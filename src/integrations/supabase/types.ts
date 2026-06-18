@@ -263,6 +263,81 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_numbers: {
+        Row: {
+          country: string
+          created_at: string
+          e164: string
+          id: string
+          is_default: boolean
+          label: string | null
+          status: Database["public"]["Enums"]["phone_number_status"]
+          twilio_sid: string | null
+          type: Database["public"]["Enums"]["phone_number_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          country?: string
+          created_at?: string
+          e164: string
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          status?: Database["public"]["Enums"]["phone_number_status"]
+          twilio_sid?: string | null
+          type: Database["public"]["Enums"]["phone_number_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          e164?: string
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          status?: Database["public"]["Enums"]["phone_number_status"]
+          twilio_sid?: string | null
+          type?: Database["public"]["Enums"]["phone_number_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      phone_verifications: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          created_at: string
+          e164: string
+          expires_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          created_at?: string
+          e164: string
+          expires_at: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          created_at?: string
+          e164?: string
+          expires_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -293,6 +368,48 @@ export type Database = {
           id?: string
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sender_ids: {
+        Row: {
+          countries: string[]
+          created_at: string
+          id: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sender_id: string
+          status: Database["public"]["Enums"]["sender_id_status"]
+          updated_at: string
+          use_case: string | null
+          user_id: string
+        }
+        Insert: {
+          countries?: string[]
+          created_at?: string
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_id: string
+          status?: Database["public"]["Enums"]["sender_id_status"]
+          updated_at?: string
+          use_case?: string | null
+          user_id: string
+        }
+        Update: {
+          countries?: string[]
+          created_at?: string
+          id?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sender_id?: string
+          status?: Database["public"]["Enums"]["sender_id_status"]
+          updated_at?: string
+          use_case?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -386,6 +503,9 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      phone_number_status: "active" | "pending" | "released"
+      phone_number_type: "toll_free" | "personal"
+      sender_id_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -514,6 +634,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      phone_number_status: ["active", "pending", "released"],
+      phone_number_type: ["toll_free", "personal"],
+      sender_id_status: ["pending", "approved", "rejected"],
     },
   },
 } as const
