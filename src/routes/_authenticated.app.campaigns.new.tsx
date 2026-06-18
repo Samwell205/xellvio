@@ -211,8 +211,6 @@ function NewCampaignPage() {
             <Label>Campaign name</Label>
             <Input value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Black Friday — US" />
           </div>
-          <SegmentPicker title="Include segments" segments={segmentsQ.data ?? []} selected={s.include} onChange={(ids) => setS({ ...s, include: ids })} />
-          <SegmentPicker title="Exclude segments (optional)" segments={segmentsQ.data ?? []} selected={s.exclude} onChange={(ids) => setS({ ...s, exclude: ids })} />
           <ContactPicker selected={s.profileIds} onChange={(ids) => setS({ ...s, profileIds: ids })} />
           <Card className="p-4 flex items-center justify-between bg-primary/5 border-primary/30">
             <div className="flex items-center gap-3">
