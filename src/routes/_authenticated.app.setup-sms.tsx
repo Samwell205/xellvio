@@ -216,6 +216,7 @@ type WizardForm = {
   sampleMessage: string;
   optInDescription: string;
   optInScreenshotPath: string;
+  customSenderId: string;
 };
 
 function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
@@ -236,6 +237,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
     sampleMessage: account?.sample_message ?? "",
     optInDescription: account?.opt_in_description ?? "",
     optInScreenshotPath: account?.opt_in_screenshot_url ?? "",
+    customSenderId: "",
   });
 
   useEffect(() => {
@@ -254,6 +256,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
       sampleMessage: account.sample_message ?? f.sampleMessage,
       optInDescription: account.opt_in_description ?? f.optInDescription,
       optInScreenshotPath: account.opt_in_screenshot_url ?? f.optInScreenshotPath,
+      customSenderId: f.customSenderId,
     }));
   }, [account]);
 
@@ -305,6 +308,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
         sampleMessage: form.sampleMessage,
         optInDescription: form.optInDescription,
         optInScreenshotPath: form.optInScreenshotPath || undefined,
+        customSenderId: form.customSenderId || undefined,
         }),
       });
       const json = await res.json().catch(() => ({}));
