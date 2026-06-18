@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in — Samwell Global SMS" }, { name: "description", content: "Sign in or create your Samwell Global SMS account." }] }),
@@ -25,17 +25,33 @@ function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">(search.mode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setMode(search.mode);
+    setErrorMsg(null);
   }, [search.mode]);
 
   const destination = search.redirect.startsWith("/") && !search.redirect.startsWith("//") ? search.redirect : "/app";
+  const passwordMismatch = mode === "signup" && confirmPassword.length > 0 && password !== confirmPassword;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErrorMsg(null);
+    if (mode === "signup") {
+      if (password !== confirmPassword) {
+        setErrorMsg("Passwords do not match.");
+        return;
+      }
+      if (password.length < 8) {
+        setErrorMsg("Password must be at least 8 characters.");
+        return;
+      }
+    }
     setLoading(true);
     try {
       if (mode === "signup") {
@@ -59,9 +75,11 @@ function AuthPage() {
       }
     } catch (err) {
       const rawMessage = err instanceof Error ? err.message : "Authentication failed";
-      const message = rawMessage.toLowerCase().includes("weak") || rawMessage.toLowerCase().includes("pwned")
-        ? "Use a stronger, unique password that has not appeared in a data breach."
+      const lower = rawMessage.toLowerCase();
+      const message = lower.includes("weak") || lower.includes("pwned") || lower.includes("breach") || lower.includes("compromis")
+        ? "This password has appeared in a known data breach. Please pick a different, unique password (12+ characters with numbers and symbols)."
         : rawMessage;
+      setErrorMsg(message);
       toast.error(message);
     } finally {
       setLoading(false);
@@ -104,6 +122,11 @@ function AuthPage() {
             <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMsg && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                {errorMsg}
+              </div>
+            )}
             {mode === "signup" && (
               <div className="space-y-1.5">
                 <Label htmlFor="name">Full name</Label>
@@ -116,10 +139,49 @@ function AuthPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={mode === "signup" ? 8 : 6}
+                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
               {mode === "signup" && <p className="text-xs text-muted-foreground">Use a unique password with 12+ characters, numbers, and symbols.</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            {mode === "signup" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword">Confirm password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    aria-invalid={passwordMismatch}
+                    className={passwordMismatch ? "border-destructive focus-visible:ring-destructive" : ""}
+                  />
+                </div>
+                {passwordMismatch && <p className="text-xs text-destructive">Passwords do not match.</p>}
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={loading || passwordMismatch}>
               {loading && <Loader2 className="size-4 animate-spin mr-2" />}
               {mode === "signin" ? "Sign in" : "Create account"}
             </Button>
