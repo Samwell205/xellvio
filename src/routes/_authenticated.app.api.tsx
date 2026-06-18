@@ -8,7 +8,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Copy, Plus, Trash2 } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/api")({
+export const Route = createFileRoute("/_authenticated/app/api")({
   head: () => ({ meta: [{ title: "API — Samwell Global SMS" }] }),
   component: ApiPage,
 });

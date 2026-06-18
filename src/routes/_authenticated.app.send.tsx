@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/send")({
+export const Route = createFileRoute("/_authenticated/app/send")({
   head: () => ({ meta: [{ title: "Send SMS — Samwell Global SMS" }] }),
   component: SendPage,
 });

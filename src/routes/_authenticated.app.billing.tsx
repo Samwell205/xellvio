@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Wallet, CreditCard } from "lucide-react";
 import { useState } from "react";
 
-export const Route = createFileRoute("/_authenticated/billing")({
+export const Route = createFileRoute("/_authenticated/app/billing")({
   head: () => ({ meta: [{ title: "Billing — Samwell Global SMS" }] }),
   component: BillingPage,
 });

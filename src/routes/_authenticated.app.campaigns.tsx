@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-export const Route = createFileRoute("/_authenticated/campaigns")({
+export const Route = createFileRoute("/_authenticated/app/campaigns")({
   head: () => ({ meta: [{ title: "Campaigns — Samwell Global SMS" }] }),
   component: CampaignsPage,
 });

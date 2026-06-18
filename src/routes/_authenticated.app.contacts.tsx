@@ -9,7 +9,7 @@ import Papa from "papaparse";
 import { toast } from "sonner";
 import { Trash2, Upload, Plus } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/contacts")({
+export const Route = createFileRoute("/_authenticated/app/contacts")({
   head: () => ({ meta: [{ title: "Contacts — Samwell Global SMS" }] }),
   component: ContactsPage,
 });
