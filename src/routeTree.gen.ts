@@ -21,6 +21,7 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
 import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.twilio-inbound'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
+import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSetupSmsRouteImport } from './routes/_authenticated.app.setup-sms'
@@ -35,6 +36,7 @@ import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
 import { Route as AuthenticatedAppAdminRatesRouteImport } from './routes/_authenticated.app.admin.rates'
+import { Route as AuthenticatedAppAdminBillingRouteImport } from './routes/_authenticated.app.admin.billing'
 import { Route as AuthenticatedAppAdminAccountsRouteImport } from './routes/_authenticated.app.admin.accounts'
 
 const SolutionsRoute = SolutionsRouteImport.update({
@@ -95,6 +97,12 @@ const ApiPublicPollVerificationsRoute =
   ApiPublicPollVerificationsRouteImport.update({
     id: '/api/public/poll-verifications',
     path: '/api/public/poll-verifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaystackWebhookRoute =
+  ApiPublicPaystackWebhookRouteImport.update({
+    id: '/api/public/paystack-webhook',
+    path: '/api/public/paystack-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicDispatchCampaignRoute =
@@ -180,6 +188,12 @@ const AuthenticatedAppAdminRatesRoute =
     path: '/app/admin/rates',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppAdminBillingRoute =
+  AuthenticatedAppAdminBillingRouteImport.update({
+    id: '/app/admin/billing',
+    path: '/app/admin/billing',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppAdminAccountsRoute =
   AuthenticatedAppAdminAccountsRouteImport.update({
     id: '/app/admin/accounts',
@@ -205,11 +219,13 @@ export interface FileRoutesByFullPath {
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
+  '/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
   '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -233,11 +249,13 @@ export interface FileRoutesByTo {
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
+  '/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
   '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -263,11 +281,13 @@ export interface FileRoutesById {
   '/_authenticated/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
+  '/_authenticated/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
   '/_authenticated/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -293,11 +313,13 @@ export interface FileRouteTypes {
     | '/app/setup-sms'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app/'
     | '/app/admin/accounts'
+    | '/app/admin/billing'
     | '/app/admin/rates'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -321,11 +343,13 @@ export interface FileRouteTypes {
     | '/app/setup-sms'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app'
     | '/app/admin/accounts'
+    | '/app/admin/billing'
     | '/app/admin/rates'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -350,11 +374,13 @@ export interface FileRouteTypes {
     | '/_authenticated/app/setup-sms'
     | '/_authenticated/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/accounts'
+    | '/_authenticated/app/admin/billing'
     | '/_authenticated/app/admin/rates'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
@@ -371,6 +397,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   SolutionsRoute: typeof SolutionsRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
+  ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
   ApiPublicTwilioInboundRoute: typeof ApiPublicTwilioInboundRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
@@ -460,6 +487,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/poll-verifications'
       fullPath: '/api/public/poll-verifications'
       preLoaderRoute: typeof ApiPublicPollVerificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/paystack-webhook': {
+      id: '/api/public/paystack-webhook'
+      path: '/api/public/paystack-webhook'
+      fullPath: '/api/public/paystack-webhook'
+      preLoaderRoute: typeof ApiPublicPaystackWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/dispatch-campaign': {
@@ -560,6 +594,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminRatesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/admin/billing': {
+      id: '/_authenticated/app/admin/billing'
+      path: '/app/admin/billing'
+      fullPath: '/app/admin/billing'
+      preLoaderRoute: typeof AuthenticatedAppAdminBillingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/admin/accounts': {
       id: '/_authenticated/app/admin/accounts'
       path: '/app/admin/accounts'
@@ -612,6 +653,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdminAccountsRoute: typeof AuthenticatedAppAdminAccountsRoute
+  AuthenticatedAppAdminBillingRoute: typeof AuthenticatedAppAdminBillingRoute
   AuthenticatedAppAdminRatesRoute: typeof AuthenticatedAppAdminRatesRoute
 }
 
@@ -628,6 +670,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdminAccountsRoute: AuthenticatedAppAdminAccountsRoute,
+  AuthenticatedAppAdminBillingRoute: AuthenticatedAppAdminBillingRoute,
   AuthenticatedAppAdminRatesRoute: AuthenticatedAppAdminRatesRoute,
 }
 
@@ -645,6 +688,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   SolutionsRoute: SolutionsRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
+  ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
   ApiPublicTwilioInboundRoute: ApiPublicTwilioInboundRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
