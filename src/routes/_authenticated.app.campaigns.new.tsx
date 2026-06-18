@@ -79,11 +79,11 @@ function NewCampaignPage() {
   const hasPending = senderList.some((x) => x.verification_status === "submitted" || x.verification_status === "in_review");
   const hasRejected = senderList.some((x) => x.verification_status === "rejected");
 
-  const audience = useMemo(() => ({ include: s.include, exclude: s.exclude }), [s.include, s.exclude]);
+  const audience = useMemo(() => ({ include: s.include, exclude: s.exclude, profile_ids: s.profileIds }), [s.include, s.exclude, s.profileIds]);
 
   const audienceQ = useQuery({
     queryKey: ["campaign-audience", audience],
-    enabled: s.include.length > 0,
+    enabled: s.include.length > 0 || s.profileIds.length > 0,
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       const { data, error } = await supabase.rpc("eligible_profile_ids", {
