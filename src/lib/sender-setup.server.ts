@@ -90,7 +90,21 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   let subSid = (acct.twilio_subaccount_sid as string | null) ?? "";
   let subToken = "";
   const accountName = acct.legal_business_name;
+  async function useMainSmsAccount() {
+    const master = masterAuth();
+    subSid = master.sid;
+    subToken = master.token;
+    await supabaseAdmin.from("accounts").update({
+      twilio_subaccount_sid: subSid,
+      twilio_subaccount_auth_token_enc: encryptToken(subToken) as any,
+      onboarding_status: "sender_pending",
+    }).eq("id", userId);
+  }
+
   async function createReplacementSubaccount() {
+    await useMainSmsAccount();
+    return;
+
     const master = masterAuth();
     try {
       const sub = await twilio<{ sid: string; auth_token: string }>(`${TWILIO_API}/Accounts.json`, {
@@ -106,9 +120,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       }).eq("id", userId);
     } catch (e) {
       if (!isSubaccountLimitError(e)) throw e;
-      subSid = master.sid;
-      subToken = master.token;
-      await supabaseAdmin.from("accounts").update({ onboarding_status: "sender_pending" }).eq("id", userId);
+      await useMainSmsAccount();
     }
   }
 
