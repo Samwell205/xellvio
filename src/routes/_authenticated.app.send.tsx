@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
+import { ReadinessBanner } from "@/components/ReadinessBanner";
 
 function useSenderOptions() {
   const numbers = useQuery({
@@ -65,6 +66,7 @@ function SendPage() {
         <h1 className="text-2xl font-extrabold">Send SMS</h1>
         <p className="text-sm text-muted-foreground">Single message, bulk send, or schedule a campaign.</p>
       </div>
+      <ReadinessBanner />
       <Tabs defaultValue="single">
         <TabsList>
           <TabsTrigger value="single">Single SMS</TabsTrigger>
