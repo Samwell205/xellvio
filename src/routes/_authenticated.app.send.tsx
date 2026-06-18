@@ -1,17 +1,55 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import Papa from "papaparse";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { sendSms, createCampaign, runCampaign } from "@/lib/sms.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
+
+function useSenderOptions() {
+  const numbers = useQuery({
+    queryKey: ["my-numbers"],
+    queryFn: async () => (await supabase.from("phone_numbers").select("e164,label,type,country").eq("status", "active")).data ?? [],
+  });
+  const senderIds = useQuery({
+    queryKey: ["approved-sender-ids"],
+    queryFn: async () => (await supabase.from("sender_ids").select("sender_id").eq("status", "approved")).data ?? [],
+  });
+  const options: { value: string; label: string }[] = [
+    ...(numbers.data ?? []).map((n) => ({ value: n.e164, label: `${n.e164} · ${n.label ?? n.type}` })),
+    ...(senderIds.data ?? []).map((s) => ({ value: s.sender_id, label: `${s.sender_id} (Sender ID)` })),
+  ];
+  return options;
+}
+
+function SenderPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const options = useSenderOptions();
+  if (options.length === 0) {
+    return (
+      <div className="text-xs text-muted-foreground">
+        No senders yet — <Link to="/app/numbers" className="text-primary underline">add a number or request a Sender ID</Link>.
+      </div>
+    );
+  }
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger><SelectValue placeholder="Select sender" /></SelectTrigger>
+      <SelectContent>
+        {options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+}
+
 
 export const Route = createFileRoute("/_authenticated/app/send")({
   head: () => ({ meta: [{ title: "Send SMS — Samwell Global SMS" }] }),
