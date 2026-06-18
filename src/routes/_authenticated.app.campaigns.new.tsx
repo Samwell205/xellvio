@@ -498,3 +498,57 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function ContactPicker({ selected, onChange }: { selected: string[]; onChange: (ids: string[]) => void }) {
+  const [q, setQ] = useState("");
+  const contactsQ = useQuery({
+    queryKey: ["pick-contacts", q],
+    queryFn: async () => {
+      let query = supabase
+        .from("profiles")
+        .select("id, phone_e164, first_name, last_name, consents(status, channel)")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (q.trim()) {
+        const s = q.trim();
+        query = query.or(`phone_e164.ilike.%${s}%,first_name.ilike.%${s}%,last_name.ilike.%${s}%`);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data ?? []).map((p: any) => {
+        const sms = (p.consents ?? []).find((c: any) => c.channel === "sms");
+        return { ...p, subscribed: sms?.status === "subscribed" };
+      });
+    },
+  });
+  const rows = contactsQ.data ?? [];
+  function toggle(id: string) {
+    onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+  }
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>Or pick specific contacts</Label>
+        <span className="text-xs text-muted-foreground">{selected.length} selected</span>
+      </div>
+      <Input placeholder="Search by name or phone…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="max-h-56 overflow-y-auto rounded-md border divide-y">
+        {contactsQ.isLoading && <div className="p-3 text-sm text-muted-foreground">Loading…</div>}
+        {!contactsQ.isLoading && rows.length === 0 && (
+          <div className="p-3 text-sm text-muted-foreground">No contacts match. <Link to="/app/audience" className="text-primary underline">Add contacts</Link>.</div>
+        )}
+        {rows.map((r: any) => (
+          <label key={r.id} className={`flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50 ${!r.subscribed ? "opacity-60" : ""}`}>
+            <Checkbox checked={selected.includes(r.id)} onCheckedChange={() => toggle(r.id)} />
+            <div className="flex-1">
+              <div className="font-mono text-xs">{r.phone_e164}</div>
+              <div className="text-xs text-muted-foreground">{[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}</div>
+            </div>
+            {!r.subscribed && <Badge variant="outline" className="text-xs">not subscribed</Badge>}
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">Only subscribed, non-suppressed contacts will receive the message.</p>
+    </div>
+  );
+}
