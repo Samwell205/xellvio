@@ -211,8 +211,6 @@ function NewCampaignPage() {
             <Label>Campaign name</Label>
             <Input value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Black Friday — US" />
           </div>
-          <SegmentPicker title="Include segments" segments={segmentsQ.data ?? []} selected={s.include} onChange={(ids) => setS({ ...s, include: ids })} />
-          <SegmentPicker title="Exclude segments (optional)" segments={segmentsQ.data ?? []} selected={s.exclude} onChange={(ids) => setS({ ...s, exclude: ids })} />
           <ContactPicker selected={s.profileIds} onChange={(ids) => setS({ ...s, profileIds: ids })} />
           <Card className="p-4 flex items-center justify-between bg-primary/5 border-primary/30">
             <div className="flex items-center gap-3">
@@ -244,14 +242,9 @@ function NewCampaignPage() {
                   <Send className="size-4 mr-1.5 rotate-90" />Export CSV
                 </Button>
               )}
-              {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick a segment or individual contacts.</span>}
+              {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick contacts above to see the eligible audience.</span>}
             </div>
           </Card>
-          {(segmentsQ.data?.length ?? 0) === 0 && (
-            <div className="text-sm text-muted-foreground">
-              No segments yet. <Link to="/app/segments/new" className="text-primary underline">Create one</Link> — or pick contacts directly below.
-            </div>
-          )}
         </Card>
       )}
 
