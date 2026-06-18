@@ -102,8 +102,8 @@ function SingleForm() {
           <Input placeholder="+15558675310" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label>Sender ID</Label>
-          <Input placeholder="Optional, e.g. SAMWELL or +1..." value={sender} onChange={(e) => setSender(e.target.value)} />
+          <Label>From</Label>
+          <SenderPicker value={sender} onChange={setSender} />
         </div>
       </div>
       <div className="mt-5 space-y-1.5">
