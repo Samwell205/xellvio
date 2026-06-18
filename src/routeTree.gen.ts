@@ -21,6 +21,7 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
 import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.twilio-inbound'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
+import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSetupSmsRouteImport } from './routes/_authenticated.app.setup-sms'
@@ -95,6 +96,12 @@ const ApiPublicPollVerificationsRoute =
   ApiPublicPollVerificationsRouteImport.update({
     id: '/api/public/poll-verifications',
     path: '/api/public/poll-verifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaystackWebhookRoute =
+  ApiPublicPaystackWebhookRouteImport.update({
+    id: '/api/public/paystack-webhook',
+    path: '/api/public/paystack-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicDispatchCampaignRoute =
@@ -205,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
@@ -233,6 +241,7 @@ export interface FileRoutesByTo {
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
@@ -263,6 +272,7 @@ export interface FileRoutesById {
   '/_authenticated/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/app/setup-sms'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/app/setup-sms'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
@@ -350,6 +362,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/setup-sms'
     | '/_authenticated/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
@@ -371,6 +384,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   SolutionsRoute: typeof SolutionsRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
+  ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
   ApiPublicTwilioInboundRoute: typeof ApiPublicTwilioInboundRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
@@ -460,6 +474,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/poll-verifications'
       fullPath: '/api/public/poll-verifications'
       preLoaderRoute: typeof ApiPublicPollVerificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/paystack-webhook': {
+      id: '/api/public/paystack-webhook'
+      path: '/api/public/paystack-webhook'
+      fullPath: '/api/public/paystack-webhook'
+      preLoaderRoute: typeof ApiPublicPaystackWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/dispatch-campaign': {
@@ -645,6 +666,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   SolutionsRoute: SolutionsRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
+  ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
   ApiPublicTwilioInboundRoute: ApiPublicTwilioInboundRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
