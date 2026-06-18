@@ -113,8 +113,16 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
     });
     if (insErr) throw new Error(insErr.message);
 
-    const from = process.env.TWILIO_FROM;
-    if (!from) throw new Error("Server is missing TWILIO_FROM — ask the admin to set it");
+    let from = process.env.TWILIO_FROM;
+    if (!from) {
+      // Auto-discover: use first SMS-capable IncomingPhoneNumber on the Twilio account
+      const listRes = await fetch(`${GATEWAY}/IncomingPhoneNumbers.json?PageSize=20`, { headers: twHeaders() });
+      const listJson = await listRes.json().catch(() => ({}));
+      if (!listRes.ok) throw new Error(listJson?.message || `Twilio ${listRes.status}: could not list numbers`);
+      const candidate = (listJson.incoming_phone_numbers ?? []).find((n: any) => n?.capabilities?.sms);
+      if (!candidate) throw new Error("No SMS-capable Twilio number is provisioned. Use the 'Get toll-free' tab to provision one first.");
+      from = candidate.phone_number as string;
+    }
 
     const res = await fetch(`${GATEWAY}/Messages.json`, {
       method: "POST",
@@ -125,7 +133,7 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
       }),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json?.message || `Twilio ${res.status}: could not send code`);
+    if (!res.ok) throw new Error(json?.message ? `Twilio: ${json.message}` : `Twilio ${res.status}: could not send code`);
     return { ok: true };
   });
 
