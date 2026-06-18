@@ -13,20 +13,18 @@ function siteOrigin(): string {
   return process.env.PUBLIC_SITE_URL || "https://samwell-reach-global.lovable.app";
 }
 
-/** List active packs — public read. */
-export const listCreditPacks = createServerFn({ method: "GET" }).handler(async () => {
-  const { createClient } = await import("@supabase/supabase-js");
-  const sb = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
-    auth: { persistSession: false, autoRefreshToken: false },
+/** List active packs — readable to any signed-in user. */
+export const listCreditPacks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("credit_packs")
+      .select("id,name,description,currency,price,credits,display_order,is_popular")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });
-  const { data, error } = await sb
-    .from("credit_packs")
-    .select("id,name,description,currency,price,credits,display_order,is_popular")
-    .eq("is_active", true)
-    .order("display_order", { ascending: true });
-  if (error) throw new Error(error.message);
-  return data ?? [];
-});
 
 /** Read shared billing settings (payoneer details + default currency). */
 export const getBillingSettings = createServerFn({ method: "GET" })
