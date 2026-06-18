@@ -294,6 +294,25 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
                 <div className="text-xs mt-1 flex flex-wrap gap-1">{detectedFields.map((f) => <Badge key={f} variant="secondary" className="text-[10px]">{f}</Badge>)}</div>
               </div>
             </div>
+            <div>
+              <div className="text-xs font-medium text-muted-foreground mb-1.5">Preview · first {Math.min(10, rows.length)} of {rows.length} rows</div>
+              <div className="rounded-md border overflow-auto max-h-64">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      {detectedFields.map((f) => <th key={f} className="text-left px-2 py-1.5 font-medium">{f}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.slice(0, 10).map((r, i) => (
+                      <tr key={i} className="border-t">
+                        {detectedFields.map((f) => <td key={f} className="px-2 py-1.5 font-mono whitespace-nowrap">{r[f] ?? <span className="text-muted-foreground">—</span>}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
             <div className="space-y-1.5">
               <Label>Add to list (optional)</Label>
