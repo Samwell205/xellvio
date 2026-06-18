@@ -245,11 +245,6 @@ function NewCampaignPage() {
               {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick a segment or individual contacts.</span>}
             </div>
           </Card>
-          {(segmentsQ.data?.length ?? 0) === 0 && (
-            <div className="text-sm text-muted-foreground">
-              No segments yet. <Link to="/app/segments/new" className="text-primary underline">Create one</Link> — or pick contacts directly below.
-            </div>
-          )}
         </Card>
       )}
 
