@@ -38,6 +38,14 @@ async function twilio<T = any>(url: string, opts: { method?: string; sid: string
   return json as T;
 }
 
+function isSubaccountLimitError(error: unknown) {
+  return String((error as any)?.message ?? "").toLowerCase().includes("maximum number of subaccounts");
+}
+
+function setupAccountSid(sid: string) {
+  return sid.startsWith("AC") ? sid : sid;
+}
+
 function pickSenderKind(country: string): "toll_free" | "sender_id" {
   const cc = country.toUpperCase();
   return cc === "US" || cc === "CA" ? "toll_free" : "sender_id";
@@ -88,17 +96,24 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   const accountName = acct.legal_business_name;
   async function createReplacementSubaccount() {
     const master = masterAuth();
-    const sub = await twilio<{ sid: string; auth_token: string }>(`${TWILIO_API}/Accounts.json`, {
-      method: "POST", sid: master.sid, token: master.token,
-      body: { FriendlyName: `${accountName} (tenant:${userId.slice(0, 8)})` },
-    });
-    subSid = sub.sid;
-    subToken = sub.auth_token;
-    await supabaseAdmin.from("accounts").update({
-      twilio_subaccount_sid: subSid,
-      twilio_subaccount_auth_token_enc: encryptToken(subToken) as any,
-      onboarding_status: "sender_pending",
-    }).eq("id", userId);
+    try {
+      const sub = await twilio<{ sid: string; auth_token: string }>(`${TWILIO_API}/Accounts.json`, {
+        method: "POST", sid: master.sid, token: master.token,
+        body: { FriendlyName: `${accountName} (tenant:${userId.slice(0, 8)})` },
+      });
+      subSid = sub.sid;
+      subToken = sub.auth_token;
+      await supabaseAdmin.from("accounts").update({
+        twilio_subaccount_sid: subSid,
+        twilio_subaccount_auth_token_enc: encryptToken(subToken) as any,
+        onboarding_status: "sender_pending",
+      }).eq("id", userId);
+    } catch (e) {
+      if (!isSubaccountLimitError(e)) throw e;
+      subSid = setupAccountSid(master.sid);
+      subToken = master.token;
+      await supabaseAdmin.from("accounts").update({ onboarding_status: "sender_pending" }).eq("id", userId);
+    }
   }
 
   if (!subSid || !acct.twilio_subaccount_auth_token_enc) {
