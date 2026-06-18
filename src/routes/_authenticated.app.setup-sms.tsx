@@ -25,10 +25,19 @@ const COUNTRIES = [
   { code: "CA", name: "Canada" },
   { code: "GB", name: "United Kingdom" },
   { code: "AU", name: "Australia" },
+  { code: "NG", name: "Nigeria" },
+  { code: "KE", name: "Kenya" },
+  { code: "ZA", name: "South Africa" },
+  { code: "GH", name: "Ghana" },
   { code: "DE", name: "Germany" },
   { code: "FR", name: "France" },
   { code: "ES", name: "Spain" },
   { code: "NL", name: "Netherlands" },
+  { code: "IN", name: "India" },
+  { code: "AE", name: "UAE" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "BR", name: "Brazil" },
+  { code: "MX", name: "Mexico" },
 ];
 
 const VOLUMES = [
@@ -86,16 +95,30 @@ function SenderStatusList({ assets, onRefresh, refreshing }: { assets: any[]; on
   );
 }
 
+function senderKindLabel(kind: string) {
+  if (kind === "toll_free") return "Toll-free number";
+  if (kind === "sender_id") return "Alphanumeric Sender ID";
+  return "Local long-code number";
+}
+
 function StatusCard({ asset }: { asset: any }) {
   const status = asset.verification_status as string;
+  const kindLabel = senderKindLabel(asset.sender_kind);
+  const identifierLabel = asset.sender_kind === "sender_id" ? "Sender ID" : "Number";
   if (status === "verified") {
     return (
       <Card className="p-5 border-success/40 bg-success/5 space-y-4">
         <div className="flex items-center gap-3">
           <CheckCircle2 className="size-6 text-success" />
           <div className="flex-1">
-            <div className="font-semibold">Your number is ready</div>
-            <div className="text-sm text-muted-foreground">{asset.country_code} · <span className="font-mono">{asset.phone_number}</span></div>
+            <div className="font-semibold">Your sender is ready</div>
+            <div className="text-sm text-muted-foreground">
+              {asset.country_code} · {kindLabel}
+            </div>
+            <div className="text-sm mt-1">
+              <span className="text-muted-foreground">{identifierLabel}:</span>{" "}
+              <span className="font-mono font-semibold">{asset.phone_number}</span>
+            </div>
           </div>
           <Badge variant="default">Active</Badge>
         </div>
@@ -109,7 +132,7 @@ function StatusCard({ asset }: { asset: any }) {
         <div className="flex items-start gap-3">
           <AlertCircle className="size-6 text-destructive shrink-0" />
           <div className="flex-1">
-            <div className="font-semibold">We need a bit more info</div>
+            <div className="font-semibold">We need a bit more info ({asset.country_code})</div>
             <div className="text-sm text-muted-foreground mt-1">{asset.friendly_rejection_reason ?? "Please update your details and try again."}</div>
             <Link to="/app/setup-sms"><Button size="sm" className="mt-3">Update and resubmit</Button></Link>
           </div>
@@ -122,8 +145,11 @@ function StatusCard({ asset }: { asset: any }) {
       <div className="flex items-center gap-3">
         <Clock className="size-6 text-primary" />
         <div className="flex-1">
-          <div className="font-semibold">Setting up your SMS number</div>
-          <div className="text-sm text-muted-foreground">{asset.country_code} · This usually takes up to 7–10 business days. You can build campaigns and collect subscribers while you wait.</div>
+          <div className="font-semibold">Setting up your sender ({asset.country_code} · {kindLabel})</div>
+          <div className="text-sm text-muted-foreground">
+            {asset.phone_number ? <>Provisioned {identifierLabel.toLowerCase()}: <span className="font-mono">{asset.phone_number}</span> · </> : null}
+            Carrier review usually takes 7–10 business days. You can build campaigns while you wait.
+          </div>
         </div>
         <Badge variant="secondary">In review</Badge>
       </div>

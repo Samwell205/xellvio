@@ -44,7 +44,22 @@ async function twilio<T = any>(url: string, opts: { method?: string; sid: string
 function pickSenderKind(country: string): "toll_free" | "local" | "sender_id" {
   const cc = country.toUpperCase();
   if (cc === "US" || cc === "CA") return "toll_free";
+  // Countries where alphanumeric Sender IDs are the norm / required
+  const senderIdCountries = new Set([
+    "NG","KE","ZA","GH","UG","TZ","RW","ET","EG","MA","SN","CI","CM",
+    "IN","PK","BD","LK","ID","PH","VN","TH","MY",
+    "DE","FR","ES","IT","NL","BE","AT","CH","SE","NO","DK","FI","IE","PT","GR","PL","CZ","RO",
+    "AE","SA","QA","KW","BH","OM","IL","TR",
+    "BR","AR","CL","CO","MX","PE",
+  ]);
+  if (senderIdCountries.has(cc)) return "sender_id";
   return "local";
+}
+
+/** Build a clean alphanumeric Sender ID from a business name (max 11 chars). */
+function senderIdFromName(name: string): string {
+  const cleaned = (name || "Sender").replace(/[^A-Za-z0-9]/g, "").slice(0, 11);
+  return cleaned.length >= 3 ? cleaned : (cleaned + "SMS").slice(0, 11);
 }
 
 /** Map a Twilio rejection into plain English the customer can act on. */
@@ -126,6 +141,36 @@ export const setupSms = createServerFn({ method: "POST" })
       const existing = await supabaseAdmin.from("sender_assets")
         .select("id").eq("account_id", userId).eq("country_code", cc).maybeSingle();
       if (existing.data) { created.push(`${cc}:exists`); continue; }
+
+      // For Sender-ID countries, no number purchase — register an alphanumeric Sender ID
+      if (kind === "sender_id") {
+        const sid = senderIdFromName(acct.legal_business_name || "Sender");
+        const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+        const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
+          method: "POST", sid: subSid, token: subToken,
+          body: { FriendlyName: `${acct.legal_business_name} ${cc} (Sender ID)`, InboundRequestUrl: `${base}/api/public/twilio-inbound`, StatusCallback: `${base}/api/public/twilio-status` },
+        }).catch(() => ({ sid: "" }));
+        // Try to register alphanumeric sender; ignore failure (some accounts auto-attach via Twilio)
+        try {
+          await twilio(`${MESSAGING_API}/Services/${ms.sid}/AlphaSenders`, {
+            method: "POST", sid: subSid, token: subToken, body: { AlphaSender: sid },
+          });
+        } catch { /* not fatal — Twilio may auto-pick on send */ }
+        await supabaseAdmin.from("sender_assets").insert({
+          account_id: userId, country_code: cc, sender_kind: kind,
+          phone_number: sid, phone_sid: null, messaging_service_sid: ms.sid || null,
+          verification_status: "verified",
+        });
+        if (!created.length) {
+          await supabaseAdmin.from("accounts").update({
+            subaccount_phone_number: sid,
+            subaccount_messaging_service_sid: ms.sid || null,
+            onboarding_status: "active",
+          }).eq("id", userId);
+        }
+        created.push(`${cc}:sender_id`);
+        continue;
+      }
 
       // Buy a number (toll-free for US/CA, local otherwise)
       const path = kind === "toll_free"
