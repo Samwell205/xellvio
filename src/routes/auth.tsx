@@ -122,6 +122,11 @@ function AuthPage() {
             <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {errorMsg && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                {errorMsg}
+              </div>
+            )}
             {mode === "signup" && (
               <div className="space-y-1.5">
                 <Label htmlFor="name">Full name</Label>
@@ -134,10 +139,49 @@ function AuthPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={mode === "signup" ? 8 : 6}
+                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
               {mode === "signup" && <p className="text-xs text-muted-foreground">Use a unique password with 12+ characters, numbers, and symbols.</p>}
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            {mode === "signup" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword">Confirm password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    aria-invalid={passwordMismatch}
+                    className={passwordMismatch ? "border-destructive focus-visible:ring-destructive" : ""}
+                  />
+                </div>
+                {passwordMismatch && <p className="text-xs text-destructive">Passwords do not match.</p>}
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={loading || passwordMismatch}>
               {loading && <Loader2 className="size-4 animate-spin mr-2" />}
               {mode === "signin" ? "Sign in" : "Create account"}
             </Button>
