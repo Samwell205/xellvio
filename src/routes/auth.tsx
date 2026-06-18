@@ -196,7 +196,24 @@ function AuthPage() {
                 {passwordMismatch && <p className="text-xs text-destructive">Passwords do not match.</p>}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={loading || passwordMismatch}>
+            {mode === "signup" && (
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5 size-4 rounded border-border accent-primary"
+                  required
+                />
+                <span className="text-muted-foreground">
+                  I agree to the{" "}
+                  <a href="/terms" target="_blank" className="text-primary hover:underline">Terms of Use</a>{" "}
+                  and{" "}
+                  <a href="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</a>.
+                </span>
+              </label>
+            )}
+            <Button type="submit" className="w-full" disabled={loading || passwordMismatch || (mode === "signup" && !termsAccepted)}>
               {loading && <Loader2 className="size-4 animate-spin mr-2" />}
               {mode === "signin" ? "Sign in" : "Create account"}
             </Button>
