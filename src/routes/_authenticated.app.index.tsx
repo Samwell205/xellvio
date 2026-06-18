@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Megaphone, CheckCircle2, RefreshCw, Send } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Users, Megaphone, CheckCircle2, RefreshCw, Send, AlertTriangle, XCircle, UserMinus, Bell } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Dashboard — Samwell Global SMS" }] }),
