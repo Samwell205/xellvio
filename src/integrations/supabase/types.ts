@@ -775,6 +775,16 @@ export type Database = {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
       }
+      my_eligible_profile_ids: {
+        Args: { _audience: Json }
+        Returns: {
+          country_code: string
+          first_name: string
+          last_name: string
+          phone_e164: string
+          profile_id: string
+        }[]
+      }
       profiles_match_query: {
         Args: { _account_id: string; _query: Json }
         Returns: string[]
