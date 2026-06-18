@@ -130,15 +130,38 @@ function BulkForm() {
   const [name, setName] = useState("");
   const [body, setBody] = useState("");
   const [sender, setSender] = useState("");
+  const [source, setSource] = useState<"list" | "csv">("list");
+  const [listId, setListId] = useState<string>("all");
   const [rows, setRows] = useState<Recipient[]>([]);
   const create = useServerFn(createCampaign);
   const run = useServerFn(runCampaign);
   const qc = useQueryClient();
 
+  const groupsQ = useQuery({
+    queryKey: ["contact_groups"],
+    queryFn: async () => (await supabase.from("contact_groups").select("id,name").order("created_at", { ascending: false })).data ?? [],
+  });
+
+  const listContactsQ = useQuery({
+    queryKey: ["list_contacts", listId],
+    enabled: source === "list",
+    queryFn: async () => {
+      let q = supabase.from("contacts").select("phone,country").not("phone", "is", null).limit(10000);
+      if (listId !== "all") q = q.eq("group_id", listId);
+      const { data } = await q;
+      return (data ?? [])
+        .filter((c) => c.phone && c.phone.length >= 6)
+        .map((c) => ({ to: c.phone as string, country: c.country ?? undefined }));
+    },
+  });
+
+  const recipients: Recipient[] = source === "list" ? (listContactsQ.data ?? []) : rows;
+
   const mut = useMutation({
     mutationFn: async () => {
-      const c = await create({ data: { name, body, sender_id: sender || undefined, recipients: rows } });
-      return run({ data: { campaign_id: c.id, recipients: rows } });
+      if (recipients.length === 0) throw new Error("No recipients selected.");
+      const c = await create({ data: { name, body, sender_id: sender || undefined, recipients } });
+      return run({ data: { campaign_id: c.id, recipients } });
     },
     onSuccess: (r) => { toast.success(`Sent ${r.sent}, failed ${r.failed}`); qc.invalidateQueries(); },
     onError: (e: Error) => toast.error(e.message),
@@ -146,15 +169,19 @@ function BulkForm() {
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return;
+    if (!/\.(csv|txt)$/i.test(f.name)) { toast.error("Upload a .csv file."); return; }
+    if (f.size > 20 * 1024 * 1024) { toast.error("Max file size is 20 MB."); return; }
     Papa.parse(f, {
       header: true, skipEmptyLines: true,
       complete: (res) => {
         const parsed = (res.data as Record<string, string>[])
-          .map((r) => ({ to: (r.phone || r.Phone || r.to || r.number || "").toString().trim(), country: r.country || r.Country }))
+          .map((r) => ({ to: (r.phone || r.Phone || r["Phone Number"] || r.to || r.number || "").toString().trim().replace(/[^\d+]/g, ""), country: r.country || r.Country }))
           .filter((r) => r.to.length >= 6);
         setRows(parsed);
-        toast.success(`Loaded ${parsed.length} recipients`);
+        if (parsed.length === 0) toast.error("No valid phone numbers found. Make sure the CSV has a 'phone' column.");
+        else toast.success(`Loaded ${parsed.length} recipients`);
       },
+      error: (err) => toast.error(`CSV parse failed: ${err.message}`),
     });
   }
 
@@ -173,16 +200,42 @@ function BulkForm() {
       <div className="space-y-1.5">
         <Label>Message</Label>
         <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
-        <div className="text-xs text-muted-foreground">{body.length} chars · {segCount(body)} segment(s) · {rows.length} recipients · est {rows.length * segCount(body)} credits</div>
+        <div className="text-xs text-muted-foreground">{body.length} chars · {segCount(body)} segment(s) · {recipients.length} recipients · est {recipients.length * segCount(body)} credits</div>
       </div>
-      <div className="rounded-xl border-2 border-dashed p-6 text-center">
-        <Upload className="size-6 mx-auto text-muted-foreground" />
-        <p className="mt-2 text-sm">Upload CSV with column <code className="px-1 rounded bg-muted">phone</code> (and optional <code className="px-1 rounded bg-muted">country</code>)</p>
-        <input type="file" accept=".csv" onChange={onFile} className="mt-3 mx-auto block text-sm" />
-        {rows.length > 0 && <p className="mt-2 text-xs text-muted-foreground">{rows.length} valid recipients ready.</p>}
+
+      <div className="space-y-2">
+        <Label>Recipients</Label>
+        <div className="flex gap-2 text-sm">
+          <button type="button" onClick={() => setSource("list")} className={`px-3 py-1.5 rounded-md border ${source === "list" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>From contact list</button>
+          <button type="button" onClick={() => setSource("csv")} className={`px-3 py-1.5 rounded-md border ${source === "csv" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Upload CSV</button>
+        </div>
+
+        {source === "list" ? (
+          <div className="rounded-xl border p-4 space-y-2">
+            <Select value={listId} onValueChange={setListId}>
+              <SelectTrigger><SelectValue placeholder="Select a list" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All contacts</SelectItem>
+                {(groupsQ.data ?? []).map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {listContactsQ.isLoading ? "Loading recipients…" : `${recipients.length} contact${recipients.length === 1 ? "" : "s"} with a phone number in this list.`}
+              {recipients.length === 0 && !listContactsQ.isLoading && <> Import contacts on the <Link to="/app/contacts" className="text-primary underline">Contacts page</Link>.</>}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl border-2 border-dashed p-6 text-center">
+            <Upload className="size-6 mx-auto text-muted-foreground" />
+            <p className="mt-2 text-sm">Upload CSV with column <code className="px-1 rounded bg-muted">phone</code> (and optional <code className="px-1 rounded bg-muted">country</code>)</p>
+            <input type="file" accept=".csv,.txt" onChange={onFile} className="mt-3 mx-auto block text-sm" />
+            {rows.length > 0 && <p className="mt-2 text-xs text-muted-foreground">{rows.length} valid recipients ready.</p>}
+          </div>
+        )}
       </div>
-      <Button onClick={() => mut.mutate()} disabled={!name || !body || rows.length === 0 || mut.isPending}>
-        {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}Send to {rows.length} recipients
+
+      <Button onClick={() => mut.mutate()} disabled={!name || !body || recipients.length === 0 || mut.isPending}>
+        {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}Send to {recipients.length} recipients
       </Button>
     </Card>
   );

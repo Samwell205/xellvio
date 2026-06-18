@@ -9,7 +9,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2, Download } from "lucide-react";
+
+const TEMPLATE_CSV = `Email,Phone Number,First Name,Last Name,Country,External ID
+jane@example.com,+15555550100,Jane,Doe,US,
+john@example.com,+447700900123,John,Smith,GB,cust_001
+,+233555000111,Ama,Mensah,GH,
+`;
+
+function downloadTemplate() {
+  const blob = new Blob([TEMPLATE_CSV], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "contacts-template.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+const ALLOWED_EXT = [".csv", ".txt"];
+const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
+
+function validateFile(f: File): string | null {
+  const name = f.name.toLowerCase();
+  const okExt = ALLOWED_EXT.some((e) => name.endsWith(e));
+  const okMime = !f.type || f.type.includes("csv") || f.type.includes("text") || f.type.includes("excel");
+  if (!okExt) return `Unsupported file type. Upload a .csv file (got "${f.name}").`;
+  if (!okMime) return `Unsupported file type "${f.type}". Use CSV.`;
+  if (f.size > MAX_BYTES) return `File too large (${(f.size / 1024 / 1024).toFixed(1)} MB). Max 20 MB.`;
+  if (f.size === 0) return "File is empty.";
+  return null;
+}
 
 type ImportProps = {
   open: boolean;
@@ -122,16 +151,20 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return;
-    if (f.size > 50 * 1024 * 1024) { toast.error("Max file size is 50 MB."); return; }
+    const err = validateFile(f);
+    if (err) { toast.error(err); e.target.value = ""; return; }
     setFileName(f.name);
     const reader = new FileReader();
     reader.onload = () => parseCsvText(String(reader.result ?? ""));
+    reader.onerror = () => toast.error("Could not read file.");
     reader.readAsText(f);
   }
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault();
     const f = e.dataTransfer.files?.[0]; if (!f) return;
+    const err = validateFile(f);
+    if (err) { toast.error(err); return; }
     setFileName(f.name);
     const reader = new FileReader();
     reader.onload = () => parseCsvText(String(reader.result ?? ""));
@@ -202,9 +235,14 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
 
         {step === "upload" && (
           <div className="space-y-4">
-            <div className="flex gap-2 text-sm">
-              <button onClick={() => setMode("file")} className={`px-3 py-1.5 rounded-md border ${mode === "file" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Upload CSV</button>
-              <button onClick={() => setMode("paste")} className={`px-3 py-1.5 rounded-md border ${mode === "paste" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Paste CSV</button>
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <div className="flex gap-2">
+                <button onClick={() => setMode("file")} className={`px-3 py-1.5 rounded-md border ${mode === "file" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Upload CSV</button>
+                <button onClick={() => setMode("paste")} className={`px-3 py-1.5 rounded-md border ${mode === "paste" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Paste CSV</button>
+              </div>
+              <Button variant="outline" size="sm" onClick={downloadTemplate}>
+                <Download className="size-4 mr-1.5" /> Download template
+              </Button>
             </div>
 
             {mode === "file" ? (
@@ -215,9 +253,9 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
               >
                 <Upload className="size-8 mx-auto text-muted-foreground" />
                 <div className="mt-3 font-semibold">Drag and drop or upload CSV</div>
-                <div className="text-xs text-muted-foreground mt-1">Accepts .csv file type · Max 50 MB</div>
+                <div className="text-xs text-muted-foreground mt-1">Accepts .csv file · Max 20 MB</div>
                 {fileName && <div className="mt-3 text-xs inline-flex items-center gap-1.5 bg-background border rounded px-2 py-1"><FileText className="size-3" />{fileName}</div>}
-                <input type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
+                <input type="file" accept=".csv,text/csv,.txt" onChange={onFile} className="hidden" />
               </label>
             ) : (
               <div className="space-y-2">
@@ -254,6 +292,25 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
               <div className="rounded-md border p-3">
                 <div className="text-xs text-muted-foreground">Detected fields</div>
                 <div className="text-xs mt-1 flex flex-wrap gap-1">{detectedFields.map((f) => <Badge key={f} variant="secondary" className="text-[10px]">{f}</Badge>)}</div>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs font-medium text-muted-foreground mb-1.5">Preview · first {Math.min(10, rows.length)} of {rows.length} rows</div>
+              <div className="rounded-md border overflow-auto max-h-64">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      {detectedFields.map((f) => <th key={f} className="text-left px-2 py-1.5 font-medium">{f}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.slice(0, 10).map((r, i) => (
+                      <tr key={i} className="border-t">
+                        {detectedFields.map((f) => <td key={f} className="px-2 py-1.5 font-mono whitespace-nowrap">{r[f] ?? <span className="text-muted-foreground">—</span>}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
 
