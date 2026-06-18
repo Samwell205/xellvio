@@ -33,6 +33,9 @@ export type Database = {
           onboarding_status: string
           phone: string | null
           privacy_policy_url: string | null
+          subaccount_messaging_service_sid: string | null
+          subaccount_phone_number: string | null
+          subaccount_phone_sid: string | null
           suspended_at: string | null
           terms_accepted_at: string | null
           terms_url: string | null
@@ -59,6 +62,9 @@ export type Database = {
           onboarding_status?: string
           phone?: string | null
           privacy_policy_url?: string | null
+          subaccount_messaging_service_sid?: string | null
+          subaccount_phone_number?: string | null
+          subaccount_phone_sid?: string | null
           suspended_at?: string | null
           terms_accepted_at?: string | null
           terms_url?: string | null
@@ -85,6 +91,9 @@ export type Database = {
           onboarding_status?: string
           phone?: string | null
           privacy_policy_url?: string | null
+          subaccount_messaging_service_sid?: string | null
+          subaccount_phone_number?: string | null
+          subaccount_phone_sid?: string | null
           suspended_at?: string | null
           terms_accepted_at?: string | null
           terms_url?: string | null

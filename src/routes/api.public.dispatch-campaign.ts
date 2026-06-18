@@ -18,11 +18,15 @@ async function statusCallbackUrl(): Promise<string> {
 
 type Rate = { country_code: string; dial_prefix: string; sell_price: number; mms_multiplier: number; active: boolean };
 
+type Sender =
+  | { kind: "platform"; lovableKey: string; twilioKey: string; messagingService: string }
+  | { kind: "tenant"; subaccountSid: string; subaccountToken: string; fromNumber: string };
+
 async function dispatchOne(
   supabaseAdmin: any,
   campaign: any,
   rates: Rate[],
-  twilio: { lovableKey: string; twilioKey: string; messagingService: string },
+  sender: Sender,
 ): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string }> {
   await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
 
@@ -92,21 +96,39 @@ async function dispatchOne(
       try {
         const body = new URLSearchParams({
           To: m.phone_e164,
-          MessagingServiceSid: twilio.messagingService,
           Body: m.rendered_body,
           StatusCallback: callback,
         });
+        if (sender.kind === "tenant") {
+          body.append("From", sender.fromNumber);
+        } else {
+          body.append("MessagingServiceSid", sender.messagingService);
+        }
         if (campaign.media_url) body.append("MediaUrl", campaign.media_url);
 
-        const res = await fetch(`${GATEWAY_URL}/Messages.json`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${twilio.lovableKey}`,
-            "X-Connection-Api-Key": twilio.twilioKey,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body,
-        });
+        const fetchInit: RequestInit = sender.kind === "tenant"
+          ? {
+              method: "POST",
+              headers: {
+                Authorization: "Basic " + Buffer.from(`${sender.subaccountSid}:${sender.subaccountToken}`).toString("base64"),
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body,
+            }
+          : {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${sender.lovableKey}`,
+                "X-Connection-Api-Key": sender.twilioKey,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body,
+            };
+
+        const url = sender.kind === "tenant"
+          ? `https://api.twilio.com/2010-04-01/Accounts/${sender.subaccountSid}/Messages.json`
+          : `${GATEWAY_URL}/Messages.json`;
+        const res = await fetch(url, fetchInit);
         const json: any = await res.json().catch(() => ({}));
         if (!res.ok) {
           await supabaseAdmin.from("messages").update({
@@ -183,7 +205,29 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         const results: any[] = [];
         for (const c of due ?? []) {
           try {
-            const r = await dispatchOne(supabaseAdmin, c, rates, { lovableKey, twilioKey, messagingService });
+            // Pick the tenant subaccount sender if provisioned, else fall back to platform messaging service.
+            const { data: acct } = await supabaseAdmin
+              .from("accounts")
+              .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc,subaccount_phone_number,onboarding_status")
+              .eq("id", c.account_id)
+              .maybeSingle();
+
+            if (acct?.onboarding_status === "suspended") {
+              await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
+              results.push({ id: c.id, error: "account_suspended" });
+              continue;
+            }
+
+            let sender: Sender;
+            if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc && acct.subaccount_phone_number) {
+              const { decryptToken } = await import("@/lib/tenant-crypto.server");
+              const token = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+              sender = { kind: "tenant", subaccountSid: acct.twilio_subaccount_sid, subaccountToken: token, fromNumber: acct.subaccount_phone_number };
+            } else {
+              sender = { kind: "platform", lovableKey, twilioKey, messagingService };
+            }
+
+            const r = await dispatchOne(supabaseAdmin, c, rates, sender);
             results.push({ id: c.id, ...r });
           } catch (e: any) {
             await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
