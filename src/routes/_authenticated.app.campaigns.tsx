@@ -31,9 +31,9 @@ function CampaignsPage() {
             </span>
           </p>
         </div>
-        <Button onClick={() => toast.info("Campaign builder ships in Phase 4 of the rebuild.")}>
+        <Link to="/app/campaigns/new"><Button>
           <Plus className="size-4 mr-1.5" />New campaign
-        </Button>
+        </Button></Link>
       </div>
 
       <Card className="p-0 overflow-hidden">
