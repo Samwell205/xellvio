@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({ meta: [{ title: "Settings — Samwell Global SMS" }] }),
@@ -15,46 +16,62 @@ export const Route = createFileRoute("/_authenticated/app/settings")({
 
 function SettingsPage() {
   const qc = useQueryClient();
-  const profile = useQuery({ queryKey: ["profile"], queryFn: async () => (await supabase.from("profiles").select("*").maybeSingle()).data });
+  const account = useQuery({
+    queryKey: ["account"],
+    queryFn: async () => (await supabase.from("accounts").select("*").maybeSingle()).data,
+  });
   const [form, setForm] = useState({ full_name: "", company: "", phone: "" });
 
   useEffect(() => {
-    if (profile.data) setForm({ full_name: profile.data.full_name ?? "", company: profile.data.company ?? "", phone: profile.data.phone ?? "" });
-  }, [profile.data]);
+    if (account.data) setForm({
+      full_name: account.data.full_name ?? "",
+      company: account.data.company ?? "",
+      phone: account.data.phone ?? "",
+    });
+  }, [account.data]);
 
   const save = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
-      const { error } = await supabase.from("profiles").update(form).eq("id", u.user.id);
+      const { error } = await supabase.from("accounts").update(form).eq("id", u.user.id);
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profile"] }); toast.success("Profile saved"); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["account"] }); toast.success("Account saved"); },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div><h1 className="text-2xl font-extrabold">Settings</h1><p className="text-sm text-muted-foreground">Profile and business info.</p></div>
+      <div>
+        <h1 className="text-2xl font-extrabold">Settings</h1>
+        <p className="text-sm text-muted-foreground">Account and integration status.</p>
+      </div>
+
       <Card className="p-6 space-y-4">
-        <h3 className="font-semibold">Profile</h3>
+        <h3 className="font-semibold">Account</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-1.5"><Label>Full name</Label><Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>Company</Label><Input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} /></div>
           <div className="space-y-1.5"><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>Email</Label><Input value={profile.data?.email ?? ""} disabled /></div>
+          <div className="space-y-1.5"><Label>Email</Label><Input value={account.data?.email ?? ""} disabled /></div>
         </div>
         <Button onClick={() => save.mutate()} disabled={save.isPending}>Save changes</Button>
       </Card>
+
       <Card className="p-6 space-y-3">
-        <h3 className="font-semibold">Security</h3>
-        <p className="text-sm text-muted-foreground">Reset your password via email link or enable two-factor authentication in the next update.</p>
-        <Button variant="outline" onClick={async () => {
-          const { data: u } = await supabase.auth.getUser();
-          if (!u.user?.email) return;
-          await supabase.auth.resetPasswordForEmail(u.user.email, { redirectTo: window.location.origin + "/auth" });
-          toast.success("Password reset email sent");
-        }}>Send password reset email</Button>
+        <h3 className="font-semibold">Twilio integration</h3>
+        <div className="flex items-center gap-2 text-sm">
+          <CheckCircle2 className="size-4 text-success" />
+          Twilio API key connected (via Lovable connector).
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <AlertTriangle className="size-4 text-warning" />
+          Messaging Service SID is stored as a server-side secret. Sender selection is geo-matched automatically by Twilio.
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Reminder: enable SMS Pumping Protection and review SMS Geo Permissions in the Twilio console before sending production traffic.
+        </p>
       </Card>
     </div>
   );
