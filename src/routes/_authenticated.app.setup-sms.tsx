@@ -90,7 +90,7 @@ function StatusCard({ asset }: { asset: any }) {
   const status = asset.verification_status as string;
   if (status === "verified") {
     return (
-      <Card className="p-5 border-success/40 bg-success/5">
+      <Card className="p-5 border-success/40 bg-success/5 space-y-4">
         <div className="flex items-center gap-3">
           <CheckCircle2 className="size-6 text-success" />
           <div className="flex-1">
@@ -99,6 +99,7 @@ function StatusCard({ asset }: { asset: any }) {
           </div>
           <Badge variant="default">Active</Badge>
         </div>
+        <TestSendInline />
       </Card>
     );
   }
