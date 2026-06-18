@@ -102,6 +102,78 @@ function SenderStatusList({ assets, accountPhone, onRefresh, refreshing, onSaved
   );
 }
 
+function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () => void }) {
+  const saveSender = useServerFn(saveCustomSenderId);
+  const senderCountries = COUNTRIES.filter((c) => c.code !== "US" && c.code !== "CA");
+  const existingSender = assets.find((asset) => asset.sender_kind === "sender_id")?.phone_number ?? "";
+  const existingCountries = assets.filter((asset) => asset.sender_kind === "sender_id").map((asset) => asset.country_code);
+  const [senderId, setSenderId] = useState(existingSender);
+  const [countries, setCountries] = useState<string[]>(existingCountries.length ? existingCountries : ["NG"]);
+  const [busy, setBusy] = useState(false);
+
+  function toggleCountry(cc: string) {
+    setCountries((current) => current.includes(cc) ? current.filter((x) => x !== cc) : [...current, cc]);
+  }
+
+  async function save() {
+    if (!senderId.match(/^[A-Z0-9]{3,11}$/)) {
+      toast.error("Sender ID must be 3–11 letters or numbers");
+      return;
+    }
+    if (countries.length === 0) {
+      toast.error("Choose at least one country for this Sender ID");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await saveSender({ data: { senderId, countries } });
+      toast.success(`Sender ID ${res.senderId} saved for ${res.countries.length} countr${res.countries.length === 1 ? "y" : "ies"}`);
+      onSaved();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save Sender ID");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="p-5 space-y-4 border-primary/30 bg-primary/5">
+      <div>
+        <div className="font-semibold">Use your own Sender ID</div>
+        <p className="text-sm text-muted-foreground">Add or change the name customers see when a country supports alphanumeric Sender ID.</p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+        <div className="space-y-1.5">
+          <Label>Sender ID</Label>
+          <Input
+            value={senderId}
+            onChange={(e) => setSenderId(e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 11))}
+            placeholder="SAMWELLAGEN"
+            maxLength={11}
+          />
+        </div>
+        <div className="flex items-end">
+          <Button type="button" onClick={save} disabled={busy} className="w-full md:w-auto">
+            {busy && <Loader2 className="size-4 animate-spin mr-2" />}
+            Save Sender ID
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {senderCountries.map((c) => {
+          const on = countries.includes(c.code);
+          return (
+            <button key={c.code} type="button" onClick={() => toggleCountry(c.code)}
+              className={`px-3 py-1.5 rounded-full border text-sm ${on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>
+              {c.name}
+            </button>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 
 function senderKindLabel(kind: string) {
   if (kind === "toll_free") return "Toll-free number";
