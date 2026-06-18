@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/app/")({
 
 function Overview() {
   const stats = useQuery({
+    queryKey: ["dash-stats"],
     refetchInterval: 10_000,
     refetchOnWindowFocus: true,
     queryKey: ["dash-stats"],
