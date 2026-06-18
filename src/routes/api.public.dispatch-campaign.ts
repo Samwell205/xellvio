@@ -96,21 +96,39 @@ async function dispatchOne(
       try {
         const body = new URLSearchParams({
           To: m.phone_e164,
-          MessagingServiceSid: twilio.messagingService,
           Body: m.rendered_body,
           StatusCallback: callback,
         });
+        if (sender.kind === "tenant") {
+          body.append("From", sender.fromNumber);
+        } else {
+          body.append("MessagingServiceSid", sender.messagingService);
+        }
         if (campaign.media_url) body.append("MediaUrl", campaign.media_url);
 
-        const res = await fetch(`${GATEWAY_URL}/Messages.json`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${twilio.lovableKey}`,
-            "X-Connection-Api-Key": twilio.twilioKey,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body,
-        });
+        const fetchInit: RequestInit = sender.kind === "tenant"
+          ? {
+              method: "POST",
+              headers: {
+                Authorization: "Basic " + Buffer.from(`${sender.subaccountSid}:${sender.subaccountToken}`).toString("base64"),
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body,
+            }
+          : {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${sender.lovableKey}`,
+                "X-Connection-Api-Key": sender.twilioKey,
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body,
+            };
+
+        const url = sender.kind === "tenant"
+          ? `https://api.twilio.com/2010-04-01/Accounts/${sender.subaccountSid}/Messages.json`
+          : `${GATEWAY_URL}/Messages.json`;
+        const res = await fetch(url, fetchInit);
         const json: any = await res.json().catch(() => ({}));
         if (!res.ok) {
           await supabaseAdmin.from("messages").update({
