@@ -4,12 +4,42 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, Megaphone, CheckCircle2, RefreshCw, Send, AlertTriangle, XCircle, UserMinus, Bell } from "lucide-react";
+import { Users, Megaphone, CheckCircle2, RefreshCw, Send, AlertTriangle, XCircle, UserMinus, Bell, Building2, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Dashboard — Samwell Global SMS" }] }),
   component: Overview,
 });
+
+function OnboardingBanner() {
+  const account = useQuery({
+    queryKey: ["account", "onboarding-status"],
+    queryFn: async () => (await supabase.from("accounts").select("onboarding_status").maybeSingle()).data,
+  });
+  const status = account.data?.onboarding_status;
+  if (!status || status === "active") return null;
+  if (status === "suspended") {
+    return (
+      <Card className="p-4 border-destructive/40 bg-destructive/5 flex items-center gap-3">
+        <AlertTriangle className="size-5 text-destructive" />
+        <div className="flex-1">
+          <div className="font-semibold text-destructive">Account suspended</div>
+          <div className="text-sm text-muted-foreground">Sending has been halted by the platform administrator. Contact support to restore access.</div>
+        </div>
+      </Card>
+    );
+  }
+  return (
+    <Card className="p-4 border-primary/40 bg-primary/5 flex items-center gap-3">
+      <Building2 className="size-5 text-primary" />
+      <div className="flex-1">
+        <div className="font-semibold">Finish setting up your business</div>
+        <div className="text-sm text-muted-foreground">Complete your business profile to enable sender provisioning.</div>
+      </div>
+      <Link to="/app/onboarding"><Button size="sm">Continue setup <ArrowRight className="size-4 ml-1.5" /></Button></Link>
+    </Card>
+  );
+}
 
 function Overview() {
   const stats = useQuery({
@@ -48,6 +78,8 @@ function Overview() {
         <Link to="/app/campaigns"><Button><Megaphone className="size-4 mr-1.5" />Campaigns</Button></Link>
       </div>
 
+
+      <OnboardingBanner />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={Users} label="Subscribed contacts" value={s?.subscribed ?? 0} />

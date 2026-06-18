@@ -28,6 +28,7 @@ function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -43,6 +44,10 @@ function AuthPage() {
     e.preventDefault();
     setErrorMsg(null);
     if (mode === "signup") {
+      if (!termsAccepted) {
+        setErrorMsg("You must accept the Terms of Use to create an account.");
+        return;
+      }
       if (password !== confirmPassword) {
         setErrorMsg("Passwords do not match.");
         return;
@@ -60,6 +65,9 @@ function AuthPage() {
           options: { emailRedirectTo: window.location.origin + destination, data: { full_name: name } },
         });
         if (error) throw error;
+        if (data.user?.id) {
+          await supabase.from("accounts").update({ terms_accepted_at: new Date().toISOString() }).eq("id", data.user.id);
+        }
         if (data.session && data.user?.email_confirmed_at) {
           toast.success("Account created — welcome!");
           navigate({ href: destination });
@@ -188,7 +196,24 @@ function AuthPage() {
                 {passwordMismatch && <p className="text-xs text-destructive">Passwords do not match.</p>}
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={loading || passwordMismatch}>
+            {mode === "signup" && (
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5 size-4 rounded border-border accent-primary"
+                  required
+                />
+                <span className="text-muted-foreground">
+                  I agree to the{" "}
+                  <a href="/terms" target="_blank" className="text-primary hover:underline">Terms of Use</a>{" "}
+                  and{" "}
+                  <a href="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</a>.
+                </span>
+              </label>
+            )}
+            <Button type="submit" className="w-full" disabled={loading || passwordMismatch || (mode === "signup" && !termsAccepted)}>
               {loading && <Loader2 className="size-4 animate-spin mr-2" />}
               {mode === "signin" ? "Sign in" : "Create account"}
             </Button>

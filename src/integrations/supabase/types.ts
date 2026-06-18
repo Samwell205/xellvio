@@ -20,42 +20,78 @@ export type Database = {
           auto_recharge_enabled: boolean
           auto_recharge_threshold: number
           avatar_url: string | null
+          business_address: string | null
+          business_reg_number: string | null
           company: string | null
+          contact_email: string | null
           created_at: string
           credit_balance: number
           email: string | null
           full_name: string | null
           id: string
+          legal_business_name: string | null
+          onboarding_status: string
           phone: string | null
+          privacy_policy_url: string | null
+          suspended_at: string | null
+          terms_accepted_at: string | null
+          terms_url: string | null
+          twilio_subaccount_auth_token_enc: string | null
+          twilio_subaccount_sid: string | null
           updated_at: string
+          website_url: string | null
         }
         Insert: {
           auto_recharge_amount?: number
           auto_recharge_enabled?: boolean
           auto_recharge_threshold?: number
           avatar_url?: string | null
+          business_address?: string | null
+          business_reg_number?: string | null
           company?: string | null
+          contact_email?: string | null
           created_at?: string
           credit_balance?: number
           email?: string | null
           full_name?: string | null
           id: string
+          legal_business_name?: string | null
+          onboarding_status?: string
           phone?: string | null
+          privacy_policy_url?: string | null
+          suspended_at?: string | null
+          terms_accepted_at?: string | null
+          terms_url?: string | null
+          twilio_subaccount_auth_token_enc?: string | null
+          twilio_subaccount_sid?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Update: {
           auto_recharge_amount?: number
           auto_recharge_enabled?: boolean
           auto_recharge_threshold?: number
           avatar_url?: string | null
+          business_address?: string | null
+          business_reg_number?: string | null
           company?: string | null
+          contact_email?: string | null
           created_at?: string
           credit_balance?: number
           email?: string | null
           full_name?: string | null
           id?: string
+          legal_business_name?: string | null
+          onboarding_status?: string
           phone?: string | null
+          privacy_policy_url?: string | null
+          suspended_at?: string | null
+          terms_accepted_at?: string | null
+          terms_url?: string | null
+          twilio_subaccount_auth_token_enc?: string | null
+          twilio_subaccount_sid?: string | null
           updated_at?: string
+          website_url?: string | null
         }
         Relationships: []
       }
@@ -464,6 +500,7 @@ export type Database = {
         }
         Returns: number
       }
+      decrypt_twilio_token: { Args: { _cipher: string }; Returns: string }
       eligible_profile_ids: {
         Args: { _account_id: string; _audience: Json }
         Returns: {
@@ -474,6 +511,7 @@ export type Database = {
           profile_id: string
         }[]
       }
+      encrypt_twilio_token: { Args: { _plain: string }; Returns: string }
       has_role: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
