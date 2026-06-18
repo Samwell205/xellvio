@@ -35,16 +35,33 @@ export const Route = createFileRoute("/api/public/twilio-inbound")({
         const params: Record<string, string> = {};
         form.forEach((v, k) => { params[k] = String(v); });
 
-        const sig = request.headers.get("x-twilio-signature") ?? "";
-        if (!validateTwilioSignature(authToken, publicUrl, params, sig)) {
-          return new Response("Invalid signature", { status: 401 });
-        }
-
         const from = params.From;
+        const to = params.To;
         const text = (params.Body ?? "").trim().toUpperCase();
         if (!from) return twiml();
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const sig = request.headers.get("x-twilio-signature") ?? "";
+        let valid = validateTwilioSignature(authToken, publicUrl, params, sig);
+        if (!valid && to) {
+          const { data: asset } = await supabaseAdmin
+            .from("sender_assets")
+            .select("account_id")
+            .eq("phone_number", to)
+            .maybeSingle();
+          if (asset?.account_id) {
+            const { data: acct } = await supabaseAdmin
+              .from("accounts")
+              .select("twilio_subaccount_auth_token_enc")
+              .eq("id", asset.account_id)
+              .maybeSingle();
+            if (acct?.twilio_subaccount_auth_token_enc) {
+              const { decryptToken } = await import("@/lib/tenant-crypto.server");
+              valid = validateTwilioSignature(decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string), publicUrl, params, sig);
+            }
+          }
+        }
+        if (!valid) return new Response("Invalid signature", { status: 401 });
 
         // Find profile(s) by phone — match across accounts (Twilio number is global)
         const { data: profiles } = await supabaseAdmin

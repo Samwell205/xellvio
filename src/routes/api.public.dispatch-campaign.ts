@@ -20,7 +20,7 @@ type Rate = { country_code: string; dial_prefix: string; sell_price: number; mms
 
 type Sender =
   | { kind: "platform"; lovableKey: string; twilioKey: string; messagingService: string }
-  | { kind: "tenant"; subaccountSid: string; subaccountToken: string; fromNumber: string };
+  | { kind: "tenant"; subaccountSid: string; subaccountToken: string; messagingService?: string; fromNumber?: string };
 
 async function dispatchOne(
   supabaseAdmin: any,
@@ -100,7 +100,8 @@ async function dispatchOne(
           StatusCallback: callback,
         });
         if (sender.kind === "tenant") {
-          body.append("From", sender.fromNumber);
+          if (sender.messagingService) body.append("MessagingServiceSid", sender.messagingService);
+          else body.append("From", sender.fromNumber!);
         } else {
           body.append("MessagingServiceSid", sender.messagingService);
         }
@@ -223,9 +224,11 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
               .select("verification_status,phone_number,messaging_service_sid")
               .eq("account_id", c.account_id);
 
+            const verifiedSender = (senderAssets ?? []).find((s: any) =>
+              s.verification_status === "verified" && (s.messaging_service_sid || s.phone_number),
+            );
             if (senderAssets && senderAssets.length > 0) {
-              const verified = senderAssets.find((s: any) => s.verification_status === "verified");
-              if (!verified) {
+              if (!verifiedSender) {
                 // Keep campaign queued — do NOT fail; it will retry once verification completes.
                 results.push({ id: c.id, skipped: "sender_pending_verification" });
                 continue;
@@ -233,10 +236,16 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             }
 
             let sender: Sender;
-            if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc && acct.subaccount_phone_number) {
+            if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc && (verifiedSender || acct.subaccount_phone_number)) {
               const { decryptToken } = await import("@/lib/tenant-crypto.server");
               const token = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
-              sender = { kind: "tenant", subaccountSid: acct.twilio_subaccount_sid, subaccountToken: token, fromNumber: acct.subaccount_phone_number };
+              sender = {
+                kind: "tenant",
+                subaccountSid: acct.twilio_subaccount_sid,
+                subaccountToken: token,
+                messagingService: verifiedSender?.messaging_service_sid ?? undefined,
+                fromNumber: verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
+              };
             } else {
               sender = { kind: "platform", lovableKey, twilioKey, messagingService };
             }

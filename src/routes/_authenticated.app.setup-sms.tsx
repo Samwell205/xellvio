@@ -209,6 +209,7 @@ type WizardForm = {
   website_url: string;
   privacy_policy_url: string;
   contact_email: string;
+  phone: string;
   targetCountries: string[];
   monthlyVolume: number;
   useCase: string;
@@ -227,6 +228,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
     website_url: account?.website_url ?? "",
     privacy_policy_url: account?.privacy_policy_url ?? "",
     contact_email: account?.contact_email ?? account?.email ?? "",
+    phone: account?.phone ?? "",
     targetCountries: account?.sms_target_countries?.length ? account.sms_target_countries : ["US"],
     monthlyVolume: account?.monthly_volume_estimate ?? 10000,
     useCase: account?.use_case_description ?? "",
@@ -236,7 +238,22 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   });
 
   useEffect(() => {
-    if (account) setForm((f) => ({ ...f, legal_business_name: account.legal_business_name ?? f.legal_business_name }));
+    if (account) setForm((f) => ({
+      ...f,
+      legal_business_name: account.legal_business_name ?? f.legal_business_name,
+      business_address: account.business_address ?? f.business_address,
+      business_reg_number: account.business_reg_number ?? f.business_reg_number,
+      website_url: account.website_url ?? f.website_url,
+      privacy_policy_url: account.privacy_policy_url ?? f.privacy_policy_url,
+      contact_email: account.contact_email ?? account.email ?? f.contact_email,
+      phone: account.phone ?? f.phone,
+      targetCountries: account.sms_target_countries?.length ? account.sms_target_countries : f.targetCountries,
+      monthlyVolume: account.monthly_volume_estimate ?? f.monthlyVolume,
+      useCase: account.use_case_description ?? f.useCase,
+      sampleMessage: account.sample_message ?? f.sampleMessage,
+      optInDescription: account.opt_in_description ?? f.optInDescription,
+      optInScreenshotPath: account.opt_in_screenshot_url ?? f.optInScreenshotPath,
+    }));
   }, [account]);
 
   async function handleUpload(file: File) {
@@ -264,6 +281,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
         website_url: form.website_url,
         privacy_policy_url: form.privacy_policy_url || null,
         contact_email: form.contact_email,
+        phone: form.phone || null,
       }).eq("id", u.user.id);
       if (error) throw error;
     },
@@ -333,6 +351,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
             <Field label="Website" v={form.website_url} on={(v) => setForm({ ...form, website_url: v })} placeholder="https://" />
             <Field label="Privacy policy URL" v={form.privacy_policy_url} on={(v) => setForm({ ...form, privacy_policy_url: v })} placeholder="https://" />
             <Field label="Contact email" v={form.contact_email} on={(v) => setForm({ ...form, contact_email: v })} type="email" />
+            <Field label="Business phone" v={form.phone} on={(v) => setForm({ ...form, phone: v })} placeholder="+15551234567" />
           </div>
           <div className="flex justify-end">
             <Button onClick={async () => { await saveProfile.mutateAsync(); setStep(2); }} disabled={saveProfile.isPending}>Continue</Button>
