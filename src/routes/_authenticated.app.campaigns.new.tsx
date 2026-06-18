@@ -33,6 +33,7 @@ type State = {
   name: string;
   include: string[];
   exclude: string[];
+  profileIds: string[];
   body: string;
   mediaUrl: string;
   sendMode: "now" | "scheduled" | "smart";
@@ -48,7 +49,7 @@ function NewCampaignPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<StepIdx>(0);
   const [s, setS] = useState<State>({
-    name: "", include: [], exclude: [], body: "", mediaUrl: "",
+    name: "", include: [], exclude: [], profileIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
   });
 
