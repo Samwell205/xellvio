@@ -123,7 +123,7 @@ function StatusCard({ asset, accountPhone }: { asset: any; accountPhone?: string
           </div>
           <Badge variant="default">Active</Badge>
         </div>
-        <TestSendInline />
+        <TestSendInline defaultPhone={accountPhone} country={asset.country_code} />
       </Card>
     );
   }
