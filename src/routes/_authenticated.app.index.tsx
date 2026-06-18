@@ -16,8 +16,11 @@ function OnboardingBanner() {
     queryKey: ["account", "onboarding-status"],
     queryFn: async () => (await supabase.from("accounts").select("onboarding_status").maybeSingle()).data,
   });
+  const senders = useQuery({
+    queryKey: ["sender-assets-banner"],
+    queryFn: async () => (await supabase.from("sender_assets").select("verification_status,country_code,phone_number,friendly_rejection_reason").order("created_at", { ascending: false })).data ?? [],
+  });
   const status = account.data?.onboarding_status;
-  if (!status || status === "active") return null;
   if (status === "suspended") {
     return (
       <Card className="p-4 border-destructive/40 bg-destructive/5 flex items-center gap-3">
@@ -29,14 +32,44 @@ function OnboardingBanner() {
       </Card>
     );
   }
+  const list = senders.data ?? [];
+  const verified = list.find((s) => s.verification_status === "verified");
+  const pending = list.find((s) => s.verification_status === "submitted" || s.verification_status === "in_review");
+  const rejected = list.find((s) => s.verification_status === "rejected");
+
+  if (verified) return null;
+  if (rejected) {
+    return (
+      <Card className="p-4 border-destructive/40 bg-destructive/5 flex items-center gap-3">
+        <AlertTriangle className="size-5 text-destructive" />
+        <div className="flex-1">
+          <div className="font-semibold">We need a bit more info</div>
+          <div className="text-sm text-muted-foreground">{rejected.friendly_rejection_reason ?? "Please update your details and try again."}</div>
+        </div>
+        <Link to="/app/setup-sms"><Button size="sm">Fix and resubmit</Button></Link>
+      </Card>
+    );
+  }
+  if (pending) {
+    return (
+      <Card className="p-4 border-primary/40 bg-primary/5 flex items-center gap-3">
+        <Building2 className="size-5 text-primary" />
+        <div className="flex-1">
+          <div className="font-semibold">Setting up your SMS number</div>
+          <div className="text-sm text-muted-foreground">This usually takes 7–10 business days. You can keep building campaigns in the meantime.</div>
+        </div>
+        <Link to="/app/setup-sms"><Button size="sm" variant="outline">View status</Button></Link>
+      </Card>
+    );
+  }
   return (
     <Card className="p-4 border-primary/40 bg-primary/5 flex items-center gap-3">
       <Building2 className="size-5 text-primary" />
       <div className="flex-1">
-        <div className="font-semibold">Finish setting up your business</div>
-        <div className="text-sm text-muted-foreground">Complete your business profile to enable sender provisioning.</div>
+        <div className="font-semibold">Set up SMS</div>
+        <div className="text-sm text-muted-foreground">Get your sender number in a few clicks — we handle the rest.</div>
       </div>
-      <Link to="/app/onboarding"><Button size="sm">Continue setup <ArrowRight className="size-4 ml-1.5" /></Button></Link>
+      <Link to="/app/setup-sms"><Button size="sm">Get started <ArrowRight className="size-4 ml-1.5" /></Button></Link>
     </Card>
   );
 }
