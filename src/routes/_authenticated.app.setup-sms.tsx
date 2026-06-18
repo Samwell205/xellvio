@@ -396,6 +396,17 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <Label>Your Sender ID</Label>
+            <Input
+              value={form.customSenderId}
+              onChange={(e) => setForm({ ...form, customSenderId: e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 11) })}
+              placeholder="SAMWELLAGEN"
+              maxLength={11}
+            />
+            <p className="text-xs text-muted-foreground">Use 3–11 letters or numbers. Countries that support alphanumeric Sender ID will send from this name; US/Canada still use a number.</p>
+          </div>
+
           <div className="space-y-2">
             <Label>Roughly how many messages per month?</Label>
             <div className="grid sm:grid-cols-2 gap-2">
@@ -450,8 +461,8 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
           <Sparkles className="size-12 text-primary mx-auto" />
           <h3 className="text-xl font-bold">You're all set</h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            We'll provision your sender number and submit the carrier registration in the background.
-            You'll get an email when your SMS is ready — usually within 7–10 business days.
+            We'll save your Sender ID for supported countries and submit any required carrier registration in the background.
+            You can test each ready sender from this page.
           </p>
           <div className="pt-2 flex justify-center gap-3">
             <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
