@@ -115,6 +115,24 @@ function AudiencePage() {
     onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
 
+  const deleteContact = useMutation({
+    mutationFn: async (row: ProfileRow) => {
+      const { data: u } = await supabase.auth.getUser();
+      const accountId = u.user!.id;
+      await supabase.from("suppressions").delete()
+        .eq("account_id", accountId).eq("phone_e164", row.phone_e164);
+      const { error } = await supabase.from("profiles").delete().eq("id", row.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Contact deleted");
+      qc.invalidateQueries({ queryKey: ["audience-profiles"] });
+      qc.invalidateQueries({ queryKey: ["audience-stats"] });
+      qc.invalidateQueries({ queryKey: ["suppressions"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed to delete"),
+  });
+
   function downloadTemplate() {
     const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
