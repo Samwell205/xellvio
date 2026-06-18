@@ -130,7 +130,7 @@ function TollFreeSearch() {
       {sQ.data?.items && (
         <div className="divide-y border rounded-lg">
           {sQ.data.items.length === 0 && <div className="p-4 text-sm text-muted-foreground">No numbers found.</div>}
-          {sQ.data.items.map((n) => (
+          {sQ.data.items.map((n: { phone_number: string; friendly_name: string; locality: string | null; region: string | null }) => (
             <div key={n.phone_number} className="flex items-center gap-3 p-3">
               <div className="flex-1">
                 <div className="font-mono font-medium">{n.phone_number}</div>

@@ -18,6 +18,7 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
 import { Route as AuthenticatedAppSendRouteImport } from './routes/_authenticated.app.send'
 import { Route as AuthenticatedAppReportsRouteImport } from './routes/_authenticated.app.reports'
+import { Route as AuthenticatedAppNumbersRouteImport } from './routes/_authenticated.app.numbers'
 import { Route as AuthenticatedAppContactsRouteImport } from './routes/_authenticated.app.contacts'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
@@ -68,6 +69,11 @@ const AuthenticatedAppReportsRoute = AuthenticatedAppReportsRouteImport.update({
   path: '/app/reports',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAppNumbersRoute = AuthenticatedAppNumbersRouteImport.update({
+  id: '/app/numbers',
+  path: '/app/numbers',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAppContactsRoute =
   AuthenticatedAppContactsRouteImport.update({
     id: '/app/contacts',
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
   '/app/contacts': typeof AuthenticatedAppContactsRoute
+  '/app/numbers': typeof AuthenticatedAppNumbersRoute
   '/app/reports': typeof AuthenticatedAppReportsRoute
   '/app/send': typeof AuthenticatedAppSendRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
   '/app/contacts': typeof AuthenticatedAppContactsRoute
+  '/app/numbers': typeof AuthenticatedAppNumbersRoute
   '/app/reports': typeof AuthenticatedAppReportsRoute
   '/app/send': typeof AuthenticatedAppSendRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRoute
   '/_authenticated/app/contacts': typeof AuthenticatedAppContactsRoute
+  '/_authenticated/app/numbers': typeof AuthenticatedAppNumbersRoute
   '/_authenticated/app/reports': typeof AuthenticatedAppReportsRoute
   '/_authenticated/app/send': typeof AuthenticatedAppSendRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/campaigns'
     | '/app/contacts'
+    | '/app/numbers'
     | '/app/reports'
     | '/app/send'
     | '/app/settings'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/campaigns'
     | '/app/contacts'
+    | '/app/numbers'
     | '/app/reports'
     | '/app/send'
     | '/app/settings'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
     | '/_authenticated/app/contacts'
+    | '/_authenticated/app/numbers'
     | '/_authenticated/app/reports'
     | '/_authenticated/app/send'
     | '/_authenticated/app/settings'
@@ -254,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppReportsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/numbers': {
+      id: '/_authenticated/app/numbers'
+      path: '/app/numbers'
+      fullPath: '/app/numbers'
+      preLoaderRoute: typeof AuthenticatedAppNumbersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/contacts': {
       id: '/_authenticated/app/contacts'
       path: '/app/contacts'
@@ -290,6 +309,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRoute
   AuthenticatedAppContactsRoute: typeof AuthenticatedAppContactsRoute
+  AuthenticatedAppNumbersRoute: typeof AuthenticatedAppNumbersRoute
   AuthenticatedAppReportsRoute: typeof AuthenticatedAppReportsRoute
   AuthenticatedAppSendRoute: typeof AuthenticatedAppSendRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
@@ -301,6 +321,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRoute,
   AuthenticatedAppContactsRoute: AuthenticatedAppContactsRoute,
+  AuthenticatedAppNumbersRoute: AuthenticatedAppNumbersRoute,
   AuthenticatedAppReportsRoute: AuthenticatedAppReportsRoute,
   AuthenticatedAppSendRoute: AuthenticatedAppSendRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
