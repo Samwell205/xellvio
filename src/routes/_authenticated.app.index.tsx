@@ -19,7 +19,6 @@ function Overview() {
     queryKey: ["dash-stats"],
     refetchInterval: 10_000,
     refetchOnWindowFocus: true,
-    queryKey: ["dash-stats"],
     queryFn: async () => {
       const [{ count: total }, { count: delivered }, { count: failed }, { data: wallet }, { data: recent }] = await Promise.all([
         supabase.from("messages").select("*", { count: "exact", head: true }),
