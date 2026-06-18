@@ -83,13 +83,14 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
     opt_in_screenshot_url: data.optInScreenshotPath ?? null,
   }).eq("id", userId);
 
-  let subSid = acct.twilio_subaccount_sid as string | null;
-  let subToken: string;
+  let subSid = (acct.twilio_subaccount_sid as string | null) ?? "";
+  let subToken = "";
+  const accountName = acct.legal_business_name;
   async function createReplacementSubaccount() {
     const master = masterAuth();
     const sub = await twilio<{ sid: string; auth_token: string }>(`${TWILIO_API}/Accounts.json`, {
       method: "POST", sid: master.sid, token: master.token,
-      body: { FriendlyName: `${acct.legal_business_name} (tenant:${userId.slice(0, 8)})` },
+      body: { FriendlyName: `${accountName} (tenant:${userId.slice(0, 8)})` },
     });
     subSid = sub.sid;
     subToken = sub.auth_token;
