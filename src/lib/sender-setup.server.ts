@@ -85,7 +85,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   let subSid = acct.twilio_subaccount_sid as string | null;
   let subToken: string;
-  if (!subSid) {
+  async function createReplacementSubaccount() {
     const master = masterAuth();
     const sub = await twilio<{ sid: string; auth_token: string }>(`${TWILIO_API}/Accounts.json`, {
       method: "POST", sid: master.sid, token: master.token,
@@ -98,9 +98,16 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       twilio_subaccount_auth_token_enc: encryptToken(subToken) as any,
       onboarding_status: "sender_pending",
     }).eq("id", userId);
+  }
+
+  if (!subSid || !acct.twilio_subaccount_auth_token_enc) {
+    await createReplacementSubaccount();
   } else {
-    if (!acct.twilio_subaccount_auth_token_enc) throw new Error("Subaccount token missing");
-    subToken = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+    try {
+      subToken = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+    } catch {
+      await createReplacementSubaccount();
+    }
   }
 
   const created: string[] = [];
