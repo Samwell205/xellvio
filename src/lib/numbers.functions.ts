@@ -211,7 +211,7 @@ export const reviewSenderId = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => reviewSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+    const { data: isAdmin } = await supabase.rpc("has_role", { _role: "admin" });
     if (!isAdmin) throw new Error("Forbidden");
     const { error } = await supabase.from("sender_ids").update({
       status: data.decision, review_note: data.note, reviewed_at: new Date().toISOString(), reviewed_by: userId,
