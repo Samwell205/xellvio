@@ -18,11 +18,15 @@ async function statusCallbackUrl(): Promise<string> {
 
 type Rate = { country_code: string; dial_prefix: string; sell_price: number; mms_multiplier: number; active: boolean };
 
+type Sender =
+  | { kind: "platform"; lovableKey: string; twilioKey: string; messagingService: string }
+  | { kind: "tenant"; subaccountSid: string; subaccountToken: string; fromNumber: string };
+
 async function dispatchOne(
   supabaseAdmin: any,
   campaign: any,
   rates: Rate[],
-  twilio: { lovableKey: string; twilioKey: string; messagingService: string },
+  sender: Sender,
 ): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string }> {
   await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
 
