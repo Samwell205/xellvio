@@ -306,7 +306,7 @@ export const setupSms = createServerFn({ method: "POST" })
         });
 
         let verificationSid: string | null = null;
-        let status: "submitted" | "verified" = kind === "toll_free" ? "submitted" : "verified";
+        const status: "submitted" | "verified" = kind === "toll_free" ? "submitted" : "verified";
 
         if (kind === "toll_free") {
           // Build absolute opt-in screenshot URL (signed) if uploaded
