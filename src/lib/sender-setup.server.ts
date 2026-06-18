@@ -108,11 +108,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       if (!isSubaccountLimitError(e)) throw e;
       subSid = master.sid;
       subToken = master.token;
-      await supabaseAdmin.from("accounts").update({
-        twilio_subaccount_sid: subSid,
-        twilio_subaccount_auth_token_enc: encryptToken(subToken) as any,
-        onboarding_status: "sender_pending",
-      }).eq("id", userId);
+      await supabaseAdmin.from("accounts").update({ onboarding_status: "sender_pending" }).eq("id", userId);
     }
   }
 
@@ -295,10 +291,12 @@ export async function syncToollfreeVerifications(opts: { onlyAccountId?: string 
       const { data: acct } = await supabaseAdmin.from("accounts")
         .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
         .eq("id", sa.account_id).maybeSingle();
-      if (!acct?.twilio_subaccount_sid || !acct.twilio_subaccount_auth_token_enc) {
-        byAccount.set(sa.account_id, null); continue;
+      if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc) {
+        creds = { subSid: acct.twilio_subaccount_sid, token: decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string) };
+      } else {
+        const master = masterAuth();
+        creds = { subSid: master.sid, token: master.token };
       }
-      creds = { subSid: acct.twilio_subaccount_sid, token: decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string) };
       byAccount.set(sa.account_id, creds);
     }
     if (!creds) continue;
