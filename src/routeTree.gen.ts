@@ -24,11 +24,14 @@ import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.publ
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
 import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
+import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
+import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
 import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenticated.app.audience'
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
+import { Route as AuthenticatedAppAdminRatesRouteImport } from './routes/_authenticated.app.admin.rates'
 
 const SolutionsRoute = SolutionsRouteImport.update({
   id: '/solutions',
@@ -108,12 +111,23 @@ const AuthenticatedAppSegmentsRoute =
     path: '/app/segments',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppPricingCalculatorRoute =
+  AuthenticatedAppPricingCalculatorRouteImport.update({
+    id: '/app/pricing-calculator',
+    path: '/app/pricing-calculator',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppCampaignsRoute =
   AuthenticatedAppCampaignsRouteImport.update({
     id: '/app/campaigns',
     path: '/app/campaigns',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppBillingRoute = AuthenticatedAppBillingRouteImport.update({
+  id: '/app/billing',
+  path: '/app/billing',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAppAudienceRoute =
   AuthenticatedAppAudienceRouteImport.update({
     id: '/app/audience',
@@ -138,6 +152,12 @@ const AuthenticatedAppCampaignsIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const AuthenticatedAppAdminRatesRoute =
+  AuthenticatedAppAdminRatesRouteImport.update({
+    id: '/app/admin/rates',
+    path: '/app/admin/rates',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -148,7 +168,9 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
+  '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
+  '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
@@ -156,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -169,7 +192,9 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
+  '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
+  '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
@@ -177,6 +202,7 @@ export interface FileRoutesByTo {
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -192,7 +218,9 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
   '/_authenticated/app/audience': typeof AuthenticatedAppAudienceRoute
+  '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
+  '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
@@ -200,6 +228,7 @@ export interface FileRoutesById {
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -215,7 +244,9 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/solutions'
     | '/app/audience'
+    | '/app/billing'
     | '/app/campaigns'
+    | '/app/pricing-calculator'
     | '/app/segments'
     | '/app/settings'
     | '/app/suppressions'
@@ -223,6 +254,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app/'
+    | '/app/admin/rates'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -236,7 +268,9 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/solutions'
     | '/app/audience'
+    | '/app/billing'
     | '/app/campaigns'
+    | '/app/pricing-calculator'
     | '/app/segments'
     | '/app/settings'
     | '/app/suppressions'
@@ -244,6 +278,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app'
+    | '/app/admin/rates'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -258,7 +293,9 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/solutions'
     | '/_authenticated/app/audience'
+    | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
+    | '/_authenticated/app/pricing-calculator'
     | '/_authenticated/app/segments'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/suppressions'
@@ -266,6 +303,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/_authenticated/app/'
+    | '/_authenticated/app/admin/rates'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
@@ -392,11 +430,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSegmentsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/pricing-calculator': {
+      id: '/_authenticated/app/pricing-calculator'
+      path: '/app/pricing-calculator'
+      fullPath: '/app/pricing-calculator'
+      preLoaderRoute: typeof AuthenticatedAppPricingCalculatorRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/campaigns': {
       id: '/_authenticated/app/campaigns'
       path: '/app/campaigns'
       fullPath: '/app/campaigns'
       preLoaderRoute: typeof AuthenticatedAppCampaignsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/billing': {
+      id: '/_authenticated/app/billing'
+      path: '/app/billing'
+      fullPath: '/app/billing'
+      preLoaderRoute: typeof AuthenticatedAppBillingRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app/audience': {
@@ -426,6 +478,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/campaigns/$id'
       preLoaderRoute: typeof AuthenticatedAppCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
+    }
+    '/_authenticated/app/admin/rates': {
+      id: '/_authenticated/app/admin/rates'
+      path: '/app/admin/rates'
+      fullPath: '/app/admin/rates'
+      preLoaderRoute: typeof AuthenticatedAppAdminRatesRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
@@ -462,20 +521,27 @@ const AuthenticatedAppSegmentsRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAppAudienceRoute: typeof AuthenticatedAppAudienceRoute
+  AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
+  AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
   AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppAdminRatesRoute: typeof AuthenticatedAppAdminRatesRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppAudienceRoute: AuthenticatedAppAudienceRoute,
+  AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
+  AuthenticatedAppPricingCalculatorRoute:
+    AuthenticatedAppPricingCalculatorRoute,
   AuthenticatedAppSegmentsRoute: AuthenticatedAppSegmentsRouteWithChildren,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppAdminRatesRoute: AuthenticatedAppAdminRatesRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
