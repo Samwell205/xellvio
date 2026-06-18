@@ -26,7 +26,7 @@ function AdminPage() {
   const review = useServerFn(reviewSenderId);
   const q = useQuery({
     queryKey: ["admin-sender-ids"],
-    queryFn: async () => (await supabase.from("sender_ids").select("*, profiles:user_id(email, full_name)").order("created_at", { ascending: false })).data ?? [],
+    queryFn: async () => (await supabase.from("sender_ids").select("*").order("created_at", { ascending: false })).data ?? [],
   });
   const [notes, setNotes] = useState<Record<string, string>>({});
   const mut = useMutation({
