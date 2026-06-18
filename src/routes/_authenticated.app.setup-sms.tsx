@@ -131,6 +131,37 @@ function StatusCard({ asset }: { asset: any }) {
   );
 }
 
+function TestSendInline() {
+  const send = useServerFn(sendTestSms);
+  const [to, setTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function run() {
+    if (!to.match(/^\+[1-9][0-9]{6,14}$/)) {
+      toast.error("Enter phone in E.164 format, e.g. +15551234567");
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await send({ data: { to, body: "Test from Samwell Global SMS — your sender is working ✅ Reply STOP to opt out." } });
+      toast.success(`Test sent (sid ${r.sid.slice(0, 10)}…)`);
+    } catch (e: any) { toast.error(e.message ?? "Test send failed"); }
+    finally { setBusy(false); }
+  }
+  return (
+    <div className="border-t pt-4">
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Send a test message</Label>
+      <p className="text-xs text-muted-foreground mb-2">Verify your credentials with one real SMS before launching campaigns.</p>
+      <div className="flex gap-2">
+        <Input placeholder="+15551234567" value={to} onChange={(e) => setTo(e.target.value)} />
+        <Button onClick={run} disabled={busy}>
+          {busy ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Send className="size-4 mr-1.5" />}
+          Send test
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 type WizardForm = {
   legal_business_name: string;
   business_address: string;
