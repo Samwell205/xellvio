@@ -126,7 +126,7 @@ async function dispatchOne(
           try {
             await supabaseAdmin.rpc("debit_account", {
               _account_id: campaign.account_id,
-              _amount: m.cost,
+              _amount: Number(m.cost),
               _campaign_id: campaign.id,
               _description: `SMS → ${m.phone_e164} (${m.country_code ?? "??"}) × ${m.segments_count}`,
             });
