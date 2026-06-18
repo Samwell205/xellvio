@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { calculateSegments } from "@/lib/sms-segments";
+import { countryFromPhone } from "@/lib/country-from-phone";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 const BATCH_SIZE = 500;
@@ -10,18 +12,18 @@ function render(body: string, p: { first_name?: string | null; last_name?: strin
 }
 
 async function statusCallbackUrl(): Promise<string> {
-  // Stable preview URL — Twilio statusCallback target. Use production if you publish.
-  const base = process.env.PUBLIC_BASE_URL
-    ?? "https://samwell-reach-global.lovable.app";
+  const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
   return `${base}/api/public/twilio-status`;
 }
+
+type Rate = { country_code: string; dial_prefix: string; sell_price: number; mms_multiplier: number; active: boolean };
 
 async function dispatchOne(
   supabaseAdmin: any,
   campaign: any,
+  rates: Rate[],
   twilio: { lovableKey: string; twilioKey: string; messagingService: string },
-): Promise<{ queued: number; failed: number }> {
-  // Mark sending
+): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string }> {
   await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
 
   const { data: recipients, error } = await supabaseAdmin.rpc("eligible_profile_ids", {
@@ -31,26 +33,61 @@ async function dispatchOne(
   if (error) throw error;
 
   const list = (recipients ?? []) as any[];
+  if (list.length === 0) {
+    await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
+    return { queued: 0, failed: 0, debited: 0, cost: 0 };
+  }
+
+  // Compute segments once per recipient (after personalization)
+  const dial = rates.map((r) => ({ country_code: r.country_code, dial_prefix: r.dial_prefix }));
+  const rateByCC: Record<string, Rate> = {};
+  for (const r of rates) rateByCC[r.country_code] = r;
+  const hasMedia = !!campaign.media_url;
+
+  const enriched = list.map((p) => {
+    const body = render(campaign.message_body, p);
+    const seg = calculateSegments(body);
+    const cc = p.country_code || countryFromPhone(p.phone_e164, dial);
+    const rate = cc ? rateByCC[cc] : undefined;
+    const unit = rate ? Number(rate.sell_price) : 0;
+    const mult = hasMedia && rate ? Number(rate.mms_multiplier) : 1;
+    const cost = +(seg.segments * unit * mult).toFixed(4);
+    return { ...p, body, segments: seg.segments, country_code: cc, cost };
+  });
+
+  const totalCost = +enriched.reduce((s, x) => s + x.cost, 0).toFixed(4);
+
+  // Balance check up front
+  const { data: acct, error: aErr } = await supabaseAdmin
+    .from("accounts").select("credit_balance").eq("id", campaign.account_id).maybeSingle();
+  if (aErr || !acct) throw new Error("Account lookup failed");
+  if (Number(acct.credit_balance) < totalCost) {
+    await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
+    return { queued: 0, failed: list.length, debited: 0, cost: totalCost, skipped: "insufficient_balance" };
+  }
+
   const callback = await statusCallbackUrl();
   let queued = 0;
   let failed = 0;
+  let debited = 0;
 
-  for (let i = 0; i < list.length; i += BATCH_SIZE) {
-    const batch = list.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < enriched.length; i += BATCH_SIZE) {
+    const batch = enriched.slice(i, i + BATCH_SIZE);
 
-    // Pre-insert message rows as queued
     const rows = batch.map((p) => ({
       campaign_id: campaign.id,
       profile_id: p.profile_id,
       phone_e164: p.phone_e164,
-      rendered_body: render(campaign.message_body, p),
+      country_code: p.country_code,
+      segments_count: p.segments,
+      cost: p.cost,
+      rendered_body: p.body,
       status: "queued",
     }));
     const { data: inserted, error: insErr } = await supabaseAdmin
-      .from("messages").insert(rows).select("id, phone_e164, rendered_body");
+      .from("messages").insert(rows).select("id, phone_e164, rendered_body, country_code, segments_count, cost");
     if (insErr) { failed += rows.length; continue; }
 
-    // Fire to Twilio in parallel (bounded)
     await Promise.all((inserted ?? []).map(async (m: any) => {
       try {
         const body = new URLSearchParams({
@@ -77,12 +114,29 @@ async function dispatchOne(
           }).eq("id", m.id);
           failed++;
         } else {
+          const providerSegments = Number(json.num_segments ?? m.segments_count ?? 1);
           await supabaseAdmin.from("messages").update({
             status: "sent",
             provider_message_id: json.sid,
             sent_at: new Date().toISOString(),
-            segments_count: Number(json.num_segments ?? 1),
+            segments_count: providerSegments,
           }).eq("id", m.id);
+
+          // Debit the account for this message
+          try {
+            await supabaseAdmin.rpc("debit_account", {
+              _account_id: campaign.account_id,
+              _amount: Number(m.cost),
+              _campaign_id: campaign.id,
+              _description: `SMS → ${m.phone_e164} (${m.country_code ?? "??"}) × ${m.segments_count}`,
+            });
+            debited += Number(m.cost);
+          } catch (e) {
+            // balance was pre-checked; log via events table
+            await supabaseAdmin.from("events").insert({
+              message_id: m.id, type: "debit_failed", payload: { error: String(e) },
+            });
+          }
           queued++;
         }
       } catch (e) {
@@ -93,14 +147,13 @@ async function dispatchOne(
   }
 
   await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
-  return { queued, failed };
+  return { queued, failed, debited: +debited.toFixed(4), cost: totalCost };
 }
 
 export const Route = createFileRoute("/api/public/dispatch-campaign")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // Auth: require Supabase publishable key in apikey header
         const apiKey = request.headers.get("apikey");
         if (!apiKey || apiKey !== process.env.SUPABASE_PUBLISHABLE_KEY) {
           return new Response("Unauthorized", { status: 401 });
@@ -115,7 +168,10 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Pick up: explicitly-queued (Send now) + scheduled-due
+        const { data: ratesRows } = await supabaseAdmin
+          .from("country_rates").select("country_code,dial_prefix,sell_price,mms_multiplier,active").eq("active", true);
+        const rates = (ratesRows ?? []) as Rate[];
+
         const nowIso = new Date().toISOString();
         const { data: due, error } = await supabaseAdmin
           .from("campaigns")
@@ -127,7 +183,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         const results: any[] = [];
         for (const c of due ?? []) {
           try {
-            const r = await dispatchOne(supabaseAdmin, c, { lovableKey, twilioKey, messagingService });
+            const r = await dispatchOne(supabaseAdmin, c, rates, { lovableKey, twilioKey, messagingService });
             results.push({ id: c.id, ...r });
           } catch (e: any) {
             await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);

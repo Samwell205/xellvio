@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, Settings2 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -13,6 +14,8 @@ const items = [
   { title: "Segments", url: "/app/segments", icon: Filter },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff },
   { title: "Campaigns", url: "/app/campaigns", icon: Megaphone },
+  { title: "Billing", url: "/app/billing", icon: Wallet },
+  { title: "SMS Pricing", url: "/app/pricing-calculator", icon: Calculator },
   { title: "Settings", url: "/app/settings", icon: Settings },
 ];
 
@@ -21,6 +24,11 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (url: string, exact?: boolean) => exact ? pathname === url : pathname === url || pathname.startsWith(url + "/");
+
+  const isAdmin = useQuery({
+    queryKey: ["is-admin"],
+    queryFn: async () => (await supabase.rpc("has_role", { _role: "admin" })).data === true,
+  });
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -50,6 +58,23 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {isAdmin.data && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/app/admin/rates")}>
+                    <Link to="/app/admin/rates" className="flex items-center gap-3">
+                      <Settings2 className="size-4" />
+                      {!collapsed && <span>Rate management</span>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter className="border-t">
         <SidebarMenu>
