@@ -53,9 +53,14 @@ export const sendTestSms = createServerFn({ method: "POST" })
       );
     }
 
-    const accountAuth = acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc
-      ? { sid: acct.twilio_subaccount_sid, token: decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string) }
-      : mainSmsAuth();
+    let accountAuth = mainSmsAuth();
+    if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc) {
+      try {
+        accountAuth = { sid: acct.twilio_subaccount_sid, token: decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string) };
+      } catch {
+        accountAuth = mainSmsAuth();
+      }
+    }
 
     const body = new URLSearchParams({
       To: data.to,
