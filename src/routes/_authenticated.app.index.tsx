@@ -79,6 +79,8 @@ function Overview() {
       </div>
 
 
+      <OnboardingBanner />
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={Users} label="Subscribed contacts" value={s?.subscribed ?? 0} />
         <Stat icon={Megaphone} label="Campaigns sent" value={s?.campaignsSent ?? 0} />
