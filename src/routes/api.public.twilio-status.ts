@@ -44,7 +44,7 @@ export const Route = createFileRoute("/api/public/twilio-status")({
           .from("messages").select("id").eq("provider_message_id", sid).maybeSingle();
         if (!msg) return new Response("ok"); // unknown — ignore
 
-        const update: Record<string, any> = { status };
+        const update: { status: string; delivered_at?: string; error_code?: string } = { status };
         if (status === "delivered") update.delivered_at = new Date().toISOString();
         if (errorCode) update.error_code = errorCode;
         await supabaseAdmin.from("messages").update(update).eq("id", msg.id);

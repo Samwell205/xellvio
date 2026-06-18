@@ -18,6 +18,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
+import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
@@ -70,6 +71,11 @@ const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/app/',
   path: '/app/',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const ApiPublicTwilioStatusRoute = ApiPublicTwilioStatusRouteImport.update({
+  id: '/api/public/twilio-status',
+  path: '/api/public/twilio-status',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicDispatchCampaignRoute =
   ApiPublicDispatchCampaignRouteImport.update({
@@ -134,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/twilio-status'
     | '/app/'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/twilio-status'
     | '/app'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/twilio-status'
     | '/_authenticated/app/'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
@@ -244,6 +256,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   SolutionsRoute: typeof SolutionsRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
+  ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/twilio-status': {
+      id: '/api/public/twilio-status'
+      path: '/api/public/twilio-status'
+      fullPath: '/api/public/twilio-status'
+      preLoaderRoute: typeof ApiPublicTwilioStatusRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/dispatch-campaign': {
       id: '/api/public/dispatch-campaign'
@@ -430,6 +450,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   SolutionsRoute: SolutionsRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
+  ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
