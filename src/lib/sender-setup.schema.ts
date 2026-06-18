@@ -6,7 +6,10 @@ const SenderIdSchema = z.preprocess(
     const cleaned = value.trim().toUpperCase();
     return cleaned === "" ? undefined : cleaned;
   },
-  z.string().regex(/^[A-Z0-9]{3,11}$/, "Sender ID must be 3–11 letters or numbers").optional(),
+  z
+    .string()
+    .regex(/^[A-Z0-9]{3,11}$/, "Sender ID must be 3–11 letters or numbers")
+    .optional(),
 );
 
 export const SetupInput = z.object({

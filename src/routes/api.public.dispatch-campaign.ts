@@ -16,11 +16,28 @@ async function statusCallbackUrl(): Promise<string> {
   return `${base}/api/public/twilio-status`;
 }
 
-type Rate = { country_code: string; dial_prefix: string; sell_price: number; mms_multiplier: number; active: boolean };
+type Rate = {
+  country_code: string;
+  dial_prefix: string;
+  sell_price: number;
+  mms_multiplier: number;
+  active: boolean;
+};
 
 type Sender =
   | { kind: "platform"; lovableKey: string; twilioKey: string; messagingService: string }
-  | { kind: "tenant"; subaccountSid: string; subaccountToken: string; messagingService?: string; fromNumber?: string; assets?: Array<{ country_code: string; messaging_service_sid?: string | null; phone_number?: string | null }> };
+  | {
+      kind: "tenant";
+      subaccountSid: string;
+      subaccountToken: string;
+      messagingService?: string;
+      fromNumber?: string;
+      assets?: Array<{
+        country_code: string;
+        messaging_service_sid?: string | null;
+        phone_number?: string | null;
+      }>;
+    };
 
 function mainSmsAuth() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -70,11 +87,20 @@ async function dispatchOne(
 
   // Balance check up front
   const { data: acct, error: aErr } = await supabaseAdmin
-    .from("accounts").select("credit_balance").eq("id", campaign.account_id).maybeSingle();
+    .from("accounts")
+    .select("credit_balance")
+    .eq("id", campaign.account_id)
+    .maybeSingle();
   if (aErr || !acct) throw new Error("Account lookup failed");
   if (Number(acct.credit_balance) < totalCost) {
     await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
-    return { queued: 0, failed: list.length, debited: 0, cost: totalCost, skipped: "insufficient_balance" };
+    return {
+      queued: 0,
+      failed: list.length,
+      debited: 0,
+      cost: totalCost,
+      skipped: "insufficient_balance",
+    };
   }
 
   const callback = await statusCallbackUrl();
@@ -96,87 +122,117 @@ async function dispatchOne(
       status: "queued",
     }));
     const { data: inserted, error: insErr } = await supabaseAdmin
-      .from("messages").insert(rows).select("id, phone_e164, rendered_body, country_code, segments_count, cost");
-    if (insErr) { failed += rows.length; continue; }
+      .from("messages")
+      .insert(rows)
+      .select("id, phone_e164, rendered_body, country_code, segments_count, cost");
+    if (insErr) {
+      failed += rows.length;
+      continue;
+    }
 
-    await Promise.all((inserted ?? []).map(async (m: any) => {
-      try {
-        const body = new URLSearchParams({
-          To: m.phone_e164,
-          Body: m.rendered_body,
-          StatusCallback: callback,
-        });
-        if (sender.kind === "tenant") {
-          const matchedSender = sender.assets?.find((asset) => asset.country_code === m.country_code && (asset.messaging_service_sid || asset.phone_number));
-          const messagingService = matchedSender?.messaging_service_sid ?? sender.messagingService;
-          const fromNumber = matchedSender?.phone_number ?? sender.fromNumber;
-          if (messagingService) body.append("MessagingServiceSid", messagingService);
-          else body.append("From", fromNumber!);
-        } else {
-          body.append("MessagingServiceSid", sender.messagingService);
-        }
-        if (campaign.media_url) body.append("MediaUrl", campaign.media_url);
-
-        const fetchInit: RequestInit = sender.kind === "tenant"
-          ? {
-              method: "POST",
-              headers: {
-                Authorization: "Basic " + Buffer.from(`${sender.subaccountSid}:${sender.subaccountToken}`).toString("base64"),
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body,
-            }
-          : {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${sender.lovableKey}`,
-                "X-Connection-Api-Key": sender.twilioKey,
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body,
-            };
-
-        const url = sender.kind === "tenant"
-          ? `https://api.twilio.com/2010-04-01/Accounts/${sender.subaccountSid}/Messages.json`
-          : `${GATEWAY_URL}/Messages.json`;
-        const res = await fetch(url, fetchInit);
-        const json: any = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          await supabaseAdmin.from("messages").update({
-            status: "failed", error_code: String(json?.code ?? res.status),
-          }).eq("id", m.id);
-          failed++;
-        } else {
-          const providerSegments = Number(json.num_segments ?? m.segments_count ?? 1);
-          await supabaseAdmin.from("messages").update({
-            status: "sent",
-            provider_message_id: json.sid,
-            sent_at: new Date().toISOString(),
-            segments_count: providerSegments,
-          }).eq("id", m.id);
-
-          // Debit the account for this message
-          try {
-            await supabaseAdmin.rpc("debit_account", {
-              _account_id: campaign.account_id,
-              _amount: Number(m.cost),
-              _campaign_id: campaign.id,
-              _description: `SMS → ${m.phone_e164} (${m.country_code ?? "??"}) × ${m.segments_count}`,
-            });
-            debited += Number(m.cost);
-          } catch (e) {
-            // balance was pre-checked; log via events table
-            await supabaseAdmin.from("events").insert({
-              message_id: m.id, type: "debit_failed", payload: { error: String(e) },
-            });
+    await Promise.all(
+      (inserted ?? []).map(async (m: any) => {
+        try {
+          const body = new URLSearchParams({
+            To: m.phone_e164,
+            Body: m.rendered_body,
+            StatusCallback: callback,
+          });
+          if (sender.kind === "tenant") {
+            const matchedSender = sender.assets?.find(
+              (asset) =>
+                asset.country_code === m.country_code &&
+                (asset.messaging_service_sid || asset.phone_number),
+            );
+            const messagingService =
+              matchedSender?.messaging_service_sid ?? sender.messagingService;
+            const fromNumber = matchedSender?.phone_number ?? sender.fromNumber;
+            if (messagingService) body.append("MessagingServiceSid", messagingService);
+            else body.append("From", fromNumber!);
+          } else {
+            body.append("MessagingServiceSid", sender.messagingService);
           }
-          queued++;
+          if (campaign.media_url) body.append("MediaUrl", campaign.media_url);
+
+          const fetchInit: RequestInit =
+            sender.kind === "tenant"
+              ? {
+                  method: "POST",
+                  headers: {
+                    Authorization:
+                      "Basic " +
+                      Buffer.from(`${sender.subaccountSid}:${sender.subaccountToken}`).toString(
+                        "base64",
+                      ),
+                    "Content-Type": "application/x-www-form-urlencoded",
+                  },
+                  body,
+                }
+              : {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${sender.lovableKey}`,
+                    "X-Connection-Api-Key": sender.twilioKey,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                  },
+                  body,
+                };
+
+          const url =
+            sender.kind === "tenant"
+              ? `https://api.twilio.com/2010-04-01/Accounts/${sender.subaccountSid}/Messages.json`
+              : `${GATEWAY_URL}/Messages.json`;
+          const res = await fetch(url, fetchInit);
+          const json: any = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            await supabaseAdmin
+              .from("messages")
+              .update({
+                status: "failed",
+                error_code: String(json?.code ?? res.status),
+              })
+              .eq("id", m.id);
+            failed++;
+          } else {
+            const providerSegments = Number(json.num_segments ?? m.segments_count ?? 1);
+            await supabaseAdmin
+              .from("messages")
+              .update({
+                status: "sent",
+                provider_message_id: json.sid,
+                sent_at: new Date().toISOString(),
+                segments_count: providerSegments,
+              })
+              .eq("id", m.id);
+
+            // Debit the account for this message
+            try {
+              await supabaseAdmin.rpc("debit_account", {
+                _account_id: campaign.account_id,
+                _amount: Number(m.cost),
+                _campaign_id: campaign.id,
+                _description: `SMS → ${m.phone_e164} (${m.country_code ?? "??"}) × ${m.segments_count}`,
+              });
+              debited += Number(m.cost);
+            } catch (e) {
+              // balance was pre-checked; log via events table
+              await supabaseAdmin.from("events").insert({
+                message_id: m.id,
+                type: "debit_failed",
+                payload: { error: String(e) },
+              });
+            }
+            queued++;
+          }
+        } catch (e) {
+          await supabaseAdmin
+            .from("messages")
+            .update({ status: "failed", error_code: "exception" })
+            .eq("id", m.id);
+          failed++;
         }
-      } catch (e) {
-        await supabaseAdmin.from("messages").update({ status: "failed", error_code: "exception" }).eq("id", m.id);
-        failed++;
-      }
-    }));
+      }),
+    );
   }
 
   await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
@@ -202,7 +258,9 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         const { data: ratesRows } = await supabaseAdmin
-          .from("country_rates").select("country_code,dial_prefix,sell_price,mms_multiplier,active").eq("active", true);
+          .from("country_rates")
+          .select("country_code,dial_prefix,sell_price,mms_multiplier,active")
+          .eq("active", true);
         const rates = (ratesRows ?? []) as Rate[];
 
         const nowIso = new Date().toISOString();
@@ -218,7 +276,9 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           try {
             const { data: acct } = await supabaseAdmin
               .from("accounts")
-              .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc,subaccount_phone_number,onboarding_status")
+              .select(
+                "twilio_subaccount_sid,twilio_subaccount_auth_token_enc,subaccount_phone_number,onboarding_status",
+              )
               .eq("id", c.account_id)
               .maybeSingle();
 
@@ -234,8 +294,9 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
               .select("verification_status,country_code,phone_number,messaging_service_sid")
               .eq("account_id", c.account_id);
 
-            const verifiedSender = (senderAssets ?? []).find((s: any) =>
-              s.verification_status === "verified" && (s.messaging_service_sid || s.phone_number),
+            const verifiedSender = (senderAssets ?? []).find(
+              (s: any) =>
+                s.verification_status === "verified" && (s.messaging_service_sid || s.phone_number),
             );
             if (senderAssets && senderAssets.length > 0) {
               if (!verifiedSender) {
@@ -246,17 +307,26 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             }
 
             let sender: Sender;
-            if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc && (verifiedSender || acct.subaccount_phone_number)) {
+            if (
+              acct?.twilio_subaccount_sid &&
+              acct.twilio_subaccount_auth_token_enc &&
+              (verifiedSender || acct.subaccount_phone_number)
+            ) {
               const { decryptToken } = await import("@/lib/tenant-crypto.server");
               try {
-                const token = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+                const token = decryptToken(
+                  acct.twilio_subaccount_auth_token_enc as unknown as string,
+                );
                 sender = {
                   kind: "tenant",
                   subaccountSid: acct.twilio_subaccount_sid,
                   subaccountToken: token,
                   messagingService: verifiedSender?.messaging_service_sid ?? undefined,
-                  fromNumber: verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
-                  assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
+                  fromNumber:
+                    verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
+                  assets: (senderAssets ?? []).filter(
+                    (s: any) => s.verification_status === "verified",
+                  ),
                 };
               } catch {
                 const main = mainSmsAuth();
@@ -265,8 +335,11 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
                   subaccountSid: main.sid,
                   subaccountToken: main.token,
                   messagingService: verifiedSender?.messaging_service_sid ?? undefined,
-                  fromNumber: verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
-                  assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
+                  fromNumber:
+                    verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
+                  assets: (senderAssets ?? []).filter(
+                    (s: any) => s.verification_status === "verified",
+                  ),
                 };
               }
             } else if (verifiedSender || acct?.subaccount_phone_number) {
@@ -276,8 +349,11 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
                 subaccountSid: main.sid,
                 subaccountToken: main.token,
                 messagingService: verifiedSender?.messaging_service_sid ?? undefined,
-                fromNumber: verifiedSender?.phone_number ?? acct?.subaccount_phone_number ?? undefined,
-                assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
+                fromNumber:
+                  verifiedSender?.phone_number ?? acct?.subaccount_phone_number ?? undefined,
+                assets: (senderAssets ?? []).filter(
+                  (s: any) => s.verification_status === "verified",
+                ),
               };
             } else {
               sender = { kind: "platform", lovableKey, twilioKey, messagingService };

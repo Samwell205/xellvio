@@ -14,10 +14,16 @@ function basic(sid: string, token: string) {
   return "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
 }
 
-async function twilio<T = any>(url: string, opts: { method?: string; sid: string; token: string; body?: Record<string, string | string[]> }): Promise<T> {
+async function twilio<T = any>(
+  url: string,
+  opts: { method?: string; sid: string; token: string; body?: Record<string, string | string[]> },
+): Promise<T> {
   const init: RequestInit = {
     method: opts.method ?? "GET",
-    headers: { Authorization: basic(opts.sid, opts.token), "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      Authorization: basic(opts.sid, opts.token),
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
   };
   if (opts.body) {
     const params = new URLSearchParams();
@@ -44,7 +50,10 @@ function pickSenderKind(country: string): "toll_free" | "sender_id" {
 }
 
 function senderIdFromName(name: string, requested?: string): string {
-  const cleaned = (requested || name || "Sender").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 11);
+  const cleaned = (requested || name || "Sender")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 11);
   return cleaned.length >= 3 ? cleaned : (cleaned + "SMS").slice(0, 11);
 }
 
@@ -52,10 +61,14 @@ function friendlyReason(raw: string | undefined): string {
   const t = (raw ?? "").toLowerCase();
   if (t.includes("privacy")) return "Your website needs a visible Privacy Policy link.";
   if (t.includes("terms")) return "Your website needs a visible Terms of Service link.";
-  if (t.includes("opt") || t.includes("consent")) return "We need clearer proof of how subscribers opt in. Please update the opt-in description or upload a screenshot of your sign-up form.";
-  if (t.includes("sample") || t.includes("message")) return "The sample message you provided doesn't match what carriers expect. Please revise it.";
-  if (t.includes("website") || t.includes("url")) return "Your business website isn't reachable. Please double-check the URL.";
-  if (t.includes("address")) return "The business address couldn't be verified. Please check it for typos.";
+  if (t.includes("opt") || t.includes("consent"))
+    return "We need clearer proof of how subscribers opt in. Please update the opt-in description or upload a screenshot of your sign-up form.";
+  if (t.includes("sample") || t.includes("message"))
+    return "The sample message you provided doesn't match what carriers expect. Please revise it.";
+  if (t.includes("website") || t.includes("url"))
+    return "Your business website isn't reachable. Please double-check the URL.";
+  if (t.includes("address"))
+    return "The business address couldn't be verified. Please check it for typos.";
   return "The carrier needs some details corrected. Please review your business info and try again.";
 }
 
@@ -65,23 +78,35 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   const { data: acct, error } = await supabaseAdmin
     .from("accounts")
-    .select("id,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,contact_email,full_name,phone,twilio_subaccount_sid,twilio_subaccount_auth_token_enc,onboarding_status,subaccount_phone_number,subaccount_messaging_service_sid")
+    .select(
+      "id,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,contact_email,full_name,phone,twilio_subaccount_sid,twilio_subaccount_auth_token_enc,onboarding_status,subaccount_phone_number,subaccount_messaging_service_sid",
+    )
     .eq("id", userId)
     .maybeSingle();
   if (error || !acct) throw new Error("Account not found");
   if (acct.onboarding_status === "suspended") throw new Error("Account suspended");
-  if (!acct.legal_business_name || !acct.business_address || !acct.website_url || !acct.contact_email) {
-    throw new Error("Please complete your business profile first (legal name, address, website, contact email).");
+  if (
+    !acct.legal_business_name ||
+    !acct.business_address ||
+    !acct.website_url ||
+    !acct.contact_email
+  ) {
+    throw new Error(
+      "Please complete your business profile first (legal name, address, website, contact email).",
+    );
   }
 
-  await supabaseAdmin.from("accounts").update({
-    sms_target_countries: data.targetCountries,
-    monthly_volume_estimate: data.monthlyVolume,
-    use_case_description: data.useCase,
-    sample_message: data.sampleMessage,
-    opt_in_description: data.optInDescription,
-    opt_in_screenshot_url: data.optInScreenshotPath ?? null,
-  }).eq("id", userId);
+  await supabaseAdmin
+    .from("accounts")
+    .update({
+      sms_target_countries: data.targetCountries,
+      monthly_volume_estimate: data.monthlyVolume,
+      use_case_description: data.useCase,
+      sample_message: data.sampleMessage,
+      opt_in_description: data.optInDescription,
+      opt_in_screenshot_url: data.optInScreenshotPath ?? null,
+    })
+    .eq("id", userId);
 
   let subSid = (acct.twilio_subaccount_sid as string | null) ?? "";
   let subToken = "";
@@ -89,11 +114,14 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
     const master = masterAuth();
     subSid = master.sid;
     subToken = master.token;
-    await supabaseAdmin.from("accounts").update({
-      twilio_subaccount_sid: subSid,
-      twilio_subaccount_auth_token_enc: encryptToken(subToken) as any,
-      onboarding_status: "sender_pending",
-    }).eq("id", userId);
+    await supabaseAdmin
+      .from("accounts")
+      .update({
+        twilio_subaccount_sid: subSid,
+        twilio_subaccount_auth_token_enc: encryptToken(subToken) as any,
+        onboarding_status: "sender_pending",
+      })
+      .eq("id", userId);
   }
 
   async function createReplacementSubaccount() {
@@ -112,7 +140,9 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   const created: string[] = [];
   const errors: Array<{ cc: string; reason: string }> = [];
-  let accountSenderSet = Boolean(acct.subaccount_phone_number || acct.subaccount_messaging_service_sid);
+  let accountSenderSet = Boolean(
+    acct.subaccount_phone_number || acct.subaccount_messaging_service_sid,
+  );
   const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
 
   async function setPrimarySender(patch: any) {
@@ -125,9 +155,13 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
     const cc = raw.toUpperCase();
     try {
       const kind = pickSenderKind(cc);
-      const { data: existing } = await supabaseAdmin.from("sender_assets")
+      const { data: existing } = await supabaseAdmin
+        .from("sender_assets")
         .select("id,phone_number,phone_sid,messaging_service_sid,sender_kind,verification_status")
-        .eq("account_id", userId).eq("country_code", cc).limit(1).maybeSingle();
+        .eq("account_id", userId)
+        .eq("country_code", cc)
+        .limit(1)
+        .maybeSingle();
       if (existing) {
         if (existing.verification_status === "verified" && existing.phone_number) {
           await setPrimarySender({
@@ -146,24 +180,40 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         let msSid: string | null = null;
         try {
           const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
-            method: "POST", sid: subSid, token: subToken,
-            body: { FriendlyName: `${(acct.legal_business_name ?? "Sender").slice(0, 40)} ${cc} (Sender ID)`, InboundRequestUrl: `${base}/api/public/twilio-inbound`, StatusCallback: `${base}/api/public/twilio-status` },
+            method: "POST",
+            sid: subSid,
+            token: subToken,
+            body: {
+              FriendlyName: `${(acct.legal_business_name ?? "Sender").slice(0, 40)} ${cc} (Sender ID)`,
+              InboundRequestUrl: `${base}/api/public/twilio-inbound`,
+              StatusCallback: `${base}/api/public/twilio-status`,
+            },
           });
           msSid = ms.sid;
           try {
             await twilio(`${MESSAGING_API}/Services/${msSid}/AlphaSenders`, {
-              method: "POST", sid: subSid, token: subToken, body: { AlphaSender: sid },
+              method: "POST",
+              sid: subSid,
+              token: subToken,
+              body: { AlphaSender: sid },
             });
           } catch {
             // Some countries do not require explicit AlphaSender attachment; direct From=SenderID still works where supported.
           }
         } catch (e: any) {
-          errors.push({ cc, reason: `Sender ID saved, but the messaging service could not be created yet: ${e?.message ?? "unknown"}` });
+          errors.push({
+            cc,
+            reason: `Sender ID saved, but the messaging service could not be created yet: ${e?.message ?? "unknown"}`,
+          });
         }
 
         await supabaseAdmin.from("sender_assets").insert({
-          account_id: userId, country_code: cc, sender_kind: "sender_id",
-          phone_number: sid, phone_sid: null, messaging_service_sid: msSid,
+          account_id: userId,
+          country_code: cc,
+          sender_kind: "sender_id",
+          phone_number: sid,
+          phone_sid: null,
+          messaging_service_sid: msSid,
           verification_status: "verified",
         });
         await setPrimarySender({
@@ -176,30 +226,59 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       }
 
       const path = `/Accounts/${subSid}/AvailablePhoneNumbers/${cc}/TollFree.json?SmsEnabled=true&PageSize=1`;
-      const avail = await twilio<{ available_phone_numbers: Array<{ phone_number: string }> }>(`${TWILIO_API}${path}`, { sid: subSid, token: subToken });
+      const avail = await twilio<{ available_phone_numbers: Array<{ phone_number: string }> }>(
+        `${TWILIO_API}${path}`,
+        { sid: subSid, token: subToken },
+      );
       const num = avail.available_phone_numbers?.[0]?.phone_number;
-      if (!num) { errors.push({ cc, reason: "No toll-free numbers are available right now." }); continue; }
+      if (!num) {
+        errors.push({ cc, reason: "No toll-free numbers are available right now." });
+        continue;
+      }
 
-      const bought = await twilio<{ sid: string; phone_number: string }>(`${TWILIO_API}/Accounts/${subSid}/IncomingPhoneNumbers.json`, {
-        method: "POST", sid: subSid, token: subToken,
-        body: { PhoneNumber: num, SmsUrl: `${base}/api/public/twilio-inbound`, StatusCallback: `${base}/api/public/twilio-status` },
-      });
+      const bought = await twilio<{ sid: string; phone_number: string }>(
+        `${TWILIO_API}/Accounts/${subSid}/IncomingPhoneNumbers.json`,
+        {
+          method: "POST",
+          sid: subSid,
+          token: subToken,
+          body: {
+            PhoneNumber: num,
+            SmsUrl: `${base}/api/public/twilio-inbound`,
+            StatusCallback: `${base}/api/public/twilio-status`,
+          },
+        },
+      );
       const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
-        method: "POST", sid: subSid, token: subToken,
-        body: { FriendlyName: `${acct.legal_business_name} ${cc}`, InboundRequestUrl: `${base}/api/public/twilio-inbound`, StatusCallback: `${base}/api/public/twilio-status` },
+        method: "POST",
+        sid: subSid,
+        token: subToken,
+        body: {
+          FriendlyName: `${acct.legal_business_name} ${cc}`,
+          InboundRequestUrl: `${base}/api/public/twilio-inbound`,
+          StatusCallback: `${base}/api/public/twilio-status`,
+        },
       });
       await twilio(`${MESSAGING_API}/Services/${ms.sid}/PhoneNumbers`, {
-        method: "POST", sid: subSid, token: subToken, body: { PhoneNumberSid: bought.sid },
+        method: "POST",
+        sid: subSid,
+        token: subToken,
+        body: { PhoneNumberSid: bought.sid },
       });
 
       let verificationSid: string | null = null;
       let status: "submitted" | "verified" = "submitted";
       let optInImageUrl: string | undefined;
       if (data.optInScreenshotPath) {
-        const signed = await supabaseAdmin.storage.from("opt-in-assets").createSignedUrl(data.optInScreenshotPath, 60 * 60 * 24 * 30);
+        const signed = await supabaseAdmin.storage
+          .from("opt-in-assets")
+          .createSignedUrl(data.optInScreenshotPath, 60 * 60 * 24 * 30);
         if (signed.data?.signedUrl) optInImageUrl = signed.data.signedUrl;
       }
-      const addr = (acct.business_address ?? "").split(/\n|,/).map((s: string) => s.trim()).filter(Boolean);
+      const addr = (acct.business_address ?? "")
+        .split(/\n|,/)
+        .map((s: string) => s.trim())
+        .filter(Boolean);
       const verifBody: Record<string, string | string[]> = {
         TollfreePhoneNumberSid: bought.sid,
         BusinessName: acct.legal_business_name!,
@@ -209,7 +288,14 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         UseCaseSummary: data.useCase,
         ProductionMessageSample: data.sampleMessage,
         OptInType: "VERBAL",
-        MessageVolume: data.monthlyVolume <= 1000 ? "10" : data.monthlyVolume <= 10000 ? "1,000" : data.monthlyVolume <= 100000 ? "10,000" : "100,000",
+        MessageVolume:
+          data.monthlyVolume <= 1000
+            ? "10"
+            : data.monthlyVolume <= 10000
+              ? "1,000"
+              : data.monthlyVolume <= 100000
+                ? "10,000"
+                : "100,000",
         BusinessStreetAddress: addr[0] ?? acct.business_address!,
         BusinessCity: addr[1] ?? "",
         BusinessStateProvinceRegion: addr[2] ?? "",
@@ -221,27 +307,42 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         BusinessContactPhone: acct.phone ?? "",
       };
       if (optInImageUrl) verifBody.OptInImageUrls = [optInImageUrl];
-      if (acct.privacy_policy_url) verifBody.AdditionalInformation = `Privacy: ${acct.privacy_policy_url}`;
+      if (acct.privacy_policy_url)
+        verifBody.AdditionalInformation = `Privacy: ${acct.privacy_policy_url}`;
 
       try {
         const ver = await twilio<{ sid: string }>(`${MESSAGING_API}/Tollfree/Verifications`, {
-          method: "POST", sid: subSid, token: subToken, body: verifBody,
+          method: "POST",
+          sid: subSid,
+          token: subToken,
+          body: verifBody,
         });
         verificationSid = ver.sid;
       } catch (e: any) {
         await supabaseAdmin.from("sender_assets").insert({
-          account_id: userId, country_code: cc, sender_kind: "toll_free",
-          phone_number: bought.phone_number, phone_sid: bought.sid, messaging_service_sid: ms.sid,
-          verification_status: "rejected", rejection_reason: e.message, friendly_rejection_reason: friendlyReason(e.message),
+          account_id: userId,
+          country_code: cc,
+          sender_kind: "toll_free",
+          phone_number: bought.phone_number,
+          phone_sid: bought.sid,
+          messaging_service_sid: ms.sid,
+          verification_status: "rejected",
+          rejection_reason: e.message,
+          friendly_rejection_reason: friendlyReason(e.message),
         });
         errors.push({ cc, reason: friendlyReason(e.message) });
         continue;
       }
 
       await supabaseAdmin.from("sender_assets").insert({
-        account_id: userId, country_code: cc, sender_kind: "toll_free",
-        phone_number: bought.phone_number, phone_sid: bought.sid, messaging_service_sid: ms.sid,
-        verification_sid: verificationSid, verification_status: status,
+        account_id: userId,
+        country_code: cc,
+        sender_kind: "toll_free",
+        phone_number: bought.phone_number,
+        phone_sid: bought.sid,
+        messaging_service_sid: ms.sid,
+        verification_sid: verificationSid,
+        verification_status: status,
       });
       await setPrimarySender({
         subaccount_phone_number: bought.phone_number,
@@ -262,7 +363,8 @@ export async function syncToollfreeVerifications(opts: { onlyAccountId?: string 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { decryptToken } = await import("./tenant-crypto.server");
 
-  let q = supabaseAdmin.from("sender_assets")
+  let q = supabaseAdmin
+    .from("sender_assets")
     .select("id,account_id,country_code,verification_sid,phone_number")
     .in("verification_status", ["submitted", "in_review"])
     .eq("sender_kind", "toll_free");
@@ -276,11 +378,16 @@ export async function syncToollfreeVerifications(opts: { onlyAccountId?: string 
     if (!sa.verification_sid) continue;
     let creds = byAccount.get(sa.account_id);
     if (creds === undefined) {
-      const { data: acct } = await supabaseAdmin.from("accounts")
+      const { data: acct } = await supabaseAdmin
+        .from("accounts")
         .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
-        .eq("id", sa.account_id).maybeSingle();
+        .eq("id", sa.account_id)
+        .maybeSingle();
       if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc) {
-        creds = { subSid: acct.twilio_subaccount_sid, token: decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string) };
+        creds = {
+          subSid: acct.twilio_subaccount_sid,
+          token: decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string),
+        };
       } else {
         const master = masterAuth();
         creds = { subSid: master.sid, token: master.token };
@@ -290,20 +397,32 @@ export async function syncToollfreeVerifications(opts: { onlyAccountId?: string 
     if (!creds) continue;
 
     try {
-      const ver = await twilio<any>(`${MESSAGING_API}/Tollfree/Verifications/${sa.verification_sid}`, { sid: creds.subSid, token: creds.token });
+      const ver = await twilio<any>(
+        `${MESSAGING_API}/Tollfree/Verifications/${sa.verification_sid}`,
+        { sid: creds.subSid, token: creds.token },
+      );
       const tStatus: string = (ver.status ?? "").toUpperCase();
       let mapped: "submitted" | "in_review" | "verified" | "rejected" = "submitted";
       let reason: string | null = null;
       if (tStatus === "APPROVED" || tStatus === "TWILIO_APPROVED") mapped = "verified";
       else if (tStatus === "REJECTED" || tStatus === "TWILIO_REJECTED") {
         mapped = "rejected";
-        reason = Array.isArray(ver.rejection_reason) ? ver.rejection_reason.join("; ") : (ver.rejection_reason ?? ver.errors?.[0]?.description ?? "rejected");
+        reason = Array.isArray(ver.rejection_reason)
+          ? ver.rejection_reason.join("; ")
+          : (ver.rejection_reason ?? ver.errors?.[0]?.description ?? "rejected");
       } else if (tStatus === "PENDING_REVIEW" || tStatus === "IN_REVIEW") mapped = "in_review";
 
       const patch: any = { verification_status: mapped, last_synced_at: new Date().toISOString() };
-      if (reason) { patch.rejection_reason = reason; patch.friendly_rejection_reason = friendlyReason(reason); }
+      if (reason) {
+        patch.rejection_reason = reason;
+        patch.friendly_rejection_reason = friendlyReason(reason);
+      }
       await supabaseAdmin.from("sender_assets").update(patch).eq("id", sa.id);
-      if (mapped === "verified") await supabaseAdmin.from("accounts").update({ onboarding_status: "active" }).eq("id", sa.account_id);
+      if (mapped === "verified")
+        await supabaseAdmin
+          .from("accounts")
+          .update({ onboarding_status: "active" })
+          .eq("id", sa.account_id);
       updated++;
     } catch {
       // Retried on the next poll.
