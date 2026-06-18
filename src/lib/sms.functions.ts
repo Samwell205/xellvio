@@ -43,8 +43,9 @@ export const sendTestSms = createServerFn({ method: "POST" })
     const { data: assets } = await assetQ;
     // Prefer a verified sender; else fall back to any saved sender.
     const asset =
-      (assets ?? []).find((a) => a.verification_status === "verified" && (a.messaging_service_sid || a.phone_number)) ||
-      (assets ?? []).find((a) => !!a.messaging_service_sid || !!a.phone_number);
+      (assets ?? []).find(
+        (a) => a.verification_status === "verified" && (a.messaging_service_sid || a.phone_number),
+      ) || (assets ?? []).find((a) => !!a.messaging_service_sid || !!a.phone_number);
     if (!asset?.messaging_service_sid && !asset?.phone_number) {
       throw new Error(
         data.country
@@ -56,7 +57,10 @@ export const sendTestSms = createServerFn({ method: "POST" })
     let accountAuth = mainSmsAuth();
     if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc) {
       try {
-        accountAuth = { sid: acct.twilio_subaccount_sid, token: decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string) };
+        accountAuth = {
+          sid: acct.twilio_subaccount_sid,
+          token: decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string),
+        };
       } catch {
         accountAuth = mainSmsAuth();
       }

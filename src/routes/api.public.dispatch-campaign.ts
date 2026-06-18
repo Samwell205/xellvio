@@ -294,7 +294,9 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             // If tenant has sender_assets, require at least one verified before sending.
             const { data: senderAssets } = await supabaseAdmin
               .from("sender_assets")
-              .select("verification_status,country_code,sender_kind,phone_number,messaging_service_sid")
+              .select(
+                "verification_status,country_code,sender_kind,phone_number,messaging_service_sid",
+              )
               .eq("account_id", c.account_id);
 
             const verifiedSender = (senderAssets ?? []).find(
