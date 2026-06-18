@@ -200,16 +200,42 @@ function BulkForm() {
       <div className="space-y-1.5">
         <Label>Message</Label>
         <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
-        <div className="text-xs text-muted-foreground">{body.length} chars · {segCount(body)} segment(s) · {rows.length} recipients · est {rows.length * segCount(body)} credits</div>
+        <div className="text-xs text-muted-foreground">{body.length} chars · {segCount(body)} segment(s) · {recipients.length} recipients · est {recipients.length * segCount(body)} credits</div>
       </div>
-      <div className="rounded-xl border-2 border-dashed p-6 text-center">
-        <Upload className="size-6 mx-auto text-muted-foreground" />
-        <p className="mt-2 text-sm">Upload CSV with column <code className="px-1 rounded bg-muted">phone</code> (and optional <code className="px-1 rounded bg-muted">country</code>)</p>
-        <input type="file" accept=".csv" onChange={onFile} className="mt-3 mx-auto block text-sm" />
-        {rows.length > 0 && <p className="mt-2 text-xs text-muted-foreground">{rows.length} valid recipients ready.</p>}
+
+      <div className="space-y-2">
+        <Label>Recipients</Label>
+        <div className="flex gap-2 text-sm">
+          <button type="button" onClick={() => setSource("list")} className={`px-3 py-1.5 rounded-md border ${source === "list" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>From contact list</button>
+          <button type="button" onClick={() => setSource("csv")} className={`px-3 py-1.5 rounded-md border ${source === "csv" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Upload CSV</button>
+        </div>
+
+        {source === "list" ? (
+          <div className="rounded-xl border p-4 space-y-2">
+            <Select value={listId} onValueChange={setListId}>
+              <SelectTrigger><SelectValue placeholder="Select a list" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All contacts</SelectItem>
+                {(groupsQ.data ?? []).map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {listContactsQ.isLoading ? "Loading recipients…" : `${recipients.length} contact${recipients.length === 1 ? "" : "s"} with a phone number in this list.`}
+              {recipients.length === 0 && !listContactsQ.isLoading && <> Import contacts on the <Link to="/app/contacts" className="text-primary underline">Contacts page</Link>.</>}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-xl border-2 border-dashed p-6 text-center">
+            <Upload className="size-6 mx-auto text-muted-foreground" />
+            <p className="mt-2 text-sm">Upload CSV with column <code className="px-1 rounded bg-muted">phone</code> (and optional <code className="px-1 rounded bg-muted">country</code>)</p>
+            <input type="file" accept=".csv,.txt" onChange={onFile} className="mt-3 mx-auto block text-sm" />
+            {rows.length > 0 && <p className="mt-2 text-xs text-muted-foreground">{rows.length} valid recipients ready.</p>}
+          </div>
+        )}
       </div>
-      <Button onClick={() => mut.mutate()} disabled={!name || !body || rows.length === 0 || mut.isPending}>
-        {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}Send to {rows.length} recipients
+
+      <Button onClick={() => mut.mutate()} disabled={!name || !body || recipients.length === 0 || mut.isPending}>
+        {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}Send to {recipients.length} recipients
       </Button>
     </Card>
   );
