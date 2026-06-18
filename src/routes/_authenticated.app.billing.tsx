@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Wallet, Plus, Settings2, Info } from "lucide-react";
 import { formatUSD } from "@/lib/money";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { addFunds, saveAutoRecharge } from "@/lib/billing.functions";
 import { useServerFn } from "@tanstack/react-start";
