@@ -30,9 +30,14 @@ export type Database = {
           full_name: string | null
           id: string
           legal_business_name: string | null
+          monthly_volume_estimate: number | null
           onboarding_status: string
+          opt_in_description: string | null
+          opt_in_screenshot_url: string | null
           phone: string | null
           privacy_policy_url: string | null
+          sample_message: string | null
+          sms_target_countries: string[] | null
           subaccount_messaging_service_sid: string | null
           subaccount_phone_number: string | null
           subaccount_phone_sid: string | null
@@ -42,6 +47,7 @@ export type Database = {
           twilio_subaccount_auth_token_enc: string | null
           twilio_subaccount_sid: string | null
           updated_at: string
+          use_case_description: string | null
           website_url: string | null
         }
         Insert: {
@@ -59,9 +65,14 @@ export type Database = {
           full_name?: string | null
           id: string
           legal_business_name?: string | null
+          monthly_volume_estimate?: number | null
           onboarding_status?: string
+          opt_in_description?: string | null
+          opt_in_screenshot_url?: string | null
           phone?: string | null
           privacy_policy_url?: string | null
+          sample_message?: string | null
+          sms_target_countries?: string[] | null
           subaccount_messaging_service_sid?: string | null
           subaccount_phone_number?: string | null
           subaccount_phone_sid?: string | null
@@ -71,6 +82,7 @@ export type Database = {
           twilio_subaccount_auth_token_enc?: string | null
           twilio_subaccount_sid?: string | null
           updated_at?: string
+          use_case_description?: string | null
           website_url?: string | null
         }
         Update: {
@@ -88,9 +100,14 @@ export type Database = {
           full_name?: string | null
           id?: string
           legal_business_name?: string | null
+          monthly_volume_estimate?: number | null
           onboarding_status?: string
+          opt_in_description?: string | null
+          opt_in_screenshot_url?: string | null
           phone?: string | null
           privacy_policy_url?: string | null
+          sample_message?: string | null
+          sms_target_countries?: string[] | null
           subaccount_messaging_service_sid?: string | null
           subaccount_phone_number?: string | null
           subaccount_phone_sid?: string | null
@@ -100,6 +117,7 @@ export type Database = {
           twilio_subaccount_auth_token_enc?: string | null
           twilio_subaccount_sid?: string | null
           updated_at?: string
+          use_case_description?: string | null
           website_url?: string | null
         }
         Relationships: []
@@ -446,6 +464,65 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sender_assets: {
+        Row: {
+          account_id: string
+          country_code: string
+          created_at: string
+          friendly_rejection_reason: string | null
+          id: string
+          last_synced_at: string | null
+          messaging_service_sid: string | null
+          phone_number: string | null
+          phone_sid: string | null
+          rejection_reason: string | null
+          sender_kind: string
+          updated_at: string
+          verification_sid: string | null
+          verification_status: string
+        }
+        Insert: {
+          account_id: string
+          country_code: string
+          created_at?: string
+          friendly_rejection_reason?: string | null
+          id?: string
+          last_synced_at?: string | null
+          messaging_service_sid?: string | null
+          phone_number?: string | null
+          phone_sid?: string | null
+          rejection_reason?: string | null
+          sender_kind: string
+          updated_at?: string
+          verification_sid?: string | null
+          verification_status?: string
+        }
+        Update: {
+          account_id?: string
+          country_code?: string
+          created_at?: string
+          friendly_rejection_reason?: string | null
+          id?: string
+          last_synced_at?: string | null
+          messaging_service_sid?: string | null
+          phone_number?: string | null
+          phone_sid?: string | null
+          rejection_reason?: string | null
+          sender_kind?: string
+          updated_at?: string
+          verification_sid?: string | null
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sender_assets_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppressions: {
         Row: {

@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, Settings2, Building2 } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, Settings2, Building2, MessageSquareText } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const items = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true },
+  { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText },
   { title: "Audience", url: "/app/audience", icon: Users },
   { title: "Segments", url: "/app/segments", icon: Filter },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff },

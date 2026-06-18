@@ -20,8 +20,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
 import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.twilio-inbound'
+import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
+import { Route as AuthenticatedAppSetupSmsRouteImport } from './routes/_authenticated.app.setup-sms'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
 import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
 import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
@@ -89,6 +91,12 @@ const ApiPublicTwilioInboundRoute = ApiPublicTwilioInboundRouteImport.update({
   path: '/api/public/twilio-inbound',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPollVerificationsRoute =
+  ApiPublicPollVerificationsRouteImport.update({
+    id: '/api/public/poll-verifications',
+    path: '/api/public/poll-verifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicDispatchCampaignRoute =
   ApiPublicDispatchCampaignRouteImport.update({
     id: '/api/public/dispatch-campaign',
@@ -99,6 +107,12 @@ const AuthenticatedAppSuppressionsRoute =
   AuthenticatedAppSuppressionsRouteImport.update({
     id: '/app/suppressions',
     path: '/app/suppressions',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppSetupSmsRoute =
+  AuthenticatedAppSetupSmsRouteImport.update({
+    id: '/app/setup-sms',
+    path: '/app/setup-sms',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAppSettingsRoute =
@@ -188,8 +202,10 @@ export interface FileRoutesByFullPath {
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app/': typeof AuthenticatedAppIndexRoute
@@ -214,8 +230,10 @@ export interface FileRoutesByTo {
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app': typeof AuthenticatedAppIndexRoute
@@ -242,8 +260,10 @@ export interface FileRoutesById {
   '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
@@ -270,8 +290,10 @@ export interface FileRouteTypes {
     | '/app/pricing-calculator'
     | '/app/segments'
     | '/app/settings'
+    | '/app/setup-sms'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app/'
@@ -296,8 +318,10 @@ export interface FileRouteTypes {
     | '/app/pricing-calculator'
     | '/app/segments'
     | '/app/settings'
+    | '/app/setup-sms'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app'
@@ -323,8 +347,10 @@ export interface FileRouteTypes {
     | '/_authenticated/app/pricing-calculator'
     | '/_authenticated/app/segments'
     | '/_authenticated/app/settings'
+    | '/_authenticated/app/setup-sms'
     | '/_authenticated/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/_authenticated/app/'
@@ -345,6 +371,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   SolutionsRoute: typeof SolutionsRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
+  ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
   ApiPublicTwilioInboundRoute: typeof ApiPublicTwilioInboundRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
 }
@@ -428,6 +455,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTwilioInboundRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/poll-verifications': {
+      id: '/api/public/poll-verifications'
+      path: '/api/public/poll-verifications'
+      fullPath: '/api/public/poll-verifications'
+      preLoaderRoute: typeof ApiPublicPollVerificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/dispatch-campaign': {
       id: '/api/public/dispatch-campaign'
       path: '/api/public/dispatch-campaign'
@@ -440,6 +474,13 @@ declare module '@tanstack/react-router' {
       path: '/app/suppressions'
       fullPath: '/app/suppressions'
       preLoaderRoute: typeof AuthenticatedAppSuppressionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/setup-sms': {
+      id: '/_authenticated/app/setup-sms'
+      path: '/app/setup-sms'
+      fullPath: '/app/setup-sms'
+      preLoaderRoute: typeof AuthenticatedAppSetupSmsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app/settings': {
@@ -567,6 +608,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
   AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppSetupSmsRoute: typeof AuthenticatedAppSetupSmsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdminAccountsRoute: typeof AuthenticatedAppAdminAccountsRoute
@@ -582,6 +624,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedAppPricingCalculatorRoute,
   AuthenticatedAppSegmentsRoute: AuthenticatedAppSegmentsRouteWithChildren,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppSetupSmsRoute: AuthenticatedAppSetupSmsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdminAccountsRoute: AuthenticatedAppAdminAccountsRoute,
@@ -602,6 +645,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   SolutionsRoute: SolutionsRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
+  ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
   ApiPublicTwilioInboundRoute: ApiPublicTwilioInboundRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
 }
