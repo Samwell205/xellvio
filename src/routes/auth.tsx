@@ -25,17 +25,33 @@ function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">(search.mode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setMode(search.mode);
+    setErrorMsg(null);
   }, [search.mode]);
 
   const destination = search.redirect.startsWith("/") && !search.redirect.startsWith("//") ? search.redirect : "/app";
+  const passwordMismatch = mode === "signup" && confirmPassword.length > 0 && password !== confirmPassword;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErrorMsg(null);
+    if (mode === "signup") {
+      if (password !== confirmPassword) {
+        setErrorMsg("Passwords do not match.");
+        return;
+      }
+      if (password.length < 8) {
+        setErrorMsg("Password must be at least 8 characters.");
+        return;
+      }
+    }
     setLoading(true);
     try {
       if (mode === "signup") {
@@ -59,9 +75,11 @@ function AuthPage() {
       }
     } catch (err) {
       const rawMessage = err instanceof Error ? err.message : "Authentication failed";
-      const message = rawMessage.toLowerCase().includes("weak") || rawMessage.toLowerCase().includes("pwned")
-        ? "Use a stronger, unique password that has not appeared in a data breach."
+      const lower = rawMessage.toLowerCase();
+      const message = lower.includes("weak") || lower.includes("pwned") || lower.includes("breach") || lower.includes("compromis")
+        ? "This password has appeared in a known data breach. Please pick a different, unique password (12+ characters with numbers and symbols)."
         : rawMessage;
+      setErrorMsg(message);
       toast.error(message);
     } finally {
       setLoading(false);
