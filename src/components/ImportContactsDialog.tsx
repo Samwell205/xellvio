@@ -292,6 +292,12 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
 
         {step === "review" && (
           <div className="space-y-4">
+            {importError && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                <div className="flex items-center gap-2 font-medium"><AlertTriangle className="size-4" /> Import could not finish</div>
+                <p className="mt-1 text-xs leading-relaxed">{importError}</p>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-md border p-3">
                 <div className="text-xs text-muted-foreground">Valid rows</div>
@@ -371,7 +377,7 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
           {step === "review" && (
             <>
               <Button variant="outline" onClick={() => setStep("upload")}>Back</Button>
-              <Button onClick={runImport} disabled={rows.length === 0}>Import {rows.length.toLocaleString()} contacts</Button>
+              <Button onClick={runImport} disabled={rows.length === 0 || step === "importing"}>Import {rows.length.toLocaleString()} contacts</Button>
             </>
           )}
           {step === "done" && <Button onClick={() => { reset(); onOpenChange(false); }}>Done</Button>}
