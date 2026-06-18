@@ -60,12 +60,12 @@ function AuthPage() {
           options: { emailRedirectTo: window.location.origin + destination, data: { full_name: name } },
         });
         if (error) throw error;
-        if (data.session) {
+        if (data.session && data.user?.email_confirmed_at) {
           toast.success("Account created — welcome!");
           navigate({ href: destination });
         } else {
-          toast.success("Account created. Check your email to confirm it, then sign in.");
-          setMode("signin");
+          toast.success("Account created! We sent a 6-digit verification code to your email — confirm it to finish signing up.");
+          navigate({ to: "/verify-email", search: { email, status: "unverified" } });
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
