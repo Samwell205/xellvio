@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,6 +123,11 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
   const [groupId, setGroupId] = useState<string>(defaultGroupId ?? "__none__");
   const [progress, setProgress] = useState(0);
   const [inserted, setInserted] = useState(0);
+  const [importError, setImportError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) setGroupId(defaultGroupId ?? "__none__");
+  }, [defaultGroupId, open]);
 
   const detectedFields = useMemo(() => {
     const set = new Set<keyof Row>();
@@ -132,11 +137,16 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
 
   function reset() {
     setText(""); setFileName(null); setRows([]); setErrors([]); setStep("upload");
-    setProgress(0); setInserted(0); setMode("file");
+    setProgress(0); setInserted(0); setMode("file"); setImportError(null);
   }
 
   function parseCsvText(csv: string) {
+    setImportError(null);
     const result = Papa.parse<Record<string, string>>(csv, { header: true, skipEmptyLines: true });
+    if (result.errors.length > 0) {
+      const first = result.errors[0];
+      setImportError(`CSV parsing issue on row ${first.row ?? "unknown"}: ${first.message}`);
+    }
     if (!result.data?.length) {
       toast.error("No rows found in CSV.");
       return;
@@ -174,6 +184,7 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
   async function runImport() {
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) { toast.error("Not signed in."); return; }
+    setImportError(null);
     setStep("importing"); setProgress(0); setInserted(0);
     const gid = groupId && groupId !== "__none__" ? groupId : null;
 
@@ -206,6 +217,7 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
         const { error } = await supabase.from("contacts").upsert(chunk, { onConflict: conflict, ignoreDuplicates: false });
         if (error) {
           console.error("Import batch failed:", error);
+          setImportError(`${chunk.length} contact${chunk.length === 1 ? "" : "s"} could not be saved. ${error.message}`);
           toast.error(`Import error: ${error.message}`);
           setStep("review");
           return;
