@@ -43,8 +43,8 @@ function pickSenderKind(country: string): "toll_free" | "sender_id" {
   return cc === "US" || cc === "CA" ? "toll_free" : "sender_id";
 }
 
-function senderIdFromName(name: string): string {
-  const cleaned = (name || "Sender").replace(/[^A-Za-z0-9]/g, "").slice(0, 11);
+function senderIdFromName(name: string, requested?: string): string {
+  const cleaned = (requested || name || "Sender").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 11);
   return cleaned.length >= 3 ? cleaned : (cleaned + "SMS").slice(0, 11);
 }
 
@@ -142,7 +142,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       }
 
       if (kind === "sender_id") {
-        const sid = senderIdFromName(acct.legal_business_name || "Sender");
+        const sid = senderIdFromName(acct.legal_business_name || "Sender", data.customSenderId);
         let msSid: string | null = null;
         try {
           const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
