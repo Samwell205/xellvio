@@ -9,7 +9,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Upload, FileText, AlertTriangle, CheckCircle2, Loader2, Download } from "lucide-react";
+
+const TEMPLATE_CSV = `Email,Phone Number,First Name,Last Name,Country,External ID
+jane@example.com,+15555550100,Jane,Doe,US,
+john@example.com,+447700900123,John,Smith,GB,cust_001
+,+233555000111,Ama,Mensah,GH,
+`;
+
+function downloadTemplate() {
+  const blob = new Blob([TEMPLATE_CSV], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "contacts-template.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+const ALLOWED_EXT = [".csv", ".txt"];
+const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
+
+function validateFile(f: File): string | null {
+  const name = f.name.toLowerCase();
+  const okExt = ALLOWED_EXT.some((e) => name.endsWith(e));
+  const okMime = !f.type || f.type.includes("csv") || f.type.includes("text") || f.type.includes("excel");
+  if (!okExt) return `Unsupported file type. Upload a .csv file (got "${f.name}").`;
+  if (!okMime) return `Unsupported file type "${f.type}". Use CSV.`;
+  if (f.size > MAX_BYTES) return `File too large (${(f.size / 1024 / 1024).toFixed(1)} MB). Max 20 MB.`;
+  if (f.size === 0) return "File is empty.";
+  return null;
+}
 
 type ImportProps = {
   open: boolean;
