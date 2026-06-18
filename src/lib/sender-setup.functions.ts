@@ -84,6 +84,14 @@ const SetupInput = z.object({
   // Profile fields (editable in wizard step 1) - persisted before this call.
 });
 
+const CustomSenderInput = z.object({
+  countries: z.array(z.string().length(2)).min(1),
+  senderId: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim().toUpperCase() : value),
+    z.string().regex(/^[A-Z0-9]{3,11}$/, "Sender ID must be 3–11 letters or numbers"),
+  ),
+});
+
 export const setupSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: z.input<typeof SetupInput>) => SetupInput.parse(input))
@@ -352,6 +360,68 @@ export const getMySenderAssets = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data } = await supabase.from("sender_assets").select("*").eq("account_id", userId).order("created_at", { ascending: false });
     return data ?? [];
+  });
+
+export const saveCustomSenderId = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: z.input<typeof CustomSenderInput>) => CustomSenderInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { encryptToken } = await import("./tenant-crypto.server");
+
+    const countries = Array.from(new Set(data.countries.map((cc) => cc.toUpperCase()).filter((cc) => cc !== "US" && cc !== "CA")));
+    if (countries.length === 0) throw new Error("Sender ID is not available for US or Canada. Choose another country.");
+
+    const { data: acct, error } = await supabase
+      .from("accounts")
+      .select("onboarding_status,twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error || !acct) throw new Error("Account not found");
+    if (acct.onboarding_status === "suspended") throw new Error("Account suspended");
+
+    const master = masterAuth();
+    if (!acct.twilio_subaccount_sid || !acct.twilio_subaccount_auth_token_enc) {
+      await supabase.from("accounts").update({
+        twilio_subaccount_sid: master.sid,
+        twilio_subaccount_auth_token_enc: encryptToken(master.token) as any,
+      }).eq("id", userId);
+    }
+
+    const saved: string[] = [];
+    for (const cc of countries) {
+      const { data: existing } = await supabase.from("sender_assets")
+        .select("id")
+        .eq("account_id", userId)
+        .eq("country_code", cc)
+        .eq("sender_kind", "sender_id")
+        .limit(1)
+        .maybeSingle();
+
+      const row = {
+        account_id: userId,
+        country_code: cc,
+        sender_kind: "sender_id",
+        phone_number: data.senderId,
+        phone_sid: null,
+        messaging_service_sid: null,
+        verification_sid: null,
+        verification_status: "verified",
+        rejection_reason: null,
+        friendly_rejection_reason: null,
+      };
+      if (existing?.id) await supabase.from("sender_assets").update(row).eq("id", existing.id);
+      else await supabase.from("sender_assets").insert(row);
+      saved.push(cc);
+    }
+
+    await supabase.from("accounts").update({
+      subaccount_phone_number: data.senderId,
+      subaccount_messaging_service_sid: null,
+      onboarding_status: "active",
+    }).eq("id", userId);
+
+    return { senderId: data.senderId, countries: saved };
   });
 
 export const refreshMyVerificationStatus = createServerFn({ method: "POST" })
