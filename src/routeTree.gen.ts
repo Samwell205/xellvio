@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as FeaturesRouteImport } from './routes/features'
@@ -27,6 +28,11 @@ import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAppApiRouteImport } from './routes/_authenticated.app.api'
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated.app.admin'
 
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SolutionsRoute = SolutionsRouteImport.update({
   id: '/solutions',
   path: '/solutions',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/features': typeof FeaturesRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/api': typeof AuthenticatedAppApiRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
@@ -140,6 +147,7 @@ export interface FileRoutesByTo {
   '/features': typeof FeaturesRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/api': typeof AuthenticatedAppApiRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
@@ -160,6 +168,7 @@ export interface FileRoutesById {
   '/features': typeof FeaturesRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
   '/_authenticated/app/api': typeof AuthenticatedAppApiRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
@@ -180,6 +189,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/pricing'
     | '/solutions'
+    | '/verify-email'
     | '/app/admin'
     | '/app/api'
     | '/app/billing'
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/pricing'
     | '/solutions'
+    | '/verify-email'
     | '/app/admin'
     | '/app/api'
     | '/app/billing'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/pricing'
     | '/solutions'
+    | '/verify-email'
     | '/_authenticated/app/admin'
     | '/_authenticated/app/api'
     | '/_authenticated/app/billing'
@@ -237,10 +249,18 @@ export interface RootRouteChildren {
   FeaturesRoute: typeof FeaturesRoute
   PricingRoute: typeof PricingRoute
   SolutionsRoute: typeof SolutionsRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/solutions': {
       id: '/solutions'
       path: '/solutions'
@@ -401,6 +421,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeaturesRoute: FeaturesRoute,
   PricingRoute: PricingRoute,
   SolutionsRoute: SolutionsRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
