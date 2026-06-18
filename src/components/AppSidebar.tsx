@@ -1,8 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import {
-  LayoutDashboard, Send, Megaphone, Users, BarChart3, Wallet, Code2, Settings, LogOut, Phone, ShieldCheck,
-} from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -11,14 +8,8 @@ import { Logo } from "./Logo";
 import { supabase } from "@/integrations/supabase/client";
 
 const items = [
-  { title: "Overview", url: "/app", icon: LayoutDashboard, exact: true },
-  { title: "Send SMS", url: "/app/send", icon: Send },
+  { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true },
   { title: "Campaigns", url: "/app/campaigns", icon: Megaphone },
-  { title: "Contacts", url: "/app/contacts", icon: Users },
-  { title: "Numbers", url: "/app/numbers", icon: Phone },
-  { title: "Reports", url: "/app/reports", icon: BarChart3 },
-  { title: "Billing", url: "/app/billing", icon: Wallet },
-  { title: "API", url: "/app/api", icon: Code2 },
   { title: "Settings", url: "/app/settings", icon: Settings },
 ];
 
@@ -27,16 +18,6 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (url: string, exact?: boolean) => exact ? pathname === url : pathname === url || pathname.startsWith(url + "/");
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
-      const { data } = await supabase.rpc("has_role", { _role: "admin" });
-      setIsAdmin(!!data);
-    })();
-  }, []);
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -63,16 +44,6 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/app/admin")}>
-                    <Link to="/app/admin" className="flex items-center gap-3">
-                      <ShieldCheck className="size-4" />
-                      {!collapsed && <span>Admin</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
