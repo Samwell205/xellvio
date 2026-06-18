@@ -715,7 +715,39 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      country_rates_public: {
+        Row: {
+          active: boolean | null
+          country_code: string | null
+          country_name: string | null
+          dial_prefix: string | null
+          id: string | null
+          mms_multiplier: number | null
+          sell_price: number | null
+          sender_supports_inbound: boolean | null
+        }
+        Insert: {
+          active?: boolean | null
+          country_code?: string | null
+          country_name?: string | null
+          dial_prefix?: string | null
+          id?: string | null
+          mms_multiplier?: number | null
+          sell_price?: number | null
+          sender_supports_inbound?: boolean | null
+        }
+        Update: {
+          active?: boolean | null
+          country_code?: string | null
+          country_name?: string | null
+          dial_prefix?: string | null
+          id?: string | null
+          mms_multiplier?: number | null
+          sell_price?: number | null
+          sender_supports_inbound?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       debit_account: {
