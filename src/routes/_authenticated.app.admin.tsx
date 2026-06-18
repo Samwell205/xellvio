@@ -50,7 +50,7 @@ function AdminPage() {
               <div>
                 <div className="text-lg font-bold">{s.sender_id}</div>
                 <div className="text-xs text-muted-foreground">
-                  {s.profiles?.email || s.user_id} · {new Date(s.created_at).toLocaleString()}
+                  {s.user_id} · {new Date(s.created_at).toLocaleString()}
                 </div>
               </div>
               <Badge variant={s.status === "approved" ? "default" : s.status === "rejected" ? "destructive" : "secondary"}>{s.status}</Badge>
