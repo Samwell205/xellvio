@@ -46,9 +46,16 @@ describe("calculateSegments — Unicode boundaries", () => {
     expect(r.segments).toBe(1);
   });
 
-  it("exactly 70 Unicode chars (emoji) = 1 segment", () => {
-    const body = "👍" + "a".repeat(69);
+  it("70 Unicode code units (Latin-1 accented) = 1 segment", () => {
+    const body = "ñ".repeat(70);
     expect(calculateSegments(body)).toMatchObject({ encoding: "Unicode", segments: 1 });
+  });
+
+  it("emoji counts as 2 UTF-16 code units (matches Twilio billing)", () => {
+    // 👍 is a surrogate pair, so it occupies 2 of the 70 Unicode slots.
+    // 35 thumbs-ups = 70 code units = 1 segment; 36 = 72 = 2 segments.
+    expect(calculateSegments("👍".repeat(35)).segments).toBe(1);
+    expect(calculateSegments("👍".repeat(36)).segments).toBe(2);
   });
 
   it("71 Unicode chars = 2 segments (67 per segment)", () => {
