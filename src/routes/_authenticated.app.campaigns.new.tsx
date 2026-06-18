@@ -242,7 +242,7 @@ function NewCampaignPage() {
                   <Send className="size-4 mr-1.5 rotate-90" />Export CSV
                 </Button>
               )}
-              {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick a segment or individual contacts.</span>}
+              {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick contacts above to see the eligible audience.</span>}
             </div>
           </Card>
         </Card>
