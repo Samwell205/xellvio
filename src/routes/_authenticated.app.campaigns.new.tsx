@@ -187,7 +187,23 @@ function NewCampaignPage() {
         <p className="text-sm text-muted-foreground">5-step builder. Compliance and test send are required.</p>
       </div>
 
+      {!hasVerified && senderList.length > 0 && (
+        <Card className={`p-4 flex items-center gap-3 ${hasRejected ? "border-destructive/40 bg-destructive/5" : "border-primary/40 bg-primary/5"}`}>
+          <ShieldCheck className={`size-5 ${hasRejected ? "text-destructive" : "text-primary"}`} />
+          <div className="flex-1 text-sm">
+            <div className="font-semibold">{hasRejected ? "We need a bit more info" : "Setting up your SMS number"}</div>
+            <div className="text-muted-foreground">
+              {hasRejected
+                ? (senderList.find((x) => x.verification_status === "rejected")?.friendly_rejection_reason ?? "Please update your details.")
+                : "Usually 7–10 business days. You can build campaigns now — they'll send the moment your number is ready."}
+            </div>
+          </div>
+          <Link to="/app/setup-sms"><Button size="sm" variant={hasRejected ? "default" : "outline"}>{hasRejected ? "Fix" : "View status"}</Button></Link>
+        </Card>
+      )}
+
       <Stepper step={step} />
+
 
       {step === 0 && (
         <Card className="p-5 space-y-4">
