@@ -26,11 +26,11 @@ import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.publ
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSetupSmsRouteImport } from './routes/_authenticated.app.setup-sms'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
-import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
 import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated.app.onboarding'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
 import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenticated.app.audience'
+import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
@@ -129,12 +129,6 @@ const AuthenticatedAppSettingsRoute =
     path: '/app/settings',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAppSegmentsRoute =
-  AuthenticatedAppSegmentsRouteImport.update({
-    id: '/app/segments',
-    path: '/app/segments',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAppPricingCalculatorRoute =
   AuthenticatedAppPricingCalculatorRouteImport.update({
     id: '/app/pricing-calculator',
@@ -158,6 +152,12 @@ const AuthenticatedAppAudienceRoute =
     path: '/app/audience',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppSegmentsIndexRoute =
+  AuthenticatedAppSegmentsIndexRouteImport.update({
+    id: '/app/segments/',
+    path: '/app/segments/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppCampaignsIndexRoute =
   AuthenticatedAppCampaignsIndexRouteImport.update({
     id: '/app/campaigns/',
@@ -166,9 +166,9 @@ const AuthenticatedAppCampaignsIndexRoute =
   } as any)
 const AuthenticatedAppSegmentsNewRoute =
   AuthenticatedAppSegmentsNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => AuthenticatedAppSegmentsRoute,
+    id: '/app/segments/new',
+    path: '/app/segments/new',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAppCampaignsNewRoute =
   AuthenticatedAppCampaignsNewRouteImport.update({
@@ -213,7 +213,6 @@ export interface FileRoutesByFullPath {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
-  '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
@@ -230,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
+  '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -243,7 +243,6 @@ export interface FileRoutesByTo {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
-  '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
@@ -260,6 +259,7 @@ export interface FileRoutesByTo {
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
+  '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -275,7 +275,6 @@ export interface FileRoutesById {
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
-  '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
@@ -292,6 +291,7 @@ export interface FileRoutesById {
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
+  '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -307,7 +307,6 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/onboarding'
     | '/app/pricing-calculator'
-    | '/app/segments'
     | '/app/settings'
     | '/app/setup-sms'
     | '/app/suppressions'
@@ -324,6 +323,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/new'
     | '/app/segments/new'
     | '/app/campaigns/'
+    | '/app/segments/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -337,7 +337,6 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/onboarding'
     | '/app/pricing-calculator'
-    | '/app/segments'
     | '/app/settings'
     | '/app/setup-sms'
     | '/app/suppressions'
@@ -354,6 +353,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/new'
     | '/app/segments/new'
     | '/app/campaigns'
+    | '/app/segments'
   id:
     | '__root__'
     | '/'
@@ -368,7 +368,6 @@ export interface FileRouteTypes {
     | '/_authenticated/app/billing'
     | '/_authenticated/app/onboarding'
     | '/_authenticated/app/pricing-calculator'
-    | '/_authenticated/app/segments'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup-sms'
     | '/_authenticated/app/suppressions'
@@ -385,6 +384,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
     | '/_authenticated/app/campaigns/'
+    | '/_authenticated/app/segments/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -524,13 +524,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/app/segments': {
-      id: '/_authenticated/app/segments'
-      path: '/app/segments'
-      fullPath: '/app/segments'
-      preLoaderRoute: typeof AuthenticatedAppSegmentsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/app/pricing-calculator': {
       id: '/_authenticated/app/pricing-calculator'
       path: '/app/pricing-calculator'
@@ -559,6 +552,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAudienceRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/segments/': {
+      id: '/_authenticated/app/segments/'
+      path: '/app/segments'
+      fullPath: '/app/segments/'
+      preLoaderRoute: typeof AuthenticatedAppSegmentsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/campaigns/': {
       id: '/_authenticated/app/campaigns/'
       path: '/app/campaigns'
@@ -568,10 +568,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/app/segments/new': {
       id: '/_authenticated/app/segments/new'
-      path: '/new'
+      path: '/app/segments/new'
       fullPath: '/app/segments/new'
       preLoaderRoute: typeof AuthenticatedAppSegmentsNewRouteImport
-      parentRoute: typeof AuthenticatedAppSegmentsRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/app/campaigns/new': {
       id: '/_authenticated/app/campaigns/new'
@@ -611,26 +611,11 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedAppSegmentsRouteChildren {
-  AuthenticatedAppSegmentsNewRoute: typeof AuthenticatedAppSegmentsNewRoute
-}
-
-const AuthenticatedAppSegmentsRouteChildren: AuthenticatedAppSegmentsRouteChildren =
-  {
-    AuthenticatedAppSegmentsNewRoute: AuthenticatedAppSegmentsNewRoute,
-  }
-
-const AuthenticatedAppSegmentsRouteWithChildren =
-  AuthenticatedAppSegmentsRoute._addFileChildren(
-    AuthenticatedAppSegmentsRouteChildren,
-  )
-
 interface AuthenticatedRouteChildren {
   AuthenticatedAppAudienceRoute: typeof AuthenticatedAppAudienceRoute
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
   AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
-  AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSetupSmsRoute: typeof AuthenticatedAppSetupSmsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
@@ -640,7 +625,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppAdminRatesRoute: typeof AuthenticatedAppAdminRatesRoute
   AuthenticatedAppCampaignsIdRoute: typeof AuthenticatedAppCampaignsIdRoute
   AuthenticatedAppCampaignsNewRoute: typeof AuthenticatedAppCampaignsNewRoute
+  AuthenticatedAppSegmentsNewRoute: typeof AuthenticatedAppSegmentsNewRoute
   AuthenticatedAppCampaignsIndexRoute: typeof AuthenticatedAppCampaignsIndexRoute
+  AuthenticatedAppSegmentsIndexRoute: typeof AuthenticatedAppSegmentsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -649,7 +636,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
   AuthenticatedAppPricingCalculatorRoute:
     AuthenticatedAppPricingCalculatorRoute,
-  AuthenticatedAppSegmentsRoute: AuthenticatedAppSegmentsRouteWithChildren,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSetupSmsRoute: AuthenticatedAppSetupSmsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
@@ -659,7 +645,9 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppAdminRatesRoute: AuthenticatedAppAdminRatesRoute,
   AuthenticatedAppCampaignsIdRoute: AuthenticatedAppCampaignsIdRoute,
   AuthenticatedAppCampaignsNewRoute: AuthenticatedAppCampaignsNewRoute,
+  AuthenticatedAppSegmentsNewRoute: AuthenticatedAppSegmentsNewRoute,
   AuthenticatedAppCampaignsIndexRoute: AuthenticatedAppCampaignsIndexRoute,
+  AuthenticatedAppSegmentsIndexRoute: AuthenticatedAppSegmentsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 import { Filter, Plus, Trash2, Users } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/app/segments")({
+export const Route = createFileRoute("/_authenticated/app/segments/")({
   head: () => ({ meta: [{ title: "Segments — Samwell Global SMS" }] }),
   component: SegmentsPage,
 });

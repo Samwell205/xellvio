@@ -33,6 +33,7 @@ type State = {
   name: string;
   include: string[];
   exclude: string[];
+  profileIds: string[];
   body: string;
   mediaUrl: string;
   sendMode: "now" | "scheduled" | "smart";
@@ -48,7 +49,7 @@ function NewCampaignPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<StepIdx>(0);
   const [s, setS] = useState<State>({
-    name: "", include: [], exclude: [], body: "", mediaUrl: "",
+    name: "", include: [], exclude: [], profileIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
   });
 
@@ -78,11 +79,11 @@ function NewCampaignPage() {
   const hasPending = senderList.some((x) => x.verification_status === "submitted" || x.verification_status === "in_review");
   const hasRejected = senderList.some((x) => x.verification_status === "rejected");
 
-  const audience = useMemo(() => ({ include: s.include, exclude: s.exclude }), [s.include, s.exclude]);
+  const audience = useMemo(() => ({ include: s.include, exclude: s.exclude, profile_ids: s.profileIds }), [s.include, s.exclude, s.profileIds]);
 
   const audienceQ = useQuery({
     queryKey: ["campaign-audience", audience],
-    enabled: s.include.length > 0,
+    enabled: s.include.length > 0 || s.profileIds.length > 0,
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       const { data, error } = await supabase.rpc("eligible_profile_ids", {
@@ -148,7 +149,7 @@ function NewCampaignPage() {
   }
 
   const canNext = (() => {
-    if (step === 0) return s.name.trim().length > 0 && s.include.length > 0;
+    if (step === 0) return s.name.trim().length > 0 && (s.include.length > 0 || s.profileIds.length > 0);
     if (step === 1) return s.body.trim().length > 0 && !insufficient;
     if (step === 2) return s.sendMode !== "scheduled" || !!s.scheduleAt;
     if (step === 3) return s.testSent;
@@ -213,20 +214,21 @@ function NewCampaignPage() {
           </div>
           <SegmentPicker title="Include segments" segments={segmentsQ.data ?? []} selected={s.include} onChange={(ids) => setS({ ...s, include: ids })} />
           <SegmentPicker title="Exclude segments (optional)" segments={segmentsQ.data ?? []} selected={s.exclude} onChange={(ids) => setS({ ...s, exclude: ids })} />
+          <ContactPicker selected={s.profileIds} onChange={(ids) => setS({ ...s, profileIds: ids })} />
           <Card className="p-4 flex items-center justify-between bg-primary/5 border-primary/30">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-lg bg-primary/15 text-primary grid place-items-center"><Users className="size-5" /></div>
               <div>
                 <div className="text-xs uppercase text-muted-foreground tracking-wide">Eligible audience</div>
-                <div className="text-2xl font-extrabold">{s.include.length === 0 ? "—" : (audienceQ.isFetching ? "…" : audienceList.length)}</div>
+                <div className="text-2xl font-extrabold">{(s.include.length === 0 && s.profileIds.length === 0) ? "—" : (audienceQ.isFetching ? "…" : audienceList.length)}</div>
                 <div className="text-xs text-muted-foreground">subscribed, not on suppression list</div>
               </div>
             </div>
-            {s.include.length === 0 && <span className="text-xs text-muted-foreground">Pick at least one include segment.</span>}
+            {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick a segment or individual contacts.</span>}
           </Card>
           {(segmentsQ.data?.length ?? 0) === 0 && (
             <div className="text-sm text-muted-foreground">
-              You have no segments yet. <Link to="/app/segments/new" className="text-primary underline">Create one</Link>.
+              No segments yet. <Link to="/app/segments/new" className="text-primary underline">Create one</Link> — or pick contacts directly below.
             </div>
           )}
         </Card>
@@ -493,6 +495,60 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
     <div>
       <div className="text-xs uppercase text-muted-foreground tracking-wide">{label}</div>
       <div className="font-medium">{value || "—"}</div>
+    </div>
+  );
+}
+
+function ContactPicker({ selected, onChange }: { selected: string[]; onChange: (ids: string[]) => void }) {
+  const [q, setQ] = useState("");
+  const contactsQ = useQuery({
+    queryKey: ["pick-contacts", q],
+    queryFn: async () => {
+      let query = supabase
+        .from("profiles")
+        .select("id, phone_e164, first_name, last_name, consents(status, channel)")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (q.trim()) {
+        const s = q.trim();
+        query = query.or(`phone_e164.ilike.%${s}%,first_name.ilike.%${s}%,last_name.ilike.%${s}%`);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data ?? []).map((p: any) => {
+        const sms = (p.consents ?? []).find((c: any) => c.channel === "sms");
+        return { ...p, subscribed: sms?.status === "subscribed" };
+      });
+    },
+  });
+  const rows = contactsQ.data ?? [];
+  function toggle(id: string) {
+    onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+  }
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>Or pick specific contacts</Label>
+        <span className="text-xs text-muted-foreground">{selected.length} selected</span>
+      </div>
+      <Input placeholder="Search by name or phone…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="max-h-56 overflow-y-auto rounded-md border divide-y">
+        {contactsQ.isLoading && <div className="p-3 text-sm text-muted-foreground">Loading…</div>}
+        {!contactsQ.isLoading && rows.length === 0 && (
+          <div className="p-3 text-sm text-muted-foreground">No contacts match. <Link to="/app/audience" className="text-primary underline">Add contacts</Link>.</div>
+        )}
+        {rows.map((r: any) => (
+          <label key={r.id} className={`flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50 ${!r.subscribed ? "opacity-60" : ""}`}>
+            <Checkbox checked={selected.includes(r.id)} onCheckedChange={() => toggle(r.id)} />
+            <div className="flex-1">
+              <div className="font-mono text-xs">{r.phone_e164}</div>
+              <div className="text-xs text-muted-foreground">{[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}</div>
+            </div>
+            {!r.subscribed && <Badge variant="outline" className="text-xs">not subscribed</Badge>}
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">Only subscribed, non-suppressed contacts will receive the message.</p>
     </div>
   );
 }

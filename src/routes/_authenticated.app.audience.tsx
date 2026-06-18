@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Users, Upload, UserPlus, Search, ShieldOff, CheckCircle2, Clock } from "lucide-react";
+import { Users, Upload, UserPlus, Search, ShieldOff, CheckCircle2, Clock, Download, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/audience")({
   head: () => ({ meta: [{ title: "Audience — Samwell Global SMS" }] }),
@@ -32,6 +32,17 @@ type ProfileRow = {
   created_at: string;
   consent_status: "subscribed" | "unsubscribed" | "pending";
 };
+
+const PHONE_KEYS = ["phone", "phone_number", "phonenumber", "mobile", "mobile_number", "cell", "msisdn", "number", "tel", "telephone", "to"];
+const FIRST_KEYS = ["first_name", "firstname", "fname", "given_name"];
+const LAST_KEYS = ["last_name", "lastname", "lname", "surname", "family_name"];
+const COUNTRY_KEYS = ["country", "country_code", "iso", "iso2"];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const CSV_TEMPLATE = `phone,first_name,last_name,country
++15551234567,Ada,Lovelace,US
++447911123456,Alan,Turing,GB
++2348012345678,Chimamanda,Adichie,NG
+`;
 
 function AudiencePage() {
   const qc = useQueryClient();
@@ -81,7 +92,6 @@ function AudiencePage() {
       const next = row.consent_status === "subscribed" ? "unsubscribed" : "subscribed";
       const { data: u } = await supabase.auth.getUser();
       const accountId = u.user!.id;
-      // Upsert consent
       const { error: ce } = await supabase.from("consents").upsert(
         { profile_id: row.id, channel: "sms", status: next, source: "manual", consented_at: new Date().toISOString() },
         { onConflict: "profile_id,channel" },
@@ -105,6 +115,15 @@ function AudiencePage() {
     onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
 
+  function downloadTemplate() {
+    const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "samwell-contacts-template.csv";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -113,8 +132,9 @@ function AudiencePage() {
           <p className="text-sm text-muted-foreground">Contacts, consents, and opt-outs.</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadTemplate}><Download className="size-4 mr-1.5" />CSV template</Button>
           <AddContactDialog onDone={() => { qc.invalidateQueries({ queryKey: ["audience-profiles"] }); qc.invalidateQueries({ queryKey: ["audience-stats"] }); }} />
-          <ImportCsvDialog onDone={() => { qc.invalidateQueries({ queryKey: ["audience-profiles"] }); qc.invalidateQueries({ queryKey: ["audience-stats"] }); }} />
+          <ImportCsvDialog onDone={() => { qc.invalidateQueries({ queryKey: ["audience-profiles"] }); qc.invalidateQueries({ queryKey: ["audience-stats"] }); }} onDownloadTemplate={downloadTemplate} />
         </div>
       </div>
 
@@ -264,16 +284,45 @@ function AddContactDialog({ onDone }: { onDone: () => void }) {
   );
 }
 
-function ImportCsvDialog({ onDone }: { onDone: () => void }) {
+type Preview = {
+  fileName: string;
+  size: number;
+  headers: string[];
+  detected: { phone?: string; first?: string; last?: string; country?: string };
+  rows: Record<string, string>[]; // all parsed rows
+  rowsPreview: Record<string, string>[]; // first N
+  parseErrors: string[];
+};
+
+type RowError = { row: number; reason: string; raw: string };
+
+function detectField(headers: string[], aliases: string[]): string | undefined {
+  for (const h of headers) if (aliases.includes(h)) return h;
+  return undefined;
+}
+
+function ImportCsvDialog({ onDone, onDownloadTemplate }: { onDone: () => void; onDownloadTemplate: () => void }) {
   const [open, setOpen] = useState(false);
   const [defaultCountry, setDefaultCountry] = useState("US");
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number } | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number; errors: RowError[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function handleFile(file: File) {
-    setBusy(true);
+  function reset() {
+    setPreview(null); setResult(null);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function handleFilePicked(file: File) {
     setResult(null);
+    // Client-side validation
+    const name = file.name.toLowerCase();
+    const okType = file.type === "text/csv" || file.type === "application/vnd.ms-excel" || name.endsWith(".csv");
+    if (!okType) { toast.error("Only .csv files are allowed."); return; }
+    if (file.size > MAX_FILE_SIZE) { toast.error(`File is ${(file.size / 1024 / 1024).toFixed(1)} MB — max is 10 MB.`); return; }
+    if (file.size === 0) { toast.error("File is empty."); return; }
+
     try {
       const text = await file.text();
       const parsed = Papa.parse<Record<string, string>>(text, {
@@ -281,55 +330,75 @@ function ImportCsvDialog({ onDone }: { onDone: () => void }) {
         skipEmptyLines: true,
         transformHeader: (h) => h.trim().toLowerCase().replace(/[\s\-]+/g, "_"),
       });
+      const headers = parsed.meta.fields ?? [];
+      const detected = {
+        phone: detectField(headers, PHONE_KEYS),
+        first: detectField(headers, FIRST_KEYS),
+        last: detectField(headers, LAST_KEYS),
+        country: detectField(headers, COUNTRY_KEYS),
+      };
+      const parseErrors = (parsed.errors ?? []).slice(0, 10).map((e) => `Row ${e.row ?? "?"}: ${e.message}`);
+      setPreview({
+        fileName: file.name, size: file.size, headers, detected,
+        rows: parsed.data, rowsPreview: parsed.data.slice(0, 5), parseErrors,
+      });
+    } catch (e: any) {
+      toast.error(`Could not read file: ${e.message ?? e}`);
+    }
+  }
+
+  async function runImport() {
+    if (!preview) return;
+    if (!preview.detected.phone) { toast.error("No phone column detected. Rename it to 'phone' and try again."); return; }
+    setBusy(true);
+    setResult(null);
+    try {
       const { data: u } = await supabase.auth.getUser();
       const accountId = u.user!.id;
-
-      const phoneKeys = ["phone", "phone_number", "phonenumber", "mobile", "mobile_number", "cell", "msisdn", "number", "tel", "telephone", "to"];
-      const firstKeys = ["first_name", "firstname", "fname", "given_name"];
-      const lastKeys = ["last_name", "lastname", "lname", "surname", "family_name"];
-      const countryKeys = ["country", "country_code", "iso", "iso2"];
-      function pick(row: Record<string, string>, keys: string[]) {
-        for (const k of keys) if (row[k] != null && String(row[k]).trim() !== "") return String(row[k]).trim();
-        return "";
-      }
+      const fallbackCountries: CountryCode[] = (defaultCountry ? [defaultCountry as CountryCode] : []).concat(["US","GB","NG","CA","AU","ZA","KE","GH","DE","FR","IN"] as CountryCode[]);
 
       const seen = new Set<string>();
       const valid: { account_id: string; phone_e164: string; first_name: string | null; last_name: string | null; country_code: string }[] = [];
-      let invalid = 0;
+      const errors: RowError[] = [];
       let duplicates = 0;
-      const fallbackCountries: CountryCode[] = (defaultCountry ? [defaultCountry as CountryCode] : []).concat(["US","GB","NG","CA","AU","ZA","KE","GH","DE","FR","IN"] as CountryCode[]);
 
-      for (const row of parsed.data) {
-        let raw = pick(row, phoneKeys);
-        if (!raw) { invalid++; continue; }
-        // Strip common formatting noise
+      function pick(row: Record<string, string>, key?: string) {
+        if (!key) return "";
+        const v = row[key];
+        return v == null ? "" : String(v).trim();
+      }
+
+      preview.rows.forEach((row, idx) => {
+        const rowNum = idx + 2; // header is line 1
+        let raw = pick(row, preview.detected.phone);
+        if (!raw) { errors.push({ row: rowNum, reason: "Missing phone", raw: JSON.stringify(row) }); return; }
         raw = raw.replace(/[\s\-()\u00A0]/g, "");
-        // If it looks international (10+ digits, with or without leading +), try with + prefix first
         const digitsOnly = raw.replace(/[^\d]/g, "");
+        const rowCountry = pick(row, preview.detected.country).toUpperCase().slice(0, 2) as CountryCode | "";
+
         const candidates: { value: string; country?: CountryCode }[] = [];
         if (raw.startsWith("+")) candidates.push({ value: raw });
         else if (digitsOnly.length >= 11) candidates.push({ value: "+" + digitsOnly });
-        const rowCountry = pick(row, countryKeys).toUpperCase().slice(0, 2) as CountryCode | "";
         if (rowCountry) candidates.push({ value: raw, country: rowCountry });
         for (const cc of fallbackCountries) candidates.push({ value: raw, country: cc });
 
         let p: ReturnType<typeof parsePhoneNumberFromString> | undefined;
         for (const c of candidates) {
-          const parsed1 = parsePhoneNumberFromString(c.value, c.country);
-          if (parsed1?.isValid()) { p = parsed1; break; }
+          const x = parsePhoneNumberFromString(c.value, c.country);
+          if (x?.isValid()) { p = x; break; }
         }
-        if (!p) { invalid++; continue; }
+        if (!p) { errors.push({ row: rowNum, reason: `Invalid phone "${raw}"`, raw }); return; }
         const e164 = p.number;
-        if (seen.has(e164)) { duplicates++; continue; }
+        if (seen.has(e164)) { duplicates++; return; }
         seen.add(e164);
         valid.push({
           account_id: accountId,
           phone_e164: e164,
-          first_name: pick(row, firstKeys) || null,
-          last_name: pick(row, lastKeys) || null,
+          first_name: pick(row, preview.detected.first) || null,
+          last_name: pick(row, preview.detected.last) || null,
           country_code: p.country ?? rowCountry ?? defaultCountry,
         });
-      }
+      });
 
       let inserted = 0;
       for (let i = 0; i < valid.length; i += 500) {
@@ -338,7 +407,7 @@ function ImportCsvDialog({ onDone }: { onDone: () => void }) {
           .from("profiles")
           .upsert(chunk, { onConflict: "account_id,phone_e164", ignoreDuplicates: false })
           .select("id");
-        if (error) throw error;
+        if (error) throw new Error(`Database error on chunk ${i}: ${error.message}`);
         inserted += data?.length ?? 0;
         if (data?.length) {
           const consents = data.map((d) => ({
@@ -348,9 +417,9 @@ function ImportCsvDialog({ onDone }: { onDone: () => void }) {
           await supabase.from("consents").upsert(consents, { onConflict: "profile_id,channel" });
         }
       }
-      setResult({ inserted, invalid, duplicates });
+      setResult({ inserted, invalid: errors.length, duplicates, errors });
       if (inserted > 0) toast.success(`Imported ${inserted} contacts`);
-      else toast.error(`No contacts imported. Check your CSV columns (phone, first_name, last_name, country) and number formats.`);
+      else toast.error("No contacts imported. See row errors below.");
       onDone();
     } catch (e: any) {
       toast.error(e.message ?? "Import failed");
@@ -360,35 +429,98 @@ function ImportCsvDialog({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setResult(null); }}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
       <DialogTrigger asChild>
         <Button><Upload className="size-4 mr-1.5" />Import CSV</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Import contacts from CSV</DialogTitle>
           <DialogDescription>
-            Expected columns: <code className="text-xs">phone</code>, <code className="text-xs">first_name</code>, <code className="text-xs">last_name</code>, <code className="text-xs">country</code> (ISO 2-letter, optional).
+            Required header: <code className="text-xs">phone</code>. Optional: <code className="text-xs">first_name</code>, <code className="text-xs">last_name</code>, <code className="text-xs">country</code> (ISO-2).{" "}
+            <button type="button" className="underline text-primary" onClick={onDownloadTemplate}>Download template</button>.
+            <br />Max file size: 10 MB. Only <code className="text-xs">.csv</code> accepted.
           </DialogDescription>
         </DialogHeader>
+
         <div className="space-y-3">
           <div>
             <Label>Default country (used when row has no country)</Label>
             <Input value={defaultCountry} onChange={(e) => setDefaultCountry(e.target.value.toUpperCase())} maxLength={2} />
           </div>
           <Input ref={fileRef} type="file" accept=".csv,text/csv" disabled={busy}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-          {busy && <p className="text-sm text-muted-foreground">Parsing and importing…</p>}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFilePicked(f); }} />
+
+          {preview && !result && (
+            <Card className="p-3 space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <div className="font-medium">{preview.fileName} <span className="text-muted-foreground text-xs">({(preview.size / 1024).toFixed(1)} KB · {preview.rows.length} rows)</span></div>
+                <Button variant="ghost" size="sm" onClick={reset}>Choose different file</Button>
+              </div>
+              <div className="text-xs space-y-1">
+                <div>Detected columns:
+                  <Badge variant="outline" className="ml-1">phone → {preview.detected.phone ?? <span className="text-destructive">none</span>}</Badge>{" "}
+                  <Badge variant="outline">first_name → {preview.detected.first ?? "—"}</Badge>{" "}
+                  <Badge variant="outline">last_name → {preview.detected.last ?? "—"}</Badge>{" "}
+                  <Badge variant="outline">country → {preview.detected.country ?? "—"}</Badge>
+                </div>
+                {!preview.detected.phone && (
+                  <div className="flex items-start gap-1 text-destructive"><AlertTriangle className="size-3.5 mt-0.5" />No phone column detected. Aliases accepted: {PHONE_KEYS.join(", ")}.</div>
+                )}
+                {preview.parseErrors.length > 0 && (
+                  <div className="text-warning">
+                    <div className="font-medium">Parser warnings:</div>
+                    <ul className="list-disc ml-5">{preview.parseErrors.map((m, i) => <li key={i}>{m}</li>)}</ul>
+                  </div>
+                )}
+              </div>
+              <div className="overflow-x-auto border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>{preview.headers.map((h) => <TableHead key={h} className="text-xs">{h}</TableHead>)}</TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {preview.rowsPreview.map((r, i) => (
+                      <TableRow key={i}>{preview.headers.map((h) => <TableCell key={h} className="text-xs">{r[h] ?? ""}</TableCell>)}</TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="text-xs text-muted-foreground">Showing first {preview.rowsPreview.length} of {preview.rows.length} rows.</div>
+            </Card>
+          )}
+
+          {busy && <p className="text-sm text-muted-foreground">Importing…</p>}
+
           {result && (
-            <Card className="p-3 text-sm">
+            <Card className="p-3 text-sm space-y-2">
               <div>✅ Inserted/updated: <b>{result.inserted}</b></div>
-              <div>⚠️ Invalid phone numbers skipped: <b>{result.invalid}</b></div>
+              <div>⚠️ Invalid rows skipped: <b>{result.invalid}</b></div>
               <div>↩️ Duplicates in file: <b>{result.duplicates}</b></div>
+              {result.errors.length > 0 && (
+                <div className="border-t pt-2">
+                  <div className="font-medium text-xs uppercase text-muted-foreground mb-1">Row errors (first 20)</div>
+                  <ul className="text-xs space-y-0.5 max-h-40 overflow-y-auto">
+                    {result.errors.slice(0, 20).map((e, i) => (
+                      <li key={i}><span className="font-mono">Row {e.row}:</span> {e.reason}</li>
+                    ))}
+                  </ul>
+                  {result.errors.length > 20 && <div className="text-xs text-muted-foreground mt-1">…and {result.errors.length - 20} more.</div>}
+                </div>
+              )}
             </Card>
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Close</Button>
+          <Button variant="ghost" onClick={() => { setOpen(false); reset(); }}>Close</Button>
+          {preview && !result && (
+            <Button onClick={runImport} disabled={busy || !preview.detected.phone}>
+              {busy ? "Importing…" : `Import ${preview.rows.length} rows`}
+            </Button>
+          )}
+          {result && (
+            <Button variant="outline" onClick={reset}>Import another file</Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
