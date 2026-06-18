@@ -221,6 +221,7 @@ type WizardForm = {
 function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [uploading, setUploading] = useState(false);
+  const [setupMessage, setSetupMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [form, setForm] = useState<WizardForm>({
     legal_business_name: account?.legal_business_name ?? "",
     business_address: account?.business_address ?? "",
@@ -290,6 +291,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
 
   const runSetup = useMutation({
     mutationFn: async () => {
+      setSetupMessage(null);
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) throw new Error("Please sign in again, then retry SMS setup.");
@@ -311,16 +313,28 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
     },
     onSuccess: (r: any) => {
       if (r?.errors?.length) {
+        const message = r.errors.map((e: any) => `${e.cc}: ${e.reason}`).join("\n");
+        setSetupMessage({ type: "error", text: message });
         for (const e of r.errors) toast.error(`${e.cc}: ${e.reason}`);
       }
       if (r?.created?.length) {
-        toast.success(`Set up ${r.created.length} sender${r.created.length === 1 ? "" : "s"}. We'll email you when verification completes.`);
+        const message = `Set up ${r.created.length} sender${r.created.length === 1 ? "" : "s"}. We'll email you when verification completes.`;
+        setSetupMessage({ type: "success", text: message });
+        toast.success(message);
         onDone();
         return;
       }
-      toast.error("SMS setup could not complete. Please adjust the highlighted details and try again.");
+      if (!r?.errors?.length) {
+        const message = "SMS setup could not complete. Please adjust the highlighted details and try again.";
+        setSetupMessage({ type: "error", text: message });
+        toast.error(message);
+      }
     },
-    onError: (e: Error) => toast.error(e.message || "Could not set up SMS. Please try again."),
+    onError: (e: Error) => {
+      const message = e.message || "Could not set up SMS. Please try again.";
+      setSetupMessage({ type: "error", text: message });
+      toast.error(message);
+    },
   });
 
   function toggleCountry(cc: string) {
@@ -437,11 +451,16 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
           </p>
           <div className="pt-2 flex justify-center gap-3">
             <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
-            <Button onClick={() => runSetup.mutate()} disabled={runSetup.isPending} size="lg">
+            <Button type="button" onClick={() => runSetup.mutate()} disabled={runSetup.isPending} size="lg">
               {runSetup.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-              Set up my SMS
+              {runSetup.isPending ? "Setting up..." : "Set up my SMS"}
             </Button>
           </div>
+          {setupMessage && (
+            <div className={`mx-auto mt-2 max-w-lg whitespace-pre-line rounded-md border px-3 py-2 text-sm ${setupMessage.type === "success" ? "border-success/40 bg-success/10 text-success-foreground" : "border-destructive/40 bg-destructive/10 text-destructive"}`}>
+              {setupMessage.text}
+            </div>
+          )}
         </Card>
       )}
     </div>
