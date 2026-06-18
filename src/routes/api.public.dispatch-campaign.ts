@@ -205,7 +205,6 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         const results: any[] = [];
         for (const c of due ?? []) {
           try {
-            // Pick the tenant subaccount sender if provisioned, else fall back to platform messaging service.
             const { data: acct } = await supabaseAdmin
               .from("accounts")
               .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc,subaccount_phone_number,onboarding_status")
@@ -216,6 +215,21 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
               await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
               results.push({ id: c.id, error: "account_suspended" });
               continue;
+            }
+
+            // If tenant has sender_assets, require at least one verified before sending.
+            const { data: senderAssets } = await supabaseAdmin
+              .from("sender_assets")
+              .select("verification_status,phone_number,messaging_service_sid")
+              .eq("account_id", c.account_id);
+
+            if (senderAssets && senderAssets.length > 0) {
+              const verified = senderAssets.find((s: any) => s.verification_status === "verified");
+              if (!verified) {
+                // Keep campaign queued — do NOT fail; it will retry once verification completes.
+                results.push({ id: c.id, skipped: "sender_pending_verification" });
+                continue;
+              }
             }
 
             let sender: Sender;
