@@ -276,34 +276,62 @@ function ImportCsvDialog({ onDone }: { onDone: () => void }) {
     setResult(null);
     try {
       const text = await file.text();
-      const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
+      const parsed = Papa.parse<Record<string, string>>(text, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (h) => h.trim().toLowerCase().replace(/[\s\-]+/g, "_"),
+      });
       const { data: u } = await supabase.auth.getUser();
       const accountId = u.user!.id;
+
+      const phoneKeys = ["phone", "phone_number", "phonenumber", "mobile", "mobile_number", "cell", "msisdn", "number", "tel", "telephone", "to"];
+      const firstKeys = ["first_name", "firstname", "fname", "given_name"];
+      const lastKeys = ["last_name", "lastname", "lname", "surname", "family_name"];
+      const countryKeys = ["country", "country_code", "iso", "iso2"];
+      function pick(row: Record<string, string>, keys: string[]) {
+        for (const k of keys) if (row[k] != null && String(row[k]).trim() !== "") return String(row[k]).trim();
+        return "";
+      }
 
       const seen = new Set<string>();
       const valid: { account_id: string; phone_e164: string; first_name: string | null; last_name: string | null; country_code: string }[] = [];
       let invalid = 0;
       let duplicates = 0;
+      const fallbackCountries: CountryCode[] = (defaultCountry ? [defaultCountry as CountryCode] : []).concat(["US","GB","NG","CA","AU","ZA","KE","GH","DE","FR","IN"] as CountryCode[]);
 
       for (const row of parsed.data) {
-        const rawPhone = row.phone ?? row.Phone ?? row.phone_number ?? row.mobile ?? row.PhoneNumber ?? "";
-        const rawCountry = (row.country ?? row.Country ?? defaultCountry).toUpperCase().slice(0, 2);
-        const p = parsePhoneNumberFromString(rawPhone, rawCountry as CountryCode);
-        if (!p || !p.isValid()) { invalid++; continue; }
+        let raw = pick(row, phoneKeys);
+        if (!raw) { invalid++; continue; }
+        // Strip common formatting noise
+        raw = raw.replace(/[\s\-()\u00A0]/g, "");
+        // If it looks international (10+ digits, with or without leading +), try with + prefix first
+        const digitsOnly = raw.replace(/[^\d]/g, "");
+        const candidates: { value: string; country?: CountryCode }[] = [];
+        if (raw.startsWith("+")) candidates.push({ value: raw });
+        else if (digitsOnly.length >= 11) candidates.push({ value: "+" + digitsOnly });
+        const rowCountry = pick(row, countryKeys).toUpperCase().slice(0, 2) as CountryCode | "";
+        if (rowCountry) candidates.push({ value: raw, country: rowCountry });
+        for (const cc of fallbackCountries) candidates.push({ value: raw, country: cc });
+
+        let p: ReturnType<typeof parsePhoneNumberFromString> | undefined;
+        for (const c of candidates) {
+          const parsed1 = parsePhoneNumberFromString(c.value, c.country);
+          if (parsed1?.isValid()) { p = parsed1; break; }
+        }
+        if (!p) { invalid++; continue; }
         const e164 = p.number;
         if (seen.has(e164)) { duplicates++; continue; }
         seen.add(e164);
         valid.push({
           account_id: accountId,
           phone_e164: e164,
-          first_name: row.first_name ?? row.firstname ?? row.FirstName ?? null,
-          last_name: row.last_name ?? row.lastname ?? row.LastName ?? null,
-          country_code: p.country ?? rawCountry,
+          first_name: pick(row, firstKeys) || null,
+          last_name: pick(row, lastKeys) || null,
+          country_code: p.country ?? rowCountry ?? defaultCountry,
         });
       }
 
       let inserted = 0;
-      // Chunk inserts
       for (let i = 0; i < valid.length; i += 500) {
         const chunk = valid.slice(i, i + 500);
         const { data, error } = await supabase
@@ -312,7 +340,6 @@ function ImportCsvDialog({ onDone }: { onDone: () => void }) {
           .select("id");
         if (error) throw error;
         inserted += data?.length ?? 0;
-        // Consent rows
         if (data?.length) {
           const consents = data.map((d) => ({
             profile_id: d.id, channel: "sms" as const, status: "subscribed" as const, source: "csv_import",
@@ -322,7 +349,8 @@ function ImportCsvDialog({ onDone }: { onDone: () => void }) {
         }
       }
       setResult({ inserted, invalid, duplicates });
-      toast.success(`Imported ${inserted} contacts`);
+      if (inserted > 0) toast.success(`Imported ${inserted} contacts`);
+      else toast.error(`No contacts imported. Check your CSV columns (phone, first_name, last_name, country) and number formats.`);
       onDone();
     } catch (e: any) {
       toast.error(e.message ?? "Import failed");
