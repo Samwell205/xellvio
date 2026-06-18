@@ -4,6 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTestSms } from "@/lib/sms.functions";
+import { calculateSegments } from "@/lib/sms-segments";
+import { countryFromPhone } from "@/lib/country-from-phone";
+import { formatUSD, formatRate } from "@/lib/money";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
   Megaphone, Users, MessageSquare, CalendarClock, CheckCircle2,
-  ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone,
+  ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone, DollarSign,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/new")({
@@ -28,7 +31,7 @@ type StepIdx = 0 | 1 | 2 | 3 | 4;
 
 type State = {
   name: string;
-  include: string[]; // segment ids
+  include: string[];
   exclude: string[];
   body: string;
   mediaUrl: string;
@@ -45,16 +48,8 @@ function NewCampaignPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState<StepIdx>(0);
   const [s, setS] = useState<State>({
-    name: "",
-    include: [],
-    exclude: [],
-    body: "",
-    mediaUrl: "",
-    sendMode: "now",
-    scheduleAt: "",
-    smartSkipHours: 8,
-    testTo: "",
-    testSent: false,
+    name: "", include: [], exclude: [], body: "", mediaUrl: "",
+    sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
   });
 
   const segmentsQ = useQuery({
@@ -62,31 +57,70 @@ function NewCampaignPage() {
     queryFn: async () => (await supabase.from("segments").select("id,name,query").order("name")).data ?? [],
   });
 
+  const ratesQ = useQuery({
+    queryKey: ["country-rates-active"],
+    queryFn: async () =>
+      (await supabase.from("country_rates").select("country_code,country_name,dial_prefix,sell_price,mms_multiplier").eq("active", true)).data ?? [],
+  });
+  const rates = ratesQ.data ?? [];
+
+  const accountQ = useQuery({
+    queryKey: ["account-balance"],
+    queryFn: async () => (await supabase.from("accounts").select("id,credit_balance").maybeSingle()).data,
+  });
+
   const audience = useMemo(() => ({ include: s.include, exclude: s.exclude }), [s.include, s.exclude]);
 
-  const estimateQ = useQuery({
-    queryKey: ["campaign-estimate", audience],
+  const audienceQ = useQuery({
+    queryKey: ["campaign-audience", audience],
     enabled: s.include.length > 0,
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       const { data, error } = await supabase.rpc("eligible_profile_ids", {
-        _account_id: u.user!.id,
-        _audience: audience as any,
+        _account_id: u.user!.id, _audience: audience as any,
       });
       if (error) throw error;
-      return (data as any[])?.length ?? 0;
+      return (data as any[]) ?? [];
     },
   });
+  const audienceList = audienceQ.data ?? [];
 
   const bodyWithStop = useMemo(
     () => (s.body.toUpperCase().includes("STOP") ? s.body : s.body + STOP_LINE),
     [s.body],
   );
-  const charCount = bodyWithStop.length;
-  const isGsm = /^[\x00-\x7F]*$/.test(bodyWithStop);
-  const segLen = isGsm ? 160 : 70;
-  const multiSegLen = isGsm ? 153 : 67;
-  const segments = charCount <= segLen ? 1 : Math.ceil(charCount / multiSegLen);
+  const seg = calculateSegments(bodyWithStop);
+
+  // Per-country breakdown
+  const breakdown = useMemo(() => {
+    if (rates.length === 0 || audienceList.length === 0) return [];
+    const counts: Record<string, number> = {};
+    for (const p of audienceList) {
+      const cc = p.country_code || countryFromPhone(p.phone_e164, rates) || "??";
+      counts[cc] = (counts[cc] ?? 0) + 1;
+    }
+    const hasMedia = !!s.mediaUrl;
+    return Object.entries(counts).map(([cc, n]) => {
+      const r = rates.find((x) => x.country_code === cc);
+      const unit = r ? Number(r.sell_price) : 0;
+      const mult = hasMedia && r ? Number(r.mms_multiplier) : 1;
+      const subtotal = +(n * seg.segments * unit * mult).toFixed(4);
+      return {
+        country_code: cc,
+        country_name: r?.country_name ?? cc,
+        recipients: n,
+        unit, mult,
+        segments: seg.segments,
+        subtotal,
+        priced: !!r,
+      };
+    }).sort((a, b) => b.subtotal - a.subtotal);
+  }, [audienceList, rates, seg.segments, s.mediaUrl]);
+
+  const totalCost = +breakdown.reduce((a, b) => a + b.subtotal, 0).toFixed(4);
+  const balance = Number(accountQ.data?.credit_balance ?? 0);
+  const balanceAfter = +(balance - totalCost).toFixed(4);
+  const insufficient = totalCost > balance && audienceList.length > 0;
 
   const callTestSend = useServerFn(sendTestSms);
   const [sending, setSending] = useState(false);
@@ -106,19 +140,18 @@ function NewCampaignPage() {
 
   const canNext = (() => {
     if (step === 0) return s.name.trim().length > 0 && s.include.length > 0;
-    if (step === 1) return s.body.trim().length > 0;
+    if (step === 1) return s.body.trim().length > 0 && !insufficient;
     if (step === 2) return s.sendMode !== "scheduled" || !!s.scheduleAt;
     if (step === 3) return s.testSent;
     return true;
   })();
 
   async function saveCampaign(launch: boolean) {
+    if (launch && insufficient) { toast.error("Insufficient balance — top up before launching."); return; }
     setSaving(true);
     try {
       const { data: u } = await supabase.auth.getUser();
-      const status = !launch ? "draft"
-        : s.sendMode === "now" ? "queued"
-        : "scheduled";
+      const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
       const { error } = await supabase.from("campaigns").insert({
         account_id: u.user!.id,
         name: s.name.trim(),
@@ -153,24 +186,14 @@ function NewCampaignPage() {
             <Label>Campaign name</Label>
             <Input value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Black Friday — US" />
           </div>
-          <SegmentPicker
-            title="Include segments"
-            segments={segmentsQ.data ?? []}
-            selected={s.include}
-            onChange={(ids) => setS({ ...s, include: ids })}
-          />
-          <SegmentPicker
-            title="Exclude segments (optional)"
-            segments={segmentsQ.data ?? []}
-            selected={s.exclude}
-            onChange={(ids) => setS({ ...s, exclude: ids })}
-          />
+          <SegmentPicker title="Include segments" segments={segmentsQ.data ?? []} selected={s.include} onChange={(ids) => setS({ ...s, include: ids })} />
+          <SegmentPicker title="Exclude segments (optional)" segments={segmentsQ.data ?? []} selected={s.exclude} onChange={(ids) => setS({ ...s, exclude: ids })} />
           <Card className="p-4 flex items-center justify-between bg-primary/5 border-primary/30">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-lg bg-primary/15 text-primary grid place-items-center"><Users className="size-5" /></div>
               <div>
                 <div className="text-xs uppercase text-muted-foreground tracking-wide">Eligible audience</div>
-                <div className="text-2xl font-extrabold">{s.include.length === 0 ? "—" : (estimateQ.isFetching ? "…" : estimateQ.data ?? 0)}</div>
+                <div className="text-2xl font-extrabold">{s.include.length === 0 ? "—" : (audienceQ.isFetching ? "…" : audienceList.length)}</div>
                 <div className="text-xs text-muted-foreground">subscribed, not on suppression list</div>
               </div>
             </div>
@@ -185,34 +208,44 @@ function NewCampaignPage() {
       )}
 
       {step === 1 && (
-        <div className="grid md:grid-cols-2 gap-5">
-          <Card className="p-5 space-y-4">
+        <div className="grid lg:grid-cols-3 gap-5">
+          <Card className="p-5 space-y-4 lg:col-span-2">
             <div>
               <Label>Message body</Label>
-              <Textarea value={s.body} onChange={(e) => setS({ ...s, body: e.target.value })}
-                rows={6} placeholder="Hi {{first_name}}, our sale starts now…" />
+              <Textarea value={s.body} onChange={(e) => setS({ ...s, body: e.target.value })} rows={6} placeholder="Hi {{first_name}}, our sale starts now…" />
               <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
-                <span>{isGsm ? "GSM-7" : "Unicode"} · {charCount} chars · {segments} SMS segment{segments > 1 ? "s" : ""}</span>
+                <span>{seg.encoding} · {seg.charCount} chars · {seg.segments} SMS segment{seg.segments !== 1 ? "s" : ""}</span>
                 <span>Personalization: <code>{"{{first_name}}"}</code> <code>{"{{last_name}}"}</code></span>
               </div>
             </div>
             <div>
               <Label>Media URL (MMS, optional)</Label>
               <Input value={s.mediaUrl} onChange={(e) => setS({ ...s, mediaUrl: e.target.value })} placeholder="https://…" />
+              {s.mediaUrl && <p className="text-xs text-muted-foreground mt-1">MMS multiplier applied per-country.</p>}
             </div>
             <div className="flex items-start gap-2 text-xs text-muted-foreground bg-success/5 border border-success/30 rounded-md p-3">
               <ShieldCheck className="size-4 text-success mt-0.5" />
               <div>Opt-out line is auto-appended if missing: <i>"Reply STOP to unsubscribe."</i></div>
             </div>
-          </Card>
-          <Card className="p-5">
-            <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1"><Smartphone className="size-4" /> Phone preview</div>
-            <div className="mx-auto w-full max-w-[280px] rounded-[2rem] border bg-card p-3 shadow-sm">
-              <div className="rounded-2xl bg-muted/40 p-3 min-h-[180px] text-sm whitespace-pre-wrap">
-                {bodyWithStop || <span className="text-muted-foreground">Your message will appear here…</span>}
+            <div>
+              <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2 flex items-center gap-1"><Smartphone className="size-4" /> Phone preview</div>
+              <div className="mx-auto w-full max-w-[280px] rounded-[2rem] border bg-card p-3 shadow-sm">
+                <div className="rounded-2xl bg-muted/40 p-3 min-h-[140px] text-sm whitespace-pre-wrap">
+                  {bodyWithStop || <span className="text-muted-foreground">Your message will appear here…</span>}
+                </div>
               </div>
             </div>
           </Card>
+
+          <CostPanel
+            insufficient={insufficient}
+            balance={balance}
+            balanceAfter={balanceAfter}
+            totalCost={totalCost}
+            breakdown={breakdown}
+            audienceCount={audienceList.length}
+            loading={audienceQ.isFetching || ratesQ.isFetching}
+          />
         </div>
       )}
 
@@ -227,24 +260,17 @@ function NewCampaignPage() {
             ].map((opt) => (
               <label key={opt.v} className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${s.sendMode === opt.v ? "border-primary bg-primary/5" : ""}`}>
                 <RadioGroupItem value={opt.v} className="mt-0.5" />
-                <div>
-                  <div className="font-medium">{opt.label}</div>
-                  <div className="text-xs text-muted-foreground">{opt.desc}</div>
-                </div>
+                <div><div className="font-medium">{opt.label}</div><div className="text-xs text-muted-foreground">{opt.desc}</div></div>
               </label>
             ))}
           </RadioGroup>
           {s.sendMode === "scheduled" && (
-            <div>
-              <Label>Date and time</Label>
-              <Input type="datetime-local" value={s.scheduleAt} onChange={(e) => setS({ ...s, scheduleAt: e.target.value })} />
-            </div>
+            <div><Label>Date and time</Label><Input type="datetime-local" value={s.scheduleAt} onChange={(e) => setS({ ...s, scheduleAt: e.target.value })} /></div>
           )}
           {s.sendMode === "smart" && (
             <div>
               <Label>Skip hours (quiet window)</Label>
-              <Input type="number" min={0} max={12} value={s.smartSkipHours}
-                onChange={(e) => setS({ ...s, smartSkipHours: Number(e.target.value) })} />
+              <Input type="number" min={0} max={12} value={s.smartSkipHours} onChange={(e) => setS({ ...s, smartSkipHours: Number(e.target.value) })} />
               <p className="text-xs text-muted-foreground mt-1">Avoid sending in the recipient's late-night / early-morning hours.</p>
             </div>
           )}
@@ -265,9 +291,7 @@ function NewCampaignPage() {
                 <Send className="size-4 mr-1.5" />{sending ? "Sending…" : "Send test"}
               </Button>
             </div>
-            {s.testSent && (
-              <div className="text-sm text-success mt-2 flex items-center gap-1"><CheckCircle2 className="size-4" /> Test sent. You can proceed.</div>
-            )}
+            {s.testSent && <div className="text-sm text-success mt-2 flex items-center gap-1"><CheckCircle2 className="size-4" /> Test sent. You can proceed.</div>}
           </div>
         </Card>
       )}
@@ -276,12 +300,20 @@ function NewCampaignPage() {
         <Card className="p-5 space-y-4">
           <div className="grid md:grid-cols-2 gap-4 text-sm">
             <ReviewItem label="Name" value={s.name} />
-            <ReviewItem label="Eligible audience" value={String(estimateQ.data ?? 0)} />
+            <ReviewItem label="Eligible audience" value={String(audienceList.length)} />
             <ReviewItem label="Send mode" value={s.sendMode} />
             <ReviewItem label="Schedule" value={s.sendMode === "scheduled" ? new Date(s.scheduleAt).toLocaleString() : "—"} />
-            <ReviewItem label="Segments" value={`${segments} × ${isGsm ? "GSM" : "Unicode"}`} />
+            <ReviewItem label="Segments / message" value={`${seg.segments} × ${seg.encoding}`} />
             <ReviewItem label="Media" value={s.mediaUrl || "—"} />
+            <ReviewItem label="Estimated cost" value={formatUSD(totalCost)} />
+            <ReviewItem label="Balance after" value={formatUSD(balanceAfter)} />
           </div>
+          {insufficient && (
+            <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-md p-3 text-sm text-destructive">
+              <AlertTriangle className="size-4 mt-0.5" />
+              <div>Insufficient balance. <Link to="/app/billing" className="underline font-medium">Add funds</Link> to launch.</div>
+            </div>
+          )}
           <div>
             <Label>Final message</Label>
             <Card className="p-3 mt-1 bg-muted/30 whitespace-pre-wrap text-sm">{bodyWithStop}</Card>
@@ -297,7 +329,7 @@ function NewCampaignPage() {
           {step === 4 ? (
             <>
               <Button variant="outline" onClick={() => saveCampaign(false)} disabled={saving}>Save as draft</Button>
-              <Button onClick={() => saveCampaign(true)} disabled={saving}>
+              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient}>
                 {s.sendMode === "now" ? "Launch now" : "Schedule"}
               </Button>
             </>
@@ -309,6 +341,77 @@ function NewCampaignPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, audienceCount, loading }: {
+  insufficient: boolean; balance: number; balanceAfter: number; totalCost: number;
+  breakdown: Array<{ country_code: string; country_name: string; recipients: number; unit: number; mult: number; segments: number; subtotal: number; priced: boolean }>;
+  audienceCount: number; loading: boolean;
+}) {
+  return (
+    <Card className="p-5 space-y-4 self-start sticky top-4">
+      <div className="flex items-center gap-2">
+        <div className="size-9 rounded-lg bg-primary/15 text-primary grid place-items-center"><DollarSign className="size-4" /></div>
+        <div>
+          <h3 className="font-semibold leading-tight">Cost estimate</h3>
+          <p className="text-xs text-muted-foreground">Live, by recipient country</p>
+        </div>
+      </div>
+
+      {insufficient && (
+        <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-md p-3 text-xs text-destructive">
+          <AlertTriangle className="size-4 mt-0.5" />
+          <div>Estimated cost exceeds your balance. Sending will be blocked. <Link to="/app/billing" className="underline font-medium">Add funds →</Link></div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-md border p-2">
+          <div className="text-xs text-muted-foreground">Total</div>
+          <div className="font-extrabold text-lg">{formatUSD(totalCost)}</div>
+        </div>
+        <div className="rounded-md border p-2">
+          <div className="text-xs text-muted-foreground">Balance</div>
+          <div className="font-extrabold text-lg">{formatUSD(balance)}</div>
+        </div>
+        <div className="rounded-md border p-2 col-span-2">
+          <div className="text-xs text-muted-foreground">After this send</div>
+          <div className={`font-extrabold text-lg ${insufficient ? "text-destructive" : ""}`}>{formatUSD(balanceAfter)}</div>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">By country ({audienceCount} recipients)</div>
+        {loading ? (
+          <div className="text-xs text-muted-foreground">Calculating…</div>
+        ) : breakdown.length === 0 ? (
+          <div className="text-xs text-muted-foreground">Pick an audience in step 1 to see per-country pricing.</div>
+        ) : (
+          <div className="border rounded-md overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr><th className="text-left p-2">Country</th><th className="text-right p-2">#</th><th className="text-right p-2">Rate</th><th className="text-right p-2">Subtotal</th></tr>
+              </thead>
+              <tbody>
+                {breakdown.map((b) => (
+                  <tr key={b.country_code} className="border-t">
+                    <td className="p-2">
+                      <div className="font-medium">{b.country_name}</div>
+                      {!b.priced && <Badge variant="destructive" className="text-[10px] mt-0.5">No rate</Badge>}
+                      {b.mult > 1 && <Badge variant="outline" className="text-[10px] ml-1">×{b.mult} MMS</Badge>}
+                    </td>
+                    <td className="p-2 text-right">{b.recipients}</td>
+                    <td className="p-2 text-right tabular-nums">{formatRate(b.unit)}</td>
+                    <td className="p-2 text-right font-medium tabular-nums">{formatUSD(b.subtotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 
