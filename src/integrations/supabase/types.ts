@@ -238,6 +238,41 @@ export type Database = {
           },
         ]
       }
+      contact_lists: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_lists_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       country_rates: {
         Row: {
           active: boolean
@@ -539,6 +574,49 @@ export type Database = {
             columns: ["pack_id"]
             isOneToOne: false
             referencedRelation: "credit_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profile_list_members: {
+        Row: {
+          account_id: string
+          added_at: string
+          list_id: string
+          profile_id: string
+        }
+        Insert: {
+          account_id: string
+          added_at?: string
+          list_id: string
+          profile_id: string
+        }
+        Update: {
+          account_id?: string
+          added_at?: string
+          list_id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_list_members_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_list_members_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "contact_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_list_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
