@@ -20,7 +20,7 @@ type Rate = { country_code: string; dial_prefix: string; sell_price: number; mms
 
 type Sender =
   | { kind: "platform"; lovableKey: string; twilioKey: string; messagingService: string }
-  | { kind: "tenant"; subaccountSid: string; subaccountToken: string; messagingService?: string; fromNumber?: string };
+  | { kind: "tenant"; subaccountSid: string; subaccountToken: string; messagingService?: string; fromNumber?: string; assets?: Array<{ country_code: string; messaging_service_sid?: string | null; phone_number?: string | null }> };
 
 function mainSmsAuth() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -107,8 +107,11 @@ async function dispatchOne(
           StatusCallback: callback,
         });
         if (sender.kind === "tenant") {
-          if (sender.messagingService) body.append("MessagingServiceSid", sender.messagingService);
-          else body.append("From", sender.fromNumber!);
+          const matchedSender = sender.assets?.find((asset) => asset.country_code === m.country_code && (asset.messaging_service_sid || asset.phone_number));
+          const messagingService = matchedSender?.messaging_service_sid ?? sender.messagingService;
+          const fromNumber = matchedSender?.phone_number ?? sender.fromNumber;
+          if (messagingService) body.append("MessagingServiceSid", messagingService);
+          else body.append("From", fromNumber!);
         } else {
           body.append("MessagingServiceSid", sender.messagingService);
         }
@@ -228,7 +231,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             // If tenant has sender_assets, require at least one verified before sending.
             const { data: senderAssets } = await supabaseAdmin
               .from("sender_assets")
-              .select("verification_status,phone_number,messaging_service_sid")
+              .select("verification_status,country_code,phone_number,messaging_service_sid")
               .eq("account_id", c.account_id);
 
             const verifiedSender = (senderAssets ?? []).find((s: any) =>
@@ -253,6 +256,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
                   subaccountToken: token,
                   messagingService: verifiedSender?.messaging_service_sid ?? undefined,
                   fromNumber: verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
+                  assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
                 };
               } catch {
                 const main = mainSmsAuth();
@@ -262,6 +266,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
                   subaccountToken: main.token,
                   messagingService: verifiedSender?.messaging_service_sid ?? undefined,
                   fromNumber: verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
+                  assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
                 };
               }
             } else if (verifiedSender || acct?.subaccount_phone_number) {
@@ -272,6 +277,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
                 subaccountToken: main.token,
                 messagingService: verifiedSender?.messaging_service_sid ?? undefined,
                 fromNumber: verifiedSender?.phone_number ?? acct?.subaccount_phone_number ?? undefined,
+                assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
               };
             } else {
               sender = { kind: "platform", lovableKey, twilioKey, messagingService };
