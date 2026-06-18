@@ -5,10 +5,35 @@ import { z } from "zod";
 const sendSchema = z.object({
   to: z.string().min(6).max(20),
   body: z.string().min(1).max(1600),
-  sender_id: z.string().max(20).optional(),
+  sender_id: z.string().min(1).max(20),
   country: z.string().max(4).optional(),
   campaign_id: z.string().uuid().optional(),
 });
+
+/**
+ * A user may only send from a sender identity they own and that is verified:
+ *  - a toll_free or personal phone_number with status='active'
+ *  - an alphanumeric sender_id with status='approved'
+ * Returns the resolved From value, or null if not verified.
+ */
+async function resolveVerifiedSender(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  userId: string,
+  sender: string,
+): Promise<string | null> {
+  const isE164 = /^\+[1-9]\d{6,14}$/.test(sender);
+  if (isE164) {
+    const { data } = await supabase
+      .from("phone_numbers").select("e164")
+      .eq("user_id", userId).eq("e164", sender).eq("status", "active")
+      .in("type", ["toll_free", "personal"]).maybeSingle();
+    return data?.e164 ?? null;
+  }
+  const { data } = await supabase
+    .from("sender_ids").select("sender_id")
+    .eq("user_id", userId).eq("sender_id", sender).eq("status", "approved").maybeSingle();
+  return data?.sender_id ?? null;
+}
 
 const CREDIT_PER_SEGMENT = 1;
 
@@ -18,13 +43,11 @@ function calcSegments(body: string): number {
   return Math.ceil(body.length / 153);
 }
 
-async function sendViaTwilio(to: string, body: string, sender: string | undefined) {
+async function sendViaTwilio(to: string, body: string, from: string) {
   const lovKey = process.env.LOVABLE_API_KEY;
   const twKey = process.env.TWILIO_API_KEY;
   if (!lovKey || !twKey) return { ok: false as const, error: "Twilio not configured" };
-
-  const from = sender || process.env.TWILIO_FROM || "";
-  if (!from) return { ok: false as const, error: "No sender ID / from number configured" };
+  if (!from) return { ok: false as const, error: "No verified sender configured" };
 
   try {
     const res = await fetch("https://connector-gateway.lovable.dev/twilio/Messages.json", {
@@ -49,6 +72,11 @@ export const sendSms = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => sendSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+
+    // Sender must be a verified identity owned by the user
+    const from = await resolveVerifiedSender(supabase, userId, data.sender_id);
+    if (!from) throw new Error("Sender is not verified. Verify a number or get a Sender ID approved before sending.");
+
     const segments = calcSegments(data.body);
     const cost = segments * CREDIT_PER_SEGMENT;
 
@@ -63,7 +91,7 @@ export const sendSms = createServerFn({ method: "POST" })
       user_id: userId,
       to_phone: data.to,
       body: data.body,
-      sender_id: data.sender_id,
+      sender_id: from,
       country: data.country,
       campaign_id: data.campaign_id,
       segments,
@@ -74,7 +102,7 @@ export const sendSms = createServerFn({ method: "POST" })
     if (mErr) throw mErr;
 
     // Try delivery
-    const result = await sendViaTwilio(data.to, data.body, data.sender_id);
+    const result = await sendViaTwilio(data.to, data.body, from);
 
     if (result.ok) {
       await supabase.from("messages").update({
@@ -99,7 +127,7 @@ export const sendSms = createServerFn({ method: "POST" })
 const bulkSchema = z.object({
   name: z.string().min(1).max(120),
   body: z.string().min(1).max(1600),
-  sender_id: z.string().max(20).optional(),
+  sender_id: z.string().min(1).max(20),
   recipients: z.array(z.object({
     to: z.string().min(6).max(20),
     country: z.string().max(4).optional(),
@@ -112,12 +140,14 @@ export const createCampaign = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => bulkSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const from = await resolveVerifiedSender(supabase, userId, data.sender_id);
+    if (!from) throw new Error("Sender is not verified. Verify a number or get a Sender ID approved before creating a campaign.");
     const status = data.schedule_at ? "scheduled" : "draft";
     const { data: camp, error } = await supabase.from("campaigns").insert({
       user_id: userId,
       name: data.name,
       message: data.body,
-      sender_id: data.sender_id,
+      sender_id: from,
       status,
       scheduled_at: data.schedule_at,
       total_recipients: data.recipients.length,
@@ -135,6 +165,12 @@ export const runCampaign = createServerFn({ method: "POST" })
     const { data: camp, error: cErr } = await supabase.from("campaigns").select("*").eq("id", data.campaign_id).eq("user_id", userId).single();
     if (cErr || !camp) throw new Error("Campaign not found");
 
+    const from = camp.sender_id ? await resolveVerifiedSender(supabase, userId, camp.sender_id) : null;
+    if (!from) {
+      await supabase.from("campaigns").update({ status: "failed" }).eq("id", data.campaign_id);
+      throw new Error("Campaign sender is not verified.");
+    }
+
     await supabase.from("campaigns").update({ status: "running" }).eq("id", data.campaign_id);
     let sent = 0, failed = 0;
     const segments = calcSegments(camp.message);
@@ -150,9 +186,9 @@ export const runCampaign = createServerFn({ method: "POST" })
     for (const r of data.recipients) {
       const { data: msg } = await supabase.from("messages").insert({
         user_id: userId, campaign_id: data.campaign_id, to_phone: r.to, country: r.country,
-        body: camp.message, sender_id: camp.sender_id, segments, cost: segments, provider: "twilio", status: "queued",
+        body: camp.message, sender_id: from, segments, cost: segments, provider: "twilio", status: "queued",
       }).select("id").single();
-      const result = await sendViaTwilio(r.to, camp.message, camp.sender_id ?? undefined);
+      const result = await sendViaTwilio(r.to, camp.message, from);
       if (result.ok) {
         sent++;
         await supabase.from("messages").update({ status: "sent", provider_sid: result.sid, delivered_at: new Date().toISOString() }).eq("id", msg!.id);

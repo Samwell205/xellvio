@@ -100,7 +100,7 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
     // rate-limit: at most 1 active OTP per (user, number) per minute
     const oneMinAgo = new Date(Date.now() - 60_000).toISOString();
     const { count } = await supabase
-      .from("phone_verifications").select("*", { count: "exact", head: true })
+      .from("verification_codes").select("*", { count: "exact", head: true })
       .eq("user_id", userId).eq("e164", data.e164).gte("created_at", oneMinAgo);
     if ((count ?? 0) > 0) throw new Error("Please wait a minute before requesting a new code");
 
@@ -108,7 +108,7 @@ export const startPhoneVerification = createServerFn({ method: "POST" })
     const code_hash = await sha256Hex(`${userId}:${data.e164}:${code}`);
     const expires_at = new Date(Date.now() + 10 * 60_000).toISOString();
 
-    const { error: insErr } = await supabase.from("phone_verifications").insert({
+    const { error: insErr } = await supabase.from("verification_codes").insert({
       user_id: userId, e164: data.e164, code_hash, expires_at,
     });
     if (insErr) throw new Error(insErr.message);
@@ -137,7 +137,7 @@ export const checkPhoneVerification = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: rec, error } = await supabase
-      .from("phone_verifications").select("*")
+      .from("verification_codes").select("*")
       .eq("user_id", userId).eq("e164", data.e164).is("consumed_at", null)
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (error) throw new Error(error.message);
@@ -147,11 +147,11 @@ export const checkPhoneVerification = createServerFn({ method: "POST" })
 
     const expected = await sha256Hex(`${userId}:${data.e164}:${data.code}`);
     if (expected !== rec.code_hash) {
-      await supabase.from("phone_verifications").update({ attempts: rec.attempts + 1 }).eq("id", rec.id);
+      await supabase.from("verification_codes").update({ attempts: rec.attempts + 1 }).eq("id", rec.id);
       throw new Error("Incorrect code");
     }
 
-    await supabase.from("phone_verifications").update({ consumed_at: new Date().toISOString() }).eq("id", rec.id);
+    await supabase.from("verification_codes").update({ consumed_at: new Date().toISOString() }).eq("id", rec.id);
 
     const { error: insErr } = await supabase.from("phone_numbers").insert({
       user_id: userId, e164: data.e164, type: "personal",
