@@ -56,6 +56,8 @@ function Overview() {
         <Stat icon={Send} label="Messages delivered" value={s?.delivered ?? 0} />
       </div>
 
+      <DeliveryAlerts />
+
       <RecentCampaigns />
     </div>
   );
