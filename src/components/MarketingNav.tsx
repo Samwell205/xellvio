@@ -9,6 +9,7 @@ const links = [
   { to: "/pricing", label: "Pricing" },
   { to: "/solutions", label: "Solutions" },
   { to: "/docs", label: "Documentation" },
+  { to: "/contact", label: "Contact" },
 ] as const;
 
 export function MarketingNav() {
