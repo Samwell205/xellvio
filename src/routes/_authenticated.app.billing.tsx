@@ -5,13 +5,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, Plus, Settings2, Info } from "lucide-react";
-import { formatUSD } from "@/lib/money";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Wallet, Settings2, CheckCircle2, Clock, XCircle, Upload, Sparkles } from "lucide-react";
+import { formatUSD, formatMoney } from "@/lib/money";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { addFunds, saveAutoRecharge } from "@/lib/billing.functions";
+import { saveAutoRecharge } from "@/lib/billing.functions";
+import { listCreditPacks, getBillingSettings, initPaystackCheckout, submitPayoneerPayment, listMyPayments, verifyPaystack } from "@/lib/billing-packs.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/app/billing")({
@@ -24,20 +28,27 @@ function BillingPage() {
   const account = useQuery({
     queryKey: ["account-billing"],
     refetchInterval: 15_000,
-    queryFn: async () => (await supabase.from("accounts").select("id,credit_balance,auto_recharge_enabled,auto_recharge_threshold,auto_recharge_amount").maybeSingle()).data,
+    queryFn: async () =>
+      (await supabase.from("accounts").select("id,credit_balance,auto_recharge_enabled,auto_recharge_threshold,auto_recharge_amount,contact_email,email").maybeSingle()).data,
   });
   const tx = useQuery({
     queryKey: ["credit-transactions"],
     refetchInterval: 15_000,
-    queryFn: async () => (await supabase.from("credit_transactions").select("id,type,amount,balance_after,description,created_at,campaign_id").order("created_at", { ascending: false }).limit(100)).data ?? [],
+    queryFn: async () =>
+      (await supabase.from("credit_transactions").select("id,type,amount,balance_after,description,created_at,campaign_id").order("created_at", { ascending: false }).limit(100)).data ?? [],
   });
 
-  const callAdd = useServerFn(addFunds);
+  const packsFn = useServerFn(listCreditPacks);
+  const settingsFn = useServerFn(getBillingSettings);
+  const paymentsFn = useServerFn(listMyPayments);
+  const verifyFn = useServerFn(verifyPaystack);
+
+  const packs = useQuery({ queryKey: ["credit-packs"], queryFn: () => packsFn() });
+  const settings = useQuery({ queryKey: ["billing-settings"], queryFn: () => settingsFn() });
+  const payments = useQuery({ queryKey: ["my-payments"], queryFn: () => paymentsFn(), refetchInterval: 15_000 });
+
   const callAuto = useServerFn(saveAutoRecharge);
-
-  const [amount, setAmount] = useState("25");
   const [auto, setAuto] = useState({ enabled: false, threshold: 10, amount: 25 });
-
   useEffect(() => {
     if (!account.data) return;
     setAuto({
@@ -46,17 +57,6 @@ function BillingPage() {
       amount: Number(account.data.auto_recharge_amount ?? 25),
     });
   }, [account.data]);
-
-  const topup = useMutation({
-    mutationFn: async (amt: number) => callAdd({ data: { amount: amt } }),
-    onSuccess: (r) => {
-      toast.success(`Added ${formatUSD(r.amount)}. New balance: ${formatUSD(r.balance_after)}`);
-      qc.invalidateQueries({ queryKey: ["account-billing"] });
-      qc.invalidateQueries({ queryKey: ["credit-transactions"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const saveAuto = useMutation({
     mutationFn: async () => callAuto({ data: auto }),
     onSuccess: () => {
@@ -66,44 +66,95 @@ function BillingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  // Handle Paystack redirect-back ?ref=
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const ref = url.searchParams.get("ref");
+    if (!ref) return;
+    verifyFn({ data: { reference: ref } })
+      .then((r) => {
+        if (r.status === "success") toast.success("Payment confirmed — credits added");
+        else toast.message(`Payment status: ${r.status}`);
+        qc.invalidateQueries({ queryKey: ["account-billing"] });
+        qc.invalidateQueries({ queryKey: ["credit-transactions"] });
+        qc.invalidateQueries({ queryKey: ["my-payments"] });
+      })
+      .catch((e) => toast.error(e.message))
+      .finally(() => {
+        url.searchParams.delete("ref");
+        window.history.replaceState({}, "", url.toString());
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const balance = Number(account.data?.credit_balance ?? 0);
-  const presets = [25, 50, 100, 250, 500, 1000];
+  const ngnPacks = (packs.data ?? []).filter((p) => p.currency === "NGN");
+  const usdPacks = (packs.data ?? []).filter((p) => p.currency === "USD");
+  const defaultCurrency = (settings.data?.default_currency ?? "NGN") as "NGN" | "USD";
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-6xl">
       <div>
         <h1 className="text-2xl font-extrabold flex items-center gap-2"><Wallet className="size-6" /> Billing</h1>
-        <p className="text-sm text-muted-foreground">Add funds, manage auto top-ups, and review transactions.</p>
+        <p className="text-sm text-muted-foreground">Buy credits, view payments, and manage auto top-ups.</p>
       </div>
 
       <Card className="p-6 bg-gradient-to-br from-primary/10 to-transparent">
         <div className="text-xs uppercase text-muted-foreground tracking-wide">Current balance</div>
         <div className="text-4xl font-extrabold mt-1">{formatUSD(balance)}</div>
-        <p className="text-xs text-muted-foreground mt-2">Each SMS is charged at your recipient's country rate × segments. Funds are deducted per message sent.</p>
+        <p className="text-xs text-muted-foreground mt-2">SMS are billed at the recipient country rate × segments. Credit balance is shown in USD regardless of how you topped up.</p>
       </Card>
 
       <Card className="p-6 space-y-4">
-        <div className="flex items-center gap-2"><Plus className="size-5 text-primary" /><h3 className="font-semibold">Add funds</h3></div>
-        <div className="flex flex-wrap gap-2">
-          {presets.map((p) => (
-            <Button key={p} variant={amount === String(p) ? "default" : "outline"} size="sm" onClick={() => setAmount(String(p))}>
-              {formatUSD(p)}
-            </Button>
-          ))}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2"><Sparkles className="size-5 text-primary" /><h3 className="font-semibold">Buy credits</h3></div>
         </div>
-        <div className="flex items-end gap-3">
-          <div className="flex-1 max-w-[200px]">
-            <Label>Custom amount (USD)</Label>
-            <Input type="number" min={1} step={1} value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <Tabs defaultValue={defaultCurrency}>
+          <TabsList>
+            <TabsTrigger value="NGN">NGN (Naira)</TabsTrigger>
+            <TabsTrigger value="USD">USD (Dollar)</TabsTrigger>
+          </TabsList>
+          <TabsContent value="NGN" className="mt-4">
+            <PackGrid packs={ngnPacks} payoneer={settings.data} accountEmail={account.data?.contact_email || account.data?.email} />
+          </TabsContent>
+          <TabsContent value="USD" className="mt-4">
+            <PackGrid packs={usdPacks} payoneer={settings.data} accountEmail={account.data?.contact_email || account.data?.email} />
+          </TabsContent>
+        </Tabs>
+      </Card>
+
+      <Card className="p-6">
+        <h3 className="font-semibold mb-3">Payment history</h3>
+        {(payments.data?.length ?? 0) === 0 ? (
+          <p className="text-sm text-muted-foreground">No payments yet.</p>
+        ) : (
+          <div className="border rounded-md overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+                <tr>
+                  <th className="text-left p-3">When</th>
+                  <th className="text-left p-3">Provider</th>
+                  <th className="text-left p-3">Amount</th>
+                  <th className="text-left p-3">Credits</th>
+                  <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.data!.map((p) => (
+                  <tr key={p.id} className="border-t">
+                    <td className="p-3 text-xs text-muted-foreground">{new Date(p.created_at).toLocaleString()}</td>
+                    <td className="p-3 capitalize">{p.provider}</td>
+                    <td className="p-3 tabular-nums">{formatMoney(Number(p.amount), p.currency)}</td>
+                    <td className="p-3 tabular-nums">{formatUSD(Number(p.credits))}</td>
+                    <td className="p-3"><PaymentStatus s={p.status} /></td>
+                    <td className="p-3 text-xs font-mono text-muted-foreground truncate max-w-[180px]">{p.provider_reference ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <Button onClick={() => topup.mutate(Number(amount))} disabled={topup.isPending || !(Number(amount) > 0)}>
-            {topup.isPending ? "Processing…" : `Add ${formatUSD(Number(amount) || 0)}`}
-          </Button>
-        </div>
-        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/40 border rounded-md p-3">
-          <Info className="size-4 mt-0.5" />
-          <div>Payment provider integration (Stripe/Mollie) coming soon. For now top-ups are simulated and credited to your balance instantly.</div>
-        </div>
+        )}
       </Card>
 
       <Card className="p-6 space-y-4">
@@ -111,7 +162,7 @@ function BillingPage() {
         <div className="flex items-center justify-between">
           <div>
             <div className="font-medium text-sm">Automatically add funds when balance is low</div>
-            <p className="text-xs text-muted-foreground">Never run out of funds mid-campaign.</p>
+            <p className="text-xs text-muted-foreground">Requires a saved Paystack card (coming soon).</p>
           </div>
           <Switch checked={auto.enabled} onCheckedChange={(v) => setAuto({ ...auto, enabled: v })} />
         </div>
@@ -119,19 +170,17 @@ function BillingPage() {
           <div>
             <Label>When balance falls below</Label>
             <Input type="number" min={1} value={auto.threshold} onChange={(e) => setAuto({ ...auto, threshold: Number(e.target.value) })} disabled={!auto.enabled} />
-            <p className="text-xs text-muted-foreground mt-1">Current threshold: {formatUSD(auto.threshold)}</p>
           </div>
           <div>
-            <Label>Add this amount</Label>
+            <Label>Add this amount (USD credits)</Label>
             <Input type="number" min={1} value={auto.amount} onChange={(e) => setAuto({ ...auto, amount: Number(e.target.value) })} disabled={!auto.enabled} />
-            <p className="text-xs text-muted-foreground mt-1">Refill amount: {formatUSD(auto.amount)}</p>
           </div>
         </div>
         <Button onClick={() => saveAuto.mutate()} disabled={saveAuto.isPending} variant="outline">Save auto top-up</Button>
       </Card>
 
       <Card className="p-6">
-        <h3 className="font-semibold mb-3">Transaction history</h3>
+        <h3 className="font-semibold mb-3">Credit ledger</h3>
         {(tx.data?.length ?? 0) === 0 ? (
           <p className="text-sm text-muted-foreground">No transactions yet.</p>
         ) : (
@@ -159,6 +208,116 @@ function BillingPage() {
       </Card>
     </div>
   );
+}
+
+function PackGrid({ packs, payoneer, accountEmail }: { packs: any[]; payoneer: any; accountEmail?: string | null }) {
+  if (!packs?.length) {
+    return <p className="text-sm text-muted-foreground">No packs available in this currency. Ask the admin to create one.</p>;
+  }
+  return (
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {packs.map((p) => (
+        <PackCard key={p.id} pack={p} payoneer={payoneer} accountEmail={accountEmail} />
+      ))}
+    </div>
+  );
+}
+
+function PackCard({ pack, payoneer, accountEmail }: { pack: any; payoneer: any; accountEmail?: string | null }) {
+  const qc = useQueryClient();
+  const initFn = useServerFn(initPaystackCheckout);
+  const payoneerFn = useServerFn(submitPayoneerPayment);
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const buy = useMutation({
+    mutationFn: async () => initFn({ data: { packId: pack.id } }),
+    onSuccess: (r) => { window.location.href = r.authorization_url; },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  async function submitPayoneer() {
+    try {
+      setSubmitting(true);
+      let proofPath: string | undefined;
+      if (file) {
+        const { data: u } = await supabase.auth.getUser();
+        const uid = u.user?.id;
+        if (!uid) throw new Error("Not signed in");
+        const path = `${uid}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+        const { error: upErr } = await supabase.storage.from("payment-proofs").upload(path, file, { upsert: false });
+        if (upErr) throw upErr;
+        proofPath = path;
+      }
+      await payoneerFn({ data: { packId: pack.id, proofPath, note } });
+      toast.success("Payment submitted — pending admin review");
+      setOpen(false); setFile(null); setNote("");
+      qc.invalidateQueries({ queryKey: ["my-payments"] });
+    } catch (e: any) {
+      toast.error(e.message || "Failed to submit");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card className={`p-5 flex flex-col gap-3 ${pack.is_popular ? "ring-2 ring-primary" : ""}`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="font-semibold">{pack.name}</div>
+          <div className="text-xs text-muted-foreground">{pack.description ?? "\u00A0"}</div>
+        </div>
+        {pack.is_popular && <Badge>Popular</Badge>}
+      </div>
+      <div className="text-3xl font-extrabold">{formatMoney(Number(pack.price), pack.currency)}</div>
+      <div className="text-sm text-muted-foreground">≈ {formatUSD(Number(pack.credits))} in credits</div>
+      <div className="flex gap-2 mt-auto">
+        <Button className="flex-1" onClick={() => buy.mutate()} disabled={buy.isPending}>
+          {buy.isPending ? "Redirecting…" : "Pay with Paystack"}
+        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">Payoneer</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Pay with Payoneer — {pack.name}</DialogTitle></DialogHeader>
+            <div className="space-y-3 text-sm">
+              <div className="rounded-md border p-3 bg-muted/30 space-y-1">
+                <div><span className="text-muted-foreground">Send</span> <strong>{formatMoney(Number(pack.price), pack.currency)}</strong></div>
+                <div><span className="text-muted-foreground">To Payoneer email</span> <strong>{payoneer?.payoneer_payee_email || "(not set)"}</strong></div>
+                {payoneer?.payoneer_payee_name && <div><span className="text-muted-foreground">Payee name</span> <strong>{payoneer.payoneer_payee_name}</strong></div>}
+                {payoneer?.payoneer_instructions && <p className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">{payoneer.payoneer_instructions}</p>}
+                <div className="text-xs text-muted-foreground mt-2">Use your account email <strong>{accountEmail}</strong> in the Payoneer payment note.</div>
+              </div>
+              <div>
+                <Label>Upload payment proof (optional screenshot)</Label>
+                <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              </div>
+              <div>
+                <Label>Note for admin (optional)</Label>
+                <Textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Payoneer transaction ID, sender name…" />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button onClick={submitPayoneer} disabled={submitting || !payoneer?.payoneer_payee_email}>
+                <Upload className="size-4 mr-2" />{submitting ? "Submitting…" : "Submit for review"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </Card>
+  );
+}
+
+function PaymentStatus({ s }: { s: string }) {
+  if (s === "paid") return <Badge variant="default" className="gap-1"><CheckCircle2 className="size-3" />Paid</Badge>;
+  if (s === "pending") return <Badge variant="secondary" className="gap-1"><Clock className="size-3" />Pending</Badge>;
+  if (s === "failed" || s === "cancelled") return <Badge variant="destructive" className="gap-1"><XCircle className="size-3" />{s}</Badge>;
+  return <Badge variant="outline">{s}</Badge>;
 }
 
 function TypeBadge({ type }: { type: string }) {
