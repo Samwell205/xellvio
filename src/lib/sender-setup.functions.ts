@@ -128,41 +128,50 @@ export const setupSms = createServerFn({ method: "POST" })
 
     // 2) For each target country, provision a sender
     const created: string[] = [];
+    const errors: Array<{ cc: string; reason: string }> = [];
     for (const cc of data.targetCountries) {
-      const kind = pickSenderKind(cc);
-      const existing = await supabaseAdmin.from("sender_assets")
-        .select("id").eq("account_id", userId).eq("country_code", cc).maybeSingle();
-      if (existing.data) { created.push(`${cc}:exists`); continue; }
+      try {
+        const kind = pickSenderKind(cc);
+        const existing = await supabaseAdmin.from("sender_assets")
+          .select("id").eq("account_id", userId).eq("country_code", cc).maybeSingle();
+        if (existing.data) { created.push(`${cc}:exists`); continue; }
 
-      // For Sender-ID countries, no number purchase — register an alphanumeric Sender ID
-      if (kind === "sender_id") {
-        const sid = senderIdFromName(acct.legal_business_name || "Sender");
-        const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
-        const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
-          method: "POST", sid: subSid, token: subToken,
-          body: { FriendlyName: `${acct.legal_business_name} ${cc} (Sender ID)`, InboundRequestUrl: `${base}/api/public/twilio-inbound`, StatusCallback: `${base}/api/public/twilio-status` },
-        }).catch(() => ({ sid: "" }));
-        // Try to register alphanumeric sender; ignore failure (some accounts auto-attach via Twilio)
-        try {
-          await twilio(`${MESSAGING_API}/Services/${ms.sid}/AlphaSenders`, {
-            method: "POST", sid: subSid, token: subToken, body: { AlphaSender: sid },
+        // For Sender-ID countries, no number purchase — register an alphanumeric Sender ID
+        if (kind === "sender_id") {
+          const sid = senderIdFromName(acct.legal_business_name || "Sender");
+          const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+          // Messaging service is best-effort; if it fails we still record the sender so the user sees progress.
+          let msSid: string | null = null;
+          try {
+            const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
+              method: "POST", sid: subSid, token: subToken,
+              body: { FriendlyName: `${(acct.legal_business_name ?? "Sender").slice(0,40)} ${cc} (Sender ID)`, InboundRequestUrl: `${base}/api/public/twilio-inbound`, StatusCallback: `${base}/api/public/twilio-status` },
+            });
+            msSid = ms.sid;
+            try {
+              await twilio(`${MESSAGING_API}/Services/${msSid}/AlphaSenders`, {
+                method: "POST", sid: subSid, token: subToken, body: { AlphaSender: sid },
+              });
+            } catch { /* Twilio may auto-pick on send */ }
+          } catch (e: any) {
+            errors.push({ cc, reason: `Sender ID provisioned but messaging service setup failed: ${e?.message ?? "unknown"}` });
+          }
+          await supabaseAdmin.from("sender_assets").insert({
+            account_id: userId, country_code: cc, sender_kind: kind,
+            phone_number: sid, phone_sid: null, messaging_service_sid: msSid,
+            verification_status: "verified",
           });
-        } catch { /* not fatal — Twilio may auto-pick on send */ }
-        await supabaseAdmin.from("sender_assets").insert({
-          account_id: userId, country_code: cc, sender_kind: kind,
-          phone_number: sid, phone_sid: null, messaging_service_sid: ms.sid || null,
-          verification_status: "verified",
-        });
-        if (!created.length) {
-          await supabaseAdmin.from("accounts").update({
-            subaccount_phone_number: sid,
-            subaccount_messaging_service_sid: ms.sid || null,
-            onboarding_status: "active",
-          }).eq("id", userId);
+          if (!created.length) {
+            await supabaseAdmin.from("accounts").update({
+              subaccount_phone_number: sid,
+              subaccount_messaging_service_sid: msSid,
+              onboarding_status: "active",
+            }).eq("id", userId);
+          }
+          created.push(`${cc}:sender_id`);
+          continue;
         }
-        created.push(`${cc}:sender_id`);
-        continue;
-      }
+
 
       // Buy a number (toll-free for US/CA, local otherwise)
       const path = kind === "toll_free"
