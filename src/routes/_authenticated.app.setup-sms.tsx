@@ -102,7 +102,7 @@ function senderKindLabel(kind: string) {
   return "Local long-code number";
 }
 
-function StatusCard({ asset }: { asset: any }) {
+function StatusCard({ asset, accountPhone }: { asset: any; accountPhone?: string }) {
   const status = asset.verification_status as string;
   const kindLabel = senderKindLabel(asset.sender_kind);
   const identifierLabel = asset.sender_kind === "sender_id" ? "Sender ID" : "Number";
