@@ -151,16 +151,20 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return;
-    if (f.size > 50 * 1024 * 1024) { toast.error("Max file size is 50 MB."); return; }
+    const err = validateFile(f);
+    if (err) { toast.error(err); e.target.value = ""; return; }
     setFileName(f.name);
     const reader = new FileReader();
     reader.onload = () => parseCsvText(String(reader.result ?? ""));
+    reader.onerror = () => toast.error("Could not read file.");
     reader.readAsText(f);
   }
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault();
     const f = e.dataTransfer.files?.[0]; if (!f) return;
+    const err = validateFile(f);
+    if (err) { toast.error(err); return; }
     setFileName(f.name);
     const reader = new FileReader();
     reader.onload = () => parseCsvText(String(reader.result ?? ""));
