@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Users, Upload, UserPlus, Search, ShieldOff, CheckCircle2, Clock, Download, AlertTriangle } from "lucide-react";
+import { Users, Upload, UserPlus, Search, ShieldOff, CheckCircle2, Clock, Download, AlertTriangle, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/audience")({
   head: () => ({ meta: [{ title: "Audience — Samwell Global SMS" }] }),
