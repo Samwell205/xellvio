@@ -36,6 +36,7 @@ import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
 import { Route as AuthenticatedAppAdminRatesRouteImport } from './routes/_authenticated.app.admin.rates'
+import { Route as AuthenticatedAppAdminBillingRouteImport } from './routes/_authenticated.app.admin.billing'
 import { Route as AuthenticatedAppAdminAccountsRouteImport } from './routes/_authenticated.app.admin.accounts'
 
 const SolutionsRoute = SolutionsRouteImport.update({
@@ -187,6 +188,12 @@ const AuthenticatedAppAdminRatesRoute =
     path: '/app/admin/rates',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppAdminBillingRoute =
+  AuthenticatedAppAdminBillingRouteImport.update({
+    id: '/app/admin/billing',
+    path: '/app/admin/billing',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppAdminAccountsRoute =
   AuthenticatedAppAdminAccountsRouteImport.update({
     id: '/app/admin/accounts',
@@ -218,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
+  '/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
   '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -247,6 +255,7 @@ export interface FileRoutesByTo {
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
+  '/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
   '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -278,6 +287,7 @@ export interface FileRoutesById {
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
+  '/_authenticated/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
   '/_authenticated/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -309,6 +319,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-status'
     | '/app/'
     | '/app/admin/accounts'
+    | '/app/admin/billing'
     | '/app/admin/rates'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -338,6 +349,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-status'
     | '/app'
     | '/app/admin/accounts'
+    | '/app/admin/billing'
     | '/app/admin/rates'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -368,6 +380,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-status'
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/accounts'
+    | '/_authenticated/app/admin/billing'
     | '/_authenticated/app/admin/rates'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
@@ -581,6 +594,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminRatesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/admin/billing': {
+      id: '/_authenticated/app/admin/billing'
+      path: '/app/admin/billing'
+      fullPath: '/app/admin/billing'
+      preLoaderRoute: typeof AuthenticatedAppAdminBillingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/admin/accounts': {
       id: '/_authenticated/app/admin/accounts'
       path: '/app/admin/accounts'
@@ -633,6 +653,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdminAccountsRoute: typeof AuthenticatedAppAdminAccountsRoute
+  AuthenticatedAppAdminBillingRoute: typeof AuthenticatedAppAdminBillingRoute
   AuthenticatedAppAdminRatesRoute: typeof AuthenticatedAppAdminRatesRoute
 }
 
@@ -649,6 +670,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdminAccountsRoute: AuthenticatedAppAdminAccountsRoute,
+  AuthenticatedAppAdminBillingRoute: AuthenticatedAppAdminBillingRoute,
   AuthenticatedAppAdminRatesRoute: AuthenticatedAppAdminRatesRoute,
 }
 
