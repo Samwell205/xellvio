@@ -82,10 +82,10 @@ function SetupSmsPage() {
   );
 }
 
-function SenderStatusList({ assets, onRefresh, refreshing }: { assets: any[]; onRefresh: () => void; refreshing: boolean }) {
+function SenderStatusList({ assets, accountPhone, onRefresh, refreshing }: { assets: any[]; accountPhone?: string; onRefresh: () => void; refreshing: boolean }) {
   return (
     <div className="space-y-3">
-      {assets.map((s) => <StatusCard key={s.id} asset={s} />)}
+      {assets.map((s) => <StatusCard key={s.id} asset={s} accountPhone={accountPhone} />)}
       <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
           {refreshing && <Loader2 className="size-4 animate-spin mr-2" />}Check for updates
@@ -94,6 +94,7 @@ function SenderStatusList({ assets, onRefresh, refreshing }: { assets: any[]; on
     </div>
   );
 }
+
 
 function senderKindLabel(kind: string) {
   if (kind === "toll_free") return "Toll-free number";
