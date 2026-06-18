@@ -166,8 +166,8 @@ function BulkForm() {
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Black Friday Launch" />
         </div>
         <div className="space-y-1.5">
-          <Label>Sender ID</Label>
-          <Input value={sender} onChange={(e) => setSender(e.target.value)} placeholder="SAMWELL" />
+          <Label>From</Label>
+          <SenderPicker value={sender} onChange={setSender} />
         </div>
       </div>
       <div className="space-y-1.5">
