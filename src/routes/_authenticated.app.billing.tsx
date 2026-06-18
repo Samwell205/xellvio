@@ -38,14 +38,14 @@ function BillingPage() {
   const [amount, setAmount] = useState("25");
   const [auto, setAuto] = useState({ enabled: false, threshold: 10, amount: 25 });
 
-  // Sync from account on first load
-  if (account.data && !auto.enabled && account.data.auto_recharge_enabled && auto.threshold === 10 && auto.amount === 25) {
+  useEffect(() => {
+    if (!account.data) return;
     setAuto({
       enabled: !!account.data.auto_recharge_enabled,
       threshold: Number(account.data.auto_recharge_threshold ?? 10),
       amount: Number(account.data.auto_recharge_amount ?? 25),
     });
-  }
+  }, [account.data]);
 
   const topup = useMutation({
     mutationFn: async (amt: number) => callAdd({ data: { amount: amt } }),
