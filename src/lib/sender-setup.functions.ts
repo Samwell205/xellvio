@@ -366,31 +366,23 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: z.input<typeof CustomSenderInput>) => CustomSenderInput.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { encryptToken } = await import("./tenant-crypto.server");
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const countries = Array.from(new Set(data.countries.map((cc) => cc.toUpperCase()).filter((cc) => cc !== "US" && cc !== "CA")));
     if (countries.length === 0) throw new Error("Sender ID is not available for US or Canada. Choose another country.");
 
-    const { data: acct, error } = await supabase
+    const { data: acct, error } = await supabaseAdmin
       .from("accounts")
-      .select("onboarding_status,twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
+      .select("onboarding_status")
       .eq("id", userId)
       .maybeSingle();
     if (error || !acct) throw new Error("Account not found");
     if (acct.onboarding_status === "suspended") throw new Error("Account suspended");
 
-    const master = masterAuth();
-    if (!acct.twilio_subaccount_sid || !acct.twilio_subaccount_auth_token_enc) {
-      await supabase.from("accounts").update({
-        twilio_subaccount_sid: master.sid,
-        twilio_subaccount_auth_token_enc: encryptToken(master.token) as any,
-      }).eq("id", userId);
-    }
-
     const saved: string[] = [];
     for (const cc of countries) {
-      const { data: existing } = await supabase.from("sender_assets")
+      const { data: existing } = await supabaseAdmin.from("sender_assets")
         .select("id")
         .eq("account_id", userId)
         .eq("country_code", cc)
@@ -410,12 +402,12 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
         rejection_reason: null,
         friendly_rejection_reason: null,
       };
-      if (existing?.id) await supabase.from("sender_assets").update(row).eq("id", existing.id);
-      else await supabase.from("sender_assets").insert(row);
+      if (existing?.id) await supabaseAdmin.from("sender_assets").update(row).eq("id", existing.id);
+      else await supabaseAdmin.from("sender_assets").insert(row);
       saved.push(cc);
     }
 
-    await supabase.from("accounts").update({
+    await supabaseAdmin.from("accounts").update({
       subaccount_phone_number: data.senderId,
       subaccount_messaging_service_sid: null,
       onboarding_status: "active",
