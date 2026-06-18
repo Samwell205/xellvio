@@ -142,6 +142,36 @@ export const setupSms = createServerFn({ method: "POST" })
         .select("id").eq("account_id", userId).eq("country_code", cc).maybeSingle();
       if (existing.data) { created.push(`${cc}:exists`); continue; }
 
+      // For Sender-ID countries, no number purchase — register an alphanumeric Sender ID
+      if (kind === "sender_id") {
+        const sid = senderIdFromName(acct.legal_business_name || "Sender");
+        const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+        const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
+          method: "POST", sid: subSid, token: subToken,
+          body: { FriendlyName: `${acct.legal_business_name} ${cc} (Sender ID)`, InboundRequestUrl: `${base}/api/public/twilio-inbound`, StatusCallback: `${base}/api/public/twilio-status` },
+        }).catch(() => ({ sid: "" }));
+        // Try to register alphanumeric sender; ignore failure (some accounts auto-attach via Twilio)
+        try {
+          await twilio(`${MESSAGING_API}/Services/${ms.sid}/AlphaSenders`, {
+            method: "POST", sid: subSid, token: subToken, body: { AlphaSender: sid },
+          });
+        } catch { /* not fatal — Twilio may auto-pick on send */ }
+        await supabaseAdmin.from("sender_assets").insert({
+          account_id: userId, country_code: cc, sender_kind: kind,
+          phone_number: sid, phone_sid: null, messaging_service_sid: ms.sid || null,
+          verification_status: "verified",
+        });
+        if (!created.length) {
+          await supabaseAdmin.from("accounts").update({
+            subaccount_phone_number: sid,
+            subaccount_messaging_service_sid: ms.sid || null,
+            onboarding_status: "active",
+          }).eq("id", userId);
+        }
+        created.push(`${cc}:sender_id`);
+        continue;
+      }
+
       // Buy a number (toll-free for US/CA, local otherwise)
       const path = kind === "toll_free"
         ? `/Accounts/${subSid}/AvailablePhoneNumbers/${cc}/TollFree.json?SmsEnabled=true&PageSize=1`
