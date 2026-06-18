@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -12,37 +12,56 @@ import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in — Samwell Global SMS" }, { name: "description", content: "Sign in or create your Samwell Global SMS account." }] }),
+  validateSearch: (search) => ({
+    mode: search.mode === "signup" ? "signup" : "signin",
+    redirect: typeof search.redirect === "string" ? search.redirect : "/app",
+  }),
   component: AuthPage,
 });
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const search = Route.useSearch();
+  const [mode, setMode] = useState<"signin" | "signup">(search.mode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setMode(search.mode);
+  }, [search.mode]);
+
+  const destination = search.redirect.startsWith("/") && !search.redirect.startsWith("//") ? search.redirect : "/app";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email, password,
-          options: { emailRedirectTo: window.location.origin + "/app", data: { full_name: name } },
+          options: { emailRedirectTo: window.location.origin + destination, data: { full_name: name } },
         });
         if (error) throw error;
-        toast.success("Account created — welcome!");
-        navigate({ to: "/app" });
+        if (data.session) {
+          toast.success("Account created — welcome!");
+          navigate({ href: destination });
+        } else {
+          toast.success("Account created. Check your email to confirm it, then sign in.");
+          setMode("signin");
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back");
-        navigate({ to: "/app" });
+        navigate({ href: destination });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Authentication failed";
+      const rawMessage = err instanceof Error ? err.message : "Authentication failed";
+      const message = rawMessage.toLowerCase().includes("weak") || rawMessage.toLowerCase().includes("pwned")
+        ? "Use a stronger, unique password that has not appeared in a data breach."
+        : rawMessage;
       toast.error(message);
     } finally {
       setLoading(false);
@@ -52,10 +71,10 @@ function AuthPage() {
   async function handleGoogle() {
     setLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + "/app" });
+      const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin + destination });
       if (result.error) { toast.error(result.error.message ?? "Google sign-in failed"); return; }
       if (result.redirected) return;
-      navigate({ to: "/app" });
+      navigate({ href: destination });
     } finally {
       setLoading(false);
     }
@@ -98,6 +117,7 @@ function AuthPage() {
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signin" ? "current-password" : "new-password"} />
+              {mode === "signup" && <p className="text-xs text-muted-foreground">Use a unique password with 12+ characters, numbers, and symbols.</p>}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="size-4 animate-spin mr-2" />}
@@ -106,7 +126,7 @@ function AuthPage() {
           </form>
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "signin" ? "No account?" : "Have an account?"}{" "}
-            <button onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-primary font-medium hover:underline">
+            <button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-primary font-medium hover:underline">
               {mode === "signin" ? "Sign up" : "Sign in"}
             </button>
           </p>
