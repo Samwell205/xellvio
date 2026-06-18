@@ -10,8 +10,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, MessageSquareText, Sparkles, Upload, Clock, AlertCircle } from "lucide-react";
-import { getMySenderAssets, refreshMyVerificationStatus } from "@/lib/sender-setup.functions";
+import {
+  CheckCircle2,
+  Loader2,
+  MessageSquareText,
+  Sparkles,
+  Upload,
+  Clock,
+  AlertCircle,
+} from "lucide-react";
+import {
+  getMySenderAssets,
+  refreshMyVerificationStatus,
+  saveCustomSenderId,
+} from "@/lib/sender-setup.functions";
 import { sendTestSms } from "@/lib/sms.functions";
 import { Send } from "lucide-react";
 
@@ -55,37 +67,81 @@ function SetupSmsPage() {
     queryFn: async () => (await supabase.from("accounts").select("*").maybeSingle()).data,
   });
   const assetsFn = useServerFn(getMySenderAssets);
-  const assets = useQuery({ queryKey: ["sender-assets"], queryFn: () => assetsFn(), refetchInterval: 30_000 });
+  const assets = useQuery({
+    queryKey: ["sender-assets"],
+    queryFn: () => assetsFn(),
+    refetchInterval: 30_000,
+  });
 
   const refreshMut = useMutation({
     mutationFn: () => refresh(),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sender-assets"] }),
   });
 
-  if (account.isLoading) return <div className="flex justify-center h-64 items-center"><Loader2 className="size-6 animate-spin" /></div>;
+  if (account.isLoading)
+    return (
+      <div className="flex justify-center h-64 items-center">
+        <Loader2 className="size-6 animate-spin" />
+      </div>
+    );
   const a = account.data;
   const hasAssets = (assets.data?.length ?? 0) > 0;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2"><MessageSquareText className="size-6 text-primary" /> Set up SMS</h1>
-        <p className="text-sm text-muted-foreground">Answer a few questions and we'll handle the rest. Most setups are ready in 7–10 business days.</p>
+        <h1 className="text-2xl font-extrabold flex items-center gap-2">
+          <MessageSquareText className="size-6 text-primary" /> Set up SMS
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Answer a few questions and we'll handle the rest. Most setups are ready in 7–10 business
+          days.
+        </p>
       </div>
 
       {hasAssets ? (
-        <SenderStatusList assets={assets.data ?? []} accountPhone={a?.phone ?? undefined} onRefresh={() => refreshMut.mutate()} refreshing={refreshMut.isPending} />
+        <SenderStatusList
+          assets={assets.data ?? []}
+          accountPhone={a?.phone ?? undefined}
+          onRefresh={() => refreshMut.mutate()}
+          refreshing={refreshMut.isPending}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["sender-assets"] });
+            qc.invalidateQueries({ queryKey: ["account"] });
+          }}
+        />
       ) : (
-        <Wizard account={a} onDone={() => { qc.invalidateQueries({ queryKey: ["sender-assets"] }); qc.invalidateQueries({ queryKey: ["account"] }); }} />
+        <Wizard
+          account={a}
+          onDone={() => {
+            qc.invalidateQueries({ queryKey: ["sender-assets"] });
+            qc.invalidateQueries({ queryKey: ["account"] });
+          }}
+        />
       )}
     </div>
   );
 }
 
-function SenderStatusList({ assets, accountPhone, onRefresh, refreshing }: { assets: any[]; accountPhone?: string; onRefresh: () => void; refreshing: boolean }) {
+function SenderStatusList({
+  assets,
+  accountPhone,
+  onRefresh,
+  refreshing,
+  onSaved,
+}: {
+  assets: any[];
+  accountPhone?: string;
+  onRefresh: () => void;
+  refreshing: boolean;
+  onSaved: () => void;
+}) {
   return (
     <div className="space-y-3">
-      {assets.map((s) => <StatusCard key={s.id} asset={s} accountPhone={accountPhone} />)}
+      <CustomSenderIdCard assets={assets} onSaved={onSaved} />
+      {assets.map((s) => (
+        <StatusCard key={s.id} asset={s} accountPhone={accountPhone} />
+      ))}
       <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
           {refreshing && <Loader2 className="size-4 animate-spin mr-2" />}Check for updates
@@ -95,6 +151,99 @@ function SenderStatusList({ assets, accountPhone, onRefresh, refreshing }: { ass
   );
 }
 
+function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () => void }) {
+  const saveSender = useServerFn(saveCustomSenderId);
+  const senderCountries = COUNTRIES.filter((c) => c.code !== "US" && c.code !== "CA");
+  const existingSender =
+    assets.find((asset) => asset.sender_kind === "sender_id")?.phone_number ?? "";
+  const existingCountries = assets
+    .filter((asset) => asset.sender_kind === "sender_id")
+    .map((asset) => asset.country_code);
+  const [senderId, setSenderId] = useState(existingSender);
+  const [countries, setCountries] = useState<string[]>(
+    existingCountries.length ? existingCountries : ["NG"],
+  );
+  const [busy, setBusy] = useState(false);
+
+  function toggleCountry(cc: string) {
+    setCountries((current) =>
+      current.includes(cc) ? current.filter((x) => x !== cc) : [...current, cc],
+    );
+  }
+
+  async function save() {
+    if (!senderId.match(/^[A-Z0-9]{3,11}$/)) {
+      toast.error("Sender ID must be 3–11 letters or numbers");
+      return;
+    }
+    if (countries.length === 0) {
+      toast.error("Choose at least one country for this Sender ID");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await saveSender({ data: { senderId, countries } });
+      toast.success(
+        `Sender ID ${res.senderId} saved for ${res.countries.length} countr${res.countries.length === 1 ? "y" : "ies"}`,
+      );
+      onSaved();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save Sender ID");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="p-5 space-y-4 border-primary/30 bg-primary/5">
+      <div>
+        <div className="font-semibold">Use your own Sender ID</div>
+        <p className="text-sm text-muted-foreground">
+          Add or change the name customers see when a country supports alphanumeric Sender ID.
+        </p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+        <div className="space-y-1.5">
+          <Label>Sender ID</Label>
+          <Input
+            value={senderId}
+            onChange={(e) =>
+              setSenderId(
+                e.target.value
+                  .replace(/[^A-Za-z0-9]/g, "")
+                  .toUpperCase()
+                  .slice(0, 11),
+              )
+            }
+            placeholder="SAMWELLAGEN"
+            maxLength={11}
+          />
+        </div>
+        <div className="flex items-end">
+          <Button type="button" onClick={save} disabled={busy} className="w-full md:w-auto">
+            {busy && <Loader2 className="size-4 animate-spin mr-2" />}
+            Save Sender ID
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {senderCountries.map((c) => {
+          const on = countries.includes(c.code);
+          return (
+            <button
+              key={c.code}
+              type="button"
+              onClick={() => toggleCountry(c.code)}
+              className={`px-3 py-1.5 rounded-full border text-sm ${on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+            >
+              {c.name}
+            </button>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
 
 function senderKindLabel(kind: string) {
   if (kind === "toll_free") return "Toll-free number";
@@ -134,8 +283,14 @@ function StatusCard({ asset, accountPhone }: { asset: any; accountPhone?: string
           <AlertCircle className="size-6 text-destructive shrink-0" />
           <div className="flex-1">
             <div className="font-semibold">We need a bit more info ({asset.country_code})</div>
-            <div className="text-sm text-muted-foreground mt-1">{asset.friendly_rejection_reason ?? "Please update your details and try again."}</div>
-            <Link to="/app/setup-sms"><Button size="sm" className="mt-3">Update and resubmit</Button></Link>
+            <div className="text-sm text-muted-foreground mt-1">
+              {asset.friendly_rejection_reason ?? "Please update your details and try again."}
+            </div>
+            <Link to="/app/setup-sms">
+              <Button size="sm" className="mt-3">
+                Update and resubmit
+              </Button>
+            </Link>
           </div>
         </div>
       </Card>
@@ -146,9 +301,16 @@ function StatusCard({ asset, accountPhone }: { asset: any; accountPhone?: string
       <div className="flex items-center gap-3">
         <Clock className="size-6 text-primary" />
         <div className="flex-1">
-          <div className="font-semibold">Setting up your sender ({asset.country_code} · {kindLabel})</div>
+          <div className="font-semibold">
+            Setting up your sender ({asset.country_code} · {kindLabel})
+          </div>
           <div className="text-sm text-muted-foreground">
-            {asset.phone_number ? <>Provisioned {identifierLabel.toLowerCase()}: <span className="font-mono">{asset.phone_number}</span> · </> : null}
+            {asset.phone_number ? (
+              <>
+                Provisioned {identifierLabel.toLowerCase()}:{" "}
+                <span className="font-mono">{asset.phone_number}</span> ·{" "}
+              </>
+            ) : null}
             Carrier review usually takes 7–10 business days. You can build campaigns while you wait.
           </div>
         </div>
@@ -158,7 +320,10 @@ function StatusCard({ asset, accountPhone }: { asset: any; accountPhone?: string
   );
 }
 
-function TestSendInline({ defaultPhone, country }: { defaultPhone?: string; country?: string } = {}) {
+function TestSendInline({
+  defaultPhone,
+  country,
+}: { defaultPhone?: string; country?: string } = {}) {
   const send = useServerFn(sendTestSms);
   const [to, setTo] = useState(defaultPhone ?? "");
   const [busy, setBusy] = useState(false);
@@ -171,36 +336,54 @@ function TestSendInline({ defaultPhone, country }: { defaultPhone?: string; coun
     setBusy(true);
     setResult(null);
     try {
-      const r = await send({ data: { to, body: "Test from Samwell Global SMS — your sender is working ✅ Reply STOP to opt out.", country } });
-      const msg = `Sent from ${r.from} (${r.country} · ${r.sender_kind.replace("_"," ")}) — status: ${r.status}`;
+      const r = await send({
+        data: {
+          to,
+          body: "Test from Samwell Global SMS — your sender is working ✅ Reply STOP to opt out.",
+          country,
+        },
+      });
+      const msg = `Sent from ${r.from} (${r.country} · ${r.sender_kind.replace("_", " ")}) — status: ${r.status}`;
       setResult({ ok: true, msg, from: r.from });
       toast.success(msg);
     } catch (e: any) {
       const m = e?.message ?? "Test send failed";
       setResult({ ok: false, msg: m });
       toast.error(m);
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <div className="border-t pt-4">
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Test / Verify Sender ID</Label>
-      <p className="text-xs text-muted-foreground mb-2">Sends one real SMS from your provisioned sender to confirm everything is working.</p>
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+        Test / Verify Sender ID
+      </Label>
+      <p className="text-xs text-muted-foreground mb-2">
+        Sends one real SMS from your provisioned sender to confirm everything is working.
+      </p>
       <div className="flex gap-2">
         <Input placeholder="+15551234567" value={to} onChange={(e) => setTo(e.target.value)} />
         <Button onClick={run} disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin mr-1.5" /> : <Send className="size-4 mr-1.5" />}
+          {busy ? (
+            <Loader2 className="size-4 animate-spin mr-1.5" />
+          ) : (
+            <Send className="size-4 mr-1.5" />
+          )}
           Send test
         </Button>
       </div>
       {result && (
-        <div className={`mt-2 text-xs rounded-md px-3 py-2 ${result.ok ? "bg-success/10 text-success-foreground border border-success/30" : "bg-destructive/10 text-destructive border border-destructive/30"}`}>
-          {result.ok ? "✅ " : "⚠️ "}{result.msg}
+        <div
+          className={`mt-2 text-xs rounded-md px-3 py-2 ${result.ok ? "bg-success/10 text-success-foreground border border-success/30" : "bg-destructive/10 text-destructive border border-destructive/30"}`}
+        >
+          {result.ok ? "✅ " : "⚠️ "}
+          {result.msg}
         </div>
       )}
     </div>
   );
 }
-
 
 type WizardForm = {
   legal_business_name: string;
@@ -216,12 +399,16 @@ type WizardForm = {
   sampleMessage: string;
   optInDescription: string;
   optInScreenshotPath: string;
+  customSenderId: string;
 };
 
 function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [uploading, setUploading] = useState(false);
-  const [setupMessage, setSetupMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [setupMessage, setSetupMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [form, setForm] = useState<WizardForm>({
     legal_business_name: account?.legal_business_name ?? "",
     business_address: account?.business_address ?? "",
@@ -236,25 +423,30 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
     sampleMessage: account?.sample_message ?? "",
     optInDescription: account?.opt_in_description ?? "",
     optInScreenshotPath: account?.opt_in_screenshot_url ?? "",
+    customSenderId: "",
   });
 
   useEffect(() => {
-    if (account) setForm((f) => ({
-      ...f,
-      legal_business_name: account.legal_business_name ?? f.legal_business_name,
-      business_address: account.business_address ?? f.business_address,
-      business_reg_number: account.business_reg_number ?? f.business_reg_number,
-      website_url: account.website_url ?? f.website_url,
-      privacy_policy_url: account.privacy_policy_url ?? f.privacy_policy_url,
-      contact_email: account.contact_email ?? account.email ?? f.contact_email,
-      phone: account.phone ?? f.phone,
-      targetCountries: account.sms_target_countries?.length ? account.sms_target_countries : f.targetCountries,
-      monthlyVolume: account.monthly_volume_estimate ?? f.monthlyVolume,
-      useCase: account.use_case_description ?? f.useCase,
-      sampleMessage: account.sample_message ?? f.sampleMessage,
-      optInDescription: account.opt_in_description ?? f.optInDescription,
-      optInScreenshotPath: account.opt_in_screenshot_url ?? f.optInScreenshotPath,
-    }));
+    if (account)
+      setForm((f) => ({
+        ...f,
+        legal_business_name: account.legal_business_name ?? f.legal_business_name,
+        business_address: account.business_address ?? f.business_address,
+        business_reg_number: account.business_reg_number ?? f.business_reg_number,
+        website_url: account.website_url ?? f.website_url,
+        privacy_policy_url: account.privacy_policy_url ?? f.privacy_policy_url,
+        contact_email: account.contact_email ?? account.email ?? f.contact_email,
+        phone: account.phone ?? f.phone,
+        targetCountries: account.sms_target_countries?.length
+          ? account.sms_target_countries
+          : f.targetCountries,
+        monthlyVolume: account.monthly_volume_estimate ?? f.monthlyVolume,
+        useCase: account.use_case_description ?? f.useCase,
+        sampleMessage: account.sample_message ?? f.sampleMessage,
+        optInDescription: account.opt_in_description ?? f.optInDescription,
+        optInScreenshotPath: account.opt_in_screenshot_url ?? f.optInScreenshotPath,
+        customSenderId: f.customSenderId,
+      }));
   }, [account]);
 
   async function handleUpload(file: File) {
@@ -263,27 +455,35 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
       const path = `${u.user.id}/optin-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const { error } = await supabase.storage.from("opt-in-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage
+        .from("opt-in-assets")
+        .upload(path, file, { upsert: true });
       if (error) throw error;
       setForm((f) => ({ ...f, optInScreenshotPath: path }));
       toast.success("Screenshot uploaded");
-    } catch (e: any) { toast.error(e.message); }
-    finally { setUploading(false); }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
+    }
   }
 
   const saveProfile = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not signed in");
-      const { error } = await supabase.from("accounts").update({
-        legal_business_name: form.legal_business_name,
-        business_address: form.business_address,
-        business_reg_number: form.business_reg_number,
-        website_url: form.website_url,
-        privacy_policy_url: form.privacy_policy_url || null,
-        contact_email: form.contact_email,
-        phone: form.phone || null,
-      }).eq("id", u.user.id);
+      const { error } = await supabase
+        .from("accounts")
+        .update({
+          legal_business_name: form.legal_business_name,
+          business_address: form.business_address,
+          business_reg_number: form.business_reg_number,
+          website_url: form.website_url,
+          privacy_policy_url: form.privacy_policy_url || null,
+          contact_email: form.contact_email,
+          phone: form.phone || null,
+        })
+        .eq("id", u.user.id);
       if (error) throw error;
     },
     onError: (e: Error) => toast.error(e.message),
@@ -299,12 +499,13 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-        targetCountries: form.targetCountries,
-        monthlyVolume: form.monthlyVolume,
-        useCase: form.useCase,
-        sampleMessage: form.sampleMessage,
-        optInDescription: form.optInDescription,
-        optInScreenshotPath: form.optInScreenshotPath || undefined,
+          targetCountries: form.targetCountries,
+          monthlyVolume: form.monthlyVolume,
+          useCase: form.useCase,
+          sampleMessage: form.sampleMessage,
+          optInDescription: form.optInDescription,
+          optInScreenshotPath: form.optInScreenshotPath || undefined,
+          customSenderId: form.customSenderId || undefined,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -325,7 +526,8 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
         return;
       }
       if (!r?.errors?.length) {
-        const message = "SMS setup could not complete. Please adjust the highlighted details and try again.";
+        const message =
+          "SMS setup could not complete. Please adjust the highlighted details and try again.";
         setSetupMessage({ type: "error", text: message });
         toast.error(message);
       }
@@ -338,7 +540,12 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   });
 
   function toggleCountry(cc: string) {
-    setForm((f) => ({ ...f, targetCountries: f.targetCountries.includes(cc) ? f.targetCountries.filter((x) => x !== cc) : [...f.targetCountries, cc] }));
+    setForm((f) => ({
+      ...f,
+      targetCountries: f.targetCountries.includes(cc)
+        ? f.targetCountries.filter((x) => x !== cc)
+        : [...f.targetCountries, cc],
+    }));
   }
 
   return (
@@ -354,21 +561,64 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
       {step === 1 && (
         <Card className="p-6 space-y-4">
           <h3 className="font-semibold">Confirm your business details</h3>
-          <p className="text-sm text-muted-foreground">We pre-filled these from your account. Edit if anything's changed.</p>
-          <Field label="Legal business name" v={form.legal_business_name} on={(v) => setForm({ ...form, legal_business_name: v })} />
+          <p className="text-sm text-muted-foreground">
+            We pre-filled these from your account. Edit if anything's changed.
+          </p>
+          <Field
+            label="Legal business name"
+            v={form.legal_business_name}
+            on={(v) => setForm({ ...form, legal_business_name: v })}
+          />
           <div className="space-y-1.5">
             <Label>Business address</Label>
-            <Textarea value={form.business_address} onChange={(e) => setForm({ ...form, business_address: e.target.value })} rows={2} placeholder="Street, City, State, ZIP" />
+            <Textarea
+              value={form.business_address}
+              onChange={(e) => setForm({ ...form, business_address: e.target.value })}
+              rows={2}
+              placeholder="Street, City, State, ZIP"
+            />
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Business registration #" v={form.business_reg_number} on={(v) => setForm({ ...form, business_reg_number: v })} />
-            <Field label="Website" v={form.website_url} on={(v) => setForm({ ...form, website_url: v })} placeholder="https://" />
-            <Field label="Privacy policy URL" v={form.privacy_policy_url} on={(v) => setForm({ ...form, privacy_policy_url: v })} placeholder="https://" />
-            <Field label="Contact email" v={form.contact_email} on={(v) => setForm({ ...form, contact_email: v })} type="email" />
-            <Field label="Business phone" v={form.phone} on={(v) => setForm({ ...form, phone: v })} placeholder="+15551234567" />
+            <Field
+              label="Business registration #"
+              v={form.business_reg_number}
+              on={(v) => setForm({ ...form, business_reg_number: v })}
+            />
+            <Field
+              label="Website"
+              v={form.website_url}
+              on={(v) => setForm({ ...form, website_url: v })}
+              placeholder="https://"
+            />
+            <Field
+              label="Privacy policy URL"
+              v={form.privacy_policy_url}
+              on={(v) => setForm({ ...form, privacy_policy_url: v })}
+              placeholder="https://"
+            />
+            <Field
+              label="Contact email"
+              v={form.contact_email}
+              on={(v) => setForm({ ...form, contact_email: v })}
+              type="email"
+            />
+            <Field
+              label="Business phone"
+              v={form.phone}
+              on={(v) => setForm({ ...form, phone: v })}
+              placeholder="+15551234567"
+            />
           </div>
           <div className="flex justify-end">
-            <Button onClick={async () => { await saveProfile.mutateAsync(); setStep(2); }} disabled={saveProfile.isPending}>Continue</Button>
+            <Button
+              onClick={async () => {
+                await saveProfile.mutateAsync();
+                setStep(2);
+              }}
+              disabled={saveProfile.isPending}
+            >
+              Continue
+            </Button>
           </div>
         </Card>
       )}
@@ -383,8 +633,12 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
               {COUNTRIES.map((c) => {
                 const on = form.targetCountries.includes(c.code);
                 return (
-                  <button key={c.code} type="button" onClick={() => toggleCountry(c.code)}
-                    className={`px-3 py-1.5 rounded-full border text-sm ${on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}>
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => toggleCountry(c.code)}
+                    className={`px-3 py-1.5 rounded-full border text-sm ${on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                  >
                     {c.name}
                   </button>
                 );
@@ -392,12 +646,38 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
             </div>
           </div>
 
+          <div className="space-y-1.5">
+            <Label>Your Sender ID</Label>
+            <Input
+              value={form.customSenderId}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  customSenderId: e.target.value
+                    .replace(/[^A-Za-z0-9]/g, "")
+                    .toUpperCase()
+                    .slice(0, 11),
+                })
+              }
+              placeholder="SAMWELLAGEN"
+              maxLength={11}
+            />
+            <p className="text-xs text-muted-foreground">
+              Use 3–11 letters or numbers. Countries that support alphanumeric Sender ID will send
+              from this name; US/Canada still use a number.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label>Roughly how many messages per month?</Label>
             <div className="grid sm:grid-cols-2 gap-2">
               {VOLUMES.map((v) => (
-                <button key={v.v} type="button" onClick={() => setForm({ ...form, monthlyVolume: v.v })}
-                  className={`p-3 rounded-md border text-sm text-left ${form.monthlyVolume === v.v ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}>
+                <button
+                  key={v.v}
+                  type="button"
+                  onClick={() => setForm({ ...form, monthlyVolume: v.v })}
+                  className={`p-3 rounded-md border text-sm text-left ${form.monthlyVolume === v.v ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
+                >
                   {v.label}
                 </button>
               ))}
@@ -406,35 +686,71 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
 
           <div className="space-y-1.5">
             <Label>What will you text people about?</Label>
-            <Textarea rows={3} value={form.useCase} onChange={(e) => setForm({ ...form, useCase: e.target.value })}
-              placeholder="e.g. New product launches, restock alerts, and seasonal sale notifications for our customers who opted in at checkout." />
+            <Textarea
+              rows={3}
+              value={form.useCase}
+              onChange={(e) => setForm({ ...form, useCase: e.target.value })}
+              placeholder="e.g. New product launches, restock alerts, and seasonal sale notifications for our customers who opted in at checkout."
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label>Sample message a subscriber would receive</Label>
-            <Textarea rows={2} value={form.sampleMessage} onChange={(e) => setForm({ ...form, sampleMessage: e.target.value })}
-              placeholder="Hi Sam! Our spring sale starts today — 20% off everything with code SPRING20. Reply STOP to opt out." />
+            <Textarea
+              rows={2}
+              value={form.sampleMessage}
+              onChange={(e) => setForm({ ...form, sampleMessage: e.target.value })}
+              placeholder="Hi Sam! Our spring sale starts today — 20% off everything with code SPRING20. Reply STOP to opt out."
+            />
           </div>
 
           <div className="space-y-1.5">
             <Label>How do subscribers opt in?</Label>
-            <Textarea rows={3} value={form.optInDescription} onChange={(e) => setForm({ ...form, optInDescription: e.target.value })}
-              placeholder="At checkout customers check a box that says 'Yes, send me SMS updates'. The box is unchecked by default." />
+            <Textarea
+              rows={3}
+              value={form.optInDescription}
+              onChange={(e) => setForm({ ...form, optInDescription: e.target.value })}
+              placeholder="At checkout customers check a box that says 'Yes, send me SMS updates'. The box is unchecked by default."
+            />
             <div className="flex items-center gap-3 pt-2">
               <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); }} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUpload(f);
+                  }}
+                />
                 <span className="inline-flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-muted">
-                  {uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+                  {uploading ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Upload className="size-4" />
+                  )}
                   Upload sign-up form screenshot (optional)
                 </span>
               </label>
-              {form.optInScreenshotPath && <span className="text-xs text-success">✓ Screenshot attached</span>}
+              {form.optInScreenshotPath && (
+                <span className="text-xs text-success">✓ Screenshot attached</span>
+              )}
             </div>
           </div>
 
           <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-            <Button onClick={() => setStep(3)} disabled={!form.useCase || !form.sampleMessage || !form.optInDescription || form.targetCountries.length === 0}>
+            <Button variant="outline" onClick={() => setStep(1)}>
+              Back
+            </Button>
+            <Button
+              onClick={() => setStep(3)}
+              disabled={
+                !form.useCase ||
+                !form.sampleMessage ||
+                !form.optInDescription ||
+                form.targetCountries.length === 0
+              }
+            >
               Continue
             </Button>
           </div>
@@ -446,18 +762,27 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
           <Sparkles className="size-12 text-primary mx-auto" />
           <h3 className="text-xl font-bold">You're all set</h3>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            We'll provision your sender number and submit the carrier registration in the background.
-            You'll get an email when your SMS is ready — usually within 7–10 business days.
+            We'll save your Sender ID for supported countries and submit any required carrier
+            registration in the background. You can test each ready sender from this page.
           </p>
           <div className="pt-2 flex justify-center gap-3">
-            <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
-            <Button type="button" onClick={() => runSetup.mutate()} disabled={runSetup.isPending} size="lg">
+            <Button variant="outline" onClick={() => setStep(2)}>
+              Back
+            </Button>
+            <Button
+              type="button"
+              onClick={() => runSetup.mutate()}
+              disabled={runSetup.isPending}
+              size="lg"
+            >
               {runSetup.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
               {runSetup.isPending ? "Setting up..." : "Set up my SMS"}
             </Button>
           </div>
           {setupMessage && (
-            <div className={`mx-auto mt-2 max-w-lg whitespace-pre-line rounded-md border px-3 py-2 text-sm ${setupMessage.type === "success" ? "border-success/40 bg-success/10 text-success-foreground" : "border-destructive/40 bg-destructive/10 text-destructive"}`}>
+            <div
+              className={`mx-auto mt-2 max-w-lg whitespace-pre-line rounded-md border px-3 py-2 text-sm ${setupMessage.type === "success" ? "border-success/40 bg-success/10 text-success-foreground" : "border-destructive/40 bg-destructive/10 text-destructive"}`}
+            >
               {setupMessage.text}
             </div>
           )}
@@ -467,10 +792,24 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   );
 }
 
-function StepDot({ n, active, done, label }: { n: number; active: boolean; done: boolean; label: string }) {
+function StepDot({
+  n,
+  active,
+  done,
+  label,
+}: {
+  n: number;
+  active: boolean;
+  done: boolean;
+  label: string;
+}) {
   return (
-    <div className={`flex items-center gap-2 ${active ? "text-foreground" : "text-muted-foreground"}`}>
-      <div className={`size-7 rounded-full flex items-center justify-center text-xs font-semibold border ${done ? "bg-success text-success-foreground border-success" : active ? "border-primary text-primary" : "border-border"}`}>
+    <div
+      className={`flex items-center gap-2 ${active ? "text-foreground" : "text-muted-foreground"}`}
+    >
+      <div
+        className={`size-7 rounded-full flex items-center justify-center text-xs font-semibold border ${done ? "bg-success text-success-foreground border-success" : active ? "border-primary text-primary" : "border-border"}`}
+      >
         {done ? <CheckCircle2 className="size-4" /> : n}
       </div>
       <span className="text-sm font-medium hidden sm:inline">{label}</span>
@@ -478,7 +817,19 @@ function StepDot({ n, active, done, label }: { n: number; active: boolean; done:
   );
 }
 
-function Field({ label, v, on, placeholder, type }: { label: string; v: string; on: (v: string) => void; placeholder?: string; type?: string }) {
+function Field({
+  label,
+  v,
+  on,
+  placeholder,
+  type,
+}: {
+  label: string;
+  v: string;
+  on: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+}) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
