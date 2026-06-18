@@ -122,6 +122,33 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_settings: {
+        Row: {
+          default_currency: string
+          id: boolean
+          payoneer_instructions: string | null
+          payoneer_payee_email: string | null
+          payoneer_payee_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          default_currency?: string
+          id?: boolean
+          payoneer_instructions?: string | null
+          payoneer_payee_email?: string | null
+          payoneer_payee_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          default_currency?: string
+          id?: boolean
+          payoneer_instructions?: string | null
+          payoneer_payee_email?: string | null
+          payoneer_payee_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           account_id: string
@@ -252,6 +279,48 @@ export type Database = {
           mms_multiplier?: number
           sell_price?: number
           sender_supports_inbound?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      credit_packs: {
+        Row: {
+          created_at: string
+          credits: number
+          currency: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credits: number
+          currency: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          currency?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name?: string
+          price?: number
           updated_at?: string
         }
         Relationships: []
@@ -398,6 +467,78 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          account_id: string
+          admin_note: string | null
+          amount: number
+          created_at: string
+          credits: number
+          currency: string
+          customer_note: string | null
+          id: string
+          metadata: Json
+          pack_id: string | null
+          paid_at: string | null
+          proof_url: string | null
+          provider: string
+          provider_reference: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          admin_note?: string | null
+          amount: number
+          created_at?: string
+          credits: number
+          currency: string
+          customer_note?: string | null
+          id?: string
+          metadata?: Json
+          pack_id?: string | null
+          paid_at?: string | null
+          proof_url?: string | null
+          provider: string
+          provider_reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          credits?: number
+          currency?: string
+          customer_note?: string | null
+          id?: string
+          metadata?: Json
+          pack_id?: string | null
+          paid_at?: string | null
+          proof_url?: string | null
+          provider?: string
+          provider_reference?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "credit_packs"
             referencedColumns: ["id"]
           },
         ]
