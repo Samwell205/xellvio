@@ -157,26 +157,33 @@ function StatusCard({ asset }: { asset: any }) {
   );
 }
 
-function TestSendInline() {
+function TestSendInline({ defaultPhone, country }: { defaultPhone?: string; country?: string } = {}) {
   const send = useServerFn(sendTestSms);
-  const [to, setTo] = useState("");
+  const [to, setTo] = useState(defaultPhone ?? "");
   const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; msg: string; from?: string } | null>(null);
   async function run() {
     if (!to.match(/^\+[1-9][0-9]{6,14}$/)) {
-      toast.error("Enter phone in E.164 format, e.g. +15551234567");
+      toast.error("Enter your number in international format, e.g. +15551234567");
       return;
     }
     setBusy(true);
+    setResult(null);
     try {
-      const r = await send({ data: { to, body: "Test from Samwell Global SMS — your sender is working ✅ Reply STOP to opt out." } });
-      toast.success(`Test sent (sid ${r.sid.slice(0, 10)}…)`);
-    } catch (e: any) { toast.error(e.message ?? "Test send failed"); }
-    finally { setBusy(false); }
+      const r = await send({ data: { to, body: "Test from Samwell Global SMS — your sender is working ✅ Reply STOP to opt out.", country } });
+      const msg = `Sent from ${r.from} (${r.country} · ${r.sender_kind.replace("_"," ")}) — status: ${r.status}`;
+      setResult({ ok: true, msg, from: r.from });
+      toast.success(msg);
+    } catch (e: any) {
+      const m = e?.message ?? "Test send failed";
+      setResult({ ok: false, msg: m });
+      toast.error(m);
+    } finally { setBusy(false); }
   }
   return (
     <div className="border-t pt-4">
-      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Send a test message</Label>
-      <p className="text-xs text-muted-foreground mb-2">Verify your credentials with one real SMS before launching campaigns.</p>
+      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Test / Verify Sender ID</Label>
+      <p className="text-xs text-muted-foreground mb-2">Sends one real SMS from your provisioned sender to confirm everything is working.</p>
       <div className="flex gap-2">
         <Input placeholder="+15551234567" value={to} onChange={(e) => setTo(e.target.value)} />
         <Button onClick={run} disabled={busy}>
@@ -184,9 +191,15 @@ function TestSendInline() {
           Send test
         </Button>
       </div>
+      {result && (
+        <div className={`mt-2 text-xs rounded-md px-3 py-2 ${result.ok ? "bg-success/10 text-success-foreground border border-success/30" : "bg-destructive/10 text-destructive border border-destructive/30"}`}>
+          {result.ok ? "✅ " : "⚠️ "}{result.msg}
+        </div>
+      )}
     </div>
   );
 }
+
 
 type WizardForm = {
   legal_business_name: string;
