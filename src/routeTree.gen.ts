@@ -24,6 +24,7 @@ import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenticated.app.audience'
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
+import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 
 const SolutionsRoute = SolutionsRouteImport.update({
   id: '/solutions',
@@ -105,6 +106,12 @@ const AuthenticatedAppSegmentsNewRoute =
     path: '/new',
     getParentRoute: () => AuthenticatedAppSegmentsRoute,
   } as any)
+const AuthenticatedAppCampaignsNewRoute =
+  AuthenticatedAppCampaignsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAppCampaignsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -115,11 +122,12 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
-  '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
 }
 export interface FileRoutesByTo {
@@ -131,11 +139,12 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
-  '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
 }
 export interface FileRoutesById {
@@ -149,11 +158,12 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
   '/_authenticated/app/audience': typeof AuthenticatedAppAudienceRoute
-  '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
 }
 export interface FileRouteTypes {
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/suppressions'
     | '/app/'
+    | '/app/campaigns/new'
     | '/app/segments/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -188,6 +199,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/suppressions'
     | '/app'
+    | '/app/campaigns/new'
     | '/app/segments/new'
   id:
     | '__root__'
@@ -205,6 +217,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/suppressions'
     | '/_authenticated/app/'
+    | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
   fileRoutesById: FileRoutesById
 }
@@ -326,8 +339,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSegmentsNewRouteImport
       parentRoute: typeof AuthenticatedAppSegmentsRoute
     }
+    '/_authenticated/app/campaigns/new': {
+      id: '/_authenticated/app/campaigns/new'
+      path: '/new'
+      fullPath: '/app/campaigns/new'
+      preLoaderRoute: typeof AuthenticatedAppCampaignsNewRouteImport
+      parentRoute: typeof AuthenticatedAppCampaignsRoute
+    }
   }
 }
+
+interface AuthenticatedAppCampaignsRouteChildren {
+  AuthenticatedAppCampaignsNewRoute: typeof AuthenticatedAppCampaignsNewRoute
+}
+
+const AuthenticatedAppCampaignsRouteChildren: AuthenticatedAppCampaignsRouteChildren =
+  {
+    AuthenticatedAppCampaignsNewRoute: AuthenticatedAppCampaignsNewRoute,
+  }
+
+const AuthenticatedAppCampaignsRouteWithChildren =
+  AuthenticatedAppCampaignsRoute._addFileChildren(
+    AuthenticatedAppCampaignsRouteChildren,
+  )
 
 interface AuthenticatedAppSegmentsRouteChildren {
   AuthenticatedAppSegmentsNewRoute: typeof AuthenticatedAppSegmentsNewRoute
@@ -345,7 +379,7 @@ const AuthenticatedAppSegmentsRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAppAudienceRoute: typeof AuthenticatedAppAudienceRoute
-  AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRoute
+  AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
   AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
@@ -354,7 +388,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppAudienceRoute: AuthenticatedAppAudienceRoute,
-  AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRoute,
+  AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
   AuthenticatedAppSegmentsRoute: AuthenticatedAppSegmentsRouteWithChildren,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
