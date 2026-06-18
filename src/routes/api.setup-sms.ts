@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { SetupInput } from "@/lib/sender-setup.schema";
-import { setupSmsForUser } from "@/lib/sender-setup.server";
 
 export const Route = createFileRoute("/api/setup-sms")({
   server: {
@@ -27,6 +26,7 @@ export const Route = createFileRoute("/api/setup-sms")({
           }
 
           const payload = SetupInput.parse(await request.json());
+          const { setupSmsForUser } = await import("@/lib/sender-setup.server");
           const result = await setupSmsForUser(userData.user.id, payload);
           return Response.json(result);
         } catch (e: any) {

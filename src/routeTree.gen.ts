@@ -17,6 +17,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
 import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.twilio-inbound'
@@ -76,6 +77,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSetupSmsRoute = ApiSetupSmsRouteImport.update({
+  id: '/api/setup-sms',
+  path: '/api/setup-sms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/features': typeof FeaturesRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
+  '/api/setup-sms': typeof ApiSetupSmsRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/features': typeof FeaturesRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
+  '/api/setup-sms': typeof ApiSetupSmsRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
@@ -271,6 +279,7 @@ export interface FileRoutesById {
   '/features': typeof FeaturesRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
+  '/api/setup-sms': typeof ApiSetupSmsRoute
   '/_authenticated/app/audience': typeof AuthenticatedAppAudienceRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/pricing'
     | '/solutions'
+    | '/api/setup-sms'
     | '/app/audience'
     | '/app/billing'
     | '/app/onboarding'
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/pricing'
     | '/solutions'
+    | '/api/setup-sms'
     | '/app/audience'
     | '/app/billing'
     | '/app/onboarding'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/pricing'
     | '/solutions'
+    | '/api/setup-sms'
     | '/_authenticated/app/audience'
     | '/_authenticated/app/billing'
     | '/_authenticated/app/onboarding'
@@ -396,6 +408,7 @@ export interface RootRouteChildren {
   FeaturesRoute: typeof FeaturesRoute
   PricingRoute: typeof PricingRoute
   SolutionsRoute: typeof SolutionsRoute
+  ApiSetupSmsRoute: typeof ApiSetupSmsRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
@@ -459,6 +472,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/setup-sms': {
+      id: '/api/setup-sms'
+      path: '/api/setup-sms'
+      fullPath: '/api/setup-sms'
+      preLoaderRoute: typeof ApiSetupSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/app/': {
@@ -663,6 +683,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeaturesRoute: FeaturesRoute,
   PricingRoute: PricingRoute,
   SolutionsRoute: SolutionsRoute,
+  ApiSetupSmsRoute: ApiSetupSmsRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,

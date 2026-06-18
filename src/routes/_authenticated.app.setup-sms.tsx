@@ -297,8 +297,10 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
       }
       if (r?.created?.length) {
         toast.success(`Set up ${r.created.length} sender${r.created.length === 1 ? "" : "s"}. We'll email you when verification completes.`);
+        onDone();
+        return;
       }
-      onDone();
+      toast.error("SMS setup could not complete. Please adjust the highlighted details and try again.");
     },
     onError: (e: Error) => toast.error(e.message || "Could not set up SMS. Please try again."),
   });
