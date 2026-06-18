@@ -235,9 +235,14 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
 
         {step === "upload" && (
           <div className="space-y-4">
-            <div className="flex gap-2 text-sm">
-              <button onClick={() => setMode("file")} className={`px-3 py-1.5 rounded-md border ${mode === "file" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Upload CSV</button>
-              <button onClick={() => setMode("paste")} className={`px-3 py-1.5 rounded-md border ${mode === "paste" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Paste CSV</button>
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <div className="flex gap-2">
+                <button onClick={() => setMode("file")} className={`px-3 py-1.5 rounded-md border ${mode === "file" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Upload CSV</button>
+                <button onClick={() => setMode("paste")} className={`px-3 py-1.5 rounded-md border ${mode === "paste" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-accent"}`}>Paste CSV</button>
+              </div>
+              <Button variant="outline" size="sm" onClick={downloadTemplate}>
+                <Download className="size-4 mr-1.5" /> Download template
+              </Button>
             </div>
 
             {mode === "file" ? (
@@ -248,9 +253,9 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
               >
                 <Upload className="size-8 mx-auto text-muted-foreground" />
                 <div className="mt-3 font-semibold">Drag and drop or upload CSV</div>
-                <div className="text-xs text-muted-foreground mt-1">Accepts .csv file type · Max 50 MB</div>
+                <div className="text-xs text-muted-foreground mt-1">Accepts .csv file · Max 20 MB</div>
                 {fileName && <div className="mt-3 text-xs inline-flex items-center gap-1.5 bg-background border rounded px-2 py-1"><FileText className="size-3" />{fileName}</div>}
-                <input type="file" accept=".csv,text/csv" onChange={onFile} className="hidden" />
+                <input type="file" accept=".csv,text/csv,.txt" onChange={onFile} className="hidden" />
               </label>
             ) : (
               <div className="space-y-2">
