@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Plus, RefreshCw, Megaphone } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/app/campaigns")({
+export const Route = createFileRoute("/_authenticated/app/campaigns/")({
   head: () => ({ meta: [{ title: "Campaigns — Samwell Global SMS" }] }),
   component: CampaignsPage,
 });
@@ -55,7 +55,7 @@ function CampaignsPage() {
                     <Megaphone className="size-8 mx-auto text-muted-foreground/60 mb-3" />
                     <div className="font-medium">No campaigns yet</div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      The campaign builder ships in the next phase of the rebuild.
+                      Click <strong>New campaign</strong> to create your first one.
                     </p>
                   </td>
                 </tr>

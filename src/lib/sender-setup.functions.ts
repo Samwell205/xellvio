@@ -84,8 +84,8 @@ export const setupSms = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error || !acct) throw new Error("Account not found");
     if (acct.onboarding_status === "suspended") throw new Error("Account suspended");
-    if (!acct.legal_business_name || !acct.business_address || !acct.website_url || !acct.business_reg_number || !acct.contact_email) {
-      throw new Error("Please complete your business profile first");
+    if (!acct.legal_business_name || !acct.business_address || !acct.website_url || !acct.contact_email) {
+      throw new Error("Please complete your business profile first (legal name, address, website, contact email).");
     }
 
     // Persist wizard answers
