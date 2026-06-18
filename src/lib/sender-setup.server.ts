@@ -85,7 +85,6 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   let subSid = (acct.twilio_subaccount_sid as string | null) ?? "";
   let subToken = "";
-  const accountName = acct.legal_business_name;
   async function useMainSmsAccount() {
     const master = masterAuth();
     subSid = master.sid;
