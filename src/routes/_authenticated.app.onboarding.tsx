@@ -1,14 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, Phone, ShieldCheck } from "lucide-react";
+import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant-twilio.functions";
 
 export const Route = createFileRoute("/_authenticated/app/onboarding")({
   head: () => ({ meta: [{ title: "Set up your business — Samwell Global SMS" }] }),
@@ -39,7 +43,6 @@ function OnboardingPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [form, setForm] = useState<Form>(empty);
-  const [step, setStep] = useState<1 | 2>(1);
 
   const account = useQuery({
     queryKey: ["account"],
@@ -59,6 +62,9 @@ function OnboardingPage() {
     });
   }, [account.data]);
 
+  const status = account.data?.onboarding_status ?? "signup";
+  const step: 1 | 2 = useMemo(() => (status === "signup" ? 1 : 2), [status]);
+
   const save = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
@@ -76,7 +82,6 @@ function OnboardingPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account"] });
       toast.success("Business profile saved");
-      navigate({ to: "/app" });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -84,8 +89,6 @@ function OnboardingPage() {
   if (account.isLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="size-6 animate-spin" /></div>;
   }
-
-  const status = account.data?.onboarding_status ?? "signup";
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -127,14 +130,116 @@ function OnboardingPage() {
         </Card>
       )}
 
-      {step === 2 && (
-        <Card className="p-6 space-y-3">
-          <h3 className="font-semibold">Sender provisioning</h3>
-          <p className="text-sm text-muted-foreground">
-            Once your profile is approved, we'll provision a dedicated Twilio subaccount and sender number for you. This step is set up in the next release.
+      {step === 2 && <SenderStep account={account.data} />}
+    </div>
+  );
+}
+
+function SenderStep({ account }: { account: any }) {
+  const qc = useQueryClient();
+  const provision = useServerFn(provisionSubaccount);
+  const search = useServerFn(searchNumbers);
+  const purchase = useServerFn(purchaseNumber);
+
+  const [country, setCountry] = useState("US");
+  const [numbers, setNumbers] = useState<any[]>([]);
+
+  const provisionMut = useMutation({
+    mutationFn: () => provision(),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["account"] });
+      toast.success(r.already ? "Subaccount already provisioned" : "Twilio subaccount created");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const searchMut = useMutation({
+    mutationFn: () => search({ data: { country } }),
+    onSuccess: (r) => { setNumbers(r); if (r.length === 0) toast.message("No numbers available for that country"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const buyMut = useMutation({
+    mutationFn: (phoneNumber: string) => purchase({ data: { phoneNumber } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["account"] });
+      toast.success("Number purchased — your account is live!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const hasSub = !!account?.twilio_subaccount_sid;
+  const hasNumber = !!account?.subaccount_phone_number;
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold flex items-center gap-2"><ShieldCheck className="size-4" /> Twilio subaccount</h3>
+          {hasSub && <Badge variant="default">Provisioned</Badge>}
+        </div>
+        {hasSub ? (
+          <p className="text-sm text-muted-foreground">SID: <span className="font-mono text-xs">{account.twilio_subaccount_sid}</span></p>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              We'll create a dedicated Twilio subaccount under your business. Your subaccount auth token is encrypted at rest and never exposed to the browser.
+            </p>
+            <Button onClick={() => provisionMut.mutate()} disabled={provisionMut.isPending}>
+              {provisionMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+              Create subaccount
+            </Button>
+          </>
+        )}
+      </Card>
+
+      <Card className="p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold flex items-center gap-2"><Phone className="size-4" /> Sender phone number</h3>
+          {hasNumber && <Badge variant="default">Active</Badge>}
+        </div>
+        {hasNumber ? (
+          <p className="text-sm">
+            Your sender: <span className="font-mono">{account.subaccount_phone_number}</span>
           </p>
-        </Card>
-      )}
+        ) : !hasSub ? (
+          <p className="text-sm text-muted-foreground">Provision your subaccount first.</p>
+        ) : (
+          <>
+            <div className="flex gap-2 items-end">
+              <div className="space-y-1.5">
+                <Label>Country</Label>
+                <Select value={country} onValueChange={setCountry}>
+                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["US","CA","GB","AU","DE","FR","ES","IT","NL","SE"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="outline" onClick={() => searchMut.mutate()} disabled={searchMut.isPending}>
+                {searchMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+                Search available numbers
+              </Button>
+            </div>
+            {numbers.length > 0 && (
+              <div className="border rounded-md divide-y">
+                {numbers.map((n) => (
+                  <div key={n.phone_number} className="p-3 flex items-center justify-between text-sm">
+                    <div>
+                      <div className="font-mono">{n.phone_number}</div>
+                      <div className="text-xs text-muted-foreground">{[n.locality, n.region].filter(Boolean).join(", ")}</div>
+                    </div>
+                    <Button size="sm" onClick={() => buyMut.mutate(n.phone_number)} disabled={buyMut.isPending}>
+                      {buyMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+                      Purchase
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </Card>
     </div>
   );
 }
