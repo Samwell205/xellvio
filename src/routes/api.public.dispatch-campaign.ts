@@ -205,7 +205,29 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         const results: any[] = [];
         for (const c of due ?? []) {
           try {
-            const r = await dispatchOne(supabaseAdmin, c, rates, { lovableKey, twilioKey, messagingService });
+            // Pick the tenant subaccount sender if provisioned, else fall back to platform messaging service.
+            const { data: acct } = await supabaseAdmin
+              .from("accounts")
+              .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc,subaccount_phone_number,onboarding_status")
+              .eq("id", c.account_id)
+              .maybeSingle();
+
+            if (acct?.onboarding_status === "suspended") {
+              await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
+              results.push({ id: c.id, error: "account_suspended" });
+              continue;
+            }
+
+            let sender: Sender;
+            if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc && acct.subaccount_phone_number) {
+              const { decryptToken } = await import("@/lib/tenant-crypto.server");
+              const token = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+              sender = { kind: "tenant", subaccountSid: acct.twilio_subaccount_sid, subaccountToken: token, fromNumber: acct.subaccount_phone_number };
+            } else {
+              sender = { kind: "platform", lovableKey, twilioKey, messagingService };
+            }
+
+            const r = await dispatchOne(supabaseAdmin, c, rates, sender);
             results.push({ id: c.id, ...r });
           } catch (e: any) {
             await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
