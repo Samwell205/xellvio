@@ -49,8 +49,8 @@ function pickSenderKind(country: string): "toll_free" | "local" | "sender_id" {
 }
 
 /** Build a clean alphanumeric Sender ID from a business name (max 11 chars). */
-function senderIdFromName(name: string): string {
-  const cleaned = (name || "Sender").replace(/[^A-Za-z0-9]/g, "").slice(0, 11);
+function senderIdFromName(name: string, requested?: string): string {
+  const cleaned = (requested || name || "Sender").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 11);
   return cleaned.length >= 3 ? cleaned : (cleaned + "SMS").slice(0, 11);
 }
 
@@ -73,6 +73,14 @@ const SetupInput = z.object({
   sampleMessage: z.string().min(20),
   optInDescription: z.string().min(20),
   optInScreenshotPath: z.string().optional(),
+  customSenderId: z.preprocess(
+    (value) => {
+      if (typeof value !== "string") return value;
+      const cleaned = value.trim().toUpperCase();
+      return cleaned === "" ? undefined : cleaned;
+    },
+    z.string().regex(/^[A-Z0-9]{3,11}$/, "Sender ID must be 3–11 letters or numbers").optional(),
+  ),
   // Profile fields (editable in wizard step 1) - persisted before this call.
 });
 
@@ -145,7 +153,7 @@ export const setupSms = createServerFn({ method: "POST" })
 
         // For Sender-ID countries, no number purchase — register an alphanumeric Sender ID
         if (kind === "sender_id") {
-          const sid = senderIdFromName(acct.legal_business_name || "Sender");
+          const sid = senderIdFromName(acct.legal_business_name || "Sender", data.customSenderId);
           const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
           // Messaging service is best-effort; if it fails we still record the sender so the user sees progress.
           let msSid: string | null = null;
