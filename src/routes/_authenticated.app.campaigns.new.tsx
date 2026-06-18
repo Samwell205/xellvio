@@ -223,7 +223,29 @@ function NewCampaignPage() {
                 <div className="text-xs text-muted-foreground">subscribed, not on suppression list</div>
               </div>
             </div>
-            {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick a segment or individual contacts.</span>}
+            <div className="flex items-center gap-2">
+              {audienceList.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const header = "profile_id,phone_e164,first_name,last_name,country_code\n";
+                    const body = audienceList.map((a: any) =>
+                      [a.profile_id, a.phone_e164, (a.first_name ?? "").replace(/[,"\n]/g, " "), (a.last_name ?? "").replace(/[,"\n]/g, " "), a.country_code ?? ""].join(","),
+                    ).join("\n");
+                    const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url; a.download = `eligible-audience-${new Date().toISOString().slice(0, 10)}.csv`;
+                    document.body.appendChild(a); a.click(); a.remove();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  <Send className="size-4 mr-1.5 rotate-90" />Export CSV
+                </Button>
+              )}
+              {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick a segment or individual contacts.</span>}
+            </div>
           </Card>
           {(segmentsQ.data?.length ?? 0) === 0 && (
             <div className="text-sm text-muted-foreground">
