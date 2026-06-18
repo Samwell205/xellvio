@@ -377,7 +377,7 @@ export function ImportContactsDialog({ open, onOpenChange, groups, defaultGroupI
           {step === "review" && (
             <>
               <Button variant="outline" onClick={() => setStep("upload")}>Back</Button>
-              <Button onClick={runImport} disabled={rows.length === 0 || step === "importing"}>Import {rows.length.toLocaleString()} contacts</Button>
+              <Button onClick={runImport} disabled={rows.length === 0}>Import {rows.length.toLocaleString()} contacts</Button>
             </>
           )}
           {step === "done" && <Button onClick={() => { reset(); onOpenChange(false); }}>Done</Button>}
