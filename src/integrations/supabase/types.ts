@@ -16,9 +16,13 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          auto_recharge_amount: number
+          auto_recharge_enabled: boolean
+          auto_recharge_threshold: number
           avatar_url: string | null
           company: string | null
           created_at: string
+          credit_balance: number
           email: string | null
           full_name: string | null
           id: string
@@ -26,9 +30,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_recharge_amount?: number
+          auto_recharge_enabled?: boolean
+          auto_recharge_threshold?: number
           avatar_url?: string | null
           company?: string | null
           created_at?: string
+          credit_balance?: number
           email?: string | null
           full_name?: string | null
           id: string
@@ -36,9 +44,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_recharge_amount?: number
+          auto_recharge_enabled?: boolean
+          auto_recharge_threshold?: number
           avatar_url?: string | null
           company?: string | null
           created_at?: string
+          credit_balance?: number
           email?: string | null
           full_name?: string | null
           id?: string
@@ -136,6 +148,99 @@ export type Database = {
           },
         ]
       }
+      country_rates: {
+        Row: {
+          active: boolean
+          cost_price: number
+          country_code: string
+          country_name: string
+          created_at: string
+          currency: string
+          dial_prefix: string
+          id: string
+          mms_multiplier: number
+          sell_price: number
+          sender_supports_inbound: boolean
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          cost_price?: number
+          country_code: string
+          country_name: string
+          created_at?: string
+          currency?: string
+          dial_prefix: string
+          id?: string
+          mms_multiplier?: number
+          sell_price?: number
+          sender_supports_inbound?: boolean
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          cost_price?: number
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          currency?: string
+          dial_prefix?: string
+          id?: string
+          mms_multiplier?: number
+          sell_price?: number
+          sender_supports_inbound?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          account_id: string
+          amount: number
+          balance_after: number
+          campaign_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          type: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          balance_after: number
+          campaign_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          type: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          balance_after?: number
+          campaign_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_transactions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -172,6 +277,7 @@ export type Database = {
         Row: {
           campaign_id: string
           cost: number | null
+          country_code: string | null
           created_at: string
           delivered_at: string | null
           error_code: string | null
@@ -187,6 +293,7 @@ export type Database = {
         Insert: {
           campaign_id: string
           cost?: number | null
+          country_code?: string | null
           created_at?: string
           delivered_at?: string | null
           error_code?: string | null
@@ -202,6 +309,7 @@ export type Database = {
         Update: {
           campaign_id?: string
           cost?: number | null
+          country_code?: string | null
           created_at?: string
           delivered_at?: string | null
           error_code?: string | null
@@ -347,6 +455,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      debit_account: {
+        Args: {
+          _account_id: string
+          _amount: number
+          _campaign_id: string
+          _description: string
+        }
+        Returns: number
+      }
       eligible_profile_ids: {
         Args: { _account_id: string; _audience: Json }
         Returns: {
@@ -364,6 +481,10 @@ export type Database = {
       profiles_match_query: {
         Args: { _account_id: string; _query: Json }
         Returns: string[]
+      }
+      topup_account: {
+        Args: { _account_id: string; _amount: number; _description: string }
+        Returns: number
       }
     }
     Enums: {
