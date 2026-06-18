@@ -130,15 +130,38 @@ function BulkForm() {
   const [name, setName] = useState("");
   const [body, setBody] = useState("");
   const [sender, setSender] = useState("");
+  const [source, setSource] = useState<"list" | "csv">("list");
+  const [listId, setListId] = useState<string>("all");
   const [rows, setRows] = useState<Recipient[]>([]);
   const create = useServerFn(createCampaign);
   const run = useServerFn(runCampaign);
   const qc = useQueryClient();
 
+  const groupsQ = useQuery({
+    queryKey: ["contact_groups"],
+    queryFn: async () => (await supabase.from("contact_groups").select("id,name").order("created_at", { ascending: false })).data ?? [],
+  });
+
+  const listContactsQ = useQuery({
+    queryKey: ["list_contacts", listId],
+    enabled: source === "list",
+    queryFn: async () => {
+      let q = supabase.from("contacts").select("phone,country").not("phone", "is", null).limit(10000);
+      if (listId !== "all") q = q.eq("group_id", listId);
+      const { data } = await q;
+      return (data ?? [])
+        .filter((c) => c.phone && c.phone.length >= 6)
+        .map((c) => ({ to: c.phone as string, country: c.country ?? undefined }));
+    },
+  });
+
+  const recipients: Recipient[] = source === "list" ? (listContactsQ.data ?? []) : rows;
+
   const mut = useMutation({
     mutationFn: async () => {
-      const c = await create({ data: { name, body, sender_id: sender || undefined, recipients: rows } });
-      return run({ data: { campaign_id: c.id, recipients: rows } });
+      if (recipients.length === 0) throw new Error("No recipients selected.");
+      const c = await create({ data: { name, body, sender_id: sender || undefined, recipients } });
+      return run({ data: { campaign_id: c.id, recipients } });
     },
     onSuccess: (r) => { toast.success(`Sent ${r.sent}, failed ${r.failed}`); qc.invalidateQueries(); },
     onError: (e: Error) => toast.error(e.message),
@@ -146,15 +169,19 @@ function BulkForm() {
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]; if (!f) return;
+    if (!/\.(csv|txt)$/i.test(f.name)) { toast.error("Upload a .csv file."); return; }
+    if (f.size > 20 * 1024 * 1024) { toast.error("Max file size is 20 MB."); return; }
     Papa.parse(f, {
       header: true, skipEmptyLines: true,
       complete: (res) => {
         const parsed = (res.data as Record<string, string>[])
-          .map((r) => ({ to: (r.phone || r.Phone || r.to || r.number || "").toString().trim(), country: r.country || r.Country }))
+          .map((r) => ({ to: (r.phone || r.Phone || r["Phone Number"] || r.to || r.number || "").toString().trim().replace(/[^\d+]/g, ""), country: r.country || r.Country }))
           .filter((r) => r.to.length >= 6);
         setRows(parsed);
-        toast.success(`Loaded ${parsed.length} recipients`);
+        if (parsed.length === 0) toast.error("No valid phone numbers found. Make sure the CSV has a 'phone' column.");
+        else toast.success(`Loaded ${parsed.length} recipients`);
       },
+      error: (err) => toast.error(`CSV parse failed: ${err.message}`),
     });
   }
 
