@@ -12,6 +12,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, MessageSquareText, Sparkles, Upload, Clock, AlertCircle } from "lucide-react";
 import { setupSms, getMySenderAssets, refreshMyVerificationStatus } from "@/lib/sender-setup.functions";
+import { sendTestSms } from "@/lib/sms.functions";
+import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/setup-sms")({
   head: () => ({ meta: [{ title: "Set up SMS — Samwell Global SMS" }] }),
