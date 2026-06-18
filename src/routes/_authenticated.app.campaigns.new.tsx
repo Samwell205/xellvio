@@ -214,20 +214,21 @@ function NewCampaignPage() {
           </div>
           <SegmentPicker title="Include segments" segments={segmentsQ.data ?? []} selected={s.include} onChange={(ids) => setS({ ...s, include: ids })} />
           <SegmentPicker title="Exclude segments (optional)" segments={segmentsQ.data ?? []} selected={s.exclude} onChange={(ids) => setS({ ...s, exclude: ids })} />
+          <ContactPicker selected={s.profileIds} onChange={(ids) => setS({ ...s, profileIds: ids })} />
           <Card className="p-4 flex items-center justify-between bg-primary/5 border-primary/30">
             <div className="flex items-center gap-3">
               <div className="size-10 rounded-lg bg-primary/15 text-primary grid place-items-center"><Users className="size-5" /></div>
               <div>
                 <div className="text-xs uppercase text-muted-foreground tracking-wide">Eligible audience</div>
-                <div className="text-2xl font-extrabold">{s.include.length === 0 ? "—" : (audienceQ.isFetching ? "…" : audienceList.length)}</div>
+                <div className="text-2xl font-extrabold">{(s.include.length === 0 && s.profileIds.length === 0) ? "—" : (audienceQ.isFetching ? "…" : audienceList.length)}</div>
                 <div className="text-xs text-muted-foreground">subscribed, not on suppression list</div>
               </div>
             </div>
-            {s.include.length === 0 && <span className="text-xs text-muted-foreground">Pick at least one include segment.</span>}
+            {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick a segment or individual contacts.</span>}
           </Card>
           {(segmentsQ.data?.length ?? 0) === 0 && (
             <div className="text-sm text-muted-foreground">
-              You have no segments yet. <Link to="/app/segments/new" className="text-primary underline">Create one</Link>.
+              No segments yet. <Link to="/app/segments/new" className="text-primary underline">Create one</Link> — or pick contacts directly below.
             </div>
           )}
         </Card>
