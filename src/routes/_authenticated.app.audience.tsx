@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Users, Upload, UserPlus, Search, ShieldOff, CheckCircle2, Clock, Download, AlertTriangle } from "lucide-react";
+import { Users, Upload, UserPlus, Search, ShieldOff, CheckCircle2, Clock, Download, AlertTriangle, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/audience")({
   head: () => ({ meta: [{ title: "Audience — Samwell Global SMS" }] }),
@@ -115,6 +115,24 @@ function AudiencePage() {
     onError: (e: any) => toast.error(e.message ?? "Failed"),
   });
 
+  const deleteContact = useMutation({
+    mutationFn: async (row: ProfileRow) => {
+      const { data: u } = await supabase.auth.getUser();
+      const accountId = u.user!.id;
+      await supabase.from("suppressions").delete()
+        .eq("account_id", accountId).eq("phone_e164", row.phone_e164);
+      const { error } = await supabase.from("profiles").delete().eq("id", row.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Contact deleted");
+      qc.invalidateQueries({ queryKey: ["audience-profiles"] });
+      qc.invalidateQueries({ queryKey: ["audience-stats"] });
+      qc.invalidateQueries({ queryKey: ["suppressions"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Failed to delete"),
+  });
+
   function downloadTemplate() {
     const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -179,9 +197,22 @@ function AudiencePage() {
                   <TableCell><ConsentBadge status={r.consent_status} /></TableCell>
                   <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" disabled={toggleConsent.isPending} onClick={() => toggleConsent.mutate(r)}>
-                      {r.consent_status === "subscribed" ? "Opt out" : "Resubscribe"}
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" disabled={toggleConsent.isPending} onClick={() => toggleConsent.mutate(r)}>
+                        {r.consent_status === "subscribed" ? "Opt out" : "Resubscribe"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        disabled={deleteContact.isPending}
+                        onClick={() => {
+                          if (confirm(`Delete ${r.phone_e164}? This cannot be undone.`)) deleteContact.mutate(r);
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

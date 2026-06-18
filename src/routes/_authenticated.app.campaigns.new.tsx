@@ -85,9 +85,8 @@ function NewCampaignPage() {
     queryKey: ["campaign-audience", audience],
     enabled: s.include.length > 0 || s.profileIds.length > 0,
     queryFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const { data, error } = await supabase.rpc("eligible_profile_ids", {
-        _account_id: u.user!.id, _audience: audience as any,
+      const { data, error } = await (supabase.rpc as any)("my_eligible_profile_ids", {
+        _audience: audience,
       });
       if (error) throw error;
       return (data as any[]) ?? [];
