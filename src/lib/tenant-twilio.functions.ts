@@ -30,7 +30,7 @@ async function twilio<T = any>(path: string, opts: { method?: string; sid: strin
   return json as T;
 }
 
-/** Provision a Twilio subaccount for the current tenant. Idempotent. */
+/** Assign the main SMS account for the current tenant. Idempotent. */
 export const provisionSubaccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -49,24 +49,17 @@ export const provisionSubaccount = createServerFn({ method: "POST" })
     if (acct.twilio_subaccount_sid) return { subaccount_sid: acct.twilio_subaccount_sid, already: true };
 
     const master = masterAuth();
-    const sub = await twilio<{ sid: string; auth_token: string }>("/Accounts.json", {
-      method: "POST",
-      sid: master.sid,
-      token: master.token,
-      body: { FriendlyName: `${acct.legal_business_name} (tenant:${userId.slice(0, 8)})` },
-    });
-
-    const enc = encryptToken(sub.auth_token);
+    const enc = encryptToken(master.token);
     const { error: upErr } = await supabaseAdmin
       .from("accounts")
       .update({
-        twilio_subaccount_sid: sub.sid,
+        twilio_subaccount_sid: master.sid,
         twilio_subaccount_auth_token_enc: enc as any,
         onboarding_status: "sender_pending",
       })
       .eq("id", userId);
     if (upErr) throw upErr;
-    return { subaccount_sid: sub.sid, already: false };
+    return { subaccount_sid: master.sid, already: false };
   });
 
 /** Search available phone numbers in a country, using the tenant subaccount. */

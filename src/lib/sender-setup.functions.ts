@@ -105,25 +105,32 @@ export const setupSms = createServerFn({ method: "POST" })
       opt_in_screenshot_url: data.optInScreenshotPath ?? null,
     }).eq("id", userId);
 
-    // 1) Ensure subaccount
+    // 1) Use the main SMS account for provisioning. Creating per-tenant subaccounts can hit provider limits.
     let subSid = acct.twilio_subaccount_sid;
     let subToken: string;
     if (!subSid) {
       const master = masterAuth();
-      const sub = await twilio<{ sid: string; auth_token: string }>(`${TWILIO_API}/Accounts.json`, {
-        method: "POST", sid: master.sid, token: master.token,
-        body: { FriendlyName: `${acct.legal_business_name} (tenant:${userId.slice(0, 8)})` },
-      });
-      subSid = sub.sid;
-      subToken = sub.auth_token;
+      subSid = master.sid;
+      subToken = master.token;
       await supabaseAdmin.from("accounts").update({
         twilio_subaccount_sid: subSid,
         twilio_subaccount_auth_token_enc: encryptToken(subToken) as any,
         onboarding_status: "sender_pending",
       }).eq("id", userId);
     } else {
-      if (!acct.twilio_subaccount_auth_token_enc) throw new Error("Subaccount token missing");
-      subToken = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+      try {
+        if (!acct.twilio_subaccount_auth_token_enc) throw new Error("Subaccount token missing");
+        subToken = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+      } catch {
+        const master = masterAuth();
+        subSid = master.sid;
+        subToken = master.token;
+        await supabaseAdmin.from("accounts").update({
+          twilio_subaccount_sid: subSid,
+          twilio_subaccount_auth_token_enc: encryptToken(subToken) as any,
+          onboarding_status: "sender_pending",
+        }).eq("id", userId);
+      }
     }
 
     // 2) For each target country, provision a sender
