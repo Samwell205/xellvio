@@ -72,6 +72,11 @@ export const sendSms = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => sendSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+
+    // Sender must be a verified identity owned by the user
+    const from = await resolveVerifiedSender(supabase, userId, data.sender_id);
+    if (!from) throw new Error("Sender is not verified. Verify a number or get a Sender ID approved before sending.");
+
     const segments = calcSegments(data.body);
     const cost = segments * CREDIT_PER_SEGMENT;
 
@@ -86,7 +91,7 @@ export const sendSms = createServerFn({ method: "POST" })
       user_id: userId,
       to_phone: data.to,
       body: data.body,
-      sender_id: data.sender_id,
+      sender_id: from,
       country: data.country,
       campaign_id: data.campaign_id,
       segments,
@@ -97,7 +102,7 @@ export const sendSms = createServerFn({ method: "POST" })
     if (mErr) throw mErr;
 
     // Try delivery
-    const result = await sendViaTwilio(data.to, data.body, data.sender_id);
+    const result = await sendViaTwilio(data.to, data.body, from);
 
     if (result.ok) {
       await supabase.from("messages").update({
@@ -122,7 +127,7 @@ export const sendSms = createServerFn({ method: "POST" })
 const bulkSchema = z.object({
   name: z.string().min(1).max(120),
   body: z.string().min(1).max(1600),
-  sender_id: z.string().max(20).optional(),
+  sender_id: z.string().min(1).max(20),
   recipients: z.array(z.object({
     to: z.string().min(6).max(20),
     country: z.string().max(4).optional(),
@@ -135,12 +140,14 @@ export const createCampaign = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => bulkSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const from = await resolveVerifiedSender(supabase, userId, data.sender_id);
+    if (!from) throw new Error("Sender is not verified. Verify a number or get a Sender ID approved before creating a campaign.");
     const status = data.schedule_at ? "scheduled" : "draft";
     const { data: camp, error } = await supabase.from("campaigns").insert({
       user_id: userId,
       name: data.name,
       message: data.body,
-      sender_id: data.sender_id,
+      sender_id: from,
       status,
       scheduled_at: data.schedule_at,
       total_recipients: data.recipients.length,
@@ -158,6 +165,12 @@ export const runCampaign = createServerFn({ method: "POST" })
     const { data: camp, error: cErr } = await supabase.from("campaigns").select("*").eq("id", data.campaign_id).eq("user_id", userId).single();
     if (cErr || !camp) throw new Error("Campaign not found");
 
+    const from = camp.sender_id ? await resolveVerifiedSender(supabase, userId, camp.sender_id) : null;
+    if (!from) {
+      await supabase.from("campaigns").update({ status: "failed" }).eq("id", data.campaign_id);
+      throw new Error("Campaign sender is not verified.");
+    }
+
     await supabase.from("campaigns").update({ status: "running" }).eq("id", data.campaign_id);
     let sent = 0, failed = 0;
     const segments = calcSegments(camp.message);
@@ -173,9 +186,9 @@ export const runCampaign = createServerFn({ method: "POST" })
     for (const r of data.recipients) {
       const { data: msg } = await supabase.from("messages").insert({
         user_id: userId, campaign_id: data.campaign_id, to_phone: r.to, country: r.country,
-        body: camp.message, sender_id: camp.sender_id, segments, cost: segments, provider: "twilio", status: "queued",
+        body: camp.message, sender_id: from, segments, cost: segments, provider: "twilio", status: "queued",
       }).select("id").single();
-      const result = await sendViaTwilio(r.to, camp.message, camp.sender_id ?? undefined);
+      const result = await sendViaTwilio(r.to, camp.message, from);
       if (result.ok) {
         sent++;
         await supabase.from("messages").update({ status: "sent", provider_sid: result.sid, delivered_at: new Date().toISOString() }).eq("id", msg!.id);
