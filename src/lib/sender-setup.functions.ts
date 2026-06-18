@@ -263,9 +263,12 @@ export const setupSms = createServerFn({ method: "POST" })
         }).eq("id", userId);
       }
       created.push(`${cc}:${status}`);
+      } catch (e: any) {
+        errors.push({ cc, reason: e?.message ?? "unknown error" });
+      }
     }
 
-    return { created };
+    return { created, errors };
   });
 
 /** Reconcile pending toll-free verifications for one or all tenants. */
