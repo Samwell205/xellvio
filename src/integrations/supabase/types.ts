@@ -14,343 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      api_keys: {
-        Row: {
-          created_at: string
-          id: string
-          key_hash: string
-          key_prefix: string
-          last_used_at: string | null
-          name: string
-          revoked: boolean
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          key_hash: string
-          key_prefix: string
-          last_used_at?: string | null
-          name: string
-          revoked?: boolean
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          key_hash?: string
-          key_prefix?: string
-          last_used_at?: string | null
-          name?: string
-          revoked?: boolean
-          user_id?: string
-        }
-        Relationships: []
-      }
-      campaigns: {
-        Row: {
-          created_at: string
-          delivered_count: number
-          failed_count: number
-          group_id: string | null
-          id: string
-          message: string
-          name: string
-          scheduled_at: string | null
-          sender_id: string | null
-          sent_count: number
-          status: string
-          total_recipients: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          delivered_count?: number
-          failed_count?: number
-          group_id?: string | null
-          id?: string
-          message: string
-          name: string
-          scheduled_at?: string | null
-          sender_id?: string | null
-          sent_count?: number
-          status?: string
-          total_recipients?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          delivered_count?: number
-          failed_count?: number
-          group_id?: string | null
-          id?: string
-          message?: string
-          name?: string
-          scheduled_at?: string | null
-          sender_id?: string | null
-          sent_count?: number
-          status?: string
-          total_recipients?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "campaigns_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "contact_groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      contact_groups: {
-        Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      contacts: {
-        Row: {
-          country: string | null
-          created_at: string
-          email: string | null
-          external_id: string | null
-          first_name: string | null
-          group_id: string | null
-          id: string
-          last_name: string | null
-          name: string | null
-          opted_out: boolean
-          phone: string | null
-          tags: string[] | null
-          user_id: string
-        }
-        Insert: {
-          country?: string | null
-          created_at?: string
-          email?: string | null
-          external_id?: string | null
-          first_name?: string | null
-          group_id?: string | null
-          id?: string
-          last_name?: string | null
-          name?: string | null
-          opted_out?: boolean
-          phone?: string | null
-          tags?: string[] | null
-          user_id: string
-        }
-        Update: {
-          country?: string | null
-          created_at?: string
-          email?: string | null
-          external_id?: string | null
-          first_name?: string | null
-          group_id?: string | null
-          id?: string
-          last_name?: string | null
-          name?: string | null
-          opted_out?: boolean
-          phone?: string | null
-          tags?: string[] | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "contacts_group_id_fkey"
-            columns: ["group_id"]
-            isOneToOne: false
-            referencedRelation: "contact_groups"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      messages: {
-        Row: {
-          body: string
-          campaign_id: string | null
-          cost: number
-          country: string | null
-          created_at: string
-          delivered_at: string | null
-          error: string | null
-          id: string
-          provider: string | null
-          provider_sid: string | null
-          segments: number
-          sender_id: string | null
-          status: string
-          to_phone: string
-          user_id: string
-        }
-        Insert: {
-          body: string
-          campaign_id?: string | null
-          cost?: number
-          country?: string | null
-          created_at?: string
-          delivered_at?: string | null
-          error?: string | null
-          id?: string
-          provider?: string | null
-          provider_sid?: string | null
-          segments?: number
-          sender_id?: string | null
-          status?: string
-          to_phone: string
-          user_id: string
-        }
-        Update: {
-          body?: string
-          campaign_id?: string | null
-          cost?: number
-          country?: string | null
-          created_at?: string
-          delivered_at?: string | null
-          error?: string | null
-          id?: string
-          provider?: string | null
-          provider_sid?: string | null
-          segments?: number
-          sender_id?: string | null
-          status?: string
-          to_phone?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "messages_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notifications: {
-        Row: {
-          body: string | null
-          created_at: string
-          id: string
-          read: boolean
-          title: string
-          user_id: string
-        }
-        Insert: {
-          body?: string | null
-          created_at?: string
-          id?: string
-          read?: boolean
-          title: string
-          user_id: string
-        }
-        Update: {
-          body?: string | null
-          created_at?: string
-          id?: string
-          read?: boolean
-          title?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      phone_numbers: {
-        Row: {
-          country: string
-          created_at: string
-          e164: string
-          id: string
-          is_default: boolean
-          label: string | null
-          status: Database["public"]["Enums"]["phone_number_status"]
-          twilio_sid: string | null
-          type: Database["public"]["Enums"]["phone_number_type"]
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          country?: string
-          created_at?: string
-          e164: string
-          id?: string
-          is_default?: boolean
-          label?: string | null
-          status?: Database["public"]["Enums"]["phone_number_status"]
-          twilio_sid?: string | null
-          type: Database["public"]["Enums"]["phone_number_type"]
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          country?: string
-          created_at?: string
-          e164?: string
-          id?: string
-          is_default?: boolean
-          label?: string | null
-          status?: Database["public"]["Enums"]["phone_number_status"]
-          twilio_sid?: string | null
-          type?: Database["public"]["Enums"]["phone_number_type"]
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      phone_verifications: {
-        Row: {
-          attempts: number
-          code_hash: string
-          consumed_at: string | null
-          created_at: string
-          e164: string
-          expires_at: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          attempts?: number
-          code_hash: string
-          consumed_at?: string | null
-          created_at?: string
-          e164: string
-          expires_at: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          attempts?: number
-          code_hash?: string
-          consumed_at?: string | null
-          created_at?: string
-          e164?: string
-          expires_at?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
+      accounts: {
         Row: {
           avatar_url: string | null
           company: string | null
@@ -383,78 +47,277 @@ export type Database = {
         }
         Relationships: []
       }
-      sender_ids: {
+      campaigns: {
         Row: {
-          countries: string[]
+          account_id: string
+          audience: Json
           created_at: string
           id: string
-          review_note: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          sender_id: string
-          status: Database["public"]["Enums"]["sender_id_status"]
+          media_url: string | null
+          message_body: string
+          name: string
+          schedule_at: string | null
+          send_mode: string
+          smart_skip_hours: number
+          status: string
           updated_at: string
-          use_case: string | null
-          user_id: string
         }
         Insert: {
-          countries?: string[]
+          account_id: string
+          audience?: Json
           created_at?: string
           id?: string
-          review_note?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          sender_id: string
-          status?: Database["public"]["Enums"]["sender_id_status"]
+          media_url?: string | null
+          message_body?: string
+          name: string
+          schedule_at?: string | null
+          send_mode?: string
+          smart_skip_hours?: number
+          status?: string
           updated_at?: string
-          use_case?: string | null
-          user_id: string
         }
         Update: {
-          countries?: string[]
+          account_id?: string
+          audience?: Json
           created_at?: string
           id?: string
-          review_note?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          sender_id?: string
-          status?: Database["public"]["Enums"]["sender_id_status"]
+          media_url?: string | null
+          message_body?: string
+          name?: string
+          schedule_at?: string | null
+          send_mode?: string
+          smart_skip_hours?: number
+          status?: string
           updated_at?: string
-          use_case?: string | null
-          user_id?: string
         }
         Relationships: []
       }
-      transactions: {
+      consents: {
         Row: {
-          amount: number
+          channel: string
+          consented_at: string
           created_at: string
-          currency: string
-          description: string | null
           id: string
-          kind: string
-          reference: string | null
-          user_id: string
+          profile_id: string
+          proof: string | null
+          source: string | null
+          status: string
+          updated_at: string
         }
         Insert: {
-          amount: number
+          channel?: string
+          consented_at?: string
           created_at?: string
-          currency?: string
-          description?: string | null
           id?: string
-          kind: string
-          reference?: string | null
-          user_id: string
+          profile_id: string
+          proof?: string | null
+          source?: string | null
+          status: string
+          updated_at?: string
         }
         Update: {
-          amount?: number
+          channel?: string
+          consented_at?: string
           created_at?: string
-          currency?: string
-          description?: string | null
           id?: string
-          kind?: string
-          reference?: string | null
-          user_id?: string
+          profile_id?: string
+          proof?: string | null
+          source?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          created_at: string
+          id: string
+          message_id: string
+          payload: Json | null
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message_id: string
+          payload?: Json | null
+          type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message_id?: string
+          payload?: Json | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          campaign_id: string
+          cost: number | null
+          created_at: string
+          delivered_at: string | null
+          error_code: string | null
+          id: string
+          phone_e164: string
+          profile_id: string | null
+          provider_message_id: string | null
+          rendered_body: string
+          segments_count: number | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          cost?: number | null
+          created_at?: string
+          delivered_at?: string | null
+          error_code?: string | null
+          id?: string
+          phone_e164: string
+          profile_id?: string | null
+          provider_message_id?: string | null
+          rendered_body: string
+          segments_count?: number | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          cost?: number | null
+          created_at?: string
+          delivered_at?: string | null
+          error_code?: string | null
+          id?: string
+          phone_e164?: string
+          profile_id?: string | null
+          provider_message_id?: string | null
+          rendered_body?: string
+          segments_count?: number | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          account_id: string
+          country_code: string | null
+          created_at: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone_e164: string
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          country_code?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone_e164: string
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          country_code?: string | null
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone_e164?: string
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      segments: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          name: string
+          query: Json
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          name: string
+          query?: Json
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          query?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      suppressions: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          phone_e164: string
+          reason: string | null
+          source: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          phone_e164: string
+          reason?: string | null
+          source?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          phone_e164?: string
+          reason?: string | null
+          source?: string | null
         }
         Relationships: []
       }
@@ -479,68 +342,28 @@ export type Database = {
         }
         Relationships: []
       }
-      verification_codes: {
-        Row: {
-          attempts: number
-          code_hash: string
-          consumed_at: string | null
-          created_at: string
-          e164: string
-          expires_at: string
-          id: string
-          user_id: string
-        }
-        Insert: {
-          attempts?: number
-          code_hash: string
-          consumed_at?: string | null
-          created_at?: string
-          e164: string
-          expires_at: string
-          id?: string
-          user_id: string
-        }
-        Update: {
-          attempts?: number
-          code_hash?: string
-          consumed_at?: string | null
-          created_at?: string
-          e164?: string
-          expires_at?: string
-          id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      wallets: {
-        Row: {
-          balance_credits: number
-          currency: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          balance_credits?: number
-          currency?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          balance_credits?: number
-          currency?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      eligible_profile_ids: {
+        Args: { _account_id: string; _audience: Json }
+        Returns: {
+          country_code: string
+          first_name: string
+          last_name: string
+          phone_e164: string
+          profile_id: string
+        }[]
+      }
       has_role: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
+      }
+      profiles_match_query: {
+        Args: { _account_id: string; _query: Json }
+        Returns: string[]
       }
     }
     Enums: {
