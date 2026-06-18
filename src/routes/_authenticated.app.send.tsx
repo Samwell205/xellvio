@@ -18,7 +18,7 @@ import { Loader2, Upload } from "lucide-react";
 function useSenderOptions() {
   const numbers = useQuery({
     queryKey: ["my-numbers"],
-    queryFn: async () => (await supabase.from("phone_numbers").select("e164,label,type,country").eq("status", "active")).data ?? [],
+    queryFn: async () => (await supabase.from("phone_numbers").select("e164,label,type,country").eq("status", "active").eq("type", "toll_free")).data ?? [],
   });
   const senderIds = useQuery({
     queryKey: ["approved-sender-ids"],
