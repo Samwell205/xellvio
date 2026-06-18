@@ -282,11 +282,16 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
         optInScreenshotPath: form.optInScreenshotPath || undefined,
       } });
     },
-    onSuccess: () => {
-      toast.success("We're setting up your SMS — we'll email you when it's ready.");
+    onSuccess: (r: any) => {
+      if (r?.errors?.length) {
+        for (const e of r.errors) toast.error(`${e.cc}: ${e.reason}`);
+      }
+      if (r?.created?.length) {
+        toast.success(`Set up ${r.created.length} sender${r.created.length === 1 ? "" : "s"}. We'll email you when verification completes.`);
+      }
       onDone();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message || "Could not set up SMS. Please try again."),
   });
 
   function toggleCountry(cc: string) {
