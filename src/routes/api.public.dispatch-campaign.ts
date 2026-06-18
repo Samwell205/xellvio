@@ -22,6 +22,13 @@ type Sender =
   | { kind: "platform"; lovableKey: string; twilioKey: string; messagingService: string }
   | { kind: "tenant"; subaccountSid: string; subaccountToken: string; messagingService?: string; fromNumber?: string };
 
+function mainSmsAuth() {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token) throw new Error("SMS provider credentials are not configured");
+  return { sid, token };
+}
+
 async function dispatchOne(
   supabaseAdmin: any,
   campaign: any,
@@ -238,13 +245,33 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             let sender: Sender;
             if (acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc && (verifiedSender || acct.subaccount_phone_number)) {
               const { decryptToken } = await import("@/lib/tenant-crypto.server");
-              const token = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+              try {
+                const token = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+                sender = {
+                  kind: "tenant",
+                  subaccountSid: acct.twilio_subaccount_sid,
+                  subaccountToken: token,
+                  messagingService: verifiedSender?.messaging_service_sid ?? undefined,
+                  fromNumber: verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
+                };
+              } catch {
+                const main = mainSmsAuth();
+                sender = {
+                  kind: "tenant",
+                  subaccountSid: main.sid,
+                  subaccountToken: main.token,
+                  messagingService: verifiedSender?.messaging_service_sid ?? undefined,
+                  fromNumber: verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
+                };
+              }
+            } else if (verifiedSender || acct?.subaccount_phone_number) {
+              const main = mainSmsAuth();
               sender = {
                 kind: "tenant",
-                subaccountSid: acct.twilio_subaccount_sid,
-                subaccountToken: token,
+                subaccountSid: main.sid,
+                subaccountToken: main.token,
                 messagingService: verifiedSender?.messaging_service_sid ?? undefined,
-                fromNumber: verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
+                fromNumber: verifiedSender?.phone_number ?? acct?.subaccount_phone_number ?? undefined,
               };
             } else {
               sender = { kind: "platform", lovableKey, twilioKey, messagingService };
