@@ -66,8 +66,11 @@ export const sendTestSms = createServerFn({ method: "POST" })
       To: data.to,
       Body: data.body,
     });
-    if (asset.messaging_service_sid) body.set("MessagingServiceSid", asset.messaging_service_sid);
-    else body.set("From", asset.phone_number!);
+    if (asset.sender_kind !== "sender_id" && asset.messaging_service_sid) {
+      body.set("MessagingServiceSid", asset.messaging_service_sid);
+    } else {
+      body.set("From", asset.phone_number!);
+    }
     const res = await fetch(`${TWILIO_API}/Accounts/${accountAuth.sid}/Messages.json`, {
       method: "POST",
       headers: {
