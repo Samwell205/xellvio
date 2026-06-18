@@ -28,6 +28,7 @@ function AuthPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -43,6 +44,10 @@ function AuthPage() {
     e.preventDefault();
     setErrorMsg(null);
     if (mode === "signup") {
+      if (!termsAccepted) {
+        setErrorMsg("You must accept the Terms of Use to create an account.");
+        return;
+      }
       if (password !== confirmPassword) {
         setErrorMsg("Passwords do not match.");
         return;
