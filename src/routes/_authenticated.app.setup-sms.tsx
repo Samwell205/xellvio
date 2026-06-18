@@ -74,7 +74,7 @@ function SetupSmsPage() {
       </div>
 
       {hasAssets ? (
-        <SenderStatusList assets={assets.data ?? []} onRefresh={() => refreshMut.mutate()} refreshing={refreshMut.isPending} />
+        <SenderStatusList assets={assets.data ?? []} accountPhone={a?.phone ?? undefined} onRefresh={() => refreshMut.mutate()} refreshing={refreshMut.isPending} />
       ) : (
         <Wizard account={a} onDone={() => { qc.invalidateQueries({ queryKey: ["sender-assets"] }); qc.invalidateQueries({ queryKey: ["account"] }); }} />
       )}
