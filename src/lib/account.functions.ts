@@ -30,6 +30,7 @@ export const ensureMyAccount = createServerFn({ method: "POST" })
         full_name: fullName,
       });
       if (error) throw error;
+      await supabaseAdmin.from("user_roles").upsert({ user_id: userId, role: "user" }, { onConflict: "user_id,role" });
       return { created: true };
     }
 
