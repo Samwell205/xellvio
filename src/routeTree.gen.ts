@@ -28,6 +28,7 @@ import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authent
 import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenticated.app.audience'
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
+import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
 
 const SolutionsRoute = SolutionsRouteImport.update({
   id: '/solutions',
@@ -131,6 +132,12 @@ const AuthenticatedAppCampaignsNewRoute =
     path: '/new',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const AuthenticatedAppCampaignsIdRoute =
+  AuthenticatedAppCampaignsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAppCampaignsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
 }
@@ -169,6 +177,7 @@ export interface FileRoutesByTo {
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
 }
@@ -191,6 +200,7 @@ export interface FileRoutesById {
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
 }
@@ -213,6 +223,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app/'
+    | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
   fileRoutesByTo: FileRoutesByTo
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app'
+    | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
   id:
@@ -254,6 +266,7 @@ export interface FileRouteTypes {
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/_authenticated/app/'
+    | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
   fileRoutesById: FileRoutesById
@@ -407,15 +420,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsNewRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/_authenticated/app/campaigns/$id': {
+      id: '/_authenticated/app/campaigns/$id'
+      path: '/$id'
+      fullPath: '/app/campaigns/$id'
+      preLoaderRoute: typeof AuthenticatedAppCampaignsIdRouteImport
+      parentRoute: typeof AuthenticatedAppCampaignsRoute
+    }
   }
 }
 
 interface AuthenticatedAppCampaignsRouteChildren {
+  AuthenticatedAppCampaignsIdRoute: typeof AuthenticatedAppCampaignsIdRoute
   AuthenticatedAppCampaignsNewRoute: typeof AuthenticatedAppCampaignsNewRoute
 }
 
 const AuthenticatedAppCampaignsRouteChildren: AuthenticatedAppCampaignsRouteChildren =
   {
+    AuthenticatedAppCampaignsIdRoute: AuthenticatedAppCampaignsIdRoute,
     AuthenticatedAppCampaignsNewRoute: AuthenticatedAppCampaignsNewRoute,
   }
 

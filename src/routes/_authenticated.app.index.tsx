@@ -47,13 +47,6 @@ function Overview() {
         <Link to="/app/campaigns"><Button><Megaphone className="size-4 mr-1.5" />Campaigns</Button></Link>
       </div>
 
-      <Card className="p-6 border-dashed">
-        <h3 className="font-semibold">Welcome to v2</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          The platform was rebuilt around contacts, consents, segments, and Twilio Messaging Service. Audience
-          import, segment builder, the campaign wizard, and delivery webhooks roll out in the next phases.
-        </p>
-      </Card>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={Users} label="Subscribed contacts" value={s?.subscribed ?? 0} />
@@ -61,7 +54,41 @@ function Overview() {
         <Stat icon={CheckCircle2} label="Delivery rate" value={`${s?.deliveryRate ?? 0}%`} tone="success" />
         <Stat icon={Send} label="Messages delivered" value={s?.delivered ?? 0} />
       </div>
+
+      <RecentCampaigns />
     </div>
+  );
+}
+
+function RecentCampaigns() {
+  const q = useQuery({
+    queryKey: ["dash-recent-campaigns"],
+    refetchInterval: 10_000,
+    queryFn: async () =>
+      (await supabase.from("campaigns").select("id,name,status,created_at,schedule_at").order("created_at", { ascending: false }).limit(5)).data ?? [],
+  });
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold">Recent campaigns</h3>
+        <Link to="/app/campaigns" className="text-xs text-primary hover:underline">View all →</Link>
+      </div>
+      {(q.data?.length ?? 0) === 0 ? (
+        <p className="text-sm text-muted-foreground">No campaigns yet. Create your first one.</p>
+      ) : (
+        <ul className="divide-y">
+          {q.data!.map((c) => (
+            <li key={c.id} className="py-2.5 flex items-center justify-between">
+              <Link to="/app/campaigns/$id" params={{ id: c.id }} className="font-medium hover:underline">{c.name}</Link>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="capitalize">{c.status}</span>
+                <span>{new Date(c.created_at).toLocaleDateString()}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 
