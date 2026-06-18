@@ -65,6 +65,9 @@ function AuthPage() {
           options: { emailRedirectTo: window.location.origin + destination, data: { full_name: name } },
         });
         if (error) throw error;
+        if (data.user?.id) {
+          await supabase.from("accounts").update({ terms_accepted_at: new Date().toISOString() }).eq("id", data.user.id);
+        }
         if (data.session && data.user?.email_confirmed_at) {
           toast.success("Account created — welcome!");
           navigate({ href: destination });
