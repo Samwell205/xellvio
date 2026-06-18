@@ -22,6 +22,13 @@ type Sender =
   | { kind: "platform"; lovableKey: string; twilioKey: string; messagingService: string }
   | { kind: "tenant"; subaccountSid: string; subaccountToken: string; messagingService?: string; fromNumber?: string };
 
+function mainSmsAuth() {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token) throw new Error("SMS provider credentials are not configured");
+  return { sid, token };
+}
+
 async function dispatchOne(
   supabaseAdmin: any,
   campaign: any,
@@ -245,6 +252,15 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
                 subaccountToken: token,
                 messagingService: verifiedSender?.messaging_service_sid ?? undefined,
                 fromNumber: verifiedSender?.phone_number ?? acct.subaccount_phone_number ?? undefined,
+              };
+            } else if (verifiedSender || acct?.subaccount_phone_number) {
+              const main = mainSmsAuth();
+              sender = {
+                kind: "tenant",
+                subaccountSid: main.sid,
+                subaccountToken: main.token,
+                messagingService: verifiedSender?.messaging_service_sid ?? undefined,
+                fromNumber: verifiedSender?.phone_number ?? acct?.subaccount_phone_number ?? undefined,
               };
             } else {
               sender = { kind: "platform", lovableKey, twilioKey, messagingService };
