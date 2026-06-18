@@ -47,13 +47,6 @@ function Overview() {
         <Link to="/app/campaigns"><Button><Megaphone className="size-4 mr-1.5" />Campaigns</Button></Link>
       </div>
 
-      <Card className="p-6 border-dashed">
-        <h3 className="font-semibold">Welcome to v2</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          The platform was rebuilt around contacts, consents, segments, and Twilio Messaging Service. Audience
-          import, segment builder, the campaign wizard, and delivery webhooks roll out in the next phases.
-        </p>
-      </Card>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={Users} label="Subscribed contacts" value={s?.subscribed ?? 0} />
