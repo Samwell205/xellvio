@@ -20,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
+import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenticated.app.audience'
 
@@ -79,6 +80,12 @@ const AuthenticatedAppSettingsRoute =
     path: '/app/settings',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppSegmentsRoute =
+  AuthenticatedAppSegmentsRouteImport.update({
+    id: '/app/segments',
+    path: '/app/segments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppCampaignsRoute =
   AuthenticatedAppCampaignsRouteImport.update({
     id: '/app/campaigns',
@@ -102,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/solutions': typeof SolutionsRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/app/segments': typeof AuthenticatedAppSegmentsRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/': typeof AuthenticatedAppIndexRoute
@@ -116,6 +124,7 @@ export interface FileRoutesByTo {
   '/solutions': typeof SolutionsRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/app/segments': typeof AuthenticatedAppSegmentsRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app': typeof AuthenticatedAppIndexRoute
@@ -132,6 +141,7 @@ export interface FileRoutesById {
   '/solutions': typeof SolutionsRoute
   '/_authenticated/app/audience': typeof AuthenticatedAppAudienceRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/app/audience'
     | '/app/campaigns'
+    | '/app/segments'
     | '/app/settings'
     | '/app/suppressions'
     | '/app/'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/app/audience'
     | '/app/campaigns'
+    | '/app/segments'
     | '/app/settings'
     | '/app/suppressions'
     | '/app'
@@ -177,6 +189,7 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/_authenticated/app/audience'
     | '/_authenticated/app/campaigns'
+    | '/_authenticated/app/segments'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/suppressions'
     | '/_authenticated/app/'
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/segments': {
+      id: '/_authenticated/app/segments'
+      path: '/app/segments'
+      fullPath: '/app/segments'
+      preLoaderRoute: typeof AuthenticatedAppSegmentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/campaigns': {
       id: '/_authenticated/app/campaigns'
       path: '/app/campaigns'
@@ -292,6 +312,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedAppAudienceRoute: typeof AuthenticatedAppAudienceRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRoute
+  AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
@@ -300,6 +321,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppAudienceRoute: AuthenticatedAppAudienceRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRoute,
+  AuthenticatedAppSegmentsRoute: AuthenticatedAppSegmentsRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
