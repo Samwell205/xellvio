@@ -40,20 +40,12 @@ async function twilio<T = any>(url: string, opts: { method?: string; sid: string
   return json as T;
 }
 
-/** Country → sender strategy. */
+/** Country → sender strategy. US/CA require toll-free; everywhere else
+ *  defaults to an alphanumeric Sender ID (no number purchase, no KYC). */
 function pickSenderKind(country: string): "toll_free" | "local" | "sender_id" {
   const cc = country.toUpperCase();
   if (cc === "US" || cc === "CA") return "toll_free";
-  // Countries where alphanumeric Sender IDs are the norm / required
-  const senderIdCountries = new Set([
-    "NG","KE","ZA","GH","UG","TZ","RW","ET","EG","MA","SN","CI","CM",
-    "IN","PK","BD","LK","ID","PH","VN","TH","MY",
-    "DE","FR","ES","IT","NL","BE","AT","CH","SE","NO","DK","FI","IE","PT","GR","PL","CZ","RO",
-    "AE","SA","QA","KW","BH","OM","IL","TR",
-    "BR","AR","CL","CO","MX","PE",
-  ]);
-  if (senderIdCountries.has(cc)) return "sender_id";
-  return "local";
+  return "sender_id";
 }
 
 /** Build a clean alphanumeric Sender ID from a business name (max 11 chars). */
