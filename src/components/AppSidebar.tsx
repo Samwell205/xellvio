@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 const items = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true },
+  { title: "Audience", url: "/app/audience", icon: Users },
+  { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff },
   { title: "Campaigns", url: "/app/campaigns", icon: Megaphone },
   { title: "Settings", url: "/app/settings", icon: Settings },
 ];
