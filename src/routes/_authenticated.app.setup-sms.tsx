@@ -25,10 +25,19 @@ const COUNTRIES = [
   { code: "CA", name: "Canada" },
   { code: "GB", name: "United Kingdom" },
   { code: "AU", name: "Australia" },
+  { code: "NG", name: "Nigeria" },
+  { code: "KE", name: "Kenya" },
+  { code: "ZA", name: "South Africa" },
+  { code: "GH", name: "Ghana" },
   { code: "DE", name: "Germany" },
   { code: "FR", name: "France" },
   { code: "ES", name: "Spain" },
   { code: "NL", name: "Netherlands" },
+  { code: "IN", name: "India" },
+  { code: "AE", name: "UAE" },
+  { code: "SA", name: "Saudi Arabia" },
+  { code: "BR", name: "Brazil" },
+  { code: "MX", name: "Mexico" },
 ];
 
 const VOLUMES = [
