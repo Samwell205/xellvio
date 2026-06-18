@@ -69,6 +69,15 @@ function NewCampaignPage() {
     queryFn: async () => (await supabase.from("accounts").select("id,credit_balance").maybeSingle()).data,
   });
 
+  const senderQ = useQuery({
+    queryKey: ["sender-assets-pending"],
+    queryFn: async () => (await supabase.from("sender_assets").select("verification_status,country_code,friendly_rejection_reason")).data ?? [],
+  });
+  const senderList = senderQ.data ?? [];
+  const hasVerified = senderList.some((x) => x.verification_status === "verified");
+  const hasPending = senderList.some((x) => x.verification_status === "submitted" || x.verification_status === "in_review");
+  const hasRejected = senderList.some((x) => x.verification_status === "rejected");
+
   const audience = useMemo(() => ({ include: s.include, exclude: s.exclude }), [s.include, s.exclude]);
 
   const audienceQ = useQuery({
