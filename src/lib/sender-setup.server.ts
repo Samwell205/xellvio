@@ -110,7 +110,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   let subSid = (acct.twilio_subaccount_sid as string | null) ?? "";
   let subToken = "";
-  async function useMainSmsAccount() {
+  async function assignMainSmsAccount() {
     const master = masterAuth();
     subSid = master.sid;
     subToken = master.token;
@@ -125,7 +125,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   }
 
   async function createReplacementSubaccount() {
-    await useMainSmsAccount();
+    await assignMainSmsAccount();
   }
 
   if (!subSid || !acct.twilio_subaccount_auth_token_enc) {
@@ -267,7 +267,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       });
 
       let verificationSid: string | null = null;
-      let status: "submitted" | "verified" = "submitted";
+      const status: "submitted" | "verified" = "submitted";
       let optInImageUrl: string | undefined;
       if (data.optInScreenshotPath) {
         const signed = await supabaseAdmin.storage
