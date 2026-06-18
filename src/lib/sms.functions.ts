@@ -14,6 +14,13 @@ function basicAuth(sid: string, token: string) {
   return "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
 }
 
+function mainSmsAuth() {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token) throw new Error("SMS provider credentials are not configured");
+  return { sid, token };
+}
+
 export const sendTestSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => TestSendSchema.parse(data))
@@ -27,10 +34,6 @@ export const sendTestSms = createServerFn({ method: "POST" })
       .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
       .eq("id", userId)
       .maybeSingle();
-    if (!acct?.twilio_subaccount_sid || !acct.twilio_subaccount_auth_token_enc) {
-      throw new Error("Your SMS sender isn't set up yet. Finish the Set up SMS wizard first.");
-    }
-
     let assetQ = supabase
       .from("sender_assets")
       .select("messaging_service_sid,phone_number,sender_kind,country_code,verification_status")
@@ -50,8 +53,9 @@ export const sendTestSms = createServerFn({ method: "POST" })
       );
     }
 
-    const subSid = acct.twilio_subaccount_sid;
-    const subToken = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+    const accountAuth = acct?.twilio_subaccount_sid && acct.twilio_subaccount_auth_token_enc
+      ? { sid: acct.twilio_subaccount_sid, token: decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string) }
+      : mainSmsAuth();
 
     const body = new URLSearchParams({
       To: data.to,
@@ -59,10 +63,10 @@ export const sendTestSms = createServerFn({ method: "POST" })
     });
     if (asset.messaging_service_sid) body.set("MessagingServiceSid", asset.messaging_service_sid);
     else body.set("From", asset.phone_number!);
-    const res = await fetch(`${TWILIO_API}/Accounts/${subSid}/Messages.json`, {
+    const res = await fetch(`${TWILIO_API}/Accounts/${accountAuth.sid}/Messages.json`, {
       method: "POST",
       headers: {
-        Authorization: basicAuth(subSid, subToken),
+        Authorization: basicAuth(accountAuth.sid, accountAuth.token),
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body,
