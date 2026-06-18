@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as FeaturesRouteImport } from './routes/features'
@@ -20,21 +19,8 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
-import { Route as AuthenticatedAppSendRouteImport } from './routes/_authenticated.app.send'
-import { Route as AuthenticatedAppReportsRouteImport } from './routes/_authenticated.app.reports'
-import { Route as AuthenticatedAppNumbersRouteImport } from './routes/_authenticated.app.numbers'
-import { Route as AuthenticatedAppContactsRouteImport } from './routes/_authenticated.app.contacts'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
-import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
-import { Route as AuthenticatedAppApiRouteImport } from './routes/_authenticated.app.api'
-import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated.app.admin'
-import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 
-const VerifyEmailRoute = VerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SolutionsRoute = SolutionsRouteImport.update({
   id: '/solutions',
   path: '/solutions',
@@ -85,53 +71,11 @@ const AuthenticatedAppSettingsRoute =
     path: '/app/settings',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAppSendRoute = AuthenticatedAppSendRouteImport.update({
-  id: '/app/send',
-  path: '/app/send',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedAppReportsRoute = AuthenticatedAppReportsRouteImport.update({
-  id: '/app/reports',
-  path: '/app/reports',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedAppNumbersRoute = AuthenticatedAppNumbersRouteImport.update({
-  id: '/app/numbers',
-  path: '/app/numbers',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedAppContactsRoute =
-  AuthenticatedAppContactsRouteImport.update({
-    id: '/app/contacts',
-    path: '/app/contacts',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAppCampaignsRoute =
   AuthenticatedAppCampaignsRouteImport.update({
     id: '/app/campaigns',
     path: '/app/campaigns',
     getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAppBillingRoute = AuthenticatedAppBillingRouteImport.update({
-  id: '/app/billing',
-  path: '/app/billing',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedAppApiRoute = AuthenticatedAppApiRouteImport.update({
-  id: '/app/api',
-  path: '/app/api',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedAppAdminRoute = AuthenticatedAppAdminRouteImport.update({
-  id: '/app/admin',
-  path: '/app/admin',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedAppCampaignsNewRoute =
-  AuthenticatedAppCampaignsNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -142,18 +86,9 @@ export interface FileRoutesByFullPath {
   '/features': typeof FeaturesRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
-  '/verify-email': typeof VerifyEmailRoute
-  '/app/admin': typeof AuthenticatedAppAdminRoute
-  '/app/api': typeof AuthenticatedAppApiRoute
-  '/app/billing': typeof AuthenticatedAppBillingRoute
-  '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
-  '/app/contacts': typeof AuthenticatedAppContactsRoute
-  '/app/numbers': typeof AuthenticatedAppNumbersRoute
-  '/app/reports': typeof AuthenticatedAppReportsRoute
-  '/app/send': typeof AuthenticatedAppSendRoute
+  '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/': typeof AuthenticatedAppIndexRoute
-  '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -163,18 +98,9 @@ export interface FileRoutesByTo {
   '/features': typeof FeaturesRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
-  '/verify-email': typeof VerifyEmailRoute
-  '/app/admin': typeof AuthenticatedAppAdminRoute
-  '/app/api': typeof AuthenticatedAppApiRoute
-  '/app/billing': typeof AuthenticatedAppBillingRoute
-  '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
-  '/app/contacts': typeof AuthenticatedAppContactsRoute
-  '/app/numbers': typeof AuthenticatedAppNumbersRoute
-  '/app/reports': typeof AuthenticatedAppReportsRoute
-  '/app/send': typeof AuthenticatedAppSendRoute
+  '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app': typeof AuthenticatedAppIndexRoute
-  '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -186,18 +112,9 @@ export interface FileRoutesById {
   '/features': typeof FeaturesRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
-  '/verify-email': typeof VerifyEmailRoute
-  '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
-  '/_authenticated/app/api': typeof AuthenticatedAppApiRoute
-  '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
-  '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
-  '/_authenticated/app/contacts': typeof AuthenticatedAppContactsRoute
-  '/_authenticated/app/numbers': typeof AuthenticatedAppNumbersRoute
-  '/_authenticated/app/reports': typeof AuthenticatedAppReportsRoute
-  '/_authenticated/app/send': typeof AuthenticatedAppSendRoute
+  '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRoute
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
-  '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -209,18 +126,9 @@ export interface FileRouteTypes {
     | '/features'
     | '/pricing'
     | '/solutions'
-    | '/verify-email'
-    | '/app/admin'
-    | '/app/api'
-    | '/app/billing'
     | '/app/campaigns'
-    | '/app/contacts'
-    | '/app/numbers'
-    | '/app/reports'
-    | '/app/send'
     | '/app/settings'
     | '/app/'
-    | '/app/campaigns/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -230,18 +138,9 @@ export interface FileRouteTypes {
     | '/features'
     | '/pricing'
     | '/solutions'
-    | '/verify-email'
-    | '/app/admin'
-    | '/app/api'
-    | '/app/billing'
     | '/app/campaigns'
-    | '/app/contacts'
-    | '/app/numbers'
-    | '/app/reports'
-    | '/app/send'
     | '/app/settings'
     | '/app'
-    | '/app/campaigns/new'
   id:
     | '__root__'
     | '/'
@@ -252,18 +151,9 @@ export interface FileRouteTypes {
     | '/features'
     | '/pricing'
     | '/solutions'
-    | '/verify-email'
-    | '/_authenticated/app/admin'
-    | '/_authenticated/app/api'
-    | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
-    | '/_authenticated/app/contacts'
-    | '/_authenticated/app/numbers'
-    | '/_authenticated/app/reports'
-    | '/_authenticated/app/send'
     | '/_authenticated/app/settings'
     | '/_authenticated/app/'
-    | '/_authenticated/app/campaigns/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -275,18 +165,10 @@ export interface RootRouteChildren {
   FeaturesRoute: typeof FeaturesRoute
   PricingRoute: typeof PricingRoute
   SolutionsRoute: typeof SolutionsRoute
-  VerifyEmailRoute: typeof VerifyEmailRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/verify-email': {
-      id: '/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof VerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/solutions': {
       id: '/solutions'
       path: '/solutions'
@@ -357,34 +239,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/app/send': {
-      id: '/_authenticated/app/send'
-      path: '/app/send'
-      fullPath: '/app/send'
-      preLoaderRoute: typeof AuthenticatedAppSendRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/reports': {
-      id: '/_authenticated/app/reports'
-      path: '/app/reports'
-      fullPath: '/app/reports'
-      preLoaderRoute: typeof AuthenticatedAppReportsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/numbers': {
-      id: '/_authenticated/app/numbers'
-      path: '/app/numbers'
-      fullPath: '/app/numbers'
-      preLoaderRoute: typeof AuthenticatedAppNumbersRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/contacts': {
-      id: '/_authenticated/app/contacts'
-      path: '/app/contacts'
-      fullPath: '/app/contacts'
-      preLoaderRoute: typeof AuthenticatedAppContactsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/app/campaigns': {
       id: '/_authenticated/app/campaigns'
       path: '/app/campaigns'
@@ -392,73 +246,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/app/billing': {
-      id: '/_authenticated/app/billing'
-      path: '/app/billing'
-      fullPath: '/app/billing'
-      preLoaderRoute: typeof AuthenticatedAppBillingRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/api': {
-      id: '/_authenticated/app/api'
-      path: '/app/api'
-      fullPath: '/app/api'
-      preLoaderRoute: typeof AuthenticatedAppApiRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/admin': {
-      id: '/_authenticated/app/admin'
-      path: '/app/admin'
-      fullPath: '/app/admin'
-      preLoaderRoute: typeof AuthenticatedAppAdminRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/campaigns/new': {
-      id: '/_authenticated/app/campaigns/new'
-      path: '/new'
-      fullPath: '/app/campaigns/new'
-      preLoaderRoute: typeof AuthenticatedAppCampaignsNewRouteImport
-      parentRoute: typeof AuthenticatedAppCampaignsRoute
-    }
   }
 }
-
-interface AuthenticatedAppCampaignsRouteChildren {
-  AuthenticatedAppCampaignsNewRoute: typeof AuthenticatedAppCampaignsNewRoute
-}
-
-const AuthenticatedAppCampaignsRouteChildren: AuthenticatedAppCampaignsRouteChildren =
-  {
-    AuthenticatedAppCampaignsNewRoute: AuthenticatedAppCampaignsNewRoute,
-  }
-
-const AuthenticatedAppCampaignsRouteWithChildren =
-  AuthenticatedAppCampaignsRoute._addFileChildren(
-    AuthenticatedAppCampaignsRouteChildren,
-  )
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
-  AuthenticatedAppApiRoute: typeof AuthenticatedAppApiRoute
-  AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
-  AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
-  AuthenticatedAppContactsRoute: typeof AuthenticatedAppContactsRoute
-  AuthenticatedAppNumbersRoute: typeof AuthenticatedAppNumbersRoute
-  AuthenticatedAppReportsRoute: typeof AuthenticatedAppReportsRoute
-  AuthenticatedAppSendRoute: typeof AuthenticatedAppSendRoute
+  AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRoute
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
-  AuthenticatedAppApiRoute: AuthenticatedAppApiRoute,
-  AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
-  AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
-  AuthenticatedAppContactsRoute: AuthenticatedAppContactsRoute,
-  AuthenticatedAppNumbersRoute: AuthenticatedAppNumbersRoute,
-  AuthenticatedAppReportsRoute: AuthenticatedAppReportsRoute,
-  AuthenticatedAppSendRoute: AuthenticatedAppSendRoute,
+  AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRoute,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
 }
@@ -476,7 +274,6 @@ const rootRouteChildren: RootRouteChildren = {
   FeaturesRoute: FeaturesRoute,
   PricingRoute: PricingRoute,
   SolutionsRoute: SolutionsRoute,
-  VerifyEmailRoute: VerifyEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
