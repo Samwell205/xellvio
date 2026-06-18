@@ -14,16 +14,378 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      campaigns: {
+        Row: {
+          created_at: string
+          delivered_count: number
+          failed_count: number
+          group_id: string | null
+          id: string
+          message: string
+          name: string
+          scheduled_at: string | null
+          sender_id: string | null
+          sent_count: number
+          status: string
+          total_recipients: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_count?: number
+          failed_count?: number
+          group_id?: string | null
+          id?: string
+          message: string
+          name: string
+          scheduled_at?: string | null
+          sender_id?: string | null
+          sent_count?: number
+          status?: string
+          total_recipients?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_count?: number
+          failed_count?: number
+          group_id?: string | null
+          id?: string
+          message?: string
+          name?: string
+          scheduled_at?: string | null
+          sender_id?: string | null
+          sent_count?: number
+          status?: string
+          total_recipients?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "contact_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          country: string | null
+          created_at: string
+          group_id: string | null
+          id: string
+          name: string | null
+          opted_out: boolean
+          phone: string
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          country?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          name?: string | null
+          opted_out?: boolean
+          phone: string
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          country?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          name?: string | null
+          opted_out?: boolean
+          phone?: string
+          tags?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "contact_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          campaign_id: string | null
+          cost: number
+          country: string | null
+          created_at: string
+          delivered_at: string | null
+          error: string | null
+          id: string
+          provider: string | null
+          provider_sid: string | null
+          segments: number
+          sender_id: string | null
+          status: string
+          to_phone: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          campaign_id?: string | null
+          cost?: number
+          country?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error?: string | null
+          id?: string
+          provider?: string | null
+          provider_sid?: string | null
+          segments?: number
+          sender_id?: string | null
+          status?: string
+          to_phone: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          campaign_id?: string | null
+          cost?: number
+          country?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error?: string | null
+          id?: string
+          provider?: string | null
+          provider_sid?: string | null
+          segments?: number
+          sender_id?: string | null
+          status?: string
+          to_phone?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          read: boolean
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          company: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          kind: string
+          reference: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          kind: string
+          reference?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          reference?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallets: {
+        Row: {
+          balance_credits: number
+          currency: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance_credits?: number
+          currency?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance_credits?: number
+          currency?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +512,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

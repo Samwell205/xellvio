@@ -9,38 +9,216 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as FeaturesRouteImport } from './routes/features'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
+import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
+import { Route as AuthenticatedAppSendRouteImport } from './routes/_authenticated.app.send'
+import { Route as AuthenticatedAppReportsRouteImport } from './routes/_authenticated.app.reports'
+import { Route as AuthenticatedAppContactsRouteImport } from './routes/_authenticated.app.contacts'
+import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
+import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
+import { Route as AuthenticatedAppApiRouteImport } from './routes/_authenticated.app.api'
 
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeaturesRoute = FeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/app/',
+  path: '/app/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppSettingsRoute =
+  AuthenticatedAppSettingsRouteImport.update({
+    id: '/app/settings',
+    path: '/app/settings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppSendRoute = AuthenticatedAppSendRouteImport.update({
+  id: '/app/send',
+  path: '/app/send',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppReportsRoute = AuthenticatedAppReportsRouteImport.update({
+  id: '/app/reports',
+  path: '/app/reports',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppContactsRoute =
+  AuthenticatedAppContactsRouteImport.update({
+    id: '/app/contacts',
+    path: '/app/contacts',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppCampaignsRoute =
+  AuthenticatedAppCampaignsRouteImport.update({
+    id: '/app/campaigns',
+    path: '/app/campaigns',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppBillingRoute = AuthenticatedAppBillingRouteImport.update({
+  id: '/app/billing',
+  path: '/app/billing',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppApiRoute = AuthenticatedAppApiRouteImport.update({
+  id: '/app/api',
+  path: '/app/api',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/features': typeof FeaturesRoute
+  '/pricing': typeof PricingRoute
+  '/app/api': typeof AuthenticatedAppApiRoute
+  '/app/billing': typeof AuthenticatedAppBillingRoute
+  '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/app/contacts': typeof AuthenticatedAppContactsRoute
+  '/app/reports': typeof AuthenticatedAppReportsRoute
+  '/app/send': typeof AuthenticatedAppSendRoute
+  '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/': typeof AuthenticatedAppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/features': typeof FeaturesRoute
+  '/pricing': typeof PricingRoute
+  '/app/api': typeof AuthenticatedAppApiRoute
+  '/app/billing': typeof AuthenticatedAppBillingRoute
+  '/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/app/contacts': typeof AuthenticatedAppContactsRoute
+  '/app/reports': typeof AuthenticatedAppReportsRoute
+  '/app/send': typeof AuthenticatedAppSendRoute
+  '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app': typeof AuthenticatedAppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/features': typeof FeaturesRoute
+  '/pricing': typeof PricingRoute
+  '/_authenticated/app/api': typeof AuthenticatedAppApiRoute
+  '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
+  '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRoute
+  '/_authenticated/app/contacts': typeof AuthenticatedAppContactsRoute
+  '/_authenticated/app/reports': typeof AuthenticatedAppReportsRoute
+  '/_authenticated/app/send': typeof AuthenticatedAppSendRoute
+  '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/features'
+    | '/pricing'
+    | '/app/api'
+    | '/app/billing'
+    | '/app/campaigns'
+    | '/app/contacts'
+    | '/app/reports'
+    | '/app/send'
+    | '/app/settings'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/features'
+    | '/pricing'
+    | '/app/api'
+    | '/app/billing'
+    | '/app/campaigns'
+    | '/app/contacts'
+    | '/app/reports'
+    | '/app/send'
+    | '/app/settings'
+    | '/app'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/features'
+    | '/pricing'
+    | '/_authenticated/app/api'
+    | '/_authenticated/app/billing'
+    | '/_authenticated/app/campaigns'
+    | '/_authenticated/app/contacts'
+    | '/_authenticated/app/reports'
+    | '/_authenticated/app/send'
+    | '/_authenticated/app/settings'
+    | '/_authenticated/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  FeaturesRoute: typeof FeaturesRoute
+  PricingRoute: typeof PricingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/features': {
+      id: '/features'
+      path: '/features'
+      fullPath: '/features'
+      preLoaderRoute: typeof FeaturesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +226,97 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/app/': {
+      id: '/_authenticated/app/'
+      path: '/app'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/settings': {
+      id: '/_authenticated/app/settings'
+      path: '/app/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/send': {
+      id: '/_authenticated/app/send'
+      path: '/app/send'
+      fullPath: '/app/send'
+      preLoaderRoute: typeof AuthenticatedAppSendRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/reports': {
+      id: '/_authenticated/app/reports'
+      path: '/app/reports'
+      fullPath: '/app/reports'
+      preLoaderRoute: typeof AuthenticatedAppReportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/contacts': {
+      id: '/_authenticated/app/contacts'
+      path: '/app/contacts'
+      fullPath: '/app/contacts'
+      preLoaderRoute: typeof AuthenticatedAppContactsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/campaigns': {
+      id: '/_authenticated/app/campaigns'
+      path: '/app/campaigns'
+      fullPath: '/app/campaigns'
+      preLoaderRoute: typeof AuthenticatedAppCampaignsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/billing': {
+      id: '/_authenticated/app/billing'
+      path: '/app/billing'
+      fullPath: '/app/billing'
+      preLoaderRoute: typeof AuthenticatedAppBillingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app/api': {
+      id: '/_authenticated/app/api'
+      path: '/app/api'
+      fullPath: '/app/api'
+      preLoaderRoute: typeof AuthenticatedAppApiRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAppApiRoute: typeof AuthenticatedAppApiRoute
+  AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
+  AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRoute
+  AuthenticatedAppContactsRoute: typeof AuthenticatedAppContactsRoute
+  AuthenticatedAppReportsRoute: typeof AuthenticatedAppReportsRoute
+  AuthenticatedAppSendRoute: typeof AuthenticatedAppSendRoute
+  AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAppApiRoute: AuthenticatedAppApiRoute,
+  AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
+  AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRoute,
+  AuthenticatedAppContactsRoute: AuthenticatedAppContactsRoute,
+  AuthenticatedAppReportsRoute: AuthenticatedAppReportsRoute,
+  AuthenticatedAppSendRoute: AuthenticatedAppSendRoute,
+  AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthRoute: AuthRoute,
+  FeaturesRoute: FeaturesRoute,
+  PricingRoute: PricingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
