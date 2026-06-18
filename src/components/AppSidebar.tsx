@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 const items = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true },
   { title: "Audience", url: "/app/audience", icon: Users },
+  { title: "Segments", url: "/app/segments", icon: Filter },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff },
   { title: "Campaigns", url: "/app/campaigns", icon: Megaphone },
   { title: "Settings", url: "/app/settings", icon: Settings },
