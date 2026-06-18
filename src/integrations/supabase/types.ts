@@ -134,33 +134,45 @@ export type Database = {
         Row: {
           country: string | null
           created_at: string
+          email: string | null
+          external_id: string | null
+          first_name: string | null
           group_id: string | null
           id: string
+          last_name: string | null
           name: string | null
           opted_out: boolean
-          phone: string
+          phone: string | null
           tags: string[] | null
           user_id: string
         }
         Insert: {
           country?: string | null
           created_at?: string
+          email?: string | null
+          external_id?: string | null
+          first_name?: string | null
           group_id?: string | null
           id?: string
+          last_name?: string | null
           name?: string | null
           opted_out?: boolean
-          phone: string
+          phone?: string | null
           tags?: string[] | null
           user_id: string
         }
         Update: {
           country?: string | null
           created_at?: string
+          email?: string | null
+          external_id?: string | null
+          first_name?: string | null
           group_id?: string | null
           id?: string
+          last_name?: string | null
           name?: string | null
           opted_out?: boolean
-          phone?: string
+          phone?: string | null
           tags?: string[] | null
           user_id?: string
         }
