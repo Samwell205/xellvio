@@ -108,7 +108,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   let accountSenderSet = Boolean(acct.subaccount_phone_number || acct.subaccount_messaging_service_sid);
   const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
 
-  async function setPrimarySender(patch: Record<string, unknown>) {
+  async function setPrimarySender(patch: any) {
     if (accountSenderSet) return;
     await supabaseAdmin.from("accounts").update(patch).eq("id", userId);
     accountSenderSet = true;
