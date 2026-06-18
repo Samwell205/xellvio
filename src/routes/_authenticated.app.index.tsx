@@ -3,10 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Send, Megaphone, CheckCircle2, XCircle, Wallet } from "lucide-react";
+import { Send, Megaphone, CheckCircle2, XCircle, Wallet, RefreshCw } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, BarChart, Bar, CartesianGrid,
 } from "recharts";
+import { ReadinessBanner } from "@/components/ReadinessBanner";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Dashboard — Samwell Global SMS" }] }),
@@ -15,6 +16,8 @@ export const Route = createFileRoute("/_authenticated/app/")({
 
 function Overview() {
   const stats = useQuery({
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
     queryKey: ["dash-stats"],
     queryFn: async () => {
       const [{ count: total }, { count: delivered }, { count: failed }, { data: wallet }, { data: recent }] = await Promise.all([
@@ -45,10 +48,18 @@ function Overview() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold">Overview</h1>
-          <p className="text-sm text-muted-foreground">Live performance across your messaging.</p>
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            Live performance across your messaging.
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/70">
+              <RefreshCw className={`size-3 ${stats.isFetching ? "animate-spin" : ""}`} /> auto-refresh
+            </span>
+          </p>
         </div>
         <Link to="/app/send"><Button>New message</Button></Link>
       </div>
+
+      <ReadinessBanner />
+
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={Send} label="Total Sent" value={s?.total ?? 0} />
