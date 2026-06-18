@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, MessageSquareText, Sparkles, Upload, Clock, AlertCircle } from "lucide-react";
-import { getMySenderAssets, refreshMyVerificationStatus } from "@/lib/sender-setup.functions";
+import { getMySenderAssets, refreshMyVerificationStatus, saveCustomSenderId } from "@/lib/sender-setup.functions";
 import { sendTestSms } from "@/lib/sms.functions";
 import { Send } from "lucide-react";
 
@@ -74,7 +74,13 @@ function SetupSmsPage() {
       </div>
 
       {hasAssets ? (
-        <SenderStatusList assets={assets.data ?? []} accountPhone={a?.phone ?? undefined} onRefresh={() => refreshMut.mutate()} refreshing={refreshMut.isPending} />
+        <SenderStatusList
+          assets={assets.data ?? []}
+          accountPhone={a?.phone ?? undefined}
+          onRefresh={() => refreshMut.mutate()}
+          refreshing={refreshMut.isPending}
+          onSaved={() => { qc.invalidateQueries({ queryKey: ["sender-assets"] }); qc.invalidateQueries({ queryKey: ["account"] }); }}
+        />
       ) : (
         <Wizard account={a} onDone={() => { qc.invalidateQueries({ queryKey: ["sender-assets"] }); qc.invalidateQueries({ queryKey: ["account"] }); }} />
       )}
@@ -82,9 +88,10 @@ function SetupSmsPage() {
   );
 }
 
-function SenderStatusList({ assets, accountPhone, onRefresh, refreshing }: { assets: any[]; accountPhone?: string; onRefresh: () => void; refreshing: boolean }) {
+function SenderStatusList({ assets, accountPhone, onRefresh, refreshing, onSaved }: { assets: any[]; accountPhone?: string; onRefresh: () => void; refreshing: boolean; onSaved: () => void }) {
   return (
     <div className="space-y-3">
+      <CustomSenderIdCard assets={assets} onSaved={onSaved} />
       {assets.map((s) => <StatusCard key={s.id} asset={s} accountPhone={accountPhone} />)}
       <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing}>
