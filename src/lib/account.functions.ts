@@ -5,6 +5,7 @@ export const ensureMyAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: userData } = await supabase.auth.getUser();
     const user = userData.user;
     const email = user?.email ?? null;
@@ -14,7 +15,7 @@ export const ensureMyAccount = createServerFn({ method: "POST" })
       (typeof meta.name === "string" && meta.name) ||
       "";
 
-    const { data: existing, error: lookupError } = await supabase
+    const { data: existing, error: lookupError } = await supabaseAdmin
       .from("accounts")
       .select("id,email,contact_email,full_name")
       .eq("id", userId)
@@ -22,7 +23,7 @@ export const ensureMyAccount = createServerFn({ method: "POST" })
     if (lookupError) throw lookupError;
 
     if (!existing) {
-      const { error } = await supabase.from("accounts").insert({
+      const { error } = await supabaseAdmin.from("accounts").insert({
         id: userId,
         email,
         contact_email: email,
@@ -37,8 +38,9 @@ export const ensureMyAccount = createServerFn({ method: "POST" })
     if (!existing.contact_email && email) patch.contact_email = email;
     if (!existing.full_name && fullName) patch.full_name = fullName;
     if (Object.keys(patch).length > 0) {
-      const { error } = await supabase.from("accounts").update(patch).eq("id", userId);
+      const { error } = await supabaseAdmin.from("accounts").update(patch).eq("id", userId);
       if (error) throw error;
     }
+    await supabaseAdmin.from("user_roles").upsert({ user_id: userId, role: "user" }, { onConflict: "user_id,role" });
     return { created: false };
   });
