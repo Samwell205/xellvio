@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/public/poll-verifications")({
         if (!apiKey || apiKey !== process.env.SUPABASE_PUBLISHABLE_KEY) {
           return new Response("Unauthorized", { status: 401 });
         }
-        const { syncToollfreeVerifications } = await import("@/lib/sender-setup.functions");
+        const { syncToollfreeVerifications } = await import("@/lib/sender-setup.server");
         const result = await syncToollfreeVerifications({});
         return Response.json(result);
       },

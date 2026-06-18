@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, MessageSquareText, Sparkles, Upload, Clock, AlertCircle } from "lucide-react";
-import { setupSms, getMySenderAssets, refreshMyVerificationStatus } from "@/lib/sender-setup.functions";
+import { getMySenderAssets, refreshMyVerificationStatus } from "@/lib/sender-setup.functions";
 import { sendTestSms } from "@/lib/sms.functions";
 import { Send } from "lucide-react";
 
@@ -218,7 +218,6 @@ type WizardForm = {
 };
 
 function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
-  const setup = useServerFn(setupSms);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState<WizardForm>({
@@ -273,14 +272,24 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
 
   const runSetup = useMutation({
     mutationFn: async () => {
-      return setup({ data: {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Please sign in again, then retry SMS setup.");
+      const res = await fetch("/api/setup-sms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
         targetCountries: form.targetCountries,
         monthlyVolume: form.monthlyVolume,
         useCase: form.useCase,
         sampleMessage: form.sampleMessage,
         optInDescription: form.optInDescription,
         optInScreenshotPath: form.optInScreenshotPath || undefined,
-      } });
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error ?? "Could not set up SMS. Please try again.");
+      return json;
     },
     onSuccess: (r: any) => {
       if (r?.errors?.length) {
