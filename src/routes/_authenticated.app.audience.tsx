@@ -197,9 +197,22 @@ function AudiencePage() {
                   <TableCell><ConsentBadge status={r.consent_status} /></TableCell>
                   <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" disabled={toggleConsent.isPending} onClick={() => toggleConsent.mutate(r)}>
-                      {r.consent_status === "subscribed" ? "Opt out" : "Resubscribe"}
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" disabled={toggleConsent.isPending} onClick={() => toggleConsent.mutate(r)}>
+                        {r.consent_status === "subscribed" ? "Opt out" : "Resubscribe"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        disabled={deleteContact.isPending}
+                        onClick={() => {
+                          if (confirm(`Delete ${r.phone_e164}? This cannot be undone.`)) deleteContact.mutate(r);
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
