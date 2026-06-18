@@ -20,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
 import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.twilio-inbound'
+import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
@@ -89,6 +90,12 @@ const ApiPublicTwilioInboundRoute = ApiPublicTwilioInboundRouteImport.update({
   path: '/api/public/twilio-inbound',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPollVerificationsRoute =
+  ApiPublicPollVerificationsRouteImport.update({
+    id: '/api/public/poll-verifications',
+    path: '/api/public/poll-verifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicDispatchCampaignRoute =
   ApiPublicDispatchCampaignRouteImport.update({
     id: '/api/public/dispatch-campaign',
@@ -190,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app/': typeof AuthenticatedAppIndexRoute
@@ -216,6 +224,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/app': typeof AuthenticatedAppIndexRoute
@@ -244,6 +253,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app/'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/app'
@@ -325,6 +337,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/suppressions'
     | '/api/public/dispatch-campaign'
+    | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/_authenticated/app/'
@@ -345,6 +358,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   SolutionsRoute: typeof SolutionsRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
+  ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
   ApiPublicTwilioInboundRoute: typeof ApiPublicTwilioInboundRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
 }
@@ -426,6 +440,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/twilio-inbound'
       fullPath: '/api/public/twilio-inbound'
       preLoaderRoute: typeof ApiPublicTwilioInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/poll-verifications': {
+      id: '/api/public/poll-verifications'
+      path: '/api/public/poll-verifications'
+      fullPath: '/api/public/poll-verifications'
+      preLoaderRoute: typeof ApiPublicPollVerificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/dispatch-campaign': {
@@ -602,6 +623,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   SolutionsRoute: SolutionsRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
+  ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
   ApiPublicTwilioInboundRoute: ApiPublicTwilioInboundRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
 }
