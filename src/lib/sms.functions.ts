@@ -38,11 +38,11 @@ export const sendTestSms = createServerFn({ method: "POST" })
     if (data.country) assetQ = assetQ.eq("country_code", data.country.toUpperCase());
 
     const { data: assets } = await assetQ;
-    // Prefer a verified sender; else fall back to any with a messaging_service_sid
+    // Prefer a verified sender; else fall back to any saved sender.
     const asset =
-      (assets ?? []).find((a) => a.verification_status === "verified" && a.messaging_service_sid) ||
-      (assets ?? []).find((a) => !!a.messaging_service_sid);
-    if (!asset?.messaging_service_sid) {
+      (assets ?? []).find((a) => a.verification_status === "verified" && (a.messaging_service_sid || a.phone_number)) ||
+      (assets ?? []).find((a) => !!a.messaging_service_sid || !!a.phone_number);
+    if (!asset?.messaging_service_sid && !asset?.phone_number) {
       throw new Error(
         data.country
           ? `No sender provisioned for ${data.country.toUpperCase()} yet. Wait for setup to finish or pick another country.`
@@ -55,9 +55,10 @@ export const sendTestSms = createServerFn({ method: "POST" })
 
     const body = new URLSearchParams({
       To: data.to,
-      MessagingServiceSid: asset.messaging_service_sid,
       Body: data.body,
     });
+    if (asset.messaging_service_sid) body.set("MessagingServiceSid", asset.messaging_service_sid);
+    else body.set("From", asset.phone_number!);
     const res = await fetch(`${TWILIO_API}/Accounts/${subSid}/Messages.json`, {
       method: "POST",
       headers: {

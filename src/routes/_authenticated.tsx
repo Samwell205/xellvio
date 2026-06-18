@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Bell, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { ensureMyAccount } from "@/lib/account.functions";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/_authenticated")({
     if (!data.user.email_confirmed_at) {
       throw redirect({ to: "/verify-email", search: { email: data.user.email ?? "" } });
     }
+    await ensureMyAccount();
     return { user: data.user };
   },
   component: AppLayout,
