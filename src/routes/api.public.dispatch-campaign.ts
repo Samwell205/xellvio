@@ -34,6 +34,7 @@ type Sender =
       fromNumber?: string;
       assets?: Array<{
         country_code: string;
+        sender_kind?: string | null;
         messaging_service_sid?: string | null;
         phone_number?: string | null;
       }>;
@@ -145,7 +146,9 @@ async function dispatchOne(
                 (asset.messaging_service_sid || asset.phone_number),
             );
             const messagingService =
-              matchedSender?.messaging_service_sid ?? sender.messagingService;
+              matchedSender?.sender_kind !== "sender_id"
+                ? (matchedSender?.messaging_service_sid ?? sender.messagingService)
+                : undefined;
             const fromNumber = matchedSender?.phone_number ?? sender.fromNumber;
             if (messagingService) body.append("MessagingServiceSid", messagingService);
             else body.append("From", fromNumber!);
@@ -291,7 +294,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             // If tenant has sender_assets, require at least one verified before sending.
             const { data: senderAssets } = await supabaseAdmin
               .from("sender_assets")
-              .select("verification_status,country_code,phone_number,messaging_service_sid")
+              .select("verification_status,country_code,sender_kind,phone_number,messaging_service_sid")
               .eq("account_id", c.account_id);
 
             const verifiedSender = (senderAssets ?? []).find(
