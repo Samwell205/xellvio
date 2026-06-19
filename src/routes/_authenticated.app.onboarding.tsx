@@ -209,7 +209,7 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
         </div>
         {hasNumber ? (
           <p className="text-sm">
-            Your sender: <span className="font-mono">{account.subaccount_phone_number}</span>
+            Your sender: <span className="font-mono">{provisioning?.phoneNumber}</span>
           </p>
         ) : !hasSub ? (
           <p className="text-sm text-muted-foreground">Provision your subaccount first.</p>
