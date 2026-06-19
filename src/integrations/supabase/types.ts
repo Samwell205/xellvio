@@ -160,6 +160,7 @@ export type Database = {
           name: string
           schedule_at: string | null
           send_mode: string
+          sender_map: Json
           smart_skip_hours: number
           status: string
           updated_at: string
@@ -174,6 +175,7 @@ export type Database = {
           name: string
           schedule_at?: string | null
           send_mode?: string
+          sender_map?: Json
           smart_skip_hours?: number
           status?: string
           updated_at?: string
@@ -188,6 +190,7 @@ export type Database = {
           name?: string
           schedule_at?: string | null
           send_mode?: string
+          sender_map?: Json
           smart_skip_hours?: number
           status?: string
           updated_at?: string
