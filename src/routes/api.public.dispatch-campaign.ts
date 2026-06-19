@@ -145,8 +145,9 @@ async function dispatchOne(
   const dispatchList = affordable;
 
 
-  for (let i = 0; i < enriched.length; i += BATCH_SIZE) {
-    const batch = enriched.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < dispatchList.length; i += BATCH_SIZE) {
+    const batch = dispatchList.slice(i, i + BATCH_SIZE);
+
 
     const rows = batch.map((p) => ({
       campaign_id: campaign.id,
