@@ -42,7 +42,7 @@ function CampaignReport() {
     queryFn: async () => {
       const { data } = await supabase
         .from("messages")
-        .select("id, phone_e164, status, error_code, sent_at, delivered_at, created_at, segments_count, country_code, cost_usd, profile:profile_id(country_code, first_name, last_name)")
+        .select("id, phone_e164, status, error_code, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)")
         .eq("campaign_id", id)
         .order("created_at", { ascending: false })
         .limit(2000);
@@ -115,7 +115,7 @@ function CampaignReport() {
     const skipped = Math.max(skippedRows, attempted - rows.length);
     const clicked = events.filter((e: any) => e.type === "clicked").length;
     const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
-    const totalCost = rows.reduce((s: number, m: any) => s + Number(m.cost_usd ?? 0), 0);
+    const totalCost = rows.reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
     const totalSegments = rows.reduce((s: number, m: any) => s + Number(m.segments_count ?? 1), 0);
     const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
     const clickRate = delivered > 0 ? (uniqueClickers / delivered) * 100 : 0;
@@ -518,7 +518,7 @@ function RecipientActivity({ rows, stats, optOuts }: { rows: any[]; stats: any; 
                         {m.error_code && <div className="text-[10px] text-destructive mt-0.5">{m.error_code}</div>}
                       </TableCell>
                       <TableCell className="tabular-nums">{m.segments_count ?? 1}</TableCell>
-                      <TableCell className="tabular-nums">{formatUSD(Number(m.cost_usd ?? 0))}</TableCell>
+                      <TableCell className="tabular-nums">{formatUSD(Number(m.cost ?? 0))}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {m.sent_at ? new Date(m.sent_at).toLocaleString() : "—"}
                       </TableCell>
