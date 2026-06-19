@@ -67,6 +67,14 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/app/admin/users")}>
+                    <Link to="/app/admin/users" className="flex items-center gap-3">
+                      <UserCog className="size-4" />
+                      {!collapsed && <span>User management</span>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/app/admin/accounts")}>
                     <Link to="/app/admin/accounts" className="flex items-center gap-3">
                       <Building2 className="size-4" />
