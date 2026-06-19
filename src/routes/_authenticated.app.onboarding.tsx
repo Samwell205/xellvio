@@ -137,7 +137,7 @@ function OnboardingPage() {
         </Card>
       )}
 
-      {step === 2 && <SenderStep account={account.data} />}
+      {step === 2 && <SenderStep provisioning={provisioning.data} />}
     </div>
   );
 }
