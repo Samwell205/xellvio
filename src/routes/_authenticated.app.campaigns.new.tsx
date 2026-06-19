@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, useNavigate, Link, useSearch } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,13 +16,16 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   Megaphone, Users, MessageSquare, CalendarClock, CheckCircle2,
-  ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone, DollarSign,
+  ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone, DollarSign, Phone,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/new")({
   head: () => ({ meta: [{ title: "New campaign — SAMWELL SMS HUB" }] }),
+  validateSearch: (s: Record<string, unknown>) =>
+    z.object({ id: z.string().uuid().optional() }).parse(s),
   component: NewCampaignPage,
 });
 
@@ -48,10 +51,37 @@ const STOP_LINE = "\nReply STOP to unsubscribe.";
 
 function NewCampaignPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: "/_authenticated/app/campaigns/new" });
   const [step, setStep] = useState<StepIdx>(0);
+  const [campaignId, setCampaignId] = useState<string | null>(search.id ?? null);
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
+  });
+
+  // Load existing draft when editing
+  useQuery({
+    queryKey: ["campaign-draft", campaignId],
+    enabled: !!campaignId,
+    queryFn: async () => {
+      const { data } = await supabase.from("campaigns").select("*").eq("id", campaignId!).maybeSingle();
+      if (data) {
+        const aud: any = data.audience ?? {};
+        setS((prev) => ({
+          ...prev,
+          name: data.name ?? "",
+          include: aud.include ?? [],
+          exclude: aud.exclude ?? [],
+          profileIds: aud.profile_ids ?? [],
+          body: (data.message_body ?? "").replace(STOP_LINE, ""),
+          mediaUrl: data.media_url ?? "",
+          sendMode: (data.send_mode as any) ?? "now",
+          scheduleAt: data.schedule_at ? new Date(data.schedule_at).toISOString().slice(0, 16) : "",
+          smartSkipHours: data.smart_skip_hours ?? 8,
+        }));
+      }
+      return data;
+    },
   });
 
   const segmentsQ = useQuery({
@@ -97,12 +127,26 @@ function NewCampaignPage() {
 
   const senderQ = useQuery({
     queryKey: ["sender-assets-pending"],
-    queryFn: async () => (await supabase.from("sender_assets").select("verification_status,country_code,friendly_rejection_reason")).data ?? [],
+    queryFn: async () =>
+      (await supabase
+        .from("sender_assets")
+        .select("verification_status,country_code,sender_kind,phone_number,messaging_service_sid,friendly_rejection_reason")
+      ).data ?? [],
   });
   const senderList = senderQ.data ?? [];
   const hasVerified = senderList.some((x) => x.verification_status === "verified");
   const hasPending = senderList.some((x) => x.verification_status === "submitted" || x.verification_status === "in_review");
   const hasRejected = senderList.some((x) => x.verification_status === "rejected");
+
+  // Map country -> verified sender (auto-routing preview)
+  const sendersByCountry = useMemo(() => {
+    const m: Record<string, any> = {};
+    for (const a of senderList) {
+      if (a.verification_status !== "verified") continue;
+      if (!m[a.country_code]) m[a.country_code] = a;
+    }
+    return m;
+  }, [senderList]);
 
   const audience = useMemo(() => ({ include: s.include, exclude: s.exclude, profile_ids: s.profileIds }), [s.include, s.exclude, s.profileIds]);
 
@@ -180,24 +224,57 @@ function NewCampaignPage() {
     return true;
   })();
 
+  async function persistCampaign(
+    targetStatus: "draft" | "queued" | "scheduled",
+  ): Promise<string | null> {
+    if (!s.name.trim()) return null;
+    const { data: u } = await supabase.auth.getUser();
+    const payload: any = {
+      account_id: u.user!.id,
+      name: s.name.trim(),
+      audience: audience as any,
+      message_body: bodyWithStop,
+      media_url: s.mediaUrl || null,
+      send_mode: s.sendMode,
+      schedule_at: s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
+      smart_skip_hours: s.smartSkipHours,
+      status: targetStatus,
+    };
+    if (campaignId) {
+      const { error } = await supabase.from("campaigns").update(payload).eq("id", campaignId);
+      if (error) throw error;
+      return campaignId;
+    }
+    const { data, error } = await supabase.from("campaigns").insert(payload).select("id").single();
+    if (error) throw error;
+    setCampaignId(data.id);
+    return data.id;
+  }
+
+  // Autosave draft after user enters a name. Debounced.
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [autoSaved, setAutoSaved] = useState<Date | null>(null);
+  useEffect(() => {
+    if (!s.name.trim()) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(async () => {
+      try {
+        const id = await persistCampaign("draft");
+        if (id) setAutoSaved(new Date());
+      } catch (e) {
+        // silent — manual save still available
+      }
+    }, 1200);
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, JSON.stringify(audience)]);
+
   async function saveCampaign(launch: boolean) {
     if (launch && insufficient) { toast.error("Insufficient balance — top up before launching."); return; }
     setSaving(true);
     try {
-      const { data: u } = await supabase.auth.getUser();
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
-      const { error } = await supabase.from("campaigns").insert({
-        account_id: u.user!.id,
-        name: s.name.trim(),
-        audience: audience as any,
-        message_body: bodyWithStop,
-        media_url: s.mediaUrl || null,
-        send_mode: s.sendMode,
-        schedule_at: s.sendMode === "scheduled" ? new Date(s.scheduleAt).toISOString() : null,
-        smart_skip_hours: s.smartSkipHours,
-        status,
-      });
-      if (error) throw error;
+      await persistCampaign(status);
       toast.success(launch ? "Campaign launched" : "Saved as draft");
       navigate({ to: "/app/campaigns" });
     } catch (e: any) {
@@ -207,9 +284,16 @@ function NewCampaignPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2"><Megaphone className="size-6" />New campaign</h1>
-        <p className="text-sm text-muted-foreground">5-step builder. Compliance and test send are required.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold flex items-center gap-2"><Megaphone className="size-6" />{campaignId ? "Edit campaign" : "New campaign"}</h1>
+          <p className="text-sm text-muted-foreground">5-step builder. Drafts autosave as you go.</p>
+        </div>
+        {autoSaved && (
+          <div className="text-xs text-muted-foreground flex items-center gap-1 pt-2">
+            <CheckCircle2 className="size-3.5 text-success" /> Draft saved {autoSaved.toLocaleTimeString()}
+          </div>
+        )}
       </div>
 
       {!hasVerified && senderList.length > 0 && (
@@ -314,15 +398,18 @@ function NewCampaignPage() {
             </div>
           </Card>
 
-          <CostPanel
-            insufficient={insufficient}
-            balance={balance}
-            balanceAfter={balanceAfter}
-            totalCost={totalCost}
-            breakdown={breakdown}
-            audienceCount={audienceList.length}
-            loading={audienceQ.isFetching || ratesQ.isFetching}
-          />
+          <div className="space-y-5">
+            <SenderRoutingCard breakdown={breakdown} sendersByCountry={sendersByCountry} />
+            <CostPanel
+              insufficient={insufficient}
+              balance={balance}
+              balanceAfter={balanceAfter}
+              totalCost={totalCost}
+              breakdown={breakdown}
+              audienceCount={audienceList.length}
+              loading={audienceQ.isFetching || ratesQ.isFetching}
+            />
+          </div>
         </div>
       )}
 
@@ -627,5 +714,64 @@ function ListPicker({ lists, selected, onChange }: { lists: { id: string; name: 
         })}
       </div>
     </div>
+  );
+}
+
+function SenderRoutingCard({
+  breakdown,
+  sendersByCountry,
+}: {
+  breakdown: Array<{ country_code: string; country_name: string; recipients: number }>;
+  sendersByCountry: Record<string, { sender_kind: string; phone_number: string | null; messaging_service_sid: string | null }>;
+}) {
+  function label(s: any) {
+    if (!s) return "No verified sender";
+    if (s.phone_number) return s.phone_number;
+    if (s.sender_kind === "sender_id") return "Alphanumeric Sender ID";
+    if (s.messaging_service_sid) return "Messaging Service";
+    return s.sender_kind;
+  }
+  return (
+    <Card className="p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="size-9 rounded-lg bg-primary/15 text-primary grid place-items-center"><Phone className="size-4" /></div>
+        <div>
+          <h3 className="font-semibold leading-tight">Sender routing</h3>
+          <p className="text-xs text-muted-foreground">Auto-selected per recipient country</p>
+        </div>
+      </div>
+      {breakdown.length === 0 ? (
+        <div className="text-xs text-muted-foreground">Pick an audience to see which sender will be used.</div>
+      ) : (
+        <div className="border rounded-md overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr><th className="text-left p-2">Country</th><th className="text-left p-2">Sender</th><th className="text-right p-2">#</th></tr>
+            </thead>
+            <tbody>
+              {breakdown.map((b) => {
+                const sender = sendersByCountry[b.country_code];
+                return (
+                  <tr key={b.country_code} className="border-t">
+                    <td className="p-2 font-medium">{b.country_name}</td>
+                    <td className="p-2">
+                      {sender ? (
+                        <span className="font-mono text-[11px]">{label(sender)}</span>
+                      ) : (
+                        <Badge variant="destructive" className="text-[10px]">No verified sender</Badge>
+                      )}
+                    </td>
+                    <td className="p-2 text-right">{b.recipients}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        Need a sender for another country? <Link to="/app/setup-sms" className="text-primary underline">Set up SMS</Link> or <Link to="/app/number-requests" className="text-primary underline">request a number</Link>.
+      </p>
+    </Card>
   );
 }
