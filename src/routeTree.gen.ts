@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -60,6 +61,11 @@ const SolutionsRoute = SolutionsRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeaturesRoute = FeaturesRouteImport.update({
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRoute
   '/features': typeof FeaturesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -299,6 +306,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRoute
   '/features': typeof FeaturesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -337,6 +345,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/docs': typeof DocsRoute
   '/features': typeof FeaturesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/pricing': typeof PricingRoute
   '/solutions': typeof SolutionsRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -377,6 +386,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/docs'
     | '/features'
+    | '/forgot-password'
     | '/pricing'
     | '/solutions'
     | '/verify-email'
@@ -415,6 +425,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/docs'
     | '/features'
+    | '/forgot-password'
     | '/pricing'
     | '/solutions'
     | '/verify-email'
@@ -452,6 +463,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/docs'
     | '/features'
+    | '/forgot-password'
     | '/pricing'
     | '/solutions'
     | '/verify-email'
@@ -492,6 +504,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DocsRoute: typeof DocsRoute
   FeaturesRoute: typeof FeaturesRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   PricingRoute: typeof PricingRoute
   SolutionsRoute: typeof SolutionsRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
@@ -524,6 +537,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/features': {
@@ -854,6 +874,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DocsRoute: DocsRoute,
   FeaturesRoute: FeaturesRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   PricingRoute: PricingRoute,
   SolutionsRoute: SolutionsRoute,
   VerifyEmailRoute: VerifyEmailRoute,
