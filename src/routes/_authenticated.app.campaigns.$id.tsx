@@ -3,16 +3,25 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
+  ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent,
+} from "@/components/ui/chart";
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
+} from "recharts";
+import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
-  Clock, SkipForward, MousePointerClick, Users,
+  Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
+  DollarSign, Wallet, Activity,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { formatUSD } from "@/lib/money";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign report — SAMWELL SMS HUB" }] }),
@@ -33,22 +42,24 @@ function CampaignReport() {
     queryFn: async () => {
       const { data } = await supabase
         .from("messages")
-        .select("id, phone_e164, status, error_code, sent_at, delivered_at, segments_count, country_code, profile:profile_id(country_code, first_name, last_name)")
+        .select("id, phone_e164, status, error_code, sent_at, delivered_at, created_at, segments_count, country_code, cost_usd, profile:profile_id(country_code, first_name, last_name)")
         .eq("campaign_id", id)
         .order("created_at", { ascending: false })
-        .limit(1000);
+        .limit(2000);
       return data ?? [];
     },
   });
 
-  const clicksQ = useQuery({
-    queryKey: ["campaign-clicks", id],
+  const eventsQ = useQuery({
+    queryKey: ["campaign-events", id],
     refetchInterval: 10_000,
     queryFn: async () => {
       const { data } = await supabase
-        .from("messages").select("id, events!inner(type)")
-        .eq("campaign_id", id).eq("events.type", "clicked");
-      return data?.length ?? 0;
+        .from("events")
+        .select("id, type, created_at, message_id, messages!inner(campaign_id)")
+        .eq("messages.campaign_id", id)
+        .limit(2000);
+      return data ?? [];
     },
   });
 
@@ -94,15 +105,21 @@ function CampaignReport() {
 
   const stats = useMemo(() => {
     const rows = messagesQ.data ?? [];
+    const events = eventsQ.data ?? [];
     const attempted = eligibleQ.data ?? rows.length;
-    const queued = rows.filter((m: any) => m.status === "queued" || m.status === "pending" || m.status === "sending").length;
+    const queued = rows.filter((m: any) => ["queued", "pending", "sending"].includes(m.status)).length;
     const sent = rows.filter((m: any) => ["sent", "delivered", "undelivered", "failed"].includes(m.status)).length;
     const delivered = rows.filter((m: any) => m.status === "delivered").length;
     const failed = rows.filter((m: any) => m.status === "failed" || m.status === "undelivered").length;
-    const skipped = Math.max(0, attempted - rows.length);
-    const clicked = clicksQ.data ?? 0;
+    const skippedRows = rows.filter((m: any) => m.status === "skipped" || m.error_code === "insufficient_balance").length;
+    const skipped = Math.max(skippedRows, attempted - rows.length);
+    const clicked = events.filter((e: any) => e.type === "clicked").length;
+    const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
+    const totalCost = rows.reduce((s: number, m: any) => s + Number(m.cost_usd ?? 0), 0);
+    const totalSegments = rows.reduce((s: number, m: any) => s + Number(m.segments_count ?? 1), 0);
     const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
-    const clickRate = delivered > 0 ? (clicked / delivered) * 100 : 0;
+    const clickRate = delivered > 0 ? (uniqueClickers / delivered) * 100 : 0;
+    const costPerDelivered = delivered > 0 ? totalCost / delivered : 0;
 
     const byCountry: Record<string, { total: number; delivered: number; failed: number }> = {};
     const failures: Record<string, number> = {};
@@ -116,8 +133,35 @@ function CampaignReport() {
         failures[m.error_code] = (failures[m.error_code] ?? 0) + 1;
       }
     }
-    return { attempted, queued, sent, delivered, failed, skipped, clicked, deliveryRate, clickRate, byCountry, failures };
-  }, [messagesQ.data, eligibleQ.data, clicksQ.data]);
+
+    // Time series — bucket by hour from first sent_at
+    const points = new Map<number, { t: number; sent: number; delivered: number; clicked: number }>();
+    const bucket = (iso: string | null) => {
+      if (!iso) return null;
+      const d = new Date(iso); d.setMinutes(0, 0, 0); return d.getTime();
+    };
+    for (const m of rows as any[]) {
+      const ts = bucket(m.sent_at);
+      if (ts) { points.set(ts, points.get(ts) ?? { t: ts, sent: 0, delivered: 0, clicked: 0 }); points.get(ts)!.sent++; }
+      const td = bucket(m.delivered_at);
+      if (td) { points.set(td, points.get(td) ?? { t: td, sent: 0, delivered: 0, clicked: 0 }); points.get(td)!.delivered++; }
+    }
+    for (const e of events as any[]) {
+      if (e.type !== "clicked") continue;
+      const tc = bucket(e.created_at);
+      if (tc) { points.set(tc, points.get(tc) ?? { t: tc, sent: 0, delivered: 0, clicked: 0 }); points.get(tc)!.clicked++; }
+    }
+    const series = [...points.values()].sort((a, b) => a.t - b.t).map((p) => ({
+      ...p,
+      label: new Date(p.t).toLocaleTimeString([], { hour: "numeric", hour12: true }),
+    }));
+
+    return {
+      attempted, queued, sent, delivered, failed, skipped, clicked, uniqueClickers,
+      totalCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
+      byCountry, failures, series,
+    };
+  }, [messagesQ.data, eventsQ.data, eligibleQ.data]);
 
   if (!campaignQ.data) return <div className="text-muted-foreground">Loading campaign…</div>;
   const c = campaignQ.data;
@@ -125,6 +169,7 @@ function CampaignReport() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <Link to="/app/campaigns" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
           <ArrowLeft className="size-3" /> Campaigns
@@ -139,6 +184,9 @@ function CampaignReport() {
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
               <RefreshCw className={`size-3 ${messagesQ.isFetching ? "animate-spin" : ""}`} /> live
             </span>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -148,11 +196,13 @@ function CampaignReport() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="recipients">Recipient activity</TabsTrigger>
           <TabsTrigger value="links">Link activity</TabsTrigger>
+          <TabsTrigger value="cost">Cost & deliverability</TabsTrigger>
         </TabsList>
 
+        {/* ───────────── OVERVIEW ───────────── */}
         <TabsContent value="overview" className="mt-5">
-          <div className="grid lg:grid-cols-[minmax(0,360px)_1fr] gap-6">
-            {/* Phone preview + audience */}
+          <div className="grid lg:grid-cols-[minmax(0,320px)_1fr] gap-6">
+            {/* Phone + audience */}
             <div className="space-y-5">
               <Card className="p-5">
                 <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3">Text Message</div>
@@ -161,32 +211,96 @@ function CampaignReport() {
 
               <Card className="p-5 space-y-4">
                 <div>
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">Included lists and segments</div>
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">Included lists & segments</div>
                   {listsQ.data?.include?.length ? (
                     <div className="flex flex-wrap gap-1.5">
                       {listsQ.data.include.map((l: any) => (
-                        <Badge key={l.id} variant="secondary">{l.name} ({stats.attempted})</Badge>
+                        <Badge key={l.id} variant="secondary">{l.name} · {stats.attempted}</Badge>
                       ))}
                     </div>
                   ) : <div className="text-sm text-muted-foreground">No included lists</div>}
                 </div>
                 <div>
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">Excluded lists and segments</div>
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">Excluded</div>
                   {listsQ.data?.exclude?.length ? (
                     <div className="flex flex-wrap gap-1.5">
                       {listsQ.data.exclude.map((l: any) => (
                         <Badge key={l.id} variant="outline">{l.name}</Badge>
                       ))}
                     </div>
-                  ) : <div className="text-sm text-muted-foreground">No excluded lists and segments</div>}
+                  ) : <div className="text-sm text-muted-foreground">No exclusions</div>}
                 </div>
               </Card>
             </div>
 
-            {/* Funnel + by-country + failures */}
+            {/* Right column */}
             <div className="space-y-5">
+              {/* KPI hero */}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <Kpi icon={CheckCircle2} label="Delivery rate" value={`${stats.deliveryRate.toFixed(1)}%`}
+                  sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} sent`} tone="success" />
+                <Kpi icon={MousePointerClick} label="Click rate" value={`${stats.clickRate.toFixed(1)}%`}
+                  sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`} tone="primary" />
+                <Kpi icon={ShieldOff} label="Opt-outs" value={(optOutsQ.data ?? 0).toLocaleString()}
+                  sub="since campaign send" tone="danger" />
+                <Kpi icon={Wallet} label="Spend" value={formatUSD(stats.totalCost)}
+                  sub={`${stats.totalSegments.toLocaleString()} segments`} tone="muted" />
+              </div>
+
+              {/* Engagement over time */}
               <Card className="p-5">
-                <div className="text-xs uppercase text-muted-foreground tracking-wide mb-4">Recipients</div>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <div className="font-semibold flex items-center gap-2"><Activity className="size-4 text-primary" /> Engagement over time</div>
+                    <div className="text-xs text-muted-foreground">Sent, delivered and clicked, bucketed hourly</div>
+                  </div>
+                </div>
+                {stats.series.length === 0 ? (
+                  <EmptyChart />
+                ) : (
+                  <ChartContainer
+                    config={{
+                      sent:      { label: "Sent",      color: "hsl(217 91% 60%)" },
+                      delivered: { label: "Delivered", color: "hsl(142 71% 45%)" },
+                      clicked:   { label: "Clicked",   color: "hsl(38 92% 50%)" },
+                    }}
+                    className="h-[260px] w-full"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={stats.series} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="g-sent" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="hsl(217 91% 60%)" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="hsl(217 91% 60%)" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="g-del" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="hsl(142 71% 45%)" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="hsl(142 71% 45%)" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="g-clk" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="hsl(38 92% 50%)" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="hsl(38 92% 50%)" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border" />
+                        <XAxis dataKey="label" tickLine={false} axisLine={false} className="text-xs" />
+                        <YAxis allowDecimals={false} tickLine={false} axisLine={false} className="text-xs" width={28} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <ChartLegend content={<ChartLegendContent />} />
+                        <Area type="monotone" dataKey="sent"      stroke="hsl(217 91% 60%)" fill="url(#g-sent)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="delivered" stroke="hsl(142 71% 45%)" fill="url(#g-del)"  strokeWidth={2} />
+                        <Area type="monotone" dataKey="clicked"   stroke="hsl(38 92% 50%)"  fill="url(#g-clk)"  strokeWidth={2} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                )}
+              </Card>
+
+              {/* Funnel */}
+              <Card className="p-5">
+                <div className="text-xs uppercase text-muted-foreground tracking-wide mb-4 flex items-center gap-1">
+                  <TrendingUp className="size-4" /> Recipient funnel
+                </div>
                 <ol className="relative space-y-5 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-px before:bg-border">
                   <FunnelRow icon={Users} label="attempted" value={stats.attempted} tone="muted" />
                   <FunnelRow icon={SkipForward} label="skipped" value={stats.skipped}
@@ -197,7 +311,7 @@ function CampaignReport() {
                     sub={stats.sent ? `${pct(stats.failed / stats.sent * 100)} of sent` : undefined} tone="danger" />
                   <FunnelRow icon={CheckCircle2} label="delivered" value={stats.delivered}
                     sub={stats.sent ? `${pct(stats.deliveryRate)} of sent` : undefined} tone="success" />
-                  <FunnelRow icon={MousePointerClick} label="clicked" value={stats.clicked}
+                  <FunnelRow icon={MousePointerClick} label="clicked" value={stats.uniqueClickers}
                     sub={stats.delivered ? `${pct(stats.clickRate)} of delivered` : undefined} tone="primary" />
                   <FunnelRow icon={ShieldOff} label="opt-outs (since send)" value={optOutsQ.data ?? 0} tone="danger" />
                   {stats.queued > 0 && (
@@ -205,97 +319,331 @@ function CampaignReport() {
                   )}
                 </ol>
               </Card>
-
-              <div className="grid md:grid-cols-2 gap-5">
-                <Card className="p-5">
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1">
-                    <Globe className="size-4" /> By country
-                  </div>
-                  {Object.keys(stats.byCountry).length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No deliveries yet.</div>
-                  ) : (
-                    <Table>
-                      <TableHeader><TableRow>
-                        <TableHead>Country</TableHead><TableHead>Total</TableHead>
-                        <TableHead>Delivered</TableHead><TableHead>Failed</TableHead>
-                      </TableRow></TableHeader>
-                      <TableBody>
-                        {Object.entries(stats.byCountry)
-                          .sort((a, b) => b[1].total - a[1].total)
-                          .map(([cc, v]) => (
-                            <TableRow key={cc}>
-                              <TableCell><Badge variant="outline">{cc}</Badge></TableCell>
-                              <TableCell>{v.total}</TableCell>
-                              <TableCell className="text-success">{v.delivered}</TableCell>
-                              <TableCell className="text-destructive">{v.failed}</TableCell>
-                            </TableRow>
-                          ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </Card>
-
-                <Card className="p-5">
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1">
-                    <AlertTriangle className="size-4" /> Failure reasons
-                  </div>
-                  {Object.keys(stats.failures).length === 0 ? (
-                    <div className="text-sm text-muted-foreground">No failures.</div>
-                  ) : (
-                    <ul className="space-y-2 text-sm">
-                      {Object.entries(stats.failures)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([code, n]) => (
-                          <li key={code} className="flex items-center justify-between border-b pb-1.5">
-                            <span className="font-mono text-xs">Twilio code {code}</span>
-                            <Badge variant="outline" className="text-destructive border-destructive/30">{n}</Badge>
-                          </li>
-                        ))}
-                    </ul>
-                  )}
-                </Card>
-              </div>
             </div>
           </div>
         </TabsContent>
 
+        {/* ───────────── RECIPIENTS ───────────── */}
         <TabsContent value="recipients" className="mt-5">
-          <Card className="p-4">
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Phone</TableHead><TableHead>Country</TableHead>
-                  <TableHead>Status</TableHead><TableHead>Error</TableHead><TableHead>Sent</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                  {(messagesQ.data ?? []).slice(0, 200).map((m: any) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-mono text-xs">{m.phone_e164}</TableCell>
-                      <TableCell>{m.country_code ?? m.profile?.country_code ?? "—"}</TableCell>
-                      <TableCell><StatusBadge status={m.status} /></TableCell>
-                      <TableCell className="text-xs text-destructive">{m.error_code ?? "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{m.sent_at ? new Date(m.sent_at).toLocaleString() : "—"}</TableCell>
-                    </TableRow>
+          <RecipientActivity
+            rows={messagesQ.data ?? []}
+            stats={stats}
+            optOuts={optOutsQ.data ?? 0}
+          />
+        </TabsContent>
+
+        {/* ───────────── LINKS ───────────── */}
+        <TabsContent value="links" className="mt-5">
+          <LinkActivity
+            uniqueClickers={stats.uniqueClickers}
+            totalClicks={stats.clicked}
+            delivered={stats.delivered}
+            clicks={(eventsQ.data ?? []).filter((e: any) => e.type === "clicked")}
+          />
+        </TabsContent>
+
+        {/* ───────────── COST & DELIVERABILITY ───────────── */}
+        <TabsContent value="cost" className="mt-5">
+          <div className="grid lg:grid-cols-3 gap-5">
+            <Card className="p-5">
+              <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1">
+                <DollarSign className="size-4" /> Cost summary
+              </div>
+              <div className="space-y-3">
+                <Stat label="Total spend" value={formatUSD(stats.totalCost)} />
+                <Stat label="Segments sent" value={stats.totalSegments.toLocaleString()} />
+                <Stat label="Cost / delivered" value={formatUSD(stats.costPerDelivered)} />
+                <Stat label="Cost / message" value={formatUSD(stats.sent > 0 ? stats.totalCost / stats.sent : 0)} />
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1">
+                <Globe className="size-4" /> Performance by country
+              </div>
+              {Object.keys(stats.byCountry).length === 0 ? (
+                <div className="text-sm text-muted-foreground">No deliveries yet.</div>
+              ) : (
+                <ul className="space-y-2.5">
+                  {Object.entries(stats.byCountry).sort((a, b) => b[1].total - a[1].total).map(([cc, v]) => {
+                    const rate = v.total ? (v.delivered / v.total) * 100 : 0;
+                    return (
+                      <li key={cc} className="text-sm">
+                        <div className="flex justify-between mb-1">
+                          <span className="font-medium">{cc} · {v.total}</span>
+                          <span className="text-muted-foreground tabular-nums">{rate.toFixed(0)}% delivered</span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-success" style={{ width: `${rate}%` }} />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+
+            <Card className="p-5">
+              <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1">
+                <AlertTriangle className="size-4" /> Failure reasons
+              </div>
+              {Object.keys(stats.failures).length === 0 ? (
+                <div className="text-sm text-muted-foreground">No failures recorded.</div>
+              ) : (
+                <ul className="space-y-2 text-sm">
+                  {Object.entries(stats.failures).sort((a, b) => b[1] - a[1]).map(([code, n]) => (
+                    <li key={code} className="flex items-center justify-between border-b pb-1.5">
+                      <span className="font-mono text-xs">{code}</span>
+                      <Badge variant="outline" className="text-destructive border-destructive/30">{n}</Badge>
+                    </li>
                   ))}
-                  {(messagesQ.data ?? []).length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                      No messages yet — the dispatcher runs every minute.
-                    </TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                </ul>
+              )}
+            </Card>
+          </div>
+
+          <Card className="p-5 mt-5 bg-gradient-to-br from-primary/5 to-transparent">
+            <div className="flex items-start gap-3">
+              <div className="size-9 rounded-full bg-primary/10 text-primary grid place-items-center"><Sparkles className="size-4" /></div>
+              <div className="text-sm">
+                <div className="font-semibold mb-1">Deliverability tip</div>
+                <p className="text-muted-foreground">
+                  Carriers throttle traffic with low engagement. Keep delivery {">"} 95%, click rate {">"} 3%, and opt-outs {"<"} 1% to stay in the good-sender lane.
+                  Messages skipped for insufficient balance are <strong>never charged</strong> — top up to retry.
+                </p>
+              </div>
             </div>
           </Card>
         </TabsContent>
-
-        <TabsContent value="links" className="mt-5">
-          <Card className="p-5 text-sm text-muted-foreground">
-            {stats.clicked > 0
-              ? `${stats.clicked} click${stats.clicked === 1 ? "" : "s"} recorded — ${pct(stats.clickRate)} of delivered.`
-              : "No link clicks recorded yet."}
-          </Card>
-        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+/* ───────────── Sub-components ───────────── */
+
+function RecipientActivity({ rows, stats, optOuts }: { rows: any[]; stats: any; optOuts: number }) {
+  const [filter, setFilter] = useState<string>("all");
+  const buckets = useMemo(() => {
+    const f = {
+      all: rows,
+      sent: rows.filter((m) => ["sent", "delivered"].includes(m.status)),
+      delivered: rows.filter((m) => m.status === "delivered"),
+      failed: rows.filter((m) => ["failed", "undelivered"].includes(m.status)),
+      skipped: rows.filter((m) => m.status === "skipped" || m.error_code === "insufficient_balance"),
+      queued: rows.filter((m) => ["queued", "pending", "sending"].includes(m.status)),
+    } as Record<string, any[]>;
+    return f;
+  }, [rows]);
+
+  const items = [
+    { key: "all",       label: "All",       count: rows.length },
+    { key: "sent",      label: "Sent",      count: buckets.sent.length },
+    { key: "delivered", label: "Delivered", count: buckets.delivered.length },
+    { key: "failed",    label: "Failed",    count: buckets.failed.length },
+    { key: "skipped",   label: "Skipped",   count: buckets.skipped.length },
+    { key: "queued",    label: "Queued",    count: buckets.queued.length },
+  ];
+
+  const shown = buckets[filter] ?? rows;
+
+  return (
+    <div className="space-y-5">
+      {/* Summary band */}
+      <Card className="p-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <SummaryStat label="Total" value={stats.attempted} />
+          <SummaryStat label="Delivered" value={stats.delivered}
+            sub={stats.attempted ? `${((stats.delivered / stats.attempted) * 100).toFixed(1)}%` : "—"} tone="success" />
+          <SummaryStat label="Failed" value={stats.failed}
+            sub={stats.sent ? `${((stats.failed / stats.sent) * 100).toFixed(1)}%` : "—"} tone="danger" />
+          <SummaryStat label="Skipped" value={stats.skipped}
+            sub={stats.skipped > 0 ? "no charge" : undefined} tone="muted" />
+          <SummaryStat label="Clicked" value={stats.uniqueClickers}
+            sub={stats.delivered ? `${((stats.uniqueClickers / stats.delivered) * 100).toFixed(1)}%` : "—"} tone="primary" />
+          <SummaryStat label="Opt-outs" value={optOuts} tone="danger" />
+          <SummaryStat label="Spend" value={formatUSD(stats.totalCost)} tone="muted" />
+          <SummaryStat label="Cost / msg" value={formatUSD(stats.sent ? stats.totalCost / stats.sent : 0)} tone="muted" />
+        </div>
+      </Card>
+
+      <div className="grid lg:grid-cols-[220px_1fr] gap-5">
+        <Card className="p-2 h-fit">
+          <ul className="space-y-1">
+            {items.map((i) => (
+              <li key={i.key}>
+                <button
+                  onClick={() => setFilter(i.key)}
+                  className={`w-full flex items-center justify-between rounded-md px-3 py-2 text-sm transition ${
+                    filter === i.key ? "bg-muted font-semibold" : "hover:bg-muted/60"
+                  }`}
+                >
+                  <span>{i.label}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">{i.count}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        <Card className="p-0 overflow-hidden">
+          {shown.length === 0 ? (
+            <div className="p-10 text-center text-sm text-muted-foreground">
+              No recipients in this bucket yet.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Recipient</TableHead>
+                  <TableHead>Country</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Segments</TableHead>
+                  <TableHead>Cost</TableHead>
+                  <TableHead>Sent</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {shown.slice(0, 300).map((m: any) => {
+                  const name = [m.profile?.first_name, m.profile?.last_name].filter(Boolean).join(" ");
+                  return (
+                    <TableRow key={m.id}>
+                      <TableCell>
+                        <div className="font-medium text-sm">{name || "—"}</div>
+                        <div className="font-mono text-xs text-muted-foreground">{m.phone_e164}</div>
+                      </TableCell>
+                      <TableCell>{m.country_code ?? m.profile?.country_code ?? "—"}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={m.status} />
+                        {m.error_code && <div className="text-[10px] text-destructive mt-0.5">{m.error_code}</div>}
+                      </TableCell>
+                      <TableCell className="tabular-nums">{m.segments_count ?? 1}</TableCell>
+                      <TableCell className="tabular-nums">{formatUSD(Number(m.cost_usd ?? 0))}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {m.sent_at ? new Date(m.sent_at).toLocaleString() : "—"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function LinkActivity({ uniqueClickers, totalClicks, delivered, clicks }: {
+  uniqueClickers: number; totalClicks: number; delivered: number; clicks: any[];
+}) {
+  const clickRate = delivered ? (uniqueClickers / delivered) * 100 : 0;
+  const cpp = uniqueClickers ? totalClicks / uniqueClickers : 0;
+  const didnt = Math.max(0, delivered - uniqueClickers);
+  const didntPct = delivered ? (didnt / delivered) * 100 : 0;
+
+  return (
+    <div className="space-y-5">
+      <Card className="p-5">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <LinkStat n={uniqueClickers} label="people clicked" sub={`${clickRate.toFixed(1)}% click rate`} />
+          <LinkStat n={totalClicks} label="total clicks" sub={`made by ${uniqueClickers} people`} />
+          <LinkStat n={cpp.toFixed(1)} label="clicks per person" sub="among those who clicked" />
+          <LinkStat n={didnt} label="didn't click" sub={`${didntPct.toFixed(1)}% of recipients`} />
+        </div>
+      </Card>
+
+      <Card className="p-0 overflow-hidden">
+        <div className="p-5 border-b">
+          <div className="font-semibold flex items-center gap-2"><MousePointerClick className="size-4 text-primary" /> Click timeline</div>
+          <p className="text-xs text-muted-foreground">Most recent clicks first</p>
+        </div>
+        {clicks.length === 0 ? (
+          <div className="p-10 text-center text-sm text-muted-foreground">
+            No link clicks yet. Add a tracked URL to your message to see activity here.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>When</TableHead>
+                <TableHead>Message ID</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clicks.slice(0, 100).map((e: any) => (
+                <TableRow key={e.id}>
+                  <TableCell className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString()}</TableCell>
+                  <TableCell className="font-mono text-xs">{e.message_id}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function Kpi({ icon: Icon, label, value, sub, tone }: {
+  icon: any; label: string; value: string; sub?: string; tone: "success" | "danger" | "primary" | "muted";
+}) {
+  const ring =
+    tone === "success" ? "bg-success/10 text-success" :
+    tone === "danger" ? "bg-destructive/10 text-destructive" :
+    tone === "primary" ? "bg-primary/10 text-primary" :
+    "bg-muted text-muted-foreground";
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className={`size-6 rounded-md grid place-items-center ${ring}`}><Icon className="size-3.5" /></span>
+        {label}
+      </div>
+      <div className="text-2xl font-extrabold mt-2 tabular-nums">{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
+    </Card>
+  );
+}
+
+function SummaryStat({ label, value, sub, tone }: { label: string; value: number | string; sub?: string; tone?: "success" | "danger" | "primary" | "muted" }) {
+  const color =
+    tone === "success" ? "text-success" :
+    tone === "danger" ? "text-destructive" :
+    tone === "primary" ? "text-primary" : "";
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={`text-2xl font-bold tabular-nums ${color}`}>{typeof value === "number" ? value.toLocaleString() : value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
+    </div>
+  );
+}
+
+function LinkStat({ n, label, sub }: { n: number | string; label: string; sub: string }) {
+  return (
+    <div className="flex gap-3">
+      <div className="size-12 rounded-lg bg-primary/10 text-primary grid place-items-center text-lg font-extrabold tabular-nums">{n}</div>
+      <div>
+        <div className="font-semibold">{label}</div>
+        <div className="text-xs text-muted-foreground">{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between text-sm border-b pb-2 last:border-0 last:pb-0">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-semibold tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function EmptyChart() {
+  return (
+    <div className="h-[260px] grid place-items-center text-sm text-muted-foreground border border-dashed rounded-md">
+      Waiting for the first send to plot engagement…
     </div>
   );
 }
@@ -328,13 +676,13 @@ function FunnelRow({
 
 function PhonePreview({ body }: { body: string }) {
   return (
-    <div className="mx-auto w-full max-w-[280px] rounded-[2rem] border bg-muted/30 p-3 shadow-inner">
+    <div className="mx-auto w-full max-w-[260px] rounded-[2rem] border bg-muted/30 p-3 shadow-inner">
       <div className="rounded-[1.5rem] bg-background border overflow-hidden">
         <div className="h-7 bg-muted/40 flex items-center justify-center">
           <div className="w-16 h-3 rounded-full bg-foreground/80" />
         </div>
-        <div className="p-4 min-h-[280px]">
-          <div className="text-[10px] text-muted-foreground text-center mb-3">Text Message</div>
+        <div className="p-4 min-h-[260px]">
+          <div className="text-[10px] text-muted-foreground text-center mb-3 inline-flex items-center gap-1 justify-center w-full"><Smartphone className="size-3" /> Text Message</div>
           <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2 text-sm whitespace-pre-wrap leading-snug max-w-[85%]">
             {body || <span className="text-muted-foreground italic">(empty message)</span>}
           </div>
