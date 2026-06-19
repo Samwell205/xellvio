@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -31,13 +32,15 @@ const schema = z.object({
   message: z.string().trim().min(10, "Add a bit more detail").max(2000),
 });
 
-const SUPPORT_EMAIL = "support@samwellglobalsms.com";
+const SUPPORT_EMAIL = "sam@samwellagency.com";
+const SUPPORT_PHONE_DISPLAY = "+1 (725) 316-6070";
+const SUPPORT_PHONE_HREF = "+17253166070";
 
 function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", topic: "General question", message: "" });
   const [sending, setSending] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     const parsed = schema.safeParse(form);
     if (!parsed.success) {
@@ -45,13 +48,22 @@ function ContactPage() {
       return;
     }
     setSending(true);
-    const subject = encodeURIComponent(`[${parsed.data.topic}] from ${parsed.data.name}`);
-    const body = encodeURIComponent(`${parsed.data.message}\n\n— ${parsed.data.name} (${parsed.data.email})`);
-    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
-    setTimeout(() => {
+    try {
+      const { error } = await supabase.from("contact_messages").insert({
+        name: parsed.data.name,
+        email: parsed.data.email,
+        topic: parsed.data.topic,
+        message: parsed.data.message,
+        user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null,
+      });
+      if (error) throw error;
+      toast.success("Message sent — we'll get back to you within one business day.");
+      setForm({ name: "", email: "", topic: "General question", message: "" });
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not send your message. Please try again.");
+    } finally {
       setSending(false);
-      toast.success("Your email client is opening — send the message to reach our support team.");
-    }, 400);
+    }
   }
 
   return (
@@ -74,7 +86,7 @@ function ContactPage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 grid gap-8 lg:grid-cols-[1fr_1.2fr]">
             <div className="space-y-4">
               <InfoCard icon={Mail} title="Email" value={SUPPORT_EMAIL} href={`mailto:${SUPPORT_EMAIL}`} hint="We reply within one business day." />
-              <InfoCard icon={Phone} title="Phone" value="+1 (415) 555-0123" href="tel:+14155550123" hint="Mon–Fri, 9am–6pm UTC." />
+              <InfoCard icon={Phone} title="Phone" value={SUPPORT_PHONE_DISPLAY} href={`tel:${SUPPORT_PHONE_HREF}`} hint="Mon–Fri, 9am–6pm." />
               <InfoCard icon={MapPin} title="Office" value="Global remote team" hint="Serving customers in 180+ countries." />
               <Card className="p-6 bg-secondary text-secondary-foreground">
                 <h3 className="text-base font-semibold">Need an instant answer?</h3>
