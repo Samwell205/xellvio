@@ -19,7 +19,7 @@ import { listCreditPacks, getBillingSettings, initPaystackCheckout, submitPayone
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/app/billing")({
-  head: () => ({ meta: [{ title: "Billing — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "Billing — SAMWELL SMS HUB" }] }),
   component: BillingPage,
 });
 

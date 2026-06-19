@@ -16,9 +16,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact Support — Samwell Global SMS" },
-      { name: "description", content: "Reach the Samwell Global SMS team for sales, technical support, billing, or sender ID approvals." },
-      { property: "og:title", content: "Contact Support — Samwell Global SMS" },
+      { title: "Contact Support — SAMWELL SMS HUB" },
+      { name: "description", content: "Reach the SAMWELL SMS HUB team for sales, technical support, billing, or sender ID approvals." },
+      { property: "og:title", content: "Contact Support — SAMWELL SMS HUB" },
       { property: "og:description", content: "Get in touch with our team for help with SMS, contacts, billing, or your account." },
     ],
   }),

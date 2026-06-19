@@ -13,9 +13,9 @@ import { Card } from "@/components/ui/card";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Samwell Global SMS — Reach Customers Worldwide" },
+      { title: "SAMWELL SMS HUB — Reach Customers Worldwide" },
       { name: "description", content: "Send global SMS campaigns with confidence. Bulk messaging, automation, analytics and APIs trusted by modern businesses." },
-      { property: "og:title", content: "Samwell Global SMS — Reach Customers Worldwide" },
+      { property: "og:title", content: "SAMWELL SMS HUB — Reach Customers Worldwide" },
       { property: "og:description", content: "Fast. Reliable. Compliant global SMS for businesses." },
     ],
   }),
@@ -239,7 +239,7 @@ function DeliveryProcess() {
 
 function Testimonials() {
   const items = [
-    { q: "Samwell cut our messaging costs by 38% while improving delivery to Africa and Asia.", a: "Maya Chen", r: "Head of Growth, Northwind" },
+    { q: "SAMWELL SMS HUB cut our messaging costs by 38% while improving delivery to Africa and Asia.", a: "Maya Chen", r: "Head of Growth, Northwind" },
     { q: "The API was a breeze — we went live in a day and handled 2M messages in the first week.", a: "Devon Park", r: "CTO, Lumen" },
     { q: "Best analytics we've used. Country-level breakdowns shaped our entire GTM.", a: "Sara Lopez", r: "Marketing Director, Globex" },
   ];
