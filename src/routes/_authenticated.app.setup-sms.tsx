@@ -26,6 +26,7 @@ import {
   saveCustomSenderId,
 } from "@/lib/sender-setup.functions";
 import { sendTestSms } from "@/lib/sms.functions";
+import { submitNumberRequest, listMyNumberRequests, cancelMyNumberRequest } from "@/lib/number-requests.functions";
 import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/setup-sms")({
