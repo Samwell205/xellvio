@@ -127,12 +127,26 @@ function NewCampaignPage() {
 
   const senderQ = useQuery({
     queryKey: ["sender-assets-pending"],
-    queryFn: async () => (await supabase.from("sender_assets").select("verification_status,country_code,friendly_rejection_reason")).data ?? [],
+    queryFn: async () =>
+      (await supabase
+        .from("sender_assets")
+        .select("verification_status,country_code,sender_kind,phone_number,messaging_service_sid,friendly_rejection_reason")
+      ).data ?? [],
   });
   const senderList = senderQ.data ?? [];
   const hasVerified = senderList.some((x) => x.verification_status === "verified");
   const hasPending = senderList.some((x) => x.verification_status === "submitted" || x.verification_status === "in_review");
   const hasRejected = senderList.some((x) => x.verification_status === "rejected");
+
+  // Map country -> verified sender (auto-routing preview)
+  const sendersByCountry = useMemo(() => {
+    const m: Record<string, any> = {};
+    for (const a of senderList) {
+      if (a.verification_status !== "verified") continue;
+      if (!m[a.country_code]) m[a.country_code] = a;
+    }
+    return m;
+  }, [senderList]);
 
   const audience = useMemo(() => ({ include: s.include, exclude: s.exclude, profile_ids: s.profileIds }), [s.include, s.exclude, s.profileIds]);
 
