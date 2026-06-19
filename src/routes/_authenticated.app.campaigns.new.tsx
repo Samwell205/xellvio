@@ -200,6 +200,13 @@ function NewCampaignPage() {
   const balanceAfter = +(balance - totalCost).toFixed(4);
   const insufficient = totalCost > balance && audienceList.length > 0;
 
+  // Block launch when any recipient country has no verified sender.
+  const missingSenderCountries = useMemo(
+    () => breakdown.filter((b) => !sendersByCountry[b.country_code]).map((b) => b.country_code),
+    [breakdown, sendersByCountry],
+  );
+  const hasMissingSender = missingSenderCountries.length > 0 && breakdown.length > 0;
+
   const callTestSend = useServerFn(sendTestSms);
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -238,6 +245,17 @@ function NewCampaignPage() {
       send_mode: s.sendMode,
       schedule_at: s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
       smart_skip_hours: s.smartSkipHours,
+      sender_map: breakdown.reduce((acc, b) => {
+        const sender = sendersByCountry[b.country_code];
+        acc[b.country_code] = sender
+          ? {
+              sender_kind: sender.sender_kind,
+              phone_number: sender.phone_number,
+              messaging_service_sid: sender.messaging_service_sid,
+            }
+          : null;
+        return acc;
+      }, {} as Record<string, any>),
       status: targetStatus,
     };
     if (campaignId) {
@@ -271,6 +289,10 @@ function NewCampaignPage() {
 
   async function saveCampaign(launch: boolean) {
     if (launch && insufficient) { toast.error("Insufficient balance — top up before launching."); return; }
+    if (launch && hasMissingSender) {
+      toast.error(`No verified sender for: ${missingSenderCountries.join(", ")}. Set up SMS or remove those recipients.`);
+      return;
+    }
     setSaving(true);
     try {
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
@@ -478,6 +500,16 @@ function NewCampaignPage() {
               <div>Insufficient balance. <Link to="/app/billing" className="underline font-medium">Add funds</Link> to launch.</div>
             </div>
           )}
+          {hasMissingSender && (
+            <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-md p-3 text-sm text-destructive">
+              <AlertTriangle className="size-4 mt-0.5" />
+              <div>
+                No verified sender for: <b>{missingSenderCountries.join(", ")}</b>. Launch is blocked until you{" "}
+                <Link to="/app/setup-sms" className="underline font-medium">set up SMS</Link> or{" "}
+                <Link to="/app/number-requests" className="underline font-medium">request a number</Link> for these countries — or remove those recipients.
+              </div>
+            </div>
+          )}
           <SenderRoutingCard breakdown={breakdown} sendersByCountry={sendersByCountry} />
           <div>
             <Label>Final message</Label>
@@ -494,7 +526,7 @@ function NewCampaignPage() {
           {step === 4 ? (
             <>
               <Button variant="outline" onClick={() => saveCampaign(false)} disabled={saving}>Save as draft</Button>
-              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient}>
+              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient || hasMissingSender}>
                 {s.sendMode === "now" ? "Launch now" : "Schedule"}
               </Button>
             </>
