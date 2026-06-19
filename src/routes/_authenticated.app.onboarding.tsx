@@ -83,20 +83,11 @@ function OnboardingPage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
-      const required: (keyof Form)[] = ["legal_business_name", "business_address", "business_reg_number", "website_url", "contact_email"];
-      for (const k of required) {
-        if (!form[k].trim()) throw new Error(`${k.replace(/_/g, " ")} is required`);
-      }
-      const { error } = await supabase
-        .from("accounts")
-        .update({ ...form, onboarding_status: "profile_complete" })
-        .eq("id", u.user.id);
-      if (error) throw error;
+      await saveProfileFn({ data: form });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account"] });
+      qc.invalidateQueries({ queryKey: ["provisioning-status"] });
       toast.success("Business profile saved");
     },
     onError: (e: Error) => toast.error(e.message),
