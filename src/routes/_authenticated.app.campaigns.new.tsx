@@ -245,6 +245,17 @@ function NewCampaignPage() {
       send_mode: s.sendMode,
       schedule_at: s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
       smart_skip_hours: s.smartSkipHours,
+      sender_map: breakdown.reduce((acc, b) => {
+        const sender = sendersByCountry[b.country_code];
+        acc[b.country_code] = sender
+          ? {
+              sender_kind: sender.sender_kind,
+              phone_number: sender.phone_number,
+              messaging_service_sid: sender.messaging_service_sid,
+            }
+          : null;
+        return acc;
+      }, {} as Record<string, any>),
       status: targetStatus,
     };
     if (campaignId) {
