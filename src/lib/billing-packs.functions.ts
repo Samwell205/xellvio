@@ -75,8 +75,21 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
       .single();
     if (payErr) throw new Error(payErr.message);
 
-    // Paystack expects subunits (kobo for NGN, cents for USD)
-    const amountSubunit = Math.round(Number(pack.price) * 100);
+    // Paystack merchants in NG can only charge NGN unless the account is
+    // multi-currency enabled. For USD packs, convert to NGN using the
+    // admin-configured FX rate while keeping the payment record in USD.
+    let chargeCurrency = pack.currency as string;
+    let chargeAmount = Number(pack.price);
+    if (chargeCurrency === "USD") {
+      const { data: settings } = await supabaseAdmin
+        .from("billing_settings")
+        .select("usd_to_ngn_rate")
+        .maybeSingle();
+      const rate = Number((settings as any)?.usd_to_ngn_rate ?? 1600);
+      chargeCurrency = "NGN";
+      chargeAmount = +(Number(pack.price) * rate).toFixed(2);
+    }
+    const amountSubunit = Math.round(chargeAmount * 100);
     const reference = `pmt_${payment.id.replace(/-/g, "")}`;
     const callback_url = `${siteOrigin()}/app/billing?ref=${reference}`;
 
@@ -89,7 +102,7 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
       body: JSON.stringify({
         email,
         amount: amountSubunit,
-        currency: pack.currency,
+        currency: chargeCurrency,
         reference,
         callback_url,
         metadata: {
@@ -97,6 +110,8 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
           payment_id: payment.id,
           pack_id: pack.id,
           pack_name: pack.name,
+          original_currency: pack.currency,
+          original_amount: pack.price,
         },
       }),
     });
@@ -108,6 +123,7 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
     await supabaseAdmin.from("payments").update({ provider_reference: reference }).eq("id", payment.id);
     return { authorization_url: json.data.authorization_url as string, reference };
   });
+
 
 /** Manually record a Payoneer payment (customer says they paid externally). */
 export const submitPayoneerPayment = createServerFn({ method: "POST" })

@@ -1,0 +1,1 @@
+ALTER TABLE public.billing_settings ADD COLUMN IF NOT EXISTS usd_to_ngn_rate NUMERIC(10,2) NOT NULL DEFAULT 1600.00;

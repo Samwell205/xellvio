@@ -130,6 +130,7 @@ export type Database = {
           payoneer_payee_email: string | null
           payoneer_payee_name: string | null
           updated_at: string
+          usd_to_ngn_rate: number
         }
         Insert: {
           default_currency?: string
@@ -138,6 +139,7 @@ export type Database = {
           payoneer_payee_email?: string | null
           payoneer_payee_name?: string | null
           updated_at?: string
+          usd_to_ngn_rate?: number
         }
         Update: {
           default_currency?: string
@@ -146,6 +148,7 @@ export type Database = {
           payoneer_payee_email?: string | null
           payoneer_payee_name?: string | null
           updated_at?: string
+          usd_to_ngn_rate?: number
         }
         Relationships: []
       }
