@@ -200,6 +200,13 @@ function NewCampaignPage() {
   const balanceAfter = +(balance - totalCost).toFixed(4);
   const insufficient = totalCost > balance && audienceList.length > 0;
 
+  // Block launch when any recipient country has no verified sender.
+  const missingSenderCountries = useMemo(
+    () => breakdown.filter((b) => !sendersByCountry[b.country_code]).map((b) => b.country_code),
+    [breakdown, sendersByCountry],
+  );
+  const hasMissingSender = missingSenderCountries.length > 0 && breakdown.length > 0;
+
   const callTestSend = useServerFn(sendTestSms);
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
