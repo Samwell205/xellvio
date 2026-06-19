@@ -124,6 +124,12 @@ function Overview() {
 
       <DeliveryAlerts />
 
+      <div className="grid lg:grid-cols-3 gap-4">
+        <ActivityLogFeed />
+        <AttributionCard />
+        <AIInsightsCard />
+      </div>
+
       <RecentCampaigns />
     </div>
   );
