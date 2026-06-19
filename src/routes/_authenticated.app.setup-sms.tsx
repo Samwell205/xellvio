@@ -334,9 +334,16 @@ function UsCanadaInfoDialog({ code, onClose }: { code: string | null; onClose: (
 
   const submit = useMutation({
     mutationFn: () => submitFn({ data: { country: code as "US" | "CA", ...form } }),
-    onSuccess: () => {
-      toast.success("Request submitted. We'll review it shortly.");
+    onSuccess: (res: any) => {
+      if (res?.auto?.provisioned) {
+        toast.success(`Approved! Your ${code} number ${res.auto.phone_number} is ready to send.`);
+      } else if (res?.auto?.note) {
+        toast.message("Request submitted — manual review needed", { description: res.auto.note });
+      } else {
+        toast.success("Request submitted. We'll review it shortly.");
+      }
       qc.invalidateQueries({ queryKey: ["my-number-requests"] });
+      qc.invalidateQueries({ queryKey: ["sender-assets"] });
       setShowForm(false);
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to submit request"),
