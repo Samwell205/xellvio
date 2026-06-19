@@ -11,7 +11,7 @@ import { formatRate } from "@/lib/money";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/_authenticated/app/admin/rates")({
+export const Route = createFileRoute("/_authenticated/admin/rates")({
   head: () => ({ meta: [{ title: "Rate management — SAMWELL SMS HUB" }] }),
   beforeLoad: async () => {
     const { data } = await supabase.rpc("has_role", { _role: "admin" });

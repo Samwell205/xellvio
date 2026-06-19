@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { PhoneCall } from "lucide-react";
 import { adminListNumberRequests, adminReviewNumberRequest } from "@/lib/number-requests.functions";
 
-export const Route = createFileRoute("/_authenticated/app/admin/number-requests")({
+export const Route = createFileRoute("/_authenticated/admin/number-requests")({
   head: () => ({ meta: [{ title: "Admin · Number requests — SAMWELL SMS HUB" }] }),
   component: AdminNumberRequestsPage,
 });

@@ -21,7 +21,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
+import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
 import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.twilio-inbound'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
@@ -37,17 +40,19 @@ import { Route as AuthenticatedAppNumberRequestsRouteImport } from './routes/_au
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
 import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenticated.app.audience'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated.admin.users'
+import { Route as AuthenticatedAdminRatesRouteImport } from './routes/_authenticated.admin.rates'
+import { Route as AuthenticatedAdminNumberRequestsRouteImport } from './routes/_authenticated.admin.number-requests'
+import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authenticated.admin.messaging'
+import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated.admin.messages'
+import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
+import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
+import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated.admin.accounts'
 import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
-import { Route as AuthenticatedAppAdminUsersRouteImport } from './routes/_authenticated.app.admin.users'
-import { Route as AuthenticatedAppAdminRatesRouteImport } from './routes/_authenticated.app.admin.rates'
-import { Route as AuthenticatedAppAdminNumberRequestsRouteImport } from './routes/_authenticated.app.admin.number-requests'
-import { Route as AuthenticatedAppAdminMessagesRouteImport } from './routes/_authenticated.app.admin.messages'
-import { Route as AuthenticatedAppAdminBillingRouteImport } from './routes/_authenticated.app.admin.billing'
-import { Route as AuthenticatedAppAdminAccountsRouteImport } from './routes/_authenticated.app.admin.accounts'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
@@ -108,10 +113,25 @@ const ApiSetupSmsRoute = ApiSetupSmsRouteImport.update({
   path: '/api/setup-sms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
-  id: '/app/',
-  path: '/app/',
+const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
 const ApiPublicTwilioStatusRoute = ApiPublicTwilioStatusRouteImport.update({
   id: '/api/public/twilio-status',
@@ -143,62 +163,108 @@ const ApiPublicDispatchCampaignRoute =
   } as any)
 const AuthenticatedAppSuppressionsRoute =
   AuthenticatedAppSuppressionsRouteImport.update({
-    id: '/app/suppressions',
-    path: '/app/suppressions',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/suppressions',
+    path: '/suppressions',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppSetupSmsRoute =
   AuthenticatedAppSetupSmsRouteImport.update({
-    id: '/app/setup-sms',
-    path: '/app/setup-sms',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/setup-sms',
+    path: '/setup-sms',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppSettingsRoute =
   AuthenticatedAppSettingsRouteImport.update({
-    id: '/app/settings',
-    path: '/app/settings',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppSegmentsRoute =
   AuthenticatedAppSegmentsRouteImport.update({
-    id: '/app/segments',
-    path: '/app/segments',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/segments',
+    path: '/segments',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppPricingCalculatorRoute =
   AuthenticatedAppPricingCalculatorRouteImport.update({
-    id: '/app/pricing-calculator',
-    path: '/app/pricing-calculator',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/pricing-calculator',
+    path: '/pricing-calculator',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppOnboardingRoute =
   AuthenticatedAppOnboardingRouteImport.update({
-    id: '/app/onboarding',
-    path: '/app/onboarding',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/onboarding',
+    path: '/onboarding',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppNumberRequestsRoute =
   AuthenticatedAppNumberRequestsRouteImport.update({
-    id: '/app/number-requests',
-    path: '/app/number-requests',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/number-requests',
+    path: '/number-requests',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppCampaignsRoute =
   AuthenticatedAppCampaignsRouteImport.update({
-    id: '/app/campaigns',
-    path: '/app/campaigns',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/campaigns',
+    path: '/campaigns',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppBillingRoute = AuthenticatedAppBillingRouteImport.update({
-  id: '/app/billing',
-  path: '/app/billing',
-  getParentRoute: () => AuthenticatedRoute,
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppAudienceRoute =
   AuthenticatedAppAudienceRouteImport.update({
-    id: '/app/audience',
-    path: '/app/audience',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/audience',
+    path: '/audience',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminRatesRoute = AuthenticatedAdminRatesRouteImport.update({
+  id: '/rates',
+  path: '/rates',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminNumberRequestsRoute =
+  AuthenticatedAdminNumberRequestsRouteImport.update({
+    id: '/number-requests',
+    path: '/number-requests',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMessagingRoute =
+  AuthenticatedAdminMessagingRouteImport.update({
+    id: '/messaging',
+    path: '/messaging',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMessagesRoute =
+  AuthenticatedAdminMessagesRouteImport.update({
+    id: '/messages',
+    path: '/messages',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBillingRoute =
+  AuthenticatedAdminBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminActivityRoute =
+  AuthenticatedAdminActivityRouteImport.update({
+    id: '/activity',
+    path: '/activity',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAccountsRoute =
+  AuthenticatedAdminAccountsRouteImport.update({
+    id: '/accounts',
+    path: '/accounts',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAppSegmentsIndexRoute =
   AuthenticatedAppSegmentsIndexRouteImport.update({
@@ -230,42 +296,6 @@ const AuthenticatedAppCampaignsIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
-const AuthenticatedAppAdminUsersRoute =
-  AuthenticatedAppAdminUsersRouteImport.update({
-    id: '/app/admin/users',
-    path: '/app/admin/users',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAppAdminRatesRoute =
-  AuthenticatedAppAdminRatesRouteImport.update({
-    id: '/app/admin/rates',
-    path: '/app/admin/rates',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAppAdminNumberRequestsRoute =
-  AuthenticatedAppAdminNumberRequestsRouteImport.update({
-    id: '/app/admin/number-requests',
-    path: '/app/admin/number-requests',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAppAdminMessagesRoute =
-  AuthenticatedAppAdminMessagesRouteImport.update({
-    id: '/app/admin/messages',
-    path: '/app/admin/messages',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAppAdminBillingRoute =
-  AuthenticatedAppAdminBillingRouteImport.update({
-    id: '/app/admin/billing',
-    path: '/app/admin/billing',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAppAdminAccountsRoute =
-  AuthenticatedAppAdminAccountsRouteImport.update({
-    id: '/app/admin/accounts',
-    path: '/app/admin/accounts',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -278,7 +308,17 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/solutions': typeof SolutionsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
+  '/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/admin/billing': typeof AuthenticatedAdminBillingRoute
+  '/admin/messages': typeof AuthenticatedAdminMessagesRoute
+  '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
+  '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
+  '/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
@@ -294,13 +334,8 @@ export interface FileRoutesByFullPath {
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
-  '/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
-  '/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
-  '/app/admin/messages': typeof AuthenticatedAppAdminMessagesRoute
-  '/app/admin/number-requests': typeof AuthenticatedAppAdminNumberRequestsRoute
-  '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
-  '/app/admin/users': typeof AuthenticatedAppAdminUsersRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -319,6 +354,14 @@ export interface FileRoutesByTo {
   '/solutions': typeof SolutionsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
+  '/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/admin/billing': typeof AuthenticatedAdminBillingRoute
+  '/admin/messages': typeof AuthenticatedAdminMessagesRoute
+  '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
+  '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
+  '/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/number-requests': typeof AuthenticatedAppNumberRequestsRoute
@@ -332,13 +375,8 @@ export interface FileRoutesByTo {
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
-  '/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
-  '/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
-  '/app/admin/messages': typeof AuthenticatedAppAdminMessagesRoute
-  '/app/admin/number-requests': typeof AuthenticatedAppAdminNumberRequestsRoute
-  '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
-  '/app/admin/users': typeof AuthenticatedAppAdminUsersRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -358,7 +396,17 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/solutions': typeof SolutionsRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
+  '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
+  '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
+  '/_authenticated/admin/messaging': typeof AuthenticatedAdminMessagingRoute
+  '/_authenticated/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
+  '/_authenticated/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/app/audience': typeof AuthenticatedAppAudienceRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
@@ -374,13 +422,8 @@ export interface FileRoutesById {
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
-  '/_authenticated/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
-  '/_authenticated/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
-  '/_authenticated/app/admin/messages': typeof AuthenticatedAppAdminMessagesRoute
-  '/_authenticated/app/admin/number-requests': typeof AuthenticatedAppAdminNumberRequestsRoute
-  '/_authenticated/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
-  '/_authenticated/app/admin/users': typeof AuthenticatedAppAdminUsersRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -400,7 +443,17 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/solutions'
     | '/verify-email'
+    | '/admin'
+    | '/app'
     | '/api/setup-sms'
+    | '/admin/accounts'
+    | '/admin/activity'
+    | '/admin/billing'
+    | '/admin/messages'
+    | '/admin/messaging'
+    | '/admin/number-requests'
+    | '/admin/rates'
+    | '/admin/users'
     | '/app/audience'
     | '/app/billing'
     | '/app/campaigns'
@@ -416,13 +469,8 @@ export interface FileRouteTypes {
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
+    | '/admin/'
     | '/app/'
-    | '/app/admin/accounts'
-    | '/app/admin/billing'
-    | '/app/admin/messages'
-    | '/app/admin/number-requests'
-    | '/app/admin/rates'
-    | '/app/admin/users'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -441,6 +489,14 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/verify-email'
     | '/api/setup-sms'
+    | '/admin/accounts'
+    | '/admin/activity'
+    | '/admin/billing'
+    | '/admin/messages'
+    | '/admin/messaging'
+    | '/admin/number-requests'
+    | '/admin/rates'
+    | '/admin/users'
     | '/app/audience'
     | '/app/billing'
     | '/app/number-requests'
@@ -454,13 +510,8 @@ export interface FileRouteTypes {
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
+    | '/admin'
     | '/app'
-    | '/app/admin/accounts'
-    | '/app/admin/billing'
-    | '/app/admin/messages'
-    | '/app/admin/number-requests'
-    | '/app/admin/rates'
-    | '/app/admin/users'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -479,7 +530,17 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/solutions'
     | '/verify-email'
+    | '/_authenticated/admin'
+    | '/_authenticated/app'
     | '/api/setup-sms'
+    | '/_authenticated/admin/accounts'
+    | '/_authenticated/admin/activity'
+    | '/_authenticated/admin/billing'
+    | '/_authenticated/admin/messages'
+    | '/_authenticated/admin/messaging'
+    | '/_authenticated/admin/number-requests'
+    | '/_authenticated/admin/rates'
+    | '/_authenticated/admin/users'
     | '/_authenticated/app/audience'
     | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
@@ -495,13 +556,8 @@ export interface FileRouteTypes {
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
+    | '/_authenticated/admin/'
     | '/_authenticated/app/'
-    | '/_authenticated/app/admin/accounts'
-    | '/_authenticated/app/admin/billing'
-    | '/_authenticated/app/admin/messages'
-    | '/_authenticated/app/admin/number-requests'
-    | '/_authenticated/app/admin/rates'
-    | '/_authenticated/app/admin/users'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
@@ -615,12 +671,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSetupSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/app': {
+      id: '/_authenticated/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AuthenticatedAppRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/': {
       id: '/_authenticated/app/'
-      path: '/app'
+      path: '/'
       fullPath: '/app/'
       preLoaderRoute: typeof AuthenticatedAppIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/api/public/twilio-status': {
       id: '/api/public/twilio-status'
@@ -659,73 +736,129 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/app/suppressions': {
       id: '/_authenticated/app/suppressions'
-      path: '/app/suppressions'
+      path: '/suppressions'
       fullPath: '/app/suppressions'
       preLoaderRoute: typeof AuthenticatedAppSuppressionsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/setup-sms': {
       id: '/_authenticated/app/setup-sms'
-      path: '/app/setup-sms'
+      path: '/setup-sms'
       fullPath: '/app/setup-sms'
       preLoaderRoute: typeof AuthenticatedAppSetupSmsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
-      path: '/app/settings'
+      path: '/settings'
       fullPath: '/app/settings'
       preLoaderRoute: typeof AuthenticatedAppSettingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/segments': {
       id: '/_authenticated/app/segments'
-      path: '/app/segments'
+      path: '/segments'
       fullPath: '/app/segments'
       preLoaderRoute: typeof AuthenticatedAppSegmentsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/pricing-calculator': {
       id: '/_authenticated/app/pricing-calculator'
-      path: '/app/pricing-calculator'
+      path: '/pricing-calculator'
       fullPath: '/app/pricing-calculator'
       preLoaderRoute: typeof AuthenticatedAppPricingCalculatorRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/onboarding': {
       id: '/_authenticated/app/onboarding'
-      path: '/app/onboarding'
+      path: '/onboarding'
       fullPath: '/app/onboarding'
       preLoaderRoute: typeof AuthenticatedAppOnboardingRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/number-requests': {
       id: '/_authenticated/app/number-requests'
-      path: '/app/number-requests'
+      path: '/number-requests'
       fullPath: '/app/number-requests'
       preLoaderRoute: typeof AuthenticatedAppNumberRequestsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/campaigns': {
       id: '/_authenticated/app/campaigns'
-      path: '/app/campaigns'
+      path: '/campaigns'
       fullPath: '/app/campaigns'
       preLoaderRoute: typeof AuthenticatedAppCampaignsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/billing': {
       id: '/_authenticated/app/billing'
-      path: '/app/billing'
+      path: '/billing'
       fullPath: '/app/billing'
       preLoaderRoute: typeof AuthenticatedAppBillingRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/audience': {
       id: '/_authenticated/app/audience'
-      path: '/app/audience'
+      path: '/audience'
       fullPath: '/app/audience'
       preLoaderRoute: typeof AuthenticatedAppAudienceRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/rates': {
+      id: '/_authenticated/admin/rates'
+      path: '/rates'
+      fullPath: '/admin/rates'
+      preLoaderRoute: typeof AuthenticatedAdminRatesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/number-requests': {
+      id: '/_authenticated/admin/number-requests'
+      path: '/number-requests'
+      fullPath: '/admin/number-requests'
+      preLoaderRoute: typeof AuthenticatedAdminNumberRequestsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/messaging': {
+      id: '/_authenticated/admin/messaging'
+      path: '/messaging'
+      fullPath: '/admin/messaging'
+      preLoaderRoute: typeof AuthenticatedAdminMessagingRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/messages': {
+      id: '/_authenticated/admin/messages'
+      path: '/messages'
+      fullPath: '/admin/messages'
+      preLoaderRoute: typeof AuthenticatedAdminMessagesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/billing': {
+      id: '/_authenticated/admin/billing'
+      path: '/billing'
+      fullPath: '/admin/billing'
+      preLoaderRoute: typeof AuthenticatedAdminBillingRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/activity': {
+      id: '/_authenticated/admin/activity'
+      path: '/activity'
+      fullPath: '/admin/activity'
+      preLoaderRoute: typeof AuthenticatedAdminActivityRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/accounts': {
+      id: '/_authenticated/admin/accounts'
+      path: '/accounts'
+      fullPath: '/admin/accounts'
+      preLoaderRoute: typeof AuthenticatedAdminAccountsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/app/segments/': {
       id: '/_authenticated/app/segments/'
@@ -762,50 +895,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
-    '/_authenticated/app/admin/users': {
-      id: '/_authenticated/app/admin/users'
-      path: '/app/admin/users'
-      fullPath: '/app/admin/users'
-      preLoaderRoute: typeof AuthenticatedAppAdminUsersRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/admin/rates': {
-      id: '/_authenticated/app/admin/rates'
-      path: '/app/admin/rates'
-      fullPath: '/app/admin/rates'
-      preLoaderRoute: typeof AuthenticatedAppAdminRatesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/admin/number-requests': {
-      id: '/_authenticated/app/admin/number-requests'
-      path: '/app/admin/number-requests'
-      fullPath: '/app/admin/number-requests'
-      preLoaderRoute: typeof AuthenticatedAppAdminNumberRequestsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/admin/messages': {
-      id: '/_authenticated/app/admin/messages'
-      path: '/app/admin/messages'
-      fullPath: '/app/admin/messages'
-      preLoaderRoute: typeof AuthenticatedAppAdminMessagesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/admin/billing': {
-      id: '/_authenticated/app/admin/billing'
-      path: '/app/admin/billing'
-      fullPath: '/app/admin/billing'
-      preLoaderRoute: typeof AuthenticatedAppAdminBillingRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/app/admin/accounts': {
-      id: '/_authenticated/app/admin/accounts'
-      path: '/app/admin/accounts'
-      fullPath: '/app/admin/accounts'
-      preLoaderRoute: typeof AuthenticatedAppAdminAccountsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
   }
 }
+
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminAccountsRoute: typeof AuthenticatedAdminAccountsRoute
+  AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
+  AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
+  AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
+  AuthenticatedAdminMessagingRoute: typeof AuthenticatedAdminMessagingRoute
+  AuthenticatedAdminNumberRequestsRoute: typeof AuthenticatedAdminNumberRequestsRoute
+  AuthenticatedAdminRatesRoute: typeof AuthenticatedAdminRatesRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminAccountsRoute: AuthenticatedAdminAccountsRoute,
+  AuthenticatedAdminActivityRoute: AuthenticatedAdminActivityRoute,
+  AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
+  AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
+  AuthenticatedAdminMessagingRoute: AuthenticatedAdminMessagingRoute,
+  AuthenticatedAdminNumberRequestsRoute: AuthenticatedAdminNumberRequestsRoute,
+  AuthenticatedAdminRatesRoute: AuthenticatedAdminRatesRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
 interface AuthenticatedAppCampaignsRouteChildren {
   AuthenticatedAppCampaignsIdRoute: typeof AuthenticatedAppCampaignsIdRoute
@@ -841,7 +959,7 @@ const AuthenticatedAppSegmentsRouteWithChildren =
     AuthenticatedAppSegmentsRouteChildren,
   )
 
-interface AuthenticatedRouteChildren {
+interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAudienceRoute: typeof AuthenticatedAppAudienceRoute
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
@@ -853,15 +971,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppSetupSmsRoute: typeof AuthenticatedAppSetupSmsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
-  AuthenticatedAppAdminAccountsRoute: typeof AuthenticatedAppAdminAccountsRoute
-  AuthenticatedAppAdminBillingRoute: typeof AuthenticatedAppAdminBillingRoute
-  AuthenticatedAppAdminMessagesRoute: typeof AuthenticatedAppAdminMessagesRoute
-  AuthenticatedAppAdminNumberRequestsRoute: typeof AuthenticatedAppAdminNumberRequestsRoute
-  AuthenticatedAppAdminRatesRoute: typeof AuthenticatedAppAdminRatesRoute
-  AuthenticatedAppAdminUsersRoute: typeof AuthenticatedAppAdminUsersRoute
 }
 
-const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAudienceRoute: AuthenticatedAppAudienceRoute,
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
@@ -874,13 +986,19 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppSetupSmsRoute: AuthenticatedAppSetupSmsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
-  AuthenticatedAppAdminAccountsRoute: AuthenticatedAppAdminAccountsRoute,
-  AuthenticatedAppAdminBillingRoute: AuthenticatedAppAdminBillingRoute,
-  AuthenticatedAppAdminMessagesRoute: AuthenticatedAppAdminMessagesRoute,
-  AuthenticatedAppAdminNumberRequestsRoute:
-    AuthenticatedAppAdminNumberRequestsRoute,
-  AuthenticatedAppAdminRatesRoute: AuthenticatedAppAdminRatesRoute,
-  AuthenticatedAppAdminUsersRoute: AuthenticatedAppAdminUsersRoute,
+}
+
+const AuthenticatedAppRouteWithChildren =
+  AuthenticatedAppRoute._addFileChildren(AuthenticatedAppRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

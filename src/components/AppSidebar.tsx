@@ -1,6 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, Settings2, Building2, MessageSquareText, CreditCard, Mail, PhoneCall, UserCog } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, PhoneCall } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -19,7 +18,6 @@ const items = [
   { title: "Billing", url: "/app/billing", icon: Wallet },
   { title: "SMS Pricing", url: "/app/pricing-calculator", icon: Calculator },
   { title: "Settings", url: "/app/settings", icon: Settings },
-
 ];
 
 export function AppSidebar() {
@@ -27,11 +25,6 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (url: string, exact?: boolean) => exact ? pathname === url : pathname === url || pathname.startsWith(url + "/");
-
-  const isAdmin = useQuery({
-    queryKey: ["is-admin"],
-    queryFn: async () => (await supabase.rpc("has_role", { _role: "admin" })).data === true,
-  });
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -61,63 +54,6 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {isAdmin.data && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/app/admin/users")}>
-                    <Link to="/app/admin/users" className="flex items-center gap-3">
-                      <UserCog className="size-4" />
-                      {!collapsed && <span>User management</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/app/admin/accounts")}>
-                    <Link to="/app/admin/accounts" className="flex items-center gap-3">
-                      <Building2 className="size-4" />
-                      {!collapsed && <span>Tenant accounts</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/app/admin/rates")}>
-                    <Link to="/app/admin/rates" className="flex items-center gap-3">
-                      <Settings2 className="size-4" />
-                      {!collapsed && <span>Rate management</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/app/admin/billing")}>
-                    <Link to="/app/admin/billing" className="flex items-center gap-3">
-                      <CreditCard className="size-4" />
-                      {!collapsed && <span>Billing admin</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/app/admin/number-requests")}>
-                    <Link to="/app/admin/number-requests" className="flex items-center gap-3">
-                      <PhoneCall className="size-4" />
-                      {!collapsed && <span>Number requests</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/app/admin/messages")}>
-                    <Link to="/app/admin/messages" className="flex items-center gap-3">
-                      <Mail className="size-4" />
-                      {!collapsed && <span>Contact messages</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
       </SidebarContent>
       <SidebarFooter className="border-t">
         <SidebarMenu>
@@ -132,3 +68,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
