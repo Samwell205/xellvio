@@ -602,3 +602,30 @@ function ContactPicker({ selected, onChange }: { selected: string[]; onChange: (
     </div>
   );
 }
+
+function ListPicker({ lists, selected, onChange }: { lists: { id: string; name: string }[]; selected: string[]; onChange: (ids: string[]) => void }) {
+  function toggle(id: string) {
+    onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+  }
+  return (
+    <div>
+      <Label>Pick contact lists</Label>
+      <div className="grid sm:grid-cols-2 gap-2 mt-1">
+        {lists.length === 0 && (
+          <div className="text-xs text-muted-foreground">
+            No lists yet. <Link to="/app/audience" className="text-primary underline">Create a list</Link>.
+          </div>
+        )}
+        {lists.map((l) => {
+          const on = selected.includes(l.id);
+          return (
+            <label key={l.id} className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer ${on ? "border-primary bg-primary/5" : ""}`}>
+              <Checkbox checked={on} onCheckedChange={() => toggle(l.id)} />
+              <div className="font-medium text-sm">{l.name}</div>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
