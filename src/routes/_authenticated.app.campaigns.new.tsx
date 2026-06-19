@@ -284,9 +284,16 @@ function NewCampaignPage() {
 
   return (
     <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2"><Megaphone className="size-6" />New campaign</h1>
-        <p className="text-sm text-muted-foreground">5-step builder. Compliance and test send are required.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold flex items-center gap-2"><Megaphone className="size-6" />{campaignId ? "Edit campaign" : "New campaign"}</h1>
+          <p className="text-sm text-muted-foreground">5-step builder. Drafts autosave as you go.</p>
+        </div>
+        {autoSaved && (
+          <div className="text-xs text-muted-foreground flex items-center gap-1 pt-2">
+            <CheckCircle2 className="size-3.5 text-success" /> Draft saved {autoSaved.toLocaleTimeString()}
+          </div>
+        )}
       </div>
 
       {!hasVerified && senderList.length > 0 && (
