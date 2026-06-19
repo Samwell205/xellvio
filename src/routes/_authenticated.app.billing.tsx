@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+// Tabs no longer used — USD is the only purchase currency
 import { Wallet, Settings2, CheckCircle2, Clock, XCircle, Sparkles } from "lucide-react";
 import { formatUSD, formatMoney } from "@/lib/money";
 import { useEffect, useState } from "react";
