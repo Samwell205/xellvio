@@ -1,0 +1,108 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+const submitSchema = z.object({
+  country: z.enum(["US", "CA"]),
+  number_type: z.enum(["toll_free", "ten_dlc", "short_code"]),
+  business_name: z.string().trim().min(2).max(120),
+  business_website: z.string().trim().max(255).optional().or(z.literal("")),
+  use_case: z.string().trim().min(10).max(1000),
+  sample_message: z.string().trim().min(10).max(1000),
+  expected_monthly_volume: z.coerce.number().int().min(0).max(10_000_000),
+});
+
+export const submitNumberRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => submitSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { error, data: row } = await supabase
+      .from("number_requests")
+      .insert({
+        account_id: userId,
+        requested_by: userId,
+        country: data.country,
+        number_type: data.number_type,
+        business_name: data.business_name,
+        business_website: data.business_website || null,
+        use_case: data.use_case,
+        sample_message: data.sample_message,
+        expected_monthly_volume: data.expected_monthly_volume,
+      })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const listMyNumberRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("number_requests")
+      .select("*")
+      .eq("account_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const cancelMyNumberRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("number_requests")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const reviewSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["approved", "rejected", "provisioned"]),
+  admin_notes: z.string().trim().max(2000).optional(),
+  assigned_phone_number: z.string().trim().max(32).optional(),
+});
+
+async function ensureAdmin(supabase: any, userId: string) {
+  const { data, error } = await supabase.rpc("has_role", { _role: "admin" });
+  if (error) throw new Error(error.message);
+  if (data !== true) throw new Error("Forbidden");
+  return userId;
+}
+
+export const adminListNumberRequests = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("number_requests")
+      .select("*, accounts:account_id(email, full_name, contact_email)")
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const adminReviewNumberRequest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => reviewSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("number_requests")
+      .update({
+        status: data.status,
+        admin_notes: data.admin_notes ?? null,
+        assigned_phone_number: data.assigned_phone_number ?? null,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: context.userId,
+      })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

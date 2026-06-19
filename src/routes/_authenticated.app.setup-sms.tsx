@@ -26,6 +26,7 @@ import {
   saveCustomSenderId,
 } from "@/lib/sender-setup.functions";
 import { sendTestSms } from "@/lib/sms.functions";
+import { submitNumberRequest, listMyNumberRequests, cancelMyNumberRequest } from "@/lib/number-requests.functions";
 import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/setup-sms")({
@@ -264,39 +265,159 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
 }
 
 function UsCanadaInfoDialog({ code, onClose }: { code: string | null; onClose: () => void }) {
+  const qc = useQueryClient();
   const name = code === "US" ? "United States" : code === "CA" ? "Canada" : "";
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    number_type: "toll_free" as "toll_free" | "ten_dlc" | "short_code",
+    business_name: "",
+    business_website: "",
+    use_case: "",
+    sample_message: "",
+    expected_monthly_volume: 1000,
+  });
+
+  const listFn = useServerFn(listMyNumberRequests);
+  const submitFn = useServerFn(submitNumberRequest);
+  const cancelFn = useServerFn(cancelMyNumberRequest);
+
+  const reqs = useQuery({
+    queryKey: ["my-number-requests"],
+    queryFn: () => listFn(),
+    enabled: !!code,
+  });
+
+  const existing = (reqs.data ?? []).find((r: any) => r.country === code);
+
+  const submit = useMutation({
+    mutationFn: () => submitFn({ data: { country: code as "US" | "CA", ...form } }),
+    onSuccess: () => {
+      toast.success("Request submitted. We'll review it shortly.");
+      qc.invalidateQueries({ queryKey: ["my-number-requests"] });
+      setShowForm(false);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to submit request"),
+  });
+
+  const cancel = useMutation({
+    mutationFn: (id: string) => cancelFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Request cancelled");
+      qc.invalidateQueries({ queryKey: ["my-number-requests"] });
+    },
+  });
+
   return (
-    <Dialog open={!!code} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
+    <Dialog open={!!code} onOpenChange={(v) => { if (!v) { setShowForm(false); onClose(); } }}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>How sending to {name} works</DialogTitle>
           <DialogDescription>
-            US and Canadian mobile carriers don't allow alphanumeric Sender IDs (like "SAMWELL"). All messages must come from a real phone number.
+            US and Canadian carriers don't allow alphanumeric Sender IDs. All messages must come from a real phone number, which we provision and verify for you.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 text-sm">
-          <div className="rounded-md border p-3 bg-muted/40 space-y-2">
-            <p className="font-medium">Your options for {name}:</p>
-            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-              <li><strong>Toll-free number</strong> (recommended) — fast to provision, supports high-volume marketing & alerts, requires brand verification.</li>
-              <li><strong>10DLC long-code</strong> — local US/CA number, requires brand + campaign registration with the carriers (~1–2 weeks).</li>
-              <li><strong>Short code</strong> — 5–6 digit number for very high volume, slower approval and higher cost.</li>
-            </ul>
+
+        {existing && !showForm ? (
+          <div className="space-y-3 text-sm">
+            <div className="rounded-md border p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="font-medium">Your {name} request</div>
+                <Badge variant={existing.status === "approved" || existing.status === "provisioned" ? "default" : existing.status === "rejected" ? "destructive" : "secondary"}>
+                  {existing.status}
+                </Badge>
+              </div>
+              <div className="mt-2 text-muted-foreground space-y-1">
+                <div>Type: <span className="text-foreground">{existing.number_type.replace("_", " ")}</span></div>
+                <div>Business: <span className="text-foreground">{existing.business_name}</span></div>
+                {existing.assigned_phone_number && <div>Number: <span className="text-foreground font-mono">{existing.assigned_phone_number}</span></div>}
+                {existing.admin_notes && <div>Admin note: <span className="text-foreground">{existing.admin_notes}</span></div>}
+              </div>
+              {existing.status === "pending" && (
+                <Button size="sm" variant="ghost" className="mt-2" onClick={() => cancel.mutate(existing.id)} disabled={cancel.isPending}>
+                  Cancel request
+                </Button>
+              )}
+            </div>
+            {existing.status === "rejected" && (
+              <Button onClick={() => setShowForm(true)} className="w-full">Submit a new request</Button>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            We provision and verify the number for you. Contact us with your expected volume and use case and we'll get the right option set up.
-          </p>
-        </div>
+        ) : !showForm ? (
+          <div className="space-y-3 text-sm">
+            <div className="rounded-md border p-3 bg-muted/40 space-y-2">
+              <p className="font-medium">Your options for {name}:</p>
+              <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                <li><strong>Toll-free number</strong> (recommended) — fast to provision, high-volume marketing & alerts, requires brand verification.</li>
+                <li><strong>10DLC long-code</strong> — local US/CA number, requires brand + campaign registration (~1–2 weeks).</li>
+                <li><strong>Short code</strong> — 5–6 digits for very high volume, slower approval and higher cost.</li>
+              </ul>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Submit a request below and an admin will review it. Once approved we'll provision the number and assign it to your account.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 text-sm">
+            <div className="grid gap-2">
+              <Label>Number type</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["toll_free", "ten_dlc", "short_code"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, number_type: t }))}
+                    className={`rounded-md border px-2 py-2 text-xs font-medium transition ${form.number_type === t ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+                  >
+                    {t === "toll_free" ? "Toll-free" : t === "ten_dlc" ? "10DLC" : "Short code"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label>Business / brand name</Label>
+              <Input value={form.business_name} onChange={(e) => setForm({ ...form, business_name: e.target.value })} placeholder="Acme Inc." />
+            </div>
+            <div className="grid gap-2">
+              <Label>Business website (optional)</Label>
+              <Input value={form.business_website} onChange={(e) => setForm({ ...form, business_website: e.target.value })} placeholder="https://acme.com" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Use case</Label>
+              <Textarea rows={2} value={form.use_case} onChange={(e) => setForm({ ...form, use_case: e.target.value })} placeholder="What you'll send (marketing, alerts, OTP, etc.)" />
+            </div>
+            <div className="grid gap-2">
+              <Label>Sample message</Label>
+              <Textarea rows={2} value={form.sample_message} onChange={(e) => setForm({ ...form, sample_message: e.target.value })} placeholder="Hi {first_name}, your order #1234 has shipped..." />
+            </div>
+            <div className="grid gap-2">
+              <Label>Expected monthly volume</Label>
+              <Input type="number" min={0} value={form.expected_monthly_volume} onChange={(e) => setForm({ ...form, expected_monthly_volume: Number(e.target.value) })} />
+            </div>
+          </div>
+        )}
+
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Close</Button>
-          <Button asChild>
-            <Link to="/contact">Request a {name} number</Link>
-          </Button>
+          {showForm ? (
+            <>
+              <Button variant="ghost" onClick={() => setShowForm(false)}>Back</Button>
+              <Button onClick={() => submit.mutate()} disabled={submit.isPending || !form.business_name || form.use_case.length < 10 || form.sample_message.length < 10}>
+                {submit.isPending ? "Submitting…" : "Submit request"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={onClose}>Close</Button>
+              {!existing && (
+                <Button onClick={() => setShowForm(true)}>Request a {name} number</Button>
+              )}
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
 
 function senderKindLabel(kind: string) {
   if (kind === "toll_free") return "Toll-free number";
