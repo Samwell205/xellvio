@@ -51,14 +51,14 @@ export function ActivityLogFeed() {
       ) : (
         <ul className="space-y-3">
           {q.data!.map((e) => {
-            const Icon = iconFor(e.name);
+            const Icon = iconFor(e.type);
             return (
               <li key={e.id} className="flex items-center gap-3">
                 <div className="size-8 rounded-md bg-muted grid place-items-center shrink-0">
                   <Icon className="size-4 text-muted-foreground" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium capitalize truncate">{e.name.replace(/_/g, " ")}</div>
+                  <div className="text-sm font-medium capitalize truncate">{e.type.replace(/_/g, " ")}</div>
                   <div className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString()}</div>
                 </div>
               </li>
