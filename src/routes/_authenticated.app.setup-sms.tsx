@@ -245,6 +245,26 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         {senderCountries.map((c) => {
           const on = countries.includes(c.code);
           const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(c.code);
+          const req = isAlphaUnsupported ? reqByCountry.get(c.code) : null;
+          const isReady = req && (req.status === "approved" || req.status === "provisioned") && req.assigned_phone_number;
+          const isPending = req && req.status === "pending";
+          const isRejected = req && req.status === "rejected";
+          let chipCls: string;
+          if (isAlphaUnsupported) {
+            if (isReady) {
+              chipCls = "border-success bg-success/10 text-success hover:bg-success/15";
+            } else if (isPending) {
+              chipCls = "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
+            } else if (isRejected) {
+              chipCls = "border-dashed border-destructive/50 bg-destructive/5 text-destructive hover:bg-destructive/10";
+            } else {
+              chipCls = "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
+            }
+          } else {
+            chipCls = on
+              ? "bg-primary text-primary-foreground border-primary"
+              : "border-border hover:bg-muted";
+          }
           return (
             <button
               key={c.code}
@@ -256,19 +276,32 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
                   toggleCountry(c.code);
                 }
               }}
-              className={`px-3 py-1.5 rounded-full border text-sm transition ${
-                isAlphaUnsupported
-                  ? "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
-                  : on
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "border-border hover:bg-muted"
-              }`}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition ${chipCls}`}
+              title={isReady ? `Approved · ${req.assigned_phone_number}` : isPending ? "Pending review" : isRejected ? "Request rejected" : undefined}
             >
-              {c.name}{isAlphaUnsupported ? " · phone number" : ""}
+              {isReady && <CheckCircle2 className="size-3.5" />}
+              {isPending && <Clock className="size-3.5" />}
+              {isRejected && <AlertCircle className="size-3.5" />}
+              <span>
+                {c.name}
+                {isAlphaUnsupported && !isReady && " · phone number"}
+                {isReady && ` · ${req.assigned_phone_number}`}
+              </span>
+              {isReady && (
+                <span className="ml-1 rounded-full bg-success/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                  Approved
+                </span>
+              )}
+              {isPending && (
+                <span className="ml-1 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                  Pending
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+
       <UsCanadaInfoDialog code={infoCountry} onClose={() => setInfoCountry(null)} />
     </Card>
   );
