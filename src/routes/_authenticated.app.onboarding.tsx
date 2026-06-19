@@ -45,9 +45,24 @@ function OnboardingPage() {
   const qc = useQueryClient();
   const [form, setForm] = useState<Form>(empty);
 
+  const provisioningFn = useServerFn(getProvisioningStatus);
+  const saveProfileFn = useServerFn(saveBusinessProfile);
+
   const account = useQuery({
     queryKey: ["account"],
-    queryFn: async () => (await supabase.from("accounts").select("*").maybeSingle()).data,
+    queryFn: async () =>
+      (await supabase
+        .from("accounts")
+        .select(
+          "id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,subaccount_phone_number,subaccount_messaging_service_sid"
+        )
+        .maybeSingle()).data,
+  });
+
+  const provisioning = useQuery({
+    queryKey: ["provisioning-status"],
+    queryFn: () => provisioningFn(),
+    refetchInterval: 10_000,
   });
 
   useEffect(() => {
