@@ -37,12 +37,10 @@ function BillingPage() {
   });
 
   const packsFn = useServerFn(listCreditPacks);
-  const settingsFn = useServerFn(getBillingSettings);
   const paymentsFn = useServerFn(listMyPayments);
   const verifyFn = useServerFn(verifyPaystack);
 
   const packs = useQuery({ queryKey: ["credit-packs"], queryFn: () => packsFn() });
-  const settings = useQuery({ queryKey: ["billing-settings"], queryFn: () => settingsFn() });
   const payments = useQuery({ queryKey: ["my-payments"], queryFn: () => paymentsFn(), refetchInterval: 15_000 });
 
   const callAuto = useServerFn(saveAutoRecharge);
