@@ -137,6 +137,10 @@ function NewCampaignPage() {
   const hasVerified = senderList.some((x) => x.verification_status === "verified");
   const hasPending = senderList.some((x) => x.verification_status === "submitted" || x.verification_status === "in_review");
   const hasRejected = senderList.some((x) => x.verification_status === "rejected");
+  const verifiedSenderSummary = senderList
+    .filter((x) => x.verification_status === "verified")
+    .map((x) => `${x.country_code}: ${x.phone_number || x.messaging_service_sid || "Sender ID"}`)
+    .join(" · ");
 
   // Map country -> verified sender (auto-routing preview)
   const sendersByCountry = useMemo(() => {
@@ -210,12 +214,14 @@ function NewCampaignPage() {
   const callTestSend = useServerFn(sendTestSms);
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const testCountry = useMemo(() => countryFromPhone(s.testTo, rates), [s.testTo, rates]);
+  const testSender = testCountry ? sendersByCountry[testCountry] : null;
 
   async function runTestSend() {
     if (!s.testTo) { toast.error("Enter a phone number to test"); return; }
     setSending(true);
     try {
-      const res = await callTestSend({ data: { to: s.testTo, body: bodyWithStop } });
+      const res = await callTestSend({ data: { to: s.testTo, body: bodyWithStop, country: testCountry ?? undefined } });
       toast.success(`Test sent (sid ${res.sid.slice(0, 10)}…)`);
       setS({ ...s, testSent: true });
     } catch (e: any) {
@@ -317,6 +323,17 @@ function NewCampaignPage() {
           </div>
         )}
       </div>
+
+      {hasVerified && (
+        <Card className="p-4 flex items-center gap-3 border-success/40 bg-success/5">
+          <CheckCircle2 className="size-5 text-success" />
+          <div className="flex-1 text-sm">
+            <div className="font-semibold">Approved sender ready</div>
+            <div className="text-muted-foreground">{verifiedSenderSummary}</div>
+          </div>
+          <Link to="/app/setup-sms"><Button size="sm" variant="outline">View status</Button></Link>
+        </Card>
+      )}
 
       {!hasVerified && senderList.length > 0 && (
         <Card className={`p-4 flex items-center gap-3 ${hasRejected ? "border-destructive/40 bg-destructive/5" : "border-primary/40 bg-primary/5"}`}>
