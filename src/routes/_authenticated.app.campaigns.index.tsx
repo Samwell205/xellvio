@@ -63,7 +63,11 @@ function CampaignsPage() {
               {(q.data ?? []).map((c) => (
                 <tr key={c.id} className="border-t hover:bg-muted/20">
                   <td className="py-3 px-4 font-semibold">
-                    <Link to="/app/campaigns/$id" params={{ id: c.id }} className="hover:underline">{c.name}</Link>
+                    {c.status === "draft" ? (
+                      <Link to="/app/campaigns/new" search={{ id: c.id }} className="hover:underline">{c.name}</Link>
+                    ) : (
+                      <Link to="/app/campaigns/$id" params={{ id: c.id }} className="hover:underline">{c.name}</Link>
+                    )}
                   </td>
                   <td className="py-3 px-4"><StatusBadge status={c.status} /></td>
                   <td className="py-3 px-4 capitalize">{c.send_mode}</td>
