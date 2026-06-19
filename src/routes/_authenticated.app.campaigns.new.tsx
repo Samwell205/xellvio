@@ -34,6 +34,7 @@ type State = {
   include: string[];
   exclude: string[];
   profileIds: string[];
+  _fromLists?: string[];
   body: string;
   mediaUrl: string;
   sendMode: "now" | "scheduled" | "smart";
