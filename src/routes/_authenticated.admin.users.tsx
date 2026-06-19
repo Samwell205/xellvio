@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { adminListUsers, adminSetUserRole } from "@/lib/admin.functions";
 import { useEffect, useState } from "react";
 
-export const Route = createFileRoute("/_authenticated/app/admin/users")({
+export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({ meta: [{ title: "User management — Admin" }] }),
   beforeLoad: async () => {
     const { data, error } = await supabase.rpc("has_role", { _role: "admin" });

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/_authenticated/app/admin/messages")({
+export const Route = createFileRoute("/_authenticated/admin/messages")({
   head: () => ({ meta: [{ title: "Contact messages — Admin" }] }),
   component: MessagesPage,
 });

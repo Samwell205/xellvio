@@ -18,7 +18,7 @@ import { formatMoney, formatUSD } from "@/lib/money";
 import { adminListPacks, upsertCreditPack, deleteCreditPack, updateBillingSettings, adminListPayments, approvePayment, rejectPayment, signedProofUrl } from "@/lib/billing-admin.functions";
 import { getBillingSettings } from "@/lib/billing-packs.functions";
 
-export const Route = createFileRoute("/_authenticated/app/admin/billing")({
+export const Route = createFileRoute("/_authenticated/admin/billing")({
   head: () => ({ meta: [{ title: "Admin · Billing — SAMWELL SMS HUB" }] }),
   component: AdminBillingPage,
 });

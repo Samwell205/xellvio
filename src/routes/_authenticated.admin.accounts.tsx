@@ -9,7 +9,7 @@ import { Loader2, ShieldOff, ShieldCheck } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminSetSuspension } from "@/lib/account.functions";
 
-export const Route = createFileRoute("/_authenticated/app/admin/accounts")({
+export const Route = createFileRoute("/_authenticated/admin/accounts")({
   head: () => ({ meta: [{ title: "Tenant accounts — Admin" }] }),
   beforeLoad: async () => {
     const { data, error } = await supabase.rpc("has_role", { _role: "admin" });
