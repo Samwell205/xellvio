@@ -478,6 +478,7 @@ function NewCampaignPage() {
               <div>Insufficient balance. <Link to="/app/billing" className="underline font-medium">Add funds</Link> to launch.</div>
             </div>
           )}
+          <SenderRoutingCard breakdown={breakdown} sendersByCountry={sendersByCountry} />
           <div>
             <Label>Final message</Label>
             <Card className="p-3 mt-1 bg-muted/30 whitespace-pre-wrap text-sm">{bodyWithStop}</Card>
