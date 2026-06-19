@@ -19,7 +19,7 @@ export const adminGetOverview = createServerFn({ method: "GET" })
     const [
       accountsAll, accountsActive, accountsSuspended,
       pendingReq, msgs24, msgs7d, msgsFailed24,
-      payments7d, creditSum, lastSignups, lastMessages, lastPayments,
+      payments7d, creditSum, lastSignups, lastMessagesRes, lastPayments,
     ] = await Promise.all([
       supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }),
       supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }).eq("onboarding_status", "active"),
@@ -31,13 +31,13 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       supabaseAdmin.from("payments").select("amount,status,created_at").gte("created_at", since7d),
       supabaseAdmin.from("accounts").select("credit_balance"),
       supabaseAdmin.from("accounts").select("id,email,full_name,company,created_at").order("created_at", { ascending: false }).limit(6),
-      supabaseAdmin.from("messages").select("id,to_e164,status,created_at,account_id").order("created_at", { ascending: false }).limit(8),
+      supabaseAdmin.from("messages").select("id,phone_e164,status,created_at,campaign_id,cost,country_code").order("created_at", { ascending: false }).limit(8),
       supabaseAdmin.from("payments").select("id,amount,currency,status,provider,created_at,account_id").order("created_at", { ascending: false }).limit(6),
     ]);
 
-    const paid7d = (payments7d.data ?? []).filter((p) => p.status === "succeeded" || p.status === "approved");
-    const revenue7d = paid7d.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-    const totalCredits = (creditSum.data ?? []).reduce((s, r) => s + Number(r.credit_balance ?? 0), 0);
+    const paid7d = (payments7d.data ?? []).filter((p: any) => p.status === "succeeded" || p.status === "approved");
+    const revenue7d = paid7d.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+    const totalCredits = (creditSum.data ?? []).reduce((s: number, r: any) => s + Number(r.credit_balance ?? 0), 0);
 
     return {
       tenants: {
@@ -55,7 +55,7 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       pendingNumberRequests: pendingReq.count ?? 0,
       recent: {
         signups: lastSignups.data ?? [],
-        messages: lastMessages.data ?? [],
+        messages: lastMessagesRes.data ?? [],
         payments: lastPayments.data ?? [],
       },
     };
@@ -66,14 +66,21 @@ export const adminListMessages = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await ensureAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: msgs }, { data: accts }] = await Promise.all([
-      supabaseAdmin.from("messages").select("id,account_id,to_e164,from_e164,status,price,country_code,error_code,created_at,campaign_id").order("created_at", { ascending: false }).limit(200),
+    const [msgsRes, campRes, accRes] = await Promise.all([
+      supabaseAdmin.from("messages").select("id,phone_e164,status,cost,country_code,error_code,created_at,campaign_id,segments_count").order("created_at", { ascending: false }).limit(200),
+      supabaseAdmin.from("campaigns").select("id,account_id,name"),
       supabaseAdmin.from("accounts").select("id,email,company,legal_business_name"),
     ]);
-    const acctMap = new Map((accts ?? []).map((a) => [a.id, a]));
-    return (msgs ?? []).map((m) => {
-      const a = acctMap.get(m.account_id);
-      return { ...m, account_label: a?.legal_business_name || a?.company || a?.email || m.account_id };
+    const campMap = new Map((campRes.data ?? []).map((c: any) => [c.id, c]));
+    const acctMap = new Map((accRes.data ?? []).map((a: any) => [a.id, a]));
+    return (msgsRes.data ?? []).map((m: any) => {
+      const c: any = m.campaign_id ? campMap.get(m.campaign_id) : null;
+      const a: any = c ? acctMap.get(c.account_id) : null;
+      return {
+        ...m,
+        campaign_name: c?.name ?? null,
+        account_label: a ? (a.legal_business_name || a.company || a.email) : "—",
+      };
     });
   });
 
