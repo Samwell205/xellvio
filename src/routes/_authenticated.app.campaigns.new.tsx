@@ -398,15 +398,18 @@ function NewCampaignPage() {
             </div>
           </Card>
 
-          <CostPanel
-            insufficient={insufficient}
-            balance={balance}
-            balanceAfter={balanceAfter}
-            totalCost={totalCost}
-            breakdown={breakdown}
-            audienceCount={audienceList.length}
-            loading={audienceQ.isFetching || ratesQ.isFetching}
-          />
+          <div className="space-y-5">
+            <SenderRoutingCard breakdown={breakdown} sendersByCountry={sendersByCountry} />
+            <CostPanel
+              insufficient={insufficient}
+              balance={balance}
+              balanceAfter={balanceAfter}
+              totalCost={totalCost}
+              breakdown={breakdown}
+              audienceCount={audienceList.length}
+              loading={audienceQ.isFetching || ratesQ.isFetching}
+            />
+          </div>
         </div>
       )}
 
