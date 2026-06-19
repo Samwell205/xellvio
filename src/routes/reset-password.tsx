@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
+import { invalidateAllSessions } from "@/lib/auth-security.functions";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
