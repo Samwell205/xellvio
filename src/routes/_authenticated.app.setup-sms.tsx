@@ -290,12 +290,7 @@ function UsCanadaInfoDialog({ code, onClose }: { code: string | null; onClose: (
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Close</Button>
           <Button asChild>
-            <Link
-              to="/contact"
-              search={{ subject: `Request ${name} phone number for SMS` } as never}
-            >
-              Request a {name} number
-            </Link>
+            <Link to="/contact">Request a {name} number</Link>
           </Button>
         </DialogFooter>
       </DialogContent>
