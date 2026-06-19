@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -36,7 +36,7 @@ function AppLayout() {
               <button className="size-9 grid place-items-center rounded-md hover:bg-accent" aria-label="Notifications">
                 <Bell className="size-4" />
               </button>
-              <div className="size-8 rounded-full bg-gradient-to-br from-primary to-primary/60" />
+              <Link to="/app/settings" aria-label="Account settings" className="size-8 rounded-full bg-gradient-to-br from-primary to-primary/60 hover:ring-2 hover:ring-primary/40 transition" />
             </div>
           </header>
           <main className="flex-1 p-4 md:p-6 max-w-[1400px] w-full mx-auto">
