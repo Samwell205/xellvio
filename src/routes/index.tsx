@@ -43,7 +43,6 @@ function HomePage() {
         <EditorialAttribution />
         <EditorialReach />
         <HowItWorks />
-        <Pricing />
         <PerCountryPricing />
         <SmsCalculator />
         <FAQ />
