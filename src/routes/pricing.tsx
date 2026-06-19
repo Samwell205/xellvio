@@ -18,14 +18,30 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
 });
 
-const plans = (yearly: boolean) => [
-  { name: "Starter", monthly: 0, yearly: 0, desc: "For trying things out.", features: ["500 SMS / mo", "1 sender ID", "Email support", "Basic analytics"], cta: "Start free" },
-  { name: "Business", monthly: 49, yearly: 39, desc: "For growing teams.", features: ["25,000 SMS / mo", "5 sender IDs", "Full API access", "Priority support", "Advanced analytics", "Automation"], cta: "Start trial", featured: true },
-  { name: "Enterprise", monthly: 0, yearly: 0, desc: "For high-volume senders.", features: ["Unlimited volume", "Dedicated routes", "Custom integrations", "24/7 SLA", "Account manager"], cta: "Contact sales", custom: true },
-];
+type Currency = "USD" | "NGN";
+
+const PRICING = {
+  USD: { symbol: "$", starter: 0, businessMonthly: 49, businessYearly: 39 },
+  NGN: { symbol: "₦", starter: 0, businessMonthly: 75000, businessYearly: 60000 },
+} as const;
+
+const formatPrice = (currency: Currency, value: number) => {
+  const { symbol } = PRICING[currency];
+  return `${symbol}${value.toLocaleString()}`;
+};
+
+const plans = (currency: Currency, yearly: boolean) => {
+  const p = PRICING[currency];
+  return [
+    { name: "Starter", price: formatPrice(currency, p.starter), desc: "For trying things out.", features: ["500 SMS / mo", "1 sender ID", "Email support", "Basic analytics"], cta: "Start free" },
+    { name: "Business", price: formatPrice(currency, yearly ? p.businessYearly : p.businessMonthly), desc: "For growing teams.", features: ["25,000 SMS / mo", "5 sender IDs", "Full API access", "Priority support", "Advanced analytics", "Automation"], cta: "Start trial", featured: true },
+    { name: "Enterprise", price: null, desc: "For high-volume senders.", features: ["Unlimited volume", "Dedicated routes", "Custom integrations", "24/7 SLA", "Account manager"], cta: "Contact sales", custom: true },
+  ];
+};
 
 function PricingPage() {
   const [yearly, setYearly] = useState(false);
+  const [currency, setCurrency] = useState<Currency>("USD");
   return (
     <div className="min-h-screen flex flex-col">
       <MarketingNav />
@@ -35,23 +51,29 @@ function PricingPage() {
             <p className="text-sm font-semibold text-primary uppercase tracking-wider">Pricing</p>
             <h1 className="mt-3 text-4xl md:text-5xl font-extrabold tracking-tight">Plans that scale with you</h1>
             <p className="mt-3 text-muted-foreground">Start free. Upgrade anytime. Cancel whenever.</p>
-            <div className="mt-8 inline-flex rounded-full border bg-background p-1">
-              <button onClick={() => setYearly(false)} className={`px-5 py-1.5 rounded-full text-sm font-medium transition ${!yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Monthly</button>
-              <button onClick={() => setYearly(true)} className={`px-5 py-1.5 rounded-full text-sm font-medium transition ${yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
-                Yearly <span className="text-xs ml-1 opacity-80">-20%</span>
-              </button>
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <div className="inline-flex rounded-full border bg-background p-1">
+                <button onClick={() => setYearly(false)} className={`px-5 py-1.5 rounded-full text-sm font-medium transition ${!yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Monthly</button>
+                <button onClick={() => setYearly(true)} className={`px-5 py-1.5 rounded-full text-sm font-medium transition ${yearly ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+                  Yearly <span className="text-xs ml-1 opacity-80">-20%</span>
+                </button>
+              </div>
+              <div className="inline-flex rounded-full border bg-background p-1">
+                <button onClick={() => setCurrency("USD")} className={`px-5 py-1.5 rounded-full text-sm font-medium transition ${currency === "USD" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>USD $</button>
+                <button onClick={() => setCurrency("NGN")} className={`px-5 py-1.5 rounded-full text-sm font-medium transition ${currency === "NGN" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>NGN ₦</button>
+              </div>
             </div>
           </div>
         </section>
         <section className="pb-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 grid md:grid-cols-3 gap-5">
-            {plans(yearly).map((p) => (
+            {plans(currency, yearly).map((p) => (
               <Card key={p.name} className={`p-7 ${p.featured ? "border-primary ring-2 ring-primary/30 relative" : ""}`}>
                 {p.featured && <span className="absolute -top-3 left-7 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">Most popular</span>}
                 <div className="font-semibold">{p.name}</div>
                 <div className="mt-3 flex items-baseline gap-1">
                   {p.custom ? <span className="text-4xl font-extrabold">Custom</span> : <>
-                    <span className="text-4xl font-extrabold">${yearly ? p.yearly : p.monthly}</span>
+                    <span className="text-4xl font-extrabold">{p.price}</span>
                     <span className="text-muted-foreground">/mo</span>
                   </>}
                 </div>
@@ -71,3 +93,4 @@ function PricingPage() {
     </div>
   );
 }
+
