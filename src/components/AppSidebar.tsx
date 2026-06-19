@@ -89,6 +89,14 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/app/admin/number-requests")}>
+                    <Link to="/app/admin/number-requests" className="flex items-center gap-3">
+                      <PhoneCall className="size-4" />
+                      {!collapsed && <span>Number requests</span>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={isActive("/app/admin/messages")}>
                     <Link to="/app/admin/messages" className="flex items-center gap-3">
                       <Mail className="size-4" />
