@@ -545,6 +545,74 @@ export type Database = {
           },
         ]
       }
+      number_requests: {
+        Row: {
+          account_id: string
+          admin_notes: string | null
+          assigned_phone_number: string | null
+          business_name: string
+          business_website: string | null
+          country: Database["public"]["Enums"]["number_request_country"]
+          created_at: string
+          expected_monthly_volume: number
+          id: string
+          number_type: Database["public"]["Enums"]["number_request_type"]
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sample_message: string
+          status: Database["public"]["Enums"]["number_request_status"]
+          updated_at: string
+          use_case: string
+        }
+        Insert: {
+          account_id: string
+          admin_notes?: string | null
+          assigned_phone_number?: string | null
+          business_name: string
+          business_website?: string | null
+          country: Database["public"]["Enums"]["number_request_country"]
+          created_at?: string
+          expected_monthly_volume?: number
+          id?: string
+          number_type?: Database["public"]["Enums"]["number_request_type"]
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sample_message: string
+          status?: Database["public"]["Enums"]["number_request_status"]
+          updated_at?: string
+          use_case: string
+        }
+        Update: {
+          account_id?: string
+          admin_notes?: string | null
+          assigned_phone_number?: string | null
+          business_name?: string
+          business_website?: string | null
+          country?: Database["public"]["Enums"]["number_request_country"]
+          created_at?: string
+          expected_monthly_volume?: number
+          id?: string
+          number_type?: Database["public"]["Enums"]["number_request_type"]
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sample_message?: string
+          status?: Database["public"]["Enums"]["number_request_status"]
+          updated_at?: string
+          use_case?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "number_requests_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           account_id: string
@@ -913,6 +981,9 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      number_request_country: "US" | "CA"
+      number_request_status: "pending" | "approved" | "rejected" | "provisioned"
+      number_request_type: "toll_free" | "ten_dlc" | "short_code"
       phone_number_status: "active" | "pending" | "released"
       phone_number_type: "toll_free" | "personal"
       sender_id_status: "pending" | "approved" | "rejected"
@@ -1044,6 +1115,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      number_request_country: ["US", "CA"],
+      number_request_status: ["pending", "approved", "rejected", "provisioned"],
+      number_request_type: ["toll_free", "ten_dlc", "short_code"],
       phone_number_status: ["active", "pending", "released"],
       phone_number_type: ["toll_free", "personal"],
       sender_id_status: ["pending", "approved", "rejected"],
