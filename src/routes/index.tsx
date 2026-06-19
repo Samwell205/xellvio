@@ -44,6 +44,8 @@ function HomePage() {
         <EditorialReach />
         <HowItWorks />
         <Pricing />
+        <PerCountryPricing />
+        <SmsCalculator />
         <FAQ />
         <CTA />
       </main>
