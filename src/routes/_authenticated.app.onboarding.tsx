@@ -142,7 +142,7 @@ function OnboardingPage() {
   );
 }
 
-function SenderStep({ account }: { account: any }) {
+function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; hasNumber: boolean; phoneNumber: string | null } | undefined }) {
   const qc = useQueryClient();
   const provision = useServerFn(provisionSubaccount);
   const search = useServerFn(searchNumbers);
@@ -155,6 +155,7 @@ function SenderStep({ account }: { account: any }) {
     mutationFn: () => provision(),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["account"] });
+      qc.invalidateQueries({ queryKey: ["provisioning-status"] });
       toast.success(r.already ? "Subaccount already provisioned" : "Twilio subaccount created");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -170,13 +171,14 @@ function SenderStep({ account }: { account: any }) {
     mutationFn: (phoneNumber: string) => purchase({ data: { phoneNumber } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account"] });
+      qc.invalidateQueries({ queryKey: ["provisioning-status"] });
       toast.success("Number purchased — your account is live!");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const hasSub = !!account?.twilio_subaccount_sid;
-  const hasNumber = !!account?.subaccount_phone_number;
+  const hasSub = !!provisioning?.hasSubaccount;
+  const hasNumber = !!provisioning?.hasNumber;
 
   return (
     <div className="space-y-4">
