@@ -155,6 +155,15 @@ function SenderStatusList({
 
 function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () => void }) {
   const saveSender = useServerFn(saveCustomSenderId);
+  const listReqsFn = useServerFn(listMyNumberRequests);
+  const reqs = useQuery({ queryKey: ["my-number-requests"], queryFn: () => listReqsFn() });
+  const reqByCountry = new Map<string, any>();
+  for (const r of reqs.data ?? []) {
+    const prev = reqByCountry.get(r.country);
+    // Prefer provisioned > approved > others, else newest
+    const rank = (s: string) => (s === "provisioned" ? 3 : s === "approved" ? 2 : s === "pending" ? 1 : 0);
+    if (!prev || rank(r.status) > rank(prev.status)) reqByCountry.set(r.country, r);
+  }
   // US & CA do not support alphanumeric Sender IDs (carrier rule) — shown but disabled.
   const ALPHA_UNSUPPORTED = new Set(["US", "CA"]);
   const senderCountries = COUNTRIES;
@@ -169,6 +178,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
   );
   const [busy, setBusy] = useState(false);
   const [infoCountry, setInfoCountry] = useState<string | null>(null);
+
 
   function toggleCountry(cc: string) {
     setCountries((current) =>
