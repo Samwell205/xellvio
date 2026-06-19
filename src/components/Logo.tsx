@@ -9,6 +9,7 @@ export function Logo({ className = "" }: { className?: string }) {
         alt="SAMWELL SMS HUB"
         className="h-8 w-auto"
       />
+      <span className="tracking-tight">SMS HUB</span>
     </Link>
   );
 }
