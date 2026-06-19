@@ -716,3 +716,62 @@ function ListPicker({ lists, selected, onChange }: { lists: { id: string; name: 
     </div>
   );
 }
+
+function SenderRoutingCard({
+  breakdown,
+  sendersByCountry,
+}: {
+  breakdown: Array<{ country_code: string; country_name: string; recipients: number }>;
+  sendersByCountry: Record<string, { sender_kind: string; phone_number: string | null; messaging_service_sid: string | null }>;
+}) {
+  function label(s: any) {
+    if (!s) return "No verified sender";
+    if (s.phone_number) return s.phone_number;
+    if (s.sender_kind === "sender_id") return "Alphanumeric Sender ID";
+    if (s.messaging_service_sid) return "Messaging Service";
+    return s.sender_kind;
+  }
+  return (
+    <Card className="p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <div className="size-9 rounded-lg bg-primary/15 text-primary grid place-items-center"><Phone className="size-4" /></div>
+        <div>
+          <h3 className="font-semibold leading-tight">Sender routing</h3>
+          <p className="text-xs text-muted-foreground">Auto-selected per recipient country</p>
+        </div>
+      </div>
+      {breakdown.length === 0 ? (
+        <div className="text-xs text-muted-foreground">Pick an audience to see which sender will be used.</div>
+      ) : (
+        <div className="border rounded-md overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/40 text-muted-foreground">
+              <tr><th className="text-left p-2">Country</th><th className="text-left p-2">Sender</th><th className="text-right p-2">#</th></tr>
+            </thead>
+            <tbody>
+              {breakdown.map((b) => {
+                const sender = sendersByCountry[b.country_code];
+                return (
+                  <tr key={b.country_code} className="border-t">
+                    <td className="p-2 font-medium">{b.country_name}</td>
+                    <td className="p-2">
+                      {sender ? (
+                        <span className="font-mono text-[11px]">{label(sender)}</span>
+                      ) : (
+                        <Badge variant="destructive" className="text-[10px]">No verified sender</Badge>
+                      )}
+                    </td>
+                    <td className="p-2 text-right">{b.recipients}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        Need a sender for another country? <Link to="/app/setup-sms" className="text-primary underline">Set up SMS</Link> or <Link to="/app/number-requests" className="text-primary underline">request a number</Link>.
+      </p>
+    </Card>
+  );
+}
