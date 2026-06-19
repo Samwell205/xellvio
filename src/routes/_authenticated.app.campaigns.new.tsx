@@ -278,6 +278,10 @@ function NewCampaignPage() {
 
   async function saveCampaign(launch: boolean) {
     if (launch && insufficient) { toast.error("Insufficient balance — top up before launching."); return; }
+    if (launch && hasMissingSender) {
+      toast.error(`No verified sender for: ${missingSenderCountries.join(", ")}. Set up SMS or remove those recipients.`);
+      return;
+    }
     setSaving(true);
     try {
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
