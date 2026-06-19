@@ -54,16 +54,16 @@ export function AdminSidebar() {
   }
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-slate-800 bg-slate-950 text-slate-100">
-      <SidebarHeader className="border-b border-slate-800">
+    <Sidebar collapsible="icon" className="border-r border-border">
+      <SidebarHeader className="border-b border-border">
         <div className="p-2 flex items-center gap-2">
           <div className="size-8 rounded-md bg-primary/15 grid place-items-center">
             <ShieldCheck className="size-4 text-primary" />
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <div className="font-semibold text-sm">SAMWELL</div>
-              <div className="text-[10px] uppercase tracking-widest text-slate-400">Admin</div>
+              <div className="font-semibold text-sm text-sidebar-foreground">SAMWELL</div>
+              <div className="text-[10px] uppercase tracking-widest text-sidebar-foreground/70">Admin</div>
             </div>
           )}
         </div>
@@ -71,7 +71,7 @@ export function AdminSidebar() {
       <SidebarContent>
         {groups.map((g) => (
           <SidebarGroup key={g.label}>
-            <SidebarGroupLabel className="text-slate-400">{g.label}</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sidebar-foreground/70">{g.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {g.items.map((it) => (
@@ -79,7 +79,7 @@ export function AdminSidebar() {
                     <SidebarMenuButton
                       asChild
                       isActive={isActive(it.url, it.exact)}
-                      className="text-slate-300 hover:bg-slate-800 hover:text-white data-[active=true]:bg-primary/15 data-[active=true]:text-white"
+                      className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-primary/15 data-[active=true]:text-sidebar-foreground"
                     >
                       <Link to={it.url} className="flex items-center gap-3">
                         <it.icon className="size-4" />
@@ -93,10 +93,10 @@ export function AdminSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter className="border-t border-slate-800">
+      <SidebarFooter className="border-t border-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={signOut} className="text-slate-300 hover:bg-slate-800 hover:text-white">
+            <SidebarMenuButton onClick={signOut} className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
               <LogOut className="size-4" />
               {!collapsed && <span>Sign out</span>}
             </SidebarMenuButton>
