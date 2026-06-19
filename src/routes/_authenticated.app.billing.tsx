@@ -111,10 +111,10 @@ function BillingPage() {
             <TabsTrigger value="USD">USD (Dollar)</TabsTrigger>
           </TabsList>
           <TabsContent value="NGN" className="mt-4">
-            <PackGrid packs={ngnPacks} payoneer={settings.data} accountEmail={account.data?.contact_email || account.data?.email} />
+            <PackGrid packs={ngnPacks} />
           </TabsContent>
           <TabsContent value="USD" className="mt-4">
-            <PackGrid packs={usdPacks} payoneer={settings.data} accountEmail={account.data?.contact_email || account.data?.email} />
+            <PackGrid packs={usdPacks} />
           </TabsContent>
         </Tabs>
       </Card>
