@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, useNavigate, Link, useSearch } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,9 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   Megaphone, Users, MessageSquare, CalendarClock, CheckCircle2,
-  ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone, DollarSign,
+  ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone, DollarSign, Phone,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/new")({
