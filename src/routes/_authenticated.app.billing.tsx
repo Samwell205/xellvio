@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+// Tabs no longer used — USD is the only purchase currency
 import { Wallet, Settings2, CheckCircle2, Clock, XCircle, Sparkles } from "lucide-react";
 import { formatUSD, formatMoney } from "@/lib/money";
 import { useEffect, useState } from "react";
@@ -84,9 +84,9 @@ function BillingPage() {
   }, []);
 
   const balance = Number(account.data?.credit_balance ?? 0);
-  const ngnPacks = (packs.data ?? []).filter((p) => p.currency === "NGN");
+  // Show USD packs only — Paystack still charges in NGN behind the scenes
+  // using the admin-configured FX rate, but customers shop in USD.
   const usdPacks = (packs.data ?? []).filter((p) => p.currency === "USD");
-  const defaultCurrency: "NGN" | "USD" = "NGN";
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -98,25 +98,15 @@ function BillingPage() {
       <Card className="p-6 bg-gradient-to-br from-primary/10 to-transparent">
         <div className="text-xs uppercase text-muted-foreground tracking-wide">Current balance</div>
         <div className="text-4xl font-extrabold mt-1">{formatUSD(balance)}</div>
-        <p className="text-xs text-muted-foreground mt-2">SMS are billed at the recipient country rate × segments. Credit balance is shown in USD regardless of how you topped up.</p>
+        <p className="text-xs text-muted-foreground mt-2">SMS are billed per recipient at the country rate × segments. We never debit more than your available balance — any messages your balance can't cover are skipped, not charged.</p>
       </Card>
 
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2"><Sparkles className="size-5 text-primary" /><h3 className="font-semibold">Buy credits</h3></div>
+          <span className="text-xs text-muted-foreground">Priced in USD · paid securely via Paystack</span>
         </div>
-        <Tabs defaultValue={defaultCurrency}>
-          <TabsList>
-            <TabsTrigger value="NGN">NGN (Naira)</TabsTrigger>
-            <TabsTrigger value="USD">USD (Dollar)</TabsTrigger>
-          </TabsList>
-          <TabsContent value="NGN" className="mt-4">
-            <PackGrid packs={ngnPacks} />
-          </TabsContent>
-          <TabsContent value="USD" className="mt-4">
-            <PackGrid packs={usdPacks} />
-          </TabsContent>
-        </Tabs>
+        <PackGrid packs={usdPacks} />
       </Card>
 
       <Card className="p-6">

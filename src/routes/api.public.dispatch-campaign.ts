@@ -86,31 +86,68 @@ async function dispatchOne(
 
   const totalCost = +enriched.reduce((s, x) => s + x.cost, 0).toFixed(4);
 
-  // Balance check up front
+  // Balance check up front — never charge more than the user has on file.
   const { data: acct, error: aErr } = await supabaseAdmin
     .from("accounts")
     .select("credit_balance")
     .eq("id", campaign.account_id)
     .maybeSingle();
   if (aErr || !acct) throw new Error("Account lookup failed");
-  if (Number(acct.credit_balance) < totalCost) {
+  const startingBalance = Number(acct.credit_balance);
+
+  // Sort cheapest-first so a low balance still reaches as many people as possible.
+  enriched.sort((a, b) => a.cost - b.cost);
+
+  // Pre-mark recipients we can't afford as skipped (no debit, no Twilio call).
+  let remaining = startingBalance;
+  const affordable: typeof enriched = [];
+  const skippedRows: any[] = [];
+  for (const r of enriched) {
+    if (r.cost > 0 && r.cost <= remaining) {
+      remaining -= r.cost;
+      affordable.push(r);
+    } else if (r.cost === 0) {
+      // Free routes (no rate row) — still send, no debit.
+      affordable.push(r);
+    } else {
+      skippedRows.push({
+        campaign_id: campaign.id,
+        profile_id: r.profile_id,
+        phone_e164: r.phone_e164,
+        country_code: r.country_code,
+        segments_count: r.segments,
+        cost: r.cost,
+        rendered_body: r.body,
+        status: "failed",
+        error_code: "insufficient_balance",
+      });
+    }
+  }
+  if (skippedRows.length > 0) {
+    await supabaseAdmin.from("messages").insert(skippedRows);
+  }
+  if (affordable.length === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
     return {
       queued: 0,
-      failed: list.length,
+      failed: skippedRows.length,
       debited: 0,
       cost: totalCost,
       skipped: "insufficient_balance",
     };
   }
 
-  const callback = await statusCallbackUrl();
   let queued = 0;
-  let failed = 0;
+  let failed = skippedRows.length;
   let debited = 0;
+  const callback = await statusCallbackUrl();
+  // From here on, dispatch only affordable recipients.
+  const dispatchList = affordable;
 
-  for (let i = 0; i < enriched.length; i += BATCH_SIZE) {
-    const batch = enriched.slice(i, i + BATCH_SIZE);
+
+  for (let i = 0; i < dispatchList.length; i += BATCH_SIZE) {
+    const batch = dispatchList.slice(i, i + BATCH_SIZE);
+
 
     const rows = batch.map((p) => ({
       campaign_id: campaign.id,
