@@ -15,7 +15,7 @@ export function ActivityLogFeed() {
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
-        .select("id,name,payload,created_at")
+        .select("id,type,created_at")
         .order("created_at", { ascending: false })
         .limit(8);
       return data ?? [];
