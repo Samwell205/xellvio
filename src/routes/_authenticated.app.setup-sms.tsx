@@ -28,7 +28,7 @@ import { sendTestSms } from "@/lib/sms.functions";
 import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/setup-sms")({
-  head: () => ({ meta: [{ title: "Set up SMS — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "Set up SMS — SAMWELL SMS HUB" }] }),
   component: SetupSmsPage,
 });
 
@@ -344,7 +344,7 @@ function TestSendInline({
       const r = await send({
         data: {
           to,
-          body: "Test from Samwell Global SMS — your sender is working ✅ Reply STOP to opt out.",
+          body: "Test from SAMWELL SMS HUB — your sender is working ✅ Reply STOP to opt out.",
           country,
         },
       });

@@ -11,7 +11,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 const GREETING: Msg = {
   role: "assistant",
   content:
-    "👋 Hi! I'm the Samwell Global SMS assistant. Ask me about sign up, verifying your email, importing contacts, sending SMS, or anything else.",
+    "👋 Hi! I'm the SAMWELL SMS HUB assistant. Ask me about sign up, verifying your email, importing contacts, sending SMS, or anything else.",
 };
 
 export function AiChatWidget() {

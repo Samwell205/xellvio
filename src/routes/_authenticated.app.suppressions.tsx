@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { ShieldOff, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/suppressions")({
-  head: () => ({ meta: [{ title: "Suppressions — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "Suppressions — SAMWELL SMS HUB" }] }),
   component: SuppressionsPage,
 });
 

@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing — Samwell Global SMS" },
+      { title: "Pricing — SAMWELL SMS HUB" },
       { name: "description", content: "Simple, transparent pricing. Start free with 50 credits and scale as you grow." },
-      { property: "og:title", content: "Pricing — Samwell Global SMS" },
+      { property: "og:title", content: "Pricing — SAMWELL SMS HUB" },
       { property: "og:description", content: "Plans that scale with you." },
     ],
   }),

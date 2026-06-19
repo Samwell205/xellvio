@@ -15,7 +15,7 @@ import { CheckCircle2, Loader2, Phone, ShieldCheck } from "lucide-react";
 import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant-twilio.functions";
 
 export const Route = createFileRoute("/_authenticated/app/onboarding")({
-  head: () => ({ meta: [{ title: "Set up your business — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "Set up your business — SAMWELL SMS HUB" }] }),
   component: OnboardingPage,
 });
 

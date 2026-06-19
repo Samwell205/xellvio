@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/new")({
-  head: () => ({ meta: [{ title: "New campaign — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "New campaign — SAMWELL SMS HUB" }] }),
   component: NewCampaignPage,
 });
 

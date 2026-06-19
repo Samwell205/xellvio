@@ -12,7 +12,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/app/admin/rates")({
-  head: () => ({ meta: [{ title: "Rate management — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "Rate management — SAMWELL SMS HUB" }] }),
   beforeLoad: async () => {
     const { data } = await supabase.rpc("has_role", { _role: "admin" });
     if (!data) throw redirect({ to: "/app" });

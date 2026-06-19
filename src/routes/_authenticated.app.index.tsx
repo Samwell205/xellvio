@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Megaphone, CheckCircle2, RefreshCw, Send, AlertTriangle, XCircle, UserMinus, Bell, Building2, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/")({
-  head: () => ({ meta: [{ title: "Dashboard — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — SAMWELL SMS HUB" }] }),
   component: Overview,
 });
 

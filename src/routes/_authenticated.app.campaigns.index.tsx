@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Plus, RefreshCw, Megaphone } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/")({
-  head: () => ({ meta: [{ title: "Campaigns — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "Campaigns — SAMWELL SMS HUB" }] }),
   component: CampaignsPage,
 });
 

@@ -14,7 +14,7 @@ import {
 import { useMemo } from "react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
-  head: () => ({ meta: [{ title: "Campaign report — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "Campaign report — SAMWELL SMS HUB" }] }),
   component: CampaignReport,
 });
 

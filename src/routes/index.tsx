@@ -13,9 +13,9 @@ import { Card } from "@/components/ui/card";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Samwell Global SMS — Reach Customers Worldwide" },
+      { title: "SAMWELL SMS HUB — Reach Customers Worldwide" },
       { name: "description", content: "Send global SMS campaigns with confidence. Bulk messaging, automation, analytics and APIs trusted by modern businesses." },
-      { property: "og:title", content: "Samwell Global SMS — Reach Customers Worldwide" },
+      { property: "og:title", content: "SAMWELL SMS HUB — Reach Customers Worldwide" },
       { property: "og:description", content: "Fast. Reliable. Compliant global SMS for businesses." },
     ],
   }),

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
-  head: () => ({ meta: [{ title: "Settings — Samwell Global SMS" }] }),
+  head: () => ({ meta: [{ title: "Settings — SAMWELL SMS HUB" }] }),
   component: SettingsPage,
 });
 
