@@ -70,8 +70,15 @@ function ResetPasswordPage() {
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      toast.success("Password updated. You're signed in.");
-      navigate({ to: "/app" });
+      // Invalidate every existing session (other devices) so the new password is required everywhere.
+      try {
+        await invalidateAllSessions();
+      } catch {
+        // Non-fatal: we'll still sign out locally below.
+      }
+      await supabase.auth.signOut();
+      toast.success("Password updated. Please sign in with your new password.");
+      navigate({ to: "/auth" });
     } catch (err) {
       const rawMessage = err instanceof Error ? err.message : "Failed to update password";
       const lower = rawMessage.toLowerCase();
