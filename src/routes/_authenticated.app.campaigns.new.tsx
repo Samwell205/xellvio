@@ -489,6 +489,16 @@ function NewCampaignPage() {
               <div>Insufficient balance. <Link to="/app/billing" className="underline font-medium">Add funds</Link> to launch.</div>
             </div>
           )}
+          {hasMissingSender && (
+            <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-md p-3 text-sm text-destructive">
+              <AlertTriangle className="size-4 mt-0.5" />
+              <div>
+                No verified sender for: <b>{missingSenderCountries.join(", ")}</b>. Launch is blocked until you{" "}
+                <Link to="/app/setup-sms" className="underline font-medium">set up SMS</Link> or{" "}
+                <Link to="/app/number-requests" className="underline font-medium">request a number</Link> for these countries — or remove those recipients.
+              </div>
+            </div>
+          )}
           <SenderRoutingCard breakdown={breakdown} sendersByCountry={sendersByCountry} />
           <div>
             <Label>Final message</Label>
