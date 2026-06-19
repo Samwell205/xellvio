@@ -34,22 +34,41 @@ export const sendTestSms = createServerFn({ method: "POST" })
       .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
       .eq("id", userId)
       .maybeSingle();
-    let assetQ = supabase
+    // Derive recipient country from To if not provided
+    let countryCode = data.country?.toUpperCase();
+    if (!countryCode) {
+      const { data: rates } = await supabase
+        .from("country_rates")
+        .select("country_code,dial_prefix")
+        .eq("active", true);
+      const { countryFromPhone } = await import("./country-from-phone");
+      countryCode = countryFromPhone(data.to, (rates ?? []) as any) ?? undefined;
+    }
+
+    const { data: allAssets } = await supabase
       .from("sender_assets")
       .select("messaging_service_sid,phone_number,sender_kind,country_code,verification_status")
       .eq("account_id", userId);
-    if (data.country) assetQ = assetQ.eq("country_code", data.country.toUpperCase());
 
-    const { data: assets } = await assetQ;
-    // Prefer a verified sender; else fall back to any saved sender.
-    const asset =
-      (assets ?? []).find(
-        (a) => a.verification_status === "verified" && (a.messaging_service_sid || a.phone_number),
-      ) || (assets ?? []).find((a) => !!a.messaging_service_sid || !!a.phone_number);
-    if (!asset?.messaging_service_sid && !asset?.phone_number) {
+    // Ranking: country match > verified > has phone/messaging_service > sender_kind preference.
+    // Avoid alphanumeric Sender ID for "From" (Twilio trial subaccounts reject it).
+    function rank(a: any) {
+      let s = 0;
+      if (countryCode && a.country_code === countryCode) s += 1000;
+      if (a.verification_status === "verified") s += 500;
+      if (a.phone_number) s += 100;          // real number is safest
+      if (a.messaging_service_sid) s += 80;  // service routes around trial limits
+      if (a.sender_kind !== "sender_id") s += 20;
+      return s;
+    }
+    const ranked = [...(allAssets ?? [])]
+      .filter((a) => a.messaging_service_sid || a.phone_number)
+      .sort((x, y) => rank(y) - rank(x));
+    const asset = ranked[0];
+    if (!asset) {
       throw new Error(
-        data.country
-          ? `No sender provisioned for ${data.country.toUpperCase()} yet. Wait for setup to finish or pick another country.`
+        countryCode
+          ? `No sender provisioned for ${countryCode} yet. Wait for setup to finish or pick another country.`
           : "No active sender yet. Wait for setup to finish.",
       );
     }
@@ -70,10 +89,15 @@ export const sendTestSms = createServerFn({ method: "POST" })
       To: data.to,
       Body: data.body,
     });
-    if (asset.sender_kind !== "sender_id" && asset.messaging_service_sid) {
+    // Prefer MessagingService when available; only fall back to From=<phone> when it's a real phone.
+    if (asset.messaging_service_sid) {
       body.set("MessagingServiceSid", asset.messaging_service_sid);
+    } else if (asset.sender_kind !== "sender_id" && asset.phone_number) {
+      body.set("From", asset.phone_number);
     } else {
-      body.set("From", asset.phone_number!);
+      throw new Error(
+        "Your only verified sender is an Alphanumeric Sender ID, which Twilio trial accounts can't use as the From number. Approve a phone number (US/CA) or upgrade the Twilio subaccount, then retry.",
+      );
     }
     const res = await fetch(`${TWILIO_API}/Accounts/${accountAuth.sid}/Messages.json`, {
       method: "POST",
