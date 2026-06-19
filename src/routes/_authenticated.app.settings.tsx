@@ -71,7 +71,7 @@ function SettingsPage() {
             You have admin privileges. Manage who else can be an admin from the User management page.
           </div>
           <Button asChild variant="outline" size="sm">
-            <Link to="/app/admin/users">Manage users & roles</Link>
+            <Link to="/admin/users">Manage users & roles</Link>
           </Button>
         </Card>
       )}
