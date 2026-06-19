@@ -45,31 +45,36 @@ export const sendTestSms = createServerFn({ method: "POST" })
       countryCode = countryFromPhone(data.to, (rates ?? []) as any) ?? undefined;
     }
 
-    const { data: allAssets } = await supabase
+    const { data: allAssets, error: assetsError } = await supabase
       .from("sender_assets")
       .select("messaging_service_sid,phone_number,sender_kind,country_code,verification_status")
       .eq("account_id", userId);
+    if (assetsError) throw new Error(assetsError.message);
 
-    // Ranking: country match > verified > has phone/messaging_service > sender_kind preference.
-    // Avoid alphanumeric Sender ID for "From" (Twilio trial subaccounts reject it).
+    // Use only verified senders. If the test recipient country is known, never fall back
+    // to another country's sender because carriers require country-appropriate routing.
     function rank(a: any) {
       let s = 0;
       if (countryCode && a.country_code === countryCode) s += 1000;
-      if (a.verification_status === "verified") s += 500;
       if (a.phone_number) s += 100;          // real number is safest
       if (a.messaging_service_sid) s += 80;  // service routes around trial limits
       if (a.sender_kind !== "sender_id") s += 20;
       return s;
     }
-    const ranked = [...(allAssets ?? [])]
-      .filter((a) => a.messaging_service_sid || a.phone_number)
+    const eligible = [...(allAssets ?? [])].filter(
+      (a) => a.verification_status === "verified" && (a.messaging_service_sid || a.phone_number),
+    );
+    const countryEligible = countryCode
+      ? eligible.filter((a) => a.country_code === countryCode)
+      : eligible;
+    const ranked = countryEligible
       .sort((x, y) => rank(y) - rank(x));
     const asset = ranked[0];
     if (!asset) {
       throw new Error(
         countryCode
-          ? `No sender provisioned for ${countryCode} yet. Wait for setup to finish or pick another country.`
-          : "No active sender yet. Wait for setup to finish.",
+          ? `No verified sender is available for ${countryCode}. Use your approved ${countryCode} number or set up a sender for that country before testing.`
+          : "No verified sender is available yet. Finish SMS setup before testing.",
       );
     }
 
@@ -89,14 +94,16 @@ export const sendTestSms = createServerFn({ method: "POST" })
       To: data.to,
       Body: data.body,
     });
-    // Prefer MessagingService when available; only fall back to From=<phone> when it's a real phone.
+    // Prefer MessagingService when available; otherwise use the approved sender value.
     if (asset.messaging_service_sid) {
       body.set("MessagingServiceSid", asset.messaging_service_sid);
     } else if (asset.sender_kind !== "sender_id" && asset.phone_number) {
       body.set("From", asset.phone_number);
+    } else if (asset.sender_kind === "sender_id" && asset.phone_number && !["US", "CA"].includes(asset.country_code)) {
+      body.set("From", asset.phone_number);
     } else {
       throw new Error(
-        "Your only verified sender is an Alphanumeric Sender ID, which Twilio trial accounts can't use as the From number. Approve a phone number (US/CA) or upgrade the Twilio subaccount, then retry.",
+        "This country requires a real approved sending number. Request or approve a phone number, then retry.",
       );
     }
     const res = await fetch(`${TWILIO_API}/Accounts/${accountAuth.sid}/Messages.json`, {
@@ -109,12 +116,17 @@ export const sendTestSms = createServerFn({ method: "POST" })
     });
     const json: any = await res.json().catch(() => ({}));
     if (!res.ok) {
+      if (json?.code === 21608 || String(json?.message ?? "").toLowerCase().includes("trial accounts cannot send")) {
+        throw new Error(
+          "Your approved sending number is ready, but the SMS provider account is still in trial mode. Trial mode can only send tests to provider-verified recipient phones. Verify this test recipient in the provider account or upgrade the SMS provider account before launching real campaigns.",
+        );
+      }
       throw new Error(json?.message ?? `Twilio error ${res.status}`);
     }
     return {
       sid: json.sid as string,
       status: json.status as string,
-      from: asset.phone_number as string,
+      from: (asset.phone_number ?? asset.messaging_service_sid) as string,
       sender_kind: asset.sender_kind as string,
       country: asset.country_code as string,
     };
