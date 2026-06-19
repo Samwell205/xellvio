@@ -95,7 +95,7 @@ function AdminOverview() {
             {d.recent.messages.map((m: any) => (
               <div key={m.id} className="py-2 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="font-medium truncate">{m.to_e164}</div>
+                  <div className="font-medium truncate">{m.phone_e164}</div>
                   <div className="text-xs text-muted-foreground truncate">{new Date(m.created_at).toLocaleString()}</div>
                 </div>
                 <Badge variant={m.status === "delivered" ? "default" : m.status === "failed" || m.status === "undelivered" ? "destructive" : "secondary"}>{m.status}</Badge>
