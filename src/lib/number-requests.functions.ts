@@ -73,6 +73,21 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
             reviewed_at: new Date().toISOString(),
           })
           .eq("id", row.id);
+        // Register the purchased number as an active sender asset for this tenant.
+        await supabaseAdmin
+          .from("sender_assets")
+          .upsert(
+            {
+              account_id: userId,
+              country_code: data.country,
+              sender_kind: data.number_type === "toll_free" ? "toll_free" : "local",
+              phone_number: purchased.phone_number,
+              phone_sid: purchased.sid,
+              verification_status: "verified",
+              last_synced_at: new Date().toISOString(),
+            },
+            { onConflict: "account_id,country_code,phone_number" },
+          );
         autoResult = { provisioned: true, phone_number: purchased.phone_number };
       }
     } catch (e: any) {
