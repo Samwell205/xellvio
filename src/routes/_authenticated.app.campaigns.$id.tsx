@@ -164,7 +164,7 @@ function CampaignReport() {
                   <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">Included lists and segments</div>
                   {listsQ.data?.include?.length ? (
                     <div className="flex flex-wrap gap-1.5">
-                      {listsQ.data.include.map((l) => (
+                      {listsQ.data.include.map((l: any) => (
                         <Badge key={l.id} variant="secondary">{l.name} ({stats.attempted})</Badge>
                       ))}
                     </div>
@@ -174,7 +174,7 @@ function CampaignReport() {
                   <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">Excluded lists and segments</div>
                   {listsQ.data?.exclude?.length ? (
                     <div className="flex flex-wrap gap-1.5">
-                      {listsQ.data.exclude.map((l) => (
+                      {listsQ.data.exclude.map((l: any) => (
                         <Badge key={l.id} variant="outline">{l.name}</Badge>
                       ))}
                     </div>
