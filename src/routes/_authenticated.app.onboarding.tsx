@@ -188,7 +188,7 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
           {hasSub && <Badge variant="default">Provisioned</Badge>}
         </div>
         {hasSub ? (
-          <p className="text-sm text-muted-foreground">SID: <span className="font-mono text-xs">{account.twilio_subaccount_sid}</span></p>
+          <p className="text-sm text-muted-foreground">Your dedicated Twilio subaccount is active. Credentials are encrypted at rest and only available to server functions.</p>
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
