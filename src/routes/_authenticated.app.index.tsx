@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Megaphone, CheckCircle2, RefreshCw, Send, AlertTriangle, XCircle, UserMinus, Bell, Building2, ArrowRight } from "lucide-react";
+import { ActivityLogFeed, AttributionCard, AIInsightsCard } from "@/components/DashboardWidgets";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Dashboard — SAMWELL SMS HUB" }] }),
@@ -122,6 +123,12 @@ function Overview() {
       </div>
 
       <DeliveryAlerts />
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <ActivityLogFeed />
+        <AttributionCard />
+        <AIInsightsCard />
+      </div>
 
       <RecentCampaigns />
     </div>
