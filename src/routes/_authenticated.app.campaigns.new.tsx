@@ -515,7 +515,7 @@ function NewCampaignPage() {
           {step === 4 ? (
             <>
               <Button variant="outline" onClick={() => saveCampaign(false)} disabled={saving}>Save as draft</Button>
-              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient}>
+              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient || hasMissingSender}>
                 {s.sendMode === "now" ? "Launch now" : "Schedule"}
               </Button>
             </>
