@@ -63,25 +63,18 @@ function SettingsPage() {
         <Button onClick={() => save.mutate()} disabled={save.isPending}>Save changes</Button>
       </Card>
 
-      <Card className="p-6 space-y-3">
-        <h3 className="font-semibold flex items-center gap-2"><Shield className="size-4" /> Admin access</h3>
-        {isAdmin.data ? (
-          <>
-            <div className="flex items-center gap-2 text-sm text-success">
-              <CheckCircle2 className="size-4" />
-              You have admin privileges. Manage who else can be an admin from the User management page.
-            </div>
-            <Button asChild variant="outline" size="sm">
-              <Link to="/app/admin/users">Manage users & roles</Link>
-            </Button>
-          </>
-        ) : (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Lock className="size-4" />
-            Admin access is granted by the platform owner. Contact your administrator if you need elevated permissions.
+      {isAdmin.data && (
+        <Card className="p-6 space-y-3">
+          <h3 className="font-semibold flex items-center gap-2"><Shield className="size-4" /> Admin access</h3>
+          <div className="flex items-center gap-2 text-sm text-success">
+            <CheckCircle2 className="size-4" />
+            You have admin privileges. Manage who else can be an admin from the User management page.
           </div>
-        )}
-      </Card>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/app/admin/users">Manage users & roles</Link>
+          </Button>
+        </Card>
+      )}
 
 
       <Card className="p-6 space-y-3">
