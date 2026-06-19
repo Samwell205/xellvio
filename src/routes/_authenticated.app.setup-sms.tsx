@@ -153,7 +153,9 @@ function SenderStatusList({
 
 function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () => void }) {
   const saveSender = useServerFn(saveCustomSenderId);
-  const senderCountries = COUNTRIES.filter((c) => c.code !== "US" && c.code !== "CA");
+  // US & CA do not support alphanumeric Sender IDs (carrier rule) — shown but disabled.
+  const ALPHA_UNSUPPORTED = new Set(["US", "CA"]);
+  const senderCountries = COUNTRIES;
   const existingSender =
     assets.find((asset) => asset.sender_kind === "sender_id")?.phone_number ?? "";
   const existingCountries = assets
