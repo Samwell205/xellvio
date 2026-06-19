@@ -34,16 +34,72 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // Fire-and-forget admin notification (do not fail request if notify breaks).
+    // Try to auto-review and auto-purchase the number on Twilio.
+    // Failures here never break the submission — the request just stays
+    // pending for manual review.
+    let autoResult: { provisioned: boolean; phone_number?: string; note?: string } = { provisioned: false };
+    try {
+      const { autoReview, autoPurchaseNumber } = await import("./auto-provision-number.server");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+      const review = autoReview({
+        country: data.country,
+        number_type: data.number_type,
+        business_name: data.business_name,
+        business_website: data.business_website || null,
+        use_case: data.use_case,
+        sample_message: data.sample_message,
+        expected_monthly_volume: data.expected_monthly_volume,
+      });
+
+      if (!review.ok) {
+        autoResult = { provisioned: false, note: review.reason };
+        await supabaseAdmin
+          .from("number_requests")
+          .update({ admin_notes: `Auto-review: ${review.reason}` })
+          .eq("id", row.id);
+      } else {
+        const purchased = await autoPurchaseNumber({
+          country: data.country,
+          number_type: data.number_type as "toll_free" | "ten_dlc",
+          friendlyName: `${data.business_name} (${data.country})`,
+        });
+        await supabaseAdmin
+          .from("number_requests")
+          .update({
+            status: "provisioned",
+            assigned_phone_number: purchased.phone_number,
+            admin_notes: "Auto-approved and provisioned by system.",
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq("id", row.id);
+        autoResult = { provisioned: true, phone_number: purchased.phone_number };
+      }
+    } catch (e: any) {
+      console.error("[number-requests] auto-provision failed", e);
+      autoResult = { provisioned: false, note: e?.message ?? "Auto-provisioning failed; queued for manual review." };
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await supabaseAdmin
+          .from("number_requests")
+          .update({ admin_notes: `Auto-provision error: ${autoResult.note}` })
+          .eq("id", row.id);
+      } catch {}
+    }
+
+    // Admin notification (fire-and-forget).
     try {
       const { sendAdminSms } = await import("./admin-notify.server");
-      const msg = `New ${data.country} ${data.number_type.replace("_", " ")} number request from ${data.business_name}. Volume: ${data.expected_monthly_volume}/mo. Review in admin → Number requests.`;
+      const status = autoResult.provisioned
+        ? `AUTO-PROVISIONED ${autoResult.phone_number}`
+        : `pending manual review (${autoResult.note ?? "see admin"})`;
+      const msg = `New ${data.country} ${data.number_type.replace("_", " ")} request from ${data.business_name} — ${status}.`;
       await sendAdminSms(msg);
     } catch (e) {
       console.error("[number-requests] admin notify failed", e);
     }
 
-    return row;
+    return { ...row, auto: autoResult };
   });
 
 
