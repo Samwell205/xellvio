@@ -51,10 +51,37 @@ const STOP_LINE = "\nReply STOP to unsubscribe.";
 
 function NewCampaignPage() {
   const navigate = useNavigate();
+  const search = useSearch({ from: "/_authenticated/app/campaigns/new" });
   const [step, setStep] = useState<StepIdx>(0);
+  const [campaignId, setCampaignId] = useState<string | null>(search.id ?? null);
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
+  });
+
+  // Load existing draft when editing
+  useQuery({
+    queryKey: ["campaign-draft", campaignId],
+    enabled: !!campaignId,
+    queryFn: async () => {
+      const { data } = await supabase.from("campaigns").select("*").eq("id", campaignId!).maybeSingle();
+      if (data) {
+        const aud: any = data.audience ?? {};
+        setS((prev) => ({
+          ...prev,
+          name: data.name ?? "",
+          include: aud.include ?? [],
+          exclude: aud.exclude ?? [],
+          profileIds: aud.profile_ids ?? [],
+          body: (data.message_body ?? "").replace(STOP_LINE, ""),
+          mediaUrl: data.media_url ?? "",
+          sendMode: (data.send_mode as any) ?? "now",
+          scheduleAt: data.schedule_at ? new Date(data.schedule_at).toISOString().slice(0, 16) : "",
+          smartSkipHours: data.smart_skip_hours ?? 8,
+        }));
+      }
+      return data;
+    },
   });
 
   const segmentsQ = useQuery({
