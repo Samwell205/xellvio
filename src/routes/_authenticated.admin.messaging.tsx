@@ -76,10 +76,10 @@ function AdminMessagingPage() {
                 <tr>
                   <th className="p-3">When</th>
                   <th className="p-3">Tenant</th>
-                  <th className="p-3">From</th>
+                  <th className="p-3">Campaign</th>
                   <th className="p-3">To</th>
                   <th className="p-3">Country</th>
-                  <th className="p-3 text-right">Price</th>
+                  <th className="p-3 text-right">Cost</th>
                   <th className="p-3">Status</th>
                   <th className="p-3">Error</th>
                 </tr>
@@ -89,10 +89,10 @@ function AdminMessagingPage() {
                   <tr key={m.id} className="border-t">
                     <td className="p-3 text-muted-foreground whitespace-nowrap">{new Date(m.created_at).toLocaleString()}</td>
                     <td className="p-3 truncate max-w-[180px]">{m.account_label}</td>
-                    <td className="p-3 tabular-nums">{m.from_e164 ?? "—"}</td>
-                    <td className="p-3 tabular-nums">{m.to_e164}</td>
+                    <td className="p-3 truncate max-w-[160px] text-muted-foreground">{m.campaign_name ?? "—"}</td>
+                    <td className="p-3 tabular-nums">{m.phone_e164}</td>
                     <td className="p-3">{m.country_code ?? "—"}</td>
-                    <td className="p-3 text-right tabular-nums">{m.price ? formatUSD(Number(m.price)) : "—"}</td>
+                    <td className="p-3 text-right tabular-nums">{m.cost ? formatUSD(Number(m.cost)) : "—"}</td>
                     <td className="p-3"><Badge variant={m.status === "delivered" ? "default" : m.status === "failed" || m.status === "undelivered" ? "destructive" : "secondary"}>{m.status}</Badge></td>
                     <td className="p-3 text-xs text-destructive">{m.error_code ?? ""}</td>
                   </tr>
