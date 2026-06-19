@@ -137,6 +137,10 @@ function NewCampaignPage() {
   const hasVerified = senderList.some((x) => x.verification_status === "verified");
   const hasPending = senderList.some((x) => x.verification_status === "submitted" || x.verification_status === "in_review");
   const hasRejected = senderList.some((x) => x.verification_status === "rejected");
+  const verifiedSenderSummary = senderList
+    .filter((x) => x.verification_status === "verified")
+    .map((x) => `${x.country_code}: ${x.phone_number || x.messaging_service_sid || "Sender ID"}`)
+    .join(" · ");
 
   // Map country -> verified sender (auto-routing preview)
   const sendersByCountry = useMemo(() => {
@@ -210,12 +214,14 @@ function NewCampaignPage() {
   const callTestSend = useServerFn(sendTestSms);
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const testCountry = useMemo(() => countryFromPhone(s.testTo, rates), [s.testTo, rates]);
+  const testSender = testCountry ? sendersByCountry[testCountry] : null;
 
   async function runTestSend() {
     if (!s.testTo) { toast.error("Enter a phone number to test"); return; }
     setSending(true);
     try {
-      const res = await callTestSend({ data: { to: s.testTo, body: bodyWithStop } });
+      const res = await callTestSend({ data: { to: s.testTo, body: bodyWithStop, country: testCountry ?? undefined } });
       toast.success(`Test sent (sid ${res.sid.slice(0, 10)}…)`);
       setS({ ...s, testSent: true });
     } catch (e: any) {
@@ -317,6 +323,17 @@ function NewCampaignPage() {
           </div>
         )}
       </div>
+
+      {hasVerified && (
+        <Card className="p-4 flex items-center gap-3 border-success/40 bg-success/5">
+          <CheckCircle2 className="size-5 text-success" />
+          <div className="flex-1 text-sm">
+            <div className="font-semibold">Approved sender ready</div>
+            <div className="text-muted-foreground">{verifiedSenderSummary}</div>
+          </div>
+          <Link to="/app/setup-sms"><Button size="sm" variant="outline">View status</Button></Link>
+        </Card>
+      )}
 
       {!hasVerified && senderList.length > 0 && (
         <Card className={`p-4 flex items-center gap-3 ${hasRejected ? "border-destructive/40 bg-destructive/5" : "border-primary/40 bg-primary/5"}`}>
@@ -471,12 +488,27 @@ function NewCampaignPage() {
           </div>
           <div>
             <Label>Send test to (E.164 phone)</Label>
+            {s.testTo && testCountry && (
+              <div className="mt-1 mb-2 text-xs rounded-md border bg-muted/30 px-3 py-2 flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Test route: {testCountry}</span>
+                {testSender ? (
+                  <span className="font-mono font-semibold">From {testSender.phone_number || testSender.messaging_service_sid}</span>
+                ) : (
+                  <span className="text-destructive font-medium">No verified sender for {testCountry}</span>
+                )}
+              </div>
+            )}
             <div className="flex gap-2 mt-1">
               <Input value={s.testTo} onChange={(e) => setS({ ...s, testTo: e.target.value })} placeholder="+15551234567" />
-              <Button onClick={runTestSend} disabled={sending || !s.body.trim()}>
+              <Button onClick={runTestSend} disabled={sending || !s.body.trim() || (!!testCountry && !testSender)}>
                 <Send className="size-4 mr-1.5" />{sending ? "Sending…" : "Send test"}
               </Button>
             </div>
+            {testCountry && !testSender && (
+              <div className="text-xs text-destructive mt-2">
+                Add or approve a sender for {testCountry} before sending this test.
+              </div>
+            )}
             {s.testSent && <div className="text-sm text-success mt-2 flex items-center gap-1"><CheckCircle2 className="size-4" /> Test sent. You can proceed.</div>}
           </div>
         </Card>
