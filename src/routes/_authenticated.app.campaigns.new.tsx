@@ -58,6 +58,30 @@ function NewCampaignPage() {
     queryFn: async () => (await supabase.from("segments").select("id,name,query").order("name")).data ?? [],
   });
 
+  const listsQ = useQuery({
+    queryKey: ["lists-pick"],
+    queryFn: async () => (await supabase.from("contact_lists").select("id,name").order("name")).data ?? [],
+  });
+  const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
+
+  // Expand selected contact lists into profile IDs and merge into s.profileIds
+  useQuery({
+    queryKey: ["list-members-expand", selectedListIds],
+    enabled: selectedListIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profile_list_members")
+        .select("profile_id")
+        .in("list_id", selectedListIds);
+      const ids = Array.from(new Set((data ?? []).map((m: any) => m.profile_id)));
+      setS((prev) => {
+        const manual = prev.profileIds.filter((id) => !prev._fromLists?.includes(id));
+        return { ...prev, profileIds: Array.from(new Set([...manual, ...ids])), _fromLists: ids } as any;
+      });
+      return ids;
+    },
+  });
+
   const ratesQ = useQuery({
     queryKey: ["country-rates-active"],
     queryFn: async () =>
