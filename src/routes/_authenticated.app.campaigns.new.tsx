@@ -34,6 +34,7 @@ type State = {
   include: string[];
   exclude: string[];
   profileIds: string[];
+  _fromLists?: string[];
   body: string;
   mediaUrl: string;
   sendMode: "now" | "scheduled" | "smart";
@@ -56,6 +57,30 @@ function NewCampaignPage() {
   const segmentsQ = useQuery({
     queryKey: ["segments-pick"],
     queryFn: async () => (await supabase.from("segments").select("id,name,query").order("name")).data ?? [],
+  });
+
+  const listsQ = useQuery({
+    queryKey: ["lists-pick"],
+    queryFn: async () => (await supabase.from("contact_lists").select("id,name").order("name")).data ?? [],
+  });
+  const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
+
+  // Expand selected contact lists into profile IDs and merge into s.profileIds
+  useQuery({
+    queryKey: ["list-members-expand", selectedListIds],
+    enabled: selectedListIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profile_list_members")
+        .select("profile_id")
+        .in("list_id", selectedListIds);
+      const ids = Array.from(new Set((data ?? []).map((m: any) => m.profile_id)));
+      setS((prev) => {
+        const manual = prev.profileIds.filter((id) => !prev._fromLists?.includes(id));
+        return { ...prev, profileIds: Array.from(new Set([...manual, ...ids])), _fromLists: ids } as any;
+      });
+      return ids;
+    },
   });
 
   const ratesQ = useQuery({
@@ -211,6 +236,17 @@ function NewCampaignPage() {
             <Label>Campaign name</Label>
             <Input value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Black Friday — US" />
           </div>
+          <ListPicker
+            lists={listsQ.data ?? []}
+            selected={selectedListIds}
+            onChange={setSelectedListIds}
+          />
+          <SegmentPicker
+            title="Include segments"
+            segments={segmentsQ.data ?? []}
+            selected={s.include}
+            onChange={(ids) => setS({ ...s, include: ids })}
+          />
           <ContactPicker selected={s.profileIds} onChange={(ids) => setS({ ...s, profileIds: ids })} />
           <Card className="p-4 flex items-center justify-between bg-primary/5 border-primary/30">
             <div className="flex items-center gap-3">
@@ -563,6 +599,33 @@ function ContactPicker({ selected, onChange }: { selected: string[]; onChange: (
         ))}
       </div>
       <p className="text-xs text-muted-foreground">Only subscribed, non-suppressed contacts will receive the message.</p>
+    </div>
+  );
+}
+
+function ListPicker({ lists, selected, onChange }: { lists: { id: string; name: string }[]; selected: string[]; onChange: (ids: string[]) => void }) {
+  function toggle(id: string) {
+    onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
+  }
+  return (
+    <div>
+      <Label>Pick contact lists</Label>
+      <div className="grid sm:grid-cols-2 gap-2 mt-1">
+        {lists.length === 0 && (
+          <div className="text-xs text-muted-foreground">
+            No lists yet. <Link to="/app/audience" className="text-primary underline">Create a list</Link>.
+          </div>
+        )}
+        {lists.map((l) => {
+          const on = selected.includes(l.id);
+          return (
+            <label key={l.id} className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer ${on ? "border-primary bg-primary/5" : ""}`}>
+              <Checkbox checked={on} onCheckedChange={() => toggle(l.id)} />
+              <div className="font-medium text-sm">{l.name}</div>
+            </label>
+          );
+        })}
+      </div>
     </div>
   );
 }
