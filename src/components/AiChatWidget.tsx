@@ -74,7 +74,7 @@ export function AiChatWidget() {
       >
         <div className="flex items-center justify-between border-b bg-secondary px-4 py-3 text-secondary-foreground">
           <div>
-            <div className="text-sm font-semibold">Samwell Support</div>
+            <div className="text-sm font-semibold">SAMWELL SMS HUB Support</div>
             <div className="text-xs opacity-70">AI assistant • replies in seconds</div>
           </div>
           <button onClick={() => setOpen(false)} aria-label="Close" className="opacity-70 hover:opacity-100">

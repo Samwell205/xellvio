@@ -239,7 +239,7 @@ function DeliveryProcess() {
 
 function Testimonials() {
   const items = [
-    { q: "Samwell cut our messaging costs by 38% while improving delivery to Africa and Asia.", a: "Maya Chen", r: "Head of Growth, Northwind" },
+    { q: "SAMWELL SMS HUB cut our messaging costs by 38% while improving delivery to Africa and Asia.", a: "Maya Chen", r: "Head of Growth, Northwind" },
     { q: "The API was a breeze — we went live in a day and handled 2M messages in the first week.", a: "Devon Park", r: "CTO, Lumen" },
     { q: "Best analytics we've used. Country-level breakdowns shaped our entire GTM.", a: "Sara Lopez", r: "Marketing Director, Globex" },
   ];
