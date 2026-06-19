@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Phone, ShieldCheck } from "lucide-react";
 import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant-twilio.functions";
+import { getProvisioningStatus, saveBusinessProfile } from "@/lib/account.functions";
 
 export const Route = createFileRoute("/_authenticated/app/onboarding")({
   head: () => ({ meta: [{ title: "Set up your business — SAMWELL SMS HUB" }] }),
@@ -44,9 +45,24 @@ function OnboardingPage() {
   const qc = useQueryClient();
   const [form, setForm] = useState<Form>(empty);
 
+  const provisioningFn = useServerFn(getProvisioningStatus);
+  const saveProfileFn = useServerFn(saveBusinessProfile);
+
   const account = useQuery({
     queryKey: ["account"],
-    queryFn: async () => (await supabase.from("accounts").select("*").maybeSingle()).data,
+    queryFn: async () =>
+      (await supabase
+        .from("accounts")
+        .select(
+          "id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,subaccount_phone_number,subaccount_messaging_service_sid"
+        )
+        .maybeSingle()).data,
+  });
+
+  const provisioning = useQuery({
+    queryKey: ["provisioning-status"],
+    queryFn: () => provisioningFn(),
+    refetchInterval: 10_000,
   });
 
   useEffect(() => {
@@ -67,20 +83,11 @@ function OnboardingPage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
-      const required: (keyof Form)[] = ["legal_business_name", "business_address", "business_reg_number", "website_url", "contact_email"];
-      for (const k of required) {
-        if (!form[k].trim()) throw new Error(`${k.replace(/_/g, " ")} is required`);
-      }
-      const { error } = await supabase
-        .from("accounts")
-        .update({ ...form, onboarding_status: "profile_complete" })
-        .eq("id", u.user.id);
-      if (error) throw error;
+      await saveProfileFn({ data: form });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account"] });
+      qc.invalidateQueries({ queryKey: ["provisioning-status"] });
       toast.success("Business profile saved");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -130,12 +137,12 @@ function OnboardingPage() {
         </Card>
       )}
 
-      {step === 2 && <SenderStep account={account.data} />}
+      {step === 2 && <SenderStep provisioning={provisioning.data} />}
     </div>
   );
 }
 
-function SenderStep({ account }: { account: any }) {
+function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; hasNumber: boolean; phoneNumber: string | null } | undefined }) {
   const qc = useQueryClient();
   const provision = useServerFn(provisionSubaccount);
   const search = useServerFn(searchNumbers);
@@ -148,6 +155,7 @@ function SenderStep({ account }: { account: any }) {
     mutationFn: () => provision(),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["account"] });
+      qc.invalidateQueries({ queryKey: ["provisioning-status"] });
       toast.success(r.already ? "Subaccount already provisioned" : "Twilio subaccount created");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -163,13 +171,14 @@ function SenderStep({ account }: { account: any }) {
     mutationFn: (phoneNumber: string) => purchase({ data: { phoneNumber } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account"] });
+      qc.invalidateQueries({ queryKey: ["provisioning-status"] });
       toast.success("Number purchased — your account is live!");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const hasSub = !!account?.twilio_subaccount_sid;
-  const hasNumber = !!account?.subaccount_phone_number;
+  const hasSub = !!provisioning?.hasSubaccount;
+  const hasNumber = !!provisioning?.hasNumber;
 
   return (
     <div className="space-y-4">
@@ -179,7 +188,7 @@ function SenderStep({ account }: { account: any }) {
           {hasSub && <Badge variant="default">Provisioned</Badge>}
         </div>
         {hasSub ? (
-          <p className="text-sm text-muted-foreground">SID: <span className="font-mono text-xs">{account.twilio_subaccount_sid}</span></p>
+          <p className="text-sm text-muted-foreground">Your dedicated Twilio subaccount is active. Credentials are encrypted at rest and only available to server functions.</p>
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
@@ -200,7 +209,7 @@ function SenderStep({ account }: { account: any }) {
         </div>
         {hasNumber ? (
           <p className="text-sm">
-            Your sender: <span className="font-mono">{account.subaccount_phone_number}</span>
+            Your sender: <span className="font-mono">{provisioning?.phoneNumber}</span>
           </p>
         ) : !hasSub ? (
           <p className="text-sm text-muted-foreground">Provision your subaccount first.</p>

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, ShieldOff, ShieldCheck } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { adminSetSuspension } from "@/lib/account.functions";
 
 export const Route = createFileRoute("/_authenticated/app/admin/accounts")({
   head: () => ({ meta: [{ title: "Tenant accounts — Admin" }] }),
@@ -30,17 +32,10 @@ function AdminAccountsPage() {
     },
   });
 
+  const suspendFn = useServerFn(adminSetSuspension);
   const setStatus = useMutation({
-    mutationFn: async ({ id, suspend }: { id: string; suspend: boolean }) => {
-      const { error } = await supabase
-        .from("accounts")
-        .update({
-          onboarding_status: suspend ? "suspended" : "active",
-          suspended_at: suspend ? new Date().toISOString() : null,
-        })
-        .eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: ({ id, suspend }: { id: string; suspend: boolean }) =>
+      suspendFn({ data: { accountId: id, suspend } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
       toast.success("Tenant updated");
