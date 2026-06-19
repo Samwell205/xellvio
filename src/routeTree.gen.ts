@@ -40,6 +40,7 @@ import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
+import { Route as AuthenticatedAppAdminUsersRouteImport } from './routes/_authenticated.app.admin.users'
 import { Route as AuthenticatedAppAdminRatesRouteImport } from './routes/_authenticated.app.admin.rates'
 import { Route as AuthenticatedAppAdminNumberRequestsRouteImport } from './routes/_authenticated.app.admin.number-requests'
 import { Route as AuthenticatedAppAdminMessagesRouteImport } from './routes/_authenticated.app.admin.messages'
@@ -217,6 +218,12 @@ const AuthenticatedAppCampaignsIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const AuthenticatedAppAdminUsersRoute =
+  AuthenticatedAppAdminUsersRouteImport.update({
+    id: '/app/admin/users',
+    path: '/app/admin/users',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppAdminRatesRoute =
   AuthenticatedAppAdminRatesRouteImport.update({
     id: '/app/admin/rates',
@@ -279,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/app/admin/messages': typeof AuthenticatedAppAdminMessagesRoute
   '/app/admin/number-requests': typeof AuthenticatedAppAdminNumberRequestsRoute
   '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
+  '/app/admin/users': typeof AuthenticatedAppAdminUsersRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -314,6 +322,7 @@ export interface FileRoutesByTo {
   '/app/admin/messages': typeof AuthenticatedAppAdminMessagesRoute
   '/app/admin/number-requests': typeof AuthenticatedAppAdminNumberRequestsRoute
   '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
+  '/app/admin/users': typeof AuthenticatedAppAdminUsersRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -353,6 +362,7 @@ export interface FileRoutesById {
   '/_authenticated/app/admin/messages': typeof AuthenticatedAppAdminMessagesRoute
   '/_authenticated/app/admin/number-requests': typeof AuthenticatedAppAdminNumberRequestsRoute
   '/_authenticated/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
+  '/_authenticated/app/admin/users': typeof AuthenticatedAppAdminUsersRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -392,6 +402,7 @@ export interface FileRouteTypes {
     | '/app/admin/messages'
     | '/app/admin/number-requests'
     | '/app/admin/rates'
+    | '/app/admin/users'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -427,6 +438,7 @@ export interface FileRouteTypes {
     | '/app/admin/messages'
     | '/app/admin/number-requests'
     | '/app/admin/rates'
+    | '/app/admin/users'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -465,6 +477,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin/messages'
     | '/_authenticated/app/admin/number-requests'
     | '/_authenticated/app/admin/rates'
+    | '/_authenticated/app/admin/users'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
@@ -709,6 +722,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/_authenticated/app/admin/users': {
+      id: '/_authenticated/app/admin/users'
+      path: '/app/admin/users'
+      fullPath: '/app/admin/users'
+      preLoaderRoute: typeof AuthenticatedAppAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/admin/rates': {
       id: '/_authenticated/app/admin/rates'
       path: '/app/admin/rates'
@@ -798,6 +818,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppAdminMessagesRoute: typeof AuthenticatedAppAdminMessagesRoute
   AuthenticatedAppAdminNumberRequestsRoute: typeof AuthenticatedAppAdminNumberRequestsRoute
   AuthenticatedAppAdminRatesRoute: typeof AuthenticatedAppAdminRatesRoute
+  AuthenticatedAppAdminUsersRoute: typeof AuthenticatedAppAdminUsersRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -819,6 +840,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppAdminNumberRequestsRoute:
     AuthenticatedAppAdminNumberRequestsRoute,
   AuthenticatedAppAdminRatesRoute: AuthenticatedAppAdminRatesRoute,
+  AuthenticatedAppAdminUsersRoute: AuthenticatedAppAdminUsersRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
