@@ -143,33 +143,3 @@
   box-shadow: 0 1px 2px oklch(0.18 0.02 256 / 0.04), 0 8px 24px -8px oklch(0.18 0.02 256 / 0.08);
 }
 
-/* ── Klaviyo-inspired editorial tokens ───────────────────────────── */
-@utility cream-bg { background-color: #faf6ef; }
-@utility cream-panel {
-  background: linear-gradient(160deg, #fbeed9 0%, #f6d9b8 55%, #ebc28d 100%);
-}
-@utility moss-panel {
-  background: linear-gradient(160deg, #d4dbb4 0%, #aebe7e 55%, #7a8a4d 100%);
-}
-@utility blush-panel {
-  background: linear-gradient(160deg, #fde8de 0%, #f7c9b6 55%, #e89c81 100%);
-}
-@utility editorial-card {
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(20,20,20,0.04), 0 18px 40px -18px rgba(20,20,20,0.18);
-}
-@utility chip-blue { background: #cfe6fb; color: #0d2a3f; }
-@utility ink-btn {
-  background: #0a0a0a; color: #ffffff;
-  border-radius: 9999px; padding: 0.85rem 1.5rem;
-  font-weight: 600; display: inline-flex; align-items: center; gap: 0.4rem;
-  transition: transform 0.15s ease, background 0.15s ease;
-}
-@utility ghost-btn {
-  background: transparent; color: #0a0a0a;
-  border-radius: 9999px; border: 1.5px solid #0a0a0a;
-  padding: 0.78rem 1.45rem; font-weight: 600;
-  display: inline-flex; align-items: center;
-  transition: background 0.15s ease;
-}
