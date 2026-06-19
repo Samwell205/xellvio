@@ -24,6 +24,8 @@ import {
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/new")({
   head: () => ({ meta: [{ title: "New campaign — SAMWELL SMS HUB" }] }),
+  validateSearch: (s: Record<string, unknown>) =>
+    z.object({ id: z.string().uuid().optional() }).parse(s),
   component: NewCampaignPage,
 });
 
