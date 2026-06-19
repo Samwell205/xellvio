@@ -231,14 +231,17 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
       <div className="flex flex-wrap gap-2">
         {senderCountries.map((c) => {
           const on = countries.includes(c.code);
+          const disabled = ALPHA_UNSUPPORTED.has(c.code);
           return (
             <button
               key={c.code}
               type="button"
-              onClick={() => toggleCountry(c.code)}
-              className={`px-3 py-1.5 rounded-full border text-sm ${on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+              disabled={disabled}
+              title={disabled ? "US & Canada don't allow alphanumeric Sender IDs — use a phone number instead." : undefined}
+              onClick={() => !disabled && toggleCountry(c.code)}
+              className={`px-3 py-1.5 rounded-full border text-sm ${disabled ? "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-60" : on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
             >
-              {c.name}
+              {c.name}{disabled ? " (N/A)" : ""}
             </button>
           );
         })}
