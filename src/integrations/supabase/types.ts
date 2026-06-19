@@ -273,6 +273,45 @@ export type Database = {
           },
         ]
       }
+      contact_messages: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          ip: string | null
+          message: string
+          name: string
+          status: string
+          topic: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          ip?: string | null
+          message: string
+          name: string
+          status?: string
+          topic?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          ip?: string | null
+          message?: string
+          name?: string
+          status?: string
+          topic?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       country_rates: {
         Row: {
           active: boolean
