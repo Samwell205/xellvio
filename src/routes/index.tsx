@@ -10,6 +10,8 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PerCountryPricing } from "@/components/PerCountryPricing";
+import { SmsCalculator } from "@/components/SmsCalculator";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,6 +44,8 @@ function HomePage() {
         <EditorialReach />
         <HowItWorks />
         <Pricing />
+        <PerCountryPricing />
+        <SmsCalculator />
         <FAQ />
         <CTA />
       </main>
