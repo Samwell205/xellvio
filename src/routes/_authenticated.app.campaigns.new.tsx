@@ -224,24 +224,57 @@ function NewCampaignPage() {
     return true;
   })();
 
+  async function persistCampaign(
+    targetStatus: "draft" | "queued" | "scheduled",
+  ): Promise<string | null> {
+    if (!s.name.trim()) return null;
+    const { data: u } = await supabase.auth.getUser();
+    const payload: any = {
+      account_id: u.user!.id,
+      name: s.name.trim(),
+      audience: audience as any,
+      message_body: bodyWithStop,
+      media_url: s.mediaUrl || null,
+      send_mode: s.sendMode,
+      schedule_at: s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
+      smart_skip_hours: s.smartSkipHours,
+      status: targetStatus,
+    };
+    if (campaignId) {
+      const { error } = await supabase.from("campaigns").update(payload).eq("id", campaignId);
+      if (error) throw error;
+      return campaignId;
+    }
+    const { data, error } = await supabase.from("campaigns").insert(payload).select("id").single();
+    if (error) throw error;
+    setCampaignId(data.id);
+    return data.id;
+  }
+
+  // Autosave draft after user enters a name. Debounced.
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [autoSaved, setAutoSaved] = useState<Date | null>(null);
+  useEffect(() => {
+    if (!s.name.trim()) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(async () => {
+      try {
+        const id = await persistCampaign("draft");
+        if (id) setAutoSaved(new Date());
+      } catch (e) {
+        // silent — manual save still available
+      }
+    }, 1200);
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, JSON.stringify(audience)]);
+
   async function saveCampaign(launch: boolean) {
     if (launch && insufficient) { toast.error("Insufficient balance — top up before launching."); return; }
     setSaving(true);
     try {
-      const { data: u } = await supabase.auth.getUser();
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
-      const { error } = await supabase.from("campaigns").insert({
-        account_id: u.user!.id,
-        name: s.name.trim(),
-        audience: audience as any,
-        message_body: bodyWithStop,
-        media_url: s.mediaUrl || null,
-        send_mode: s.sendMode,
-        schedule_at: s.sendMode === "scheduled" ? new Date(s.scheduleAt).toISOString() : null,
-        smart_skip_hours: s.smartSkipHours,
-        status,
-      });
-      if (error) throw error;
+      await persistCampaign(status);
       toast.success(launch ? "Campaign launched" : "Saved as draft");
       navigate({ to: "/app/campaigns" });
     } catch (e: any) {
