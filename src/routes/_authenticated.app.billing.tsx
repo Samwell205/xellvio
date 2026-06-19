@@ -5,17 +5,15 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Wallet, Settings2, CheckCircle2, Clock, XCircle, Upload, Sparkles } from "lucide-react";
+import { Wallet, Settings2, CheckCircle2, Clock, XCircle, Sparkles } from "lucide-react";
 import { formatUSD, formatMoney } from "@/lib/money";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { saveAutoRecharge } from "@/lib/billing.functions";
-import { listCreditPacks, getBillingSettings, initPaystackCheckout, submitPayoneerPayment, listMyPayments, verifyPaystack } from "@/lib/billing-packs.functions";
+import { listCreditPacks, initPaystackCheckout, listMyPayments, verifyPaystack } from "@/lib/billing-packs.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/app/billing")({
