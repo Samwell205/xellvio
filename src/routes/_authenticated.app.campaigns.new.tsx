@@ -488,12 +488,27 @@ function NewCampaignPage() {
           </div>
           <div>
             <Label>Send test to (E.164 phone)</Label>
+            {s.testTo && testCountry && (
+              <div className="mt-1 mb-2 text-xs rounded-md border bg-muted/30 px-3 py-2 flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Test route: {testCountry}</span>
+                {testSender ? (
+                  <span className="font-mono font-semibold">From {testSender.phone_number || testSender.messaging_service_sid}</span>
+                ) : (
+                  <span className="text-destructive font-medium">No verified sender for {testCountry}</span>
+                )}
+              </div>
+            )}
             <div className="flex gap-2 mt-1">
               <Input value={s.testTo} onChange={(e) => setS({ ...s, testTo: e.target.value })} placeholder="+15551234567" />
-              <Button onClick={runTestSend} disabled={sending || !s.body.trim()}>
+              <Button onClick={runTestSend} disabled={sending || !s.body.trim() || (!!testCountry && !testSender)}>
                 <Send className="size-4 mr-1.5" />{sending ? "Sending…" : "Send test"}
               </Button>
             </div>
+            {testCountry && !testSender && (
+              <div className="text-xs text-destructive mt-2">
+                Add or approve a sender for {testCountry} before sending this test.
+              </div>
+            )}
             {s.testSent && <div className="text-sm text-success mt-2 flex items-center gap-1"><CheckCircle2 className="size-4" /> Test sent. You can proceed.</div>}
           </div>
         </Card>
