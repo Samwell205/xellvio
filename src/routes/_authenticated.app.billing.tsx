@@ -86,7 +86,7 @@ function BillingPage() {
   const balance = Number(account.data?.credit_balance ?? 0);
   const ngnPacks = (packs.data ?? []).filter((p) => p.currency === "NGN");
   const usdPacks = (packs.data ?? []).filter((p) => p.currency === "USD");
-  const defaultCurrency = (settings.data?.default_currency ?? "NGN") as "NGN" | "USD";
+  const defaultCurrency: "NGN" | "USD" = "NGN";
 
   return (
     <div className="space-y-6 max-w-6xl">
