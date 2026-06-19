@@ -33,8 +33,19 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
       .select()
       .single();
     if (error) throw new Error(error.message);
+
+    // Fire-and-forget admin notification (do not fail request if notify breaks).
+    try {
+      const { sendAdminSms } = await import("./admin-notify.server");
+      const msg = `New ${data.country} ${data.number_type.replace("_", " ")} number request from ${data.business_name}. Volume: ${data.expected_monthly_volume}/mo. Review in admin → Number requests.`;
+      await sendAdminSms(msg);
+    } catch (e) {
+      console.error("[number-requests] admin notify failed", e);
+    }
+
     return row;
   });
+
 
 export const listMyNumberRequests = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
