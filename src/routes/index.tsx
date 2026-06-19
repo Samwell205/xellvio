@@ -43,7 +43,6 @@ function HomePage() {
         <EditorialAttribution />
         <EditorialReach />
         <HowItWorks />
-        <Pricing />
         <PerCountryPricing />
         <SmsCalculator />
         <FAQ />
@@ -276,42 +275,6 @@ function HowItWorks() {
   );
 }
 
-function Pricing() {
-  const plans = [
-    { name: "Starter", price: "$0", desc: "For trying things out.", features: ["500 SMS / mo", "1 sender ID", "Email support"], cta: "Start free" },
-    { name: "Business", price: "$49", desc: "For growing teams.", features: ["25,000 SMS / mo", "5 sender IDs", "API access", "Priority support"], cta: "Start trial", featured: true },
-    { name: "Enterprise", price: "Custom", desc: "For high-volume senders.", features: ["Unlimited volume", "Dedicated routes", "Custom integrations", "24/7 SLA"], cta: "Contact sales" },
-  ];
-  return (
-    <section className="bg-background py-24" id="pricing">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <motion.div {...fade} className="max-w-2xl">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground">Simple, scalable plans</h2>
-          <p className="mt-3 text-muted-foreground">Pay for what you use. Upgrade anytime.</p>
-        </motion.div>
-        <div className="mt-12 grid md:grid-cols-3 gap-5 max-w-5xl">
-          {plans.map((p) => (
-            <div key={p.name} className={`rounded-2xl bg-card p-7 ${p.featured ? "ring-2 ring-primary" : "border border-border"}`}>
-              {p.featured && <span className="inline-block mb-3 rounded-full bg-neutral-900 px-3 py-1 text-xs font-semibold text-white">Most popular</span>}
-              <div className="font-semibold text-foreground">{p.name}</div>
-              <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-foreground">{p.price}</span>
-                {p.price !== "Custom" && <span className="text-muted-foreground">/mo</span>}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{p.desc}</p>
-              <ul className="mt-5 space-y-2.5 text-sm">
-                {p.features.map((f) => (
-                  <li key={f} className="flex gap-2 text-muted-foreground"><Check className="size-4 shrink-0 mt-0.5" /> {f}</li>
-                ))}
-              </ul>
-              <Link to="/auth" className={`mt-6 ${p.featured ? "inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-full px-5 py-3 font-semibold hover:bg-primary/90 transition-colors" : "inline-flex items-center gap-1.5 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-full px-5 py-3 font-semibold transition-colors"} w-full justify-center`}>{p.cta}</Link>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function FAQ() {
   const faqs = [
