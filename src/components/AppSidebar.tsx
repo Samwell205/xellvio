@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 const items = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true },
   { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText },
+  { title: "Number requests", url: "/app/number-requests", icon: PhoneCall },
   { title: "Audience", url: "/app/audience", icon: Users },
   { title: "Segments", url: "/app/segments", icon: Filter },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff },
@@ -18,6 +19,7 @@ const items = [
   { title: "Billing", url: "/app/billing", icon: Wallet },
   { title: "SMS Pricing", url: "/app/pricing-calculator", icon: Calculator },
   { title: "Settings", url: "/app/settings", icon: Settings },
+
 ];
 
 export function AppSidebar() {
