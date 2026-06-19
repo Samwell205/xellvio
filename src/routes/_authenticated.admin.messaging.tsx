@@ -26,9 +26,9 @@ function AdminMessagingPage() {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (!search) return true;
       const s = search.toLowerCase();
-      return (r.to_e164 ?? "").toLowerCase().includes(s) ||
+      return (r.phone_e164 ?? "").toLowerCase().includes(s) ||
         (r.account_label ?? "").toLowerCase().includes(s) ||
-        (r.from_e164 ?? "").toLowerCase().includes(s);
+        (r.campaign_name ?? "").toLowerCase().includes(s);
     });
   }, [q.data, search, statusFilter]);
 
