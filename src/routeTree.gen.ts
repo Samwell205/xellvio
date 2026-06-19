@@ -40,6 +40,7 @@ import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
 import { Route as AuthenticatedAppAdminRatesRouteImport } from './routes/_authenticated.app.admin.rates'
+import { Route as AuthenticatedAppAdminMessagesRouteImport } from './routes/_authenticated.app.admin.messages'
 import { Route as AuthenticatedAppAdminBillingRouteImport } from './routes/_authenticated.app.admin.billing'
 import { Route as AuthenticatedAppAdminAccountsRouteImport } from './routes/_authenticated.app.admin.accounts'
 
@@ -214,6 +215,12 @@ const AuthenticatedAppAdminRatesRoute =
     path: '/app/admin/rates',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAppAdminMessagesRoute =
+  AuthenticatedAppAdminMessagesRouteImport.update({
+    id: '/app/admin/messages',
+    path: '/app/admin/messages',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppAdminBillingRoute =
   AuthenticatedAppAdminBillingRouteImport.update({
     id: '/app/admin/billing',
@@ -254,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
   '/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
+  '/app/admin/messages': typeof AuthenticatedAppAdminMessagesRoute
   '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -286,6 +294,7 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
   '/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
+  '/app/admin/messages': typeof AuthenticatedAppAdminMessagesRoute
   '/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -322,6 +331,7 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/admin/accounts': typeof AuthenticatedAppAdminAccountsRoute
   '/_authenticated/app/admin/billing': typeof AuthenticatedAppAdminBillingRoute
+  '/_authenticated/app/admin/messages': typeof AuthenticatedAppAdminMessagesRoute
   '/_authenticated/app/admin/rates': typeof AuthenticatedAppAdminRatesRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/admin/accounts'
     | '/app/admin/billing'
+    | '/app/admin/messages'
     | '/app/admin/rates'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -390,6 +401,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/admin/accounts'
     | '/app/admin/billing'
+    | '/app/admin/messages'
     | '/app/admin/rates'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -425,6 +437,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/_authenticated/app/admin/accounts'
     | '/_authenticated/app/admin/billing'
+    | '/_authenticated/app/admin/messages'
     | '/_authenticated/app/admin/rates'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
@@ -670,6 +683,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAdminRatesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/app/admin/messages': {
+      id: '/_authenticated/app/admin/messages'
+      path: '/app/admin/messages'
+      fullPath: '/app/admin/messages'
+      preLoaderRoute: typeof AuthenticatedAppAdminMessagesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/admin/billing': {
       id: '/_authenticated/app/admin/billing'
       path: '/app/admin/billing'
@@ -734,6 +754,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAdminAccountsRoute: typeof AuthenticatedAppAdminAccountsRoute
   AuthenticatedAppAdminBillingRoute: typeof AuthenticatedAppAdminBillingRoute
+  AuthenticatedAppAdminMessagesRoute: typeof AuthenticatedAppAdminMessagesRoute
   AuthenticatedAppAdminRatesRoute: typeof AuthenticatedAppAdminRatesRoute
 }
 
@@ -751,6 +772,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAdminAccountsRoute: AuthenticatedAppAdminAccountsRoute,
   AuthenticatedAppAdminBillingRoute: AuthenticatedAppAdminBillingRoute,
+  AuthenticatedAppAdminMessagesRoute: AuthenticatedAppAdminMessagesRoute,
   AuthenticatedAppAdminRatesRoute: AuthenticatedAppAdminRatesRoute,
 }
 

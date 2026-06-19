@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, Settings2, Building2, MessageSquareText, CreditCard } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, Settings2, Building2, MessageSquareText, CreditCard, Mail } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -85,6 +85,14 @@ export function AppSidebar() {
                     <Link to="/app/admin/billing" className="flex items-center gap-3">
                       <CreditCard className="size-4" />
                       {!collapsed && <span>Billing admin</span>}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/app/admin/messages")}>
+                    <Link to="/app/admin/messages" className="flex items-center gap-3">
+                      <Mail className="size-4" />
+                      {!collapsed && <span>Contact messages</span>}
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
