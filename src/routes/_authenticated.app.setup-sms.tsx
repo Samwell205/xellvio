@@ -232,22 +232,73 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
       <div className="flex flex-wrap gap-2">
         {senderCountries.map((c) => {
           const on = countries.includes(c.code);
-          const disabled = ALPHA_UNSUPPORTED.has(c.code);
+          const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(c.code);
           return (
             <button
               key={c.code}
               type="button"
-              disabled={disabled}
-              title={disabled ? "US & Canada don't allow alphanumeric Sender IDs — use a phone number instead." : undefined}
-              onClick={() => !disabled && toggleCountry(c.code)}
-              className={`px-3 py-1.5 rounded-full border text-sm ${disabled ? "border-border bg-muted text-muted-foreground cursor-not-allowed opacity-60" : on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+              onClick={() => {
+                if (isAlphaUnsupported) {
+                  setInfoCountry(c.code);
+                } else {
+                  toggleCountry(c.code);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-full border text-sm transition ${
+                isAlphaUnsupported
+                  ? "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                  : on
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border hover:bg-muted"
+              }`}
             >
-              {c.name}{disabled ? " (N/A)" : ""}
+              {c.name}{isAlphaUnsupported ? " · phone number" : ""}
             </button>
           );
         })}
       </div>
+      <UsCanadaInfoDialog code={infoCountry} onClose={() => setInfoCountry(null)} />
     </Card>
+  );
+}
+
+function UsCanadaInfoDialog({ code, onClose }: { code: string | null; onClose: () => void }) {
+  const name = code === "US" ? "United States" : code === "CA" ? "Canada" : "";
+  return (
+    <Dialog open={!!code} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>How sending to {name} works</DialogTitle>
+          <DialogDescription>
+            US and Canadian mobile carriers don't allow alphanumeric Sender IDs (like "SAMWELL"). All messages must come from a real phone number.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div className="rounded-md border p-3 bg-muted/40 space-y-2">
+            <p className="font-medium">Your options for {name}:</p>
+            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+              <li><strong>Toll-free number</strong> (recommended) — fast to provision, supports high-volume marketing & alerts, requires brand verification.</li>
+              <li><strong>10DLC long-code</strong> — local US/CA number, requires brand + campaign registration with the carriers (~1–2 weeks).</li>
+              <li><strong>Short code</strong> — 5–6 digit number for very high volume, slower approval and higher cost.</li>
+            </ul>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            We provision and verify the number for you. Contact us with your expected volume and use case and we'll get the right option set up.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button asChild>
+            <Link
+              to="/contact"
+              search={{ subject: `Request ${name} phone number for SMS` } as never}
+            >
+              Request a {name} number
+            </Link>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
