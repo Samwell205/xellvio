@@ -208,6 +208,19 @@ function PackPicker({ packs }: { packs: any[] }) {
   const [customAmount, setCustomAmount] = useState<number>(50);
 
   useEffect(() => {
+    const url = new URL(window.location.href);
+    const pack = url.searchParams.get("pack");
+    const amt = url.searchParams.get("amount");
+    if (amt && Number(amt) > 0) {
+      setSelected(CUSTOM);
+      setCustomAmount(Math.min(10000, Math.max(5, Number(amt))));
+    } else if (pack && packs.some((p) => p.id === pack)) {
+      setSelected(pack);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [packs.length]);
+
+  useEffect(() => {
     if (!packs.length) return;
     if (selected !== CUSTOM && !packs.some((p) => p.id === selected)) {
       setSelected(packs.find((p) => p.is_popular)?.id ?? packs[0].id);
