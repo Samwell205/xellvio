@@ -4,6 +4,7 @@ import { AdminSidebar } from "@/components/AdminSidebar";
 import { ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { TwilioLowBalanceBanner } from "@/components/TwilioBalanceCard";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async () => {
@@ -28,7 +29,8 @@ function AdminShell() {
             </div>
           </header>
           <main className="flex-1 p-4 md:p-6 max-w-[1500px] w-full mx-auto">
-            <div className="admin-surface text-foreground bg-background rounded-xl border border-slate-800/60 p-4 md:p-6 shadow-2xl">
+            <div className="admin-surface text-foreground bg-background rounded-xl border border-slate-800/60 p-4 md:p-6 shadow-2xl space-y-4">
+              <TwilioLowBalanceBanner />
               <Outlet />
             </div>
           </main>
