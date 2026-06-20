@@ -68,6 +68,9 @@ export function TwilioBalanceCard() {
           threshold_low: lowT,
           threshold_critical: critT,
           alert_email: email,
+          alert_emails: emails,
+          alert_phone_e164: phone,
+          balance_buffer_usd: buffer,
           alerts_enabled: enabled,
         },
       }),
@@ -78,10 +81,24 @@ export function TwilioBalanceCard() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const resume = useMutation({
+    mutationFn: () => resumeFn(),
+    onSuccess: (r: any) => {
+      toast.success(
+        r?.resumed > 0
+          ? `Resumed ${r.resumed} campaign${r.resumed === 1 ? "" : "s"}`
+          : "No campaigns could be resumed yet (Twilio balance still too low)",
+      );
+      qc.invalidateQueries({ queryKey: ["twilio-balance"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const latest = q.data?.latest;
   const status = (latest?.status ?? "healthy") as "healthy" | "low" | "critical" | "error";
   const balance = Number(latest?.balance ?? 0);
   const currency = latest?.currency ?? "USD";
+  const pausedCount = q.data?.pausedCampaignCount ?? 0;
 
   return (
     <Card className="p-5 space-y-5">
