@@ -97,6 +97,69 @@ export const adminListEvents = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+export const adminListCompliance = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const [blockedRes, suspendedRes, eventsRes, accountsRes] = await Promise.all([
+      supabaseAdmin
+        .from("campaigns")
+        .select("id,account_id,name,message_body,status,paused_reason,created_at")
+        .eq("status", "blocked_content")
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabaseAdmin
+        .from("accounts")
+        .select("id,email,company,legal_business_name,onboarding_status,suspended_at")
+        .eq("onboarding_status", "suspended")
+        .order("suspended_at", { ascending: false })
+        .limit(100),
+      supabaseAdmin
+        .from("events")
+        .select("id,account_id,type,payload,created_at")
+        .in("type", ["account_auto_suspended", "campaign_blocked_content", "content_scan_blocked"])
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabaseAdmin.from("accounts").select("id,email,company,legal_business_name"),
+    ]);
+
+    const acctMap = new Map((accountsRes.data ?? []).map((a: any) => [a.id, a]));
+    const label = (a: any) => (a ? (a.legal_business_name || a.company || a.email) : "—");
+
+    return {
+      blockedCampaigns: (blockedRes.data ?? []).map((c: any) => ({
+        ...c,
+        account_label: label(acctMap.get(c.account_id)),
+      })),
+      suspendedAccounts: suspendedRes.data ?? [],
+      events: (eventsRes.data ?? []).map((e: any) => ({
+        ...e,
+        account_label: label(acctMap.get(e.account_id)),
+      })),
+    };
+  });
+
+export const adminReinstateAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { accountId: string }) => input)
+  .handler(async ({ context, data }) => {
+    await ensureAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("accounts")
+      .update({ suspended_at: null, onboarding_status: "active" })
+      .eq("id", data.accountId);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("events").insert({
+      type: "account_reinstated",
+      account_id: data.accountId,
+      payload: { by: context.userId },
+    });
+    return { ok: true };
+  });
+
 export const adminListTollfreeAttempts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
