@@ -982,16 +982,14 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
 
     const { data: asset } = await supabaseAdmin
       .from("sender_assets")
-      .select("id,verification_sid,account_id")
+      .select("id,verification_sid,account_id,phone_sid")
       .eq("account_id", userId)
       .eq("country_code", "US")
       .eq("sender_kind", "toll_free")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!asset?.verification_sid) {
-      return { refreshed: false as const, reason: "No verification has been submitted yet." };
-    }
+    if (!asset) return { refreshed: false as const, reason: "No verification has been submitted yet." };
 
     const { data: acct } = await supabaseAdmin
       .from("accounts")
@@ -1013,21 +1011,30 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
       subToken = m.token;
     }
 
-    const ver = await twilio<any>(
-      `${MESSAGING_API}/Tollfree/Verifications/${asset.verification_sid}`,
-      { sid: subSid, token: subToken },
-    );
+    let verificationSid = asset.verification_sid as string | null;
+    let ver: any = null;
+    if (verificationSid) {
+      ver = await twilio<any>(`${MESSAGING_API}/Tollfree/Verifications/${verificationSid}`, {
+        sid: subSid,
+        token: subToken,
+      });
+    } else if (asset.phone_sid) {
+      ver = await findExistingTollfreeVerification({ phoneSid: asset.phone_sid, sid: subSid, token: subToken });
+      verificationSid = typeof ver?.sid === "string" && ver.sid.trim() ? ver.sid : null;
+    }
+    if (!verificationSid || !ver) {
+      return { refreshed: false as const, reason: "No verification has been submitted yet." };
+    }
     const status = mapStatus(ver.status);
     const reason =
       status === "rejected"
-        ? Array.isArray(ver.rejection_reason)
-          ? ver.rejection_reason.join("; ")
-          : (ver.rejection_reason ?? ver.errors?.[0]?.description ?? "rejected")
+        ? verificationRejectionReason(ver)
         : null;
     await supabaseAdmin
       .from("sender_assets")
       .update({
         verification_status: status,
+        verification_sid: verificationSid,
         rejection_reason: reason,
         friendly_rejection_reason: reason ? friendlyReason(reason) : null,
         last_synced_at: new Date().toISOString(),
