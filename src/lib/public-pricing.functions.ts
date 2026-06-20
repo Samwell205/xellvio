@@ -24,9 +24,9 @@ export const getPublicCountryRates = createServerFn({ method: "GET" }).handler(a
     .order("country_name");
   if (error) throw new Error(error.message);
   return (data ?? []).map((r) => ({
-    country: r.country_name,
-    code: r.country_code,
-    dial: r.dial_prefix,
+    country: r.country_name ?? "",
+    code: r.country_code ?? "",
+    dial: r.dial_prefix ?? "",
     perSms: Number(r.sell_price),
     mmsMult: Number(r.mms_multiplier),
     inbound: Boolean(r.sender_supports_inbound),
