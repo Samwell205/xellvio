@@ -10,7 +10,17 @@ export const Route = createFileRoute("/api/public/cron/twilio-balance-check")({
         }
         const { checkTwilioBalanceAndAlert } = await import("@/lib/twilio-balance.server");
         const result = await checkTwilioBalanceAndAlert();
-        return Response.json(result);
+
+        // Auto-resume any paused campaigns now that we have a fresh balance
+        let resumed: string[] = [];
+        try {
+          const { resumePausedCampaigns } = await import("@/lib/twilio-resume.server");
+          resumed = await resumePausedCampaigns();
+        } catch (e) {
+          console.error("[cron] resumePausedCampaigns failed", e);
+        }
+
+        return Response.json({ ...result, resumed_campaign_ids: resumed });
       },
     },
   },
