@@ -52,7 +52,7 @@ async function dispatchOne(
   campaign: any,
   rates: Rate[],
   sender: Sender,
-): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string }> {
+): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string; paused?: boolean }> {
   await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
 
   const { data: recipients, error } = await supabaseAdmin.rpc("eligible_profile_ids", {
