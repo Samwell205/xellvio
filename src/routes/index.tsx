@@ -14,9 +14,9 @@ import { Card } from "@/components/ui/card";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "SAMWELL SMS HUB — Reach Customers Worldwide" },
+      { title: "Xellio — Reach Customers Worldwide" },
       { name: "description", content: "Send global SMS campaigns with confidence. Bulk messaging, automation, analytics and APIs trusted by modern businesses." },
-      { property: "og:title", content: "SAMWELL SMS HUB — Reach Customers Worldwide" },
+      { property: "og:title", content: "Xellio — Reach Customers Worldwide" },
       { property: "og:description", content: "Fast. Reliable. Compliant global SMS for businesses." },
     ],
   }),
@@ -54,7 +54,7 @@ function Hero() {
     <section className="bg-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-          <p className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">SAMWELL SMS HUB</p>
+          <p className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">Xellio</p>
           <h1 className="mt-4 text-5xl sm:text-6xl md:text-[64px] font-extrabold tracking-tight leading-[1.02] text-foreground">
             SMS marketing<br/>built for smarter sends
           </h1>

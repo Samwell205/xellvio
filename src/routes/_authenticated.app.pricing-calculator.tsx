@@ -13,7 +13,7 @@ import { calculateSegments } from "@/lib/sms-segments";
 import { formatUSD, formatRate } from "@/lib/money";
 
 export const Route = createFileRoute("/_authenticated/app/pricing-calculator")({
-  head: () => ({ meta: [{ title: "SMS Pricing — SAMWELL SMS HUB" }] }),
+  head: () => ({ meta: [{ title: "SMS Pricing — Xellio" }] }),
   component: PricingCalculatorPage,
 });
 

@@ -13,8 +13,8 @@ import { invalidateAllSessions } from "@/lib/auth-security.functions";
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Reset password — SAMWELL SMS HUB" },
-      { name: "description", content: "Set a new password for your SAMWELL SMS HUB account." },
+      { title: "Reset password — Xellio" },
+      { name: "description", content: "Set a new password for your Xellio account." },
     ],
   }),
   component: ResetPasswordPage,

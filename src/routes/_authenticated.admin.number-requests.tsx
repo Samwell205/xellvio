@@ -13,7 +13,7 @@ import { PhoneCall } from "lucide-react";
 import { adminListNumberRequests, adminReviewNumberRequest } from "@/lib/number-requests.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/number-requests")({
-  head: () => ({ meta: [{ title: "Admin · Number requests — SAMWELL SMS HUB" }] }),
+  head: () => ({ meta: [{ title: "Admin · Number requests — Xellio" }] }),
   component: AdminNumberRequestsPage,
 });
 
