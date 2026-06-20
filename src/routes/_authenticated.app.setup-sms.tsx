@@ -448,6 +448,12 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
           </DialogDescription>
         </DialogHeader>
 
+        {coveredByUs && existing && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+            <strong>No separate Canada request needed.</strong> Your US toll-free verification covers Canadian carriers too. Status below reflects your US request.
+          </div>
+        )}
+
         {existing && !showForm ? (
           <div className="space-y-3 text-sm">
             <div className="rounded-md border p-3">
