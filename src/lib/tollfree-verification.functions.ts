@@ -326,6 +326,13 @@ function storedStatus(raw: string | null | undefined): StoredVerificationStatus 
   return "pending";
 }
 
+function verificationRejectionReason(ver: any) {
+  if (Array.isArray(ver?.rejection_reason)) return ver.rejection_reason.join("; ");
+  if (typeof ver?.rejection_reason === "string") return ver.rejection_reason;
+  if (Array.isArray(ver?.errors) && ver.errors[0]?.description) return ver.errors[0].description;
+  return "rejected";
+}
+
 async function findExistingTollfreeVerification(opts: { phoneSid: string; sid: string; token: string }) {
   const query = new URLSearchParams({ TollfreePhoneNumberSid: opts.phoneSid, PageSize: "1" }).toString();
   const page = await twilio<{
@@ -883,7 +890,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
         if (verificationSid) {
           status = mapStatus(existingVerification?.status);
           twilioResponse = existingVerification;
-          rejectionReason = null;
+          rejectionReason = status === "rejected" ? verificationRejectionReason(existingVerification) : null;
         } else {
           status = "rejected";
           rejectionReason = "Twilio says a verification already exists for this number, but did not return its verification ID. Please contact support to reconnect the existing carrier verification.";
