@@ -100,18 +100,28 @@ async function flagAccountForReview(
       payload: { account_id: accountId, reason, detail },
     });
 
-    // Best-effort admin alert
+    // Best-effort admin alert via email queue
     try {
-      const { fireCapacityAlert } = await import("@/lib/twilio-alerts.server");
-      await fireCapacityAlert({
-        kind: "campaign_paused",
-        tenantEmail: acct?.email ?? null,
-        twilioBalance: 0,
-        currency: "USD",
-        campaignCost: 0,
-        shortfall: 0,
-        pausedCampaignCount: undefined,
-      });
+      const { data: settings } = await supabaseAdmin
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "twilio_alert_emails")
+        .maybeSingle();
+      const emailsRaw = String(settings?.value ?? "sam@samwellagency.com");
+      const emails = emailsRaw.split(",").map((s) => s.trim()).filter((s) => s.includes("@"));
+      for (const to of emails) {
+        await supabaseAdmin.rpc("enqueue_email", {
+          queue_name: "transactional_emails",
+          payload: {
+            to,
+            subject: `🚨 Account auto-suspended: prohibited content`,
+            html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px;"><h1 style="color:#b91c1c;">Account Suspended</h1><p>Account ${accountId} (${acct?.email ?? "no email"}) was auto-suspended.</p><p><b>Reason:</b> ${reason}</p><p><b>Detail:</b> ${detail}</p></div>`,
+            text: `Account ${accountId} auto-suspended. Reason: ${reason}. Detail: ${detail}.`,
+            template_name: "account_suspended_alert",
+            message_id: `acct-susp-${accountId}-${Date.now()}`,
+          } as any,
+        });
+      }
     } catch {
       // alert best-effort
     }
