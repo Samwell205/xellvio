@@ -5,6 +5,11 @@ import { z } from "zod";
 const TWILIO_API = "https://api.twilio.com/2010-04-01";
 const MESSAGING_API = "https://messaging.twilio.com/v1";
 
+// Internal mailbox that receives Twilio's toll-free verification status
+// notifications (submitted / approved / rejected / follow-up questions).
+// End users never see donotreply@twilio.com — we send them branded emails.
+const INTERNAL_TFV_CONTACT_EMAIL = "admin@xellvio.com";
+
 function masterAuth() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
@@ -883,7 +888,10 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       TollfreePhoneNumberSid: phoneSid,
       BusinessName: data.legalEntityName,
       BusinessWebsite: data.websiteUrl,
-      NotificationEmail: data.notificationEmail,
+      // Route Twilio's TFV status notifications to our internal inbox so the
+      // customer never sees emails from donotreply@twilio.com. We re-notify the
+      // customer ourselves with branded emails from admin@xellvio.com.
+      NotificationEmail: INTERNAL_TFV_CONTACT_EMAIL,
       UseCaseCategories: data.useCaseCategories,
       UseCaseSummary: data.useCaseDescription,
       ProductionMessageSample: data.sampleMessage,
