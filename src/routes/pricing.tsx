@@ -4,6 +4,9 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { CreditPacks } from "@/components/CreditPacks";
 import { SmsCalculator } from "@/components/SmsCalculator";
 import { PerCountryPricing } from "@/components/PerCountryPricing";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getPublicCountryRates } from "@/lib/public-pricing.functions";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -18,6 +21,10 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function PricingPage() {
+  const loadRates = useServerFn(getPublicCountryRates);
+  const ratesQ = useQuery({ queryKey: ["public-country-rates"], queryFn: () => loadRates() });
+  const rates = ratesQ.data;
+
   return (
     <div className="min-h-screen flex flex-col">
       <MarketingNav />
@@ -35,8 +42,8 @@ function PricingPage() {
           </div>
         </section>
         <CreditPacks />
-        <SmsCalculator />
-        <PerCountryPricing />
+        <SmsCalculator rates={rates} />
+        <PerCountryPricing rates={rates} />
       </main>
       <MarketingFooter />
     </div>

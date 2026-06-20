@@ -96,3 +96,31 @@ export const adminListEvents = createServerFn({ method: "GET" })
       .limit(200);
     return data ?? [];
   });
+
+export const adminListTollfreeAttempts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [attemptsRes, accountsRes] = await Promise.all([
+      (supabaseAdmin as any)
+        .from("tollfree_verification_attempts")
+        .select("id,account_id,actor_user_id,sender_asset_id,phone_number,phone_sid,messaging_service_sid,verification_sid,attempt_status,failure_reason,friendly_failure_reason,twilio_status,twilio_code,twilio_more_info,twilio_response,request_summary,created_at,updated_at")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabaseAdmin.from("accounts").select("id,email,company,legal_business_name,full_name"),
+    ]);
+    if (attemptsRes.error) throw new Error(attemptsRes.error.message);
+    if (accountsRes.error) throw new Error(accountsRes.error.message);
+    const accountMap = new Map((accountsRes.data ?? []).map((a: any) => [a.id, a]));
+    return (attemptsRes.data ?? []).map((attempt: any) => {
+      const account = accountMap.get(attempt.account_id);
+      return {
+        ...attempt,
+        account_label: account?.legal_business_name || account?.company || account?.email || attempt.account_id,
+        account_email: account?.email ?? null,
+        actor_label:
+          account?.full_name || account?.email || (attempt.actor_user_id === attempt.account_id ? "Account owner" : attempt.actor_user_id),
+      };
+    });
+  });

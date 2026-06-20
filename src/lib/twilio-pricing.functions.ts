@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+function round4(n: number) {
+  return Math.round(n * 10000) / 10000;
+}
+
 export const syncTwilioPricing = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -27,6 +31,23 @@ export const setDefaultMarkup = createServerFn({ method: "POST" })
         { onConflict: "key" },
       );
     if (error) throw new Error(error.message);
+    const { data: rows, error: rowsError } = await supabaseAdmin
+      .from("country_rates")
+      .select("id,cost_price")
+      .eq("manual_override", false);
+    if (rowsError) throw new Error(rowsError.message);
+    await Promise.all(
+      (rows ?? []).map((row) =>
+        supabaseAdmin
+          .from("country_rates")
+          .update({
+            markup_percent: data.percent,
+            sell_price: round4(Number(row.cost_price) * (1 + data.percent / 100)),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", row.id),
+      ),
+    );
     return { ok: true, percent: data.percent };
   });
 

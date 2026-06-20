@@ -112,6 +112,7 @@ function AdminRatesPage() {
     onSuccess: () => {
       toast.success("Default markup updated. Next sync will reprice non-overridden countries.");
       qc.invalidateQueries({ queryKey: ["default-markup"] });
+      qc.invalidateQueries({ queryKey: ["admin-rates"] });
       setMarkupDraft("");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -123,8 +124,21 @@ function AdminRatesPage() {
     r.country_code.toLowerCase().includes(search.toLowerCase()),
   );
 
+  function calculateSell(cost: number, markup: number) {
+    if (!Number.isFinite(cost) || !Number.isFinite(markup)) return 0;
+    return Math.round(cost * (1 + markup / 100) * 10000) / 10000;
+  }
   function patch(id: string, p: Partial<Row>) {
-    setEdits((e) => ({ ...e, [id]: { ...(e[id] ?? {}), ...p } }));
+    setEdits((e) => {
+      const base = ratesQ.data?.find((row) => row.id === id);
+      const next = { ...(e[id] ?? {}), ...p };
+      if ((p.cost_price !== undefined || p.markup_percent !== undefined) && base) {
+        const cost = Number(next.cost_price ?? base.cost_price);
+        const markup = Number(next.markup_percent ?? base.markup_percent ?? markupQ.data?.percent ?? 40);
+        next.sell_price = calculateSell(cost, markup);
+      }
+      return { ...e, [id]: next };
+    });
   }
   function current(row: Row): Row { return { ...row, ...(edits[row.id] ?? {}) } as Row; }
 

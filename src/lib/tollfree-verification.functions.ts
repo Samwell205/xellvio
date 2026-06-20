@@ -42,6 +42,7 @@ async function twilio<T = any>(
     (err as any).twilioCode = json?.code;
     (err as any).twilioStatus = res.status;
     (err as any).twilioMore = json?.more_info;
+    (err as any).twilioResponse = json;
     throw err;
   }
   return json as T;
@@ -62,7 +63,60 @@ function friendlyReason(raw: string | undefined): string {
     return "The business address couldn't be verified. Check it for typos.";
   if (t.includes("name") || t.includes("entity"))
     return "The legal business name doesn't match a verifiable registration.";
+  if (t.includes("verification id") || t.includes("verification sid"))
+    return "Twilio did not accept the toll-free verification request. No new number was purchased; review the form and retry now.";
   return raw!;
+}
+
+function attemptTwilioFields(e: any, reason: string) {
+  const safeReason = reason || "Submission failed";
+  return {
+    failure_reason: safeReason,
+    friendly_failure_reason: friendlyReason(safeReason),
+    twilio_status: typeof e?.twilioStatus === "number" ? e.twilioStatus : null,
+    twilio_code: e?.twilioCode != null ? String(e.twilioCode) : null,
+    twilio_more_info: e?.twilioMore ?? null,
+    twilio_response: e?.twilioResponse ?? null,
+  };
+}
+
+function requestSummary(data: TollfreeVerificationPayload) {
+  return {
+    legalEntityName: data.legalEntityName,
+    businessDba: data.businessDba || null,
+    websiteUrl: data.websiteUrl,
+    businessType: data.businessType,
+    businessCountry: data.businessCountry,
+    notificationEmail: data.notificationEmail,
+    optInType: data.optInType,
+    useCaseCategories: data.useCaseCategories,
+    monthlyVolume: data.monthlyVolume,
+    hasProofOfOptInUrl: !!data.proofOfOptInUrl,
+    hasPrivacyPolicyUrl: !!data.privacyPolicyUrl,
+    hasTermsUrl: !!data.termsUrl,
+  };
+}
+
+async function createAttemptLog(supabaseAdmin: any, values: Record<string, any>) {
+  const { data, error } = await (supabaseAdmin as any)
+    .from("tollfree_verification_attempts")
+    .insert(values)
+    .select("id")
+    .single();
+  if (error) {
+    console.error("[tollfree-verification] attempt log insert failed", error.message);
+    return null;
+  }
+  return data?.id as string | null;
+}
+
+async function updateAttemptLog(supabaseAdmin: any, id: string | null, patch: Record<string, any>) {
+  if (!id) return;
+  const { error } = await (supabaseAdmin as any)
+    .from("tollfree_verification_attempts")
+    .update(patch)
+    .eq("id", id);
+  if (error) console.error("[tollfree-verification] attempt log update failed", error.message);
 }
 
 const VOLUME_VALUES = [
@@ -453,6 +507,12 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const attemptId = await createAttemptLog(supabaseAdmin, {
+      account_id: userId,
+      actor_user_id: userId,
+      attempt_status: "started",
+      request_summary: requestSummary(data),
+    });
 
     // Persist the questionnaire snapshot onto the account too, so it round-trips on load.
     await supabaseAdmin
@@ -483,6 +543,10 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       reserved = await getOrBuyUsTollfree({ userId, legalName: data.legalEntityName });
     } catch (e: any) {
       const reason = e?.message ?? "Could not reserve or reconnect the toll-free number.";
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        attempt_status: "failed",
+        ...attemptTwilioFields(e, reason),
+      });
       if (!reason.toLowerCase().includes("already being")) {
         await supabaseAdmin
           .from("sender_assets")
@@ -513,6 +577,14 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     } = reserved;
 
     if (alreadySubmitted) {
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        sender_asset_id: assetId,
+        phone_number: phoneNumber,
+        phone_sid: phoneSid,
+        messaging_service_sid: messagingServiceSid,
+        verification_sid: existingVerificationSid,
+        attempt_status: "already_submitted",
+      });
       return {
         phoneNumber,
         messagingServiceSid,
@@ -523,6 +595,13 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
         alreadySubmitted: true,
       };
     }
+    await updateAttemptLog(supabaseAdmin, attemptId, {
+      sender_asset_id: assetId,
+      phone_number: phoneNumber,
+      phone_sid: phoneSid,
+      messaging_service_sid: messagingServiceSid,
+      attempt_status: "number_reserved",
+    });
 
     // Build the Twilio Tollfree Verifications payload.
     const body: Record<string, string | string[]> = {
@@ -566,19 +645,29 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     let verificationSid: string | null = null;
     let status: "submitted" | "in_review" | "verified" | "rejected" = "submitted";
     let rejectionReason: string | null = null;
+    let twilioResponse: any = null;
     try {
       const ver = await twilio<{ sid?: string; status?: string }>(
         `${MESSAGING_API}/Tollfree/Verifications`,
         { method: "POST", sid: subSid, token: subToken, body },
       );
+      twilioResponse = ver;
       verificationSid = typeof ver.sid === "string" && ver.sid.trim() ? ver.sid : null;
       if (!verificationSid) {
-        throw new Error("Twilio did not return a toll-free verification ID, so the submission was not accepted.");
+        const err = new Error("Twilio did not return a toll-free verification ID, so the submission was not accepted.");
+        (err as any).noVerificationSid = true;
+        (err as any).twilioResponse = ver;
+        throw err;
       }
       status = mapStatus(ver.status);
     } catch (e: any) {
       status = "rejected";
       rejectionReason = e?.message ?? "Submission failed";
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        attempt_status: e?.noVerificationSid ? "no_verification_sid" : "failed",
+        verification_sid: verificationSid,
+        ...attemptTwilioFields(e, rejectionReason ?? "Submission failed"),
+      });
       // Surface the raw Twilio failure server-side so we can debug repeat rejections.
       console.error("[tollfree-verification] Twilio submission failed", {
         userId,
@@ -610,6 +699,13 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
         ...patch,
       });
       if (insErr) console.error("[tollfree-verification] persist insert failed", insErr.message);
+    }
+    if (verificationSid) {
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        attempt_status: "submitted",
+        verification_sid: verificationSid,
+        twilio_response: twilioResponse,
+      });
     }
 
     return {
