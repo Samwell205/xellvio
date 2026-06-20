@@ -24,6 +24,7 @@ export function TwilioBalanceCard() {
   const refreshFn = useServerFn(refreshTwilioBalance);
   const updateFn = useServerFn(updateTwilioBalanceSettings);
   const resumeFn = useServerFn(resumePausedCampaignsNow);
+  const testFn = useServerFn(sendTestCapacityAlert);
   const qc = useQueryClient();
 
   const q = useQuery({
