@@ -11,37 +11,22 @@ export type CountryRate = {
   status: "Active" | "Inactive";
 };
 
-export const COUNTRY_RATES: CountryRate[] = [
-  { country: "Australia", code: "AU", dial: "+61", perSms: 0.0728, mmsMult: 3, inbound: true, status: "Active" },
-  { country: "Brazil", code: "BR", dial: "+55", perSms: 0.0476, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "Canada", code: "CA", dial: "+1", perSms: 0.0116, mmsMult: 3, inbound: true, status: "Active" },
-  { country: "France", code: "FR", dial: "+33", perSms: 0.1050, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "Germany", code: "DE", dial: "+49", perSms: 0.1246, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "India", code: "IN", dial: "+91", perSms: 0.0090, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "Italy", code: "IT", dial: "+39", perSms: 0.1092, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "Netherlands", code: "NL", dial: "+31", perSms: 0.1176, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "Nigeria", code: "NG", dial: "+234", perSms: 0.0574, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "South Africa", code: "ZA", dial: "+27", perSms: 0.0483, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "Spain", code: "ES", dial: "+34", perSms: 0.0952, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "Sweden", code: "SE", dial: "+46", perSms: 0.1064, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "United Arab Emirates", code: "AE", dial: "+971", perSms: 0.0868, mmsMult: 3, inbound: false, status: "Active" },
-  { country: "United Kingdom", code: "GB", dial: "+44", perSms: 0.0574, mmsMult: 3, inbound: true, status: "Active" },
-  { country: "United States", code: "US", dial: "+1", perSms: 0.0116, mmsMult: 3, inbound: true, status: "Active" },
-];
-
-export function PerCountryPricing({ rates = COUNTRY_RATES }: { rates?: CountryRate[] }) {
+export function PerCountryPricing({ rates }: { rates?: CountryRate[] }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
 
+  const list = rates ?? [];
+  const loading = !rates;
+
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
-    if (!t) return rates;
-    return rates.filter(r =>
+    if (!t) return list;
+    return list.filter(r =>
       r.country.toLowerCase().includes(t) ||
       r.code.toLowerCase().includes(t) ||
       r.dial.includes(t)
     );
-  }, [q, rates]);
+  }, [q, list]);
 
   return (
     <section className="bg-background py-16" id="per-country-pricing">
@@ -55,7 +40,9 @@ export function PerCountryPricing({ rates = COUNTRY_RATES }: { rates?: CountryRa
             <div className="flex items-center gap-3">
               <Globe className="size-5 text-muted-foreground" />
               <span className="font-bold text-foreground text-lg">Per-country pricing</span>
-              <span className="text-sm text-muted-foreground hidden sm:inline">— {rates.length} countries</span>
+              <span className="text-sm text-muted-foreground hidden sm:inline">
+                — {loading ? "loading…" : `${list.length} countries`}
+              </span>
             </div>
             <ChevronDown className={`size-5 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
           </button>
@@ -87,7 +74,10 @@ export function PerCountryPricing({ rates = COUNTRY_RATES }: { rates?: CountryRa
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map(r => (
+                    {loading && (
+                      <tr><td colSpan={6} className="px-6 py-10 text-center text-muted-foreground">Loading live rates…</td></tr>
+                    )}
+                    {!loading && rows.map(r => (
                       <tr key={r.code} className="border-t border-border">
                         <td className="px-6 py-4">
                           <div className="font-semibold text-foreground">{r.country}</div>
@@ -108,7 +98,7 @@ export function PerCountryPricing({ rates = COUNTRY_RATES }: { rates?: CountryRa
                         </td>
                       </tr>
                     ))}
-                    {rows.length === 0 && (
+                    {!loading && rows.length === 0 && (
                       <tr><td colSpan={6} className="px-6 py-10 text-center text-muted-foreground">No matches</td></tr>
                     )}
                   </tbody>
