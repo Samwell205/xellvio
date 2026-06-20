@@ -352,7 +352,7 @@ async function findExistingTollfreeVerification(opts: { phoneSid: string; sid: s
   }
 
   // 2) Fallback: paginate the full list and match locally on tollfree_phone_number_sid.
-  let nextUrl: string | null = `${MESSAGING_API}/Tollfree/Verifications?PageSize=100`;
+  let nextUrl: string | null = `${MESSAGING_API}/Tollfree/Verifications?PageSize=50`;
   let safety = 20;
   while (nextUrl && safety-- > 0) {
     const page: { tollfree_verifications?: Ver[]; meta?: { next_page_url?: string | null } } = await twilio<any>(
