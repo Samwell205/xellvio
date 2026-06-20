@@ -1,0 +1,1 @@
+ALTER VIEW public.country_rates_public SET (security_invoker = false);
