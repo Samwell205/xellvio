@@ -101,7 +101,7 @@ export function SmsCalculator({ rates }: { rates?: CountryRate[] }) {
                 ${costPer.toFixed(3)}
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
-                {rate.dial} · ${rate.perSms.toFixed(4)} per segment
+                {rate ? `${rate.dial} · $${rate.perSms.toFixed(4)} per segment` : "Live rates loading…"}
               </div>
             </div>
 
