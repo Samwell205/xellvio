@@ -124,6 +124,82 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
     return { authorization_url: json.data.authorization_url as string, reference };
   });
 
+/** Start a Paystack checkout for an arbitrary USD amount (custom credits). 1:1 USD→credits. */
+export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { amount: number }) => {
+    const a = Number(d?.amount);
+    if (!Number.isFinite(a)) throw new Error("amount required");
+    if (a < 5) throw new Error("Minimum is $5");
+    if (a > 10000) throw new Error("Maximum is $10,000");
+    return { amount: Math.round(a * 100) / 100 };
+  })
+  .handler(async ({ data, context }) => {
+    const { data: account } = await context.supabase
+      .from("accounts")
+      .select("contact_email,email")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const email = account?.contact_email || account?.email;
+    if (!email) throw new Error("Add a contact email to your account first");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: payment, error: payErr } = await supabaseAdmin
+      .from("payments")
+      .insert({
+        account_id: context.userId,
+        pack_id: null,
+        provider: "paystack",
+        currency: "USD",
+        amount: data.amount,
+        credits: data.amount,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+    if (payErr) throw new Error(payErr.message);
+
+    const { data: settings } = await supabaseAdmin
+      .from("billing_settings")
+      .select("usd_to_ngn_rate")
+      .maybeSingle();
+    const rate = Number((settings as any)?.usd_to_ngn_rate ?? 1600);
+    const chargeAmount = +(data.amount * rate).toFixed(2);
+    const amountSubunit = Math.round(chargeAmount * 100);
+    const reference = `pmt_${payment.id.replace(/-/g, "")}`;
+    const callback_url = `${siteOrigin()}/app/billing?ref=${reference}`;
+
+    const res = await fetch(`${PAYSTACK_API}/transaction/initialize`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${paystackKey()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        amount: amountSubunit,
+        currency: "NGN",
+        reference,
+        callback_url,
+        metadata: {
+          account_id: context.userId,
+          payment_id: payment.id,
+          custom: true,
+          original_currency: "USD",
+          original_amount: data.amount,
+        },
+      }),
+    });
+    const json: any = await res.json().catch(() => ({}));
+    if (!res.ok || !json?.status) {
+      await supabaseAdmin.from("payments").update({ status: "failed", admin_note: json?.message ?? "init failed" }).eq("id", payment.id);
+      throw new Error(json?.message || `Paystack init failed (${res.status})`);
+    }
+    await supabaseAdmin.from("payments").update({ provider_reference: reference }).eq("id", payment.id);
+    return { authorization_url: json.data.authorization_url as string, reference };
+  });
+
+
 
 /** Manually record a Payoneer payment (customer says they paid externally). */
 export const submitPayoneerPayment = createServerFn({ method: "POST" })
