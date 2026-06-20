@@ -8,6 +8,7 @@ type Status =
   | "rejected"
   | "failed"
   | "queued"
+  | "sending"
   | "sent"
   | "delivered"
   | "running"
