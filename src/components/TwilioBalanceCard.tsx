@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Phone, AlertTriangle, CheckCircle2, XCircle, PlayCircle, PauseCircle } from "lucide-react";
-import { getTwilioBalance, refreshTwilioBalance, updateTwilioBalanceSettings, resumePausedCampaignsNow } from "@/lib/twilio-balance.functions";
+import { getTwilioBalance, refreshTwilioBalance, updateTwilioBalanceSettings, resumePausedCampaignsNow, sendTestCapacityAlert } from "@/lib/twilio-balance.functions";
 
 function formatMoney(n: number, currency: string) {
   try {
