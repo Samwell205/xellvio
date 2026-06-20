@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/audience")({
-  head: () => ({ meta: [{ title: "Audience — Xellio" }] }),
+  head: () => ({ meta: [{ title: "Audience — Xellvio" }] }),
   component: AudiencePage,
 });
 

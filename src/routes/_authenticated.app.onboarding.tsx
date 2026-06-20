@@ -16,7 +16,7 @@ import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant
 import { getProvisioningStatus, saveBusinessProfile } from "@/lib/account.functions";
 
 export const Route = createFileRoute("/_authenticated/app/onboarding")({
-  head: () => ({ meta: [{ title: "Set up your business — Xellio" }] }),
+  head: () => ({ meta: [{ title: "Set up your business — Xellvio" }] }),
   component: OnboardingPage,
 });
 

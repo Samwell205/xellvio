@@ -12,7 +12,7 @@ import { adminGetOverview } from "@/lib/admin-overview.functions";
 import { formatUSD } from "@/lib/money";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
-  head: () => ({ meta: [{ title: "Admin overview — Xellio" }] }),
+  head: () => ({ meta: [{ title: "Admin overview — Xellvio" }] }),
   component: AdminOverview,
 });
 

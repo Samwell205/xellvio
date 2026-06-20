@@ -12,8 +12,8 @@ import { Loader2, MailCheck } from "lucide-react";
 export const Route = createFileRoute("/forgot-password")({
   head: () => ({
     meta: [
-      { title: "Forgot password — Xellio" },
-      { name: "description", content: "Reset your Xellio password by email." },
+      { title: "Forgot password — Xellvio" },
+      { name: "description", content: "Reset your Xellvio password by email." },
     ],
   }),
   component: ForgotPasswordPage,

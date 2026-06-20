@@ -8,7 +8,7 @@ import { Users, Megaphone, CheckCircle2, RefreshCw, Send, AlertTriangle, XCircle
 import { ActivityLogFeed, AttributionCard, AIInsightsCard } from "@/components/DashboardWidgets";
 
 export const Route = createFileRoute("/_authenticated/app/")({
-  head: () => ({ meta: [{ title: "Dashboard — Xellio" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Xellvio" }] }),
   component: Overview,
 });
 

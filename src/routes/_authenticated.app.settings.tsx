@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { CheckCircle2, AlertTriangle, Shield, Lock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
-  head: () => ({ meta: [{ title: "Settings — Xellio" }] }),
+  head: () => ({ meta: [{ title: "Settings — Xellvio" }] }),
   component: SettingsPage,
 });
 

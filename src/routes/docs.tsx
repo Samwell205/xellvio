@@ -10,9 +10,9 @@ import { Card } from "@/components/ui/card";
 export const Route = createFileRoute("/docs")({
   head: () => ({
     meta: [
-      { title: "SMS Documentation — Xellio" },
+      { title: "SMS Documentation — Xellvio" },
       { name: "description", content: "Documentation for signup, sender verification, SMS sending, campaigns, wallet credits, and API access." },
-      { property: "og:title", content: "SMS Documentation — Xellio" },
+      { property: "og:title", content: "SMS Documentation — Xellvio" },
       { property: "og:description", content: "Guides for sending compliant SMS from verified identities." },
     ],
   }),
