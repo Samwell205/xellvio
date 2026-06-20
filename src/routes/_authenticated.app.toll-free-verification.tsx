@@ -176,6 +176,7 @@ function TollfreeVerificationPage() {
   // submitted yet, or when the carrier rejected and we need to resubmit.
   const submissionStarted = hasSubmissionStarted(asset);
   const hasReservedNumber = hasReservedTollfreeNumber(asset);
+  const localSubmissionFailure = status === "rejected" && !asset?.verification_sid;
   const isLocked =
     status === "submitted" ||
     status === "in_review" ||
@@ -285,7 +286,9 @@ function TollfreeVerificationPage() {
             <CardTitle className="text-base">Current status</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               {hasReservedNumber
-                ? "A toll-free number is already reserved for this request, but Twilio has not returned a verification ID yet. Continue below; no new number will be purchased."
+                ? localSubmissionFailure
+                  ? "Twilio did not return a verification ID, so this was not submitted to carrier review. Fix anything needed and retry below; no new number will be purchased."
+                  : "A toll-free number is already reserved for this request, but Twilio has not returned a verification ID yet. Continue below; no new number will be purchased."
                 : statusBlurb(status)}
             </p>
           </div>
@@ -332,11 +335,16 @@ function TollfreeVerificationPage() {
               <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
                 <div className="flex items-center gap-2 font-medium text-destructive">
                   <AlertCircle className="size-4" />
-                  Why it was rejected
+                  {localSubmissionFailure ? "Submission failed — retry available" : "Why it was rejected"}
                 </div>
                 <div className="mt-1 text-foreground">
                   {asset.friendly_rejection_reason ?? asset.rejection_reason ?? "No reason provided."}
                 </div>
+                {localSubmissionFailure && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    This did not enter carrier review because there is no verification ID. Retry will reuse the reserved number.
+                  </div>
+                )}
                 {asset.rejection_reason && asset.friendly_rejection_reason && (
                   <div className="mt-2 text-xs text-muted-foreground">
                     Carrier message: {asset.rejection_reason}
