@@ -198,45 +198,88 @@ function BillingPage() {
   );
 }
 
-function PackGrid({ packs }: { packs: any[] }) {
-  if (!packs?.length) {
-    return <p className="text-sm text-muted-foreground">No packs available in this currency. Ask the admin to create one.</p>;
-  }
-  return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {packs.map((p) => (
-        <PackCard key={p.id} pack={p} />
-      ))}
-    </div>
-  );
-}
-
-function PackCard({ pack }: { pack: any }) {
+function PackPicker({ packs }: { packs: any[] }) {
+  const CUSTOM = "__custom__";
   const initFn = useServerFn(initPaystackCheckout);
+  const initCustomFn = useServerFn(initPaystackCheckoutCustom);
+
+  const defaultId = packs.find((p) => p.is_popular)?.id ?? packs[0]?.id ?? CUSTOM;
+  const [selected, setSelected] = useState<string>(defaultId);
+  const [customAmount, setCustomAmount] = useState<number>(50);
+
+  useEffect(() => {
+    if (!packs.length) return;
+    if (selected !== CUSTOM && !packs.some((p) => p.id === selected)) {
+      setSelected(packs.find((p) => p.is_popular)?.id ?? packs[0].id);
+    }
+  }, [packs, selected]);
+
+  const pack = packs.find((p) => p.id === selected);
+  const isCustom = selected === CUSTOM;
+  const amount = isCustom ? customAmount : Number(pack?.price ?? 0);
+  const credits = isCustom ? customAmount : Number(pack?.credits ?? 0);
 
   const buy = useMutation({
-    mutationFn: async () => initFn({ data: { packId: pack.id } }),
+    mutationFn: async () => {
+      if (isCustom) return initCustomFn({ data: { amount: customAmount } });
+      return initFn({ data: { packId: selected } });
+    },
     onSuccess: (r) => { window.location.href = r.authorization_url; },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  if (!packs.length) {
+    return <p className="text-sm text-muted-foreground">No packs available. Ask the admin to create one.</p>;
+  }
+
   return (
-    <Card className={`p-5 flex flex-col gap-3 ${pack.is_popular ? "ring-2 ring-primary" : ""}`}>
-      <div className="flex items-start justify-between">
+    <div className="grid md:grid-cols-[1fr_auto] gap-4 items-end">
+      <div className="space-y-3">
         <div>
-          <div className="font-semibold">{pack.name}</div>
-          <div className="text-xs text-muted-foreground">{pack.description ?? "\u00A0"}</div>
+          <Label>Choose a pack</Label>
+          <Select value={selected} onValueChange={setSelected}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {packs.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.name} — {formatUSD(Number(p.price))} ({formatUSD(Number(p.credits))} credits){p.is_popular ? " · Popular" : ""}
+                </SelectItem>
+              ))}
+              <SelectItem value={CUSTOM}>Custom amount…</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        {pack.is_popular && <Badge>Popular</Badge>}
+        {isCustom && (
+          <div>
+            <Label>Custom amount (USD)</Label>
+            <Input
+              type="number"
+              min={5}
+              max={10000}
+              step={1}
+              value={customAmount}
+              onChange={(e) => setCustomAmount(Number(e.target.value))}
+            />
+            <p className="text-xs text-muted-foreground mt-1">1 USD = 1 credit · min $5, max $10,000</p>
+          </div>
+        )}
       </div>
-      <div className="text-3xl font-extrabold">{formatMoney(Number(pack.price), pack.currency)}</div>
-      <div className="text-sm text-muted-foreground">≈ {formatUSD(Number(pack.credits))} in credits</div>
-      <Button className="mt-auto" onClick={() => buy.mutate()} disabled={buy.isPending}>
-        {buy.isPending ? "Redirecting…" : "Pay with Paystack"}
-      </Button>
-    </Card>
+      <div className="rounded-xl border bg-muted/30 p-4 min-w-[220px]">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">You pay</div>
+        <div className="text-3xl font-extrabold tabular-nums">{formatUSD(amount)}</div>
+        <div className="text-sm text-muted-foreground">≈ {formatUSD(credits)} in credits</div>
+        <Button
+          className="mt-3 w-full"
+          onClick={() => buy.mutate()}
+          disabled={buy.isPending || (isCustom && (customAmount < 5 || customAmount > 10000))}
+        >
+          {buy.isPending ? "Redirecting…" : "Pay with Paystack"}
+        </Button>
+      </div>
+    </div>
   );
 }
+
 
 
 function PaymentStatus({ s }: { s: string }) {
