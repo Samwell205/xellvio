@@ -155,7 +155,7 @@ export async function fireCapacityAlert(args: AlertArgs): Promise<void> {
       console.error("[twilio-alerts] SMS failed", e);
     }
 
-    await markSent(args.kind, args);
+    await markSent(args.kind);
   } catch (e) {
     console.error("[twilio-alerts] fireCapacityAlert error", e);
   }
