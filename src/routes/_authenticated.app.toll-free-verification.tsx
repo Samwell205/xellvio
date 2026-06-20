@@ -491,7 +491,26 @@ function TollfreeVerificationPage() {
               />
             </Field>
           </Two>
+          {form.businessType && form.businessType !== "Sole Proprietorship" && (
+            <Two>
+              <Field label="Business registration number" required>
+                <Input
+                  value={form.businessRegistrationNumber ?? ""}
+                  onChange={(e) => update("businessRegistrationNumber", e.target.value)}
+                  placeholder="e.g. EIN 12-3456789"
+                />
+              </Field>
+              <Field label="Registration authority / type" required>
+                <Input
+                  value={form.businessRegistrationIdentifier ?? ""}
+                  onChange={(e) => update("businessRegistrationIdentifier", e.target.value)}
+                  placeholder="EIN, DUNS, CBN, CN, etc."
+                />
+              </Field>
+            </Two>
+          )}
         </Section>
+
 
         <Section title="Step 2 / 3 — Business location">
           <Two>
