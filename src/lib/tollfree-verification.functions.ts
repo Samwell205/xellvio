@@ -478,6 +478,28 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       })
       .eq("id", userId);
 
+    let reserved;
+    try {
+      reserved = await getOrBuyUsTollfree({ userId, legalName: data.legalEntityName });
+    } catch (e: any) {
+      const reason = e?.message ?? "Could not reserve or reconnect the toll-free number.";
+      if (!reason.toLowerCase().includes("already being")) {
+        await supabaseAdmin
+          .from("sender_assets")
+          .update({
+            verification_status: "rejected",
+            rejection_reason: reason,
+            friendly_rejection_reason: friendlyReason(reason),
+            last_synced_at: new Date().toISOString(),
+          })
+          .eq("account_id", userId)
+          .eq("country_code", "US")
+          .eq("sender_kind", "toll_free")
+          .is("verification_sid", null);
+      }
+      throw new Error(friendlyReason(reason));
+    }
+
     const {
       phoneNumber,
       phoneSid,
@@ -488,7 +510,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       verificationSid: existingVerificationSid,
       verificationStatus: existingVerificationStatus,
       alreadySubmitted,
-    } = await getOrBuyUsTollfree({ userId, legalName: data.legalEntityName });
+    } = reserved;
 
     if (alreadySubmitted) {
       return {
@@ -545,11 +567,14 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     let status: "submitted" | "in_review" | "verified" | "rejected" = "submitted";
     let rejectionReason: string | null = null;
     try {
-      const ver = await twilio<{ sid: string; status?: string }>(
+      const ver = await twilio<{ sid?: string; status?: string }>(
         `${MESSAGING_API}/Tollfree/Verifications`,
         { method: "POST", sid: subSid, token: subToken, body },
       );
-      verificationSid = ver.sid;
+      verificationSid = typeof ver.sid === "string" && ver.sid.trim() ? ver.sid : null;
+      if (!verificationSid) {
+        throw new Error("Twilio did not return a toll-free verification ID, so the submission was not accepted.");
+      }
       status = mapStatus(ver.status);
     } catch (e: any) {
       status = "rejected";
