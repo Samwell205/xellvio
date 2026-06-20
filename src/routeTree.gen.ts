@@ -25,6 +25,7 @@ import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.ap
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
+import { Route as ApiPublicTwilioTollfreeStatusRouteImport } from './routes/api.public.twilio-tollfree-status'
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
 import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.twilio-inbound'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
@@ -133,6 +134,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const ApiPublicTwilioTollfreeStatusRoute =
+  ApiPublicTwilioTollfreeStatusRouteImport.update({
+    id: '/api/public/twilio-tollfree-status',
+    path: '/api/public/twilio-tollfree-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTwilioStatusRoute = ApiPublicTwilioStatusRouteImport.update({
   id: '/api/public/twilio-status',
   path: '/api/public/twilio-status',
@@ -334,6 +341,7 @@ export interface FileRoutesByFullPath {
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
+  '/api/public/twilio-tollfree-status': typeof ApiPublicTwilioTollfreeStatusRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
@@ -375,6 +383,7 @@ export interface FileRoutesByTo {
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
+  '/api/public/twilio-tollfree-status': typeof ApiPublicTwilioTollfreeStatusRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
@@ -422,6 +431,7 @@ export interface FileRoutesById {
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
+  '/api/public/twilio-tollfree-status': typeof ApiPublicTwilioTollfreeStatusRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
@@ -469,6 +479,7 @@ export interface FileRouteTypes {
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
+    | '/api/public/twilio-tollfree-status'
     | '/admin/'
     | '/app/'
     | '/app/campaigns/$id'
@@ -510,6 +521,7 @@ export interface FileRouteTypes {
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
+    | '/api/public/twilio-tollfree-status'
     | '/admin'
     | '/app'
     | '/app/campaigns/$id'
@@ -556,6 +568,7 @@ export interface FileRouteTypes {
     | '/api/public/poll-verifications'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
+    | '/api/public/twilio-tollfree-status'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/_authenticated/app/campaigns/$id'
@@ -583,6 +596,7 @@ export interface RootRouteChildren {
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
   ApiPublicTwilioInboundRoute: typeof ApiPublicTwilioInboundRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
+  ApiPublicTwilioTollfreeStatusRoute: typeof ApiPublicTwilioTollfreeStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -698,6 +712,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/api/public/twilio-tollfree-status': {
+      id: '/api/public/twilio-tollfree-status'
+      path: '/api/public/twilio-tollfree-status'
+      fullPath: '/api/public/twilio-tollfree-status'
+      preLoaderRoute: typeof ApiPublicTwilioTollfreeStatusRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/twilio-status': {
       id: '/api/public/twilio-status'
@@ -1024,6 +1045,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
   ApiPublicTwilioInboundRoute: ApiPublicTwilioInboundRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
+  ApiPublicTwilioTollfreeStatusRoute: ApiPublicTwilioTollfreeStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
