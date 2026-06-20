@@ -326,42 +326,89 @@ function storedStatus(raw: string | null | undefined): StoredVerificationStatus 
   return "pending";
 }
 
+type TollfreeVerificationRecord = {
+  sid?: string;
+  status?: string;
+  tollfree_phone_number_sid?: string;
+  tollfree_phone_number?: string;
+  rejection_reason?: unknown;
+  rejection_reasons?: unknown;
+  errors?: Array<{ description?: string }>;
+  date_created?: string;
+};
+
 function verificationRejectionReason(ver: any) {
   if (Array.isArray(ver?.rejection_reason)) return ver.rejection_reason.join("; ");
   if (typeof ver?.rejection_reason === "string") return ver.rejection_reason;
+  if (Array.isArray(ver?.rejection_reasons)) {
+    return ver.rejection_reasons
+      .map((r: any) => r?.description ?? r?.message ?? r?.reason ?? r?.code ?? String(r))
+      .filter(Boolean)
+      .join("; ") || "rejected";
+  }
   if (Array.isArray(ver?.errors) && ver.errors[0]?.description) return ver.errors[0].description;
   return "rejected";
 }
 
 async function findExistingTollfreeVerification(opts: { phoneSid: string; sid: string; token: string }) {
-  type Ver = { sid?: string; status?: string; tollfree_phone_number_sid?: string; rejection_reason?: unknown; errors?: Array<{ description?: string }>; date_created?: string };
-  const matches = (v: Ver) => typeof v?.tollfree_phone_number_sid === "string" && v.tollfree_phone_number_sid === opts.phoneSid;
+  const matches = (v: TollfreeVerificationRecord) =>
+    typeof v?.tollfree_phone_number_sid === "string" && v.tollfree_phone_number_sid === opts.phoneSid;
+  const listFrom = (page: any): TollfreeVerificationRecord[] =>
+    page?.tollfree_verifications ?? page?.tollfreeVerifications ?? page?.verifications ?? [];
 
-  // 1) Try filtered query (may not be supported by Twilio in all cases).
-  try {
-    const query = new URLSearchParams({ TollfreePhoneNumberSid: opts.phoneSid, PageSize: "50" }).toString();
-    const page = await twilio<{ tollfree_verifications?: Ver[] }>(
-      `${MESSAGING_API}/Tollfree/Verifications?${query}`,
-      { sid: opts.sid, token: opts.token },
-    );
-    const list = page.tollfree_verifications ?? [];
-    const direct = list.find(matches) ?? (list.length === 1 ? list[0] : null);
-    if (direct?.sid) return direct;
-  } catch (err) {
-    console.warn("[tollfree-verification] filtered lookup failed", err);
+  // 1) Try filtered query. Twilio documents the list filter as lower camel-case,
+  // but older examples use request-body casing, so try both before paginating.
+  const filterQueries = [
+    new URLSearchParams({ tollfreePhoneNumberSid: opts.phoneSid, PageSize: "50" }).toString(),
+    new URLSearchParams({ TollfreePhoneNumberSid: opts.phoneSid, PageSize: "50" }).toString(),
+  ];
+  for (const query of filterQueries) {
+    try {
+      const page = await twilio<any>(`${MESSAGING_API}/Tollfree/Verifications?${query}`, {
+        sid: opts.sid,
+        token: opts.token,
+      });
+      const list = listFrom(page);
+      const direct = list.find(matches) ?? (list.length === 1 ? list[0] : null);
+      if (direct?.sid) return direct;
+    } catch (err) {
+      console.warn("[tollfree-verification] filtered lookup failed", err);
+    }
   }
 
   // 2) Fallback: paginate the full list and match locally on tollfree_phone_number_sid.
   let nextUrl: string | null = `${MESSAGING_API}/Tollfree/Verifications?PageSize=50`;
   let safety = 20;
   while (nextUrl && safety-- > 0) {
-    const page: { tollfree_verifications?: Ver[]; meta?: { next_page_url?: string | null } } = await twilio<any>(
-      nextUrl,
-      { sid: opts.sid, token: opts.token },
-    );
-    const hit = (page.tollfree_verifications ?? []).find(matches);
+    const page: any = await twilio<any>(nextUrl, { sid: opts.sid, token: opts.token });
+    const hit = listFrom(page).find(matches);
     if (hit?.sid) return hit;
-    nextUrl = page.meta?.next_page_url ?? null;
+    nextUrl = page.meta?.next_page_url ?? page.next_page_url ?? null;
+    if (nextUrl && !nextUrl.startsWith("http")) nextUrl = `${MESSAGING_API}${nextUrl}`;
+  }
+  return null;
+}
+
+async function findLocalTollfreeVerification(supabaseAdmin: any, opts: { accountId: string; phoneSid: string }) {
+  const { data, error } = await (supabaseAdmin as any)
+    .from("tollfree_verification_attempts")
+    .select("verification_sid,twilio_response,created_at")
+    .eq("account_id", opts.accountId)
+    .eq("phone_sid", opts.phoneSid)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) {
+    console.warn("[tollfree-verification] local verification lookup failed", error.message);
+    return null;
+  }
+  for (const row of data ?? []) {
+    const response = (row.twilio_response ?? {}) as TollfreeVerificationRecord;
+    const sid = typeof row.verification_sid === "string" && row.verification_sid.trim()
+      ? row.verification_sid
+      : typeof response.sid === "string" && response.sid.trim()
+        ? response.sid
+        : null;
+    if (sid?.startsWith("HH")) return { ...response, sid };
   }
   return null;
 }
