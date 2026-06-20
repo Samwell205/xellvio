@@ -67,20 +67,41 @@ const BUSINESS_TYPES = [
   "Corporation",
 ] as const;
 const CATEGORIES = [
-  "GENERAL_MARKETING",
-  "2FA",
   "ACCOUNT_NOTIFICATIONS",
-  "APPOINTMENTS",
   "CUSTOMER_CARE",
+  "MARKETING",
+  "TWO_FACTOR_AUTHENTICATION",
+  "CHARITY_NONPROFIT",
   "DELIVERY_NOTIFICATIONS",
-  "FRAUD_ALERTS",
+  "FRAUD_ALERT_MESSAGING",
+  "EVENTS",
   "HIGHER_EDUCATION",
-  "HEALTHCARE_ALERTS",
-  "POLLING_AND_VOTING",
+  "K12",
+  "POLLING_AND_VOTING_NON_POLITICAL",
+  "POLITICAL_ELECTION_CAMPAIGNS",
   "PUBLIC_SERVICE_ANNOUNCEMENT",
-  "SECURITY_ALERTS",
-  "MIXED",
+  "SECURITY_ALERT",
 ] as const;
+
+const LEGACY_CATEGORY_MAP: Record<string, (typeof CATEGORIES)[number]> = {
+  "2FA": "TWO_FACTOR_AUTHENTICATION",
+  FRAUD_ALERTS: "FRAUD_ALERT_MESSAGING",
+  GENERAL_MARKETING: "MARKETING",
+  POLLING_AND_VOTING: "POLLING_AND_VOTING_NON_POLITICAL",
+  SECURITY_ALERTS: "SECURITY_ALERT",
+  GENERAL_SCHOOL_UPDATES: "K12",
+  HEALTHCARE_ALERTS: "ACCOUNT_NOTIFICATIONS",
+  APPOINTMENTS: "ACCOUNT_NOTIFICATIONS",
+};
+
+function normalizeCategories(values: unknown): string[] {
+  const raw = Array.isArray(values) ? values : typeof values === "string" ? [values] : [];
+  const normalized = raw
+    .map((v) => String(v).trim().toUpperCase())
+    .map((v) => LEGACY_CATEGORY_MAP[v] ?? v)
+    .filter((v) => (CATEGORIES as readonly string[]).includes(v));
+  return Array.from(new Set(normalized));
+}
 
 type Status = "submitted" | "in_review" | "verified" | "rejected";
 
@@ -184,7 +205,15 @@ function TollfreeVerificationPage() {
 
   const [form, setForm] = useState(() => defaultForm());
   useEffect(() => {
-    if (payload) setForm({ ...defaultForm(), ...payload, agreeToTos: true });
+    if (payload) {
+      const normalizedCategories = normalizeCategories(payload.useCaseCategories);
+      setForm({
+        ...defaultForm(),
+        ...payload,
+        useCaseCategories: normalizedCategories.length ? normalizedCategories : defaultForm().useCaseCategories,
+        agreeToTos: true,
+      });
+    }
   }, [payload]);
 
 
