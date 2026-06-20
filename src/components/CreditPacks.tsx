@@ -56,7 +56,7 @@ export function CreditPacks() {
             <Sparkles className="size-5 text-primary" />
             <h2 className="text-2xl font-extrabold tracking-tight">Buy credits</h2>
           </div>
-          <p className="text-sm text-muted-foreground">Priced in USD · paid securely via Paystack</p>
+          <p className="text-sm text-muted-foreground">Priced in USD · pay by card or crypto</p>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 grid sm:grid-cols-[1fr_auto] gap-6 items-end">
