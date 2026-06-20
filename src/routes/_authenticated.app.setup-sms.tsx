@@ -443,7 +443,7 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
           <DialogTitle>How sending to {name} works</DialogTitle>
           <DialogDescription>
             {coveredByUs
-              ? "A US toll-free number automatically covers Canadian mobile carriers — once your US verification is approved, you can text Canada from the same number. No separate Canada request is needed."
+              ? "Your US toll-free number also covers Canada — the same verification works for both countries. You do not need a separate Canada request."
               : "US and Canadian carriers don't allow alphanumeric Sender IDs. All messages must come from a real phone number, which we provision and verify for you."}
           </DialogDescription>
         </DialogHeader>
