@@ -1043,6 +1043,28 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
         verification_sid: verificationSid,
         twilio_response: twilioResponse,
       });
+
+      // Send our own branded "submitted" email to the customer so they
+      // never have to rely on the donotreply@twilio.com message.
+      if (status !== "rejected") {
+        try {
+          const { sendBrandedEmail } = await import("@/lib/email/send-internal.server");
+          const baseUrl = process.env.PUBLIC_BASE_URL ?? "https://xellvio.lovable.app";
+          await sendBrandedEmail({
+            templateName: "tollfree-submitted",
+            recipientEmail: data.notificationEmail,
+            idempotencyKey: `tfv-${verificationSid}-submitted`,
+            templateData: {
+              firstName: data.contactFirstName,
+              businessName: data.legalEntityName,
+              phoneNumber,
+              dashboardUrl: `${baseUrl}/app/setup-sms`,
+            },
+          });
+        } catch (err) {
+          console.warn("[tollfree-verification] branded submit email failed", err);
+        }
+      }
     }
 
     return {
