@@ -597,17 +597,18 @@ function TollfreeVerificationPage() {
             </label>
           </div>
         </Section>
+        </fieldset>
 
-        <div className="flex items-center justify-end gap-3">
-          <Button type="submit" disabled={!canSubmit || submitMut.isPending} size="lg">
-            {submitMut.isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
-            {asset?.verification_sid && status === "rejected"
-              ? "Resubmit for verification"
-              : asset?.verification_sid
-                ? "Update & resubmit"
+        {!isLocked && (
+          <div className="flex items-center justify-end gap-3">
+            <Button type="submit" disabled={!canSubmit || submitMut.isPending} size="lg">
+              {submitMut.isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
+              {status === "rejected"
+                ? "Resubmit for verification"
                 : "Send information for verification"}
-          </Button>
-        </div>
+            </Button>
+          </div>
+        )}
       </form>
 
       {isLoading && (
