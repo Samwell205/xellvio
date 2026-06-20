@@ -117,7 +117,8 @@ function normalizeCategories(values: unknown): string[] {
 
 function normalizeBusinessTypeLabel(value: unknown) {
   const raw = String(value ?? "").trim();
-  return LEGACY_BUSINESS_TYPE_MAP[raw] ?? (BUSINESS_TYPES as readonly string[]).includes(raw) ? raw : "";
+  if (LEGACY_BUSINESS_TYPE_MAP[raw]) return LEGACY_BUSINESS_TYPE_MAP[raw];
+  return (BUSINESS_TYPES as readonly string[]).includes(raw) ? raw : "";
 }
 
 type Status = "submitted" | "in_review" | "verified" | "rejected";
