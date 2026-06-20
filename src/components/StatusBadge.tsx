@@ -22,6 +22,7 @@ const map: Record<Status, { label: string; cls: string; Icon: React.ComponentTyp
   pending: { label: "Pending verification", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
   scheduled: { label: "Scheduled", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
   queued: { label: "Queued", cls: "bg-muted text-muted-foreground border-border", Icon: Clock },
+  sending: { label: "Sending", cls: "bg-primary/15 text-primary border-primary/30", Icon: Loader2 },
   draft: { label: "Draft", cls: "bg-muted text-muted-foreground border-border", Icon: Clock },
   processing: { label: "Processing", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Loader2 },
   paused_low_balance: { label: "Processing", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Loader2 },
