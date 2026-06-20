@@ -63,6 +63,7 @@ import { Route as AuthenticatedAdminRatesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminNumberRequestsRouteImport } from './routes/_authenticated.admin.number-requests'
 import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authenticated.admin.messaging'
 import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated.admin.messages'
+import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_authenticated.admin.compliance'
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
 import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated.admin.accounts'
@@ -364,6 +365,12 @@ const AuthenticatedAdminMessagesRoute =
     path: '/messages',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminComplianceRoute =
+  AuthenticatedAdminComplianceRouteImport.update({
+    id: '/compliance',
+    path: '/compliance',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminBillingRoute =
   AuthenticatedAdminBillingRouteImport.update({
     id: '/billing',
@@ -466,6 +473,7 @@ export interface FileRoutesByFullPath {
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
+  '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
@@ -531,6 +539,7 @@ export interface FileRoutesByTo {
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
+  '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
@@ -598,6 +607,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
+  '/_authenticated/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/_authenticated/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/_authenticated/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
@@ -667,6 +677,7 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/activity'
     | '/admin/billing'
+    | '/admin/compliance'
     | '/admin/messages'
     | '/admin/messaging'
     | '/admin/number-requests'
@@ -732,6 +743,7 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/activity'
     | '/admin/billing'
+    | '/admin/compliance'
     | '/admin/messages'
     | '/admin/messaging'
     | '/admin/number-requests'
@@ -798,6 +810,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/activity'
     | '/_authenticated/admin/billing'
+    | '/_authenticated/admin/compliance'
     | '/_authenticated/admin/messages'
     | '/_authenticated/admin/messaging'
     | '/_authenticated/admin/number-requests'
@@ -1256,6 +1269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminMessagesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/compliance': {
+      id: '/_authenticated/admin/compliance'
+      path: '/compliance'
+      fullPath: '/admin/compliance'
+      preLoaderRoute: typeof AuthenticatedAdminComplianceRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/billing': {
       id: '/_authenticated/admin/billing'
       path: '/billing'
@@ -1347,6 +1367,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAccountsRoute: typeof AuthenticatedAdminAccountsRoute
   AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
   AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
+  AuthenticatedAdminComplianceRoute: typeof AuthenticatedAdminComplianceRoute
   AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
   AuthenticatedAdminMessagingRoute: typeof AuthenticatedAdminMessagingRoute
   AuthenticatedAdminNumberRequestsRoute: typeof AuthenticatedAdminNumberRequestsRoute
@@ -1360,6 +1381,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAccountsRoute: AuthenticatedAdminAccountsRoute,
   AuthenticatedAdminActivityRoute: AuthenticatedAdminActivityRoute,
   AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
+  AuthenticatedAdminComplianceRoute: AuthenticatedAdminComplianceRoute,
   AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
   AuthenticatedAdminMessagingRoute: AuthenticatedAdminMessagingRoute,
   AuthenticatedAdminNumberRequestsRoute: AuthenticatedAdminNumberRequestsRoute,

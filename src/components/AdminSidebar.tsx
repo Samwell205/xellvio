@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2,
-  Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList,
+  Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
