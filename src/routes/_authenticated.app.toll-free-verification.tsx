@@ -177,6 +177,9 @@ function statusBlurb(status: Status | null | undefined) {
 
 function friendlyRejectionDisplay(asset: any) {
   const raw = String(asset?.rejection_reason ?? "").toLowerCase();
+  if (raw.includes("invalid sole proprietorship classification")) {
+    return "This business was submitted as a sole proprietor, but carriers are treating it as a registered business. Choose Private company / LLC / Partnership, enter the registration details, and resubmit; the reserved toll-free number will be reused.";
+  }
   if (raw.includes("usecasecategories")) {
     return "The selected use case category was not accepted by Twilio. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
   }
@@ -236,6 +239,8 @@ function TollfreeVerificationPage() {
       setForm({
         ...defaultForm(),
         ...payload,
+        businessType: normalizeBusinessTypeLabel(payload.businessType),
+        businessRegistrationCountry: payload.businessRegistrationCountry || payload.businessCountry || "US",
         useCaseCategories: normalizedCategories.length ? normalizedCategories : defaultForm().useCaseCategories,
         agreeToTos: true,
       });
@@ -509,7 +514,7 @@ function TollfreeVerificationPage() {
               />
             </Field>
           </Two>
-          {form.businessType && form.businessType !== "Sole Proprietorship" && (
+          {form.businessType && form.businessType !== "Sole Proprietor" && (
             <Two>
               <Field label="Business registration number" required>
                 <Input
@@ -518,11 +523,19 @@ function TollfreeVerificationPage() {
                   placeholder="e.g. EIN 12-3456789"
                 />
               </Field>
-              <Field label="Registration authority / type" required>
+              <Field label="Registration authority" required>
                 <Input
                   value={form.businessRegistrationIdentifier ?? ""}
-                  onChange={(e) => update("businessRegistrationIdentifier", e.target.value)}
-                  placeholder="EIN, DUNS, CBN, CN, etc."
+                  onChange={(e) => update("businessRegistrationIdentifier", e.target.value.toUpperCase())}
+                  placeholder="EIN, CBN, CRN, VAT, BRN"
+                />
+              </Field>
+              <Field label="Registration country" required>
+                <Input
+                  value={form.businessRegistrationCountry ?? "US"}
+                  onChange={(e) => update("businessRegistrationCountry", e.target.value.toUpperCase())}
+                  maxLength={2}
+                  placeholder="US"
                 />
               </Field>
             </Two>
