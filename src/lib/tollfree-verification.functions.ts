@@ -906,7 +906,8 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       status = mapStatus(ver.status);
     } catch (e: any) {
       const carrierMessage = e?.message ?? "Submission failed";
-      const alreadyExists = carrierMessage.toLowerCase().includes("verification already exists");
+      const lower = carrierMessage.toLowerCase();
+      const alreadyExists = lower.includes("verification already exists") || lower.includes("already has") || lower.includes("already exists for this phone");
       if (alreadyExists) {
         const existingVerification = await findExistingTollfreeVerification({ phoneSid, sid: subSid, token: subToken });
         verificationSid = typeof existingVerification?.sid === "string" && existingVerification.sid.trim()
