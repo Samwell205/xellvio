@@ -252,7 +252,7 @@ function NewCampaignPage() {
   })();
 
   async function persistCampaign(
-    targetStatus: "draft" | "queued" | "scheduled",
+    targetStatus: "draft" | "queued" | "scheduled" | "blocked_content",
   ): Promise<string | null> {
     if (!s.name.trim()) return null;
     const { data: u } = await supabase.auth.getUser();
