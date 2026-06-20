@@ -17,6 +17,7 @@ import { Wallet, Plus, Trash2, ExternalLink } from "lucide-react";
 import { formatMoney, formatUSD } from "@/lib/money";
 import { adminListPacks, upsertCreditPack, deleteCreditPack, updateBillingSettings, adminListPayments, approvePayment, rejectPayment, signedProofUrl } from "@/lib/billing-admin.functions";
 import { getBillingSettings } from "@/lib/billing-packs.functions";
+import { simulateNowPaymentsIpn } from "@/lib/nowpayments-admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/billing")({
   head: () => ({ meta: [{ title: "Admin · Billing — Xellvio" }] }),
