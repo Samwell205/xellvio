@@ -305,7 +305,17 @@ function TollfreeVerificationPage() {
         )}
       </Card>
 
+      {asset && <Timeline asset={asset} status={status} />}
+
+      {isLocked && (
+        <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+          Your submission is locked while the carrier reviews it. Only Twilio can approve
+          or reject this — we cannot approve it manually. This page updates automatically.
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
+        <fieldset disabled={isLocked} className={isLocked ? "opacity-70 pointer-events-none" : ""} aria-disabled={isLocked}>
         <Section title="Step 1 / 3 — Business and contact information">
           <Two>
             <Field label="Legal entity name" required>
