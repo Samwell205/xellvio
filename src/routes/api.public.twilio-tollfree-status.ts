@@ -135,6 +135,59 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
             .eq("id", asset.account_id);
         }
 
+        // Send branded status email to the customer (approved / rejected).
+        if (status === "verified" || status === "rejected") {
+          try {
+            const { data: acct } = await supabaseAdmin
+              .from("accounts")
+              .select("contact_email,email,full_name,legal_business_name")
+              .eq("id", asset.account_id)
+              .maybeSingle();
+            const { data: assetFull } = await supabaseAdmin
+              .from("sender_assets")
+              .select("phone_number")
+              .eq("id", asset.id)
+              .maybeSingle();
+            const recipient = (acct?.contact_email || acct?.email || "").trim();
+            if (recipient) {
+              const firstName = (acct?.full_name ?? "").split(" ")[0] || undefined;
+              const baseUrl =
+                process.env.PUBLIC_BASE_URL ?? "https://xellvio.lovable.app";
+              const { sendBrandedEmail } = await import(
+                "@/lib/email/send-internal.server"
+              );
+              if (status === "verified") {
+                await sendBrandedEmail({
+                  templateName: "tollfree-approved",
+                  recipientEmail: recipient,
+                  idempotencyKey: `tfv-${verificationSid}-approved`,
+                  templateData: {
+                    firstName,
+                    businessName: acct?.legal_business_name ?? undefined,
+                    phoneNumber: assetFull?.phone_number ?? undefined,
+                    dashboardUrl: `${baseUrl}/app/campaigns/new`,
+                  },
+                });
+              } else {
+                await sendBrandedEmail({
+                  templateName: "tollfree-rejected",
+                  recipientEmail: recipient,
+                  idempotencyKey: `tfv-${verificationSid}-rejected`,
+                  templateData: {
+                    firstName,
+                    businessName: acct?.legal_business_name ?? undefined,
+                    phoneNumber: assetFull?.phone_number ?? undefined,
+                    reason: reason ? friendlyReason(reason) : undefined,
+                    setupUrl: `${baseUrl}/app/setup-sms`,
+                  },
+                });
+              }
+            }
+          } catch (err) {
+            console.warn("[twilio-tollfree-status] branded email failed", err);
+          }
+        }
+
         return new Response("ok");
       },
     },
