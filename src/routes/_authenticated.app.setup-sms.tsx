@@ -230,7 +230,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
                   .slice(0, 11),
               )
             }
-            placeholder="SAMWELLAGEN"
+            placeholder="XELLIO"
             maxLength={11}
           />
         </div>
@@ -912,7 +912,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                     .slice(0, 11),
                 })
               }
-              placeholder="SAMWELLAGEN"
+              placeholder="XELLIO"
               maxLength={11}
             />
             <p className="text-xs text-muted-foreground">

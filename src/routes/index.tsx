@@ -278,7 +278,7 @@ function FAQ() {
     { q: "Why is SMS marketing important?", a: "Text messages have 98% open rates and reach customers instantly — making SMS the most direct channel for engagement." },
     { q: "Is SMS marketing effective?", a: "Yes — brands using SMS see significant lifts in conversion when combined with personalized segmentation and timing." },
     { q: "What are some SMS best practices?", a: "Get explicit consent, keep messages short, identify your brand, and include a clear opt-out." },
-    { q: "How does SAMWELL charge for SMS?", a: "Pay-as-you-go credits priced per segment per destination country. Live rates inside your dashboard." },
+    { q: "How does Xellio charge for SMS?", a: "Pay-as-you-go credits priced per segment per destination country. Live rates inside your dashboard." },
     { q: "Which countries is SMS available in?", a: "We deliver to 190+ countries via tier-1 carriers with automatic routing and failover." },
   ];
   const [open, setOpen] = useState<number | null>(0);

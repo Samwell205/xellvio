@@ -38,7 +38,7 @@ const apiExample = [
   "Authorization: Bearer YOUR_API_KEY",
   "",
   "{",
-  '  "from": "SAMWELL",',
+  '  "from": "XELLIO",',
   '  "to": "+14155550123",',
   '  "body": "Your order is ready for pickup."',
   "}",

@@ -63,7 +63,7 @@ export function AdminSidebar() {
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <div className="font-semibold text-sm text-sidebar-foreground">SAMWELL</div>
+              <div className="font-semibold text-sm text-sidebar-foreground">Xellio</div>
               <div className="text-[10px] uppercase tracking-widest text-sidebar-foreground/70">Admin</div>
             </div>
           )}
