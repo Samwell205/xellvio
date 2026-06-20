@@ -16,6 +16,23 @@ async function statusCallbackUrl(): Promise<string> {
   return `${base}/api/public/twilio-status`;
 }
 
+function publicBaseUrl() {
+  return (process.env.PUBLIC_BASE_URL ?? "https://xellvio.com").replace(/\/$/, "");
+}
+
+function supportsMms(countryCode?: string | null) {
+  const cc = (countryCode ?? "").toUpperCase();
+  return cc === "US" || cc === "CA";
+}
+
+function mediaLinkForMessage(messageId: string) {
+  return `${publicBaseUrl()}/m/${messageId}`;
+}
+
+function fallbackMediaBody(body: string, messageId: string) {
+  return `${body}\n\nImage: ${mediaLinkForMessage(messageId)}`;
+}
+
 type Rate = {
   country_code: string;
   dial_prefix: string;
