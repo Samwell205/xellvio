@@ -116,7 +116,7 @@ function NewCampaignPage() {
   const ratesQ = useQuery({
     queryKey: ["country-rates-active"],
     queryFn: async () =>
-      (await supabase.from("country_rates").select("country_code,country_name,dial_prefix,sell_price,mms_multiplier").eq("active", true)).data ?? [],
+      ((await supabase.from("country_rates_public").select("country_code,country_name,dial_prefix,sell_price,mms_multiplier").eq("active", true)).data ?? []) as any[],
   });
   const rates = ratesQ.data ?? [];
 

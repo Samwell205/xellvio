@@ -79,7 +79,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
     let countryCode = data.country?.toUpperCase();
     if (!countryCode) {
       const { data: rates } = await supabase
-        .from("country_rates")
+        .from("country_rates_public")
         .select("country_code,dial_prefix")
         .eq("active", true);
       const { countryFromPhone } = await import("./country-from-phone");

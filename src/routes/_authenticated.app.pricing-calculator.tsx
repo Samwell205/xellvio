@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_authenticated/app/pricing-calculator")({
 function PricingCalculatorPage() {
   const ratesQ = useQuery({
     queryKey: ["country-rates-all"],
-    queryFn: async () => (await supabase.from("country_rates").select("country_code,country_name,dial_prefix,sell_price,mms_multiplier,active,sender_supports_inbound").order("country_name")).data ?? [],
+    queryFn: async () => ((await supabase.from("country_rates_public").select("country_code,country_name,dial_prefix,sell_price,mms_multiplier,active,sender_supports_inbound").order("country_name")).data ?? []) as any[],
   });
   const rates = ratesQ.data ?? [];
 
