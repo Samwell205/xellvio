@@ -28,6 +28,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as ApiPublicTwilioTollfreeStatusRouteImport } from './routes/api.public.twilio-tollfree-status'
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
 import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.twilio-inbound'
+import { Route as ApiPublicSyncTwilioPricingRouteImport } from './routes/api.public.sync-twilio-pricing'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
@@ -150,6 +151,12 @@ const ApiPublicTwilioInboundRoute = ApiPublicTwilioInboundRouteImport.update({
   path: '/api/public/twilio-inbound',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSyncTwilioPricingRoute =
+  ApiPublicSyncTwilioPricingRouteImport.update({
+    id: '/api/public/sync-twilio-pricing',
+    path: '/api/public/sync-twilio-pricing',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPollVerificationsRoute =
   ApiPublicPollVerificationsRouteImport.update({
     id: '/api/public/poll-verifications',
@@ -339,6 +346,7 @@ export interface FileRoutesByFullPath {
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
+  '/api/public/sync-twilio-pricing': typeof ApiPublicSyncTwilioPricingRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/api/public/twilio-tollfree-status': typeof ApiPublicTwilioTollfreeStatusRoute
@@ -381,6 +389,7 @@ export interface FileRoutesByTo {
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
+  '/api/public/sync-twilio-pricing': typeof ApiPublicSyncTwilioPricingRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/api/public/twilio-tollfree-status': typeof ApiPublicTwilioTollfreeStatusRoute
@@ -429,6 +438,7 @@ export interface FileRoutesById {
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
+  '/api/public/sync-twilio-pricing': typeof ApiPublicSyncTwilioPricingRoute
   '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
   '/api/public/twilio-tollfree-status': typeof ApiPublicTwilioTollfreeStatusRoute
@@ -477,6 +487,7 @@ export interface FileRouteTypes {
     | '/api/public/dispatch-campaign'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
+    | '/api/public/sync-twilio-pricing'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/api/public/twilio-tollfree-status'
@@ -519,6 +530,7 @@ export interface FileRouteTypes {
     | '/api/public/dispatch-campaign'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
+    | '/api/public/sync-twilio-pricing'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/api/public/twilio-tollfree-status'
@@ -566,6 +578,7 @@ export interface FileRouteTypes {
     | '/api/public/dispatch-campaign'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
+    | '/api/public/sync-twilio-pricing'
     | '/api/public/twilio-inbound'
     | '/api/public/twilio-status'
     | '/api/public/twilio-tollfree-status'
@@ -594,6 +607,7 @@ export interface RootRouteChildren {
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
+  ApiPublicSyncTwilioPricingRoute: typeof ApiPublicSyncTwilioPricingRoute
   ApiPublicTwilioInboundRoute: typeof ApiPublicTwilioInboundRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
   ApiPublicTwilioTollfreeStatusRoute: typeof ApiPublicTwilioTollfreeStatusRoute
@@ -732,6 +746,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/twilio-inbound'
       fullPath: '/api/public/twilio-inbound'
       preLoaderRoute: typeof ApiPublicTwilioInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/sync-twilio-pricing': {
+      id: '/api/public/sync-twilio-pricing'
+      path: '/api/public/sync-twilio-pricing'
+      fullPath: '/api/public/sync-twilio-pricing'
+      preLoaderRoute: typeof ApiPublicSyncTwilioPricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/poll-verifications': {
@@ -1043,6 +1064,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
+  ApiPublicSyncTwilioPricingRoute: ApiPublicSyncTwilioPricingRoute,
   ApiPublicTwilioInboundRoute: ApiPublicTwilioInboundRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
   ApiPublicTwilioTollfreeStatusRoute: ApiPublicTwilioTollfreeStatusRoute,
