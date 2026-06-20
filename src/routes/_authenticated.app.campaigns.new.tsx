@@ -245,7 +245,7 @@ function NewCampaignPage() {
     if (step === 0) return s.name.trim().length > 0 && (s.include.length > 0 || s.profileIds.length > 0);
     if (step === 1) return s.body.trim().length > 0 && !insufficient;
     if (step === 2) return s.sendMode !== "scheduled" || !!s.scheduleAt;
-    if (step === 3) return s.testSent;
+    if (step === 3) return s.testSent || testLimitReached;
     return true;
   })();
 
