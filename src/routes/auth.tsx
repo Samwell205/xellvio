@@ -45,7 +45,7 @@ function AuthPage() {
     setErrorMsg(null);
     if (mode === "signup") {
       if (!termsAccepted) {
-        setErrorMsg("You must accept the Terms of Use to create an account.");
+        setErrorMsg("You must accept the Terms of Service, Acceptable Use Policy, Anti-Spam Policy, and Privacy Policy to create an account.");
         return;
       }
       if (password !== confirmPassword) {
@@ -66,7 +66,17 @@ function AuthPage() {
         });
         if (error) throw error;
         if (data.user?.id) {
-          await supabase.from("accounts").update({ terms_accepted_at: new Date().toISOString() }).eq("id", data.user.id);
+          const { LEGAL_VERSION } = await import("@/content/legal");
+          const acceptedAt = new Date().toISOString();
+          await supabase.from("accounts").update({
+            terms_accepted_at: acceptedAt,
+            policies_accepted_version: LEGAL_VERSION,
+            policies_accepted: {
+              version: LEGAL_VERSION,
+              accepted_at: acceptedAt,
+              policies: ["terms", "aup", "anti-spam", "privacy"],
+            } as any,
+          }).eq("id", data.user.id);
         }
         if (data.session && data.user?.email_confirmed_at) {
           toast.success("Account created — welcome!");
@@ -214,9 +224,10 @@ function AuthPage() {
                 />
                 <span className="text-muted-foreground">
                   I agree to the{" "}
-                  <a href="/terms" target="_blank" className="text-primary hover:underline">Terms of Use</a>{" "}
-                  and{" "}
-                  <a href="/privacy" target="_blank" className="text-primary hover:underline">Privacy Policy</a>.
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Terms of Service</a>,{" "}
+                  <a href="/aup" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Acceptable Use Policy</a>,{" "}
+                  <a href="/anti-spam" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Anti-Spam Policy</a>, and{" "}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Privacy Policy</a>.
                 </span>
               </label>
             )}
