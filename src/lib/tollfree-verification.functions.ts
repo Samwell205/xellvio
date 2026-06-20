@@ -424,18 +424,16 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     } else {
       // Persist even without a pre-existing asset row so the rejection
       // reason shows up on reload instead of silently disappearing.
-      await supabaseAdmin.from("sender_assets").upsert(
-        {
-          account_id: userId,
-          country_code: "US",
-          sender_kind: "toll_free",
-          phone_number: phoneNumber,
-          phone_sid: phoneSid,
-          messaging_service_sid: messagingServiceSid,
-          ...patch,
-        },
-        { onConflict: "account_id,country_code,phone_number" },
-      );
+      const { error: insErr } = await supabaseAdmin.from("sender_assets").insert({
+        account_id: userId,
+        country_code: "US",
+        sender_kind: "toll_free",
+        phone_number: phoneNumber,
+        phone_sid: phoneSid,
+        messaging_service_sid: messagingServiceSid,
+        ...patch,
+      });
+      if (insErr) console.error("[tollfree-verification] persist insert failed", insErr.message);
     }
 
     return {
