@@ -30,6 +30,7 @@ import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
+import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './routes/_authenticated.app.toll-free-verification'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSetupSmsRouteImport } from './routes/_authenticated.app.setup-sms'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
@@ -160,6 +161,12 @@ const ApiPublicDispatchCampaignRoute =
     id: '/api/public/dispatch-campaign',
     path: '/api/public/dispatch-campaign',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedAppTollFreeVerificationRoute =
+  AuthenticatedAppTollFreeVerificationRouteImport.update({
+    id: '/toll-free-verification',
+    path: '/toll-free-verification',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppSuppressionsRoute =
   AuthenticatedAppSuppressionsRouteImport.update({
@@ -329,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
+  '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
@@ -370,6 +378,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
+  '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
@@ -417,6 +426,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
+  '/_authenticated/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
@@ -464,6 +474,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup-sms'
     | '/app/suppressions'
+    | '/app/toll-free-verification'
     | '/api/public/dispatch-campaign'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
@@ -505,6 +516,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup-sms'
     | '/app/suppressions'
+    | '/app/toll-free-verification'
     | '/api/public/dispatch-campaign'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
@@ -551,6 +563,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup-sms'
     | '/_authenticated/app/suppressions'
+    | '/_authenticated/app/toll-free-verification'
     | '/api/public/dispatch-campaign'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
@@ -733,6 +746,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/dispatch-campaign'
       preLoaderRoute: typeof ApiPublicDispatchCampaignRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/app/toll-free-verification': {
+      id: '/_authenticated/app/toll-free-verification'
+      path: '/toll-free-verification'
+      fullPath: '/app/toll-free-verification'
+      preLoaderRoute: typeof AuthenticatedAppTollFreeVerificationRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/suppressions': {
       id: '/_authenticated/app/suppressions'
@@ -970,6 +990,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSetupSmsRoute: typeof AuthenticatedAppSetupSmsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
+  AuthenticatedAppTollFreeVerificationRoute: typeof AuthenticatedAppTollFreeVerificationRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
 
@@ -985,6 +1006,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSetupSmsRoute: AuthenticatedAppSetupSmsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
+  AuthenticatedAppTollFreeVerificationRoute:
+    AuthenticatedAppTollFreeVerificationRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
 }
 
