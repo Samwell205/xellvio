@@ -197,6 +197,8 @@ export const TollfreeVerificationInput = z.object({
   businessDba: z.string().trim().max(255).optional(),
   websiteUrl: z.string().trim().url(),
   businessType: z.string().trim().min(2).max(64),
+  businessRegistrationNumber: z.string().trim().max(64).optional().or(z.literal("")),
+  businessRegistrationIdentifier: z.string().trim().max(64).optional().or(z.literal("")),
   contactFirstName: z.string().trim().min(1).max(64),
   contactLastName: z.string().trim().min(1).max(64),
   contactEmail: z.string().trim().email(),
@@ -675,6 +677,19 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       attempt_status: "number_reserved",
     });
 
+    // Map UI business type to Twilio's required enum.
+    const businessTypeMap: Record<string, string> = {
+      "Sole Proprietorship": "SOLE_PROPRIETOR",
+      "Partnership": "PARTNERSHIP",
+      "Limited Liability Corporation": "LIMITED_LIABILITY_CORPORATION",
+      "Co-operative": "CO_OPERATIVE",
+      "Non-profit Corporation": "NON_PROFIT_CORPORATION",
+      "Corporation": "CORPORATION",
+    };
+    const twilioBusinessType =
+      businessTypeMap[data.businessType] ?? data.businessType.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+    const businessCountry = (data.businessCountry || "US").toUpperCase();
+
     // Build the Twilio Tollfree Verifications payload.
     const body: Record<string, string | string[]> = {
       TollfreePhoneNumberSid: phoneSid,
@@ -690,12 +705,20 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       BusinessCity: data.city,
       BusinessStateProvinceRegion: data.state,
       BusinessPostalCode: data.zip,
-      BusinessCountry: data.businessCountry || "US",
+      BusinessCountry: businessCountry,
       BusinessContactFirstName: data.contactFirstName,
       BusinessContactLastName: data.contactLastName,
       BusinessContactEmail: data.contactEmail,
       BusinessContactPhone: `${data.contactPhoneCountry}${data.contactPhone}`,
+      BusinessType: twilioBusinessType,
     };
+    // Carriers now require these for any non sole-proprietor business.
+    if (twilioBusinessType !== "SOLE_PROPRIETOR") {
+      const regNumber = (data.businessRegistrationNumber ?? "").trim();
+      const regAuthority = (data.businessRegistrationIdentifier ?? "").trim();
+      if (regNumber) body.BusinessRegistrationNumber = regNumber;
+      if (regAuthority) body.BusinessRegistrationIdentifier = regAuthority;
+    }
     if (data.addressLine2) body.BusinessStreetAddress2 = data.addressLine2;
     if (data.proofOfOptInUrl) body.OptInImageUrls = [data.proofOfOptInUrl];
     const callbackBase = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
