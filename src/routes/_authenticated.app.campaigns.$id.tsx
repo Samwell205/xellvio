@@ -221,7 +221,7 @@ function CampaignReport() {
             <div className="space-y-5">
               <Card className="p-5">
                 <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3">Text Message</div>
-                <PhonePreview body={c.message_body} />
+                <PhonePreview body={c.message_body} mediaUrl={c.media_url} />
               </Card>
 
               <Card className="p-5 space-y-4">
