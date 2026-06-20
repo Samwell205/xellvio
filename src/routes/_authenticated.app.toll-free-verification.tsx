@@ -136,6 +136,10 @@ function statusBlurb(status: Status | null | undefined) {
   }
 }
 
+function hasSubmissionStarted(asset: any, rawStatus: Status | "pending" | null) {
+  return !!asset && (rawStatus === "pending" || !!asset.phone_number || !!asset.phone_sid || !!asset.verification_sid);
+}
+
 function TollfreeVerificationPage() {
   const qc = useQueryClient();
   const load = useServerFn(getMyTollfreeVerification);
@@ -159,14 +163,20 @@ function TollfreeVerificationPage() {
   // Twilio verification SID behind it — without a SID the carrier never received
   // it. BUT "rejected" without a SID is a legitimate local-failure state
   // (e.g. Twilio rejected the API call), and we must show its reason.
-  const rawStatus = (asset?.verification_status as Status | null) ?? null;
+  const rawStatus = (asset?.verification_status as Status | "pending" | null) ?? null;
   const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review" || rawStatus === "verified";
   const status: Status | null =
-    trustsCarrier && !asset?.verification_sid ? null : rawStatus;
+    rawStatus === "pending" || (trustsCarrier && !asset?.verification_sid) ? null : rawStatus;
   const payload = (asset?.verification_payload as any) ?? null;
   // After submission the form is read-only. Only allow editing when nothing was
   // submitted yet, or when the carrier rejected and we need to resubmit.
-  const isLocked = status === "submitted" || status === "in_review" || status === "verified";
+  const submissionStarted = hasSubmissionStarted(asset, rawStatus);
+  const hasReservedNumber = submissionStarted && !asset?.verification_sid;
+  const isLocked =
+    (submissionStarted && rawStatus !== "rejected") ||
+    status === "submitted" ||
+    status === "in_review" ||
+    status === "verified";
 
   const [form, setForm] = useState(() => defaultForm());
   useEffect(() => {
@@ -238,6 +248,10 @@ function TollfreeVerificationPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isLocked) {
+      toast.error("This toll-free request has already been started, so another number will not be purchased.");
+      return;
+    }
     if (!canSubmit) {
       toast.error("Please fill in all required fields and accept the Terms.");
       return;
@@ -266,7 +280,11 @@ function TollfreeVerificationPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="text-base">Current status</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">{statusBlurb(status)}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {submissionStarted && !asset?.verification_sid
+                ? "A toll-free number is already reserved for this request, but Twilio has not returned a verification ID yet. No new number will be purchased."
+                : statusBlurb(status)}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={status} />
@@ -333,12 +351,13 @@ function TollfreeVerificationPage() {
         )}
       </Card>
 
-      {asset && <Timeline asset={asset} status={status} />}
+      {asset?.verification_sid && <Timeline asset={asset} status={status} />}
 
       {isLocked && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Your submission is locked while the carrier reviews it. Only Twilio can approve
-          or reject this — we cannot approve it manually. This page updates automatically.
+          {asset?.verification_sid
+            ? "Your submission is locked while the carrier reviews it. Only Twilio can approve or reject this — we cannot approve it manually. This page updates automatically."
+            : "This toll-free request is already locked to the reserved number above. Submitting again is disabled so another number cannot be purchased."}
         </div>
       )}
 
@@ -633,7 +652,9 @@ function TollfreeVerificationPage() {
               {submitMut.isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
               {status === "rejected"
                 ? "Resubmit for verification"
-                : "Send information for verification"}
+                : hasReservedNumber
+                  ? "Continue verification with reserved number"
+                  : "Send information for verification"}
             </Button>
           </div>
         )}

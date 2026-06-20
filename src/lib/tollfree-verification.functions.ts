@@ -175,10 +175,29 @@ function mapStatus(raw: string | undefined): "submitted" | "in_review" | "verifi
   return "submitted";
 }
 
+type StoredVerificationStatus = "pending" | "submitted" | "in_review" | "verified" | "rejected";
+
+function storedStatus(raw: string | null | undefined): StoredVerificationStatus {
+  if (raw === "submitted" || raw === "in_review" || raw === "verified" || raw === "rejected") {
+    return raw;
+  }
+  return "pending";
+}
+
 async function getOrBuyUsTollfree(opts: {
   userId: string;
   legalName: string;
-}): Promise<{ phoneNumber: string; phoneSid: string; messagingServiceSid: string; subSid: string; subToken: string; assetId: string | null }> {
+}): Promise<{
+  phoneNumber: string;
+  phoneSid: string;
+  messagingServiceSid: string;
+  subSid: string;
+  subToken: string;
+  assetId: string | null;
+  verificationSid: string | null;
+  verificationStatus: StoredVerificationStatus;
+  alreadySubmitted: boolean;
+}> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { decryptToken, encryptToken } = await import("./tenant-crypto.server");
 
@@ -212,29 +231,175 @@ async function getOrBuyUsTollfree(opts: {
       .eq("id", opts.userId);
   }
 
-  // 1) Reuse an existing US toll-free asset if present.
-  const { data: existing } = await supabaseAdmin
-    .from("sender_assets")
-    .select("id,phone_number,phone_sid,messaging_service_sid")
-    .eq("account_id", opts.userId)
-    .eq("country_code", "US")
-    .eq("sender_kind", "toll_free")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  type AssetRow = {
+    id: string;
+    phone_number: string | null;
+    phone_sid: string | null;
+    messaging_service_sid: string | null;
+    verification_sid: string | null;
+    verification_status: string | null;
+    created_at: string | null;
+  };
+  const selectAsset =
+    "id,phone_number,phone_sid,messaging_service_sid,verification_sid,verification_status,created_at";
+  const loadAsset = async () => {
+    const { data: row, error } = await supabaseAdmin
+      .from("sender_assets")
+      .select(selectAsset)
+      .eq("account_id", opts.userId)
+      .eq("country_code", "US")
+      .eq("sender_kind", "toll_free")
+      .maybeSingle();
+    if (error) throw error;
+    return (row ?? null) as AssetRow | null;
+  };
 
-  if (existing?.phone_sid && existing.phone_number && existing.messaging_service_sid) {
+  // 1) Claim exactly one US toll-free asset row before any carrier purchase.
+  // This idempotency guard prevents rapid repeat clicks from buying numbers.
+  let existing = await loadAsset();
+  let createdPlaceholder = false;
+  if (!existing) {
+    const ins = await supabaseAdmin
+      .from("sender_assets")
+      .insert({
+        account_id: opts.userId,
+        country_code: "US",
+        sender_kind: "toll_free",
+        verification_status: "pending",
+      })
+      .select(selectAsset)
+      .single();
+    if (ins.error) {
+      if ((ins.error as any).code !== "23505") throw ins.error;
+      existing = await loadAsset();
+    } else {
+      existing = ins.data as AssetRow;
+      createdPlaceholder = true;
+    }
+  }
+  if (!existing) throw new Error("Could not reserve a toll-free sender record. Please try again.");
+
+  const currentStatus = storedStatus(existing.verification_status);
+  const alreadySubmitted =
+    !!existing.verification_sid &&
+    (currentStatus === "submitted" || currentStatus === "in_review" || currentStatus === "verified");
+  if (alreadySubmitted) {
     return {
-      phoneNumber: existing.phone_number,
-      phoneSid: existing.phone_sid,
-      messagingServiceSid: existing.messaging_service_sid,
+      phoneNumber: existing.phone_number ?? "",
+      phoneSid: existing.phone_sid ?? "",
+      messagingServiceSid: existing.messaging_service_sid ?? "",
       subSid,
       subToken,
       assetId: existing.id,
+      verificationSid: existing.verification_sid,
+      verificationStatus: currentStatus,
+      alreadySubmitted: true,
     };
   }
 
-  // 2) Buy the first available US toll-free number that supports SMS.
+  const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+
+  const createMessagingService = async (phoneSid: string) => {
+    const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
+      method: "POST",
+      sid: subSid,
+      token: subToken,
+      body: {
+        FriendlyName: `${opts.legalName.slice(0, 40)} US`,
+        InboundRequestUrl: `${base}/api/public/twilio-inbound`,
+        StatusCallback: `${base}/api/public/twilio-status`,
+      },
+    });
+    await twilio(`${MESSAGING_API}/Services/${ms.sid}/PhoneNumbers`, {
+      method: "POST",
+      sid: subSid,
+      token: subToken,
+      body: { PhoneNumberSid: phoneSid },
+    });
+    return ms.sid;
+  };
+
+  // 2) Reuse/recover an existing reserved number. Never buy another number
+  // for an account that already has a toll-free sender row.
+  if (existing.phone_number || existing.phone_sid) {
+    if (!createdPlaceholder && currentStatus !== "rejected") {
+      const lockCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const claimed = await supabaseAdmin
+        .from("sender_assets")
+        .update({ last_synced_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .or(`last_synced_at.is.null,last_synced_at.lt.${lockCutoff}`)
+        .select(selectAsset)
+        .maybeSingle();
+      if (claimed.error) throw claimed.error;
+      if (!claimed.data) {
+        throw new Error("This toll-free request is already being processed. Please wait a moment before trying again.");
+      }
+      existing = claimed.data as AssetRow;
+    }
+    let phoneSid = existing.phone_sid;
+    let phoneNumber = existing.phone_number;
+    if (!phoneSid && phoneNumber) {
+      const qs = new URLSearchParams({ PhoneNumber: phoneNumber, PageSize: "1" }).toString();
+      const found = await twilio<{ incoming_phone_numbers: Array<{ sid: string; phone_number: string }> }>(
+        `${TWILIO_API}/Accounts/${subSid}/IncomingPhoneNumbers.json?${qs}`,
+        { sid: subSid, token: subToken },
+      );
+      const match = found.incoming_phone_numbers?.[0];
+      if (!match) {
+        throw new Error(
+          `A toll-free number (${phoneNumber}) is already reserved for this account, so another number will not be purchased. Please contact support to reconnect it before submitting again.`,
+        );
+      }
+      phoneSid = match.sid;
+      phoneNumber = match.phone_number;
+    }
+    if (!phoneSid) throw new Error("The reserved toll-free number is missing its carrier ID.");
+    const messagingServiceSid = existing.messaging_service_sid ?? (await createMessagingService(phoneSid));
+    await supabaseAdmin
+      .from("sender_assets")
+      .update({
+        phone_number: phoneNumber,
+        phone_sid: phoneSid,
+        messaging_service_sid: messagingServiceSid,
+      })
+      .eq("id", existing.id);
+    return {
+      phoneNumber: phoneNumber ?? "",
+      phoneSid,
+      messagingServiceSid,
+      subSid,
+      subToken,
+      assetId: existing.id,
+      verificationSid: existing.verification_sid,
+      verificationStatus: currentStatus,
+      alreadySubmitted: false,
+    };
+  }
+
+  const stalePlaceholder = existing.created_at
+    ? Date.now() - Date.parse(existing.created_at) > 10 * 60 * 1000
+    : true;
+  if (!createdPlaceholder && !stalePlaceholder) {
+    throw new Error("A toll-free number reservation is already being prepared. Please wait a moment before trying again.");
+  }
+  if (!createdPlaceholder) {
+    const lockCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const claimed = await supabaseAdmin
+      .from("sender_assets")
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq("id", existing.id)
+      .or(`last_synced_at.is.null,last_synced_at.lt.${lockCutoff}`)
+      .select(selectAsset)
+      .maybeSingle();
+    if (claimed.error) throw claimed.error;
+    if (!claimed.data) {
+      throw new Error("A toll-free number reservation is already being prepared. Please wait a moment before trying again.");
+    }
+    existing = claimed.data as AssetRow;
+  }
+
+  // 3) Buy once, only after this request owns the single placeholder row.
   const avail = await twilio<{ available_phone_numbers: Array<{ phone_number: string }> }>(
     `${TWILIO_API}/Accounts/${subSid}/AvailablePhoneNumbers/US/TollFree.json?SmsEnabled=true&PageSize=1`,
     { sid: subSid, token: subToken },
@@ -244,7 +409,6 @@ async function getOrBuyUsTollfree(opts: {
     throw new Error("No US toll-free numbers are available from the carrier right now. Try again in a few minutes.");
   }
 
-  const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
   const bought = await twilio<{ sid: string; phone_number: string }>(
     `${TWILIO_API}/Accounts/${subSid}/IncomingPhoneNumbers.json`,
     {
@@ -258,62 +422,28 @@ async function getOrBuyUsTollfree(opts: {
       },
     },
   );
+  const messagingServiceSid = await createMessagingService(bought.sid);
 
-  // 3) Wrap it in a Messaging Service so we can route through it.
-  const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
-    method: "POST",
-    sid: subSid,
-    token: subToken,
-    body: {
-      FriendlyName: `${opts.legalName.slice(0, 40)} US`,
-      InboundRequestUrl: `${base}/api/public/twilio-inbound`,
-      StatusCallback: `${base}/api/public/twilio-status`,
-    },
-  });
-  await twilio(`${MESSAGING_API}/Services/${ms.sid}/PhoneNumbers`, {
-    method: "POST",
-    sid: subSid,
-    token: subToken,
-    body: { PhoneNumberSid: bought.sid },
-  });
-
-  // 4) Save the asset (no verification yet) and return.
-  let assetId: string | null = existing?.id ?? null;
-  if (assetId) {
-    await supabaseAdmin
-      .from("sender_assets")
-      .update({
-        phone_number: bought.phone_number,
-        phone_sid: bought.sid,
-        messaging_service_sid: ms.sid,
-        sender_kind: "toll_free",
-        verification_status: "submitted",
-      })
-      .eq("id", assetId);
-  } else {
-    const ins = await supabaseAdmin
-      .from("sender_assets")
-      .insert({
-        account_id: opts.userId,
-        country_code: "US",
-        sender_kind: "toll_free",
-        phone_number: bought.phone_number,
-        phone_sid: bought.sid,
-        messaging_service_sid: ms.sid,
-        verification_status: "submitted",
-      })
-      .select("id")
-      .single();
-    assetId = ins.data?.id ?? null;
-  }
+  await supabaseAdmin
+    .from("sender_assets")
+    .update({
+      phone_number: bought.phone_number,
+      phone_sid: bought.sid,
+      messaging_service_sid: messagingServiceSid,
+      verification_status: "pending",
+    })
+    .eq("id", existing.id);
 
   return {
     phoneNumber: bought.phone_number,
     phoneSid: bought.sid,
-    messagingServiceSid: ms.sid,
+    messagingServiceSid,
     subSid,
     subToken,
-    assetId,
+    assetId: existing.id,
+    verificationSid: existing.verification_sid,
+    verificationStatus: currentStatus,
+    alreadySubmitted: false,
   };
 }
 
@@ -348,8 +478,29 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       })
       .eq("id", userId);
 
-    const { phoneNumber, phoneSid, messagingServiceSid, subSid, subToken, assetId } =
-      await getOrBuyUsTollfree({ userId, legalName: data.legalEntityName });
+    const {
+      phoneNumber,
+      phoneSid,
+      messagingServiceSid,
+      subSid,
+      subToken,
+      assetId,
+      verificationSid: existingVerificationSid,
+      verificationStatus: existingVerificationStatus,
+      alreadySubmitted,
+    } = await getOrBuyUsTollfree({ userId, legalName: data.legalEntityName });
+
+    if (alreadySubmitted) {
+      return {
+        phoneNumber,
+        messagingServiceSid,
+        verificationSid: existingVerificationSid,
+        status: existingVerificationStatus === "pending" ? "submitted" : existingVerificationStatus,
+        rejectionReason: null,
+        friendlyRejectionReason: null,
+        alreadySubmitted: true,
+      };
+    }
 
     // Build the Twilio Tollfree Verifications payload.
     const body: Record<string, string | string[]> = {
@@ -443,6 +594,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       status,
       rejectionReason,
       friendlyRejectionReason: rejectionReason ? friendlyReason(rejectionReason) : null,
+      alreadySubmitted: false,
     };
   });
 
