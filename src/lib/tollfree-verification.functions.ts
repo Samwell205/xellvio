@@ -358,7 +358,7 @@ async function getOrBuyUsTollfree(opts: {
     // of the one that already contains this phone number, if any.
     let next: string | null = `${MESSAGING_API}/Services?PageSize=50`;
     while (next) {
-      const page = await twilio<{ services?: Array<{ sid: string }>; meta?: { next_page_url?: string | null } }>(
+      const page: { services?: Array<{ sid: string }>; meta?: { next_page_url?: string | null } } = await twilio(
         next,
         { sid: subSid, token: subToken },
       );
