@@ -1,0 +1,1 @@
+UPDATE public.campaigns SET status = 'queued', updated_at = now() WHERE status = 'sending' AND NOT EXISTS (SELECT 1 FROM public.messages m WHERE m.campaign_id = campaigns.id);
