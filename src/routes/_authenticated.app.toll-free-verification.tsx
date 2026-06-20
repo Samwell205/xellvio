@@ -66,6 +66,16 @@ const BUSINESS_TYPES = [
   "Government",
 ] as const;
 
+const REGISTRATION_AUTHORITIES = [
+  { v: "EIN", l: "EIN — US employer ID" },
+  { v: "CBN", l: "CBN — Canadian business number" },
+  { v: "CRN", l: "CRN — Company registration number" },
+  { v: "PROVINCIAL_NUMBER", l: "Provincial number — Canada" },
+  { v: "VAT", l: "VAT — Value-added tax number" },
+  { v: "BRN", l: "BRN — Business registration number" },
+  { v: "OTHER", l: "Other" },
+] as const;
+
 const LEGACY_BUSINESS_TYPE_MAP: Record<string, (typeof BUSINESS_TYPES)[number]> = {
   "Sole Proprietorship": "Sole Proprietor",
   Partnership: "Private company / LLC / Partnership",
