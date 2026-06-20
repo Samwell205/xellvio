@@ -108,13 +108,13 @@ export async function checkTwilioBalanceAndAlert(): Promise<CheckResult> {
     status !== prevStatus;
 
   let alerted = false;
-  if (shouldAlert) {
+  if (shouldAlert && status !== "healthy") {
     try {
       await enqueueLowBalanceEmail({
         to: alertEmail,
         balance,
         currency,
-        status,
+        status: status as "low" | "critical",
         thresholdLow,
         thresholdCritical,
       });
