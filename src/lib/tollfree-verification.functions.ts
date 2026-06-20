@@ -353,24 +353,85 @@ async function getOrBuyUsTollfree(opts: {
 
   const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
 
+  const findMessagingServiceForPhone = async (phoneSid: string): Promise<string | null> => {
+    // Walk all Messaging Services for this (sub)account and return the SID
+    // of the one that already contains this phone number, if any.
+    let next: string | null = `${MESSAGING_API}/Services?PageSize=50`;
+    while (next) {
+      const page: { services?: Array<{ sid: string }>; meta?: { next_page_url?: string | null } } = await twilio(
+        next,
+        { sid: subSid, token: subToken },
+      );
+      for (const svc of page.services ?? []) {
+        try {
+          await twilio(`${MESSAGING_API}/Services/${svc.sid}/PhoneNumbers/${phoneSid}`, {
+            sid: subSid,
+            token: subToken,
+          });
+          return svc.sid;
+        } catch {
+          // not in this service, keep looking
+        }
+      }
+      next = page.meta?.next_page_url ?? null;
+    }
+    return null;
+  };
+
   const createMessagingService = async (phoneSid: string) => {
     const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
       method: "POST",
       sid: subSid,
       token: subToken,
       body: {
-        FriendlyName: `${opts.legalName.slice(0, 40)} US`,
+        FriendlyName: `${opts.legalName.slice(0, 40)} US ${Date.now().toString(36)}`,
         InboundRequestUrl: `${base}/api/public/twilio-inbound`,
         StatusCallback: `${base}/api/public/twilio-status`,
       },
     });
-    await twilio(`${MESSAGING_API}/Services/${ms.sid}/PhoneNumbers`, {
-      method: "POST",
-      sid: subSid,
-      token: subToken,
-      body: { PhoneNumberSid: phoneSid },
-    });
-    return ms.sid;
+    try {
+      await twilio(`${MESSAGING_API}/Services/${ms.sid}/PhoneNumbers`, {
+        method: "POST",
+        sid: subSid,
+        token: subToken,
+        body: { PhoneNumberSid: phoneSid },
+      });
+      return ms.sid;
+    } catch (e: any) {
+      const code = e?.twilioCode;
+      const msg = String(e?.message ?? "").toLowerCase();
+      const alreadyAttached =
+        code === 21712 ||
+        code === "21712" ||
+        msg.includes("associated with another messaging service") ||
+        msg.includes("already") && msg.includes("messaging service");
+      if (!alreadyAttached) {
+        // Clean up empty service we just created so we don't leak it.
+        try {
+          await twilio(`${MESSAGING_API}/Services/${ms.sid}`, {
+            method: "DELETE",
+            sid: subSid,
+            token: subToken,
+          });
+        } catch {}
+        throw e;
+      }
+      // Find the existing messaging service that owns this phone number and reuse it.
+      const existingMs = await findMessagingServiceForPhone(phoneSid);
+      try {
+        await twilio(`${MESSAGING_API}/Services/${ms.sid}`, {
+          method: "DELETE",
+          sid: subSid,
+          token: subToken,
+        });
+      } catch {}
+      if (!existingMs) {
+        throw new Error(
+          "This toll-free number is already attached to another Messaging Service on the carrier, but we couldn't locate it to reuse. Please contact support.",
+        );
+      }
+      return existingMs;
+    }
   };
 
   // 2) Reuse/recover an existing reserved number. Never buy another number
