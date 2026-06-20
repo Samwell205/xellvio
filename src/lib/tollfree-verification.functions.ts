@@ -51,6 +51,10 @@ async function twilio<T = any>(
 function friendlyReason(raw: string | undefined): string {
   const t = (raw ?? "").toLowerCase();
   if (!t) return "The carrier hasn't returned a specific reason yet.";
+  if (t.includes("invalid sole proprietorship classification"))
+    return "This business was submitted as a sole proprietor, but carriers are treating it as a registered business. Choose Private company / LLC / Partnership, enter the business registration details, and resubmit; the reserved toll-free number will be reused.";
+  if (t.includes("business type is required") || t.includes("business registration"))
+    return "Registered businesses must include a valid business type, registration number, registration authority, and registration country. Add those details and resubmit; the reserved toll-free number will be reused.";
   if (t.includes("privacy")) return "Your website needs a visible Privacy Policy link.";
   if (t.includes("terms")) return "Your website needs a visible Terms of Service link.";
   if (t.includes("usecasecategories"))
@@ -159,6 +163,76 @@ const USE_CASE_CATEGORIES = [
   "SECURITY_ALERT",
 ] as const;
 
+const TWILIO_BUSINESS_TYPES = [
+  "PRIVATE_PROFIT",
+  "PUBLIC_PROFIT",
+  "SOLE_PROPRIETOR",
+  "NON_PROFIT",
+  "GOVERNMENT",
+] as const;
+
+const REGISTRATION_AUTHORITIES = [
+  "EIN",
+  "CBN",
+  "CRN",
+  "PROVINCIAL_NUMBER",
+  "VAT",
+  "ACN",
+  "ABN",
+  "BRN",
+  "SIREN",
+  "SIRET",
+  "NZBN",
+  "USt-IdNr",
+  "CIF",
+  "NIF",
+  "CNPJ",
+  "UID",
+  "NEQ",
+  "OTHER",
+] as const;
+
+const BUSINESS_TYPE_MAP: Record<string, (typeof TWILIO_BUSINESS_TYPES)[number]> = {
+  "SOLE PROPRIETORSHIP": "SOLE_PROPRIETOR",
+  "SOLE PROPRIETOR": "SOLE_PROPRIETOR",
+  "PRIVATE COMPANY": "PRIVATE_PROFIT",
+  "PRIVATE COMPANY / LLC / PARTNERSHIP": "PRIVATE_PROFIT",
+  PARTNERSHIP: "PRIVATE_PROFIT",
+  "LIMITED LIABILITY CORPORATION": "PRIVATE_PROFIT",
+  LLC: "PRIVATE_PROFIT",
+  "L.L.C.": "PRIVATE_PROFIT",
+  "CO-OPERATIVE": "PRIVATE_PROFIT",
+  COOPERATIVE: "PRIVATE_PROFIT",
+  CORPORATION: "PRIVATE_PROFIT",
+  "PUBLIC COMPANY": "PUBLIC_PROFIT",
+  "PUBLIC CORPORATION": "PUBLIC_PROFIT",
+  "NON-PROFIT CORPORATION": "NON_PROFIT",
+  NONPROFIT: "NON_PROFIT",
+  "NON-PROFIT": "NON_PROFIT",
+  GOVERNMENT: "GOVERNMENT",
+};
+
+function normalizeBusinessType(value: string) {
+  const raw = value.trim();
+  const upper = raw.toUpperCase().replace(/\s+/g, " ");
+  if ((TWILIO_BUSINESS_TYPES as readonly string[]).includes(upper)) {
+    return upper as (typeof TWILIO_BUSINESS_TYPES)[number];
+  }
+  return BUSINESS_TYPE_MAP[upper] ?? "PRIVATE_PROFIT";
+}
+
+function normalizeRegistrationAuthority(value: string) {
+  const raw = value.trim();
+  const found = REGISTRATION_AUTHORITIES.find((authority) => authority.toUpperCase() === raw.toUpperCase());
+  return found ?? null;
+}
+
+function looksLikeRegisteredEntity(name: string) {
+  return /\b(LLC|L\.L\.C\.|INC|INC\.|CORP|CORPORATION|LTD|LIMITED|LP|LLP|CO\.|COMPANY|NONPROFIT|NON-PROFIT)\b/i.test(
+    name,
+  );
+}
+
 const LEGACY_USE_CASE_CATEGORY_MAP: Record<string, (typeof USE_CASE_CATEGORIES)[number]> = {
   "2FA": "TWO_FACTOR_AUTHENTICATION",
   FRAUD_ALERTS: "FRAUD_ALERT_MESSAGING",
@@ -199,6 +273,7 @@ export const TollfreeVerificationInput = z.object({
   businessType: z.string().trim().min(2).max(64),
   businessRegistrationNumber: z.string().trim().max(64).optional().or(z.literal("")),
   businessRegistrationIdentifier: z.string().trim().max(64).optional().or(z.literal("")),
+  businessRegistrationCountry: z.string().trim().length(2).optional().or(z.literal("")),
   contactFirstName: z.string().trim().min(1).max(64),
   contactLastName: z.string().trim().min(1).max(64),
   contactEmail: z.string().trim().email(),
@@ -588,6 +663,39 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       request_summary: requestSummary(data),
     });
 
+    const initialTwilioBusinessType = normalizeBusinessType(data.businessType);
+    const registrationNumber = (data.businessRegistrationNumber ?? "").trim();
+    const registrationAuthority = (data.businessRegistrationIdentifier ?? "").trim();
+    const registrationCountry = (data.businessRegistrationCountry || data.businessCountry || "").trim();
+    const normalizedRegistrationAuthority = normalizeRegistrationAuthority(registrationAuthority);
+    if (initialTwilioBusinessType === "SOLE_PROPRIETOR" && looksLikeRegisteredEntity(data.legalEntityName)) {
+      const reason = "This legal entity name looks like a registered business, so it cannot be submitted as a sole proprietor. Choose Private company / LLC / Partnership and add the registration details.";
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        attempt_status: "failed",
+        failure_reason: reason,
+        friendly_failure_reason: reason,
+      });
+      throw new Error(reason);
+    }
+    if (initialTwilioBusinessType !== "SOLE_PROPRIETOR" && (!registrationNumber || !registrationAuthority || !registrationCountry)) {
+      const reason = "Registered businesses must include a registration number, registration authority, and registration country before carrier submission.";
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        attempt_status: "failed",
+        failure_reason: reason,
+        friendly_failure_reason: reason,
+      });
+      throw new Error(reason);
+    }
+    if (initialTwilioBusinessType !== "SOLE_PROPRIETOR" && !normalizedRegistrationAuthority) {
+      const reason = "Registration authority must be one of Twilio's accepted codes, such as EIN for US businesses.";
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        attempt_status: "failed",
+        failure_reason: reason,
+        friendly_failure_reason: reason,
+      });
+      throw new Error(reason);
+    }
+
     // Persist the questionnaire snapshot onto the account too, so it round-trips on load.
     await supabaseAdmin
       .from("accounts")
@@ -678,17 +786,10 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     });
 
     // Map UI business type to Twilio's required enum.
-    const businessTypeMap: Record<string, string> = {
-      "Sole Proprietorship": "SOLE_PROPRIETOR",
-      "Partnership": "PARTNERSHIP",
-      "Limited Liability Corporation": "LIMITED_LIABILITY_CORPORATION",
-      "Co-operative": "CO_OPERATIVE",
-      "Non-profit Corporation": "NON_PROFIT_CORPORATION",
-      "Corporation": "CORPORATION",
-    };
-    const twilioBusinessType =
-      businessTypeMap[data.businessType] ?? data.businessType.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+    const twilioBusinessType = normalizeBusinessType(data.businessType);
     const businessCountry = (data.businessCountry || "US").toUpperCase();
+    const twilioRegistrationCountry = (registrationCountry || businessCountry).toUpperCase();
+    const twilioRegistrationAuthority = normalizedRegistrationAuthority;
 
     // Build the Twilio Tollfree Verifications payload.
     const body: Record<string, string | string[]> = {
@@ -712,12 +813,17 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       BusinessContactPhone: `${data.contactPhoneCountry}${data.contactPhone}`,
       BusinessType: twilioBusinessType,
     };
-    // Carriers now require these for any non sole-proprietor business.
+    if (data.businessDba) body.DoingBusinessAs = data.businessDba;
+    // Carriers require registration details for every business type except SOLE_PROPRIETOR.
     if (twilioBusinessType !== "SOLE_PROPRIETOR") {
-      const regNumber = (data.businessRegistrationNumber ?? "").trim();
-      const regAuthority = (data.businessRegistrationIdentifier ?? "").trim();
-      if (regNumber) body.BusinessRegistrationNumber = regNumber;
-      if (regAuthority) body.BusinessRegistrationIdentifier = regAuthority;
+      if (!registrationNumber || !twilioRegistrationAuthority || !twilioRegistrationCountry) {
+        throw new Error(
+          "Registered businesses must include a registration number, registration authority, and registration country before carrier submission.",
+        );
+      }
+      body.BusinessRegistrationNumber = registrationNumber;
+      body.BusinessRegistrationAuthority = twilioRegistrationAuthority;
+      body.BusinessRegistrationCountry = twilioRegistrationCountry;
     }
     if (data.addressLine2) body.BusinessStreetAddress2 = data.addressLine2;
     if (data.proofOfOptInUrl) body.OptInImageUrls = [data.proofOfOptInUrl];

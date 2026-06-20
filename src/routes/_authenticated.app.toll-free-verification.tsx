@@ -59,13 +59,35 @@ const OPT_IN_TYPES = [
   { v: "MOBILE_QR_CODE", l: "Mobile QR Code" },
 ] as const;
 const BUSINESS_TYPES = [
-  "Sole Proprietorship",
-  "Partnership",
-  "Limited Liability Corporation",
-  "Co-operative",
-  "Non-profit Corporation",
-  "Corporation",
+  "Sole Proprietor",
+  "Private company / LLC / Partnership",
+  "Public company",
+  "Non-profit",
+  "Government",
 ] as const;
+
+const REGISTRATION_AUTHORITIES = [
+  { v: "EIN", l: "EIN — US employer ID" },
+  { v: "CBN", l: "CBN — Canadian business number" },
+  { v: "CRN", l: "CRN — Company registration number" },
+  { v: "PROVINCIAL_NUMBER", l: "Provincial number — Canada" },
+  { v: "VAT", l: "VAT — Value-added tax number" },
+  { v: "BRN", l: "BRN — Business registration number" },
+  { v: "OTHER", l: "Other" },
+] as const;
+
+const LEGACY_BUSINESS_TYPE_MAP: Record<string, (typeof BUSINESS_TYPES)[number]> = {
+  "Sole Proprietorship": "Sole Proprietor",
+  Partnership: "Private company / LLC / Partnership",
+  "Limited Liability Corporation": "Private company / LLC / Partnership",
+  "Co-operative": "Private company / LLC / Partnership",
+  Corporation: "Private company / LLC / Partnership",
+  PRIVATE_PROFIT: "Private company / LLC / Partnership",
+  PUBLIC_PROFIT: "Public company",
+  NON_PROFIT: "Non-profit",
+  SOLE_PROPRIETOR: "Sole Proprietor",
+  GOVERNMENT: "Government",
+};
 const CATEGORIES = [
   "ACCOUNT_NOTIFICATIONS",
   "CUSTOMER_CARE",
@@ -101,6 +123,18 @@ function normalizeCategories(values: unknown): string[] {
     .map((v) => LEGACY_CATEGORY_MAP[v] ?? v)
     .filter((v) => (CATEGORIES as readonly string[]).includes(v));
   return Array.from(new Set(normalized));
+}
+
+function normalizeBusinessTypeLabel(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (LEGACY_BUSINESS_TYPE_MAP[raw]) return LEGACY_BUSINESS_TYPE_MAP[raw];
+  return (BUSINESS_TYPES as readonly string[]).includes(raw) ? raw : "";
+}
+
+function looksLikeRegisteredEntity(name: unknown) {
+  return /\b(LLC|L\.L\.C\.|INC|INC\.|CORP|CORPORATION|LTD|LIMITED|LP|LLP|CO\.|COMPANY|NONPROFIT|NON-PROFIT)\b/i.test(
+    String(name ?? ""),
+  );
 }
 
 type Status = "submitted" | "in_review" | "verified" | "rejected";
@@ -159,6 +193,9 @@ function statusBlurb(status: Status | null | undefined) {
 
 function friendlyRejectionDisplay(asset: any) {
   const raw = String(asset?.rejection_reason ?? "").toLowerCase();
+  if (raw.includes("invalid sole proprietorship classification")) {
+    return "This business was submitted as a sole proprietor, but carriers are treating it as a registered business. Choose Private company / LLC / Partnership, enter the registration details, and resubmit; the reserved toll-free number will be reused.";
+  }
   if (raw.includes("usecasecategories")) {
     return "The selected use case category was not accepted by Twilio. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
   }
@@ -215,14 +252,24 @@ function TollfreeVerificationPage() {
   useEffect(() => {
     if (payload) {
       const normalizedCategories = normalizeCategories(payload.useCaseCategories);
+      const normalizedBusinessType = normalizeBusinessTypeLabel(payload.businessType);
+      const rejectedSoleProprietor = String(asset?.rejection_reason ?? "")
+        .toLowerCase()
+        .includes("invalid sole proprietorship classification");
       setForm({
         ...defaultForm(),
         ...payload,
+        businessType:
+          normalizedBusinessType === "Sole Proprietor" &&
+          (looksLikeRegisteredEntity(payload.legalEntityName) || rejectedSoleProprietor)
+            ? "Private company / LLC / Partnership"
+            : normalizedBusinessType,
+        businessRegistrationCountry: payload.businessRegistrationCountry || payload.businessCountry || "US",
         useCaseCategories: normalizedCategories.length ? normalizedCategories : defaultForm().useCaseCategories,
         agreeToTos: true,
       });
     }
-  }, [payload]);
+  }, [payload, asset?.rejection_reason]);
 
 
   const submitMut = useMutation({
@@ -491,8 +538,8 @@ function TollfreeVerificationPage() {
               />
             </Field>
           </Two>
-          {form.businessType && form.businessType !== "Sole Proprietorship" && (
-            <Two>
+          {form.businessType && form.businessType !== "Sole Proprietor" && (
+            <Three>
               <Field label="Business registration number" required>
                 <Input
                   value={form.businessRegistrationNumber ?? ""}
@@ -500,14 +547,32 @@ function TollfreeVerificationPage() {
                   placeholder="e.g. EIN 12-3456789"
                 />
               </Field>
-              <Field label="Registration authority / type" required>
-                <Input
+              <Field label="Registration authority" required>
+                <Select
                   value={form.businessRegistrationIdentifier ?? ""}
-                  onChange={(e) => update("businessRegistrationIdentifier", e.target.value)}
-                  placeholder="EIN, DUNS, CBN, CN, etc."
+                  onValueChange={(v) => update("businessRegistrationIdentifier", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select authority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REGISTRATION_AUTHORITIES.map((authority) => (
+                      <SelectItem key={authority.v} value={authority.v}>
+                        {authority.l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Registration country" required>
+                <Input
+                  value={form.businessRegistrationCountry ?? "US"}
+                  onChange={(e) => update("businessRegistrationCountry", e.target.value.toUpperCase())}
+                  maxLength={2}
+                  placeholder="US"
                 />
               </Field>
-            </Two>
+            </Three>
           )}
         </Section>
 
@@ -893,6 +958,7 @@ function defaultForm() {
     businessType: "",
     businessRegistrationNumber: "",
     businessRegistrationIdentifier: "",
+    businessRegistrationCountry: "US",
     contactFirstName: "",
     contactLastName: "",
     contactEmail: "",
@@ -936,6 +1002,10 @@ function isValid(f: ReturnType<typeof defaultForm>) {
     f.city.trim() &&
     f.state.trim() &&
     f.zip.trim() &&
+    (f.businessType === "Sole Proprietor" ||
+      (!!f.businessRegistrationNumber.trim() &&
+        !!f.businessRegistrationIdentifier.trim() &&
+        /^[A-Z]{2}$/.test(f.businessRegistrationCountry.trim()))) &&
     f.useCaseCategories.length > 0 &&
     f.useCaseDescription.trim().length >= 40 &&
     f.sampleMessage.trim().length >= 20 &&
