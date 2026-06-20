@@ -65,6 +65,61 @@ function mainSmsAuth() {
   return { sid, token };
 }
 
+// SHAFT-related Twilio error codes that indicate prohibited content
+function isShaftError(twilioCode: string): boolean {
+  return [
+    "30007", // Message filtered (carrier violation / SHAFT)
+    "21610", // Message to recipient blocked
+    "30034", // Content filtering (T-Mobile)
+    "30004", // Message blocked
+  ].includes(twilioCode);
+}
+
+async function flagAccountForReview(
+  supabaseAdmin: any,
+  accountId: string,
+  reason: string,
+  detail: string,
+) {
+  try {
+    const { data: acct } = await supabaseAdmin
+      .from("accounts")
+      .select("email, suspended_at")
+      .eq("id", accountId)
+      .maybeSingle();
+    if (acct?.suspended_at) return; // already suspended
+
+    await supabaseAdmin
+      .from("accounts")
+      .update({ suspended_at: new Date().toISOString(), onboarding_status: "suspended" })
+      .eq("id", accountId);
+
+    // Log event for audit trail
+    await supabaseAdmin.from("events").insert({
+      type: "account_auto_suspended",
+      payload: { account_id: accountId, reason, detail },
+    });
+
+    // Best-effort admin alert
+    try {
+      const { fireCapacityAlert } = await import("@/lib/twilio-alerts.server");
+      await fireCapacityAlert({
+        kind: "campaign_paused",
+        tenantEmail: acct?.email ?? null,
+        twilioBalance: 0,
+        currency: "USD",
+        campaignCost: 0,
+        shortfall: 0,
+        pausedCampaignCount: undefined,
+      });
+    } catch {
+      // alert best-effort
+    }
+  } catch (e) {
+    console.error("[dispatch] flagAccountForReview failed", e);
+  }
+}
+
 async function dispatchOne(
   supabaseAdmin: any,
   campaign: any,
