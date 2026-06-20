@@ -1055,17 +1055,55 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
             </div>
           </div>
 
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
+            <div className="text-sm font-semibold">Required disclosures in your opt-in flow</div>
+            <p className="text-xs text-muted-foreground">
+              Carriers require your sign-up form to clearly state your business identity, message purpose and frequency, "message and data rates may apply," links to your Privacy Policy and Terms, and how to opt out (Reply STOP) and get help (Reply HELP). See the full{" "}
+              <Link to="/sms-terms" target="_blank" className="text-primary hover:underline">SMS Terms & Consent</Link>.
+            </p>
+            <div className="rounded-md bg-background border border-border p-3 text-xs leading-relaxed text-foreground">
+              <div className="font-semibold mb-1 text-muted-foreground uppercase tracking-wide text-[10px]">Sample consent language</div>
+              "By providing your phone number and checking this box, you agree to receive recurring automated marketing and informational text messages from <em>[Your Business]</em> at the number provided. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe or HELP for help. See our Privacy Policy [link] and Terms [link]."
+            </div>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={consentConfirmed}
+                onChange={(e) => setConsentConfirmed(e.target.checked)}
+                className="mt-0.5 size-4 rounded border-border accent-primary"
+              />
+              <span className="text-foreground">
+                I confirm my opt-in flow includes all the disclosures above and that I retain records of consent for every recipient.
+              </span>
+            </label>
+          </div>
+
           <div className="flex justify-between">
             <Button variant="outline" onClick={() => setStep(1)}>
               Back
             </Button>
             <Button
-              onClick={() => setStep(3)}
+              onClick={async () => {
+                try {
+                  const { data: u } = await supabase.auth.getUser();
+                  if (u.user) {
+                    const { LEGAL_VERSION } = await import("@/content/legal");
+                    await supabase.from("accounts").update({
+                      sms_consent_disclosures_confirmed_at: new Date().toISOString(),
+                      sms_consent_disclosures_version: LEGAL_VERSION,
+                    }).eq("id", u.user.id);
+                  }
+                } catch {
+                  // best-effort: continue even if persistence fails
+                }
+                setStep(3);
+              }}
               disabled={
                 !form.useCase ||
                 !form.sampleMessage ||
                 !form.optInDescription ||
-                form.targetCountries.length === 0
+                form.targetCountries.length === 0 ||
+                !consentConfirmed
               }
             >
               Continue
