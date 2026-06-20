@@ -250,7 +250,10 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           const tfAsset = isAlphaUnsupported
             ? assets.find((a) => a.country_code === c.code && a.sender_kind === "toll_free")
             : null;
-          const vStatus: string | undefined = tfAsset?.verification_status ?? undefined;
+          // Only trust the carrier status when there's an actual Twilio verification SID.
+          const vStatus: string | undefined = tfAsset?.verification_sid
+            ? (tfAsset?.verification_status ?? undefined)
+            : undefined;
           const req = isAlphaUnsupported ? reqByCountry.get(c.code) : null;
           const hasNumber = !!tfAsset?.phone_number;
           const isVerified = vStatus === "verified";

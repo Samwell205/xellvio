@@ -154,7 +154,11 @@ function TollfreeVerificationPage() {
   });
 
   const asset = data?.asset ?? null;
-  const status = (asset?.verification_status as Status | null) ?? null;
+  // Guard: never trust a "verified"/"in_review"/etc. status that has no Twilio
+  // verification SID behind it. Without a SID it was never actually sent to the
+  // carrier, so the only honest state is "not yet submitted".
+  const rawStatus = (asset?.verification_status as Status | null) ?? null;
+  const status: Status | null = asset?.verification_sid ? rawStatus : null;
   const payload = (asset?.verification_payload as any) ?? null;
   // After submission the form is read-only. Only allow editing when nothing was
   // submitted yet, or when the carrier rejected and we need to resubmit.
