@@ -144,16 +144,27 @@ function TollfreeVerificationPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["tollfree-verification"],
     queryFn: () => load(),
+    // Live polling: keep refreshing while Twilio is still reviewing.
+    refetchInterval: (q) => {
+      const s = (q.state.data as any)?.asset?.verification_status as Status | null | undefined;
+      if (s === "submitted" || s === "in_review") return 30_000;
+      return false;
+    },
+    refetchIntervalInBackground: false,
   });
 
   const asset = data?.asset ?? null;
   const status = (asset?.verification_status as Status | null) ?? null;
   const payload = (asset?.verification_payload as any) ?? null;
+  // After submission the form is read-only. Only allow editing when nothing was
+  // submitted yet, or when the carrier rejected and we need to resubmit.
+  const isLocked = status === "submitted" || status === "in_review" || status === "verified";
 
   const [form, setForm] = useState(() => defaultForm());
   useEffect(() => {
     if (payload) setForm({ ...defaultForm(), ...payload, agreeToTos: true });
   }, [payload]);
+
 
   const submitMut = useMutation({
     mutationFn: (input: any) => submit({ data: input }),
