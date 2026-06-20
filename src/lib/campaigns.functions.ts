@@ -42,7 +42,7 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
     if (rErr) throw new Error(rErr.message);
 
     const { data: rates } = await supabase
-      .from("country_rates")
+      .from("country_rates_public")
       .select("country_code,country_name,dial_prefix")
       .eq("active", true);
     const dial = (rates ?? []).map((r) => ({ country_code: r.country_code, dial_prefix: r.dial_prefix }));
