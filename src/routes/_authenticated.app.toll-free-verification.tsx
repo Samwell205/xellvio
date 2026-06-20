@@ -279,7 +279,11 @@ function TollfreeVerificationPage() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="text-base">Current status</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">{statusBlurb(status)}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {submissionStarted && !asset?.verification_sid
+                ? "A toll-free number is already reserved for this request, but Twilio has not returned a verification ID yet. No new number will be purchased."
+                : statusBlurb(status)}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={status} />
@@ -350,8 +354,9 @@ function TollfreeVerificationPage() {
 
       {isLocked && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Your submission is locked while the carrier reviews it. Only Twilio can approve
-          or reject this — we cannot approve it manually. This page updates automatically.
+          {asset?.verification_sid
+            ? "Your submission is locked while the carrier reviews it. Only Twilio can approve or reject this — we cannot approve it manually. This page updates automatically."
+            : "This toll-free request is already locked to the reserved number above. Submitting again is disabled so another number cannot be purchased."}
         </div>
       )}
 
