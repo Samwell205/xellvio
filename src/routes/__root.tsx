@@ -90,8 +90,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Xellvio" },
       { name: "twitter:description", content: "Reach Customers Worldwide. Fast. Reliable. Compliant" },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/2b5c261b-f4c5-4b95-a326-56ee78ac3e17" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/2b5c261b-f4c5-4b95-a326-56ee78ac3e17" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c00f3ec4-52a2-47d2-a9cc-a86884d2cb68" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/c00f3ec4-52a2-47d2-a9cc-a86884d2cb68" },
     ],
     links: [
       {
