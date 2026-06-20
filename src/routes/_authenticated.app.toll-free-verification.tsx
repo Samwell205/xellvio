@@ -171,8 +171,8 @@ function TollfreeVerificationPage() {
   // After submission the form is read-only. Only allow editing when nothing was
   // submitted yet, or when the carrier rejected and we need to resubmit.
   const submissionStarted = hasSubmissionStarted(asset, rawStatus);
+  const hasReservedNumber = submissionStarted && !asset?.verification_sid;
   const isLocked =
-    (submissionStarted && rawStatus !== "rejected") ||
     status === "submitted" ||
     status === "in_review" ||
     status === "verified";
@@ -354,9 +354,8 @@ function TollfreeVerificationPage() {
 
       {isLocked && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-          {asset?.verification_sid
-            ? "Your submission is locked while the carrier reviews it. Only Twilio can approve or reject this — we cannot approve it manually. This page updates automatically."
-            : "This toll-free request is already locked to the reserved number above. Submitting again is disabled so another number cannot be purchased."}
+          Your submission is locked while the carrier reviews it. Only Twilio can approve
+          or reject this — we cannot approve it manually. This page updates automatically.
         </div>
       )}
 
@@ -651,7 +650,9 @@ function TollfreeVerificationPage() {
               {submitMut.isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
               {status === "rejected"
                 ? "Resubmit for verification"
-                : "Send information for verification"}
+                : hasReservedNumber
+                  ? "Continue verification with reserved number"
+                  : "Send information for verification"}
             </Button>
           </div>
         )}
