@@ -891,6 +891,8 @@ function defaultForm() {
     businessDba: "",
     websiteUrl: "",
     businessType: "",
+    businessRegistrationNumber: "",
+    businessRegistrationIdentifier: "",
     contactFirstName: "",
     contactLastName: "",
     contactEmail: "",
