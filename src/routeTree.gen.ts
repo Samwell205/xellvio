@@ -53,6 +53,7 @@ import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated.admin.accounts'
 import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
@@ -299,6 +300,12 @@ const AuthenticatedAppCampaignsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedAppSegmentsNewRoute =
   AuthenticatedAppSegmentsNewRouteImport.update({
     id: '/new',
@@ -363,6 +370,7 @@ export interface FileRoutesByFullPath {
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
 }
@@ -407,6 +415,7 @@ export interface FileRoutesByTo {
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
 }
@@ -457,6 +466,7 @@ export interface FileRoutesById {
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
 }
@@ -507,6 +517,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
+    | '/lovable/email/queue/process'
     | '/app/campaigns/'
     | '/app/segments/'
   fileRoutesByTo: FileRoutesByTo
@@ -551,6 +562,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
+    | '/lovable/email/queue/process'
     | '/app/campaigns'
     | '/app/segments'
   id:
@@ -600,6 +612,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
+    | '/lovable/email/queue/process'
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/segments/'
   fileRoutesById: FileRoutesById
@@ -624,6 +637,7 @@ export interface RootRouteChildren {
   ApiPublicTwilioInboundRoute: typeof ApiPublicTwilioInboundRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
   ApiPublicTwilioTollfreeStatusRoute: typeof ApiPublicTwilioTollfreeStatusRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -936,6 +950,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsIndexRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/app/segments/new': {
       id: '/_authenticated/app/segments/new'
       path: '/new'
@@ -1091,6 +1112,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTwilioInboundRoute: ApiPublicTwilioInboundRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
   ApiPublicTwilioTollfreeStatusRoute: ApiPublicTwilioTollfreeStatusRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
