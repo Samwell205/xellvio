@@ -1112,8 +1112,20 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
         token: subToken,
       });
     } else if (asset.phone_sid) {
-      ver = await findExistingTollfreeVerification({ phoneSid: asset.phone_sid, sid: subSid, token: subToken });
+      ver =
+        (await findExistingTollfreeVerification({ phoneSid: asset.phone_sid, sid: subSid, token: subToken })) ??
+        (await findLocalTollfreeVerification(supabaseAdmin, { accountId: userId, phoneSid: asset.phone_sid }));
       verificationSid = typeof ver?.sid === "string" && ver.sid.trim() ? ver.sid : null;
+      if (verificationSid) {
+        try {
+          ver = await twilio<any>(`${MESSAGING_API}/Tollfree/Verifications/${verificationSid}`, {
+            sid: subSid,
+            token: subToken,
+          });
+        } catch (fetchErr) {
+          console.warn("[tollfree-verification] recovered verification fetch failed", fetchErr);
+        }
+      }
     }
     if (!verificationSid || !ver) {
       return { refreshed: false as const, reason: "No verification has been submitted yet." };
