@@ -164,6 +164,30 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_test_sends: {
+        Row: {
+          created_at: string
+          id: string
+          to_phone: string
+          twilio_sid: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          to_phone: string
+          twilio_sid?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          to_phone?: string
+          twilio_sid?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           account_id: string

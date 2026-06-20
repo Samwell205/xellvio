@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { sendTestSms } from "@/lib/sms.functions";
+import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
 import { formatUSD, formatRate } from "@/lib/money";
@@ -212,6 +212,14 @@ function NewCampaignPage() {
   const hasMissingSender = missingSenderCountries.length > 0 && breakdown.length > 0;
 
   const callTestSend = useServerFn(sendTestSms);
+  const callTestUsage = useServerFn(getTestSendUsage);
+  const testUsageQ = useQuery({
+    queryKey: ["test-send-usage"],
+    queryFn: () => callTestUsage(),
+    staleTime: 30_000,
+  });
+  const testUsage = testUsageQ.data ?? { used: 0, limit: 5, remaining: 5, resetsAt: "" };
+  const testLimitReached = testUsage.remaining <= 0;
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
   const testCountry = useMemo(() => countryFromPhone(s.testTo, rates), [s.testTo, rates]);
@@ -219,21 +227,25 @@ function NewCampaignPage() {
 
   async function runTestSend() {
     if (!s.testTo) { toast.error("Enter a phone number to test"); return; }
+    if (testLimitReached) { toast.error(`Daily test limit reached (${testUsage.limit}/day).`); return; }
     setSending(true);
     try {
       const res = await callTestSend({ data: { to: s.testTo, body: bodyWithStop, country: testCountry ?? undefined } });
       toast.success(`Test sent (sid ${res.sid.slice(0, 10)}…)`);
       setS({ ...s, testSent: true });
+      testUsageQ.refetch();
     } catch (e: any) {
       toast.error(e.message ?? "Test send failed");
+      testUsageQ.refetch();
     } finally { setSending(false); }
   }
+
 
   const canNext = (() => {
     if (step === 0) return s.name.trim().length > 0 && (s.include.length > 0 || s.profileIds.length > 0);
     if (step === 1) return s.body.trim().length > 0 && !insufficient;
     if (step === 2) return s.sendMode !== "scheduled" || !!s.scheduleAt;
-    if (step === 3) return s.testSent;
+    if (step === 3) return s.testSent || testLimitReached;
     return true;
   })();
 
@@ -484,7 +496,16 @@ function NewCampaignPage() {
         <Card className="p-5 space-y-4">
           <div className="flex items-start gap-2 bg-warning/10 border border-warning/30 rounded-md p-3 text-sm">
             <AlertTriangle className="size-4 text-warning mt-0.5" />
-            <div>A test send is <b>required</b> before you can schedule or launch a campaign.</div>
+            <div className="flex-1 flex items-center justify-between gap-3">
+              <div>
+                {testLimitReached
+                  ? <>Daily test limit reached. You can proceed without another test today.</>
+                  : <>A test send is <b>required</b> before you can schedule or launch a campaign.</>}
+              </div>
+              <span className="text-xs font-medium whitespace-nowrap">
+                {testUsage.used}/{testUsage.limit} used today
+              </span>
+            </div>
           </div>
           <div>
             <Label>Send test to (E.164 phone)</Label>
@@ -500,8 +521,8 @@ function NewCampaignPage() {
             )}
             <div className="flex gap-2 mt-1">
               <Input value={s.testTo} onChange={(e) => setS({ ...s, testTo: e.target.value })} placeholder="+15551234567" />
-              <Button onClick={runTestSend} disabled={sending || !s.body.trim() || (!!testCountry && !testSender)}>
-                <Send className="size-4 mr-1.5" />{sending ? "Sending…" : "Send test"}
+              <Button onClick={runTestSend} disabled={sending || testLimitReached || !s.body.trim() || (!!testCountry && !testSender)}>
+                <Send className="size-4 mr-1.5" />{sending ? "Sending…" : testLimitReached ? "Daily limit reached" : "Send test"}
               </Button>
             </div>
             {testCountry && !testSender && (
@@ -510,6 +531,11 @@ function NewCampaignPage() {
               </div>
             )}
             {s.testSent && <div className="text-sm text-success mt-2 flex items-center gap-1"><CheckCircle2 className="size-4" /> Test sent. You can proceed.</div>}
+            {testLimitReached && !s.testSent && (
+              <div className="text-xs text-muted-foreground mt-2">
+                You've used all {testUsage.limit} test sends for today. The limit resets at 00:00 UTC — you can continue to schedule or launch without another test.
+              </div>
+            )}
           </div>
         </Card>
       )}
