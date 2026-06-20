@@ -326,6 +326,17 @@ function storedStatus(raw: string | null | undefined): StoredVerificationStatus 
   return "pending";
 }
 
+async function findExistingTollfreeVerification(opts: { phoneSid: string; sid: string; token: string }) {
+  const query = new URLSearchParams({ TollfreePhoneNumberSid: opts.phoneSid, PageSize: "1" }).toString();
+  const page = await twilio<{
+    tollfree_verifications?: Array<{ sid?: string; status?: string; rejection_reason?: unknown; errors?: Array<{ description?: string }> }>;
+  }>(`${MESSAGING_API}/Tollfree/Verifications?${query}`, {
+    sid: opts.sid,
+    token: opts.token,
+  });
+  return page.tollfree_verifications?.[0] ?? null;
+}
+
 async function getOrBuyUsTollfree(opts: {
   userId: string;
   legalName: string;
