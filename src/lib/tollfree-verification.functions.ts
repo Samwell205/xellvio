@@ -171,6 +171,27 @@ const TWILIO_BUSINESS_TYPES = [
   "GOVERNMENT",
 ] as const;
 
+const REGISTRATION_AUTHORITIES = [
+  "EIN",
+  "CBN",
+  "CRN",
+  "PROVINCIAL_NUMBER",
+  "VAT",
+  "ACN",
+  "ABN",
+  "BRN",
+  "SIREN",
+  "SIRET",
+  "NZBN",
+  "USt-IdNr",
+  "CIF",
+  "NIF",
+  "CNPJ",
+  "UID",
+  "NEQ",
+  "OTHER",
+] as const;
+
 const BUSINESS_TYPE_MAP: Record<string, (typeof TWILIO_BUSINESS_TYPES)[number]> = {
   "SOLE PROPRIETORSHIP": "SOLE_PROPRIETOR",
   "SOLE PROPRIETOR": "SOLE_PROPRIETOR",
@@ -198,6 +219,12 @@ function normalizeBusinessType(value: string) {
     return upper as (typeof TWILIO_BUSINESS_TYPES)[number];
   }
   return BUSINESS_TYPE_MAP[upper] ?? "PRIVATE_PROFIT";
+}
+
+function normalizeRegistrationAuthority(value: string) {
+  const raw = value.trim();
+  const found = REGISTRATION_AUTHORITIES.find((authority) => authority.toUpperCase() === raw.toUpperCase());
+  return found ?? null;
 }
 
 function looksLikeRegisteredEntity(name: string) {
