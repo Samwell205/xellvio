@@ -5,6 +5,11 @@ import { z } from "zod";
 const TWILIO_API = "https://api.twilio.com/2010-04-01";
 const MESSAGING_API = "https://messaging.twilio.com/v1";
 
+// Internal mailbox that receives Twilio's toll-free verification status
+// notifications (submitted / approved / rejected / follow-up questions).
+// End users never see donotreply@twilio.com — we send them branded emails.
+const INTERNAL_TFV_CONTACT_EMAIL = "admin@xellvio.com";
+
 function masterAuth() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
