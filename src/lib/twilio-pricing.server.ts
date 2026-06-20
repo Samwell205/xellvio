@@ -38,6 +38,11 @@ export function ceil5(n: number): number {
   return Math.ceil(n * 1e5) / 1e5;
 }
 
+function round4(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 1e4) / 1e4;
+}
+
 /** Highest current_price (as number) across all carriers for a given number_type. */
 function highestPriceFor(
   pricing: TwilioCountryPricing,
@@ -160,7 +165,7 @@ export async function runTwilioPricingSync(): Promise<{
         continue;
       }
       const markup = Number(c.markup_percent ?? defaultMarkup);
-      const sell = ceil5(extracted.cost_price * (1 + markup / 100));
+      const sell = round4(extracted.cost_price * (1 + markup / 100));
       const cost = ceil5(extracted.cost_price); // also 5dp
 
       const { error: uErr } = await supabaseAdmin
