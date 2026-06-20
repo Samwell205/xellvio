@@ -348,7 +348,8 @@ async function dispatchOne(
     );
   }
 
-  await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
+  const finalStatus = queued > 0 ? "sent" : "failed";
+  await supabaseAdmin.from("campaigns").update({ status: finalStatus }).eq("id", campaign.id);
   return { queued, failed, debited: +debited.toFixed(4), cost: totalCost };
 }
 
