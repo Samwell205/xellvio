@@ -23,6 +23,7 @@ export function TwilioBalanceCard() {
   const getFn = useServerFn(getTwilioBalance);
   const refreshFn = useServerFn(refreshTwilioBalance);
   const updateFn = useServerFn(updateTwilioBalanceSettings);
+  const resumeFn = useServerFn(resumePausedCampaignsNow);
   const qc = useQueryClient();
 
   const q = useQuery({
