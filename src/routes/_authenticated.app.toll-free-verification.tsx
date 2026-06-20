@@ -136,8 +136,12 @@ function statusBlurb(status: Status | null | undefined) {
   }
 }
 
-function hasSubmissionStarted(asset: any, rawStatus: Status | "pending" | null) {
-  return !!asset && (rawStatus === "pending" || !!asset.phone_number || !!asset.phone_sid || !!asset.verification_sid);
+function hasSubmissionStarted(asset: any) {
+  return !!asset?.verification_sid;
+}
+
+function hasReservedTollfreeNumber(asset: any) {
+  return !!asset && !asset.verification_sid && (!!asset.phone_number || !!asset.phone_sid);
 }
 
 function TollfreeVerificationPage() {
@@ -170,10 +174,9 @@ function TollfreeVerificationPage() {
   const payload = (asset?.verification_payload as any) ?? null;
   // After submission the form is read-only. Only allow editing when nothing was
   // submitted yet, or when the carrier rejected and we need to resubmit.
-  const submissionStarted = hasSubmissionStarted(asset, rawStatus);
-  const hasReservedNumber = submissionStarted && !asset?.verification_sid;
+  const submissionStarted = hasSubmissionStarted(asset);
+  const hasReservedNumber = hasReservedTollfreeNumber(asset);
   const isLocked =
-    (submissionStarted && rawStatus !== "rejected") ||
     status === "submitted" ||
     status === "in_review" ||
     status === "verified";
@@ -281,8 +284,8 @@ function TollfreeVerificationPage() {
           <div>
             <CardTitle className="text-base">Current status</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {submissionStarted && !asset?.verification_sid
-                ? "A toll-free number is already reserved for this request, but Twilio has not returned a verification ID yet. No new number will be purchased."
+              {hasReservedNumber
+                ? "A toll-free number is already reserved for this request, but Twilio has not returned a verification ID yet. Continue below; no new number will be purchased."
                 : statusBlurb(status)}
             </p>
           </div>
@@ -355,9 +358,7 @@ function TollfreeVerificationPage() {
 
       {isLocked && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-          {asset?.verification_sid
-            ? "Your submission is locked while the carrier reviews it. Only Twilio can approve or reject this — we cannot approve it manually. This page updates automatically."
-            : "This toll-free request is already locked to the reserved number above. Submitting again is disabled so another number cannot be purchased."}
+          Your submission is locked while the carrier reviews it. Only Twilio can approve or reject this — we cannot approve it manually. This page updates automatically.
         </div>
       )}
 
