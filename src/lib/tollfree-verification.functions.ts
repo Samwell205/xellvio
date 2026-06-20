@@ -51,6 +51,10 @@ async function twilio<T = any>(
 function friendlyReason(raw: string | undefined): string {
   const t = (raw ?? "").toLowerCase();
   if (!t) return "The carrier hasn't returned a specific reason yet.";
+  if (t.includes("invalid sole proprietorship classification"))
+    return "This business was submitted as a sole proprietor, but carriers are treating it as a registered business. Choose Private company / LLC / Partnership, enter the business registration details, and resubmit; the reserved toll-free number will be reused.";
+  if (t.includes("business type is required") || t.includes("business registration"))
+    return "Registered businesses must include a valid business type, registration number, registration authority, and registration country. Add those details and resubmit; the reserved toll-free number will be reused.";
   if (t.includes("privacy")) return "Your website needs a visible Privacy Policy link.";
   if (t.includes("terms")) return "Your website needs a visible Terms of Service link.";
   if (t.includes("usecasecategories"))
@@ -159,6 +163,43 @@ const USE_CASE_CATEGORIES = [
   "SECURITY_ALERT",
 ] as const;
 
+const TWILIO_BUSINESS_TYPES = [
+  "PRIVATE_PROFIT",
+  "PUBLIC_PROFIT",
+  "SOLE_PROPRIETOR",
+  "NON_PROFIT",
+  "GOVERNMENT",
+] as const;
+
+const BUSINESS_TYPE_MAP: Record<string, (typeof TWILIO_BUSINESS_TYPES)[number]> = {
+  "SOLE PROPRIETORSHIP": "SOLE_PROPRIETOR",
+  "SOLE PROPRIETOR": "SOLE_PROPRIETOR",
+  "PRIVATE COMPANY": "PRIVATE_PROFIT",
+  "PRIVATE COMPANY / LLC / PARTNERSHIP": "PRIVATE_PROFIT",
+  PARTNERSHIP: "PRIVATE_PROFIT",
+  "LIMITED LIABILITY CORPORATION": "PRIVATE_PROFIT",
+  LLC: "PRIVATE_PROFIT",
+  "L.L.C.": "PRIVATE_PROFIT",
+  "CO-OPERATIVE": "PRIVATE_PROFIT",
+  COOPERATIVE: "PRIVATE_PROFIT",
+  CORPORATION: "PRIVATE_PROFIT",
+  "PUBLIC COMPANY": "PUBLIC_PROFIT",
+  "PUBLIC CORPORATION": "PUBLIC_PROFIT",
+  "NON-PROFIT CORPORATION": "NON_PROFIT",
+  NONPROFIT: "NON_PROFIT",
+  "NON-PROFIT": "NON_PROFIT",
+  GOVERNMENT: "GOVERNMENT",
+};
+
+function normalizeBusinessType(value: string) {
+  const raw = value.trim();
+  const upper = raw.toUpperCase().replace(/\s+/g, " ");
+  if ((TWILIO_BUSINESS_TYPES as readonly string[]).includes(upper)) {
+    return upper as (typeof TWILIO_BUSINESS_TYPES)[number];
+  }
+  return BUSINESS_TYPE_MAP[upper] ?? "PRIVATE_PROFIT";
+}
+
 const LEGACY_USE_CASE_CATEGORY_MAP: Record<string, (typeof USE_CASE_CATEGORIES)[number]> = {
   "2FA": "TWO_FACTOR_AUTHENTICATION",
   FRAUD_ALERTS: "FRAUD_ALERT_MESSAGING",
@@ -199,6 +240,7 @@ export const TollfreeVerificationInput = z.object({
   businessType: z.string().trim().min(2).max(64),
   businessRegistrationNumber: z.string().trim().max(64).optional().or(z.literal("")),
   businessRegistrationIdentifier: z.string().trim().max(64).optional().or(z.literal("")),
+  businessRegistrationCountry: z.string().trim().length(2).optional().or(z.literal("")),
   contactFirstName: z.string().trim().min(1).max(64),
   contactLastName: z.string().trim().min(1).max(64),
   contactEmail: z.string().trim().email(),
