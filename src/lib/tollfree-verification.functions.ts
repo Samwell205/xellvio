@@ -751,9 +751,8 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     // Map UI business type to Twilio's required enum.
     const twilioBusinessType = normalizeBusinessType(data.businessType);
     const businessCountry = (data.businessCountry || "US").toUpperCase();
-    const registrationCountry = (data.businessRegistrationCountry || businessCountry).toUpperCase();
-    const registrationNumber = (data.businessRegistrationNumber ?? "").trim();
-    const registrationAuthority = (data.businessRegistrationIdentifier ?? "").trim().toUpperCase();
+    const twilioRegistrationCountry = (registrationCountry || businessCountry).toUpperCase();
+    const twilioRegistrationAuthority = registrationAuthority.toUpperCase();
 
     // Build the Twilio Tollfree Verifications payload.
     const body: Record<string, string | string[]> = {
@@ -780,14 +779,14 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     if (data.businessDba) body.DoingBusinessAs = data.businessDba;
     // Carriers require registration details for every business type except SOLE_PROPRIETOR.
     if (twilioBusinessType !== "SOLE_PROPRIETOR") {
-      if (!registrationNumber || !registrationAuthority || !registrationCountry) {
+      if (!registrationNumber || !twilioRegistrationAuthority || !twilioRegistrationCountry) {
         throw new Error(
           "Registered businesses must include a registration number, registration authority, and registration country before carrier submission.",
         );
       }
       body.BusinessRegistrationNumber = registrationNumber;
-      body.BusinessRegistrationAuthority = registrationAuthority;
-      body.BusinessRegistrationCountry = registrationCountry;
+      body.BusinessRegistrationAuthority = twilioRegistrationAuthority;
+      body.BusinessRegistrationCountry = twilioRegistrationCountry;
     }
     if (data.addressLine2) body.BusinessStreetAddress2 = data.addressLine2;
     if (data.proofOfOptInUrl) body.OptInImageUrls = [data.proofOfOptInUrl];
