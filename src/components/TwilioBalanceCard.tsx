@@ -210,7 +210,10 @@ export function TwilioBalanceCard() {
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-between gap-2">
+          <Button variant="outline" onClick={() => test.mutate()} disabled={test.isPending || !enabled}>
+            {test.isPending ? "Sending..." : "Send test alert"}
+          </Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Saving..." : "Save settings"}
           </Button>
