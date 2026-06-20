@@ -748,6 +748,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       BusinessContactPhone: `${data.contactPhoneCountry}${data.contactPhone}`,
       BusinessType: twilioBusinessType,
     };
+    if (data.businessDba) body.DoingBusinessAs = data.businessDba;
     // Carriers require registration details for every business type except SOLE_PROPRIETOR.
     if (twilioBusinessType !== "SOLE_PROPRIETOR") {
       if (!registrationNumber || !registrationAuthority || !registrationCountry) {
