@@ -243,11 +243,15 @@ function TollfreeVerificationPage() {
     if (payload) {
       const normalizedCategories = normalizeCategories(payload.useCaseCategories);
       const normalizedBusinessType = normalizeBusinessTypeLabel(payload.businessType);
+      const rejectedSoleProprietor = String(asset?.rejection_reason ?? "")
+        .toLowerCase()
+        .includes("invalid sole proprietorship classification");
       setForm({
         ...defaultForm(),
         ...payload,
         businessType:
-          normalizedBusinessType === "Sole Proprietor" && looksLikeRegisteredEntity(payload.legalEntityName)
+          normalizedBusinessType === "Sole Proprietor" &&
+          (looksLikeRegisteredEntity(payload.legalEntityName) || rejectedSoleProprietor)
             ? "Private company / LLC / Partnership"
             : normalizedBusinessType,
         businessRegistrationCountry: payload.businessRegistrationCountry || payload.businessCountry || "US",
@@ -255,7 +259,7 @@ function TollfreeVerificationPage() {
         agreeToTos: true,
       });
     }
-  }, [payload]);
+  }, [payload, asset?.rejection_reason]);
 
 
   const submitMut = useMutation({
