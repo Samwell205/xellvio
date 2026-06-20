@@ -334,14 +334,36 @@ function verificationRejectionReason(ver: any) {
 }
 
 async function findExistingTollfreeVerification(opts: { phoneSid: string; sid: string; token: string }) {
-  const query = new URLSearchParams({ TollfreePhoneNumberSid: opts.phoneSid, PageSize: "1" }).toString();
-  const page = await twilio<{
-    tollfree_verifications?: Array<{ sid?: string; status?: string; rejection_reason?: unknown; errors?: Array<{ description?: string }> }>;
-  }>(`${MESSAGING_API}/Tollfree/Verifications?${query}`, {
-    sid: opts.sid,
-    token: opts.token,
-  });
-  return page.tollfree_verifications?.[0] ?? null;
+  type Ver = { sid?: string; status?: string; tollfree_phone_number_sid?: string; rejection_reason?: unknown; errors?: Array<{ description?: string }>; date_created?: string };
+  const matches = (v: Ver) => typeof v?.tollfree_phone_number_sid === "string" && v.tollfree_phone_number_sid === opts.phoneSid;
+
+  // 1) Try filtered query (may not be supported by Twilio in all cases).
+  try {
+    const query = new URLSearchParams({ TollfreePhoneNumberSid: opts.phoneSid, PageSize: "50" }).toString();
+    const page = await twilio<{ tollfree_verifications?: Ver[] }>(
+      `${MESSAGING_API}/Tollfree/Verifications?${query}`,
+      { sid: opts.sid, token: opts.token },
+    );
+    const list = page.tollfree_verifications ?? [];
+    const direct = list.find(matches) ?? (list.length === 1 ? list[0] : null);
+    if (direct?.sid) return direct;
+  } catch (err) {
+    console.warn("[tollfree-verification] filtered lookup failed", err);
+  }
+
+  // 2) Fallback: paginate the full list and match locally on tollfree_phone_number_sid.
+  let nextUrl: string | null = `${MESSAGING_API}/Tollfree/Verifications?PageSize=100`;
+  let safety = 20;
+  while (nextUrl && safety-- > 0) {
+    const page: { tollfree_verifications?: Ver[]; meta?: { next_page_url?: string | null } } = await twilio<any>(
+      nextUrl,
+      { sid: opts.sid, token: opts.token },
+    );
+    const hit = (page.tollfree_verifications ?? []).find(matches);
+    if (hit?.sid) return hit;
+    nextUrl = page.meta?.next_page_url ?? null;
+  }
+  return null;
 }
 
 async function getOrBuyUsTollfree(opts: {
