@@ -30,6 +30,7 @@ import { Route as AntiSpamRouteImport } from './routes/anti-spam'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
+import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
@@ -178,6 +179,11 @@ const SolutionsEmailToSmsRoute = SolutionsEmailToSmsRouteImport.update({
   id: '/email-to-sms',
   path: '/email-to-sms',
   getParentRoute: () => SolutionsRoute,
+} as any)
+const MMessageIdRoute = MMessageIdRouteImport.update({
+  id: '/m/$messageId',
+  path: '/m/$messageId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
@@ -455,6 +461,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
@@ -519,6 +526,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
@@ -585,6 +593,7 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
@@ -653,6 +662,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/api/setup-sms'
     | '/email/unsubscribe'
+    | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/admin/accounts'
     | '/admin/activity'
@@ -717,6 +727,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/setup-sms'
     | '/email/unsubscribe'
+    | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/admin/accounts'
     | '/admin/activity'
@@ -782,6 +793,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/api/setup-sms'
     | '/email/unsubscribe'
+    | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/activity'
@@ -848,6 +860,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  MMessageIdRoute: typeof MMessageIdRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
@@ -1011,6 +1024,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/solutions/email-to-sms'
       preLoaderRoute: typeof SolutionsEmailToSmsRouteImport
       parentRoute: typeof SolutionsRoute
+    }
+    '/m/$messageId': {
+      id: '/m/$messageId'
+      path: '/m/$messageId'
+      fullPath: '/m/$messageId'
+      preLoaderRoute: typeof MMessageIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
@@ -1471,6 +1491,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   ApiSetupSmsRoute: ApiSetupSmsRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  MMessageIdRoute: MMessageIdRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
