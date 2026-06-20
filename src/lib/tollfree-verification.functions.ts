@@ -359,7 +359,7 @@ async function findExistingTollfreeVerification(opts: { phoneSid: string; sid: s
   // 1) Try filtered query. Twilio documents the list filter as lower camel-case,
   // but older examples use request-body casing, so try both before paginating.
   const filterQueries = [
-    new URLSearchParams({ tollfreePhoneNumberSid: opts.phoneSid, PageSize: "50" }).toString(),
+    new URLSearchParams({ tollfreePhoneNumberSid: opts.phoneSid, pageSize: "50" }).toString(),
     new URLSearchParams({ TollfreePhoneNumberSid: opts.phoneSid, PageSize: "50" }).toString(),
   ];
   for (const query of filterQueries) {
@@ -377,7 +377,7 @@ async function findExistingTollfreeVerification(opts: { phoneSid: string; sid: s
   }
 
   // 2) Fallback: paginate the full list and match locally on tollfree_phone_number_sid.
-  let nextUrl: string | null = `${MESSAGING_API}/Tollfree/Verifications?PageSize=50`;
+  let nextUrl: string | null = `${MESSAGING_API}/Tollfree/Verifications?pageSize=50`;
   let safety = 20;
   while (nextUrl && safety-- > 0) {
     const page: any = await twilio<any>(nextUrl, { sid: opts.sid, token: opts.token });
