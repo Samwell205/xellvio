@@ -166,7 +166,7 @@ function TollfreeVerificationPage() {
   const rawStatus = (asset?.verification_status as Status | "pending" | null) ?? null;
   const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review" || rawStatus === "verified";
   const status: Status | null =
-    trustsCarrier && !asset?.verification_sid ? null : rawStatus;
+    rawStatus === "pending" || (trustsCarrier && !asset?.verification_sid) ? null : rawStatus;
   const payload = (asset?.verification_payload as any) ?? null;
   // After submission the form is read-only. Only allow editing when nothing was
   // submitted yet, or when the carrier rejected and we need to resubmit.
