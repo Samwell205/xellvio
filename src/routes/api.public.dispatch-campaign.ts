@@ -12,8 +12,25 @@ function render(body: string, p: { first_name?: string | null; last_name?: strin
 }
 
 async function statusCallbackUrl(): Promise<string> {
-  const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+  const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
   return `${base}/api/public/twilio-status`;
+}
+
+function publicBaseUrl() {
+  return (process.env.PUBLIC_BASE_URL ?? "https://xellvio.com").replace(/\/$/, "");
+}
+
+function supportsMms(countryCode?: string | null) {
+  const cc = (countryCode ?? "").toUpperCase();
+  return cc === "US" || cc === "CA";
+}
+
+function mediaLinkForMessage(messageId: string) {
+  return `${publicBaseUrl()}/m/${messageId}`;
+}
+
+function fallbackMediaBody(body: string, messageId: string) {
+  return `${body}\n\nImage: ${mediaLinkForMessage(messageId)}`;
 }
 
 type Rate = {
@@ -97,7 +114,7 @@ async function dispatchOne(
       getMasterTwilioBalance(),
       getBalanceBuffer(),
     ]);
-    if (ok && totalCost > 0 && twBal < totalCost + buffer) {
+    if (ok && totalCost > 0 && twBal < totalCost) {
       const { data: pausedAcct } = await supabaseAdmin
         .from("accounts")
         .select("email")
@@ -123,12 +140,20 @@ async function dispatchOne(
         tenantEmail: (pausedAcct as any)?.email ?? null,
         twilioBalance: twBal,
         currency,
-        campaignCost: totalCost,
-        shortfall: +(totalCost + buffer - twBal).toFixed(4),
+          campaignCost: totalCost,
+          shortfall: +(totalCost - twBal).toFixed(4),
         pausedCampaignCount: pausedCount ?? undefined,
       });
       return { queued: 0, failed: 0, debited: 0, cost: totalCost, paused: true };
     }
+      if (ok && totalCost > 0 && twBal < totalCost + buffer) {
+        console.warn("[dispatch] provider balance is below reserve but can cover campaign", {
+          campaignId: campaign.id,
+          balance: twBal,
+          cost: totalCost,
+          reserve: buffer,
+        });
+      }
   } catch (e) {
     console.error("[dispatch] balance preflight failed (continuing)", e);
   }
@@ -219,9 +244,12 @@ async function dispatchOne(
     await Promise.all(
       (inserted ?? []).map(async (m: any) => {
         try {
+          const sendAsMms = !!campaign.media_url && supportsMms(m.country_code);
+          const messageBody =
+            campaign.media_url && !sendAsMms ? fallbackMediaBody(m.rendered_body, m.id) : m.rendered_body;
           const body = new URLSearchParams({
             To: m.phone_e164,
-            Body: m.rendered_body,
+            Body: messageBody,
             StatusCallback: callback,
           });
           if (sender.kind === "tenant") {
@@ -230,17 +258,14 @@ async function dispatchOne(
                 asset.country_code === m.country_code &&
                 (asset.messaging_service_sid || asset.phone_number),
             );
-            const messagingService =
-              matchedSender?.sender_kind !== "sender_id"
-                ? (matchedSender?.messaging_service_sid ?? sender.messagingService)
-                : undefined;
+            const messagingService = matchedSender?.messaging_service_sid ?? sender.messagingService;
             const fromNumber = matchedSender?.phone_number ?? sender.fromNumber;
             if (messagingService) body.append("MessagingServiceSid", messagingService);
             else body.append("From", fromNumber!);
           } else {
             body.append("MessagingServiceSid", sender.messagingService);
           }
-          if (campaign.media_url) body.append("MediaUrl", campaign.media_url);
+          if (sendAsMms) body.append("MediaUrl", campaign.media_url);
 
           const fetchInit: RequestInit =
             sender.kind === "tenant"
@@ -323,7 +348,8 @@ async function dispatchOne(
     );
   }
 
-  await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
+  const finalStatus = queued > 0 ? "sent" : "failed";
+  await supabaseAdmin.from("campaigns").update({ status: finalStatus }).eq("id", campaign.id);
   return { queued, failed, debited: +debited.toFixed(4), cost: totalCost };
 }
 
