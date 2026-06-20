@@ -419,7 +419,17 @@ async function dispatchOne(
     );
   }
 
-  const finalStatus = queued > 0 ? "sent" : "failed";
+  // Auto-suspend: if multiple SHAFT-related carrier errors occur, flag account for review.
+  if (shaftErrors >= 2) {
+    await flagAccountForReview(
+      supabaseAdmin,
+      campaign.account_id,
+      "shaft_carrier_errors",
+      `${shaftErrors} messages blocked by carrier for prohibited content (SHAFT). Campaign ${campaign.id}.`,
+    );
+  }
+
+  const finalStatus = queued > 0 ? "sent" : failed > 0 ? "failed" : "sent";
   await supabaseAdmin.from("campaigns").update({ status: finalStatus }).eq("id", campaign.id);
   return { queued, failed, debited: +debited.toFixed(4), cost: totalCost };
 }
