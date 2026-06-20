@@ -811,6 +811,7 @@ export type Database = {
           rejection_reason: string | null
           sender_kind: string
           updated_at: string
+          verification_payload: Json | null
           verification_sid: string | null
           verification_status: string
         }
@@ -827,6 +828,7 @@ export type Database = {
           rejection_reason?: string | null
           sender_kind: string
           updated_at?: string
+          verification_payload?: Json | null
           verification_sid?: string | null
           verification_status?: string
         }
@@ -843,6 +845,7 @@ export type Database = {
           rejection_reason?: string | null
           sender_kind?: string
           updated_at?: string
+          verification_payload?: Json | null
           verification_sid?: string | null
           verification_status?: string
         }
