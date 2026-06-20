@@ -191,7 +191,22 @@ function CampaignReport() {
         </div>
       </div>
 
+      {c.status === "paused_low_balance" && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-4 flex items-start gap-3">
+          <RefreshCw className="size-5 text-amber-600 animate-spin shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-900 dark:text-amber-200">
+            <div className="font-semibold mb-1">Your campaign is processing</div>
+            <div>
+              {c.paused_reason ??
+                "We're temporarily waiting for platform capacity — your messages will start sending automatically within a few minutes."}
+            </div>
+            <div className="text-xs mt-1 opacity-80">You haven't been charged for any un-sent messages.</div>
+          </div>
+        </div>
+      )}
+
       <Tabs defaultValue="overview">
+
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="recipients">Recipient activity</TabsTrigger>
