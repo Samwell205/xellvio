@@ -18,6 +18,7 @@ import { formatMoney, formatUSD } from "@/lib/money";
 import { adminListPacks, upsertCreditPack, deleteCreditPack, updateBillingSettings, adminListPayments, approvePayment, rejectPayment, signedProofUrl } from "@/lib/billing-admin.functions";
 import { getBillingSettings } from "@/lib/billing-packs.functions";
 import { simulateNowPaymentsIpn } from "@/lib/nowpayments-admin.functions";
+import { TwilioBalanceCard } from "@/components/TwilioBalanceCard";
 
 export const Route = createFileRoute("/_authenticated/admin/billing")({
   head: () => ({ meta: [{ title: "Admin · Billing — Xellvio" }] }),
@@ -31,6 +32,7 @@ function AdminBillingPage() {
         <h1 className="text-2xl font-extrabold flex items-center gap-2"><Wallet className="size-6" /> Billing administration</h1>
         <p className="text-sm text-muted-foreground">Manage credit packs, Payoneer instructions, and pending payments.</p>
       </div>
+      <TwilioBalanceCard />
       <Tabs defaultValue="payments">
         <TabsList>
           <TabsTrigger value="payments">Pending payments</TabsTrigger>
