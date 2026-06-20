@@ -563,7 +563,7 @@ function TollfreeVerificationPage() {
           <Two>
             <Field label="Use case category" required>
               <Select
-                value={form.useCaseCategories[0] ?? "GENERAL_MARKETING"}
+                value={form.useCaseCategories[0] ?? "MARKETING"}
                 onValueChange={(v) => update("useCaseCategories", [v] as any)}
               >
                 <SelectTrigger>
@@ -877,7 +877,7 @@ function defaultForm() {
     zip: "",
     monthlyVolume: "10,000" as (typeof VOLUMES)[number],
     optInType: "WEB_FORM" as (typeof OPT_IN_TYPES)[number]["v"],
-    useCaseCategories: ["GENERAL_MARKETING"] as string[],
+    useCaseCategories: ["MARKETING"] as string[],
     proofOfOptInUrl: "",
     useCaseDescription: "",
     sampleMessage: "",
