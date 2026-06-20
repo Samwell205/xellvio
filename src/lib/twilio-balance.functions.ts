@@ -15,7 +15,10 @@ export const getTwilioBalance = createServerFn({ method: "GET" })
         "twilio_low_balance_threshold_usd",
         "twilio_critical_balance_threshold_usd",
         "twilio_alert_email",
+        "twilio_alert_emails",
+        "twilio_alert_phone_e164",
         "twilio_alerts_enabled",
+        "twilio_balance_buffer_usd",
       ]);
     const readS = (k: string, f: any) => settingsRows?.find((r) => r.key === k)?.value ?? f;
 
@@ -26,13 +29,22 @@ export const getTwilioBalance = createServerFn({ method: "GET" })
       .limit(1)
       .maybeSingle();
 
+    const { count: pausedCampaignCount } = await supabaseAdmin
+      .from("campaigns")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "paused_low_balance");
+
     return {
       latest,
+      pausedCampaignCount: pausedCampaignCount ?? 0,
       settings: {
         threshold_low: Number(readS("twilio_low_balance_threshold_usd", 20)),
         threshold_critical: Number(readS("twilio_critical_balance_threshold_usd", 5)),
         alert_email: String(readS("twilio_alert_email", "")),
+        alert_emails: String(readS("twilio_alert_emails", "")),
+        alert_phone_e164: String(readS("twilio_alert_phone_e164", "")),
         alerts_enabled: Boolean(readS("twilio_alerts_enabled", true)),
+        balance_buffer_usd: Number(readS("twilio_balance_buffer_usd", 5)),
       },
     };
   });
