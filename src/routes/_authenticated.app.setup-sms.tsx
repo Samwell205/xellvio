@@ -373,13 +373,49 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
     enabled: !!code,
   });
 
-  const existing = (reqs.data ?? []).find((r: any) => r.country === code);
+  const ownRequest = (reqs.data ?? []).find((r: any) => r.country === code);
+  const usRequest = (reqs.data ?? []).find((r: any) => r.country === "US");
+  const usTfAsset = assets.find((a) => a.country_code === "US" && a.sender_kind === "toll_free");
+  const ownTfAsset = code
+    ? assets.find((a) => a.country_code === code && a.sender_kind === "toll_free")
+    : null;
+  // A US toll-free verification automatically covers Canada — no separate CA request needed.
+  const coveredByUs = code === "CA" && !ownRequest && !ownTfAsset && (!!usRequest || !!usTfAsset);
+  const existing = ownRequest ?? (coveredByUs ? usRequest : null);
+  const effectiveTfAsset = ownTfAsset ?? (coveredByUs ? usTfAsset : null);
+
+  // Translate the internal request status + Twilio verification status into a single
+  // carrier-aware label and badge. "approved" from an admin only means the number was
+  // provisioned — the carrier may still be reviewing.
+  const verificationStatus: string | undefined = effectiveTfAsset?.verification_sid
+    ? (effectiveTfAsset?.verification_status ?? undefined)
+    : undefined;
+  let carrierLabel = existing?.status ?? "";
+  let carrierVariant: "default" | "secondary" | "destructive" = "secondary";
+  if (verificationStatus === "verified") {
+    carrierLabel = "Verified by carrier";
+    carrierVariant = "default";
+  } else if (verificationStatus === "rejected" || existing?.status === "rejected") {
+    carrierLabel = "Rejected by carrier";
+    carrierVariant = "destructive";
+  } else if (
+    verificationStatus === "in_review" ||
+    verificationStatus === "submitted" ||
+    existing?.status === "approved" ||
+    existing?.status === "provisioned"
+  ) {
+    carrierLabel = "In carrier review";
+    carrierVariant = "secondary";
+  } else if (existing?.status === "pending") {
+    carrierLabel = "Awaiting admin review";
+    carrierVariant = "secondary";
+  }
 
   const submit = useMutation({
     mutationFn: () => submitFn({ data: { country: code as "US" | "CA", ...form } }),
     onSuccess: (res: any) => {
       if (res?.auto?.provisioned) {
-        toast.success(`Approved! Your ${code} number ${res.auto.phone_number} is ready to send.`);
+        toast.success(`Your ${code} number ${res.auto.phone_number} is provisioned and now in carrier review.`);
       } else if (res?.auto?.note) {
         toast.message("Request submitted — manual review needed", { description: res.auto.note });
       } else {
@@ -406,7 +442,9 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
         <DialogHeader>
           <DialogTitle>How sending to {name} works</DialogTitle>
           <DialogDescription>
-            US and Canadian carriers don't allow alphanumeric Sender IDs. All messages must come from a real phone number, which we provision and verify for you.
+            {coveredByUs
+              ? "A US toll-free number automatically covers Canadian mobile carriers — once your US verification is approved, you can text Canada from the same number. No separate Canada request is needed."
+              : "US and Canadian carriers don't allow alphanumeric Sender IDs. All messages must come from a real phone number, which we provision and verify for you."}
           </DialogDescription>
         </DialogHeader>
 
@@ -414,10 +452,10 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
           <div className="space-y-3 text-sm">
             <div className="rounded-md border p-3">
               <div className="flex items-center justify-between gap-2">
-                <div className="font-medium">Your {name} request</div>
-                <Badge variant={existing.status === "approved" || existing.status === "provisioned" ? "default" : existing.status === "rejected" ? "destructive" : "secondary"}>
-                  {existing.status}
-                </Badge>
+                <div className="font-medium">
+                  {coveredByUs ? "Covered by your US toll-free request" : `Your ${name} request`}
+                </div>
+                <Badge variant={carrierVariant}>{carrierLabel}</Badge>
               </div>
               <div className="mt-2 text-muted-foreground space-y-1">
                 <div>Type: <span className="text-foreground">{existing.number_type.replace("_", " ")}</span></div>
@@ -425,13 +463,18 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
                 {existing.assigned_phone_number && <div>Number: <span className="text-foreground font-mono">{existing.assigned_phone_number}</span></div>}
                 {existing.admin_notes && <div>Admin note: <span className="text-foreground">{existing.admin_notes}</span></div>}
               </div>
-              {existing.status === "pending" && (
+              {carrierLabel === "In carrier review" && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  The number is provisioned, but Twilio and the mobile carriers (AT&amp;T, T-Mobile, Verizon, plus Canadian carriers) are still reviewing your business details. This usually takes 1–3 weeks. Only Twilio can approve this — we cannot approve it manually.
+                </p>
+              )}
+              {existing.status === "pending" && !coveredByUs && (
                 <Button size="sm" variant="ghost" className="mt-2" onClick={() => cancel.mutate(existing.id)} disabled={cancel.isPending}>
                   Cancel request
                 </Button>
               )}
             </div>
-            {existing.status === "rejected" && (
+            {existing.status === "rejected" && !coveredByUs && (
               <Button onClick={() => setShowForm(true)} className="w-full">Submit a new request</Button>
             )}
           </div>
@@ -500,7 +543,7 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
           ) : (
             <>
               <Button variant="ghost" onClick={onClose}>Close</Button>
-              {!existing && (
+              {!existing && !coveredByUs && (
                 <Button onClick={() => setShowForm(true)}>Request a {name} number</Button>
               )}
             </>
