@@ -911,3 +911,54 @@ function SenderRoutingCard({
     </Card>
   );
 }
+
+function MmsImagePicker({ mediaUrl, onChange }: { mediaUrl: string; onChange: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  async function handleFile(file: File) {
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be 5 MB or smaller."); return; }
+    if (!/^image\/(jpeg|jpg|png|gif)$/.test(file.type)) { toast.error("Only JPG, PNG, or GIF images are allowed."); return; }
+    setUploading(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${uid}/${crypto.randomUUID()}.${ext}`;
+      const up = await supabase.storage.from("campaign-media").upload(path, file, {
+        contentType: file.type, upsert: false,
+      });
+      if (up.error) throw up.error;
+      // 1-year signed URL so Twilio can fetch it at send time, including scheduled campaigns.
+      const signed = await supabase.storage.from("campaign-media").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error("Could not sign media URL");
+      onChange(signed.data.signedUrl);
+      toast.success("Image uploaded");
+    } catch (e: any) {
+      toast.error(e.message ?? "Upload failed");
+    } finally { setUploading(false); }
+  }
+  const isImg = !!mediaUrl && /\.(jpe?g|png|gif)(\?|$)/i.test(mediaUrl);
+  return (
+    <div className="mt-1 flex items-start gap-3">
+      {isImg && (
+        <img src={mediaUrl} alt="MMS preview" className="size-20 rounded-md border object-cover" />
+      )}
+      <div className="flex-1 flex flex-wrap gap-2">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+        />
+        <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={uploading}>
+          {uploading ? "Uploading…" : mediaUrl ? "Replace image" : "Upload image"}
+        </Button>
+        {mediaUrl && (
+          <Button type="button" variant="ghost" onClick={() => onChange("")}>Remove</Button>
+        )}
+      </div>
+    </div>
+  );
+}
