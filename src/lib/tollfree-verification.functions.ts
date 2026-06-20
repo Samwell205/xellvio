@@ -720,17 +720,11 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     });
 
     // Map UI business type to Twilio's required enum.
-    const businessTypeMap: Record<string, string> = {
-      "Sole Proprietorship": "SOLE_PROPRIETOR",
-      "Partnership": "PARTNERSHIP",
-      "Limited Liability Corporation": "LIMITED_LIABILITY_CORPORATION",
-      "Co-operative": "CO_OPERATIVE",
-      "Non-profit Corporation": "NON_PROFIT_CORPORATION",
-      "Corporation": "CORPORATION",
-    };
-    const twilioBusinessType =
-      businessTypeMap[data.businessType] ?? data.businessType.toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+    const twilioBusinessType = normalizeBusinessType(data.businessType);
     const businessCountry = (data.businessCountry || "US").toUpperCase();
+    const registrationCountry = (data.businessRegistrationCountry || businessCountry).toUpperCase();
+    const registrationNumber = (data.businessRegistrationNumber ?? "").trim();
+    const registrationAuthority = (data.businessRegistrationIdentifier ?? "").trim().toUpperCase();
 
     // Build the Twilio Tollfree Verifications payload.
     const body: Record<string, string | string[]> = {
@@ -754,12 +748,16 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       BusinessContactPhone: `${data.contactPhoneCountry}${data.contactPhone}`,
       BusinessType: twilioBusinessType,
     };
-    // Carriers now require these for any non sole-proprietor business.
+    // Carriers require registration details for every business type except SOLE_PROPRIETOR.
     if (twilioBusinessType !== "SOLE_PROPRIETOR") {
-      const regNumber = (data.businessRegistrationNumber ?? "").trim();
-      const regAuthority = (data.businessRegistrationIdentifier ?? "").trim();
-      if (regNumber) body.BusinessRegistrationNumber = regNumber;
-      if (regAuthority) body.BusinessRegistrationIdentifier = regAuthority;
+      if (!registrationNumber || !registrationAuthority || !registrationCountry) {
+        throw new Error(
+          "Registered businesses must include a registration number, registration authority, and registration country before carrier submission.",
+        );
+      }
+      body.BusinessRegistrationNumber = registrationNumber;
+      body.BusinessRegistrationAuthority = registrationAuthority;
+      body.BusinessRegistrationCountry = registrationCountry;
     }
     if (data.addressLine2) body.BusinessStreetAddress2 = data.addressLine2;
     if (data.proofOfOptInUrl) body.OptInImageUrls = [data.proofOfOptInUrl];
