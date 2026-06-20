@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, XCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, AlertTriangle, Loader2, ShieldOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Status =
@@ -16,7 +16,8 @@ type Status =
   | "completed"
   | "draft"
   | "paused_low_balance"
-  | "processing";
+  | "processing"
+  | "blocked_content";
 
 const map: Record<Status, { label: string; cls: string; Icon: React.ComponentType<{ className?: string }> }> = {
   pending: { label: "Pending verification", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
@@ -33,6 +34,7 @@ const map: Record<Status, { label: string; cls: string; Icon: React.ComponentTyp
   sent: { label: "Sent", cls: "bg-primary/15 text-primary border-primary/30", Icon: CheckCircle2 },
   running: { label: "Running", cls: "bg-primary/15 text-primary border-primary/30", Icon: Loader2 },
   rejected: { label: "Rejected", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: XCircle },
+  blocked_content: { label: "Blocked — content violation", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: ShieldOff },
   failed: { label: "Failed", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: AlertTriangle },
 };
 

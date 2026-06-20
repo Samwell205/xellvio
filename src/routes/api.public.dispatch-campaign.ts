@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
+import { keywordScan } from "@/lib/content-scanner";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 const BATCH_SIZE = 500;
@@ -64,6 +65,71 @@ function mainSmsAuth() {
   return { sid, token };
 }
 
+// SHAFT-related Twilio error codes that indicate prohibited content
+function isShaftError(twilioCode: string): boolean {
+  return [
+    "30007", // Message filtered (carrier violation / SHAFT)
+    "21610", // Message to recipient blocked
+    "30034", // Content filtering (T-Mobile)
+    "30004", // Message blocked
+  ].includes(twilioCode);
+}
+
+async function flagAccountForReview(
+  supabaseAdmin: any,
+  accountId: string,
+  reason: string,
+  detail: string,
+) {
+  try {
+    const { data: acct } = await supabaseAdmin
+      .from("accounts")
+      .select("email, suspended_at")
+      .eq("id", accountId)
+      .maybeSingle();
+    if (acct?.suspended_at) return; // already suspended
+
+    await supabaseAdmin
+      .from("accounts")
+      .update({ suspended_at: new Date().toISOString(), onboarding_status: "suspended" })
+      .eq("id", accountId);
+
+    // Log event for audit trail
+    await supabaseAdmin.from("events").insert({
+      type: "account_auto_suspended",
+      payload: { account_id: accountId, reason, detail },
+    });
+
+    // Best-effort admin alert via email queue
+    try {
+      const { data: settings } = await supabaseAdmin
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "twilio_alert_emails")
+        .maybeSingle();
+      const emailsRaw = String(settings?.value ?? "sam@samwellagency.com");
+      const emails = emailsRaw.split(",").map((s) => s.trim()).filter((s) => s.includes("@"));
+      for (const to of emails) {
+        await supabaseAdmin.rpc("enqueue_email", {
+          queue_name: "transactional_emails",
+          payload: {
+            to,
+            subject: `🚨 Account auto-suspended: prohibited content`,
+            html: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px;"><h1 style="color:#b91c1c;">Account Suspended</h1><p>Account ${accountId} (${acct?.email ?? "no email"}) was auto-suspended.</p><p><b>Reason:</b> ${reason}</p><p><b>Detail:</b> ${detail}</p></div>`,
+            text: `Account ${accountId} auto-suspended. Reason: ${reason}. Detail: ${detail}.`,
+            template_name: "account_suspended_alert",
+            message_id: `acct-susp-${accountId}-${Date.now()}`,
+          } as any,
+        });
+      }
+    } catch {
+      // alert best-effort
+    }
+  } catch (e) {
+    console.error("[dispatch] flagAccountForReview failed", e);
+  }
+}
+
 async function dispatchOne(
   supabaseAdmin: any,
   campaign: any,
@@ -71,6 +137,18 @@ async function dispatchOne(
   sender: Sender,
 ): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string; paused?: boolean }> {
   await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
+
+  // Defense-in-depth: keyword scan at dispatch time. If SHAFT content slipped through,
+  // fail the campaign immediately and flag the account.
+  const preScan = keywordScan(campaign.message_body ?? "");
+  if (!preScan.allowed) {
+    await supabaseAdmin
+      .from("campaigns")
+      .update({ status: "blocked_content", paused_reason: preScan.reason })
+      .eq("id", campaign.id);
+    await flagAccountForReview(supabaseAdmin, campaign.account_id, "content_violation_dispatch", preScan.reason ?? "Keyword hit at dispatch");
+    return { queued: 0, failed: 0, debited: 0, cost: 0, skipped: "blocked_content" };
+  }
 
   const { data: recipients, error } = await supabaseAdmin.rpc("eligible_profile_ids", {
     _account_id: campaign.account_id,
@@ -213,6 +291,7 @@ async function dispatchOne(
   let queued = 0;
   let failed = skippedRows.length;
   let debited = 0;
+  let shaftErrors = 0;
   const callback = await statusCallbackUrl();
   // From here on, dispatch only affordable recipients.
   const dispatchList = affordable;
@@ -297,15 +376,17 @@ async function dispatchOne(
               : `${GATEWAY_URL}/Messages.json`;
           const res = await fetch(url, fetchInit);
           const json: any = await res.json().catch(() => ({}));
+          const twilioCode = String(json?.code ?? "");
           if (!res.ok) {
             await supabaseAdmin
               .from("messages")
               .update({
                 status: "failed",
-                error_code: String(json?.code ?? res.status),
+                error_code: twilioCode || String(res.status),
               })
               .eq("id", m.id);
             failed++;
+            if (isShaftError(twilioCode)) shaftErrors++;
           } else {
             const providerSegments = Number(json.num_segments ?? m.segments_count ?? 1);
             await supabaseAdmin
@@ -348,7 +429,17 @@ async function dispatchOne(
     );
   }
 
-  const finalStatus = queued > 0 ? "sent" : "failed";
+  // Auto-suspend: if multiple SHAFT-related carrier errors occur, flag account for review.
+  if (shaftErrors >= 2) {
+    await flagAccountForReview(
+      supabaseAdmin,
+      campaign.account_id,
+      "shaft_carrier_errors",
+      `${shaftErrors} messages blocked by carrier for prohibited content (SHAFT). Campaign ${campaign.id}.`,
+    );
+  }
+
+  const finalStatus = queued > 0 ? "sent" : failed > 0 ? "failed" : "sent";
   await supabaseAdmin.from("campaigns").update({ status: finalStatus }).eq("id", campaign.id);
   return { queued, failed, debited: +debited.toFixed(4), cost: totalCost };
 }

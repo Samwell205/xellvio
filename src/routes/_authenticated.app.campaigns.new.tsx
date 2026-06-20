@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
+import { scanCampaignContent } from "@/lib/content-scanner.functions";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
 import { formatUSD, formatRate } from "@/lib/money";
@@ -213,6 +214,7 @@ function NewCampaignPage() {
 
   const callTestSend = useServerFn(sendTestSms);
   const callTestUsage = useServerFn(getTestSendUsage);
+  const callContentScan = useServerFn(scanCampaignContent);
   const testUsageQ = useQuery({
     queryKey: ["test-send-usage"],
     queryFn: () => callTestUsage(),
@@ -250,7 +252,7 @@ function NewCampaignPage() {
   })();
 
   async function persistCampaign(
-    targetStatus: "draft" | "queued" | "scheduled",
+    targetStatus: "draft" | "queued" | "scheduled" | "blocked_content",
   ): Promise<string | null> {
     if (!s.name.trim()) return null;
     const { data: u } = await supabase.auth.getUser();
@@ -313,6 +315,17 @@ function NewCampaignPage() {
     }
     setSaving(true);
     try {
+      // Layer 1+2: Content safety scan before any launch
+      if (launch) {
+        const scan = await callContentScan({ data: { messageBody: bodyWithStop, mediaUrl: s.mediaUrl || undefined } });
+        if (!scan.allowed) {
+          // Save as blocked so user sees it in their list, then stop
+          await persistCampaign("blocked_content");
+          toast.error(`Blocked: ${scan.reason ?? "Content violates platform policy."}`);
+          navigate({ to: "/app/campaigns" });
+          return;
+        }
+      }
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
       await persistCampaign(status);
       toast.success(launch ? "Campaign launched" : "Saved as draft");
