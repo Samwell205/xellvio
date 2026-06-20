@@ -86,3 +86,13 @@ export const updateTwilioBalanceSettings = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+export const resumePausedCampaignsNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+    const { resumePausedCampaigns } = await import("./twilio-resume.server");
+    const ids = await resumePausedCampaigns();
+    return { resumed: ids.length, ids };
+  });
