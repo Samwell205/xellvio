@@ -221,7 +221,7 @@ function CampaignReport() {
             <div className="space-y-5">
               <Card className="p-5">
                 <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3">Text Message</div>
-                <PhonePreview body={c.message_body} />
+                <PhonePreview body={c.message_body} mediaUrl={c.media_url} />
               </Card>
 
               <Card className="p-5 space-y-4">
@@ -689,18 +689,45 @@ function FunnelRow({
   );
 }
 
-function PhonePreview({ body }: { body: string }) {
+function PhonePreview({ body, mediaUrl }: { body: string; mediaUrl?: string | null }) {
+  const isImg = !!mediaUrl && /\.(jpe?g|png|gif|webp)(\?|$)/i.test(mediaUrl);
+  const now = new Date();
+  const time = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   return (
-    <div className="mx-auto w-full max-w-[260px] rounded-[2rem] border bg-muted/30 p-3 shadow-inner">
-      <div className="rounded-[1.5rem] bg-background border overflow-hidden">
-        <div className="h-7 bg-muted/40 flex items-center justify-center">
-          <div className="w-16 h-3 rounded-full bg-foreground/80" />
+    <div className="mx-auto w-full max-w-[280px] rounded-[2.5rem] border-[8px] border-foreground/90 bg-foreground/90 shadow-xl">
+      <div className="rounded-[2rem] bg-background overflow-hidden">
+        {/* Status bar */}
+        <div className="relative h-7 bg-background flex items-center justify-between px-5 text-[10px] font-semibold">
+          <span>{time}</span>
+          <div className="absolute left-1/2 -translate-x-1/2 top-1 w-20 h-4 rounded-full bg-foreground" />
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-2 rounded-sm border border-foreground/70" />
+          </span>
         </div>
-        <div className="p-4 min-h-[260px]">
-          <div className="text-[10px] text-muted-foreground text-center mb-3 inline-flex items-center gap-1 justify-center w-full"><Smartphone className="size-3" /> Text Message</div>
-          <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2 text-sm whitespace-pre-wrap leading-snug max-w-[85%]">
-            {body || <span className="text-muted-foreground italic">(empty message)</span>}
+        {/* Conversation header */}
+        <div className="border-b bg-muted/40 py-2 flex flex-col items-center">
+          <div className="size-9 rounded-full bg-gradient-to-br from-primary/70 to-primary flex items-center justify-center text-primary-foreground text-xs font-bold">
+            SMS
           </div>
+          <div className="text-[11px] font-semibold mt-1">Text Message</div>
+        </div>
+        {/* Messages */}
+        <div className="p-3 min-h-[260px] bg-background space-y-2">
+          {isImg && (
+            <div className="flex">
+              <img
+                src={mediaUrl!}
+                alt="MMS preview"
+                className="rounded-2xl rounded-tl-sm max-w-[85%] max-h-56 object-cover border"
+              />
+            </div>
+          )}
+          <div className="flex">
+            <div className="bg-muted text-foreground rounded-2xl rounded-tl-sm px-3 py-2 text-[13px] whitespace-pre-wrap leading-snug max-w-[85%] shadow-sm">
+              {body || <span className="text-muted-foreground italic">(empty message)</span>}
+            </div>
+          </div>
+          <div className="text-[10px] text-muted-foreground text-center pt-1">Delivered</div>
         </div>
       </div>
     </div>
