@@ -529,7 +529,7 @@ function TollfreeVerificationPage() {
             </Field>
           </Two>
           {form.businessType && form.businessType !== "Sole Proprietor" && (
-            <Two>
+            <Three>
               <Field label="Business registration number" required>
                 <Input
                   value={form.businessRegistrationNumber ?? ""}
@@ -552,7 +552,7 @@ function TollfreeVerificationPage() {
                   placeholder="US"
                 />
               </Field>
-            </Two>
+            </Three>
           )}
         </Section>
 
