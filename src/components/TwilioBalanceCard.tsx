@@ -44,6 +44,9 @@ export function TwilioBalanceCard() {
   const [lowT, setLowT] = useState<number>(20);
   const [critT, setCritT] = useState<number>(5);
   const [email, setEmail] = useState<string>("");
+  const [emails, setEmails] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [buffer, setBuffer] = useState<number>(5);
   const [enabled, setEnabled] = useState<boolean>(true);
 
   useEffect(() => {
@@ -51,6 +54,9 @@ export function TwilioBalanceCard() {
       setLowT(q.data.settings.threshold_low);
       setCritT(q.data.settings.threshold_critical);
       setEmail(q.data.settings.alert_email);
+      setEmails(q.data.settings.alert_emails ?? "");
+      setPhone(q.data.settings.alert_phone_e164 ?? "");
+      setBuffer(q.data.settings.balance_buffer_usd ?? 5);
       setEnabled(q.data.settings.alerts_enabled);
     }
   }, [q.data?.settings.threshold_low, q.data?.settings.threshold_critical, q.data?.settings.alert_email, q.data?.settings.alerts_enabled]);
