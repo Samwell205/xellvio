@@ -883,7 +883,10 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       TollfreePhoneNumberSid: phoneSid,
       BusinessName: data.legalEntityName,
       BusinessWebsite: data.websiteUrl,
-      NotificationEmail: data.notificationEmail,
+      // Route Twilio's TFV status notifications to our internal inbox so the
+      // customer never sees emails from donotreply@twilio.com. We re-notify the
+      // customer ourselves with branded emails from admin@xellvio.com.
+      NotificationEmail: INTERNAL_TFV_CONTACT_EMAIL,
       UseCaseCategories: data.useCaseCategories,
       UseCaseSummary: data.useCaseDescription,
       ProductionMessageSample: data.sampleMessage,
