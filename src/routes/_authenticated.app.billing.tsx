@@ -271,6 +271,11 @@ function PackPicker({ packs }: { packs: any[] }) {
             <p className="text-xs text-muted-foreground mt-1">1 USD = 1 credit · min $5, max $10,000</p>
           </div>
         )}
+        {amount < 25 && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-800 dark:text-amber-200">
+            <strong>Heads up:</strong> Crypto payments (USDT, BTC, etc.) usually require at least <strong>$25</strong> to clear the network's minimum. For amounts under $25, please pay by <strong>card</strong> — or pick the Growth ($25) pack or higher for crypto.
+          </div>
+        )}
       </div>
       <div className="rounded-xl border bg-muted/30 p-4 min-w-[220px]">
         <div className="text-xs uppercase tracking-wide text-muted-foreground">You pay</div>
