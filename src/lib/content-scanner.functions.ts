@@ -19,10 +19,14 @@ const AI_SCHEMA = z.object({
       "alcohol",
       "firearms",
       "tobacco",
-      "drugs",
+      "cannabis_cbd",
+      "illegal_drugs",
       "gambling",
-      "cbd_vape",
-      "cryptocurrency_scam",
+      "payday_loans",
+      "debt_collection",
+      "crypto_scam",
+      "get_rich_quick",
+      "fraud_deceptive",
       "phishing",
       "none",
     ])
@@ -46,15 +50,29 @@ async function aiScan(messageBody: string): Promise<ScanResult> {
       model,
       output: Output.object({ schema: AI_SCHEMA }),
       system:
-        "You are a content safety classifier for an SMS marketing platform. " +
-        "Analyze the message for prohibited categories: tobacco (cigarettes, vaping, nicotine), " +
-        "alcohol promotions, firearms, drugs, gambling, sexual services, hate speech, CBD/THC products, " +
-        "cryptocurrency scams, and phishing. " +
-        "Return allowed=true ONLY if the message is safe for bulk SMS. " +
-        "Be strict: promotional messages for tobacco, vaping, e-cigarettes, nicotine products, or related accessories must be blocked. " +
+        "You are a content safety classifier for an SMS marketing platform that must comply with US/CA carrier (SHAFT) policies and Twilio's Acceptable Use Policy. " +
+        "Block messages promoting any of these categories:\n" +
+        "- tobacco: cigarettes, cigars, vaping, e-cigs, nicotine products, hookah\n" +
+        "- alcohol: promotional alcohol sales/delivery, bar specials targeting consumers\n" +
+        "- firearms: guns, ammo, accessories, ghost guns\n" +
+        "- cannabis_cbd: marijuana, CBD, THC, delta-8/9/10, edibles, dispensaries (even where state-legal)\n" +
+        "- illegal_drugs: prescription drugs without Rx, controlled substances, research chemicals\n" +
+        "- gambling: casinos, sportsbooks, lottery, betting apps, free spins / deposit bonuses\n" +
+        "- payday_loans: payday/cash-advance/title loans, high-APR short-term lending, no-credit-check loans\n" +
+        "- debt_collection: collection notices, debt-relief offers, garnishment threats, tax-debt relief\n" +
+        "- crypto_scam: crypto giveaways, doubling schemes, guaranteed returns, presale/airdrop bait, celebrity-impersonation crypto\n" +
+        "- get_rich_quick: 'make $X from home', passive-income systems, guaranteed-income schemes, MLM-style pitches\n" +
+        "- fraud_deceptive: fake prize/winner notices, IRS/SSA/arrest threats, fake package-delivery links, fake refunds, impersonation of brands or government\n" +
+        "- sexual: escort/adult services, explicit content\n" +
+        "- hate_speech: extremist or hate-group content, incitement\n" +
+        "- phishing: credential harvesting, fake account-verification links\n\n" +
+        "Return allowed=true ONLY if the message is clearly safe for bulk SMS. " +
+        "Be strict — promotional, recruitment, or 'opportunity' messages for ANY of these categories must be blocked, " +
+        "including obfuscated wording (e.g. 'nic salt', 'D8', 'fast $$$', '🚀 100x', 'we buy debt'). " +
         "Return allowed=false with the specific category and a concise reason if prohibited.",
       prompt: `Analyze this SMS campaign message for prohibited content:\n\n"""${messageBody}"""`,
     });
+
 
     const result = output as z.infer<typeof AI_SCHEMA>;
     return {
