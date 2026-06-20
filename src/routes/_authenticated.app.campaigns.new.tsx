@@ -487,7 +487,14 @@ function NewCampaignPage() {
             <div>
               <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2 flex items-center gap-1"><Smartphone className="size-4" /> Phone preview</div>
               <div className="mx-auto w-full max-w-[280px] rounded-[2rem] border bg-card p-3 shadow-sm">
-                <div className="rounded-2xl bg-muted/40 p-3 min-h-[140px] text-sm whitespace-pre-wrap">
+                <div className="rounded-2xl bg-muted/40 p-3 min-h-[140px] text-sm whitespace-pre-wrap space-y-2">
+                  {s.mediaUrl && /\.(jpe?g|png|gif|webp)(\?|$)/i.test(s.mediaUrl) && (
+                    <img
+                      src={s.mediaUrl}
+                      alt="MMS preview"
+                      className="w-full max-h-64 rounded-lg object-cover border"
+                    />
+                  )}
                   {bodyWithStop || <span className="text-muted-foreground">Your message will appear here…</span>}
                 </div>
               </div>
