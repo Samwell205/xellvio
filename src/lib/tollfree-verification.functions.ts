@@ -894,6 +894,15 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
           status = mapStatus(existingVerification?.status);
           twilioResponse = existingVerification;
           rejectionReason = status === "rejected" ? verificationRejectionReason(existingVerification) : null;
+          if (status === "rejected") {
+            const updated = await twilio<{ sid?: string; status?: string }>(
+              `${MESSAGING_API}/Tollfree/Verifications/${verificationSid}`,
+              { method: "POST", sid: subSid, token: subToken, body },
+            );
+            twilioResponse = updated;
+            status = mapStatus(updated.status);
+            rejectionReason = status === "rejected" ? verificationRejectionReason(updated) : null;
+          }
         } else {
           status = "rejected";
           rejectionReason = "Twilio says a verification already exists for this number, but did not return its verification ID. Please contact support to reconnect the existing carrier verification.";
