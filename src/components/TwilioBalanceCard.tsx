@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Phone, AlertTriangle, CheckCircle2, XCircle, PlayCircle, PauseCircle } from "lucide-react";
-import { getTwilioBalance, refreshTwilioBalance, updateTwilioBalanceSettings, resumePausedCampaignsNow } from "@/lib/twilio-balance.functions";
+import { getTwilioBalance, refreshTwilioBalance, updateTwilioBalanceSettings, resumePausedCampaignsNow, sendTestCapacityAlert } from "@/lib/twilio-balance.functions";
 
 function formatMoney(n: number, currency: string) {
   try {
@@ -24,6 +24,7 @@ export function TwilioBalanceCard() {
   const refreshFn = useServerFn(refreshTwilioBalance);
   const updateFn = useServerFn(updateTwilioBalanceSettings);
   const resumeFn = useServerFn(resumePausedCampaignsNow);
+  const testFn = useServerFn(sendTestCapacityAlert);
   const qc = useQueryClient();
 
   const q = useQuery({
@@ -90,6 +91,18 @@ export function TwilioBalanceCard() {
           : "No campaigns could be resumed yet (Twilio balance still too low)",
       );
       qc.invalidateQueries({ queryKey: ["twilio-balance"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const test = useMutation({
+    mutationFn: () => testFn(),
+    onSuccess: (r: any) => {
+      const emailList = (r?.emails ?? []).join(", ");
+      toast.success(
+        `Test alert fired → ${r?.emails?.length ?? 0} email(s)${emailList ? ` (${emailList})` : ""} + SMS to ${r?.phone || "—"}. Allow up to 1 min for delivery.`,
+        { duration: 8000 },
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -197,7 +210,10 @@ export function TwilioBalanceCard() {
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
         </div>
-        <div className="flex justify-end">
+        <div className="flex justify-between gap-2">
+          <Button variant="outline" onClick={() => test.mutate()} disabled={test.isPending || !enabled}>
+            {test.isPending ? "Sending..." : "Send test alert"}
+          </Button>
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "Saving..." : "Save settings"}
           </Button>
