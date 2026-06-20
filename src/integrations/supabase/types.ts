@@ -1159,6 +1159,39 @@ export type Database = {
         }
         Relationships: []
       }
+      twilio_balance_snapshots: {
+        Row: {
+          alerted: boolean
+          balance: number
+          checked_at: string
+          created_at: string
+          currency: string
+          error_message: string | null
+          id: string
+          status: string
+        }
+        Insert: {
+          alerted?: boolean
+          balance: number
+          checked_at?: string
+          created_at?: string
+          currency?: string
+          error_message?: string | null
+          id?: string
+          status: string
+        }
+        Update: {
+          alerted?: boolean
+          balance?: number
+          checked_at?: string
+          created_at?: string
+          currency?: string
+          error_message?: string | null
+          id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
