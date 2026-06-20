@@ -531,6 +531,11 @@ function NewCampaignPage() {
               </div>
             )}
             {s.testSent && <div className="text-sm text-success mt-2 flex items-center gap-1"><CheckCircle2 className="size-4" /> Test sent. You can proceed.</div>}
+            {testLimitReached && !s.testSent && (
+              <div className="text-xs text-muted-foreground mt-2">
+                You've used all {testUsage.limit} test sends for today. The limit resets at 00:00 UTC — you can continue to schedule or launch without another test.
+              </div>
+            )}
           </div>
         </Card>
       )}
