@@ -36,12 +36,51 @@ function AdminBillingPage() {
           <TabsTrigger value="payments">Pending payments</TabsTrigger>
           <TabsTrigger value="packs">Credit packs</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
         </TabsList>
         <TabsContent value="payments" className="mt-4"><PendingPayments /></TabsContent>
         <TabsContent value="packs" className="mt-4"><PacksAdmin /></TabsContent>
         <TabsContent value="settings" className="mt-4"><SettingsAdmin /></TabsContent>
+        <TabsContent value="diagnostics" className="mt-4"><Diagnostics /></TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function Diagnostics() {
+  const simFn = useServerFn(simulateNowPaymentsIpn);
+  const [reference, setReference] = useState("");
+  const [status, setStatus] = useState("finished");
+  const [result, setResult] = useState<any>(null);
+  const sim = useMutation({
+    mutationFn: async () => simFn({ data: { reference, status } }),
+    onSuccess: (r) => { setResult(r); toast.success(`IPN ${r.status} — payment ${r.before} → ${r.after}`); },
+    onError: (e: Error) => { setResult({ error: e.message }); toast.error(e.message); },
+  });
+  return (
+    <Card className="p-4 space-y-4 max-w-2xl">
+      <div>
+        <h3 className="font-semibold">Simulate NOWPayments IPN</h3>
+        <p className="text-xs text-muted-foreground">Signs a fake callback server-side and posts it to the IPN endpoint. Use the <code>provider_reference</code> from a pending NOWPayments payment (looks like <code>npm_xxxx</code>).</p>
+      </div>
+      <div><Label>Payment reference</Label><Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="npm_..." /></div>
+      <div>
+        <Label>Status</Label>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="finished">finished (credit)</SelectItem>
+            <SelectItem value="confirmed">confirmed (credit)</SelectItem>
+            <SelectItem value="failed">failed</SelectItem>
+            <SelectItem value="expired">expired</SelectItem>
+            <SelectItem value="refunded">refunded</SelectItem>
+            <SelectItem value="waiting">waiting</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <Button onClick={() => sim.mutate()} disabled={sim.isPending || !reference}>Send simulated IPN</Button>
+      {result && <pre className="text-xs bg-muted/40 p-3 rounded overflow-x-auto">{JSON.stringify(result, null, 2)}</pre>}
+    </Card>
   );
 }
 
