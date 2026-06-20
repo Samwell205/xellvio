@@ -1,0 +1,23 @@
+# Xellvio
+
+> Xellvio is a global bulk SMS platform — send fast, reliable, compliant SMS campaigns worldwide with scheduling, analytics, sender IDs, and a developer API.
+
+## Pages
+
+- [Home](/): Platform overview and getting started.
+- [Features](/features): Bulk messaging, scheduling, analytics, contacts, API, automation.
+- [Solutions](/solutions): Use cases by industry and workflow.
+- [Email to SMS](/solutions/email-to-sms): Send SMS directly from email — gateway guide and setup.
+- [Pricing](/pricing): Per-country SMS pricing and credit packs.
+- [Docs](/docs): API reference, setup, and sending checklist.
+- [Contact](/contact): Get in touch with the Xellvio team.
+
+## Optional
+
+- [Terms of Service](/terms)
+- [Privacy Policy](/privacy)
+- [Acceptable Use Policy](/aup)
+- [Anti-Spam Policy](/anti-spam)
+- [SMS Terms](/sms-terms)
+- [Cookies](/cookies)
+- [DPA](/dpa)

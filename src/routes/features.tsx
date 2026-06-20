@@ -57,7 +57,7 @@ function FeaturesPage() {
                   <div className="size-11 rounded-lg bg-primary/10 text-primary grid place-items-center">
                     <f.icon className="size-5" />
                   </div>
-                  <h3 className="mt-4 font-semibold">{f.title}</h3>
+                  <h2 className="mt-4 font-semibold">{f.title}</h2>
                   <p className="mt-1.5 text-sm text-muted-foreground">{f.text}</p>
                 </Card>
               </motion.div>
