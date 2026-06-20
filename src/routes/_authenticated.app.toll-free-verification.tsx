@@ -196,7 +196,8 @@ function TollfreeVerificationPage() {
   });
 
   // Live carrier-side refresh: while the carrier is still reviewing, ask
-  // Twilio directly for the latest status every minute.
+  // Twilio directly for the latest status every minute (belt-and-braces in
+  // case Twilio's webhook doesn't fire).
   useEffect(() => {
     if (status !== "submitted" && status !== "in_review") return;
     if (!asset?.verification_sid) return;
@@ -207,6 +208,25 @@ function TollfreeVerificationPage() {
     }, 60_000);
     return () => clearInterval(id);
   }, [status, asset?.verification_sid, refresh, qc]);
+
+  // Realtime: instantly reflect DB updates (driven by the Twilio webhook)
+  // for this user's sender_assets row.
+  useEffect(() => {
+    if (!asset?.id) return;
+    const channel = supabase
+      .channel(`sender-asset-${asset.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "sender_assets", filter: `id=eq.${asset.id}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [asset?.id, qc]);
 
   const update = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
