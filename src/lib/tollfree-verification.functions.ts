@@ -956,14 +956,25 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       const lower = carrierMessage.toLowerCase();
       const alreadyExists = lower.includes("verification already exists") || lower.includes("already has") || lower.includes("already exists for this phone");
       if (alreadyExists) {
-        const existingVerification = await findExistingTollfreeVerification({ phoneSid, sid: subSid, token: subToken });
+        const existingVerification =
+          (await findExistingTollfreeVerification({ phoneSid, sid: subSid, token: subToken })) ??
+          (await findLocalTollfreeVerification(supabaseAdmin, { accountId: userId, phoneSid }));
         verificationSid = typeof existingVerification?.sid === "string" && existingVerification.sid.trim()
           ? existingVerification.sid
           : null;
         if (verificationSid) {
-          status = mapStatus(existingVerification?.status);
-          twilioResponse = existingVerification;
-          rejectionReason = status === "rejected" ? verificationRejectionReason(existingVerification) : null;
+          let currentVerification = existingVerification;
+          try {
+            currentVerification = await twilio<any>(`${MESSAGING_API}/Tollfree/Verifications/${verificationSid}`, {
+              sid: subSid,
+              token: subToken,
+            });
+          } catch (fetchErr) {
+            console.warn("[tollfree-verification] recovered verification fetch failed", fetchErr);
+          }
+          status = mapStatus(currentVerification?.status);
+          twilioResponse = currentVerification;
+          rejectionReason = status === "rejected" ? verificationRejectionReason(currentVerification) : null;
           if (status === "rejected") {
             const updated = await twilio<{ sid?: string; status?: string }>(
               `${MESSAGING_API}/Tollfree/Verifications/${verificationSid}`,
