@@ -866,12 +866,15 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     let rejectionReason: string | null = null;
     let twilioResponse: any = null;
     try {
+      const verificationUrl = existingVerificationSid
+        ? `${MESSAGING_API}/Tollfree/Verifications/${existingVerificationSid}`
+        : `${MESSAGING_API}/Tollfree/Verifications`;
       const ver = await twilio<{ sid?: string; status?: string }>(
-        `${MESSAGING_API}/Tollfree/Verifications`,
+        verificationUrl,
         { method: "POST", sid: subSid, token: subToken, body },
       );
       twilioResponse = ver;
-      verificationSid = typeof ver.sid === "string" && ver.sid.trim() ? ver.sid : null;
+      verificationSid = typeof ver.sid === "string" && ver.sid.trim() ? ver.sid : existingVerificationSid;
       if (!verificationSid) {
         const err = new Error("Twilio did not return a toll-free verification ID, so the submission was not accepted.");
         (err as any).noVerificationSid = true;
