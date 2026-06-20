@@ -121,6 +121,12 @@ function normalizeBusinessTypeLabel(value: unknown) {
   return (BUSINESS_TYPES as readonly string[]).includes(raw) ? raw : "";
 }
 
+function looksLikeRegisteredEntity(name: unknown) {
+  return /\b(LLC|L\.L\.C\.|INC|INC\.|CORP|CORPORATION|LTD|LIMITED|LP|LLP|CO\.|COMPANY|NONPROFIT|NON-PROFIT)\b/i.test(
+    String(name ?? ""),
+  );
+}
+
 type Status = "submitted" | "in_review" | "verified" | "rejected";
 
 function StatusBadge({ status }: { status: Status | null | undefined }) {
@@ -236,10 +242,14 @@ function TollfreeVerificationPage() {
   useEffect(() => {
     if (payload) {
       const normalizedCategories = normalizeCategories(payload.useCaseCategories);
+      const normalizedBusinessType = normalizeBusinessTypeLabel(payload.businessType);
       setForm({
         ...defaultForm(),
         ...payload,
-        businessType: normalizeBusinessTypeLabel(payload.businessType),
+        businessType:
+          normalizedBusinessType === "Sole Proprietor" && looksLikeRegisteredEntity(payload.legalEntityName)
+            ? "Private company / LLC / Partnership"
+            : normalizedBusinessType,
         businessRegistrationCountry: payload.businessRegistrationCountry || payload.businessCountry || "US",
         useCaseCategories: normalizedCategories.length ? normalizedCategories : defaultForm().useCaseCategories,
         agreeToTos: true,
