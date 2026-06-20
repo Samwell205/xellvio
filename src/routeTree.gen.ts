@@ -41,6 +41,7 @@ import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.
 import { Route as ApiPublicSyncTwilioPricingRouteImport } from './routes/api.public.sync-twilio-pricing'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
+import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './routes/_authenticated.app.toll-free-verification'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
@@ -49,6 +50,7 @@ import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
 import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated.app.onboarding'
+import { Route as AuthenticatedAppCheckoutRouteImport } from './routes/_authenticated.app.checkout'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
 import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenticated.app.audience'
@@ -233,6 +235,11 @@ const ApiPublicPaystackWebhookRoute =
     path: '/api/public/paystack-webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
+  id: '/api/public/nowpayments-ipn',
+  path: '/api/public/nowpayments-ipn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicDispatchCampaignRoute =
   ApiPublicDispatchCampaignRouteImport.update({
     id: '/api/public/dispatch-campaign',
@@ -279,6 +286,12 @@ const AuthenticatedAppOnboardingRoute =
   AuthenticatedAppOnboardingRouteImport.update({
     id: '/onboarding',
     path: '/onboarding',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppCheckoutRoute =
+  AuthenticatedAppCheckoutRouteImport.update({
+    id: '/checkout',
+    path: '/checkout',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppCampaignsRoute =
@@ -434,6 +447,7 @@ export interface FileRoutesByFullPath {
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
+  '/app/checkout': typeof AuthenticatedAppCheckoutRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -442,6 +456,7 @@ export interface FileRoutesByFullPath {
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/sync-twilio-pricing': typeof ApiPublicSyncTwilioPricingRoute
@@ -492,6 +507,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
+  '/app/checkout': typeof AuthenticatedAppCheckoutRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -499,6 +515,7 @@ export interface FileRoutesByTo {
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/sync-twilio-pricing': typeof ApiPublicSyncTwilioPricingRoute
@@ -554,6 +571,7 @@ export interface FileRoutesById {
   '/_authenticated/app/audience': typeof AuthenticatedAppAudienceRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
+  '/_authenticated/app/checkout': typeof AuthenticatedAppCheckoutRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -562,6 +580,7 @@ export interface FileRoutesById {
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/_authenticated/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/sync-twilio-pricing': typeof ApiPublicSyncTwilioPricingRoute
@@ -617,6 +636,7 @@ export interface FileRouteTypes {
     | '/app/audience'
     | '/app/billing'
     | '/app/campaigns'
+    | '/app/checkout'
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/segments'
@@ -625,6 +645,7 @@ export interface FileRouteTypes {
     | '/app/suppressions'
     | '/app/toll-free-verification'
     | '/api/public/dispatch-campaign'
+    | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/sync-twilio-pricing'
@@ -675,6 +696,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/app/audience'
     | '/app/billing'
+    | '/app/checkout'
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/settings'
@@ -682,6 +704,7 @@ export interface FileRouteTypes {
     | '/app/suppressions'
     | '/app/toll-free-verification'
     | '/api/public/dispatch-campaign'
+    | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/sync-twilio-pricing'
@@ -736,6 +759,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/audience'
     | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
+    | '/_authenticated/app/checkout'
     | '/_authenticated/app/onboarding'
     | '/_authenticated/app/pricing-calculator'
     | '/_authenticated/app/segments'
@@ -744,6 +768,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/suppressions'
     | '/_authenticated/app/toll-free-verification'
     | '/api/public/dispatch-campaign'
+    | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/sync-twilio-pricing'
@@ -786,6 +811,7 @@ export interface RootRouteChildren {
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
+  ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
   ApiPublicSyncTwilioPricingRoute: typeof ApiPublicSyncTwilioPricingRoute
@@ -1024,6 +1050,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaystackWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/nowpayments-ipn': {
+      id: '/api/public/nowpayments-ipn'
+      path: '/api/public/nowpayments-ipn'
+      fullPath: '/api/public/nowpayments-ipn'
+      preLoaderRoute: typeof ApiPublicNowpaymentsIpnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/dispatch-campaign': {
       id: '/api/public/dispatch-campaign'
       path: '/api/public/dispatch-campaign'
@@ -1078,6 +1111,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/app/onboarding'
       preLoaderRoute: typeof AuthenticatedAppOnboardingRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/checkout': {
+      id: '/_authenticated/app/checkout'
+      path: '/checkout'
+      fullPath: '/app/checkout'
+      preLoaderRoute: typeof AuthenticatedAppCheckoutRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/campaigns': {
@@ -1291,6 +1331,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAudienceRoute: typeof AuthenticatedAppAudienceRoute
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
+  AuthenticatedAppCheckoutRoute: typeof AuthenticatedAppCheckoutRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
   AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
   AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -1305,6 +1346,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAudienceRoute: AuthenticatedAppAudienceRoute,
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
+  AuthenticatedAppCheckoutRoute: AuthenticatedAppCheckoutRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
   AuthenticatedAppPricingCalculatorRoute:
     AuthenticatedAppPricingCalculatorRoute,
@@ -1357,6 +1399,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSetupSmsRoute: ApiSetupSmsRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
+  ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
   ApiPublicSyncTwilioPricingRoute: ApiPublicSyncTwilioPricingRoute,

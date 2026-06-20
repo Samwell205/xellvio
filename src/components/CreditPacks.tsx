@@ -42,7 +42,7 @@ export function CreditPacks() {
     const params = new URLSearchParams();
     if (isCustom) params.set("amount", String(customAmount));
     else params.set("pack", selected);
-    const dest = `/app/billing?${params.toString()}`;
+    const dest = `/app/checkout?${params.toString()}`;
     const { data } = await supabase.auth.getSession();
     if (data.session) navigate({ to: dest });
     else navigate({ to: "/auth", search: { redirect: dest } as any });
@@ -56,7 +56,7 @@ export function CreditPacks() {
             <Sparkles className="size-5 text-primary" />
             <h2 className="text-2xl font-extrabold tracking-tight">Buy credits</h2>
           </div>
-          <p className="text-sm text-muted-foreground">Priced in USD · paid securely via Paystack</p>
+          <p className="text-sm text-muted-foreground">Priced in USD · pay by card or crypto</p>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 grid sm:grid-cols-[1fr_auto] gap-6 items-end">
@@ -106,7 +106,7 @@ export function CreditPacks() {
               onClick={handlePay}
               disabled={busy || packsQ.isLoading || (isCustom && (customAmount < 5 || customAmount > 10000))}
             >
-              Pay with Paystack
+              Pay
             </Button>
             <Link to="/auth" className="block text-center text-xs text-muted-foreground mt-2 hover:underline">
               New here? Create a free account
