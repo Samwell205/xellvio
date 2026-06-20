@@ -548,11 +548,21 @@ function TollfreeVerificationPage() {
                 />
               </Field>
               <Field label="Registration authority" required>
-                <Input
+                <Select
                   value={form.businessRegistrationIdentifier ?? ""}
-                  onChange={(e) => update("businessRegistrationIdentifier", e.target.value.toUpperCase())}
-                  placeholder="EIN, CBN, CRN, VAT, BRN"
-                />
+                  onValueChange={(v) => update("businessRegistrationIdentifier", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select authority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REGISTRATION_AUTHORITIES.map((authority) => (
+                      <SelectItem key={authority.v} value={authority.v}>
+                        {authority.l}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Registration country" required>
                 <Input
