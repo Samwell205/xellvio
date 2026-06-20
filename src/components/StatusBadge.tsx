@@ -13,13 +13,17 @@ type Status =
   | "running"
   | "scheduled"
   | "completed"
-  | "draft";
+  | "draft"
+  | "paused_low_balance"
+  | "processing";
 
 const map: Record<Status, { label: string; cls: string; Icon: React.ComponentType<{ className?: string }> }> = {
   pending: { label: "Pending verification", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
   scheduled: { label: "Scheduled", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
   queued: { label: "Queued", cls: "bg-muted text-muted-foreground border-border", Icon: Clock },
   draft: { label: "Draft", cls: "bg-muted text-muted-foreground border-border", Icon: Clock },
+  processing: { label: "Processing", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Loader2 },
+  paused_low_balance: { label: "Processing", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Loader2 },
   approved: { label: "Approved", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   active: { label: "Active", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   delivered: { label: "Delivered", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
@@ -36,7 +40,7 @@ export function StatusBadge({ status, className }: { status: string; className?:
   const { Icon } = cfg;
   return (
     <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium", cfg.cls, className)}>
-      <Icon className={cn("size-3.5", key === "running" && "animate-spin")} />
+      <Icon className={cn("size-3.5", (key === "running" || key === "processing" || key === "paused_low_balance") && "animate-spin")} />
       {cfg.label}
     </span>
   );

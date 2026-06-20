@@ -52,7 +52,7 @@ async function dispatchOne(
   campaign: any,
   rates: Rate[],
   sender: Sender,
-): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string }> {
+): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string; paused?: boolean }> {
   await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
 
   const { data: recipients, error } = await supabaseAdmin.rpc("eligible_profile_ids", {
@@ -85,6 +85,54 @@ async function dispatchOne(
   });
 
   const totalCost = +enriched.reduce((s, x) => s + x.cost, 0).toFixed(4);
+
+  // Master Twilio balance pre-flight: if not enough to cover this campaign,
+  // pause it (don't fail) and fire urgent admin alert. Auto-resume cron picks
+  // it up once admin funds Twilio.
+  try {
+    const { getMasterTwilioBalance, getBalanceBuffer, fireCapacityAlert } = await import(
+      "@/lib/twilio-alerts.server"
+    );
+    const [{ balance: twBal, currency, ok }, buffer] = await Promise.all([
+      getMasterTwilioBalance(),
+      getBalanceBuffer(),
+    ]);
+    if (ok && totalCost > 0 && twBal < totalCost + buffer) {
+      const { data: pausedAcct } = await supabaseAdmin
+        .from("accounts")
+        .select("email")
+        .eq("id", campaign.account_id)
+        .maybeSingle();
+      await supabaseAdmin
+        .from("campaigns")
+        .update({
+          status: "paused_low_balance",
+          paused_reason:
+            "Platform is temporarily at capacity. Your campaign will resume automatically within a few minutes.",
+          paused_at: new Date().toISOString(),
+        })
+        .eq("id", campaign.id);
+      const { count: pausedCount } = await supabaseAdmin
+        .from("campaigns")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "paused_low_balance");
+      await fireCapacityAlert({
+        kind: "campaign_paused",
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        tenantEmail: (pausedAcct as any)?.email ?? null,
+        twilioBalance: twBal,
+        currency,
+        campaignCost: totalCost,
+        shortfall: +(totalCost + buffer - twBal).toFixed(4),
+        pausedCampaignCount: pausedCount ?? undefined,
+      });
+      return { queued: 0, failed: 0, debited: 0, cost: totalCost, paused: true };
+    }
+  } catch (e) {
+    console.error("[dispatch] balance preflight failed (continuing)", e);
+  }
+
 
   // Balance check up front — never charge more than the user has on file.
   const { data: acct, error: aErr } = await supabaseAdmin

@@ -197,6 +197,8 @@ export type Database = {
           media_url: string | null
           message_body: string
           name: string
+          paused_at: string | null
+          paused_reason: string | null
           schedule_at: string | null
           send_mode: string
           sender_map: Json
@@ -212,6 +214,8 @@ export type Database = {
           media_url?: string | null
           message_body?: string
           name: string
+          paused_at?: string | null
+          paused_reason?: string | null
           schedule_at?: string | null
           send_mode?: string
           sender_map?: Json
@@ -227,6 +231,8 @@ export type Database = {
           media_url?: string | null
           message_body?: string
           name?: string
+          paused_at?: string | null
+          paused_reason?: string | null
           schedule_at?: string | null
           send_mode?: string
           sender_map?: Json

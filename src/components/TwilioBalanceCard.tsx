@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Phone, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
-import { getTwilioBalance, refreshTwilioBalance, updateTwilioBalanceSettings } from "@/lib/twilio-balance.functions";
+import { RefreshCw, Phone, AlertTriangle, CheckCircle2, XCircle, PlayCircle, PauseCircle } from "lucide-react";
+import { getTwilioBalance, refreshTwilioBalance, updateTwilioBalanceSettings, resumePausedCampaignsNow } from "@/lib/twilio-balance.functions";
 
 function formatMoney(n: number, currency: string) {
   try {
@@ -23,6 +23,7 @@ export function TwilioBalanceCard() {
   const getFn = useServerFn(getTwilioBalance);
   const refreshFn = useServerFn(refreshTwilioBalance);
   const updateFn = useServerFn(updateTwilioBalanceSettings);
+  const resumeFn = useServerFn(resumePausedCampaignsNow);
   const qc = useQueryClient();
 
   const q = useQuery({
@@ -43,6 +44,9 @@ export function TwilioBalanceCard() {
   const [lowT, setLowT] = useState<number>(20);
   const [critT, setCritT] = useState<number>(5);
   const [email, setEmail] = useState<string>("");
+  const [emails, setEmails] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [buffer, setBuffer] = useState<number>(5);
   const [enabled, setEnabled] = useState<boolean>(true);
 
   useEffect(() => {
@@ -50,6 +54,9 @@ export function TwilioBalanceCard() {
       setLowT(q.data.settings.threshold_low);
       setCritT(q.data.settings.threshold_critical);
       setEmail(q.data.settings.alert_email);
+      setEmails(q.data.settings.alert_emails ?? "");
+      setPhone(q.data.settings.alert_phone_e164 ?? "");
+      setBuffer(q.data.settings.balance_buffer_usd ?? 5);
       setEnabled(q.data.settings.alerts_enabled);
     }
   }, [q.data?.settings.threshold_low, q.data?.settings.threshold_critical, q.data?.settings.alert_email, q.data?.settings.alerts_enabled]);
@@ -61,6 +68,9 @@ export function TwilioBalanceCard() {
           threshold_low: lowT,
           threshold_critical: critT,
           alert_email: email,
+          alert_emails: emails,
+          alert_phone_e164: phone,
+          balance_buffer_usd: buffer,
           alerts_enabled: enabled,
         },
       }),
@@ -71,10 +81,24 @@ export function TwilioBalanceCard() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const resume = useMutation({
+    mutationFn: () => resumeFn(),
+    onSuccess: (r: any) => {
+      toast.success(
+        r?.resumed > 0
+          ? `Resumed ${r.resumed} campaign${r.resumed === 1 ? "" : "s"}`
+          : "No campaigns could be resumed yet (Twilio balance still too low)",
+      );
+      qc.invalidateQueries({ queryKey: ["twilio-balance"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const latest = q.data?.latest;
   const status = (latest?.status ?? "healthy") as "healthy" | "low" | "critical" | "error";
   const balance = Number(latest?.balance ?? 0);
   const currency = latest?.currency ?? "USD";
+  const pausedCount = q.data?.pausedCampaignCount ?? 0;
 
   return (
     <Card className="p-5 space-y-5">
@@ -118,6 +142,24 @@ export function TwilioBalanceCard() {
         <strong>Tip:</strong> Enable <a className="underline" href="https://console.twilio.com/us1/billing/manage-billing/recharge" target="_blank" rel="noreferrer">Twilio Auto-Recharge</a> so Twilio automatically charges your card when your balance drops below your chosen threshold. This card is your safety net in case Auto-Recharge fails or is off.
       </div>
 
+      {pausedCount > 0 && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-3 flex items-center gap-3">
+          <PauseCircle className="size-5 text-amber-600 shrink-0" />
+          <div className="flex-1 text-sm">
+            <div className="font-semibold text-amber-900 dark:text-amber-200">
+              {pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused — waiting for Twilio funds
+            </div>
+            <div className="text-xs text-amber-800/80 dark:text-amber-200/80">
+              They'll auto-resume on the next balance check. Click below to resume immediately once Twilio is funded.
+            </div>
+          </div>
+          <Button size="sm" onClick={() => resume.mutate()} disabled={resume.isPending}>
+            <PlayCircle className="size-4 mr-1.5" />
+            {resume.isPending ? "Checking..." : "Resume now"}
+          </Button>
+        </div>
+      )}
+
       <div className="border-t pt-4 space-y-3">
         <h4 className="font-medium text-sm">Alert settings</h4>
         <div className="grid sm:grid-cols-2 gap-3">
@@ -129,14 +171,28 @@ export function TwilioBalanceCard() {
             <Label htmlFor="critT">Critical threshold (USD)</Label>
             <Input id="critT" type="number" min={0} step={1} value={critT} onChange={(e) => setCritT(Number(e.target.value))} />
           </div>
+          <div>
+            <Label htmlFor="buf">Safety buffer (USD)</Label>
+            <Input id="buf" type="number" min={0} step={1} value={buffer} onChange={(e) => setBuffer(Number(e.target.value))} />
+            <p className="text-[11px] text-muted-foreground mt-1">Required headroom above campaign cost before sending.</p>
+          </div>
+          <div>
+            <Label htmlFor="aphone">Urgent SMS phone (E.164)</Label>
+            <Input id="aphone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+2348106199368" />
+          </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="aemail">Alert email</Label>
+            <Label htmlFor="aemails">Urgent alert emails (comma-separated)</Label>
+            <Input id="aemails" value={emails} onChange={(e) => setEmails(e.target.value)} placeholder="ops@example.com, alerts@example.com" />
+            <p className="text-[11px] text-muted-foreground mt-1">Used for "platform at capacity" urgent alerts (3 admins).</p>
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="aemail">Standard threshold alert email</Label>
             <Input id="aemail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="sm:col-span-2 flex items-center justify-between rounded-md border p-3">
             <div>
-              <div className="font-medium text-sm">Enable email alerts</div>
-              <div className="text-xs text-muted-foreground">Send an email when balance crosses a threshold (one per state change).</div>
+              <div className="font-medium text-sm">Enable alerts</div>
+              <div className="text-xs text-muted-foreground">Email + SMS notifications for low balance and paused campaigns.</div>
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
@@ -169,13 +225,14 @@ export function TwilioLowBalanceBanner() {
     refetchInterval: 5 * 60_000,
   });
   const latest = q.data?.latest;
-  if (!latest) return null;
-  const status = latest.status as "healthy" | "low" | "critical" | "error";
-  if (status === "healthy") return null;
+  const pausedCount = q.data?.pausedCampaignCount ?? 0;
+  if (!latest && pausedCount === 0) return null;
+  const status = (latest?.status ?? "healthy") as "healthy" | "low" | "critical" | "error";
+  if (status === "healthy" && pausedCount === 0) return null;
 
-  const isCritical = status === "critical";
-  const balance = Number(latest.balance ?? 0);
-  const currency = latest.currency ?? "USD";
+  const isCritical = status === "critical" || pausedCount > 0;
+  const balance = Number(latest?.balance ?? 0);
+  const currency = latest?.currency ?? "USD";
 
   return (
     <div
@@ -189,8 +246,10 @@ export function TwilioLowBalanceBanner() {
     >
       <AlertTriangle className="size-4 shrink-0" />
       <div className="flex-1">
-        {status === "error" ? (
-          <>Twilio balance check failed: {latest.error_message ?? "unknown error"}</>
+        {pausedCount > 0 ? (
+          <><strong>{pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused</strong> — Twilio balance {formatMoney(balance, currency)}. Fund Twilio now to auto-resume.</>
+        ) : status === "error" ? (
+          <>Twilio balance check failed: {latest?.error_message ?? "unknown error"}</>
         ) : (
           <>
             Twilio balance is <strong>{isCritical ? "critically " : ""}low</strong>: {formatMoney(balance, currency)}. Top up to avoid SMS interruptions.
