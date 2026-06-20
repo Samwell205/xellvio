@@ -175,8 +175,8 @@ export const setupSms = createServerFn({ method: "POST" })
         .eq("id", userId);
     } else {
       try {
-        if (!acct.twilio_subaccount_auth_token_enc) throw new Error("Subaccount token missing");
-        subToken = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+        if (!tokenEnc) throw new Error("Subaccount token missing");
+        subToken = decryptToken(tokenEnc as unknown as string);
       } catch {
         const master = masterAuth();
         subSid = master.sid;
