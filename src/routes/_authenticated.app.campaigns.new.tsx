@@ -496,7 +496,16 @@ function NewCampaignPage() {
         <Card className="p-5 space-y-4">
           <div className="flex items-start gap-2 bg-warning/10 border border-warning/30 rounded-md p-3 text-sm">
             <AlertTriangle className="size-4 text-warning mt-0.5" />
-            <div>A test send is <b>required</b> before you can schedule or launch a campaign.</div>
+            <div className="flex-1 flex items-center justify-between gap-3">
+              <div>
+                {testLimitReached
+                  ? <>Daily test limit reached. You can proceed without another test today.</>
+                  : <>A test send is <b>required</b> before you can schedule or launch a campaign.</>}
+              </div>
+              <span className="text-xs font-medium whitespace-nowrap">
+                {testUsage.used}/{testUsage.limit} used today
+              </span>
+            </div>
           </div>
           <div>
             <Label>Send test to (E.164 phone)</Label>
