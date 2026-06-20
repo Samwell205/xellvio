@@ -119,11 +119,20 @@ export const setupSms = createServerFn({ method: "POST" })
     const { data: acct, error } = await supabase
       .from("accounts")
       .select(
-        "id,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,contact_email,full_name,phone,twilio_subaccount_sid,twilio_subaccount_auth_token_enc,onboarding_status",
+        "id,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,contact_email,full_name,phone,twilio_subaccount_sid,onboarding_status",
       )
       .eq("id", userId)
       .maybeSingle();
     if (error || !acct) throw new Error("Account not found");
+
+    // The encrypted Twilio token column is revoked from tenant SELECT.
+    // Fetch it through the admin client so server logic can still decrypt it.
+    const { data: acctSecret } = await supabaseAdmin
+      .from("accounts")
+      .select("twilio_subaccount_auth_token_enc")
+      .eq("id", userId)
+      .maybeSingle();
+    const tokenEnc = acctSecret?.twilio_subaccount_auth_token_enc ?? null;
     if (acct.onboarding_status === "suspended") throw new Error("Account suspended");
     if (
       !acct.legal_business_name ||
@@ -166,8 +175,8 @@ export const setupSms = createServerFn({ method: "POST" })
         .eq("id", userId);
     } else {
       try {
-        if (!acct.twilio_subaccount_auth_token_enc) throw new Error("Subaccount token missing");
-        subToken = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+        if (!tokenEnc) throw new Error("Subaccount token missing");
+        subToken = decryptToken(tokenEnc as unknown as string);
       } catch {
         const master = masterAuth();
         subSid = master.sid;
