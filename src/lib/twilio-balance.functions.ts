@@ -105,3 +105,50 @@ export const resumePausedCampaignsNow = createServerFn({ method: "POST" })
     const ids = await resumePausedCampaigns();
     return { resumed: ids.length, ids };
   });
+
+export const sendTestCapacityAlert = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: isAdmin } = await context.supabase.rpc("has_role", { _role: "admin" });
+    if (!isAdmin) throw new Error("Forbidden");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Clear throttle so test always fires
+    await supabaseAdmin
+      .from("platform_settings")
+      .delete()
+      .in("key", [
+        "twilio_alert_last_campaign_paused_at",
+        "twilio_alert_last_mid_campaign_exhausted_at",
+        "twilio_alert_last_test_at",
+      ]);
+
+    // Read current recipients for the response
+    const { data: rows } = await supabaseAdmin
+      .from("platform_settings")
+      .select("key,value")
+      .in("key", ["twilio_alert_emails", "twilio_alert_phone_e164", "twilio_alerts_enabled"]);
+    const read = (k: string, f: any) => rows?.find((r) => r.key === k)?.value ?? f;
+    const emails = String(read("twilio_alert_emails", ""))
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.includes("@"));
+    const phone = String(read("twilio_alert_phone_e164", ""));
+    const enabled = Boolean(read("twilio_alerts_enabled", true));
+
+    if (!enabled) throw new Error("Alerts are disabled — turn them on first.");
+
+    const { fireCapacityAlert, getMasterTwilioBalance } = await import("./twilio-alerts.server");
+    const bal = await getMasterTwilioBalance();
+    await fireCapacityAlert({
+      kind: "campaign_paused",
+      campaignName: "[TEST] Xellvio alert verification",
+      tenantEmail: context.claims?.email ?? null,
+      twilioBalance: bal.balance,
+      currency: bal.currency || "USD",
+      campaignCost: bal.balance + 100,
+      shortfall: 100,
+      pausedCampaignCount: 0,
+    });
+    return { ok: true, emails, phone };
+  });
