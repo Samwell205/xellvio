@@ -103,12 +103,13 @@ function BillingPage() {
       </Card>
 
       <Card className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2"><Sparkles className="size-5 text-primary" /><h3 className="font-semibold">Buy credits</h3></div>
           <span className="text-xs text-muted-foreground">Priced in USD · paid securely via Paystack</span>
         </div>
-        <PackGrid packs={usdPacks} />
+        <PackPicker packs={usdPacks.filter((p) => Number(p.price) <= 500)} />
       </Card>
+
 
       <Card className="p-6">
         <h3 className="font-semibold mb-3">Payment history</h3>
