@@ -64,7 +64,10 @@ export const updateTwilioBalanceSettings = createServerFn({ method: "POST" })
     threshold_low?: number;
     threshold_critical?: number;
     alert_email?: string;
+    alert_emails?: string;
+    alert_phone_e164?: string;
     alerts_enabled?: boolean;
+    balance_buffer_usd?: number;
   }) => d)
   .handler(async ({ data, context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _role: "admin" });
@@ -78,8 +81,14 @@ export const updateTwilioBalanceSettings = createServerFn({ method: "POST" })
       rows.push({ key: "twilio_critical_balance_threshold_usd", value: data.threshold_critical });
     if (typeof data.alert_email === "string")
       rows.push({ key: "twilio_alert_email", value: data.alert_email });
+    if (typeof data.alert_emails === "string")
+      rows.push({ key: "twilio_alert_emails", value: data.alert_emails });
+    if (typeof data.alert_phone_e164 === "string")
+      rows.push({ key: "twilio_alert_phone_e164", value: data.alert_phone_e164 });
     if (typeof data.alerts_enabled === "boolean")
       rows.push({ key: "twilio_alerts_enabled", value: data.alerts_enabled });
+    if (typeof data.balance_buffer_usd === "number")
+      rows.push({ key: "twilio_balance_buffer_usd", value: data.balance_buffer_usd });
 
     for (const r of rows) {
       await supabaseAdmin.from("platform_settings").upsert(r, { onConflict: "key" });
