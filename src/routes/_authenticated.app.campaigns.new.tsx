@@ -431,9 +431,54 @@ function NewCampaignPage() {
               </div>
             </div>
             <div>
-              <Label>Media URL (MMS, optional)</Label>
-              <Input value={s.mediaUrl} onChange={(e) => setS({ ...s, mediaUrl: e.target.value })} placeholder="https://…" />
-              {s.mediaUrl && <p className="text-xs text-muted-foreground mt-1">MMS multiplier applied per-country.</p>}
+              <Label>Website link (optional)</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  placeholder="https://your-site.com/sale"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const url = (e.target as HTMLInputElement).value.trim();
+                      if (!url) return;
+                      setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + url });
+                      (e.target as HTMLInputElement).value = "";
+                    }
+                  }}
+                  id="link-input"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const el = document.getElementById("link-input") as HTMLInputElement | null;
+                    const url = el?.value.trim();
+                    if (!url) return;
+                    setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + url });
+                    if (el) el.value = "";
+                  }}
+                >Add to message</Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Links don't cost extra — they just add characters, which may push the message into a second SMS segment.
+              </p>
+            </div>
+            <div>
+              <Label>MMS image (optional)</Label>
+              <MmsImagePicker
+                mediaUrl={s.mediaUrl}
+                onChange={(url) => setS({ ...s, mediaUrl: url })}
+              />
+              {s.mediaUrl ? (
+                <p className="text-xs text-muted-foreground mt-1">MMS multiplier applied per-country (see cost estimate).</p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">Upload a JPG, PNG, or GIF (max 5 MB) — or paste a public image URL.</p>
+              )}
+              <Input
+                className="mt-2"
+                value={s.mediaUrl}
+                onChange={(e) => setS({ ...s, mediaUrl: e.target.value })}
+                placeholder="…or paste a https:// image URL"
+              />
             </div>
             <div className="flex items-start gap-2 text-xs text-muted-foreground bg-success/5 border border-success/30 rounded-md p-3">
               <ShieldCheck className="size-4 text-success mt-0.5" />
@@ -864,5 +909,56 @@ function SenderRoutingCard({
         Need a sender for another country? <Link to="/app/setup-sms" className="text-primary underline">Set up SMS</Link> or <Link to="/app/number-requests" className="text-primary underline">request a number</Link>.
       </p>
     </Card>
+  );
+}
+
+function MmsImagePicker({ mediaUrl, onChange }: { mediaUrl: string; onChange: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  async function handleFile(file: File) {
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be 5 MB or smaller."); return; }
+    if (!/^image\/(jpeg|jpg|png|gif)$/.test(file.type)) { toast.error("Only JPG, PNG, or GIF images are allowed."); return; }
+    setUploading(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${uid}/${crypto.randomUUID()}.${ext}`;
+      const up = await supabase.storage.from("campaign-media").upload(path, file, {
+        contentType: file.type, upsert: false,
+      });
+      if (up.error) throw up.error;
+      // 1-year signed URL so Twilio can fetch it at send time, including scheduled campaigns.
+      const signed = await supabase.storage.from("campaign-media").createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error("Could not sign media URL");
+      onChange(signed.data.signedUrl);
+      toast.success("Image uploaded");
+    } catch (e: any) {
+      toast.error(e.message ?? "Upload failed");
+    } finally { setUploading(false); }
+  }
+  const isImg = !!mediaUrl && /\.(jpe?g|png|gif)(\?|$)/i.test(mediaUrl);
+  return (
+    <div className="mt-1 flex items-start gap-3">
+      {isImg && (
+        <img src={mediaUrl} alt="MMS preview" className="size-20 rounded-md border object-cover" />
+      )}
+      <div className="flex-1 flex flex-wrap gap-2">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+        />
+        <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={uploading}>
+          {uploading ? "Uploading…" : mediaUrl ? "Replace image" : "Upload image"}
+        </Button>
+        {mediaUrl && (
+          <Button type="button" variant="ghost" onClick={() => onChange("")}>Remove</Button>
+        )}
+      </div>
+    </div>
   );
 }
