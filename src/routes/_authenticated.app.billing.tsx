@@ -200,8 +200,7 @@ function BillingPage() {
 
 function PackPicker({ packs }: { packs: any[] }) {
   const CUSTOM = "__custom__";
-  const initFn = useServerFn(initPaystackCheckout);
-  const initCustomFn = useServerFn(initPaystackCheckoutCustom);
+  const navigate = useNavigate();
 
   const defaultId = packs.find((p) => p.is_popular)?.id ?? packs[0]?.id ?? CUSTOM;
   const [selected, setSelected] = useState<string>(defaultId);
@@ -232,14 +231,10 @@ function PackPicker({ packs }: { packs: any[] }) {
   const amount = isCustom ? customAmount : Number(pack?.price ?? 0);
   const credits = isCustom ? customAmount : Number(pack?.credits ?? 0);
 
-  const buy = useMutation({
-    mutationFn: async () => {
-      if (isCustom) return initCustomFn({ data: { amount: customAmount } });
-      return initFn({ data: { packId: selected } });
-    },
-    onSuccess: (r) => { window.location.href = r.authorization_url; },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  function goCheckout() {
+    const search: Record<string, any> = isCustom ? { amount: customAmount } : { pack: selected };
+    navigate({ to: "/app/checkout", search });
+  }
 
   if (!packs.length) {
     return <p className="text-sm text-muted-foreground">No packs available. Ask the admin to create one.</p>;
@@ -283,15 +278,16 @@ function PackPicker({ packs }: { packs: any[] }) {
         <div className="text-sm text-muted-foreground">≈ {formatUSD(credits)} in credits</div>
         <Button
           className="mt-3 w-full"
-          onClick={() => buy.mutate()}
-          disabled={buy.isPending || (isCustom && (customAmount < 5 || customAmount > 10000))}
+          onClick={goCheckout}
+          disabled={isCustom && (customAmount < 5 || customAmount > 10000)}
         >
-          {buy.isPending ? "Redirecting…" : "Pay with Paystack"}
+          Pay
         </Button>
       </div>
     </div>
   );
 }
+
 
 
 
