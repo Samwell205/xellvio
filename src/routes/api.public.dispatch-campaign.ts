@@ -97,7 +97,8 @@ async function flagAccountForReview(
     // Log event for audit trail
     await supabaseAdmin.from("events").insert({
       type: "account_auto_suspended",
-      payload: { account_id: accountId, reason, detail },
+      account_id: accountId,
+      payload: { reason, detail },
     });
 
     // Best-effort admin alert via email queue

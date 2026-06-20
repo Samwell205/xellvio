@@ -596,27 +596,37 @@ export type Database = {
       }
       events: {
         Row: {
+          account_id: string | null
           created_at: string
           id: string
-          message_id: string
+          message_id: string | null
           payload: Json | null
           type: string
         }
         Insert: {
+          account_id?: string | null
           created_at?: string
           id?: string
-          message_id: string
+          message_id?: string | null
           payload?: Json | null
           type: string
         }
         Update: {
+          account_id?: string | null
           created_at?: string
           id?: string
-          message_id?: string
+          message_id?: string | null
           payload?: Json | null
           type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_message_id_fkey"
             columns: ["message_id"]

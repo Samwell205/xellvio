@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2,
-  Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList,
+  Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -15,6 +15,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
     items: [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true },
       { title: "Activity log", url: "/admin/activity", icon: Activity },
+      { title: "Compliance", url: "/admin/compliance", icon: ShieldOff },
     ],
   },
   {
