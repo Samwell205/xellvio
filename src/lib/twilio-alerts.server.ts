@@ -43,21 +43,22 @@ async function loadSettings() {
 
 async function shouldSend(kind: string): Promise<boolean> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const key = `twilio_alert_last_${kind}_at`;
   const { data } = await supabaseAdmin
-    .from("events")
-    .select("id")
-    .eq("type", `twilio_alert_${kind}`)
-    .gte("created_at", fifteenMinAgo)
-    .limit(1);
-  return !(data && data.length > 0);
+    .from("platform_settings")
+    .select("value")
+    .eq("key", key)
+    .maybeSingle();
+  const last = (data as any)?.value ? Date.parse(String((data as any).value)) : 0;
+  return Date.now() - last > 15 * 60 * 1000;
 }
 
-async function markSent(kind: string, payload: any) {
+async function markSent(kind: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const key = `twilio_alert_last_${kind}_at`;
   await supabaseAdmin
-    .from("events")
-    .insert({ type: `twilio_alert_${kind}`, payload });
+    .from("platform_settings")
+    .upsert({ key, value: new Date().toISOString() as any }, { onConflict: "key" });
 }
 
 export async function fireCapacityAlert(args: AlertArgs): Promise<void> {
