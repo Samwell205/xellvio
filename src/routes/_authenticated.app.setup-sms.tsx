@@ -245,17 +245,23 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         {senderCountries.map((c) => {
           const on = countries.includes(c.code);
           const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(c.code);
+          // For US/CA, the source of truth is Twilio toll-free verification status on the
+          // sender_asset — NOT the internal number_request (auto-approved at purchase).
+          const tfAsset = isAlphaUnsupported
+            ? assets.find((a) => a.country_code === c.code && a.sender_kind === "toll_free")
+            : null;
+          const vStatus: string | undefined = tfAsset?.verification_status ?? undefined;
           const req = isAlphaUnsupported ? reqByCountry.get(c.code) : null;
-          const isReady = req && (req.status === "approved" || req.status === "provisioned") && req.assigned_phone_number;
-          const isPending = req && req.status === "pending";
-          const isRejected = req && req.status === "rejected";
+          const hasNumber = !!tfAsset?.phone_number;
+          const isVerified = vStatus === "verified";
+          const isInReview = vStatus === "in_review" || vStatus === "submitted";
+          const isTfRejected = vStatus === "rejected" || req?.status === "rejected";
+          const notStarted = isAlphaUnsupported && !tfAsset && !req;
           let chipCls: string;
           if (isAlphaUnsupported) {
-            if (isReady) {
+            if (isVerified) {
               chipCls = "border-success bg-success/10 text-success hover:bg-success/15";
-            } else if (isPending) {
-              chipCls = "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
-            } else if (isRejected) {
+            } else if (isTfRejected) {
               chipCls = "border-dashed border-destructive/50 bg-destructive/5 text-destructive hover:bg-destructive/10";
             } else {
               chipCls = "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
@@ -265,6 +271,15 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
               ? "bg-primary text-primary-foreground border-primary"
               : "border-border hover:bg-muted";
           }
+          const titleText = isVerified
+            ? `Verified by Twilio · ${tfAsset?.phone_number ?? ""}`
+            : isTfRejected
+              ? `Rejected by Twilio${tfAsset?.friendly_rejection_reason ? ` · ${tfAsset.friendly_rejection_reason}` : tfAsset?.rejection_reason ? ` · ${tfAsset.rejection_reason}` : ""}`
+              : isInReview
+                ? "Awaiting Twilio carrier review — only Twilio can approve this (typically 1–3 weeks)."
+                : notStarted
+                  ? "Submit toll-free verification to begin the Twilio review."
+                  : "Pending";
           return (
             <button
               key={c.code}
@@ -277,24 +292,35 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
                 }
               }}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition ${chipCls}`}
-              title={isReady ? `Approved · ${req.assigned_phone_number}` : isPending ? "Pending review" : isRejected ? "Request rejected" : undefined}
+              title={titleText}
             >
-              {isReady && <CheckCircle2 className="size-3.5" />}
-              {isPending && <Clock className="size-3.5" />}
-              {isRejected && <AlertCircle className="size-3.5" />}
+              {isVerified && <CheckCircle2 className="size-3.5" />}
+              {(isInReview || (isAlphaUnsupported && !isVerified && !isTfRejected)) && (
+                <Clock className="size-3.5" />
+              )}
+              {isTfRejected && <AlertCircle className="size-3.5" />}
               <span>
                 {c.name}
-                {isAlphaUnsupported && !isReady && " · phone number"}
-                {isReady && ` · ${req.assigned_phone_number}`}
+                {isAlphaUnsupported && hasNumber && ` · ${tfAsset?.phone_number}`}
+                {isAlphaUnsupported && !hasNumber && " · phone number"}
               </span>
-              {isReady && (
-                <span className="ml-1 rounded-full bg-success/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                  Approved
-                </span>
-              )}
-              {isPending && (
-                <span className="ml-1 rounded-full bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                  Pending
+              {isAlphaUnsupported && (
+                <span
+                  className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    isVerified
+                      ? "bg-success/20"
+                      : isTfRejected
+                        ? "bg-destructive/20"
+                        : "bg-amber-500/20"
+                  }`}
+                >
+                  {isVerified
+                    ? "Verified"
+                    : isTfRejected
+                      ? "Rejected"
+                      : isInReview
+                        ? "In review"
+                        : "Not started"}
                 </span>
               )}
             </button>
