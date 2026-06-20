@@ -136,6 +136,10 @@ function statusBlurb(status: Status | null | undefined) {
   }
 }
 
+function hasSubmissionStarted(asset: any, rawStatus: Status | "pending" | null) {
+  return !!asset && (rawStatus === "pending" || !!asset.phone_number || !!asset.phone_sid || !!asset.verification_sid);
+}
+
 function TollfreeVerificationPage() {
   const qc = useQueryClient();
   const load = useServerFn(getMyTollfreeVerification);
@@ -159,14 +163,19 @@ function TollfreeVerificationPage() {
   // Twilio verification SID behind it — without a SID the carrier never received
   // it. BUT "rejected" without a SID is a legitimate local-failure state
   // (e.g. Twilio rejected the API call), and we must show its reason.
-  const rawStatus = (asset?.verification_status as Status | null) ?? null;
+  const rawStatus = (asset?.verification_status as Status | "pending" | null) ?? null;
   const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review" || rawStatus === "verified";
   const status: Status | null =
     trustsCarrier && !asset?.verification_sid ? null : rawStatus;
   const payload = (asset?.verification_payload as any) ?? null;
   // After submission the form is read-only. Only allow editing when nothing was
   // submitted yet, or when the carrier rejected and we need to resubmit.
-  const isLocked = status === "submitted" || status === "in_review" || status === "verified";
+  const submissionStarted = hasSubmissionStarted(asset, rawStatus);
+  const isLocked =
+    (submissionStarted && rawStatus !== "rejected") ||
+    status === "submitted" ||
+    status === "in_review" ||
+    status === "verified";
 
   const [form, setForm] = useState(() => defaultForm());
   useEffect(() => {
@@ -238,6 +247,10 @@ function TollfreeVerificationPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isLocked) {
+      toast.error("This toll-free request has already been started, so another number will not be purchased.");
+      return;
+    }
     if (!canSubmit) {
       toast.error("Please fill in all required fields and accept the Terms.");
       return;
