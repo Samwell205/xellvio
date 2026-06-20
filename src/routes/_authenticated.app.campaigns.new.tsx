@@ -521,8 +521,8 @@ function NewCampaignPage() {
             )}
             <div className="flex gap-2 mt-1">
               <Input value={s.testTo} onChange={(e) => setS({ ...s, testTo: e.target.value })} placeholder="+15551234567" />
-              <Button onClick={runTestSend} disabled={sending || !s.body.trim() || (!!testCountry && !testSender)}>
-                <Send className="size-4 mr-1.5" />{sending ? "Sending…" : "Send test"}
+              <Button onClick={runTestSend} disabled={sending || testLimitReached || !s.body.trim() || (!!testCountry && !testSender)}>
+                <Send className="size-4 mr-1.5" />{sending ? "Sending…" : testLimitReached ? "Daily limit reached" : "Send test"}
               </Button>
             </div>
             {testCountry && !testSender && (
