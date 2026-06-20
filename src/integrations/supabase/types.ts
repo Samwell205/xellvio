@@ -949,6 +949,69 @@ export type Database = {
         }
         Relationships: []
       }
+      tollfree_verification_attempts: {
+        Row: {
+          account_id: string
+          actor_user_id: string
+          attempt_status: string
+          created_at: string
+          failure_reason: string | null
+          friendly_failure_reason: string | null
+          id: string
+          messaging_service_sid: string | null
+          phone_number: string | null
+          phone_sid: string | null
+          request_summary: Json | null
+          sender_asset_id: string | null
+          twilio_code: string | null
+          twilio_more_info: string | null
+          twilio_response: Json | null
+          twilio_status: number | null
+          updated_at: string
+          verification_sid: string | null
+        }
+        Insert: {
+          account_id: string
+          actor_user_id: string
+          attempt_status?: string
+          created_at?: string
+          failure_reason?: string | null
+          friendly_failure_reason?: string | null
+          id?: string
+          messaging_service_sid?: string | null
+          phone_number?: string | null
+          phone_sid?: string | null
+          request_summary?: Json | null
+          sender_asset_id?: string | null
+          twilio_code?: string | null
+          twilio_more_info?: string | null
+          twilio_response?: Json | null
+          twilio_status?: number | null
+          updated_at?: string
+          verification_sid?: string | null
+        }
+        Update: {
+          account_id?: string
+          actor_user_id?: string
+          attempt_status?: string
+          created_at?: string
+          failure_reason?: string | null
+          friendly_failure_reason?: string | null
+          id?: string
+          messaging_service_sid?: string | null
+          phone_number?: string | null
+          phone_sid?: string | null
+          request_summary?: Json | null
+          sender_asset_id?: string | null
+          twilio_code?: string | null
+          twilio_more_info?: string | null
+          twilio_response?: Json | null
+          twilio_status?: number | null
+          updated_at?: string
+          verification_sid?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
