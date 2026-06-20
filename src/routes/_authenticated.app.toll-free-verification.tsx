@@ -218,7 +218,7 @@ function TollfreeVerificationPage() {
             send your details for verification.
           </p>
         </div>
-        <PriceCard />
+        
       </div>
 
       <Card>
