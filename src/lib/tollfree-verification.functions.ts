@@ -200,6 +200,12 @@ function normalizeBusinessType(value: string) {
   return BUSINESS_TYPE_MAP[upper] ?? "PRIVATE_PROFIT";
 }
 
+function looksLikeRegisteredEntity(name: string) {
+  return /\b(LLC|L\.L\.C\.|INC|INC\.|CORP|CORPORATION|LTD|LIMITED|LP|LLP|CO\.|COMPANY|NONPROFIT|NON-PROFIT)\b/i.test(
+    name,
+  );
+}
+
 const LEGACY_USE_CASE_CATEGORY_MAP: Record<string, (typeof USE_CASE_CATEGORIES)[number]> = {
   "2FA": "TWO_FACTOR_AUTHENTICATION",
   FRAUD_ALERTS: "FRAUD_ALERT_MESSAGING",
@@ -629,6 +635,29 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       attempt_status: "started",
       request_summary: requestSummary(data),
     });
+
+    const initialTwilioBusinessType = normalizeBusinessType(data.businessType);
+    const registrationNumber = (data.businessRegistrationNumber ?? "").trim();
+    const registrationAuthority = (data.businessRegistrationIdentifier ?? "").trim();
+    const registrationCountry = (data.businessRegistrationCountry || data.businessCountry || "").trim();
+    if (initialTwilioBusinessType === "SOLE_PROPRIETOR" && looksLikeRegisteredEntity(data.legalEntityName)) {
+      const reason = "This legal entity name looks like a registered business, so it cannot be submitted as a sole proprietor. Choose Private company / LLC / Partnership and add the registration details.";
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        attempt_status: "failed",
+        failure_reason: reason,
+        friendly_failure_reason: reason,
+      });
+      throw new Error(reason);
+    }
+    if (initialTwilioBusinessType !== "SOLE_PROPRIETOR" && (!registrationNumber || !registrationAuthority || !registrationCountry)) {
+      const reason = "Registered businesses must include a registration number, registration authority, and registration country before carrier submission.";
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        attempt_status: "failed",
+        failure_reason: reason,
+        friendly_failure_reason: reason,
+      });
+      throw new Error(reason);
+    }
 
     // Persist the questionnaire snapshot onto the account too, so it round-trips on load.
     await supabaseAdmin
