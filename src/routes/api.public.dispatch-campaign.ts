@@ -73,6 +73,18 @@ async function dispatchOne(
 ): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string; paused?: boolean }> {
   await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
 
+  // Defense-in-depth: keyword scan at dispatch time. If SHAFT content slipped through,
+  // fail the campaign immediately and flag the account.
+  const preScan = keywordScan(campaign.message_body ?? "");
+  if (!preScan.allowed) {
+    await supabaseAdmin
+      .from("campaigns")
+      .update({ status: "blocked_content", paused_reason: preScan.reason })
+      .eq("id", campaign.id);
+    await flagAccountForReview(supabaseAdmin, campaign.account_id, "content_violation_dispatch", preScan.reason ?? "Keyword hit at dispatch");
+    return { queued: 0, failed: 0, debited: 0, cost: 0, skipped: "blocked_content" };
+  }
+
   const { data: recipients, error } = await supabaseAdmin.rpc("eligible_profile_ids", {
     _account_id: campaign.account_id,
     _audience: campaign.audience ?? { include: [], exclude: [] },
@@ -214,6 +226,7 @@ async function dispatchOne(
   let queued = 0;
   let failed = skippedRows.length;
   let debited = 0;
+  let shaftErrors = 0;
   const callback = await statusCallbackUrl();
   // From here on, dispatch only affordable recipients.
   const dispatchList = affordable;
@@ -298,15 +311,17 @@ async function dispatchOne(
               : `${GATEWAY_URL}/Messages.json`;
           const res = await fetch(url, fetchInit);
           const json: any = await res.json().catch(() => ({}));
+          const twilioCode = String(json?.code ?? "");
           if (!res.ok) {
             await supabaseAdmin
               .from("messages")
               .update({
                 status: "failed",
-                error_code: String(json?.code ?? res.status),
+                error_code: twilioCode || String(res.status),
               })
               .eq("id", m.id);
             failed++;
+            if (isShaftError(twilioCode)) shaftErrors++;
           } else {
             const providerSegments = Number(json.num_segments ?? m.segments_count ?? 1);
             await supabaseAdmin
