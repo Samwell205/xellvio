@@ -315,6 +315,17 @@ function NewCampaignPage() {
     }
     setSaving(true);
     try {
+      // Layer 1+2: Content safety scan before any launch
+      if (launch) {
+        const scan = await callContentScan({ data: { messageBody: bodyWithStop, mediaUrl: s.mediaUrl || undefined } });
+        if (!scan.allowed) {
+          // Save as blocked so user sees it in their list, then stop
+          await persistCampaign("blocked_content");
+          toast.error(`Blocked: ${scan.reason ?? "Content violates platform policy."}`);
+          navigate({ to: "/app/campaigns" });
+          return;
+        }
+      }
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
       await persistCampaign(status);
       toast.success(launch ? "Campaign launched" : "Saved as draft");
