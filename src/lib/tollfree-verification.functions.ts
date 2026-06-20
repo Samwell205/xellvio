@@ -186,7 +186,10 @@ function normalizeUseCaseCategories(value: unknown) {
     .filter((v): v is (typeof USE_CASE_CATEGORIES)[number] =>
       (USE_CASE_CATEGORIES as readonly string[]).includes(v),
     );
-  return Array.from(new Set(normalized)).slice(0, 5);
+  const deduped = Array.from(new Set(normalized)).slice(0, 5);
+  // Always guarantee at least one valid category so the carrier submission
+  // never fails purely because saved/legacy values normalized to empty.
+  return deduped.length > 0 ? deduped : ["MARKETING"];
 }
 
 export const TollfreeVerificationInput = z.object({
