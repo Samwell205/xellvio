@@ -352,6 +352,17 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         const rates = (ratesRows ?? []) as Rate[];
 
         const nowIso = new Date().toISOString();
+
+        // Recovery: campaigns flipped to "sending" but stalled (worker crash or
+        // timeout) for more than 5 minutes are reset to "queued" so the next
+        // tick re-processes them. Without this they sit in "sending" forever.
+        const stalledCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        await supabaseAdmin
+          .from("campaigns")
+          .update({ status: "queued" })
+          .eq("status", "sending")
+          .lt("updated_at", stalledCutoff);
+
         const { data: due, error } = await supabaseAdmin
           .from("campaigns")
           .select("*")
