@@ -374,6 +374,9 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     };
     if (data.addressLine2) body.BusinessStreetAddress2 = data.addressLine2;
     if (data.proofOfOptInUrl) body.OptInImageUrls = [data.proofOfOptInUrl];
+    const callbackBase = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+    body.StatusCallback = `${callbackBase}/api/public/twilio-tollfree-status`;
+    body.StatusCallbackMethod = "POST";
     const extra: string[] = [];
     if (data.businessDba) extra.push(`DBA: ${data.businessDba}`);
     if (data.businessType) extra.push(`Business type: ${data.businessType}`);
