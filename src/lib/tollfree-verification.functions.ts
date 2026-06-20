@@ -141,48 +141,51 @@ const OPT_IN_VALUES = [
 ] as const;
 
 const USE_CASE_CATEGORIES = [
-  "2FA",
-  "APP_DELIVERY",
-  "APPOINTMENTS",
-  "AUCTION",
-  "AUTO_REPAIR_SERVICES",
-  "BANK_TRANSFERS",
-  "BILLING",
-  "BOOKING_CONFIRMATIONS",
-  "BUSINESS_UPDATES",
-  "COVID_19_ALERTS",
-  "CONVERSATIONAL_ALERTS",
-  "DELIVERY_NOTIFICATIONS",
-  "EVENTS",
-  "FRAUD_ALERTS",
-  "FUNDRAISING",
-  "GENERAL_MARKETING",
-  "GENERAL_SCHOOL_UPDATES",
-  "HEALTHCARE_ALERTS",
-  "HOUSING_COMMUNITY_UPDATES",
-  "INSURANCE_UPDATES",
-  "JOB_DISPATCH",
-  "LEGAL_NOTIFICATIONS",
-  "MIXED",
-  "NOTARY",
-  "ORDER_NOTIFICATIONS",
-  "PERSONAL",
-  "POLITICAL",
-  "PUBLIC_SERVICE_ANNOUNCEMENT",
-  "REAL_ESTATE",
-  "RELIGIOUS",
-  "REPAIR_AND_DIAGNOSTICS",
-  "REWARDS_PROGRAM",
-  "SECURITY_ALERTS",
-  "SOCIAL",
-  "SWEEPSTAKE",
-  "SYSTEM_ALERTS",
-  "VOTING_REMINDERS",
-  "WAITLIST",
-  "WEBINAR",
-  "WORKSHOP",
+  "TWO_FACTOR_AUTHENTICATION",
+  "ACCOUNT_NOTIFICATIONS",
+  "CUSTOMER_CARE",
   "CHARITY_NONPROFIT",
+  "DELIVERY_NOTIFICATIONS",
+  "FRAUD_ALERT_MESSAGING",
+  "EVENTS",
+  "HIGHER_EDUCATION",
+  "K12",
+  "MARKETING",
+  "POLLING_AND_VOTING_NON_POLITICAL",
+  "POLITICAL_ELECTION_CAMPAIGNS",
+  "PUBLIC_SERVICE_ANNOUNCEMENT",
+  "SECURITY_ALERT",
 ] as const;
+
+const LEGACY_USE_CASE_CATEGORY_MAP: Record<string, (typeof USE_CASE_CATEGORIES)[number]> = {
+  "2FA": "TWO_FACTOR_AUTHENTICATION",
+  FRAUD_ALERTS: "FRAUD_ALERT_MESSAGING",
+  GENERAL_MARKETING: "MARKETING",
+  POLLING_AND_VOTING: "POLLING_AND_VOTING_NON_POLITICAL",
+  POLITICAL: "POLITICAL_ELECTION_CAMPAIGNS",
+  SECURITY_ALERTS: "SECURITY_ALERT",
+  GENERAL_SCHOOL_UPDATES: "K12",
+  HEALTHCARE_ALERTS: "ACCOUNT_NOTIFICATIONS",
+  APPOINTMENTS: "ACCOUNT_NOTIFICATIONS",
+  BOOKING_CONFIRMATIONS: "ACCOUNT_NOTIFICATIONS",
+  BUSINESS_UPDATES: "ACCOUNT_NOTIFICATIONS",
+  ORDER_NOTIFICATIONS: "ACCOUNT_NOTIFICATIONS",
+  DELIVERY_NOTIFICATIONS: "DELIVERY_NOTIFICATIONS",
+  EVENTS: "EVENTS",
+  CHARITY_NONPROFIT: "CHARITY_NONPROFIT",
+  PUBLIC_SERVICE_ANNOUNCEMENT: "PUBLIC_SERVICE_ANNOUNCEMENT",
+};
+
+function normalizeUseCaseCategories(value: unknown) {
+  const raw = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+  const normalized = raw
+    .map((v) => String(v).trim().toUpperCase())
+    .map((v) => LEGACY_USE_CASE_CATEGORY_MAP[v] ?? v)
+    .filter((v): v is (typeof USE_CASE_CATEGORIES)[number] =>
+      (USE_CASE_CATEGORIES as readonly string[]).includes(v),
+    );
+  return Array.from(new Set(normalized)).slice(0, 5);
+}
 
 export const TollfreeVerificationInput = z.object({
   legalEntityName: z.string().trim().min(2).max(255),
@@ -204,7 +207,10 @@ export const TollfreeVerificationInput = z.object({
   // Use case
   monthlyVolume: z.enum(VOLUME_VALUES),
   optInType: z.enum(OPT_IN_VALUES),
-  useCaseCategories: z.array(z.enum(USE_CASE_CATEGORIES)).min(1).max(5),
+  useCaseCategories: z.preprocess(
+    normalizeUseCaseCategories,
+    z.array(z.enum(USE_CASE_CATEGORIES)).min(1).max(5),
+  ),
   proofOfOptInUrl: z.string().trim().url().optional().or(z.literal("")),
   useCaseDescription: z.string().trim().min(40).max(2000),
   sampleMessage: z.string().trim().min(20).max(1600),
