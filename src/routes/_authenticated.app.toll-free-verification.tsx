@@ -351,7 +351,7 @@ function TollfreeVerificationPage() {
         )}
       </Card>
 
-      {asset && <Timeline asset={asset} status={status} />}
+      {asset?.verification_sid && <Timeline asset={asset} status={status} />}
 
       {isLocked && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
