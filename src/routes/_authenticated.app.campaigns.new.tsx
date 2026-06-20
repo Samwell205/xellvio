@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { sendTestSms } from "@/lib/sms.functions";
+import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
 import { formatUSD, formatRate } from "@/lib/money";
