@@ -431,9 +431,54 @@ function NewCampaignPage() {
               </div>
             </div>
             <div>
-              <Label>Media URL (MMS, optional)</Label>
-              <Input value={s.mediaUrl} onChange={(e) => setS({ ...s, mediaUrl: e.target.value })} placeholder="https://…" />
-              {s.mediaUrl && <p className="text-xs text-muted-foreground mt-1">MMS multiplier applied per-country.</p>}
+              <Label>Website link (optional)</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  placeholder="https://your-site.com/sale"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const url = (e.target as HTMLInputElement).value.trim();
+                      if (!url) return;
+                      setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + url });
+                      (e.target as HTMLInputElement).value = "";
+                    }
+                  }}
+                  id="link-input"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const el = document.getElementById("link-input") as HTMLInputElement | null;
+                    const url = el?.value.trim();
+                    if (!url) return;
+                    setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + url });
+                    if (el) el.value = "";
+                  }}
+                >Add to message</Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Links don't cost extra — they just add characters, which may push the message into a second SMS segment.
+              </p>
+            </div>
+            <div>
+              <Label>MMS image (optional)</Label>
+              <MmsImagePicker
+                mediaUrl={s.mediaUrl}
+                onChange={(url) => setS({ ...s, mediaUrl: url })}
+              />
+              {s.mediaUrl ? (
+                <p className="text-xs text-muted-foreground mt-1">MMS multiplier applied per-country (see cost estimate).</p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-1">Upload a JPG, PNG, or GIF (max 5 MB) — or paste a public image URL.</p>
+              )}
+              <Input
+                className="mt-2"
+                value={s.mediaUrl}
+                onChange={(e) => setS({ ...s, mediaUrl: e.target.value })}
+                placeholder="…or paste a https:// image URL"
+              />
             </div>
             <div className="flex items-start gap-2 text-xs text-muted-foreground bg-success/5 border border-success/30 rounded-md p-3">
               <ShieldCheck className="size-4 text-success mt-0.5" />
