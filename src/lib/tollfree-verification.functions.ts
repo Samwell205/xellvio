@@ -667,6 +667,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const registrationNumber = (data.businessRegistrationNumber ?? "").trim();
     const registrationAuthority = (data.businessRegistrationIdentifier ?? "").trim();
     const registrationCountry = (data.businessRegistrationCountry || data.businessCountry || "").trim();
+    const normalizedRegistrationAuthority = normalizeRegistrationAuthority(registrationAuthority);
     if (initialTwilioBusinessType === "SOLE_PROPRIETOR" && looksLikeRegisteredEntity(data.legalEntityName)) {
       const reason = "This legal entity name looks like a registered business, so it cannot be submitted as a sole proprietor. Choose Private company / LLC / Partnership and add the registration details.";
       await updateAttemptLog(supabaseAdmin, attemptId, {
@@ -678,6 +679,15 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     }
     if (initialTwilioBusinessType !== "SOLE_PROPRIETOR" && (!registrationNumber || !registrationAuthority || !registrationCountry)) {
       const reason = "Registered businesses must include a registration number, registration authority, and registration country before carrier submission.";
+      await updateAttemptLog(supabaseAdmin, attemptId, {
+        attempt_status: "failed",
+        failure_reason: reason,
+        friendly_failure_reason: reason,
+      });
+      throw new Error(reason);
+    }
+    if (initialTwilioBusinessType !== "SOLE_PROPRIETOR" && !normalizedRegistrationAuthority) {
+      const reason = "Registration authority must be one of Twilio's accepted codes, such as EIN for US businesses.";
       await updateAttemptLog(supabaseAdmin, attemptId, {
         attempt_status: "failed",
         failure_reason: reason,
@@ -779,7 +789,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const twilioBusinessType = normalizeBusinessType(data.businessType);
     const businessCountry = (data.businessCountry || "US").toUpperCase();
     const twilioRegistrationCountry = (registrationCountry || businessCountry).toUpperCase();
-    const twilioRegistrationAuthority = registrationAuthority.toUpperCase();
+    const twilioRegistrationAuthority = normalizedRegistrationAuthority;
 
     // Build the Twilio Tollfree Verifications payload.
     const body: Record<string, string | string[]> = {
