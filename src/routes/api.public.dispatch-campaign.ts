@@ -12,7 +12,7 @@ function render(body: string, p: { first_name?: string | null; last_name?: strin
 }
 
 async function statusCallbackUrl(): Promise<string> {
-  const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+  const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
   return `${base}/api/public/twilio-status`;
 }
 
@@ -97,7 +97,7 @@ async function dispatchOne(
       getMasterTwilioBalance(),
       getBalanceBuffer(),
     ]);
-    if (ok && totalCost > 0 && twBal < totalCost + buffer) {
+    if (ok && totalCost > 0 && twBal < totalCost) {
       const { data: pausedAcct } = await supabaseAdmin
         .from("accounts")
         .select("email")
@@ -123,12 +123,20 @@ async function dispatchOne(
         tenantEmail: (pausedAcct as any)?.email ?? null,
         twilioBalance: twBal,
         currency,
-        campaignCost: totalCost,
-        shortfall: +(totalCost + buffer - twBal).toFixed(4),
+          campaignCost: totalCost,
+          shortfall: +(totalCost - twBal).toFixed(4),
         pausedCampaignCount: pausedCount ?? undefined,
       });
       return { queued: 0, failed: 0, debited: 0, cost: totalCost, paused: true };
     }
+      if (ok && totalCost > 0 && twBal < totalCost + buffer) {
+        console.warn("[dispatch] provider balance is below reserve but can cover campaign", {
+          campaignId: campaign.id,
+          balance: twBal,
+          cost: totalCost,
+          reserve: buffer,
+        });
+      }
   } catch (e) {
     console.error("[dispatch] balance preflight failed (continuing)", e);
   }
