@@ -225,9 +225,10 @@ export function TwilioLowBalanceBanner() {
     refetchInterval: 5 * 60_000,
   });
   const latest = q.data?.latest;
-  if (!latest) return null;
-  const status = latest.status as "healthy" | "low" | "critical" | "error";
-  if (status === "healthy") return null;
+  const pausedCount = q.data?.pausedCampaignCount ?? 0;
+  if (!latest && pausedCount === 0) return null;
+  const status = (latest?.status ?? "healthy") as "healthy" | "low" | "critical" | "error";
+  if (status === "healthy" && pausedCount === 0) return null;
 
   const isCritical = status === "critical";
   const balance = Number(latest.balance ?? 0);
