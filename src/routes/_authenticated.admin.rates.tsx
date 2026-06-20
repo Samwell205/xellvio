@@ -18,7 +18,7 @@ import {
 } from "@/lib/twilio-pricing.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/rates")({
-  head: () => ({ meta: [{ title: "Rate management — SAMWELL SMS HUB" }] }),
+  head: () => ({ meta: [{ title: "Rate management — Xellio" }] }),
   beforeLoad: async () => {
     const { data } = await supabase.rpc("has_role", { _role: "admin" });
     if (!data) throw redirect({ to: "/app" });

@@ -11,7 +11,7 @@ import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign in — SAMWELL SMS HUB" }, { name: "description", content: "Sign in or create your SAMWELL SMS HUB account." }] }),
+  head: () => ({ meta: [{ title: "Sign in — Xellio" }, { name: "description", content: "Sign in or create your Xellio account." }] }),
   validateSearch: (search) => ({
     mode: search.mode === "signup" ? "signup" : "signin",
     redirect: typeof search.redirect === "string" ? search.redirect : "/app",
@@ -121,7 +121,7 @@ function AuthPage() {
           <h2 className="text-4xl font-extrabold tracking-tight">Reach customers <span className="text-gradient">worldwide.</span></h2>
           <p className="mt-4 text-muted-foreground">Send global SMS campaigns with confidence — fast, reliable, compliant.</p>
         </div>
-        <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} SAMWELL SMS HUB</div>
+        <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} Xellio</div>
       </div>
       <div className="flex items-center justify-center p-6 md:p-10">
         <Card className="w-full max-w-md p-8">

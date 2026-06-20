@@ -19,7 +19,7 @@ import { adminListPacks, upsertCreditPack, deleteCreditPack, updateBillingSettin
 import { getBillingSettings } from "@/lib/billing-packs.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/billing")({
-  head: () => ({ meta: [{ title: "Admin · Billing — SAMWELL SMS HUB" }] }),
+  head: () => ({ meta: [{ title: "Admin · Billing — Xellio" }] }),
   component: AdminBillingPage,
 });
 

@@ -28,7 +28,7 @@ export function MarketingFooter() {
       </div>
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-5 text-xs text-secondary-foreground/60 flex flex-wrap justify-between gap-3">
-          <span>© {new Date().getFullYear()} SAMWELL SMS HUB. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} Xellio. All rights reserved.</span>
           <span>Built for global communication.</span>
         </div>
       </div>

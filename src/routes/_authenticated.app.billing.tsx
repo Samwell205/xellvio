@@ -17,7 +17,7 @@ import { listCreditPacks, initPaystackCheckout, listMyPayments, verifyPaystack }
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/app/billing")({
-  head: () => ({ meta: [{ title: "Billing — SAMWELL SMS HUB" }] }),
+  head: () => ({ meta: [{ title: "Billing — Xellio" }] }),
   component: BillingPage,
 });
 

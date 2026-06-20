@@ -24,7 +24,7 @@ import { useMemo, useState } from "react";
 import { formatUSD } from "@/lib/money";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
-  head: () => ({ meta: [{ title: "Campaign report — SAMWELL SMS HUB" }] }),
+  head: () => ({ meta: [{ title: "Campaign report — Xellio" }] }),
   component: CampaignReport,
 });
 

@@ -10,9 +10,9 @@ import { Card } from "@/components/ui/card";
 export const Route = createFileRoute("/docs")({
   head: () => ({
     meta: [
-      { title: "SMS Documentation — SAMWELL SMS HUB" },
+      { title: "SMS Documentation — Xellio" },
       { name: "description", content: "Documentation for signup, sender verification, SMS sending, campaigns, wallet credits, and API access." },
-      { property: "og:title", content: "SMS Documentation — SAMWELL SMS HUB" },
+      { property: "og:title", content: "SMS Documentation — Xellio" },
       { property: "og:description", content: "Guides for sending compliant SMS from verified identities." },
     ],
   }),
@@ -38,7 +38,7 @@ const apiExample = [
   "Authorization: Bearer YOUR_API_KEY",
   "",
   "{",
-  '  "from": "SAMWELL",',
+  '  "from": "XELLIO",',
   '  "to": "+14155550123",',
   '  "body": "Your order is ready for pickup."',
   "}",

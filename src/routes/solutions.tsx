@@ -10,9 +10,9 @@ import { Card } from "@/components/ui/card";
 export const Route = createFileRoute("/solutions")({
   head: () => ({
     meta: [
-      { title: "SMS Solutions — SAMWELL SMS HUB" },
+      { title: "SMS Solutions — Xellio" },
       { name: "description", content: "SMS marketing, transactional messaging, automations, compliance, sender identity, and developer APIs for global teams." },
-      { property: "og:title", content: "SMS Solutions — SAMWELL SMS HUB" },
+      { property: "og:title", content: "SMS Solutions — Xellio" },
       { property: "og:description", content: "Customer messaging workflows inspired by the best SMS platforms." },
     ],
   }),

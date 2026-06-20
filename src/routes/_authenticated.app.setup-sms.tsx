@@ -30,7 +30,7 @@ import { submitNumberRequest, listMyNumberRequests, cancelMyNumberRequest } from
 import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/setup-sms")({
-  head: () => ({ meta: [{ title: "Set up SMS — SAMWELL SMS HUB" }] }),
+  head: () => ({ meta: [{ title: "Set up SMS — Xellio" }] }),
   component: SetupSmsPage,
 });
 
@@ -230,7 +230,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
                   .slice(0, 11),
               )
             }
-            placeholder="SAMWELLAGEN"
+            placeholder="XELLIO"
             maxLength={11}
           />
         </div>
@@ -592,7 +592,7 @@ function TestSendInline({
       const r = await send({
         data: {
           to,
-          body: "Test from SAMWELL SMS HUB — your sender is working ✅ Reply STOP to opt out.",
+          body: "Test from Xellio — your sender is working ✅ Reply STOP to opt out.",
           country,
         },
       });
@@ -912,7 +912,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                     .slice(0, 11),
                 })
               }
-              placeholder="SAMWELLAGEN"
+              placeholder="XELLIO"
               maxLength={11}
             />
             <p className="text-xs text-muted-foreground">
