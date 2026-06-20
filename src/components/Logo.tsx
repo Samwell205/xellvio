@@ -9,7 +9,7 @@ export function Logo({ className = "" }: { className?: string }) {
         alt="Xellio"
         className="h-8 w-auto"
       />
-      <span className="tracking-tight">SMS HUB</span>
+      <span className="tracking-tight">Xellio</span>
     </Link>
   );
 }
