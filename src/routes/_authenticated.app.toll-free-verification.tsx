@@ -924,6 +924,7 @@ function defaultForm() {
     businessType: "",
     businessRegistrationNumber: "",
     businessRegistrationIdentifier: "",
+    businessRegistrationCountry: "US",
     contactFirstName: "",
     contactLastName: "",
     contactEmail: "",
@@ -967,6 +968,10 @@ function isValid(f: ReturnType<typeof defaultForm>) {
     f.city.trim() &&
     f.state.trim() &&
     f.zip.trim() &&
+    (f.businessType === "Sole Proprietor" ||
+      (!!f.businessRegistrationNumber.trim() &&
+        !!f.businessRegistrationIdentifier.trim() &&
+        /^[A-Z]{2}$/.test(f.businessRegistrationCountry.trim()))) &&
     f.useCaseCategories.length > 0 &&
     f.useCaseDescription.trim().length >= 40 &&
     f.sampleMessage.trim().length >= 20 &&
