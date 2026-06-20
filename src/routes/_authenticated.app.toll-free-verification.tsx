@@ -155,11 +155,14 @@ function TollfreeVerificationPage() {
   });
 
   const asset = data?.asset ?? null;
-  // Guard: never trust a "verified"/"in_review"/etc. status that has no Twilio
-  // verification SID behind it. Without a SID it was never actually sent to the
-  // carrier, so the only honest state is "not yet submitted".
+  // Guard: never trust a "verified"/"in_review"/"submitted" status that has no
+  // Twilio verification SID behind it — without a SID the carrier never received
+  // it. BUT "rejected" without a SID is a legitimate local-failure state
+  // (e.g. Twilio rejected the API call), and we must show its reason.
   const rawStatus = (asset?.verification_status as Status | null) ?? null;
-  const status: Status | null = asset?.verification_sid ? rawStatus : null;
+  const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review" || rawStatus === "verified";
+  const status: Status | null =
+    trustsCarrier && !asset?.verification_sid ? null : rawStatus;
   const payload = (asset?.verification_payload as any) ?? null;
   // After submission the form is read-only. Only allow editing when nothing was
   // submitted yet, or when the carrier rejected and we need to resubmit.

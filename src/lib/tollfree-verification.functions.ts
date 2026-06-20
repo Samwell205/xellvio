@@ -403,6 +403,12 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     } catch (e: any) {
       status = "rejected";
       rejectionReason = e?.message ?? "Submission failed";
+      // Surface the raw Twilio failure server-side so we can debug repeat rejections.
+      console.error("[tollfree-verification] Twilio submission failed", {
+        userId,
+        phoneSid,
+        message: rejectionReason,
+      });
     }
 
     const patch: any = {
@@ -415,6 +421,19 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     };
     if (assetId) {
       await supabaseAdmin.from("sender_assets").update(patch).eq("id", assetId);
+    } else {
+      // Persist even without a pre-existing asset row so the rejection
+      // reason shows up on reload instead of silently disappearing.
+      const { error: insErr } = await supabaseAdmin.from("sender_assets").insert({
+        account_id: userId,
+        country_code: "US",
+        sender_kind: "toll_free",
+        phone_number: phoneNumber,
+        phone_sid: phoneSid,
+        messaging_service_sid: messagingServiceSid,
+        ...patch,
+      });
+      if (insErr) console.error("[tollfree-verification] persist insert failed", insErr.message);
     }
 
     return {
