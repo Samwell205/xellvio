@@ -21,12 +21,53 @@ function mainSmsAuth() {
   return { sid, token };
 }
 
+export const TEST_SEND_DAILY_LIMIT = 5;
+
+function startOfUtcDayIso() {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+export const getTestSendUsage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const since = startOfUtcDayIso();
+    const { count } = await supabase
+      .from("campaign_test_sends")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", since);
+    const used = count ?? 0;
+    const reset = new Date();
+    reset.setUTCHours(24, 0, 0, 0);
+    return {
+      used,
+      limit: TEST_SEND_DAILY_LIMIT,
+      remaining: Math.max(0, TEST_SEND_DAILY_LIMIT - used),
+      resetsAt: reset.toISOString(),
+    };
+  });
+
 export const sendTestSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => TestSendSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { decryptToken } = await import("./tenant-crypto.server");
+
+    // Enforce per-user daily test-send limit
+    const sinceDay = startOfUtcDayIso();
+    const { count: usedToday } = await supabase
+      .from("campaign_test_sends")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("created_at", sinceDay);
+    if ((usedToday ?? 0) >= TEST_SEND_DAILY_LIMIT) {
+      throw new Error(`Daily test limit reached (${TEST_SEND_DAILY_LIMIT}/day). Try again tomorrow (resets 00:00 UTC).`);
+    }
+
 
     // Load this tenant's own Twilio subaccount + sender
     const { data: acct } = await supabase
