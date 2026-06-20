@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { COUNTRY_RATES, type CountryRate } from "./PerCountryPricing";
+import type { CountryRate } from "./PerCountryPricing";
 
 const GSM_REGEX = /^[A-Za-z0-9 \r\n@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#¤%&'()*+,\-./:;<=>?¡ÄÖÑÜ§¿äöñüà^{}\\\[~\]|€]*$/;
 
@@ -23,14 +23,16 @@ const TEMPLATES: Record<string, string> = {
   "Booking confirmation": "Hi {name}, your booking on {date} is confirmed. See you soon!",
 };
 
-export function SmsCalculator({ rates = COUNTRY_RATES }: { rates?: CountryRate[] }) {
+export function SmsCalculator({ rates }: { rates?: CountryRate[] }) {
+  const list = rates ?? [];
+  const loading = !rates;
   const [country, setCountry] = useState("US");
   const [text, setText] = useState("");
   const [contacts, setContacts] = useState(1);
 
-  const rate = rates.find(c => c.code === country) ?? rates[0] ?? COUNTRY_RATES[0];
+  const rate = list.find(c => c.code === country) ?? list[0];
   const seg = useMemo(() => segmentInfo(text), [text]);
-  const costPer = seg.parts * rate.perSms;
+  const costPer = rate ? seg.parts * rate.perSms : 0;
   const total = costPer * Math.max(0, contacts || 0);
 
   return (
@@ -84,9 +86,11 @@ export function SmsCalculator({ rates = COUNTRY_RATES }: { rates?: CountryRate[]
             <select
               value={country}
               onChange={e => setCountry(e.target.value)}
-              className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              disabled={loading || list.length === 0}
+              className="w-full rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60"
             >
-              {rates.map(c => (
+              {loading && <option>Loading live rates…</option>}
+              {!loading && list.map(c => (
                 <option key={c.code} value={c.code}>{c.country}</option>
               ))}
             </select>
@@ -97,7 +101,7 @@ export function SmsCalculator({ rates = COUNTRY_RATES }: { rates?: CountryRate[]
                 ${costPer.toFixed(3)}
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
-                {rate.dial} · ${rate.perSms.toFixed(4)} per segment
+                {rate ? `${rate.dial} · $${rate.perSms.toFixed(4)} per segment` : "Live rates loading…"}
               </div>
             </div>
 
