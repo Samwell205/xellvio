@@ -230,9 +230,9 @@ export function TwilioLowBalanceBanner() {
   const status = (latest?.status ?? "healthy") as "healthy" | "low" | "critical" | "error";
   if (status === "healthy" && pausedCount === 0) return null;
 
-  const isCritical = status === "critical";
-  const balance = Number(latest.balance ?? 0);
-  const currency = latest.currency ?? "USD";
+  const isCritical = status === "critical" || pausedCount > 0;
+  const balance = Number(latest?.balance ?? 0);
+  const currency = latest?.currency ?? "USD";
 
   return (
     <div
@@ -246,8 +246,10 @@ export function TwilioLowBalanceBanner() {
     >
       <AlertTriangle className="size-4 shrink-0" />
       <div className="flex-1">
-        {status === "error" ? (
-          <>Twilio balance check failed: {latest.error_message ?? "unknown error"}</>
+        {pausedCount > 0 ? (
+          <><strong>{pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused</strong> — Twilio balance {formatMoney(balance, currency)}. Fund Twilio now to auto-resume.</>
+        ) : status === "error" ? (
+          <>Twilio balance check failed: {latest?.error_message ?? "unknown error"}</>
         ) : (
           <>
             Twilio balance is <strong>{isCritical ? "critically " : ""}low</strong>: {formatMoney(balance, currency)}. Top up to avoid SMS interruptions.
