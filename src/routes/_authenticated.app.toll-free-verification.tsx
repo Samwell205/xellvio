@@ -173,6 +173,7 @@ function TollfreeVerificationPage() {
   const submissionStarted = hasSubmissionStarted(asset, rawStatus);
   const hasReservedNumber = submissionStarted && !asset?.verification_sid;
   const isLocked =
+    (submissionStarted && rawStatus !== "rejected") ||
     status === "submitted" ||
     status === "in_review" ||
     status === "verified";
@@ -354,8 +355,9 @@ function TollfreeVerificationPage() {
 
       {isLocked && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Your submission is locked while the carrier reviews it. Only Twilio can approve
-          or reject this — we cannot approve it manually. This page updates automatically.
+          {asset?.verification_sid
+            ? "Your submission is locked while the carrier reviews it. Only Twilio can approve or reject this — we cannot approve it manually. This page updates automatically."
+            : "This toll-free request is already locked to the reserved number above. Submitting again is disabled so another number cannot be purchased."}
         </div>
       )}
 
