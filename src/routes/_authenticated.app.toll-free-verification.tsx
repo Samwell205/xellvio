@@ -59,13 +59,25 @@ const OPT_IN_TYPES = [
   { v: "MOBILE_QR_CODE", l: "Mobile QR Code" },
 ] as const;
 const BUSINESS_TYPES = [
-  "Sole Proprietorship",
-  "Partnership",
-  "Limited Liability Corporation",
-  "Co-operative",
-  "Non-profit Corporation",
-  "Corporation",
+  "Sole Proprietor",
+  "Private company / LLC / Partnership",
+  "Public company",
+  "Non-profit",
+  "Government",
 ] as const;
+
+const LEGACY_BUSINESS_TYPE_MAP: Record<string, (typeof BUSINESS_TYPES)[number]> = {
+  "Sole Proprietorship": "Sole Proprietor",
+  Partnership: "Private company / LLC / Partnership",
+  "Limited Liability Corporation": "Private company / LLC / Partnership",
+  "Co-operative": "Private company / LLC / Partnership",
+  Corporation: "Private company / LLC / Partnership",
+  PRIVATE_PROFIT: "Private company / LLC / Partnership",
+  PUBLIC_PROFIT: "Public company",
+  NON_PROFIT: "Non-profit",
+  SOLE_PROPRIETOR: "Sole Proprietor",
+  GOVERNMENT: "Government",
+};
 const CATEGORIES = [
   "ACCOUNT_NOTIFICATIONS",
   "CUSTOMER_CARE",
@@ -101,6 +113,11 @@ function normalizeCategories(values: unknown): string[] {
     .map((v) => LEGACY_CATEGORY_MAP[v] ?? v)
     .filter((v) => (CATEGORIES as readonly string[]).includes(v));
   return Array.from(new Set(normalized));
+}
+
+function normalizeBusinessTypeLabel(value: unknown) {
+  const raw = String(value ?? "").trim();
+  return LEGACY_BUSINESS_TYPE_MAP[raw] ?? (BUSINESS_TYPES as readonly string[]).includes(raw) ? raw : "";
 }
 
 type Status = "submitted" | "in_review" | "verified" | "rejected";
