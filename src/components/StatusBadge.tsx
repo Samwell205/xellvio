@@ -34,6 +34,7 @@ const map: Record<Status, { label: string; cls: string; Icon: React.ComponentTyp
   sent: { label: "Sent", cls: "bg-primary/15 text-primary border-primary/30", Icon: CheckCircle2 },
   running: { label: "Running", cls: "bg-primary/15 text-primary border-primary/30", Icon: Loader2 },
   rejected: { label: "Rejected", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: XCircle },
+  blocked_content: { label: "Blocked — content violation", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: ShieldOff },
   failed: { label: "Failed", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: AlertTriangle },
 };
 
