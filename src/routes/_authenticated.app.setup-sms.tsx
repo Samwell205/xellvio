@@ -720,6 +720,7 @@ type WizardForm = {
 
 function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [consentConfirmed, setConsentConfirmed] = useState<boolean>(!!account?.sms_consent_disclosures_confirmed_at);
   const [uploading, setUploading] = useState(false);
   const [setupMessage, setSetupMessage] = useState<{
     type: "success" | "error";
