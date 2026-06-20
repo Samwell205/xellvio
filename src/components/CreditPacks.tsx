@@ -106,7 +106,7 @@ export function CreditPacks() {
               onClick={handlePay}
               disabled={busy || packsQ.isLoading || (isCustom && (customAmount < 5 || customAmount > 10000))}
             >
-              Pay with Paystack
+              Pay
             </Button>
             <Link to="/auth" className="block text-center text-xs text-muted-foreground mt-2 hover:underline">
               New here? Create a free account
