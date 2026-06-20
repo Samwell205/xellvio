@@ -128,7 +128,7 @@ function AuthPage() {
       <div className="hidden md:flex hero-gradient flex-col justify-between p-10">
         <Logo />
         <div className="max-w-md">
-          <h2 className="text-4xl font-extrabold tracking-tight">Reach customers <span className="text-gradient">worldwide.</span></h2>
+          <div className="text-4xl font-extrabold tracking-tight">Reach customers <span className="text-gradient">worldwide.</span></div>
           <p className="mt-4 text-muted-foreground">Send global SMS campaigns with confidence — fast, reliable, compliant.</p>
         </div>
         <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} Xellvio</div>

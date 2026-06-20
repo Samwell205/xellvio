@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://xellvio.com/sitemap.xml
