@@ -190,6 +190,19 @@ function TollfreeVerificationPage() {
     onError: (e: any) => toast.error(e?.message ?? "Refresh failed"),
   });
 
+  // Live carrier-side refresh: while the carrier is still reviewing, ask
+  // Twilio directly for the latest status every minute.
+  useEffect(() => {
+    if (status !== "submitted" && status !== "in_review") return;
+    if (!asset?.verification_sid) return;
+    const id = setInterval(() => {
+      refresh({ data: undefined as any })
+        .then(() => qc.invalidateQueries({ queryKey: ["tollfree-verification"] }))
+        .catch(() => {});
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [status, asset?.verification_sid, refresh, qc]);
+
   const update = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
