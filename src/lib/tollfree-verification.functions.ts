@@ -197,6 +197,8 @@ export const TollfreeVerificationInput = z.object({
   businessDba: z.string().trim().max(255).optional(),
   websiteUrl: z.string().trim().url(),
   businessType: z.string().trim().min(2).max(64),
+  businessRegistrationNumber: z.string().trim().max(64).optional().or(z.literal("")),
+  businessRegistrationIdentifier: z.string().trim().max(64).optional().or(z.literal("")),
   contactFirstName: z.string().trim().min(1).max(64),
   contactLastName: z.string().trim().min(1).max(64),
   contactEmail: z.string().trim().email(),
