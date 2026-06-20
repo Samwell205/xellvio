@@ -212,6 +212,14 @@ function NewCampaignPage() {
   const hasMissingSender = missingSenderCountries.length > 0 && breakdown.length > 0;
 
   const callTestSend = useServerFn(sendTestSms);
+  const callTestUsage = useServerFn(getTestSendUsage);
+  const testUsageQ = useQuery({
+    queryKey: ["test-send-usage"],
+    queryFn: () => callTestUsage(),
+    staleTime: 30_000,
+  });
+  const testUsage = testUsageQ.data ?? { used: 0, limit: 5, remaining: 5, resetsAt: "" };
+  const testLimitReached = testUsage.remaining <= 0;
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
   const testCountry = useMemo(() => countryFromPhone(s.testTo, rates), [s.testTo, rates]);
@@ -219,15 +227,19 @@ function NewCampaignPage() {
 
   async function runTestSend() {
     if (!s.testTo) { toast.error("Enter a phone number to test"); return; }
+    if (testLimitReached) { toast.error(`Daily test limit reached (${testUsage.limit}/day).`); return; }
     setSending(true);
     try {
       const res = await callTestSend({ data: { to: s.testTo, body: bodyWithStop, country: testCountry ?? undefined } });
       toast.success(`Test sent (sid ${res.sid.slice(0, 10)}…)`);
       setS({ ...s, testSent: true });
+      testUsageQ.refetch();
     } catch (e: any) {
       toast.error(e.message ?? "Test send failed");
+      testUsageQ.refetch();
     } finally { setSending(false); }
   }
+
 
   const canNext = (() => {
     if (step === 0) return s.name.trim().length > 0 && (s.include.length > 0 || s.profileIds.length > 0);
