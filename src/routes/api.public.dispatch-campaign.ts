@@ -244,9 +244,12 @@ async function dispatchOne(
     await Promise.all(
       (inserted ?? []).map(async (m: any) => {
         try {
+          const sendAsMms = !!campaign.media_url && supportsMms(m.country_code);
+          const messageBody =
+            campaign.media_url && !sendAsMms ? fallbackMediaBody(m.rendered_body, m.id) : m.rendered_body;
           const body = new URLSearchParams({
             To: m.phone_e164,
-            Body: m.rendered_body,
+            Body: messageBody,
             StatusCallback: callback,
           });
           if (sender.kind === "tenant") {
@@ -255,17 +258,14 @@ async function dispatchOne(
                 asset.country_code === m.country_code &&
                 (asset.messaging_service_sid || asset.phone_number),
             );
-            const messagingService =
-              matchedSender?.sender_kind !== "sender_id"
-                ? (matchedSender?.messaging_service_sid ?? sender.messagingService)
-                : undefined;
+            const messagingService = matchedSender?.messaging_service_sid ?? sender.messagingService;
             const fromNumber = matchedSender?.phone_number ?? sender.fromNumber;
             if (messagingService) body.append("MessagingServiceSid", messagingService);
             else body.append("From", fromNumber!);
           } else {
             body.append("MessagingServiceSid", sender.messagingService);
           }
-          if (campaign.media_url) body.append("MediaUrl", campaign.media_url);
+          if (sendAsMms) body.append("MediaUrl", campaign.media_url);
 
           const fetchInit: RequestInit =
             sender.kind === "tenant"
