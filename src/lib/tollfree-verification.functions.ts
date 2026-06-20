@@ -53,6 +53,8 @@ function friendlyReason(raw: string | undefined): string {
   if (!t) return "The carrier hasn't returned a specific reason yet.";
   if (t.includes("privacy")) return "Your website needs a visible Privacy Policy link.";
   if (t.includes("terms")) return "Your website needs a visible Terms of Service link.";
+  if (t.includes("usecasecategories"))
+    return "The selected use case category was not accepted by Twilio. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
   if (t.includes("opt") || t.includes("consent"))
     return "We need clearer proof of how subscribers opt in. Add a screenshot or public URL of your sign-up form.";
   if (t.includes("sample") || t.includes("message"))

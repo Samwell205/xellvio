@@ -157,6 +157,14 @@ function statusBlurb(status: Status | null | undefined) {
   }
 }
 
+function friendlyRejectionDisplay(asset: any) {
+  const raw = String(asset?.rejection_reason ?? "").toLowerCase();
+  if (raw.includes("usecasecategories")) {
+    return "The selected use case category was not accepted by Twilio. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
+  }
+  return asset?.friendly_rejection_reason ?? asset?.rejection_reason ?? "No reason provided.";
+}
+
 function hasSubmissionStarted(asset: any) {
   return !!asset?.verification_sid;
 }
@@ -367,7 +375,7 @@ function TollfreeVerificationPage() {
                   {localSubmissionFailure ? "Submission failed — retry available" : "Why it was rejected"}
                 </div>
                 <div className="mt-1 text-foreground">
-                  {asset.friendly_rejection_reason ?? asset.rejection_reason ?? "No reason provided."}
+                  {friendlyRejectionDisplay(asset)}
                 </div>
                 {localSubmissionFailure && (
                   <div className="mt-2 text-xs text-muted-foreground">
