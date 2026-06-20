@@ -621,33 +621,114 @@ function TollfreeVerificationPage() {
   );
 }
 
-function PriceCard() {
+function Timeline({
+  asset,
+  status,
+}: {
+  asset: any;
+  status: Status | null;
+}) {
+  const submittedAt = asset.created_at as string | null;
+  const lastAt = asset.last_synced_at as string | null;
+  const fmt = (d?: string | null) =>
+    d ? new Date(d).toLocaleString() : "—";
+  const reached = (key: Status) => {
+    if (status === "verified") return true;
+    if (status === "rejected") return key === "submitted" || key === "in_review" || key === "rejected";
+    if (status === "in_review") return key === "submitted" || key === "in_review";
+    if (status === "submitted") return key === "submitted";
+    return false;
+  };
+  const stages: Array<{
+    key: Status;
+    label: string;
+    desc: string;
+    timeAt?: string | null;
+    Icon: typeof Clock;
+  }> = [
+    {
+      key: "submitted",
+      label: "Submitted to carrier",
+      desc: "Your details were sent to Twilio for the toll-free verification queue.",
+      timeAt: submittedAt,
+      Icon: ShieldCheck,
+    },
+    {
+      key: "in_review",
+      label: "In carrier review",
+      desc: "Twilio and the US carriers are reviewing your submission. This usually takes 1–3 weeks.",
+      timeAt: status === "in_review" ? lastAt : null,
+      Icon: Hourglass,
+    },
+    {
+      key: status === "rejected" ? "rejected" : "verified",
+      label: status === "rejected" ? "Rejected by carrier" : "Approved by carrier",
+      desc:
+        status === "rejected"
+          ? asset.friendly_rejection_reason ?? asset.rejection_reason ?? "The carrier rejected this submission."
+          : status === "verified"
+            ? "Your toll-free number is approved. Campaigns to US recipients will now deliver."
+            : "Waiting for the carrier's final decision.",
+      timeAt: status === "verified" || status === "rejected" ? lastAt : null,
+      Icon: status === "rejected" ? AlertCircle : CheckCircle2,
+    },
+  ];
   return (
-    <Card className="w-full md:w-80 border-primary/40 bg-primary/5">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">US toll-free number — included pricing</CardTitle>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Verification progress</CardTitle>
       </CardHeader>
-      <CardContent className="text-sm space-y-1.5">
-        <Row label="Number" value="$2.00 / month" />
-        <Row label="Outbound SMS" value="$0.0075 / segment" />
-        <Row label="Verification" value="Free" />
-        <p className="text-xs text-muted-foreground pt-1">
-          We auto-buy the number and submit it to the carrier when you click submit. Approval takes
-          1–3 weeks.
-        </p>
+      <CardContent>
+        <ol className="relative border-l border-border ml-3 space-y-6">
+          {stages.map((s) => {
+            const done = reached(s.key);
+            const isCurrent =
+              (status === "submitted" && s.key === "submitted") ||
+              (status === "in_review" && s.key === "in_review") ||
+              (status === "verified" && s.key === "verified") ||
+              (status === "rejected" && s.key === "rejected");
+            const tone =
+              s.key === "rejected" && done
+                ? "bg-destructive text-destructive-foreground border-destructive"
+                : done
+                  ? s.key === "verified"
+                    ? "bg-emerald-500 text-white border-emerald-500"
+                    : "bg-primary text-primary-foreground border-primary"
+                  : "bg-muted text-muted-foreground border-border";
+            return (
+              <li key={s.key} className="ml-6">
+                <span
+                  className={`absolute -left-3 flex size-6 items-center justify-center rounded-full border ${tone}`}
+                >
+                  <s.Icon className="size-3.5" />
+                </span>
+                <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                  <div className="font-medium">
+                    {s.label}
+                    {isCurrent && status !== "verified" && status !== "rejected" && (
+                      <span className="ml-2 text-xs text-muted-foreground">(current)</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {s.timeAt ? fmt(s.timeAt) : done ? "" : "Pending"}
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">{s.desc}</p>
+                {s.key === "rejected" && done && asset.rejection_reason && asset.friendly_rejection_reason && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Carrier message: {asset.rejection_reason}
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ol>
       </CardContent>
     </Card>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
+
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
