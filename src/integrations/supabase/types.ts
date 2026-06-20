@@ -35,8 +35,12 @@ export type Database = {
           opt_in_description: string | null
           opt_in_screenshot_url: string | null
           phone: string | null
+          policies_accepted: Json | null
+          policies_accepted_version: string | null
           privacy_policy_url: string | null
           sample_message: string | null
+          sms_consent_disclosures_confirmed_at: string | null
+          sms_consent_disclosures_version: string | null
           sms_target_countries: string[] | null
           subaccount_messaging_service_sid: string | null
           subaccount_phone_number: string | null
@@ -70,8 +74,12 @@ export type Database = {
           opt_in_description?: string | null
           opt_in_screenshot_url?: string | null
           phone?: string | null
+          policies_accepted?: Json | null
+          policies_accepted_version?: string | null
           privacy_policy_url?: string | null
           sample_message?: string | null
+          sms_consent_disclosures_confirmed_at?: string | null
+          sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
           subaccount_messaging_service_sid?: string | null
           subaccount_phone_number?: string | null
@@ -105,8 +113,12 @@ export type Database = {
           opt_in_description?: string | null
           opt_in_screenshot_url?: string | null
           phone?: string | null
+          policies_accepted?: Json | null
+          policies_accepted_version?: string | null
           privacy_policy_url?: string | null
           sample_message?: string | null
+          sms_consent_disclosures_confirmed_at?: string | null
+          sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
           subaccount_messaging_service_sid?: string | null
           subaccount_phone_number?: string | null
