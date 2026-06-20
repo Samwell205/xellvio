@@ -214,6 +214,7 @@ function NewCampaignPage() {
 
   const callTestSend = useServerFn(sendTestSms);
   const callTestUsage = useServerFn(getTestSendUsage);
+  const callContentScan = useServerFn(scanCampaignContent);
   const testUsageQ = useQuery({
     queryKey: ["test-send-usage"],
     queryFn: () => callTestUsage(),
