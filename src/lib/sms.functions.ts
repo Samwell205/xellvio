@@ -164,6 +164,12 @@ export const sendTestSms = createServerFn({ method: "POST" })
       }
       throw new Error(json?.message ?? `Twilio error ${res.status}`);
     }
+    // Log the successful test send for daily-limit accounting
+    await supabase.from("campaign_test_sends").insert({
+      user_id: userId,
+      to_phone: data.to,
+      twilio_sid: (json?.sid as string) ?? null,
+    });
     return {
       sid: json.sid as string,
       status: json.status as string,
