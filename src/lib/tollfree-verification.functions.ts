@@ -296,19 +296,6 @@ async function getOrBuyUsTollfree(opts: {
       alreadySubmitted: true,
     };
   }
-  if (!createdPlaceholder && currentStatus !== "rejected") {
-    return {
-      phoneNumber: existing.phone_number ?? "",
-      phoneSid: existing.phone_sid ?? "",
-      messagingServiceSid: existing.messaging_service_sid ?? "",
-      subSid,
-      subToken,
-      assetId: existing.id,
-      verificationSid: existing.verification_sid,
-      verificationStatus: currentStatus,
-      alreadySubmitted: true,
-    };
-  }
 
   const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
 
@@ -335,6 +322,21 @@ async function getOrBuyUsTollfree(opts: {
   // 2) Reuse/recover an existing reserved number. Never buy another number
   // for an account that already has a toll-free sender row.
   if (existing.phone_number || existing.phone_sid) {
+    if (!createdPlaceholder && currentStatus !== "rejected") {
+      const lockCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+      const claimed = await supabaseAdmin
+        .from("sender_assets")
+        .update({ last_synced_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .or(`last_synced_at.is.null,last_synced_at.lt.${lockCutoff}`)
+        .select(selectAsset)
+        .maybeSingle();
+      if (claimed.error) throw claimed.error;
+      if (!claimed.data) {
+        throw new Error("This toll-free request is already being processed. Please wait a moment before trying again.");
+      }
+      existing = claimed.data as AssetRow;
+    }
     let phoneSid = existing.phone_sid;
     let phoneNumber = existing.phone_number;
     if (!phoneSid && phoneNumber) {
