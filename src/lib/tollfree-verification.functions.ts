@@ -296,6 +296,19 @@ async function getOrBuyUsTollfree(opts: {
       alreadySubmitted: true,
     };
   }
+  if (!createdPlaceholder && currentStatus !== "rejected") {
+    return {
+      phoneNumber: existing.phone_number ?? "",
+      phoneSid: existing.phone_sid ?? "",
+      messagingServiceSid: existing.messaging_service_sid ?? "",
+      subSid,
+      subToken,
+      assetId: existing.id,
+      verificationSid: existing.verification_sid,
+      verificationStatus: currentStatus,
+      alreadySubmitted: true,
+    };
+  }
 
   const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
 
