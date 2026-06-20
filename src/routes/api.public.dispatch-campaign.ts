@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
+import { keywordScan } from "@/lib/content-scanner";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 const BATCH_SIZE = 500;
