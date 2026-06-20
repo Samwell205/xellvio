@@ -368,6 +368,21 @@ async function getOrBuyUsTollfree(opts: {
   if (!createdPlaceholder && !stalePlaceholder) {
     throw new Error("A toll-free number reservation is already being prepared. Please wait a moment before trying again.");
   }
+  if (!createdPlaceholder) {
+    const lockCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const claimed = await supabaseAdmin
+      .from("sender_assets")
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq("id", existing.id)
+      .or(`last_synced_at.is.null,last_synced_at.lt.${lockCutoff}`)
+      .select(selectAsset)
+      .maybeSingle();
+    if (claimed.error) throw claimed.error;
+    if (!claimed.data) {
+      throw new Error("A toll-free number reservation is already being prepared. Please wait a moment before trying again.");
+    }
+    existing = claimed.data as AssetRow;
+  }
 
   // 3) Buy once, only after this request owns the single placeholder row.
   const avail = await twilio<{ available_phone_numbers: Array<{ phone_number: string }> }>(
