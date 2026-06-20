@@ -195,7 +195,7 @@ function TollfreeVerificationPage() {
         res.status === "verified"
           ? "Approved by the carrier."
           : res.status === "rejected"
-            ? "Submission was rejected. See reason below."
+            ? (res.friendlyRejectionReason ?? "Submission failed. You can retry now without buying another number.")
             : "Submitted. The carrier will review shortly.",
       );
       qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
