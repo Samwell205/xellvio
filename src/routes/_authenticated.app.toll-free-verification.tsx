@@ -378,7 +378,7 @@ function TollfreeVerificationPage() {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={status} />
-            {asset?.verification_sid && (
+            {(asset?.verification_sid || asset?.phone_sid) && (
               <Button
                 variant="outline"
                 size="sm"

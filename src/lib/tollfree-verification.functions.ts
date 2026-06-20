@@ -326,6 +326,24 @@ function storedStatus(raw: string | null | undefined): StoredVerificationStatus 
   return "pending";
 }
 
+function verificationRejectionReason(ver: any) {
+  if (Array.isArray(ver?.rejection_reason)) return ver.rejection_reason.join("; ");
+  if (typeof ver?.rejection_reason === "string") return ver.rejection_reason;
+  if (Array.isArray(ver?.errors) && ver.errors[0]?.description) return ver.errors[0].description;
+  return "rejected";
+}
+
+async function findExistingTollfreeVerification(opts: { phoneSid: string; sid: string; token: string }) {
+  const query = new URLSearchParams({ TollfreePhoneNumberSid: opts.phoneSid, PageSize: "1" }).toString();
+  const page = await twilio<{
+    tollfree_verifications?: Array<{ sid?: string; status?: string; rejection_reason?: unknown; errors?: Array<{ description?: string }> }>;
+  }>(`${MESSAGING_API}/Tollfree/Verifications?${query}`, {
+    sid: opts.sid,
+    token: opts.token,
+  });
+  return page.tollfree_verifications?.[0] ?? null;
+}
+
 async function getOrBuyUsTollfree(opts: {
   userId: string;
   legalName: string;
@@ -848,12 +866,15 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     let rejectionReason: string | null = null;
     let twilioResponse: any = null;
     try {
+      const verificationUrl = existingVerificationSid
+        ? `${MESSAGING_API}/Tollfree/Verifications/${existingVerificationSid}`
+        : `${MESSAGING_API}/Tollfree/Verifications`;
       const ver = await twilio<{ sid?: string; status?: string }>(
-        `${MESSAGING_API}/Tollfree/Verifications`,
+        verificationUrl,
         { method: "POST", sid: subSid, token: subToken, body },
       );
       twilioResponse = ver;
-      verificationSid = typeof ver.sid === "string" && ver.sid.trim() ? ver.sid : null;
+      verificationSid = typeof ver.sid === "string" && ver.sid.trim() ? ver.sid : existingVerificationSid;
       if (!verificationSid) {
         const err = new Error("Twilio did not return a toll-free verification ID, so the submission was not accepted.");
         (err as any).noVerificationSid = true;
@@ -862,10 +883,36 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       }
       status = mapStatus(ver.status);
     } catch (e: any) {
-      status = "rejected";
-      rejectionReason = e?.message ?? "Submission failed";
+      const carrierMessage = e?.message ?? "Submission failed";
+      const alreadyExists = carrierMessage.toLowerCase().includes("verification already exists");
+      if (alreadyExists) {
+        const existingVerification = await findExistingTollfreeVerification({ phoneSid, sid: subSid, token: subToken });
+        verificationSid = typeof existingVerification?.sid === "string" && existingVerification.sid.trim()
+          ? existingVerification.sid
+          : null;
+        if (verificationSid) {
+          status = mapStatus(existingVerification?.status);
+          twilioResponse = existingVerification;
+          rejectionReason = status === "rejected" ? verificationRejectionReason(existingVerification) : null;
+          if (status === "rejected") {
+            const updated = await twilio<{ sid?: string; status?: string }>(
+              `${MESSAGING_API}/Tollfree/Verifications/${verificationSid}`,
+              { method: "POST", sid: subSid, token: subToken, body },
+            );
+            twilioResponse = updated;
+            status = mapStatus(updated.status);
+            rejectionReason = status === "rejected" ? verificationRejectionReason(updated) : null;
+          }
+        } else {
+          status = "rejected";
+          rejectionReason = "Twilio says a verification already exists for this number, but did not return its verification ID. Please contact support to reconnect the existing carrier verification.";
+        }
+      } else {
+        status = "rejected";
+        rejectionReason = carrierMessage;
+      }
       await updateAttemptLog(supabaseAdmin, attemptId, {
-        attempt_status: e?.noVerificationSid ? "no_verification_sid" : "failed",
+        attempt_status: verificationSid ? "existing_verification_recovered" : e?.noVerificationSid ? "no_verification_sid" : "failed",
         verification_sid: verificationSid,
         ...attemptTwilioFields(e, rejectionReason ?? "Submission failed"),
       });
@@ -947,16 +994,14 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
 
     const { data: asset } = await supabaseAdmin
       .from("sender_assets")
-      .select("id,verification_sid,account_id")
+      .select("id,verification_sid,account_id,phone_sid")
       .eq("account_id", userId)
       .eq("country_code", "US")
       .eq("sender_kind", "toll_free")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (!asset?.verification_sid) {
-      return { refreshed: false as const, reason: "No verification has been submitted yet." };
-    }
+    if (!asset) return { refreshed: false as const, reason: "No verification has been submitted yet." };
 
     const { data: acct } = await supabaseAdmin
       .from("accounts")
@@ -978,21 +1023,30 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
       subToken = m.token;
     }
 
-    const ver = await twilio<any>(
-      `${MESSAGING_API}/Tollfree/Verifications/${asset.verification_sid}`,
-      { sid: subSid, token: subToken },
-    );
+    let verificationSid = asset.verification_sid as string | null;
+    let ver: any = null;
+    if (verificationSid) {
+      ver = await twilio<any>(`${MESSAGING_API}/Tollfree/Verifications/${verificationSid}`, {
+        sid: subSid,
+        token: subToken,
+      });
+    } else if (asset.phone_sid) {
+      ver = await findExistingTollfreeVerification({ phoneSid: asset.phone_sid, sid: subSid, token: subToken });
+      verificationSid = typeof ver?.sid === "string" && ver.sid.trim() ? ver.sid : null;
+    }
+    if (!verificationSid || !ver) {
+      return { refreshed: false as const, reason: "No verification has been submitted yet." };
+    }
     const status = mapStatus(ver.status);
     const reason =
       status === "rejected"
-        ? Array.isArray(ver.rejection_reason)
-          ? ver.rejection_reason.join("; ")
-          : (ver.rejection_reason ?? ver.errors?.[0]?.description ?? "rejected")
+        ? verificationRejectionReason(ver)
         : null;
     await supabaseAdmin
       .from("sender_assets")
       .update({
         verification_status: status,
+        verification_sid: verificationSid,
         rejection_reason: reason,
         friendly_rejection_reason: reason ? friendlyReason(reason) : null,
         last_synced_at: new Date().toISOString(),
