@@ -448,8 +448,29 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       })
       .eq("id", userId);
 
-    const { phoneNumber, phoneSid, messagingServiceSid, subSid, subToken, assetId } =
-      await getOrBuyUsTollfree({ userId, legalName: data.legalEntityName });
+    const {
+      phoneNumber,
+      phoneSid,
+      messagingServiceSid,
+      subSid,
+      subToken,
+      assetId,
+      verificationSid: existingVerificationSid,
+      verificationStatus: existingVerificationStatus,
+      alreadySubmitted,
+    } = await getOrBuyUsTollfree({ userId, legalName: data.legalEntityName });
+
+    if (alreadySubmitted) {
+      return {
+        phoneNumber,
+        messagingServiceSid,
+        verificationSid: existingVerificationSid,
+        status: existingVerificationStatus === "pending" ? "submitted" : existingVerificationStatus,
+        rejectionReason: null,
+        friendlyRejectionReason: null,
+        alreadySubmitted: true,
+      };
+    }
 
     // Build the Twilio Tollfree Verifications payload.
     const body: Record<string, string | string[]> = {
