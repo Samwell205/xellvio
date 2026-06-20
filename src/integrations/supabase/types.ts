@@ -328,7 +328,11 @@ export type Database = {
           currency: string
           dial_prefix: string
           id: string
+          last_synced_at: string | null
+          manual_override: boolean
+          markup_percent: number
           mms_multiplier: number
+          number_type_used: string | null
           sell_price: number
           sender_supports_inbound: boolean
           updated_at: string
@@ -342,7 +346,11 @@ export type Database = {
           currency?: string
           dial_prefix: string
           id?: string
+          last_synced_at?: string | null
+          manual_override?: boolean
+          markup_percent?: number
           mms_multiplier?: number
+          number_type_used?: string | null
           sell_price?: number
           sender_supports_inbound?: boolean
           updated_at?: string
@@ -356,7 +364,11 @@ export type Database = {
           currency?: string
           dial_prefix?: string
           id?: string
+          last_synced_at?: string | null
+          manual_override?: boolean
+          markup_percent?: number
           mms_multiplier?: number
+          number_type_used?: string | null
           sell_price?: number
           sender_supports_inbound?: boolean
           updated_at?: string
@@ -690,6 +702,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      pricing_sync_log: {
+        Row: {
+          cost_price: number | null
+          country_code: string
+          id: string
+          message: string | null
+          number_type_used: string | null
+          sell_price: number | null
+          status: string
+          synced_at: string
+        }
+        Insert: {
+          cost_price?: number | null
+          country_code: string
+          id?: string
+          message?: string | null
+          number_type_used?: string | null
+          sell_price?: number | null
+          status?: string
+          synced_at?: string
+        }
+        Update: {
+          cost_price?: number | null
+          country_code?: string
+          id?: string
+          message?: string | null
+          number_type_used?: string | null
+          sell_price?: number | null
+          status?: string
+          synced_at?: string
+        }
+        Relationships: []
       }
       profile_list_members: {
         Row: {
