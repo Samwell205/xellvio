@@ -16,7 +16,8 @@ type Status =
   | "completed"
   | "draft"
   | "paused_low_balance"
-  | "processing";
+  | "processing"
+  | "blocked_content";
 
 const map: Record<Status, { label: string; cls: string; Icon: React.ComponentType<{ className?: string }> }> = {
   pending: { label: "Pending verification", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
