@@ -1,0 +1,1 @@
+UPDATE public.credit_packs SET is_active = false, updated_at = now() WHERE currency = 'USD' AND price < 25 AND is_active = true;
