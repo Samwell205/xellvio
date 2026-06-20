@@ -1,0 +1,1 @@
+DELETE FROM public.sender_assets WHERE id = '120826ee-beaa-418a-8276-158090a903c7';
