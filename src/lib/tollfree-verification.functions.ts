@@ -564,6 +564,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       status,
       rejectionReason,
       friendlyRejectionReason: rejectionReason ? friendlyReason(rejectionReason) : null,
+      alreadySubmitted: false,
     };
   });
 
