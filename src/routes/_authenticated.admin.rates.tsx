@@ -110,7 +110,7 @@ function AdminRatesPage() {
   const saveMarkup = useMutation({
     mutationFn: async (percent: number) => await setMarkupFn({ data: { percent } }),
     onSuccess: () => {
-      toast.success("Default markup updated. Next sync will reprice non-overridden countries.");
+      toast.success("Default markup updated and active country sell prices recalculated.");
       qc.invalidateQueries({ queryKey: ["default-markup"] });
       qc.invalidateQueries({ queryKey: ["admin-rates"] });
       setMarkupDraft("");
