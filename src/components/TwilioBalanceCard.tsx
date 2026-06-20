@@ -95,6 +95,18 @@ export function TwilioBalanceCard() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const test = useMutation({
+    mutationFn: () => testFn(),
+    onSuccess: (r: any) => {
+      const emailList = (r?.emails ?? []).join(", ");
+      toast.success(
+        `Test alert fired → ${r?.emails?.length ?? 0} email(s)${emailList ? ` (${emailList})` : ""} + SMS to ${r?.phone || "—"}. Allow up to 1 min for delivery.`,
+        { duration: 8000 },
+      );
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const latest = q.data?.latest;
   const status = (latest?.status ?? "healthy") as "healthy" | "low" | "critical" | "error";
   const balance = Number(latest?.balance ?? 0);
