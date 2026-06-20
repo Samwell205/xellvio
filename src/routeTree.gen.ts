@@ -37,7 +37,6 @@ import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
 import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated.app.onboarding'
-import { Route as AuthenticatedAppNumberRequestsRouteImport } from './routes/_authenticated.app.number-requests'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
 import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenticated.app.audience'
@@ -204,12 +203,6 @@ const AuthenticatedAppOnboardingRoute =
     path: '/onboarding',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
-const AuthenticatedAppNumberRequestsRoute =
-  AuthenticatedAppNumberRequestsRouteImport.update({
-    id: '/number-requests',
-    path: '/number-requests',
-    getParentRoute: () => AuthenticatedAppRoute,
-  } as any)
 const AuthenticatedAppCampaignsRoute =
   AuthenticatedAppCampaignsRouteImport.update({
     id: '/campaigns',
@@ -329,7 +322,6 @@ export interface FileRoutesByFullPath {
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
-  '/app/number-requests': typeof AuthenticatedAppNumberRequestsRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -372,7 +364,6 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
-  '/app/number-requests': typeof AuthenticatedAppNumberRequestsRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -419,7 +410,6 @@ export interface FileRoutesById {
   '/_authenticated/app/audience': typeof AuthenticatedAppAudienceRoute
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
-  '/_authenticated/app/number-requests': typeof AuthenticatedAppNumberRequestsRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -467,7 +457,6 @@ export interface FileRouteTypes {
     | '/app/audience'
     | '/app/billing'
     | '/app/campaigns'
-    | '/app/number-requests'
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/segments'
@@ -510,7 +499,6 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/app/audience'
     | '/app/billing'
-    | '/app/number-requests'
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/settings'
@@ -556,7 +544,6 @@ export interface FileRouteTypes {
     | '/_authenticated/app/audience'
     | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
-    | '/_authenticated/app/number-requests'
     | '/_authenticated/app/onboarding'
     | '/_authenticated/app/pricing-calculator'
     | '/_authenticated/app/segments'
@@ -796,13 +783,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppOnboardingRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/number-requests': {
-      id: '/_authenticated/app/number-requests'
-      path: '/number-requests'
-      fullPath: '/app/number-requests'
-      preLoaderRoute: typeof AuthenticatedAppNumberRequestsRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
     '/_authenticated/app/campaigns': {
       id: '/_authenticated/app/campaigns'
       path: '/campaigns'
@@ -983,7 +963,6 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAudienceRoute: typeof AuthenticatedAppAudienceRoute
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
-  AuthenticatedAppNumberRequestsRoute: typeof AuthenticatedAppNumberRequestsRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
   AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
   AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -998,7 +977,6 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAudienceRoute: AuthenticatedAppAudienceRoute,
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
-  AuthenticatedAppNumberRequestsRoute: AuthenticatedAppNumberRequestsRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
   AuthenticatedAppPricingCalculatorRoute:
     AuthenticatedAppPricingCalculatorRoute,
