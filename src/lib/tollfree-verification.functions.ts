@@ -873,10 +873,27 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       }
       status = mapStatus(ver.status);
     } catch (e: any) {
-      status = "rejected";
-      rejectionReason = e?.message ?? "Submission failed";
+      const carrierMessage = e?.message ?? "Submission failed";
+      const alreadyExists = carrierMessage.toLowerCase().includes("verification already exists");
+      if (alreadyExists) {
+        const existingVerification = await findExistingTollfreeVerification({ phoneSid, sid: subSid, token: subToken });
+        verificationSid = typeof existingVerification?.sid === "string" && existingVerification.sid.trim()
+          ? existingVerification.sid
+          : null;
+        if (verificationSid) {
+          status = mapStatus(existingVerification?.status);
+          twilioResponse = existingVerification;
+          rejectionReason = null;
+        } else {
+          status = "rejected";
+          rejectionReason = "Twilio says a verification already exists for this number, but did not return its verification ID. Please contact support to reconnect the existing carrier verification.";
+        }
+      } else {
+        status = "rejected";
+        rejectionReason = carrierMessage;
+      }
       await updateAttemptLog(supabaseAdmin, attemptId, {
-        attempt_status: e?.noVerificationSid ? "no_verification_sid" : "failed",
+        attempt_status: verificationSid ? "existing_verification_recovered" : e?.noVerificationSid ? "no_verification_sid" : "failed",
         verification_sid: verificationSid,
         ...attemptTwilioFields(e, rejectionReason ?? "Submission failed"),
       });
