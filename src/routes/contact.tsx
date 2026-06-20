@@ -16,9 +16,9 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact Support — Xellio" },
-      { name: "description", content: "Reach the Xellio team for sales, technical support, billing, or sender ID approvals." },
-      { property: "og:title", content: "Contact Support — Xellio" },
+      { title: "Contact Support — Xellvio" },
+      { name: "description", content: "Reach the Xellvio team for sales, technical support, billing, or sender ID approvals." },
+      { property: "og:title", content: "Contact Support — Xellvio" },
       { property: "og:description", content: "Get in touch with our team for help with SMS, contacts, billing, or your account." },
     ],
   }),

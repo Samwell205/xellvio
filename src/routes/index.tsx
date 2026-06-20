@@ -14,9 +14,9 @@ import { Card } from "@/components/ui/card";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Xellio — Reach Customers Worldwide" },
+      { title: "Xellvio — Reach Customers Worldwide" },
       { name: "description", content: "Send global SMS campaigns with confidence. Bulk messaging, automation, analytics and APIs trusted by modern businesses." },
-      { property: "og:title", content: "Xellio — Reach Customers Worldwide" },
+      { property: "og:title", content: "Xellvio — Reach Customers Worldwide" },
       { property: "og:description", content: "Fast. Reliable. Compliant global SMS for businesses." },
     ],
   }),
@@ -54,7 +54,7 @@ function Hero() {
     <section className="bg-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-          <p className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">Xellio</p>
+          <p className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">Xellvio</p>
           <h1 className="mt-4 text-5xl sm:text-6xl md:text-[64px] font-extrabold tracking-tight leading-[1.02] text-foreground">
             SMS marketing<br/>built for smarter sends
           </h1>
@@ -278,7 +278,7 @@ function FAQ() {
     { q: "Why is SMS marketing important?", a: "Text messages have 98% open rates and reach customers instantly — making SMS the most direct channel for engagement." },
     { q: "Is SMS marketing effective?", a: "Yes — brands using SMS see significant lifts in conversion when combined with personalized segmentation and timing." },
     { q: "What are some SMS best practices?", a: "Get explicit consent, keep messages short, identify your brand, and include a clear opt-out." },
-    { q: "How does Xellio charge for SMS?", a: "Pay-as-you-go credits priced per segment per destination country. Live rates inside your dashboard." },
+    { q: "How does Xellvio charge for SMS?", a: "Pay-as-you-go credits priced per segment per destination country. Live rates inside your dashboard." },
     { q: "Which countries is SMS available in?", a: "We deliver to 190+ countries via tier-1 carriers with automatic routing and failover." },
   ];
   const [open, setOpen] = useState<number | null>(0);

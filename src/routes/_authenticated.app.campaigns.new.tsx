@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/new")({
-  head: () => ({ meta: [{ title: "New campaign — Xellio" }] }),
+  head: () => ({ meta: [{ title: "New campaign — Xellvio" }] }),
   validateSearch: (s: Record<string, unknown>) =>
     z.object({ id: z.string().uuid().optional() }).parse(s),
   component: NewCampaignPage,

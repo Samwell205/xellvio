@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Filter, Users, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/segments/new")({
-  head: () => ({ meta: [{ title: "New segment — Xellio" }] }),
+  head: () => ({ meta: [{ title: "New segment — Xellvio" }] }),
   component: NewSegmentPage,
 });
 

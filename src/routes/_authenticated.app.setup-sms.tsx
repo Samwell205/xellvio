@@ -30,7 +30,7 @@ import { submitNumberRequest, listMyNumberRequests, cancelMyNumberRequest } from
 import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/setup-sms")({
-  head: () => ({ meta: [{ title: "Set up SMS — Xellio" }] }),
+  head: () => ({ meta: [{ title: "Set up SMS — Xellvio" }] }),
   component: SetupSmsPage,
 });
 
@@ -592,7 +592,7 @@ function TestSendInline({
       const r = await send({
         data: {
           to,
-          body: "Test from Xellio — your sender is working ✅ Reply STOP to opt out.",
+          body: "Test from Xellvio — your sender is working ✅ Reply STOP to opt out.",
           country,
         },
       });

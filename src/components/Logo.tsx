@@ -7,10 +7,10 @@ export function Logo({ className = "" }: { className?: string }) {
     <Link to="/" className={`flex items-center gap-2 font-bold text-lg ${className}`}>
       <img
         src={logoAsset.url}
-        alt="Xellio"
+        alt="Xellvio"
         className="h-8 w-auto"
       />
-      <span className="tracking-tight">Xellio</span>
+      <span className="tracking-tight">Xellvio</span>
     </Link>
   );
 }

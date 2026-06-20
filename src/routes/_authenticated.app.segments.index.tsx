@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Filter, Plus, Trash2, Users } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/segments/")({
-  head: () => ({ meta: [{ title: "Segments — Xellio" }] }),
+  head: () => ({ meta: [{ title: "Segments — Xellvio" }] }),
   component: SegmentsPage,
 });
 
