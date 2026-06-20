@@ -42,7 +42,7 @@ export function CreditPacks() {
     const params = new URLSearchParams();
     if (isCustom) params.set("amount", String(customAmount));
     else params.set("pack", selected);
-    const dest = `/app/billing?${params.toString()}`;
+    const dest = `/app/checkout?${params.toString()}`;
     const { data } = await supabase.auth.getSession();
     if (data.session) navigate({ to: dest });
     else navigate({ to: "/auth", search: { redirect: dest } as any });
