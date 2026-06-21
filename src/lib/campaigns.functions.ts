@@ -41,10 +41,12 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
     );
     if (rErr) throw new Error(rErr.message);
 
-    const { data: ratesData } = await supabase
-      .from("country_rates_public")
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ratesData } = await supabaseAdmin
+      .from("country_rates")
       .select("country_code,country_name,dial_prefix")
       .eq("active", true);
+
     const rates = (ratesData ?? []) as Array<{ country_code: string; country_name: string; dial_prefix: string }>;
     const dial = rates.map((r) => ({ country_code: r.country_code, dial_prefix: r.dial_prefix }));
     const nameByCC: Record<string, string> = {};
