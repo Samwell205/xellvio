@@ -34,12 +34,23 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
   }> => {
     const { supabase } = context;
 
-    // Resolve eligible recipients via the existing RPC.
-    const { data: recipients, error: rErr } = await (supabase.rpc as any)(
-      "my_eligible_profile_ids",
+    // Resolve eligible recipients in pages because each backend API response is capped.
+    const { data: countData, error: countError } = await (supabase.rpc as any)(
+      "my_eligible_profile_count",
       { _audience: data.audience },
     );
-    if (rErr) throw new Error(rErr.message);
+    if (countError) throw new Error(countError.message);
+    const recipients: any[] = [];
+    const PAGE = 1000;
+    const total = Number(countData ?? 0);
+    for (let offset = 0; offset < total; offset += PAGE) {
+      const { data: batch, error: rErr } = await (supabase.rpc as any)(
+        "my_eligible_profile_ids_page",
+        { _audience: data.audience, _limit: PAGE, _offset: offset },
+      );
+      if (rErr) throw new Error(rErr.message);
+      recipients.push(...((batch ?? []) as any[]));
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: ratesData } = await supabaseAdmin
@@ -53,7 +64,7 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
     for (const r of rates) nameByCC[r.country_code] = r.country_name;
 
     const counts: Record<string, number> = {};
-    for (const p of (recipients ?? []) as any[]) {
+    for (const p of recipients) {
       const cc = p.country_code || countryFromPhone(p.phone_e164, dial) || "??";
       counts[cc] = (counts[cc] ?? 0) + 1;
     }
