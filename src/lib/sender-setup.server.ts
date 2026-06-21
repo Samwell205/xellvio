@@ -143,7 +143,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   let accountSenderSet = Boolean(
     acct.subaccount_phone_number || acct.subaccount_messaging_service_sid,
   );
-  const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+  const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
 
   async function setPrimarySender(patch: any) {
     if (accountSenderSet) return;

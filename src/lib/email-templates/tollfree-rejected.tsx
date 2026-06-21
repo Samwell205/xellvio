@@ -47,7 +47,7 @@ export const template = {
   subject: "Action needed on your toll-free verification",
   displayName: "Toll-free verification rejected",
   previewData: {
-    firstName: "Sam",
+    firstName: "Alex",
     businessName: "Acme Co",
     phoneNumber: "+18885551234",
     reason: "Your website needs a visible Privacy Policy link.",

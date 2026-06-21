@@ -32,7 +32,7 @@ const schema = z.object({
   message: z.string().trim().min(10, "Add a bit more detail").max(2000),
 });
 
-const SUPPORT_EMAIL = "sam@samwellagency.com";
+const SUPPORT_EMAIL = "admin@xellvio.com";
 const SUPPORT_PHONE_DISPLAY = "+1 (725) 316-6070";
 const SUPPORT_PHONE_HREF = "+17253166070";
 

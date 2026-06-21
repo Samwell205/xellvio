@@ -531,7 +531,7 @@ async function getOrBuyUsTollfree(opts: {
     };
   }
 
-  const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+  const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
 
   const findMessagingServiceForPhone = async (phoneSid: string): Promise<string | null> => {
     // Walk all Messaging Services for this (sub)account and return the SID
@@ -922,7 +922,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     }
     if (data.addressLine2) body.BusinessStreetAddress2 = data.addressLine2;
     if (data.proofOfOptInUrl) body.OptInImageUrls = [data.proofOfOptInUrl];
-    const callbackBase = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+    const callbackBase = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
     body.StatusCallback = `${callbackBase}/api/public/twilio-tollfree-status`;
     body.StatusCallbackMethod = "POST";
     const extra: string[] = [];

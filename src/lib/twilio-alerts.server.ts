@@ -31,7 +31,7 @@ async function loadSettings() {
     .select("key,value")
     .in("key", ["twilio_alert_emails", "twilio_alert_phone_e164", "twilio_alerts_enabled"]);
   const read = (k: string, f: any) => rows?.find((r) => r.key === k)?.value ?? f;
-  const emailsRaw = String(read("twilio_alert_emails", "sam@samwellagency.com"));
+  const emailsRaw = String(read("twilio_alert_emails", "admin@xellvio.com"));
   const emails = emailsRaw
     .split(",")
     .map((s) => s.trim())

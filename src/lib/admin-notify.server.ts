@@ -2,7 +2,7 @@
 // Sends SMS via the master Twilio account using the workspace MessagingServiceSid.
 
 export const ADMIN_NOTIFY_PHONE = "+2347056089052";
-export const ADMIN_NOTIFY_EMAIL = "sam@samwellagency.com";
+export const ADMIN_NOTIFY_EMAIL = "admin@xellvio.com";
 
 const TWILIO_API = "https://api.twilio.com/2010-04-01";
 
