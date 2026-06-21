@@ -156,7 +156,7 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["account"] });
       qc.invalidateQueries({ queryKey: ["provisioning-status"] });
-      toast.success(r.already ? "Subaccount already provisioned" : "Twilio subaccount created");
+      toast.success(r.already ? "Subaccount already provisioned" : "SMS subaccount created");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -184,15 +184,15 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
     <div className="space-y-4">
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2"><ShieldCheck className="size-4" /> Twilio subaccount</h3>
+          <h3 className="font-semibold flex items-center gap-2"><ShieldCheck className="size-4" /> SMS subaccount</h3>
           {hasSub && <Badge variant="default">Provisioned</Badge>}
         </div>
         {hasSub ? (
-          <p className="text-sm text-muted-foreground">Your dedicated Twilio subaccount is active. Credentials are encrypted at rest and only available to server functions.</p>
+          <p className="text-sm text-muted-foreground">Your dedicated SMS subaccount is active. Credentials are encrypted at rest and only available to server functions.</p>
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              We'll create a dedicated Twilio subaccount under your business. Your subaccount auth token is encrypted at rest and never exposed to the browser.
+              We'll create a dedicated SMS subaccount under your business. Your subaccount auth token is encrypted at rest and never exposed to the browser.
             </p>
             <Button onClick={() => provisionMut.mutate()} disabled={provisionMut.isPending}>
               {provisionMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}

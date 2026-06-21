@@ -212,7 +212,7 @@ function DeliveryAlerts() {
               icon={XCircle}
               tone="destructive"
               title={`Failed → ${m.phone_e164}`}
-              subtitle={m.error_code ? `Twilio error ${m.error_code}` : "Provider rejected message"}
+              subtitle={m.error_code ? `Provider error ${m.error_code}` : "Provider rejected message"}
               when={m.created_at}
               href={m.campaign_id}
             />
@@ -223,7 +223,7 @@ function DeliveryAlerts() {
               icon={AlertTriangle}
               tone="warning"
               title={`Undelivered → ${m.phone_e164}`}
-              subtitle={m.error_code ? `Twilio error ${m.error_code}` : "Carrier did not deliver"}
+              subtitle={m.error_code ? `Provider error ${m.error_code}` : "Carrier did not deliver"}
               when={m.created_at}
               href={m.campaign_id}
             />

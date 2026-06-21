@@ -124,17 +124,17 @@ function SettingsPage() {
       <TollfreeStatusCard />
 
       <Card className="p-6 space-y-3">
-        <h3 className="font-semibold">Twilio integration</h3>
+        <h3 className="font-semibold">SMS integration</h3>
         <div className="flex items-center gap-2 text-sm">
           <CheckCircle2 className="size-4 text-success" />
-          Twilio API key connected (via Lovable connector).
+          SMS API key connected (via Lovable connector).
         </div>
         <div className="flex items-center gap-2 text-sm">
           <AlertTriangle className="size-4 text-warning" />
-          Messaging Service SID is stored as a server-side secret. Sender selection is geo-matched automatically by Twilio.
+          Messaging Service SID is stored as a server-side secret. Sender selection is geo-matched automatically.
         </div>
         <p className="text-xs text-muted-foreground">
-          Reminder: enable SMS Pumping Protection and review SMS Geo Permissions in the Twilio console before sending production traffic.
+          Reminder: enable SMS Pumping Protection and review SMS Geo Permissions in your provider console before sending production traffic.
         </p>
       </Card>
     </div>

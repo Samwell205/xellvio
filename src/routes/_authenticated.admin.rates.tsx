@@ -172,7 +172,7 @@ function AdminRatesPage() {
         <div className="flex items-center gap-2">
           <Button onClick={() => sync.mutate()} disabled={sync.isPending}>
             <RefreshCw className={`size-4 mr-1.5 ${sync.isPending ? "animate-spin" : ""}`} />
-            {sync.isPending ? "Syncing…" : "Refresh Twilio pricing"}
+            {sync.isPending ? "Syncing…" : "Refresh our SMS provider pricing"}
           </Button>
           <Link to="/app"><Button variant="outline"><ArrowLeft className="size-4 mr-1.5" /> Dashboard</Button></Link>
         </div>
