@@ -936,7 +936,28 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
             </Card>
           )}
 
-          {busy && <p className="text-sm text-muted-foreground">Importing…</p>}
+          {busy && progress && (
+            <Card className="p-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">{progress.label}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0}%
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${progress.total > 0 ? (progress.processed / progress.total) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {progress.phase === "validating" && "Parsing CSV and validating phone numbers."}
+                {progress.phase === "importing" && "Saving contacts in batches of 500. Keep this window open."}
+                {progress.phase === "attaching" && "Adding imported contacts to your list."}
+                {progress.phase === "done" && "Wrapping up…"}
+              </div>
+            </Card>
+          )}
 
           {result && (
             <Card className="p-3 text-sm space-y-2">
