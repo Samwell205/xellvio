@@ -19,12 +19,16 @@ import {
   Upload,
   Clock,
   AlertCircle,
+  ShieldCheck,
+  ArrowRight,
+  X,
 } from "lucide-react";
 import {
   getMySenderAssets,
   refreshMyVerificationStatus,
   saveCustomSenderId,
 } from "@/lib/sender-setup.functions";
+import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 import { sendTestSms } from "@/lib/sms.functions";
 import { submitNumberRequest, listMyNumberRequests, cancelMyNumberRequest } from "@/lib/number-requests.functions";
 import { Send } from "lucide-react";
