@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ShieldCheck, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
@@ -14,7 +14,6 @@ const items = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true },
   { title: "Campaigns", url: "/app/campaigns", icon: Megaphone },
   { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText },
-  { title: "Toll-free verification", url: "/app/toll-free-verification", icon: ShieldCheck },
   { title: "Audience", url: "/app/audience", icon: Users },
   { title: "Segments", url: "/app/segments", icon: Filter },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff },
@@ -49,10 +48,10 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               {items.map((it) => (
                 <SidebarMenuItem key={it.url}>
-                  <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)}>
+                  <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)} className="h-8 text-sm">
                     <Link to={it.url} className="flex items-center gap-3">
                       <it.icon className="size-4" />
                       {!collapsed && <span>{it.title}</span>}
@@ -60,18 +59,25 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
               <Collapsible open={collapsed ? false : settingsOpen} onOpenChange={setSettingsOpen}>
                 <SidebarMenuItem>
                   {collapsed ? (
-                    <SidebarMenuButton asChild isActive={settingsActive}>
+                    <SidebarMenuButton asChild isActive={settingsActive} className="h-8 text-sm">
                       <Link to="/app/settings" className="flex items-center gap-3">
                         <Settings className="size-4" />
                       </Link>
                     </SidebarMenuButton>
                   ) : (
                     <CollapsibleTrigger asChild>
-                      <SidebarMenuButton isActive={settingsActive} className="w-full">
+                      <SidebarMenuButton isActive={settingsActive} className="w-full h-8 text-sm">
                         <Settings className="size-4" />
                         <span>Settings</span>
                         <ChevronDown className={`ml-auto size-4 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
@@ -80,7 +86,7 @@ export function AppSidebar() {
                   )}
                   {!collapsed && (
                     <CollapsibleContent>
-                      <SidebarMenuSub>
+                      <SidebarMenuSub className="gap-0.5">
                         {settingsChildren.map((c) => (
                           <SidebarMenuSubItem key={c.url}>
                             <SidebarMenuSubButton asChild isActive={isActive(c.url, c.exact)}>
@@ -103,7 +109,7 @@ export function AppSidebar() {
       <SidebarFooter className="border-t">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={signOut}>
+            <SidebarMenuButton onClick={signOut} className="h-8 text-sm">
               <LogOut className="size-4" />
               {!collapsed && <span>Sign out</span>}
             </SidebarMenuButton>
