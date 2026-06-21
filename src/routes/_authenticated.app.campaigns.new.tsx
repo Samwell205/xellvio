@@ -116,12 +116,13 @@ function NewCampaignPage() {
     },
   });
 
+  const loadRates = useServerFn(getActiveCountryRatesRaw);
   const ratesQ = useQuery({
     queryKey: ["country-rates-active"],
-    queryFn: async () =>
-      ((await supabase.from("country_rates_public").select("country_code,country_name,dial_prefix,sell_price,mms_multiplier").eq("active", true)).data ?? []) as any[],
+    queryFn: () => loadRates(),
   });
   const rates = ratesQ.data ?? [];
+
 
   const accountQ = useQuery({
     queryKey: ["account-balance"],
