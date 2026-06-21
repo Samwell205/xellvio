@@ -48,6 +48,7 @@ type State = {
   smartSkipHours: number;
   testTo: string;
   testSent: boolean;
+  excludedCountries: string[];
 };
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
@@ -60,6 +61,7 @@ function NewCampaignPage() {
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
+    excludedCountries: [],
   });
 
   // Load existing draft when editing
