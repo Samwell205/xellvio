@@ -117,6 +117,7 @@ function SettingsPage() {
         </Card>
       )}
 
+      <TollfreeStatusCard />
 
       <Card className="p-6 space-y-3">
         <h3 className="font-semibold">Twilio integration</h3>
