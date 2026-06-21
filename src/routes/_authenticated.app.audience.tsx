@@ -811,6 +811,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
         });
       });
 
+      setProgress({ phase: "importing", processed: 0, total: valid.length, label: `Importing 0 / ${valid.length} contacts…` });
       let inserted = 0;
       const insertedIds: string[] = [];
       for (let i = 0; i < valid.length; i += 500) {
@@ -829,14 +830,20 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
           }));
           await supabase.from("consents").upsert(consents, { onConflict: "profile_id,channel" });
         }
+        const processed = Math.min(i + 500, valid.length);
+        setProgress({ phase: "importing", processed, total: valid.length, label: `Importing ${processed} / ${valid.length} contacts…` });
       }
 
       if (targetListId && insertedIds.length > 0) {
+        setProgress({ phase: "attaching", processed: 0, total: insertedIds.length, label: `Adding to list 0 / ${insertedIds.length}…` });
         const members = insertedIds.map((pid) => ({ list_id: targetListId!, profile_id: pid, account_id: accountId }));
         for (let i = 0; i < members.length; i += 500) {
           await sb.from("profile_list_members").upsert(members.slice(i, i + 500), { onConflict: "list_id,profile_id" });
+          const processed = Math.min(i + 500, members.length);
+          setProgress({ phase: "attaching", processed, total: members.length, label: `Adding to list ${processed} / ${members.length}…` });
         }
       }
+      setProgress({ phase: "done", processed: valid.length, total: valid.length, label: "Done" });
 
       setResult({ inserted, invalid: errors.length, duplicates, errors });
       if (inserted > 0) toast.success(`Imported ${inserted} contacts${targetListId ? " into list" : ""}`);
