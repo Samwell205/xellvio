@@ -498,11 +498,29 @@ function TollfreeVerificationPage() {
             </Field>
             <div className="grid grid-cols-[100px_1fr] gap-2">
               <Field label="Country" required>
-                <Input
+                <Select
                   value={form.contactPhoneCountry}
-                  onChange={(e) => update("contactPhoneCountry", e.target.value)}
-                  placeholder="+1"
-                />
+                  onValueChange={(v) => {
+                    update("contactPhoneCountry", v);
+                    const iso = isoFromDial(v);
+                    if (iso) {
+                      if (!form.businessCountry) update("businessCountry", iso);
+                      if (!form.businessRegistrationCountry)
+                        update("businessRegistrationCountry", iso);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="+1" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRIES.map((c) => (
+                      <SelectItem key={`${c.iso}-${c.dial}`} value={c.dial}>
+                        {c.dial} {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Phone number" required>
                 <Input
@@ -566,12 +584,21 @@ function TollfreeVerificationPage() {
                 </Select>
               </Field>
               <Field label="Registration country" required>
-                <Input
+                <Select
                   value={form.businessRegistrationCountry ?? "US"}
-                  onChange={(e) => update("businessRegistrationCountry", e.target.value.toUpperCase())}
-                  maxLength={2}
-                  placeholder="US"
-                />
+                  onValueChange={(v) => update("businessRegistrationCountry", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRIES.map((c) => (
+                      <SelectItem key={c.iso} value={c.iso}>
+                        {c.iso} — {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
             </Three>
           )}
@@ -580,13 +607,26 @@ function TollfreeVerificationPage() {
 
         <Section title="Step 2 / 3 — Business location">
           <Two>
-            <Field label="Country (ISO 2-letter code, e.g. US, GB, CA, AU)" required>
-              <Input
+            <Field label="Country" required>
+              <Select
                 value={form.businessCountry}
-                onChange={(e) => update("businessCountry", e.target.value.toUpperCase())}
-                maxLength={2}
-                placeholder="US"
-              />
+                onValueChange={(v) => {
+                  update("businessCountry", v);
+                  if (!form.businessRegistrationCountry || form.businessRegistrationCountry === "US")
+                    update("businessRegistrationCountry", v);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c.iso} value={c.iso}>
+                      {c.iso} — {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <div />
           </Two>
