@@ -212,7 +212,7 @@ export const setupSms = createServerFn({ method: "POST" })
         // For Sender-ID countries, no number purchase — register an alphanumeric Sender ID
         if (kind === "sender_id") {
           const sid = senderIdFromName(acct.legal_business_name || "Sender", data.customSenderId);
-          const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+          const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
           // Messaging service is best-effort; if it fails we still record the sender so the user sees progress.
           let msSid: string | null = null;
           try {
@@ -281,7 +281,7 @@ export const setupSms = createServerFn({ method: "POST" })
           continue;
         }
 
-        const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+        const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
         const bought = await twilio<{ sid: string; phone_number: string }>(
           `${TWILIO_API}/Accounts/${subSid}/IncomingPhoneNumbers.json`,
           {

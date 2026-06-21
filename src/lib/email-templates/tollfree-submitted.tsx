@@ -41,7 +41,7 @@ export const template = {
   subject: "Your toll-free verification has been submitted",
   displayName: "Toll-free verification submitted",
   previewData: {
-    firstName: "Sam",
+    firstName: "Alex",
     businessName: "Acme Co",
     phoneNumber: "+18885551234",
     dashboardUrl: "https://xellvio.lovable.app/app/setup-sms",

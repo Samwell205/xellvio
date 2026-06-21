@@ -40,7 +40,7 @@ export const template = {
   subject: "More info needed on your toll-free verification",
   displayName: "Toll-free info requested",
   previewData: {
-    firstName: "Sam",
+    firstName: "Alex",
     businessName: "Acme Co",
     message: "Please confirm the URL where customers opt in to receive SMS.",
     setupUrl: "https://xellvio.lovable.app/app/setup-sms",

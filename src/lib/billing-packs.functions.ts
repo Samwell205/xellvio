@@ -10,7 +10,7 @@ function paystackKey() {
 }
 
 function siteOrigin(): string {
-  return process.env.PUBLIC_SITE_URL || "https://samwell-reach-global.lovable.app";
+  return process.env.PUBLIC_SITE_URL || "https://xellvio.com";
 }
 
 /** List active packs — readable to any signed-in user. */

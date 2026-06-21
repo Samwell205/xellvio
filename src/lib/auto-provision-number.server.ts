@@ -91,7 +91,7 @@ export async function autoPurchaseNumber(input: { country: "US" | "CA"; number_t
   const available = await searchAvailable(input.country, input.number_type);
   if (!available) throw new Error(`No ${input.number_type === "toll_free" ? "toll-free" : "local"} numbers available right now in ${input.country}.`);
 
-  const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+  const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
   const body: Record<string, string> = {
     PhoneNumber: available.phone_number,
     FriendlyName: input.friendlyName.slice(0, 64),

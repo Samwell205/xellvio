@@ -272,7 +272,7 @@ function AudiencePage() {
     const blob = new Blob([CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = "samwell-contacts-template.csv";
+    a.href = url; a.download = "xellvio-contacts-template.csv";
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
   }

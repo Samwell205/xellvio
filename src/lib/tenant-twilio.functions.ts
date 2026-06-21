@@ -112,7 +112,7 @@ export const purchaseNumber = createServerFn({ method: "POST" })
     if (acct.subaccount_phone_sid) throw new Error("A number is already provisioned for this account");
     const token = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
 
-    const base = process.env.PUBLIC_BASE_URL ?? "https://samwell-reach-global.lovable.app";
+    const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
     const result = await twilio<{ sid: string; phone_number: string }>(
       `/Accounts/${acct.twilio_subaccount_sid}/IncomingPhoneNumbers.json`,
       {

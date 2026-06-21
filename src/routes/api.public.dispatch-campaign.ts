@@ -126,7 +126,7 @@ async function flagAccountForReview(
         .select("value")
         .eq("key", "twilio_alert_emails")
         .maybeSingle();
-      const emailsRaw = String(settings?.value ?? "sam@samwellagency.com");
+      const emailsRaw = String(settings?.value ?? "admin@xellvio.com");
       const emails = emailsRaw.split(",").map((s) => s.trim()).filter((s) => s.includes("@"));
       for (const to of emails) {
         await supabaseAdmin.rpc("enqueue_email", {
