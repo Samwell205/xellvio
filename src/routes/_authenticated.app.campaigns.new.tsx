@@ -114,6 +114,7 @@ function NewCampaignPage() {
           .from("profile_list_members")
           .select("profile_id")
           .in("list_id", selectedListIds)
+          .order("profile_id", { ascending: true })
           .range(offset, offset + PAGE - 1);
         if (error) throw error;
         const batch = (data ?? []).map((m: any) => m.profile_id);
