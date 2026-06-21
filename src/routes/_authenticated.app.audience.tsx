@@ -73,32 +73,92 @@ function AudiencePage() {
   });
 
   const profilesQ = useQuery({
-    queryKey: ["audience-profiles"],
+    queryKey: ["audience-profiles", listFilter],
     queryFn: async (): Promise<ProfileRow[]> => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, phone_e164, first_name, last_name, country_code, created_at, consents(status, channel)")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      const profiles = (data ?? []).map((p: any) => {
+      // When filtering by a specific list, load ALL of that list's members
+      // (paged through Supabase's 1000-row cap) so users see their full list.
+      let listProfileIds: string[] | null = null;
+      if (listFilter !== "all") {
+        listProfileIds = [];
+        const PAGE = 1000;
+        for (let offset = 0; ; offset += PAGE) {
+          const { data, error } = await sb
+            .from("profile_list_members")
+            .select("profile_id")
+            .eq("list_id", listFilter)
+            .range(offset, offset + PAGE - 1);
+          if (error) throw error;
+          const ids = (data ?? []).map((m: any) => m.profile_id);
+          listProfileIds.push(...ids);
+          if (ids.length < PAGE) break;
+        }
+        if (listProfileIds.length === 0) return [];
+      }
+
+      // Pull profiles (chunked when filtering by list; capped to most recent when "all")
+      const profiles: any[] = [];
+      if (listProfileIds) {
+        const CHUNK = 500;
+        for (let i = 0; i < listProfileIds.length; i += CHUNK) {
+          const chunk = listProfileIds.slice(i, i + CHUNK);
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("id, phone_e164, first_name, last_name, country_code, created_at, consents(status, channel)")
+            .in("id", chunk);
+          if (error) throw error;
+          profiles.push(...(data ?? []));
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, phone_e164, first_name, last_name, country_code, created_at, consents(status, channel)")
+          .order("created_at", { ascending: false })
+          .limit(1000);
+        if (error) throw error;
+        profiles.push(...(data ?? []));
+      }
+
+      const mapped: ProfileRow[] = profiles.map((p: any) => {
         const sms = (p.consents ?? []).find((c: any) => c.channel === "sms");
         return { ...p, consent_status: sms?.status ?? "pending", list_ids: [] as string[] } as ProfileRow;
       });
-      // Fetch list memberships in a separate query
-      if (profiles.length > 0) {
-        const ids = profiles.map((p) => p.id);
-        const { data: mem } = await sb
-          .from("profile_list_members")
-          .select("profile_id,list_id")
-          .in("profile_id", ids);
+
+      // Hydrate list memberships for the visible profiles
+      if (mapped.length > 0) {
+        const ids = mapped.map((p) => p.id);
         const byProfile: Record<string, string[]> = {};
-        for (const m of (mem ?? []) as any[]) {
-          (byProfile[m.profile_id] ||= []).push(m.list_id);
+        const CHUNK = 500;
+        for (let i = 0; i < ids.length; i += CHUNK) {
+          const { data: mem } = await sb
+            .from("profile_list_members")
+            .select("profile_id,list_id")
+            .in("profile_id", ids.slice(i, i + CHUNK));
+          for (const m of (mem ?? []) as any[]) {
+            (byProfile[m.profile_id] ||= []).push(m.list_id);
+          }
         }
-        for (const p of profiles) p.list_ids = byProfile[p.id] ?? [];
+        for (const p of mapped) p.list_ids = byProfile[p.id] ?? [];
       }
-      return profiles;
+      mapped.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+      return mapped;
+    },
+  });
+
+  // Per-list totals (HEAD count) — independent of the loaded profile rows
+  const listCountsQ = useQuery({
+    queryKey: ["audience-list-counts", (listsQ.data ?? []).map((l) => l.id).join(",")],
+    enabled: (listsQ.data ?? []).length > 0,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const out: Record<string, number> = {};
+      const all = listsQ.data ?? [];
+      await Promise.all(all.map(async (l) => {
+        const { count } = await sb
+          .from("profile_list_members")
+          .select("profile_id", { count: "exact", head: true })
+          .eq("list_id", l.id);
+        out[l.id] = count ?? 0;
+      }));
+      return out;
     },
   });
 
@@ -113,6 +173,7 @@ function AudiencePage() {
       return { total: total ?? 0, subs: subs ?? 0, supp: supp ?? 0 };
     },
   });
+
 
   const filtered = useMemo(() => {
     const rows = profilesQ.data ?? [];
