@@ -614,7 +614,7 @@ function StatusCard({ asset, accountPhone }: { asset: any; accountPhone?: string
             <div className="text-sm text-muted-foreground mt-1">
               {asset.friendly_rejection_reason ?? "Please update your details and try again."}
             </div>
-            <Link to="/app/setup-sms">
+            <Link to={asset.sender_kind === "toll_free" && (asset.country_code === "US" || asset.country_code === "CA") ? "/app/toll-free-verification" : "/app/setup-sms"}>
               <Button size="sm" className="mt-3">
                 Update and resubmit
               </Button>
