@@ -112,7 +112,7 @@ export const setupSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: z.input<typeof SetupInput>) => SetupInput.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     const { encryptToken, decryptToken } = await import("./tenant-crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
