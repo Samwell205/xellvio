@@ -78,13 +78,15 @@ export const sendTestSms = createServerFn({ method: "POST" })
     // Derive recipient country from To if not provided
     let countryCode = data.country?.toUpperCase();
     if (!countryCode) {
-      const { data: rates } = await supabase
-        .from("country_rates_public")
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: rates } = await supabaseAdmin
+        .from("country_rates")
         .select("country_code,dial_prefix")
         .eq("active", true);
       const { countryFromPhone } = await import("./country-from-phone");
       countryCode = countryFromPhone(data.to, (rates ?? []) as any) ?? undefined;
     }
+
 
     const { data: allAssets, error: assetsError } = await supabase
       .from("sender_assets")
