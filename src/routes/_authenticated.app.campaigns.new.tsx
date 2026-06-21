@@ -289,10 +289,19 @@ function NewCampaignPage() {
   ): Promise<string | null> {
     if (!s.name.trim()) return null;
     const { data: u } = await supabase.auth.getUser();
+    const launching = targetStatus === "queued" || targetStatus === "scheduled";
+    // On launch, if the user excluded any country, narrow to explicit profile IDs
+    // so the dispatcher only sends to recipients in the kept countries.
+    const audiencePayload: any = { ...audience, excluded_countries: s.excludedCountries };
+    if (launching && s.excludedCountries.length > 0 && recipientCountries.length > 0) {
+      audiencePayload.include = [];
+      audiencePayload.exclude = [];
+      audiencePayload.profile_ids = includedProfileIds;
+    }
     const payload: any = {
       account_id: u.user!.id,
       name: s.name.trim(),
-      audience: audience as any,
+      audience: audiencePayload,
       message_body: bodyWithStop,
       media_url: s.mediaUrl || null,
       send_mode: s.sendMode,
