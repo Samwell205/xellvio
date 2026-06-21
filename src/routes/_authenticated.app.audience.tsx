@@ -306,9 +306,9 @@ function AudiencePage() {
         <button
           onClick={() => setListFilter("all")}
           className={`px-3 py-1 rounded-full text-xs border ${listFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
-        >All ({profilesQ.data?.length ?? 0})</button>
+        >All ({statsQ.data?.total ?? 0})</button>
         {(listsQ.data ?? []).map((l) => {
-          const count = (profilesQ.data ?? []).filter((p) => p.list_ids.includes(l.id)).length;
+          const count = listCountsQ.data?.[l.id] ?? 0;
           const on = listFilter === l.id;
           return (
             <button key={l.id} onClick={() => setListFilter(l.id)}
