@@ -565,7 +565,8 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
                   </div>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="sm" onClick={() => { setEditingId(l.id); setName(l.name); setDesc(l.description ?? ""); }}><Pencil className="size-4" /></Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => remove(l.id)}><Trash2 className="size-4" /></Button>
+                    <Button variant="ghost" size="sm" className="text-destructive" title="Delete list only (keep contacts)" onClick={() => remove(l.id)}><Trash2 className="size-4" /></Button>
+                    <Button variant="ghost" size="sm" className="text-destructive" title="Delete list AND all contacts in it" disabled={busy} onClick={() => removeWithContacts(l.id, l.name)}><Trash2 className="size-4" /><span className="ml-1 text-[10px] font-semibold">+ contacts</span></Button>
                   </div>
                 </div>
               ))}
