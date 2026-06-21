@@ -652,7 +652,7 @@ function NewCampaignPage() {
         <Card className="p-5 space-y-4">
           <div className="grid md:grid-cols-2 gap-4 text-sm">
             <ReviewItem label="Name" value={s.name} />
-            <ReviewItem label="Eligible audience" value={String(audienceList.length)} />
+            <ReviewItem label="Eligible audience" value={s.excludedCountries.length > 0 ? `${activeRecipientCount} (of ${audienceList.length}; ${s.excludedCountries.length} country skipped)` : String(audienceList.length)} />
             <ReviewItem label="Send mode" value={s.sendMode} />
             <ReviewItem label="Schedule" value={s.sendMode === "scheduled" ? new Date(s.scheduleAt).toLocaleString() : "—"} />
             <ReviewItem label="Segments / message" value={`${seg.segments} × ${seg.encoding}`} />
