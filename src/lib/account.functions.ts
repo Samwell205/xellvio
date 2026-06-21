@@ -61,7 +61,7 @@ export const getProvisioningStatus = createServerFn({ method: "GET" })
       hasSubaccount: !!data?.twilio_subaccount_sid,
       hasNumber: !!data?.subaccount_phone_number,
       phoneNumber: data?.subaccount_phone_number ?? null,
-      messagingServiceSid: data?.subaccount_messaging_service_sid ?? null,
+      messagingServiceSid: data?.subaccount_messaging_service_sid ? "configured" : null,
       onboardingStatus: data?.onboarding_status ?? "signup",
     };
   });

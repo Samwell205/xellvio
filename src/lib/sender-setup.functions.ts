@@ -116,7 +116,7 @@ export const setupSms = createServerFn({ method: "POST" })
     const { encryptToken, decryptToken } = await import("./tenant-crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: acct, error } = await supabase
+    const { data: acct, error } = await supabaseAdmin
       .from("accounts")
       .select(
         "id,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,contact_email,full_name,phone,twilio_subaccount_sid,onboarding_status",
