@@ -7,7 +7,6 @@ import { PerCountryPricing } from "@/components/PerCountryPricing";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getPublicCountryRates } from "@/lib/public-pricing.functions";
-import { useRatesRealtime } from "@/hooks/use-rates-realtime";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -22,10 +21,15 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function PricingPage() {
-  useRatesRealtime([["public-country-rates"]]);
   const loadRates = useServerFn(getPublicCountryRates);
-  const ratesQ = useQuery({ queryKey: ["public-country-rates"], queryFn: () => loadRates() });
+  const ratesQ = useQuery({
+    queryKey: ["public-country-rates"],
+    queryFn: () => loadRates(),
+    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+  });
   const rates = ratesQ.data;
+
 
 
   return (

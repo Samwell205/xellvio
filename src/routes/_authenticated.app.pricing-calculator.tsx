@@ -11,7 +11,6 @@ import { Calculator, Search, Globe } from "lucide-react";
 import { useMemo, useState } from "react";
 import { calculateSegments } from "@/lib/sms-segments";
 import { formatUSD, formatRate } from "@/lib/money";
-import { useRatesRealtime } from "@/hooks/use-rates-realtime";
 
 export const Route = createFileRoute("/_authenticated/app/pricing-calculator")({
   head: () => ({ meta: [{ title: "SMS Pricing — Xellvio" }] }),
@@ -19,11 +18,13 @@ export const Route = createFileRoute("/_authenticated/app/pricing-calculator")({
 });
 
 function PricingCalculatorPage() {
-  useRatesRealtime([["country-rates-all"]]);
   const ratesQ = useQuery({
     queryKey: ["country-rates-all"],
     queryFn: async () => ((await supabase.from("country_rates_public").select("country_code,country_name,dial_prefix,sell_price,mms_multiplier,active,sender_supports_inbound").order("country_name")).data ?? []) as any[],
+    refetchOnWindowFocus: true,
+    staleTime: 30_000,
   });
+
   const rates = ratesQ.data ?? [];
 
 
