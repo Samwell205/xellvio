@@ -1200,3 +1200,76 @@ function Field({
     </div>
   );
 }
+
+function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetCountries: string[] }) {
+  const loadTf = useServerFn(getMyTollfreeVerification);
+  const tf = useQuery({ queryKey: ["tollfree-verification"], queryFn: () => loadTf() });
+  const asset = (tf.data as any)?.asset ?? null;
+  const status: string | null = asset?.verification_sid ? (asset?.verification_status ?? null) : null;
+
+  const needsUsCa =
+    (targetCountries ?? []).some((c) => c === "US" || c === "CA") ||
+    assets.some((a) => (a.country_code === "US" || a.country_code === "CA") && a.sender_kind === "toll_free");
+
+  const [skipped, setSkipped] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("xv:tf-skipped") === "1";
+  });
+
+  // Auto-show when verified or in review — status is useful info even if skipped.
+  const showAnyway = status === "verified" || status === "in_review" || status === "submitted" || status === "rejected";
+
+  if (skipped && !showAnyway && !needsUsCa) return null;
+
+  let badge = (
+    <Badge variant="outline" className="gap-1"><Clock className="size-3" /> Not started</Badge>
+  );
+  let blurb = needsUsCa
+    ? "You're targeting US or Canada. US carriers (AT&T, T-Mobile, Verizon) require toll-free verification before they will deliver your messages."
+    : "Only required to send SMS to US or Canada. Skip if you don't plan to send there.";
+  if (status === "verified") {
+    badge = <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" /> Approved</Badge>;
+    blurb = `Your toll-free number ${asset?.phone_number ?? ""} is approved for US/Canada delivery.`;
+  } else if (status === "rejected") {
+    blurb = asset?.friendly_rejection_reason ?? "Carrier rejected the submission — open to resubmit.";
+    badge = <Badge variant="destructive" className="gap-1"><X className="size-3" /> Rejected</Badge>;
+  } else if (status === "in_review" || status === "submitted") {
+    badge = <Badge className="gap-1 bg-blue-500 hover:bg-blue-500 text-white"><Clock className="size-3" /> In review</Badge>;
+    blurb = "Carrier is reviewing your submission (typically 1–3 weeks). You can keep using the rest of the app.";
+  }
+
+  return (
+    <Card className="p-5 space-y-3 border-primary/30 bg-primary/5">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 font-semibold">
+          <ShieldCheck className="size-5 text-primary" />
+          Toll-free verification (US &amp; Canada)
+        </div>
+        {badge}
+      </div>
+      <p className="text-sm text-muted-foreground">{blurb}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button asChild size="sm">
+          <Link to="/app/toll-free-verification">
+            {status ? "Open verification" : "Start toll-free verification"}
+            <ArrowRight className="size-3.5 ml-1" />
+          </Link>
+        </Button>
+        {!status && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              window.localStorage.setItem("xv:tf-skipped", "1");
+              setSkipped(true);
+              toast.message("Skipped — you can start it any time from Settings.");
+            }}
+          >
+            Skip for now
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
