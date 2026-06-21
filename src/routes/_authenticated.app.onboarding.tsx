@@ -54,7 +54,7 @@ function OnboardingPage() {
       (await supabase
         .from("accounts")
         .select(
-          "id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,subaccount_phone_number,subaccount_messaging_service_sid"
+          "id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,subaccount_phone_number"
         )
         .maybeSingle()).data,
   });

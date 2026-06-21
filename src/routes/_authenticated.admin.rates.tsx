@@ -82,6 +82,8 @@ function AdminRatesPage() {
       toast.success(`${row.country_name} updated`);
       setEdits((e) => { const n = { ...e }; delete n[row.id]; return n; });
       qc.invalidateQueries({ queryKey: ["admin-rates"] });
+      qc.invalidateQueries({ queryKey: ["country-rates-all"] });
+      qc.invalidateQueries({ queryKey: ["public-country-rates"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -91,7 +93,11 @@ function AdminRatesPage() {
       const { error } = await supabase.from("country_rates").update({ active }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-rates"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-rates"] });
+      qc.invalidateQueries({ queryKey: ["country-rates-all"] });
+      qc.invalidateQueries({ queryKey: ["public-country-rates"] });
+    },
   });
 
   const toggleOverride = useMutation({
@@ -99,7 +105,11 @@ function AdminRatesPage() {
       const { error } = await supabase.from("country_rates").update({ manual_override }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin-rates"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-rates"] });
+      qc.invalidateQueries({ queryKey: ["country-rates-all"] });
+      qc.invalidateQueries({ queryKey: ["public-country-rates"] });
+    },
   });
 
   const sync = useMutation({
@@ -107,6 +117,8 @@ function AdminRatesPage() {
     onSuccess: (r: any) => {
       toast.success(`Synced ${r.updated} · skipped ${r.skipped} · errors ${r.errors}`);
       qc.invalidateQueries({ queryKey: ["admin-rates"] });
+      qc.invalidateQueries({ queryKey: ["country-rates-all"] });
+      qc.invalidateQueries({ queryKey: ["public-country-rates"] });
     },
     onError: (e: Error) => toast.error(`Sync failed: ${e.message}`),
   });
@@ -117,6 +129,8 @@ function AdminRatesPage() {
       toast.success("Default markup updated and active country sell prices recalculated.");
       qc.invalidateQueries({ queryKey: ["default-markup"] });
       qc.invalidateQueries({ queryKey: ["admin-rates"] });
+      qc.invalidateQueries({ queryKey: ["country-rates-all"] });
+      qc.invalidateQueries({ queryKey: ["public-country-rates"] });
       setMarkupDraft("");
     },
     onError: (e: Error) => toast.error(e.message),

@@ -28,6 +28,7 @@ export const getPublicCountryRates = createServerFn({ method: "GET" }).handler(a
   const { data, error } = await supabaseAdmin
     .from("country_rates")
     .select("country_code,country_name,dial_prefix,sell_price,mms_multiplier,sender_supports_inbound,active")
+    .eq("active", true)
     .order("country_name");
   if (error) throw new Error(error.message);
   return (data ?? []).map((r) => ({

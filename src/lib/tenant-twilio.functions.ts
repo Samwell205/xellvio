@@ -34,11 +34,11 @@ async function twilio<T = any>(path: string, opts: { method?: string; sid: strin
 export const provisionSubaccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     const { encryptToken } = await import("./tenant-crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: acct, error } = await supabase
+    const { data: acct, error } = await supabaseAdmin
       .from("accounts")
       .select("id,legal_business_name,onboarding_status,twilio_subaccount_sid")
       .eq("id", userId)
@@ -69,10 +69,11 @@ export const searchNumbers = createServerFn({ method: "POST" })
     z.object({ country: z.string().length(2), smsEnabled: z.boolean().optional() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     const { decryptToken } = await import("./tenant-crypto.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: acct } = await supabase
+    const { data: acct } = await supabaseAdmin
       .from("accounts")
       .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
       .eq("id", userId)
@@ -96,11 +97,11 @@ export const purchaseNumber = createServerFn({ method: "POST" })
     z.object({ phoneNumber: z.string().regex(/^\+\d{6,15}$/) }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
     const { decryptToken } = await import("./tenant-crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: acct } = await supabase
+    const { data: acct } = await supabaseAdmin
       .from("accounts")
       .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc,subaccount_phone_sid")
       .eq("id", userId)
