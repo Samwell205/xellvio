@@ -192,6 +192,7 @@ function AudiencePage() {
     qc.invalidateQueries({ queryKey: ["audience-stats"] });
     qc.invalidateQueries({ queryKey: ["suppressions"] });
     qc.invalidateQueries({ queryKey: ["contact-lists"] });
+    qc.invalidateQueries({ queryKey: ["audience-list-counts"] });
   };
 
   const toggleConsent = useMutation({
