@@ -506,7 +506,9 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
               )}
             </div>
             {existing.status === "rejected" && !coveredByUs && (
-              <Button onClick={() => setShowForm(true)} className="w-full">Submit a new request</Button>
+              <Button asChild className="w-full">
+                <Link to="/app/toll-free-verification">Submit a new request</Link>
+              </Button>
             )}
           </div>
         ) : !showForm ? (
