@@ -58,6 +58,28 @@ type Sender =
       }>;
     };
 
+async function loadEligibleRecipients(supabaseAdmin: any, accountId: string, audience: any): Promise<any[]> {
+  const { count, error: countError } = await supabaseAdmin.rpc("eligible_profile_count", {
+    _account_id: accountId,
+    _audience: audience,
+  });
+  if (countError) throw countError;
+  const PAGE = 1000;
+  const total = Number(count ?? 0);
+  const recipients: any[] = [];
+  for (let offset = 0; offset < total; offset += PAGE) {
+    const { data, error } = await supabaseAdmin.rpc("eligible_profile_ids_page", {
+      _account_id: accountId,
+      _audience: audience,
+      _limit: PAGE,
+      _offset: offset,
+    });
+    if (error) throw error;
+    recipients.push(...(data ?? []));
+  }
+  return recipients;
+}
+
 function mainSmsAuth() {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const token = process.env.TWILIO_AUTH_TOKEN;
@@ -151,13 +173,11 @@ async function dispatchOne(
     return { queued: 0, failed: 0, debited: 0, cost: 0, skipped: "blocked_content" };
   }
 
-  const { data: recipients, error } = await supabaseAdmin.rpc("eligible_profile_ids", {
-    _account_id: campaign.account_id,
-    _audience: campaign.audience ?? { include: [], exclude: [] },
-  });
-  if (error) throw error;
-
-  const list = (recipients ?? []) as any[];
+  const list = await loadEligibleRecipients(
+    supabaseAdmin,
+    campaign.account_id,
+    campaign.audience ?? { include: [], exclude: [] },
+  );
   if (list.length === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
     return { queued: 0, failed: 0, debited: 0, cost: 0 };
