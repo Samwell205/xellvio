@@ -1258,6 +1258,21 @@ export type Database = {
           profile_id: string
         }[]
       }
+      eligible_profile_ids_page: {
+        Args: {
+          _account_id: string
+          _audience: Json
+          _limit?: number
+          _offset?: number
+        }
+        Returns: {
+          country_code: string
+          first_name: string
+          last_name: string
+          phone_e164: string
+          profile_id: string
+        }[]
+      }
       encrypt_twilio_token: { Args: { _plain: string }; Returns: string }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
@@ -1276,8 +1291,19 @@ export type Database = {
         }
         Returns: number
       }
+      my_eligible_profile_count: { Args: { _audience: Json }; Returns: number }
       my_eligible_profile_ids: {
         Args: { _audience: Json }
+        Returns: {
+          country_code: string
+          first_name: string
+          last_name: string
+          phone_e164: string
+          profile_id: string
+        }[]
+      }
+      my_eligible_profile_ids_page: {
+        Args: { _audience: Json; _limit?: number; _offset?: number }
         Returns: {
           country_code: string
           first_name: string
