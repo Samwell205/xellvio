@@ -268,7 +268,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           const coveredByUs = c.code === "CA" && !ownTfAsset && !ownReq && (!!usTfAsset || !!usReq);
           const tfAsset = ownTfAsset ?? (coveredByUs ? usTfAsset : null);
           const req = ownReq ?? (coveredByUs ? usReq : null);
-          // Only trust the carrier status when there's an actual Twilio verification SID.
+          // Only trust the carrier status when there's an actual our SMS provider verification SID.
           const vStatus: string | undefined = tfAsset?.verification_sid
             ? (tfAsset?.verification_status ?? undefined)
             : undefined;
@@ -301,13 +301,13 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           const titleText = coveredByUs
             ? `Covered by your US toll-free number${tfAsset?.phone_number ? ` (${tfAsset.phone_number})` : ""}. No separate Canada request needed.`
             : isVerified
-              ? `Verified by Twilio · ${tfAsset?.phone_number ?? ""}`
+              ? `Verified by carrier · ${tfAsset?.phone_number ?? ""}`
               : isTfRejected
-                ? `Rejected by Twilio${tfAsset?.friendly_rejection_reason ? ` · ${tfAsset.friendly_rejection_reason}` : tfAsset?.rejection_reason ? ` · ${tfAsset.rejection_reason}` : ""}`
+                ? `Rejected by carrier${tfAsset?.friendly_rejection_reason ? ` · ${tfAsset.friendly_rejection_reason}` : tfAsset?.rejection_reason ? ` · ${tfAsset.rejection_reason}` : ""}`
                 : isInReview
-                  ? "Awaiting Twilio carrier review — only Twilio can approve this (typically 1–3 weeks)."
+                  ? "Awaiting carrier review — only the carrier can approve this (typically 1–3 weeks)."
                   : notStarted
-                    ? "Submit toll-free verification to begin the Twilio review."
+                    ? "Submit toll-free verification to begin the our SMS provider review."
                     : "Pending";
           const chipStatusLabel = isVerified
             ? "Verified"
@@ -409,7 +409,7 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
       }
     : null);
 
-  // Translate the internal request status + Twilio verification status into a single
+  // Translate the internal request status + our SMS provider verification status into a single
   // carrier-aware label and badge. "approved" from an admin only means the number was
   // provisioned — the carrier may still be reviewing.
   const verificationStatus: string | undefined = effectiveTfAsset?.verification_sid
@@ -496,7 +496,7 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
               </div>
               {carrierLabel === "In carrier review" && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  The number is provisioned, but Twilio and the mobile carriers (AT&amp;T, T-Mobile, Verizon, plus Canadian carriers) are still reviewing your business details. This usually takes 1–3 weeks. Only Twilio can approve this — we cannot approve it manually.
+                  The number is provisioned, but The mobile carriers (AT&amp;T, T-Mobile, Verizon, plus Canadian carriers) are still reviewing your business details. This usually takes 1–3 weeks. Only the carrier can approve this — we cannot approve it manually.
                 </p>
               )}
               {existing.status === "pending" && !coveredByUs && (

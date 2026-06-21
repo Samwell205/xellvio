@@ -37,7 +37,7 @@ function AdminTollfreeAttemptsPage() {
                   <th className="p-3">Tenant / Actor</th>
                   <th className="p-3">Number</th>
                   <th className="p-3">Verification SID</th>
-                  <th className="p-3">Twilio</th>
+                  <th className="p-3">our SMS provider</th>
                   <th className="p-3">Details</th>
                 </tr>
               </thead>

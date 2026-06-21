@@ -36,7 +36,7 @@ export function TwilioBalanceCard() {
   const refresh = useMutation({
     mutationFn: () => refreshFn(),
     onSuccess: () => {
-      toast.success("Twilio balance refreshed");
+      toast.success("SMS balance refreshed");
       qc.invalidateQueries({ queryKey: ["twilio-balance"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -76,7 +76,7 @@ export function TwilioBalanceCard() {
         },
       }),
     onSuccess: () => {
-      toast.success("Twilio alert settings saved");
+      toast.success("Alert settings saved");
       qc.invalidateQueries({ queryKey: ["twilio-balance"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -88,7 +88,7 @@ export function TwilioBalanceCard() {
       toast.success(
         r?.resumed > 0
           ? `Resumed ${r.resumed} campaign${r.resumed === 1 ? "" : "s"}`
-          : "No campaigns could be resumed yet (Twilio balance still too low)",
+          : "No campaigns could be resumed yet (SMS balance still too low)",
       );
       qc.invalidateQueries({ queryKey: ["twilio-balance"] });
     },
@@ -118,7 +118,7 @@ export function TwilioBalanceCard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Phone className="size-5" />
-          <h3 className="font-semibold">Twilio account balance</h3>
+          <h3 className="font-semibold">SMS account balance</h3>
         </div>
         <Button
           size="sm"
@@ -152,7 +152,7 @@ export function TwilioBalanceCard() {
       </div>
 
       <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-        <strong>Tip:</strong> Enable <a className="underline" href="https://console.twilio.com/us1/billing/manage-billing/recharge" target="_blank" rel="noreferrer">Twilio Auto-Recharge</a> so Twilio automatically charges your card when your balance drops below your chosen threshold. This card is your safety net in case Auto-Recharge fails or is off.
+        <strong>Tip:</strong> Enable <a className="underline" href="https://console.twilio.com/us1/billing/manage-billing/recharge" target="_blank" rel="noreferrer">Auto-Recharge</a> so the provider automatically charges your card when your balance drops below your chosen threshold. This card is your safety net in case Auto-Recharge fails or is off.
       </div>
 
       {pausedCount > 0 && (
@@ -160,10 +160,10 @@ export function TwilioBalanceCard() {
           <PauseCircle className="size-5 text-amber-600 shrink-0" />
           <div className="flex-1 text-sm">
             <div className="font-semibold text-amber-900 dark:text-amber-200">
-              {pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused — waiting for Twilio funds
+              {pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused — waiting for funds
             </div>
             <div className="text-xs text-amber-800/80 dark:text-amber-200/80">
-              They'll auto-resume on the next balance check. Click below to resume immediately once Twilio is funded.
+              They'll auto-resume on the next balance check. Click below to resume immediately once funded.
             </div>
           </div>
           <Button size="sm" onClick={() => resume.mutate()} disabled={resume.isPending}>
@@ -263,12 +263,12 @@ export function TwilioLowBalanceBanner() {
       <AlertTriangle className="size-4 shrink-0" />
       <div className="flex-1">
         {pausedCount > 0 ? (
-          <><strong>{pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused</strong> — Twilio balance {formatMoney(balance, currency)}. Fund Twilio now to auto-resume.</>
+          <><strong>{pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused</strong> — SMS balance {formatMoney(balance, currency)}. Top up now to auto-resume.</>
         ) : status === "error" ? (
-          <>Twilio balance check failed: {latest?.error_message ?? "unknown error"}</>
+          <>SMS balance check failed: {latest?.error_message ?? "unknown error"}</>
         ) : (
           <>
-            Twilio balance is <strong>{isCritical ? "critically " : ""}low</strong>: {formatMoney(balance, currency)}. Top up to avoid SMS interruptions.
+            SMS balance is <strong>{isCritical ? "critically " : ""}low</strong>: {formatMoney(balance, currency)}. Top up to avoid SMS interruptions.
           </>
         )}
       </div>

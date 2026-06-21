@@ -197,7 +197,7 @@ function friendlyRejectionDisplay(asset: any) {
     return "This business was submitted as a sole proprietor, but carriers are treating it as a registered business. Choose Private company / LLC / Partnership, enter the registration details, and resubmit; the reserved toll-free number will be reused.";
   }
   if (raw.includes("usecasecategories")) {
-    return "The selected use case category was not accepted by Twilio. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
+    return "The selected use case category was not accepted by the carrier. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
   }
   return asset?.friendly_rejection_reason ?? asset?.rejection_reason ?? "No reason provided.";
 }
@@ -219,7 +219,7 @@ function TollfreeVerificationPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["tollfree-verification"],
     queryFn: () => load(),
-    // Live polling: keep refreshing while Twilio is still reviewing.
+    // Live polling: keep refreshing while still reviewing.
     refetchInterval: (q) => {
       const s = (q.state.data as any)?.asset?.verification_status as Status | null | undefined;
       if (s === "submitted" || s === "in_review") return 30_000;
@@ -230,9 +230,9 @@ function TollfreeVerificationPage() {
 
   const asset = data?.asset ?? null;
   // Guard: never trust a "verified"/"in_review"/"submitted" status that has no
-  // Twilio verification SID behind it — without a SID the carrier never received
+  // our SMS provider verification SID behind it — without a SID the carrier never received
   // it. BUT "rejected" without a SID is a legitimate local-failure state
-  // (e.g. Twilio rejected the API call), and we must show its reason.
+  // (e.g. the provider rejected the API call), and we must show its reason.
   const rawStatus = (asset?.verification_status as Status | "pending" | null) ?? null;
   const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review" || rawStatus === "verified";
   const status: Status | null =
@@ -297,8 +297,8 @@ function TollfreeVerificationPage() {
   });
 
   // Live carrier-side refresh: while the carrier is still reviewing, ask
-  // Twilio directly for the latest status every minute (belt-and-braces in
-  // case Twilio's webhook doesn't fire).
+  // the provider directly for the latest status every minute (belt-and-braces in
+  // case the provider's webhook doesn't fire).
   useEffect(() => {
     if (status !== "submitted" && status !== "in_review") return;
     if (!asset?.verification_sid) return;
@@ -310,7 +310,7 @@ function TollfreeVerificationPage() {
     return () => clearInterval(id);
   }, [status, asset?.verification_sid, refresh, qc]);
 
-  // Realtime: instantly reflect DB updates (driven by the Twilio webhook)
+  // Realtime: instantly reflect DB updates (driven by the the provider webhook)
   // for this user's sender_assets row.
   useEffect(() => {
     if (!asset?.id) return;
@@ -371,8 +371,8 @@ function TollfreeVerificationPage() {
             <p className="text-sm text-muted-foreground mt-1">
               {hasReservedNumber
                 ? localSubmissionFailure
-                  ? "Twilio did not return a verification ID, so this was not submitted to carrier review. Fix anything needed and retry below; no new number will be purchased."
-                  : "A toll-free number is already reserved for this request, but Twilio has not returned a verification ID yet. Continue below; no new number will be purchased."
+                  ? "Submission did not return a verification ID, so this was not submitted to carrier review. Fix anything needed and retry below; no new number will be purchased."
+                  : "A toll-free number is already reserved for this request, but the verification ID has not been returned yet. Continue below; no new number will be purchased."
                 : statusBlurb(status)}
             </p>
           </div>
@@ -450,7 +450,7 @@ function TollfreeVerificationPage() {
 
       {isLocked && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Your submission is locked while the carrier reviews it. Only Twilio can approve or reject this — we cannot approve it manually. This page updates automatically.
+          Your submission is locked while the carrier reviews it. Only the carrier can approve or reject this — we cannot approve it manually. This page updates automatically.
         </div>
       )}
 
@@ -828,14 +828,14 @@ function Timeline({
     {
       key: "submitted",
       label: "Submitted to carrier",
-      desc: "Your details were sent to Twilio for the toll-free verification queue.",
+      desc: "Your details were sent for the toll-free verification queue.",
       timeAt: submittedAt,
       Icon: ShieldCheck,
     },
     {
       key: "in_review",
       label: "In carrier review",
-      desc: "Twilio and the US carriers are reviewing your submission. This usually takes 1–3 weeks.",
+      desc: "The carriers are reviewing your submission. This usually takes 1–3 weeks.",
       timeAt: status === "in_review" ? lastAt : null,
       Icon: Hourglass,
     },
