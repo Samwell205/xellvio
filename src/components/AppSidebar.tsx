@@ -1,24 +1,29 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ShieldCheck, ChevronDown } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
+  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
+  SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Logo } from "./Logo";
 import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 
 const items = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true },
+  { title: "Campaigns", url: "/app/campaigns", icon: Megaphone },
   { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText },
-  
   { title: "Toll-free verification", url: "/app/toll-free-verification", icon: ShieldCheck },
   { title: "Audience", url: "/app/audience", icon: Users },
   { title: "Segments", url: "/app/segments", icon: Filter },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff },
-  { title: "Campaigns", url: "/app/campaigns", icon: Megaphone },
+];
+
+const settingsChildren = [
+  { title: "Account", url: "/app/settings", icon: Settings, exact: true },
   { title: "Billing", url: "/app/billing", icon: Wallet },
   { title: "SMS Pricing", url: "/app/pricing-calculator", icon: Calculator },
-  { title: "Settings", url: "/app/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -26,6 +31,9 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (url: string, exact?: boolean) => exact ? pathname === url : pathname === url || pathname.startsWith(url + "/");
+  const settingsActive = settingsChildren.some((c) => isActive(c.url, c.exact));
+  const [settingsOpen, setSettingsOpen] = useState(settingsActive);
+  useEffect(() => { if (settingsActive) setSettingsOpen(true); }, [settingsActive]);
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -52,6 +60,42 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              <Collapsible open={collapsed ? false : settingsOpen} onOpenChange={setSettingsOpen}>
+                <SidebarMenuItem>
+                  {collapsed ? (
+                    <SidebarMenuButton asChild isActive={settingsActive}>
+                      <Link to="/app/settings" className="flex items-center gap-3">
+                        <Settings className="size-4" />
+                      </Link>
+                    </SidebarMenuButton>
+                  ) : (
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton isActive={settingsActive} className="w-full">
+                        <Settings className="size-4" />
+                        <span>Settings</span>
+                        <ChevronDown className={`ml-auto size-4 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                  )}
+                  {!collapsed && (
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {settingsChildren.map((c) => (
+                          <SidebarMenuSubItem key={c.url}>
+                            <SidebarMenuSubButton asChild isActive={isActive(c.url, c.exact)}>
+                              <Link to={c.url} className="flex items-center gap-2">
+                                <c.icon className="size-3.5" />
+                                <span>{c.title}</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  )}
+                </SidebarMenuItem>
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -69,4 +113,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
