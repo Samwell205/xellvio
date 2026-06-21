@@ -59,7 +59,11 @@ function SettingsPage() {
   const qc = useQueryClient();
   const account = useQuery({
     queryKey: ["account"],
-    queryFn: async () => (await supabase.from("accounts").select("*").maybeSingle()).data,
+    queryFn: async () =>
+      (await supabase
+        .from("accounts")
+        .select("id,email,full_name,company,phone")
+        .maybeSingle()).data,
   });
   const isAdmin = useQuery({
     queryKey: ["is-admin"],

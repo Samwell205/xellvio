@@ -70,7 +70,11 @@ function SetupSmsPage() {
   const refresh = useServerFn(refreshMyVerificationStatus);
   const account = useQuery({
     queryKey: ["account"],
-    queryFn: async () => (await supabase.from("accounts").select("*").maybeSingle()).data,
+    queryFn: async () =>
+      (await supabase
+        .from("accounts")
+        .select("id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,contact_email,onboarding_status,subaccount_phone_number,monthly_volume_estimate,use_case_description,sample_message,opt_in_description,opt_in_screenshot_url,sms_target_countries,sms_consent_disclosures_confirmed_at")
+        .maybeSingle()).data,
   });
   const assetsFn = useServerFn(getMySenderAssets);
   const assets = useQuery({
