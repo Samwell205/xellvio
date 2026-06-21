@@ -347,7 +347,7 @@ function NewCampaignPage() {
     }, 1200);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, JSON.stringify(audience)]);
+  }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, JSON.stringify(audience), JSON.stringify(s.excludedCountries)]);
 
   async function saveCampaign(launch: boolean) {
     if (launch && insufficient) { toast.error("Insufficient balance — top up before launching."); return; }
