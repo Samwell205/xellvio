@@ -393,8 +393,21 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
     : null;
   // A US toll-free verification automatically covers Canada — no separate CA request needed.
   const coveredByUs = code === "CA" && !ownRequest && !ownTfAsset && (!!usRequest || !!usTfAsset);
-  const existing = ownRequest ?? (coveredByUs ? usRequest : null);
+  const realExisting = ownRequest ?? (coveredByUs ? usRequest : null);
   const effectiveTfAsset = ownTfAsset ?? (coveredByUs ? usTfAsset : null);
+  // If a toll-free number is already provisioned (e.g. via admin) but there's no number_request row,
+  // synthesize a pseudo-request so the dialog shows the carrier-review status instead of the "request a number" CTA.
+  const existing: any = realExisting ?? (effectiveTfAsset
+    ? {
+        id: effectiveTfAsset.id,
+        country: effectiveTfAsset.country_code,
+        status: effectiveTfAsset.verification_status === "verified" ? "provisioned" : effectiveTfAsset.verification_status === "rejected" ? "rejected" : "approved",
+        number_type: "toll_free",
+        business_name: "—",
+        assigned_phone_number: effectiveTfAsset.phone_number,
+        admin_notes: null,
+      }
+    : null);
 
   // Translate the internal request status + Twilio verification status into a single
   // carrier-aware label and badge. "approved" from an admin only means the number was
@@ -614,7 +627,7 @@ function StatusCard({ asset, accountPhone }: { asset: any; accountPhone?: string
             <div className="text-sm text-muted-foreground mt-1">
               {asset.friendly_rejection_reason ?? "Please update your details and try again."}
             </div>
-            <Link to="/app/setup-sms">
+            <Link to={asset.sender_kind === "toll_free" && (asset.country_code === "US" || asset.country_code === "CA") ? "/app/toll-free-verification" : "/app/setup-sms"}>
               <Button size="sm" className="mt-3">
                 Update and resubmit
               </Button>
