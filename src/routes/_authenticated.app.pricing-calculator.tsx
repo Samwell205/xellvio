@@ -65,8 +65,9 @@ function PricingCalculatorPage() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent className="max-h-72">
                 {rates.map((r) => (
-                  <SelectItem key={r.country_code} value={r.country_code}>{r.country_name} ({r.dial_prefix})</SelectItem>
+                  <SelectItem key={r.code} value={r.code}>{r.country} ({r.dial})</SelectItem>
                 ))}
+
               </SelectContent>
             </Select>
           </div>
