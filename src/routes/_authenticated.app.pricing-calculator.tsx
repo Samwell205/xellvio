@@ -109,15 +109,16 @@ function PricingCalculatorPage() {
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.country_code} className="border-t">
-                  <td className="p-3"><div className="font-medium">{r.country_name}</div><div className="text-xs text-muted-foreground">{r.country_code}</div></td>
-                  <td className="p-3 tabular-nums">{r.dial_prefix}</td>
-                  <td className="p-3 text-right tabular-nums">{formatRate(Number(r.sell_price))}</td>
-                  <td className="p-3 text-right tabular-nums">×{Number(r.mms_multiplier).toFixed(1)}</td>
-                  <td className="p-3">{r.sender_supports_inbound ? <Badge variant="default">Yes</Badge> : <Badge variant="outline">No</Badge>}</td>
-                  <td className="p-3">{r.active ? <Badge variant="secondary">Active</Badge> : <Badge variant="destructive">Off</Badge>}</td>
+                <tr key={r.code} className="border-t">
+                  <td className="p-3"><div className="font-medium">{r.country}</div><div className="text-xs text-muted-foreground">{r.code}</div></td>
+                  <td className="p-3 tabular-nums">{r.dial}</td>
+                  <td className="p-3 text-right tabular-nums">{formatRate(Number(r.perSms))}</td>
+                  <td className="p-3 text-right tabular-nums">×{Number(r.mmsMult).toFixed(1)}</td>
+                  <td className="p-3">{r.inbound ? <Badge variant="default">Yes</Badge> : <Badge variant="outline">No</Badge>}</td>
+                  <td className="p-3">{r.status === "Active" ? <Badge variant="secondary">Active</Badge> : <Badge variant="destructive">Off</Badge>}</td>
                 </tr>
               ))}
+
               {filtered.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">No countries match "{search}".</td></tr>}
             </tbody>
           </table>
