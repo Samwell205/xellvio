@@ -557,7 +557,8 @@ function NewCampaignPage() {
           </Card>
 
           <div className="space-y-5">
-            <SenderRoutingCard breakdown={breakdown} sendersByCountry={sendersByCountry} />
+            <SenderRoutingCard breakdown={fullBreakdown} sendersByCountry={sendersByCountry} onToggleCountry={toggleCountry} />
+
             <CostPanel
               insufficient={insufficient}
               balance={balance}
