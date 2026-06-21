@@ -175,11 +175,20 @@ function NewCampaignPage() {
     queryKey: ["campaign-audience", audience],
     enabled: s.include.length > 0 || s.profileIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await (supabase.rpc as any)("my_eligible_profile_ids", {
-        _audience: audience,
-      });
-      if (error) throw error;
-      return (data as any[]) ?? [];
+      // Page through results — PostgREST caps each response at 1000 rows.
+      const PAGE = 1000;
+      const all: any[] = [];
+      for (let offset = 0; ; offset += PAGE) {
+        const { data, error } = await (supabase.rpc as any)(
+          "my_eligible_profile_ids",
+          { _audience: audience },
+        ).range(offset, offset + PAGE - 1);
+        if (error) throw error;
+        const rows = (data as any[]) ?? [];
+        all.push(...rows);
+        if (rows.length < PAGE) break;
+      }
+      return all;
     },
   });
   const audienceList = audienceQ.data ?? [];
