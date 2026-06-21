@@ -495,6 +495,44 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
     onDone();
   }
 
+  async function removeWithContacts(id: string, name: string) {
+    if (!confirm(`Delete list "${name}" AND every contact inside it? This cannot be undone.`)) return;
+    setBusy(true);
+    try {
+      // Fetch all member profile ids (paginated)
+      const profileIds: string[] = [];
+      let from = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data, error } = await sb
+          .from("profile_list_members")
+          .select("profile_id")
+          .eq("list_id", id)
+          .range(from, from + 999);
+        if (error) throw error;
+        const rows = data ?? [];
+        profileIds.push(...rows.map((r: any) => r.profile_id));
+        if (rows.length < 1000) break;
+        from += 1000;
+      }
+      // Delete profiles in chunks (cascades will clear memberships, consents, etc.)
+      for (let i = 0; i < profileIds.length; i += 500) {
+        const chunk = profileIds.slice(i, i + 500);
+        if (chunk.length === 0) break;
+        const { error } = await sb.from("profiles").delete().in("id", chunk);
+        if (error) throw error;
+      }
+      const { error: lerr } = await sb.from("contact_lists").delete().eq("id", id);
+      if (lerr) throw lerr;
+      toast.success(`List and ${profileIds.length} contact${profileIds.length === 1 ? "" : "s"} deleted`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to delete list with contacts");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
