@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
+import { getActiveCountryRatesRaw } from "@/lib/public-pricing.functions";
+
 import { scanCampaignContent } from "@/lib/content-scanner.functions";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
@@ -114,12 +116,13 @@ function NewCampaignPage() {
     },
   });
 
+  const loadRates = useServerFn(getActiveCountryRatesRaw);
   const ratesQ = useQuery({
     queryKey: ["country-rates-active"],
-    queryFn: async () =>
-      ((await supabase.from("country_rates_public").select("country_code,country_name,dial_prefix,sell_price,mms_multiplier").eq("active", true)).data ?? []) as any[],
+    queryFn: () => loadRates(),
   });
   const rates = ratesQ.data ?? [];
+
 
   const accountQ = useQuery({
     queryKey: ["account-balance"],
