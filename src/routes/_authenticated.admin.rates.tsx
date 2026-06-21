@@ -44,7 +44,7 @@ type Row = {
 };
 
 function AdminRatesPage() {
-  useRatesRealtime([["admin-rates"], ["country-rates-all"], ["public-country-rates"]]);
+
 
   const qc = useQueryClient();
   const syncFn = useServerFn(syncTwilioPricing);
