@@ -59,15 +59,9 @@ type Sender =
     };
 
 async function loadEligibleRecipients(supabaseAdmin: any, accountId: string, audience: any): Promise<any[]> {
-  const { count, error: countError } = await supabaseAdmin.rpc("eligible_profile_count", {
-    _account_id: accountId,
-    _audience: audience,
-  });
-  if (countError) throw countError;
   const PAGE = 1000;
-  const total = Number(count ?? 0);
   const recipients: any[] = [];
-  for (let offset = 0; offset < total; offset += PAGE) {
+  for (let offset = 0; ; offset += PAGE) {
     const { data, error } = await supabaseAdmin.rpc("eligible_profile_ids_page", {
       _account_id: accountId,
       _audience: audience,
@@ -75,7 +69,9 @@ async function loadEligibleRecipients(supabaseAdmin: any, accountId: string, aud
       _offset: offset,
     });
     if (error) throw error;
-    recipients.push(...(data ?? []));
+    const rows = data ?? [];
+    recipients.push(...rows);
+    if (rows.length < PAGE) break;
   }
   return recipients;
 }
