@@ -114,6 +114,7 @@ function NewCampaignPage() {
           .from("profile_list_members")
           .select("profile_id")
           .in("list_id", selectedListIds)
+          .order("profile_id", { ascending: true })
           .range(offset, offset + PAGE - 1);
         if (error) throw error;
         const batch = (data ?? []).map((m: any) => m.profile_id);
@@ -175,18 +176,25 @@ function NewCampaignPage() {
     queryKey: ["campaign-audience", audience],
     enabled: s.include.length > 0 || s.profileIds.length > 0,
     queryFn: async () => {
-      // Page through results — PostgREST caps each response at 1000 rows.
+      const { data: countData, error: countError } = await (supabase.rpc as any)(
+        "my_eligible_profile_count",
+        { _audience: audience },
+      );
+      if (countError) throw countError;
+
+      // Page through a backend helper with explicit offset/limit because RPC
+      // responses are capped at 1000 rows by the API gateway.
+      const total = Number(countData ?? 0);
       const PAGE = 1000;
       const all: any[] = [];
-      for (let offset = 0; ; offset += PAGE) {
+      for (let offset = 0; offset < total; offset += PAGE) {
         const { data, error } = await (supabase.rpc as any)(
-          "my_eligible_profile_ids",
-          { _audience: audience },
-        ).range(offset, offset + PAGE - 1);
+          "my_eligible_profile_ids_page",
+          { _audience: audience, _limit: PAGE, _offset: offset },
+        );
         if (error) throw error;
         const rows = (data as any[]) ?? [];
         all.push(...rows);
-        if (rows.length < PAGE) break;
       }
       return all;
     },

@@ -34,12 +34,25 @@ export async function resumePausedCampaigns(): Promise<string[]> {
   let remainingBalance = balance - buffer;
   const resumed: string[] = [];
 
+  async function loadEligibleRecipients(accountId: string, audience: any): Promise<any[]> {
+    const PAGE = 1000;
+    const recipients: any[] = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const { data } = await supabaseAdmin.rpc("eligible_profile_ids_page", {
+        _account_id: accountId,
+        _audience: audience,
+        _limit: PAGE,
+        _offset: offset,
+      });
+      const rows = data ?? [];
+      recipients.push(...rows);
+      if (rows.length < PAGE) break;
+    }
+    return recipients;
+  }
+
   for (const c of paused) {
-    const { data: recipients } = await supabaseAdmin.rpc("eligible_profile_ids", {
-      _account_id: c.account_id,
-      _audience: c.audience ?? { include: [], exclude: [] },
-    });
-    const list = (recipients ?? []) as any[];
+    const list = await loadEligibleRecipients(c.account_id, c.audience ?? { include: [], exclude: [] });
     const hasMedia = !!c.media_url;
     let cost = 0;
     for (const p of list) {
