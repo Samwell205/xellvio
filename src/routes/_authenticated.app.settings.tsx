@@ -127,7 +127,7 @@ function SettingsPage() {
         <h3 className="font-semibold">SMS integration</h3>
         <div className="flex items-center gap-2 text-sm">
           <CheckCircle2 className="size-4 text-success" />
-          SMS API key connected (via Lovable connector).
+          SMS API key connected.
         </div>
         <div className="flex items-center gap-2 text-sm">
           <AlertTriangle className="size-4 text-warning" />
