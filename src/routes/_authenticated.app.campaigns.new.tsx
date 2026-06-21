@@ -676,7 +676,7 @@ function NewCampaignPage() {
               </div>
             </div>
           )}
-          <SenderRoutingCard breakdown={breakdown} sendersByCountry={sendersByCountry} />
+          <SenderRoutingCard breakdown={fullBreakdown} sendersByCountry={sendersByCountry} onToggleCountry={toggleCountry} />
           <div>
             <Label>Final message</Label>
             <Card className="p-3 mt-1 bg-muted/30 whitespace-pre-wrap text-sm">{bodyWithStop}</Card>
