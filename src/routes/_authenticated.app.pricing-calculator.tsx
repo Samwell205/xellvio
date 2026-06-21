@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Calculator, Search, Globe } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { calculateSegments } from "@/lib/sms-segments";
 import { formatUSD, formatRate } from "@/lib/money";
 import { getPublicCountryRates } from "@/lib/public-pricing.functions";
@@ -33,6 +33,12 @@ function PricingCalculatorPage() {
   const [body, setBody] = useState<string>("Hi {{first_name}}, our sale is live. Reply STOP to unsubscribe.");
   const [recipients, setRecipients] = useState<number>(1000);
   const [search, setSearch] = useState<string>("");
+
+  useEffect(() => {
+    if (rates.length > 0 && !rates.some((r) => r.code === country)) {
+      setCountry(rates[0].code);
+    }
+  }, [country, rates]);
 
   const seg = useMemo(() => calculateSegments(body), [body]);
   const rate = rates.find((r) => r.code === country);
@@ -62,7 +68,7 @@ function PricingCalculatorPage() {
           <div>
             <Label>Destination country</Label>
             <Select value={country} onValueChange={setCountry}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={ratesQ.isLoading ? "Loading countries…" : "Select country"} /></SelectTrigger>
               <SelectContent className="max-h-72">
                 {rates.map((r) => (
                   <SelectItem key={r.code} value={r.code}>{r.country} ({r.dial})</SelectItem>
@@ -119,7 +125,9 @@ function PricingCalculatorPage() {
                 </tr>
               ))}
 
-              {filtered.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">No countries match "{search}".</td></tr>}
+              {ratesQ.isLoading && <tr><td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">Loading countries…</td></tr>}
+              {ratesQ.isError && <tr><td colSpan={6} className="p-6 text-center text-sm text-destructive">Pricing could not load. Refresh the page or try again shortly.</td></tr>}
+              {!ratesQ.isLoading && !ratesQ.isError && filtered.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-sm text-muted-foreground">No countries match "{search}".</td></tr>}
             </tbody>
           </table>
         </div>
