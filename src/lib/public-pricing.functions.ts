@@ -1,6 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
 
 export type PublicCountryRate = {
   country: string;
@@ -12,14 +10,14 @@ export type PublicCountryRate = {
   status: "Active" | "Inactive";
 };
 
+// Server-side only: uses the privileged admin client to read the raw
+// country_rates table but projects ONLY safe public columns. This is the
+// single controlled access path for non-admin pricing reads — both the
+// public /pricing page and the tenant SMS Pricing page call this fn.
 export const getPublicCountryRates = createServerFn({ method: "GET" }).handler(async () => {
-  const supabasePublic = createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_PUBLISHABLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
-  const { data, error } = await supabasePublic
-    .from("country_rates_public")
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("country_rates")
     .select("country_code,country_name,dial_prefix,sell_price,mms_multiplier,sender_supports_inbound,active")
     .order("country_name");
   if (error) throw new Error(error.message);
