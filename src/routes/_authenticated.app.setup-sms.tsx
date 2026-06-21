@@ -105,6 +105,10 @@ function SetupSmsPage() {
         </p>
       </div>
 
+      <TollfreeSetupStep assets={assets.data ?? []} targetCountries={a?.sms_target_countries ?? []} />
+
+
+
       {hasAssets ? (
         <SenderStatusList
           assets={assets.data ?? []}
