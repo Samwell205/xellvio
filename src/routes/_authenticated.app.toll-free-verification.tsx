@@ -579,11 +579,12 @@ function TollfreeVerificationPage() {
 
         <Section title="Step 2 / 3 — Business location">
           <Two>
-            <Field label="Country" required>
+            <Field label="Country (ISO 2-letter code, e.g. US, GB, CA, AU)" required>
               <Input
                 value={form.businessCountry}
                 onChange={(e) => update("businessCountry", e.target.value.toUpperCase())}
                 maxLength={2}
+                placeholder="US"
               />
             </Field>
             <div />
