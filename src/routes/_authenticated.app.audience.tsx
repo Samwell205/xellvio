@@ -691,9 +691,16 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
   const [existingListId, setExistingListId] = useState<string>("");
   const [newListName, setNewListName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [progress, setProgress] = useState<{
+    phase: "validating" | "importing" | "attaching" | "done";
+    processed: number;
+    total: number;
+    label: string;
+  } | null>(null);
 
   function reset() {
     setPreview(null); setResult(null); setListMode("none"); setExistingListId(""); setNewListName("");
+    setProgress(null);
     if (fileRef.current) fileRef.current.value = "";
   }
 
