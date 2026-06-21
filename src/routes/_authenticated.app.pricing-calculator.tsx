@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { Calculator, Search, Globe } from "lucide-react";
 import { useMemo, useState } from "react";
 import { calculateSegments } from "@/lib/sms-segments";
 import { formatUSD, formatRate } from "@/lib/money";
+import { getPublicCountryRates } from "@/lib/public-pricing.functions";
 
 export const Route = createFileRoute("/_authenticated/app/pricing-calculator")({
   head: () => ({ meta: [{ title: "SMS Pricing — Xellvio" }] }),
@@ -18,15 +19,15 @@ export const Route = createFileRoute("/_authenticated/app/pricing-calculator")({
 });
 
 function PricingCalculatorPage() {
+  const loadRates = useServerFn(getPublicCountryRates);
   const ratesQ = useQuery({
     queryKey: ["country-rates-all"],
-    queryFn: async () => ((await supabase.from("country_rates_public").select("country_code,country_name,dial_prefix,sell_price,mms_multiplier,active,sender_supports_inbound").order("country_name")).data ?? []) as any[],
+    queryFn: () => loadRates(),
     refetchOnWindowFocus: true,
     staleTime: 30_000,
   });
 
   const rates = ratesQ.data ?? [];
-
 
   const [country, setCountry] = useState<string>("US");
   const [body, setBody] = useState<string>("Hi {{first_name}}, our sale is live. Reply STOP to unsubscribe.");
@@ -34,19 +35,20 @@ function PricingCalculatorPage() {
   const [search, setSearch] = useState<string>("");
 
   const seg = useMemo(() => calculateSegments(body), [body]);
-  const rate = rates.find((r) => r.country_code === country);
-  const unit = rate ? Number(rate.sell_price) : 0;
+  const rate = rates.find((r) => r.code === country);
+  const unit = rate ? Number(rate.perSms) : 0;
   const perSms = +(seg.segments * unit).toFixed(4);
   const total = +(perSms * Math.max(0, recipients || 0)).toFixed(2);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return rates.filter((r) =>
-      r.country_name.toLowerCase().includes(q) ||
-      r.country_code.toLowerCase().includes(q) ||
-      r.dial_prefix.includes(q),
+      r.country.toLowerCase().includes(q) ||
+      r.code.toLowerCase().includes(q) ||
+      r.dial.includes(q),
     );
   }, [rates, search]);
+
 
   return (
     <div className="space-y-6 max-w-5xl">
