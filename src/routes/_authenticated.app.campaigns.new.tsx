@@ -48,6 +48,7 @@ type State = {
   smartSkipHours: number;
   testTo: string;
   testSent: boolean;
+  excludedCountries: string[];
 };
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
@@ -60,6 +61,7 @@ function NewCampaignPage() {
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
+    excludedCountries: [],
   });
 
   // Load existing draft when editing
@@ -81,6 +83,7 @@ function NewCampaignPage() {
           sendMode: (data.send_mode as any) ?? "now",
           scheduleAt: data.schedule_at ? new Date(data.schedule_at).toISOString().slice(0, 16) : "",
           smartSkipHours: data.smart_skip_hours ?? 8,
+          excludedCountries: Array.isArray(aud.excluded_countries) ? aud.excluded_countries : [],
         }));
       }
       return data;
@@ -177,14 +180,27 @@ function NewCampaignPage() {
   );
   const seg = calculateSegments(bodyWithStop);
 
-  // Per-country breakdown
-  const breakdown = useMemo(() => {
-    if (rates.length === 0 || audienceList.length === 0) return [];
+  // Resolve country code per recipient (memoized)
+  const recipientCountries = useMemo(() => {
+    return audienceList.map((p: any) => ({
+      profile_id: p.profile_id,
+      country_code: p.country_code || countryFromPhone(p.phone_e164, rates) || "??",
+    }));
+  }, [audienceList, rates]);
+
+  const excludedSet = useMemo(() => new Set(s.excludedCountries), [s.excludedCountries]);
+
+  // Profile IDs that survive country exclusion (used at launch time)
+  const includedProfileIds = useMemo(
+    () => recipientCountries.filter((r) => !excludedSet.has(r.country_code)).map((r) => r.profile_id),
+    [recipientCountries, excludedSet],
+  );
+
+  // Per-country breakdown — includes ALL countries; `excluded` flag drives UI + cost skip
+  const fullBreakdown = useMemo(() => {
+    if (rates.length === 0 || recipientCountries.length === 0) return [];
     const counts: Record<string, number> = {};
-    for (const p of audienceList) {
-      const cc = p.country_code || countryFromPhone(p.phone_e164, rates) || "??";
-      counts[cc] = (counts[cc] ?? 0) + 1;
-    }
+    for (const p of recipientCountries) counts[p.country_code] = (counts[p.country_code] ?? 0) + 1;
     const hasMedia = !!s.mediaUrl;
     return Object.entries(counts).map(([cc, n]) => {
       const r = rates.find((x) => x.country_code === cc);
@@ -199,21 +215,35 @@ function NewCampaignPage() {
         segments: seg.segments,
         subtotal,
         priced: !!r,
+        excluded: excludedSet.has(cc),
       };
     }).sort((a, b) => b.subtotal - a.subtotal);
-  }, [audienceList, rates, seg.segments, s.mediaUrl]);
+  }, [recipientCountries, rates, seg.segments, s.mediaUrl, excludedSet]);
+
+  // Active rows = countries actually being sent to
+  const breakdown = useMemo(() => fullBreakdown.filter((b) => !b.excluded), [fullBreakdown]);
+  const activeRecipientCount = breakdown.reduce((a, b) => a + b.recipients, 0);
 
   const totalCost = +breakdown.reduce((a, b) => a + b.subtotal, 0).toFixed(4);
   const balance = Number(accountQ.data?.credit_balance ?? 0);
   const balanceAfter = +(balance - totalCost).toFixed(4);
-  const insufficient = totalCost > balance && audienceList.length > 0;
+  const insufficient = totalCost > balance && activeRecipientCount > 0;
 
-  // Block launch when any recipient country has no verified sender.
+  // Block launch when any (non-excluded) recipient country has no verified sender.
   const missingSenderCountries = useMemo(
     () => breakdown.filter((b) => !sendersByCountry[b.country_code]).map((b) => b.country_code),
     [breakdown, sendersByCountry],
   );
   const hasMissingSender = missingSenderCountries.length > 0 && breakdown.length > 0;
+
+  function toggleCountry(cc: string) {
+    setS((prev) => ({
+      ...prev,
+      excludedCountries: prev.excludedCountries.includes(cc)
+        ? prev.excludedCountries.filter((x) => x !== cc)
+        : [...prev.excludedCountries, cc],
+    }));
+  }
 
   const callTestSend = useServerFn(sendTestSms);
   const callTestUsage = useServerFn(getTestSendUsage);
@@ -259,10 +289,19 @@ function NewCampaignPage() {
   ): Promise<string | null> {
     if (!s.name.trim()) return null;
     const { data: u } = await supabase.auth.getUser();
+    const launching = targetStatus === "queued" || targetStatus === "scheduled";
+    // On launch, if the user excluded any country, narrow to explicit profile IDs
+    // so the dispatcher only sends to recipients in the kept countries.
+    const audiencePayload: any = { ...audience, excluded_countries: s.excludedCountries };
+    if (launching && s.excludedCountries.length > 0 && recipientCountries.length > 0) {
+      audiencePayload.include = [];
+      audiencePayload.exclude = [];
+      audiencePayload.profile_ids = includedProfileIds;
+    }
     const payload: any = {
       account_id: u.user!.id,
       name: s.name.trim(),
-      audience: audience as any,
+      audience: audiencePayload,
       message_body: bodyWithStop,
       media_url: s.mediaUrl || null,
       send_mode: s.sendMode,
@@ -308,7 +347,7 @@ function NewCampaignPage() {
     }, 1200);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, JSON.stringify(audience)]);
+  }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, JSON.stringify(audience), JSON.stringify(s.excludedCountries)]);
 
   async function saveCampaign(launch: boolean) {
     if (launch && insufficient) { toast.error("Insufficient balance — top up before launching."); return; }
@@ -518,14 +557,15 @@ function NewCampaignPage() {
           </Card>
 
           <div className="space-y-5">
-            <SenderRoutingCard breakdown={breakdown} sendersByCountry={sendersByCountry} />
+            <SenderRoutingCard breakdown={fullBreakdown} sendersByCountry={sendersByCountry} onToggleCountry={toggleCountry} />
+
             <CostPanel
               insufficient={insufficient}
               balance={balance}
               balanceAfter={balanceAfter}
               totalCost={totalCost}
               breakdown={breakdown}
-              audienceCount={audienceList.length}
+              audienceCount={activeRecipientCount}
               loading={audienceQ.isFetching || ratesQ.isFetching}
             />
           </div>
@@ -612,7 +652,7 @@ function NewCampaignPage() {
         <Card className="p-5 space-y-4">
           <div className="grid md:grid-cols-2 gap-4 text-sm">
             <ReviewItem label="Name" value={s.name} />
-            <ReviewItem label="Eligible audience" value={String(audienceList.length)} />
+            <ReviewItem label="Eligible audience" value={s.excludedCountries.length > 0 ? `${activeRecipientCount} (of ${audienceList.length}; ${s.excludedCountries.length} country skipped)` : String(audienceList.length)} />
             <ReviewItem label="Send mode" value={s.sendMode} />
             <ReviewItem label="Schedule" value={s.sendMode === "scheduled" ? new Date(s.scheduleAt).toLocaleString() : "—"} />
             <ReviewItem label="Segments / message" value={`${seg.segments} × ${seg.encoding}`} />
@@ -636,7 +676,7 @@ function NewCampaignPage() {
               </div>
             </div>
           )}
-          <SenderRoutingCard breakdown={breakdown} sendersByCountry={sendersByCountry} />
+          <SenderRoutingCard breakdown={fullBreakdown} sendersByCountry={sendersByCountry} onToggleCountry={toggleCountry} />
           <div>
             <Label>Final message</Label>
             <Card className="p-3 mt-1 bg-muted/30 whitespace-pre-wrap text-sm">{bodyWithStop}</Card>
@@ -879,9 +919,11 @@ function ListPicker({ lists, selected, onChange }: { lists: { id: string; name: 
 function SenderRoutingCard({
   breakdown,
   sendersByCountry,
+  onToggleCountry,
 }: {
-  breakdown: Array<{ country_code: string; country_name: string; recipients: number }>;
+  breakdown: Array<{ country_code: string; country_name: string; recipients: number; excluded?: boolean }>;
   sendersByCountry: Record<string, { sender_kind: string; phone_number: string | null; messaging_service_sid: string | null }>;
+  onToggleCountry?: (cc: string) => void;
 }) {
   function label(s: any) {
     if (!s) return "No verified sender";
@@ -890,13 +932,16 @@ function SenderRoutingCard({
     if (s.messaging_service_sid) return "Messaging Service";
     return s.sender_kind;
   }
+  const excludedCount = breakdown.filter((b) => b.excluded).length;
   return (
     <Card className="p-5 space-y-3">
       <div className="flex items-center gap-2">
         <div className="size-9 rounded-lg bg-primary/15 text-primary grid place-items-center"><Phone className="size-4" /></div>
         <div>
           <h3 className="font-semibold leading-tight">Sender routing</h3>
-          <p className="text-xs text-muted-foreground">Auto-selected per recipient country</p>
+          <p className="text-xs text-muted-foreground">
+            {onToggleCountry ? "Untick a country to skip it in this campaign" : "Auto-selected per recipient country"}
+          </p>
         </div>
       </div>
       {breakdown.length === 0 ? (
@@ -905,14 +950,29 @@ function SenderRoutingCard({
         <div className="border rounded-md overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-muted/40 text-muted-foreground">
-              <tr><th className="text-left p-2">Country</th><th className="text-left p-2">Sender</th><th className="text-right p-2">#</th></tr>
+              <tr>
+                {onToggleCountry && <th className="p-2 w-8"></th>}
+                <th className="text-left p-2">Country</th>
+                <th className="text-left p-2">Sender</th>
+                <th className="text-right p-2">#</th>
+              </tr>
             </thead>
             <tbody>
               {breakdown.map((b) => {
                 const sender = sendersByCountry[b.country_code];
+                const included = !b.excluded;
                 return (
-                  <tr key={b.country_code} className="border-t">
-                    <td className="p-2 font-medium">{b.country_name}</td>
+                  <tr key={b.country_code} className={`border-t ${b.excluded ? "opacity-50" : ""}`}>
+                    {onToggleCountry && (
+                      <td className="p-2 align-middle">
+                        <Checkbox
+                          checked={included}
+                          onCheckedChange={() => onToggleCountry(b.country_code)}
+                          aria-label={`Include ${b.country_name}`}
+                        />
+                      </td>
+                    )}
+                    <td className={`p-2 font-medium ${b.excluded ? "line-through" : ""}`}>{b.country_name}</td>
                     <td className="p-2">
                       {sender ? (
                         <span className="font-mono text-[11px]">{label(sender)}</span>
@@ -927,6 +987,11 @@ function SenderRoutingCard({
             </tbody>
           </table>
         </div>
+      )}
+      {excludedCount > 0 && (
+        <p className="text-[11px] text-muted-foreground">
+          {excludedCount} {excludedCount === 1 ? "country" : "countries"} skipped — those recipients won't receive this campaign.
+        </p>
       )}
       <p className="text-[11px] text-muted-foreground">
         Need a sender for another country? <Link to="/app/setup-sms" className="text-primary underline">Set up SMS</Link> or <Link to="/app/number-requests" className="text-primary underline">request a number</Link>.
