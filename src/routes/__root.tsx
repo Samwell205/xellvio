@@ -84,11 +84,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Send fast, reliable, compliant bulk SMS campaigns worldwide. Scheduling, analytics, sender IDs, and a developer API." },
       { property: "og:site_name", content: "Xellvio" },
       { property: "og:title", content: "Xellvio — Global Bulk SMS Platform" },
-      { property: "og:description", content: "Send fast, reliable, compliant bulk SMS campaigns worldwide." },
+      { property: "og:description", content: "Send fast, reliable, compliant bulk SMS campaigns worldwide. Scheduling, analytics, sender IDs, and a developer API." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Xellvio — Global Bulk SMS Platform" },
-      { name: "twitter:description", content: "Send fast, reliable, compliant bulk SMS campaigns worldwide." },
+      { name: "twitter:description", content: "Send fast, reliable, compliant bulk SMS campaigns worldwide. Scheduling, analytics, sender IDs, and a developer API." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/74e5da20-6d22-40e0-9f0a-22e55bedbb4c" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/74e5da20-6d22-40e0-9f0a-22e55bedbb4c" },
     ],
     links: [
       {
