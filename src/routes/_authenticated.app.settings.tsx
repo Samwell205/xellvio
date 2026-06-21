@@ -1,18 +1,59 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, AlertTriangle, Shield, Lock } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Shield, ShieldCheck, Clock, X, ArrowRight } from "lucide-react";
+import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({ meta: [{ title: "Settings — Xellvio" }] }),
   component: SettingsPage,
 });
+
+function TollfreeStatusCard() {
+  const load = useServerFn(getMyTollfreeVerification);
+  const { data, isLoading } = useQuery({
+    queryKey: ["tollfree-verification"],
+    queryFn: () => load(),
+  });
+  const asset = (data as any)?.asset ?? null;
+  const status = asset?.verification_sid ? (asset?.verification_status as string | null) : null;
+
+  let badge = (
+    <Badge variant="outline" className="gap-1"><Clock className="size-3" /> Not started</Badge>
+  );
+  let blurb = "Required to send SMS to US and Canadian recipients. Skip if you only send elsewhere.";
+  if (status === "verified") {
+    badge = <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" /> Approved</Badge>;
+    blurb = `Your toll-free number ${asset?.phone_number ?? ""} is approved for US/Canada delivery.`;
+  } else if (status === "rejected") {
+    badge = <Badge variant="destructive" className="gap-1"><X className="size-3" /> Rejected</Badge>;
+    blurb = asset?.friendly_rejection_reason ?? "Carrier rejected the submission — open to resubmit.";
+  } else if (status === "in_review" || status === "submitted") {
+    badge = <Badge className="gap-1 bg-blue-500 hover:bg-blue-500 text-white"><Clock className="size-3" /> In review</Badge>;
+    blurb = "Carrier is reviewing your submission (typically 1–3 weeks).";
+  }
+
+  return (
+    <Card className="p-6 space-y-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="font-semibold flex items-center gap-2"><ShieldCheck className="size-4" /> Toll-free verification (US/Canada)</h3>
+        {isLoading ? <Badge variant="outline">Loading…</Badge> : badge}
+      </div>
+      <p className="text-sm text-muted-foreground">{blurb}</p>
+      <Button asChild variant="outline" size="sm">
+        <Link to="/app/toll-free-verification">{status ? "Open verification" : "Start verification"} <ArrowRight className="size-3.5 ml-1" /></Link>
+      </Button>
+    </Card>
+  );
+}
 
 function SettingsPage() {
   const qc = useQueryClient();
