@@ -73,32 +73,92 @@ function AudiencePage() {
   });
 
   const profilesQ = useQuery({
-    queryKey: ["audience-profiles"],
+    queryKey: ["audience-profiles", listFilter],
     queryFn: async (): Promise<ProfileRow[]> => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, phone_e164, first_name, last_name, country_code, created_at, consents(status, channel)")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      const profiles = (data ?? []).map((p: any) => {
+      // When filtering by a specific list, load ALL of that list's members
+      // (paged through Supabase's 1000-row cap) so users see their full list.
+      let listProfileIds: string[] | null = null;
+      if (listFilter !== "all") {
+        listProfileIds = [];
+        const PAGE = 1000;
+        for (let offset = 0; ; offset += PAGE) {
+          const { data, error } = await sb
+            .from("profile_list_members")
+            .select("profile_id")
+            .eq("list_id", listFilter)
+            .range(offset, offset + PAGE - 1);
+          if (error) throw error;
+          const ids = (data ?? []).map((m: any) => m.profile_id);
+          listProfileIds.push(...ids);
+          if (ids.length < PAGE) break;
+        }
+        if (listProfileIds.length === 0) return [];
+      }
+
+      // Pull profiles (chunked when filtering by list; capped to most recent when "all")
+      const profiles: any[] = [];
+      if (listProfileIds) {
+        const CHUNK = 500;
+        for (let i = 0; i < listProfileIds.length; i += CHUNK) {
+          const chunk = listProfileIds.slice(i, i + CHUNK);
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("id, phone_e164, first_name, last_name, country_code, created_at, consents(status, channel)")
+            .in("id", chunk);
+          if (error) throw error;
+          profiles.push(...(data ?? []));
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id, phone_e164, first_name, last_name, country_code, created_at, consents(status, channel)")
+          .order("created_at", { ascending: false })
+          .limit(1000);
+        if (error) throw error;
+        profiles.push(...(data ?? []));
+      }
+
+      const mapped: ProfileRow[] = profiles.map((p: any) => {
         const sms = (p.consents ?? []).find((c: any) => c.channel === "sms");
         return { ...p, consent_status: sms?.status ?? "pending", list_ids: [] as string[] } as ProfileRow;
       });
-      // Fetch list memberships in a separate query
-      if (profiles.length > 0) {
-        const ids = profiles.map((p) => p.id);
-        const { data: mem } = await sb
-          .from("profile_list_members")
-          .select("profile_id,list_id")
-          .in("profile_id", ids);
+
+      // Hydrate list memberships for the visible profiles
+      if (mapped.length > 0) {
+        const ids = mapped.map((p) => p.id);
         const byProfile: Record<string, string[]> = {};
-        for (const m of (mem ?? []) as any[]) {
-          (byProfile[m.profile_id] ||= []).push(m.list_id);
+        const CHUNK = 500;
+        for (let i = 0; i < ids.length; i += CHUNK) {
+          const { data: mem } = await sb
+            .from("profile_list_members")
+            .select("profile_id,list_id")
+            .in("profile_id", ids.slice(i, i + CHUNK));
+          for (const m of (mem ?? []) as any[]) {
+            (byProfile[m.profile_id] ||= []).push(m.list_id);
+          }
         }
-        for (const p of profiles) p.list_ids = byProfile[p.id] ?? [];
+        for (const p of mapped) p.list_ids = byProfile[p.id] ?? [];
       }
-      return profiles;
+      mapped.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+      return mapped;
+    },
+  });
+
+  // Per-list totals (HEAD count) — independent of the loaded profile rows
+  const listCountsQ = useQuery({
+    queryKey: ["audience-list-counts", (listsQ.data ?? []).map((l) => l.id).join(",")],
+    enabled: (listsQ.data ?? []).length > 0,
+    queryFn: async (): Promise<Record<string, number>> => {
+      const out: Record<string, number> = {};
+      const all = listsQ.data ?? [];
+      await Promise.all(all.map(async (l) => {
+        const { count } = await sb
+          .from("profile_list_members")
+          .select("profile_id", { count: "exact", head: true })
+          .eq("list_id", l.id);
+        out[l.id] = count ?? 0;
+      }));
+      return out;
     },
   });
 
@@ -113,6 +173,7 @@ function AudiencePage() {
       return { total: total ?? 0, subs: subs ?? 0, supp: supp ?? 0 };
     },
   });
+
 
   const filtered = useMemo(() => {
     const rows = profilesQ.data ?? [];
@@ -131,6 +192,7 @@ function AudiencePage() {
     qc.invalidateQueries({ queryKey: ["audience-stats"] });
     qc.invalidateQueries({ queryKey: ["suppressions"] });
     qc.invalidateQueries({ queryKey: ["contact-lists"] });
+    qc.invalidateQueries({ queryKey: ["audience-list-counts"] });
   };
 
   const toggleConsent = useMutation({
@@ -244,9 +306,9 @@ function AudiencePage() {
         <button
           onClick={() => setListFilter("all")}
           className={`px-3 py-1 rounded-full text-xs border ${listFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"}`}
-        >All ({profilesQ.data?.length ?? 0})</button>
+        >All ({statsQ.data?.total ?? 0})</button>
         {(listsQ.data ?? []).map((l) => {
-          const count = (profilesQ.data ?? []).filter((p) => p.list_ids.includes(l.id)).length;
+          const count = listCountsQ.data?.[l.id] ?? 0;
           const on = listFilter === l.id;
           return (
             <button key={l.id} onClick={() => setListFilter(l.id)}
@@ -629,9 +691,16 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
   const [existingListId, setExistingListId] = useState<string>("");
   const [newListName, setNewListName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [progress, setProgress] = useState<{
+    phase: "validating" | "importing" | "attaching" | "done";
+    processed: number;
+    total: number;
+    label: string;
+  } | null>(null);
 
   function reset() {
     setPreview(null); setResult(null); setListMode("none"); setExistingListId(""); setNewListName("");
+    setProgress(null);
     if (fileRef.current) fileRef.current.value = "";
   }
 
@@ -672,6 +741,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
     if (!preview.detected.phone) { toast.error("No phone column detected. Rename it to 'phone' and try again."); return; }
     setBusy(true);
     setResult(null);
+    setProgress({ phase: "validating", processed: 0, total: preview.rows.length, label: "Validating phone numbers…" });
     try {
       const { data: u } = await supabase.auth.getUser();
       const accountId = u.user!.id;
@@ -741,6 +811,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
         });
       });
 
+      setProgress({ phase: "importing", processed: 0, total: valid.length, label: `Importing 0 / ${valid.length} contacts…` });
       let inserted = 0;
       const insertedIds: string[] = [];
       for (let i = 0; i < valid.length; i += 500) {
@@ -759,14 +830,20 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
           }));
           await supabase.from("consents").upsert(consents, { onConflict: "profile_id,channel" });
         }
+        const processed = Math.min(i + 500, valid.length);
+        setProgress({ phase: "importing", processed, total: valid.length, label: `Importing ${processed} / ${valid.length} contacts…` });
       }
 
       if (targetListId && insertedIds.length > 0) {
+        setProgress({ phase: "attaching", processed: 0, total: insertedIds.length, label: `Adding to list 0 / ${insertedIds.length}…` });
         const members = insertedIds.map((pid) => ({ list_id: targetListId!, profile_id: pid, account_id: accountId }));
         for (let i = 0; i < members.length; i += 500) {
           await sb.from("profile_list_members").upsert(members.slice(i, i + 500), { onConflict: "list_id,profile_id" });
+          const processed = Math.min(i + 500, members.length);
+          setProgress({ phase: "attaching", processed, total: members.length, label: `Adding to list ${processed} / ${members.length}…` });
         }
       }
+      setProgress({ phase: "done", processed: valid.length, total: valid.length, label: "Done" });
 
       setResult({ inserted, invalid: errors.length, duplicates, errors });
       if (inserted > 0) toast.success(`Imported ${inserted} contacts${targetListId ? " into list" : ""}`);
@@ -859,7 +936,28 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
             </Card>
           )}
 
-          {busy && <p className="text-sm text-muted-foreground">Importing…</p>}
+          {busy && progress && (
+            <Card className="p-3 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">{progress.label}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">
+                  {progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0}%
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${progress.total > 0 ? (progress.processed / progress.total) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {progress.phase === "validating" && "Parsing CSV and validating phone numbers."}
+                {progress.phase === "importing" && "Saving contacts in batches of 500. Keep this window open."}
+                {progress.phase === "attaching" && "Adding imported contacts to your list."}
+                {progress.phase === "done" && "Wrapping up…"}
+              </div>
+            </Card>
+          )}
 
           {result && (
             <Card className="p-3 text-sm space-y-2">

@@ -106,11 +106,21 @@ function NewCampaignPage() {
     queryKey: ["list-members-expand", selectedListIds],
     enabled: selectedListIds.length > 0,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profile_list_members")
-        .select("profile_id")
-        .in("list_id", selectedListIds);
-      const ids = Array.from(new Set((data ?? []).map((m: any) => m.profile_id)));
+      // Page through profile_list_members so lists >1000 are fully expanded.
+      const all: string[] = [];
+      const PAGE = 1000;
+      for (let offset = 0; ; offset += PAGE) {
+        const { data, error } = await supabase
+          .from("profile_list_members")
+          .select("profile_id")
+          .in("list_id", selectedListIds)
+          .range(offset, offset + PAGE - 1);
+        if (error) throw error;
+        const batch = (data ?? []).map((m: any) => m.profile_id);
+        all.push(...batch);
+        if (batch.length < PAGE) break;
+      }
+      const ids = Array.from(new Set(all));
       setS((prev) => {
         const manual = prev.profileIds.filter((id) => !prev._fromLists?.includes(id));
         return { ...prev, profileIds: Array.from(new Set([...manual, ...ids])), _fromLists: ids } as any;
