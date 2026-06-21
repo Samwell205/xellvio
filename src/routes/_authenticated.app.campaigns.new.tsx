@@ -179,14 +179,27 @@ function NewCampaignPage() {
   );
   const seg = calculateSegments(bodyWithStop);
 
-  // Per-country breakdown
-  const breakdown = useMemo(() => {
-    if (rates.length === 0 || audienceList.length === 0) return [];
+  // Resolve country code per recipient (memoized)
+  const recipientCountries = useMemo(() => {
+    return audienceList.map((p: any) => ({
+      profile_id: p.profile_id,
+      country_code: p.country_code || countryFromPhone(p.phone_e164, rates) || "??",
+    }));
+  }, [audienceList, rates]);
+
+  const excludedSet = useMemo(() => new Set(s.excludedCountries), [s.excludedCountries]);
+
+  // Profile IDs that survive country exclusion (used at launch time)
+  const includedProfileIds = useMemo(
+    () => recipientCountries.filter((r) => !excludedSet.has(r.country_code)).map((r) => r.profile_id),
+    [recipientCountries, excludedSet],
+  );
+
+  // Per-country breakdown — includes ALL countries; `excluded` flag drives UI + cost skip
+  const fullBreakdown = useMemo(() => {
+    if (rates.length === 0 || recipientCountries.length === 0) return [];
     const counts: Record<string, number> = {};
-    for (const p of audienceList) {
-      const cc = p.country_code || countryFromPhone(p.phone_e164, rates) || "??";
-      counts[cc] = (counts[cc] ?? 0) + 1;
-    }
+    for (const p of recipientCountries) counts[p.country_code] = (counts[p.country_code] ?? 0) + 1;
     const hasMedia = !!s.mediaUrl;
     return Object.entries(counts).map(([cc, n]) => {
       const r = rates.find((x) => x.country_code === cc);
@@ -201,21 +214,35 @@ function NewCampaignPage() {
         segments: seg.segments,
         subtotal,
         priced: !!r,
+        excluded: excludedSet.has(cc),
       };
     }).sort((a, b) => b.subtotal - a.subtotal);
-  }, [audienceList, rates, seg.segments, s.mediaUrl]);
+  }, [recipientCountries, rates, seg.segments, s.mediaUrl, excludedSet]);
+
+  // Active rows = countries actually being sent to
+  const breakdown = useMemo(() => fullBreakdown.filter((b) => !b.excluded), [fullBreakdown]);
+  const activeRecipientCount = breakdown.reduce((a, b) => a + b.recipients, 0);
 
   const totalCost = +breakdown.reduce((a, b) => a + b.subtotal, 0).toFixed(4);
   const balance = Number(accountQ.data?.credit_balance ?? 0);
   const balanceAfter = +(balance - totalCost).toFixed(4);
-  const insufficient = totalCost > balance && audienceList.length > 0;
+  const insufficient = totalCost > balance && activeRecipientCount > 0;
 
-  // Block launch when any recipient country has no verified sender.
+  // Block launch when any (non-excluded) recipient country has no verified sender.
   const missingSenderCountries = useMemo(
     () => breakdown.filter((b) => !sendersByCountry[b.country_code]).map((b) => b.country_code),
     [breakdown, sendersByCountry],
   );
   const hasMissingSender = missingSenderCountries.length > 0 && breakdown.length > 0;
+
+  function toggleCountry(cc: string) {
+    setS((prev) => ({
+      ...prev,
+      excludedCountries: prev.excludedCountries.includes(cc)
+        ? prev.excludedCountries.filter((x) => x !== cc)
+        : [...prev.excludedCountries, cc],
+    }));
+  }
 
   const callTestSend = useServerFn(sendTestSms);
   const callTestUsage = useServerFn(getTestSendUsage);
