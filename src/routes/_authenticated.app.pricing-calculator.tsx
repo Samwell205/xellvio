@@ -84,7 +84,7 @@ function PricingCalculatorPage() {
 
         <Card className="p-5 space-y-3 self-start bg-gradient-to-br from-primary/10 to-transparent">
           <div className="text-xs uppercase text-muted-foreground tracking-wide">Estimate</div>
-          <Row label={`Rate for ${rate?.country_name ?? country}`} value={`${formatRate(unit)} per segment`} />
+          <Row label={`Rate for ${rate?.country ?? country}`} value={`${formatRate(unit)} per segment`} />
           <Row label="Segments per message" value={String(seg.segments)} />
           <Row label="Cost per SMS" value={formatUSD(perSms)} />
           <div className="border-t pt-3">
