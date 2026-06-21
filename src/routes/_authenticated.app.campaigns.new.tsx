@@ -565,7 +565,7 @@ function NewCampaignPage() {
               balanceAfter={balanceAfter}
               totalCost={totalCost}
               breakdown={breakdown}
-              audienceCount={audienceList.length}
+              audienceCount={activeRecipientCount}
               loading={audienceQ.isFetching || ratesQ.isFetching}
             />
           </div>
