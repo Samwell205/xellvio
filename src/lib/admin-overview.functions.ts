@@ -67,7 +67,7 @@ export const adminListMessages = createServerFn({ method: "GET" })
     await ensureAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const [msgsRes, campRes, accRes] = await Promise.all([
-      supabaseAdmin.from("messages").select("id,phone_e164,status,cost,country_code,error_code,created_at,campaign_id,segments_count").order("created_at", { ascending: false }).limit(200),
+      supabaseAdmin.from("messages").select("id,phone_e164,status,cost,country_code,error_code,created_at,campaign_id,segments_count,rendered_body").order("created_at", { ascending: false }).limit(200),
       supabaseAdmin.from("campaigns").select("id,account_id,name"),
       supabaseAdmin.from("accounts").select("id,email,company,legal_business_name"),
     ]);

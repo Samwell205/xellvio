@@ -28,7 +28,8 @@ function AdminMessagingPage() {
       const s = search.toLowerCase();
       return (r.phone_e164 ?? "").toLowerCase().includes(s) ||
         (r.account_label ?? "").toLowerCase().includes(s) ||
-        (r.campaign_name ?? "").toLowerCase().includes(s);
+        (r.campaign_name ?? "").toLowerCase().includes(s) ||
+        (r.rendered_body ?? "").toLowerCase().includes(s);
     });
   }, [q.data, search, statusFilter]);
 
@@ -56,7 +57,7 @@ function AdminMessagingPage() {
       </div>
 
       <Card className="p-3 flex flex-wrap gap-2 items-center">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search number, tenant…" className="max-w-xs" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search number, tenant, body…" className="max-w-xs" />
         <div className="flex gap-1 flex-wrap">
           {statuses.map((s) => (
             <button key={s} onClick={() => setStatusFilter(s)} className={`text-xs px-3 py-1 rounded-md border ${statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}>
@@ -78,6 +79,7 @@ function AdminMessagingPage() {
                   <th className="p-3">Tenant</th>
                   <th className="p-3">Campaign</th>
                   <th className="p-3">To</th>
+                  <th className="p-3">Content</th>
                   <th className="p-3">Country</th>
                   <th className="p-3 text-right">Cost</th>
                   <th className="p-3">Status</th>
@@ -86,18 +88,23 @@ function AdminMessagingPage() {
               </thead>
               <tbody>
                 {filtered.map((m: any) => (
-                  <tr key={m.id} className="border-t">
+                  <tr key={m.id} className="border-t align-top">
                     <td className="p-3 text-muted-foreground whitespace-nowrap">{new Date(m.created_at).toLocaleString()}</td>
                     <td className="p-3 truncate max-w-[180px]">{m.account_label}</td>
                     <td className="p-3 truncate max-w-[160px] text-muted-foreground">{m.campaign_name ?? "—"}</td>
                     <td className="p-3 tabular-nums">{m.phone_e164}</td>
+                    <td className="p-3 max-w-[320px]">
+                      <div className="text-xs whitespace-pre-wrap break-words line-clamp-3" title={m.rendered_body ?? ""}>
+                        {m.rendered_body ?? <span className="text-muted-foreground">—</span>}
+                      </div>
+                    </td>
                     <td className="p-3">{m.country_code ?? "—"}</td>
                     <td className="p-3 text-right tabular-nums">{m.cost ? formatUSD(Number(m.cost)) : "—"}</td>
                     <td className="p-3"><Badge variant={m.status === "delivered" ? "default" : m.status === "failed" || m.status === "undelivered" ? "destructive" : "secondary"}>{m.status}</Badge></td>
                     <td className="p-3 text-xs text-destructive">{m.error_code ?? ""}</td>
                   </tr>
                 ))}
-                {filtered.length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No messages match.</td></tr>}
+                {filtered.length === 0 && <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">No messages match.</td></tr>}
               </tbody>
             </table>
           </div>

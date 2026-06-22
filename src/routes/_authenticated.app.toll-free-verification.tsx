@@ -819,7 +819,10 @@ function TollfreeVerificationPage() {
         </fieldset>
 
         {!isLocked && (
-          <div className="flex items-center justify-end gap-3">
+          <div className="flex flex-col items-end gap-2">
+            <div className="text-xs text-muted-foreground rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+              A one-time <strong>$5</strong> fee will be deducted from your credit balance for the toll-free number &amp; carrier verification. Resubmissions after a rejection are free.
+            </div>
             <Button type="submit" disabled={!canSubmit || submitMut.isPending} size="lg">
               {submitMut.isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
               {status === "rejected"

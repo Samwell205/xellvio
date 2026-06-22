@@ -17,6 +17,15 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => submitSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+
+    // Charge the one-time $5 phone-number fee (idempotent per country).
+    const { chargeNumberVerificationFee } = await import("./number-fee.server");
+    await chargeNumberVerificationFee({
+      accountId: userId,
+      marker: `number-request:${data.country}:${data.number_type}`,
+      description: `Phone number fee — ${data.country} ${data.number_type}`,
+    });
+
     const { error, data: row } = await supabase
       .from("number_requests")
       .insert({

@@ -562,6 +562,9 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
               <Label>Expected monthly volume</Label>
               <Input type="number" min={0} value={form.expected_monthly_volume} onChange={(e) => setForm({ ...form, expected_monthly_volume: Number(e.target.value) })} />
             </div>
+            <div className="rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs">
+              A one-time <strong>$5</strong> fee will be deducted from your credit balance to cover the phone-number provisioning &amp; carrier verification. You won't be re-charged if you retry the same request.
+            </div>
           </div>
         )}
 
