@@ -897,6 +897,7 @@ function TollfreeVerificationPage() {
           </div>
         )}
       </form>
+      )}
 
       {isLoading && (
         <div className="text-sm text-muted-foreground flex items-center gap-2">
