@@ -28,7 +28,8 @@ function AdminMessagingPage() {
       const s = search.toLowerCase();
       return (r.phone_e164 ?? "").toLowerCase().includes(s) ||
         (r.account_label ?? "").toLowerCase().includes(s) ||
-        (r.campaign_name ?? "").toLowerCase().includes(s);
+        (r.campaign_name ?? "").toLowerCase().includes(s) ||
+        (r.rendered_body ?? "").toLowerCase().includes(s);
     });
   }, [q.data, search, statusFilter]);
 
