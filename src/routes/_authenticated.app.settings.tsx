@@ -114,7 +114,7 @@ function GorgiasCard() {
         </div>
       </div>
       <div className="flex gap-2">
-        <Button onClick={() => save.mutate()} disabled={save.isPending || !form.domain || !form.email || !form.apiKey}>
+        <Button onClick={() => save.mutate()} disabled={save.isPending || !form.domain || !form.email || (!connected && !form.apiKey)}>
           {connected ? "Update connection" : "Connect Gorgias"}
         </Button>
         {connected && (
