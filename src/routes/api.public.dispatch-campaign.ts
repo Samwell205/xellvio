@@ -434,6 +434,24 @@ async function dispatchOne(
               });
             }
             queued++;
+
+            // Mirror this outbound to the tenant's Gorgias helpdesk (no-op if not connected).
+            try {
+              const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
+              const ourNumber =
+                sender.kind === "tenant"
+                  ? (sender.assets?.find((a: any) => a.country_code === m.country_code)?.phone_number ?? sender.fromNumber ?? null)
+                  : null;
+              await forwardSmsToGorgias({
+                accountId: campaign.account_id,
+                phone: m.phone_e164,
+                fromNumber: ourNumber,
+                body: messageBody,
+                direction: "outbound",
+              });
+            } catch (e) {
+              console.error("[dispatch] gorgias mirror failed", e);
+            }
           }
         } catch (e) {
           await supabaseAdmin

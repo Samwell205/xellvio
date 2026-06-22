@@ -93,6 +93,30 @@ export const Route = createFileRoute("/api/public/twilio-inbound")({
           return twiml("You're resubscribed. Reply STOP to opt out.");
         }
 
+        // Forward the inbound message to each matched tenant's Gorgias helpdesk (if connected).
+        const rawBody = (params.Body ?? "").trim();
+        if (rawBody && (profiles?.length ?? 0) > 0) {
+          const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
+          const seen = new Set<string>();
+          await Promise.all(
+            (profiles ?? [])
+              .filter((p) => {
+                if (seen.has(p.account_id)) return false;
+                seen.add(p.account_id);
+                return true;
+              })
+              .map((p) =>
+                forwardSmsToGorgias({
+                  accountId: p.account_id,
+                  phone: from,
+                  fromNumber: to ?? null,
+                  body: rawBody,
+                  direction: "inbound",
+                }),
+              ),
+          );
+        }
+
         return twiml();
       },
     },

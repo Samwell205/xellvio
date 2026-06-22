@@ -28,6 +28,10 @@ export type Database = {
           credit_balance: number
           email: string | null
           full_name: string | null
+          gorgias_api_key_enc: string | null
+          gorgias_domain: string | null
+          gorgias_email: string | null
+          gorgias_enabled: boolean
           id: string
           legal_business_name: string | null
           monthly_volume_estimate: number | null
@@ -67,6 +71,10 @@ export type Database = {
           credit_balance?: number
           email?: string | null
           full_name?: string | null
+          gorgias_api_key_enc?: string | null
+          gorgias_domain?: string | null
+          gorgias_email?: string | null
+          gorgias_enabled?: boolean
           id: string
           legal_business_name?: string | null
           monthly_volume_estimate?: number | null
@@ -106,6 +114,10 @@ export type Database = {
           credit_balance?: number
           email?: string | null
           full_name?: string | null
+          gorgias_api_key_enc?: string | null
+          gorgias_domain?: string | null
+          gorgias_email?: string | null
+          gorgias_enabled?: boolean
           id?: string
           legal_business_name?: string | null
           monthly_volume_estimate?: number | null
@@ -632,6 +644,44 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: false
             referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gorgias_ticket_map: {
+        Row: {
+          account_id: string
+          created_at: string
+          gorgias_customer_id: number | null
+          gorgias_ticket_id: number
+          id: string
+          phone_e164: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          gorgias_customer_id?: number | null
+          gorgias_ticket_id: number
+          id?: string
+          phone_e164: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          gorgias_customer_id?: number | null
+          gorgias_ticket_id?: number
+          id?: string
+          phone_e164?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gorgias_ticket_map_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]

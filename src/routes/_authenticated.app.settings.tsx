@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, AlertTriangle, Shield, ShieldCheck, Clock, X, ArrowRight } from "lucide-react";
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
+import { getGorgiasSettings, saveGorgiasSettings, disableGorgias } from "@/lib/gorgias.functions";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({ meta: [{ title: "Settings — Xellvio" }] }),
@@ -51,6 +52,75 @@ function TollfreeStatusCard() {
       <Button asChild variant="outline" size="sm">
         <Link to="/app/toll-free-verification">{status ? "Open verification" : "Start verification"} <ArrowRight className="size-3.5 ml-1" /></Link>
       </Button>
+    </Card>
+  );
+}
+
+function GorgiasCard() {
+  const qc = useQueryClient();
+  const loadFn = useServerFn(getGorgiasSettings);
+  const saveFn = useServerFn(saveGorgiasSettings);
+  const disableFn = useServerFn(disableGorgias);
+  const q = useQuery({ queryKey: ["gorgias-settings"], queryFn: () => loadFn() });
+  const [form, setForm] = useState({ domain: "", email: "", apiKey: "" });
+  useEffect(() => {
+    if (q.data) setForm((f) => ({ domain: q.data.domain ?? "", email: q.data.email ?? "", apiKey: f.apiKey }));
+  }, [q.data]);
+
+  const save = useMutation({
+    mutationFn: () => saveFn({ data: { ...form, enabled: true } }),
+    onSuccess: () => {
+      toast.success("Gorgias connected — SMS replies will appear as tickets.");
+      setForm((f) => ({ ...f, apiKey: "" }));
+      qc.invalidateQueries({ queryKey: ["gorgias-settings"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const disconnect = useMutation({
+    mutationFn: () => disableFn(),
+    onSuccess: () => { toast.success("Gorgias disconnected"); qc.invalidateQueries({ queryKey: ["gorgias-settings"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const connected = q.data?.enabled && q.data?.hasApiKey;
+
+  return (
+    <Card className="p-6 space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h3 className="font-semibold">Gorgias helpdesk</h3>
+        {connected ? (
+          <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" /> Connected</Badge>
+        ) : (
+          <Badge variant="outline">Not connected</Badge>
+        )}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Connect your Gorgias account so every outbound SMS and every customer reply lands on one rolling ticket per phone number — agents can reply from Gorgias and you keep the full thread in one place.
+      </p>
+      <div className="grid md:grid-cols-3 gap-3">
+        <div className="space-y-1.5">
+          <Label>Gorgias subdomain</Label>
+          <Input placeholder="mybrand" value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} />
+          <p className="text-xs text-muted-foreground">From mybrand.gorgias.com</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Account email</Label>
+          <Input type="email" placeholder="you@yourbrand.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>API key</Label>
+          <Input type="password" placeholder={q.data?.hasApiKey ? "•••••••• (saved)" : "Paste API key"} value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />
+          <p className="text-xs text-muted-foreground">Settings → REST API → Generate.</p>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <Button onClick={() => save.mutate()} disabled={save.isPending || !form.domain || !form.email || !form.apiKey}>
+          {connected ? "Update connection" : "Connect Gorgias"}
+        </Button>
+        {connected && (
+          <Button variant="outline" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}>Disconnect</Button>
+        )}
+      </div>
     </Card>
   );
 }
@@ -122,6 +192,7 @@ function SettingsPage() {
       )}
 
       <TollfreeStatusCard />
+      <GorgiasCard />
 
       <Card className="p-6 space-y-3">
         <h3 className="font-semibold">SMS integration</h3>
