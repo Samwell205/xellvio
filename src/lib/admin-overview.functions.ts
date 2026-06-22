@@ -176,14 +176,37 @@ export const adminListTollfreeAttempts = createServerFn({ method: "GET" })
     if (attemptsRes.error) throw new Error(attemptsRes.error.message);
     if (accountsRes.error) throw new Error(accountsRes.error.message);
     const accountMap = new Map((accountsRes.data ?? []).map((a: any) => [a.id, a]));
+
+    const verificationSids = Array.from(
+      new Set(
+        (attemptsRes.data ?? [])
+          .map((a: any) => a.verification_sid)
+          .filter((sid: string | null): sid is string => !!sid),
+      ),
+    );
+    let assetMap = new Map<string, any>();
+    if (verificationSids.length > 0) {
+      const { data: assets } = await (supabaseAdmin as any)
+        .from("sender_assets")
+        .select("verification_sid,verification_status,rejection_reason,friendly_rejection_reason,last_synced_at")
+        .in("verification_sid", verificationSids);
+      assetMap = new Map((assets ?? []).map((a: any) => [a.verification_sid, a]));
+    }
+
     return (attemptsRes.data ?? []).map((attempt: any) => {
       const account = accountMap.get(attempt.account_id);
+      const asset = attempt.verification_sid ? assetMap.get(attempt.verification_sid) : null;
       return {
         ...attempt,
         account_label: account?.legal_business_name || account?.company || account?.email || attempt.account_id,
         account_email: account?.email ?? null,
         actor_label:
           account?.full_name || account?.email || (attempt.actor_user_id === attempt.account_id ? "Account owner" : attempt.actor_user_id),
+        verification_status: asset?.verification_status ?? null,
+        rejection_reason: asset?.rejection_reason ?? null,
+        friendly_rejection_reason: asset?.friendly_rejection_reason ?? null,
+        last_synced_at: asset?.last_synced_at ?? null,
       };
     });
   });
+

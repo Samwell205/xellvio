@@ -33,7 +33,8 @@ function AdminTollfreeAttemptsPage() {
               <thead className="bg-muted/50 text-left">
                 <tr>
                   <th className="p-3">When</th>
-                  <th className="p-3">Status</th>
+                  <th className="p-3">Submission</th>
+                  <th className="p-3">Verification result</th>
                   <th className="p-3">Tenant / Actor</th>
                   <th className="p-3">Number</th>
                   <th className="p-3">Verification SID</th>
@@ -46,6 +47,7 @@ function AdminTollfreeAttemptsPage() {
                   <tr key={attempt.id} className="border-t align-top">
                     <td className="p-3 text-muted-foreground whitespace-nowrap">{new Date(attempt.created_at).toLocaleString()}</td>
                     <td className="p-3"><AttemptBadge status={attempt.attempt_status} /></td>
+                    <td className="p-3"><VerificationBadge status={attempt.verification_status} /></td>
                     <td className="p-3">
                       <div className="font-medium">{attempt.account_label}</div>
                       <div className="text-xs text-muted-foreground">{attempt.actor_label}</div>
@@ -62,6 +64,9 @@ function AdminTollfreeAttemptsPage() {
                       {attempt.twilio_more_info && <div className="text-muted-foreground max-w-56 truncate">{attempt.twilio_more_info}</div>}
                     </td>
                     <td className="p-3 max-w-md">
+                      {(attempt.friendly_rejection_reason || attempt.rejection_reason) && (
+                        <div className="mb-2 text-destructive font-medium">{attempt.friendly_rejection_reason ?? attempt.rejection_reason}</div>
+                      )}
                       {(attempt.friendly_failure_reason || attempt.failure_reason) && (
                         <div className="mb-2 text-destructive font-medium">{attempt.friendly_failure_reason ?? attempt.failure_reason}</div>
                       )}
@@ -71,7 +76,8 @@ function AdminTollfreeAttemptsPage() {
                     </td>
                   </tr>
                 ))}
-                {(q.data ?? []).length === 0 && <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No toll-free verification attempts yet.</td></tr>}
+                {(q.data ?? []).length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No toll-free verification attempts yet.</td></tr>}
+
               </tbody>
             </table>
           </div>
@@ -89,4 +95,16 @@ function AttemptBadge({ status }: { status: string }) {
       {status.replaceAll("_", " ")}
     </Badge>
   );
+}
+
+function VerificationBadge({ status }: { status: string | null }) {
+  if (!status) return <span className="text-xs text-muted-foreground">Pending</span>;
+  const map: Record<string, { variant: "default" | "destructive" | "outline" | "secondary"; label: string }> = {
+    verified: { variant: "default", label: "Approved" },
+    rejected: { variant: "destructive", label: "Rejected" },
+    in_review: { variant: "secondary", label: "In review" },
+    submitted: { variant: "outline", label: "Submitted" },
+  };
+  const cfg = map[status] ?? { variant: "outline" as const, label: status.replaceAll("_", " ") };
+  return <Badge variant={cfg.variant} className="whitespace-nowrap">{cfg.label}</Badge>;
 }
