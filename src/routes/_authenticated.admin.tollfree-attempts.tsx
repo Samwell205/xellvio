@@ -96,3 +96,15 @@ function AttemptBadge({ status }: { status: string }) {
     </Badge>
   );
 }
+
+function VerificationBadge({ status }: { status: string | null }) {
+  if (!status) return <span className="text-xs text-muted-foreground">Pending</span>;
+  const map: Record<string, { variant: "default" | "destructive" | "outline" | "secondary"; label: string }> = {
+    verified: { variant: "default", label: "Approved" },
+    rejected: { variant: "destructive", label: "Rejected" },
+    in_review: { variant: "secondary", label: "In review" },
+    submitted: { variant: "outline", label: "Submitted" },
+  };
+  const cfg = map[status] ?? { variant: "outline" as const, label: status.replaceAll("_", " ") };
+  return <Badge variant={cfg.variant} className="whitespace-nowrap">{cfg.label}</Badge>;
+}
