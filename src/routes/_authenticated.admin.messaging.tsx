@@ -57,7 +57,7 @@ function AdminMessagingPage() {
       </div>
 
       <Card className="p-3 flex flex-wrap gap-2 items-center">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search number, tenant…" className="max-w-xs" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search number, tenant, body…" className="max-w-xs" />
         <div className="flex gap-1 flex-wrap">
           {statuses.map((s) => (
             <button key={s} onClick={() => setStatusFilter(s)} className={`text-xs px-3 py-1 rounded-md border ${statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}>
