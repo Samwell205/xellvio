@@ -38,15 +38,28 @@ export const saveGorgiasSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => SaveSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { userId } = context;
-    const { encryptToken } = await import("./tenant-crypto.server");
+    const { userId, supabase } = context;
+    const { encryptToken, decryptToken } = await import("./tenant-crypto.server");
     const { verifyGorgias } = await import("./gorgias.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Verify creds against Gorgias before saving so we never store a broken key.
-    await verifyGorgias({ domain: data.domain, email: data.email, apiKey: data.apiKey });
+    // If the user didn't paste a new API key, reuse the saved one.
+    let apiKey = data.apiKey;
+    if (!apiKey) {
+      const { data: existing } = await supabase
+        .from("accounts")
+        .select("gorgias_api_key_enc")
+        .eq("id", userId)
+        .maybeSingle();
+      const enc = existing?.gorgias_api_key_enc as string | null | undefined;
+      if (!enc) throw new Error("Paste your Gorgias API key to connect.");
+      apiKey = decryptToken(enc);
+    }
 
-    const enc = encryptToken(data.apiKey);
+    // Verify creds against Gorgias before saving so we never store a broken key.
+    await verifyGorgias({ domain: data.domain, email: data.email, apiKey });
+
+    const enc = encryptToken(apiKey);
     const { error } = await supabaseAdmin
       .from("accounts")
       .update({
