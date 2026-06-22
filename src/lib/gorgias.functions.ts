@@ -13,7 +13,7 @@ const SaveSchema = z.object({
       message: "Subdomain should be just the part before .gorgias.com (letters, numbers, hyphens) — e.g. 'mybrand' from mybrand.gorgias.com",
     }),
   email: z.string().trim().email().max(200),
-  apiKey: z.string().trim().min(10).max(500),
+  apiKey: z.string().trim().max(500).optional().transform((s) => (s ? s : undefined)),
   enabled: z.boolean().optional(),
 });
 
