@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, AlertTriangle, Shield, ShieldCheck, Clock, X, ArrowRight } from "lucide-react";
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
+import { getGorgiasSettings, saveGorgiasSettings, disableGorgias } from "@/lib/gorgias.functions";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({ meta: [{ title: "Settings — Xellvio" }] }),
