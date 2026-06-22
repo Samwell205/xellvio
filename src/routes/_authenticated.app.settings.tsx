@@ -123,6 +123,7 @@ function SettingsPage() {
       )}
 
       <TollfreeStatusCard />
+      <GorgiasCard />
 
       <Card className="p-6 space-y-3">
         <h3 className="font-semibold">SMS integration</h3>
