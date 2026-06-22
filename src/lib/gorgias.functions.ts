@@ -3,7 +3,15 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
 const SaveSchema = z.object({
-  domain: z.string().trim().min(1).max(120),
+  domain: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .transform((s) => s.replace(/^https?:\/\//, "").replace(/\.gorgias\.com.*$/i, "").replace(/\/.*$/, ""))
+    .refine((s) => /^[a-zA-Z0-9][a-zA-Z0-9-]{1,62}$/.test(s), {
+      message: "Subdomain should be just the part before .gorgias.com (letters, numbers, hyphens) — e.g. 'mybrand' from mybrand.gorgias.com",
+    }),
   email: z.string().trim().email().max(200),
   apiKey: z.string().trim().min(10).max(500),
   enabled: z.boolean().optional(),
