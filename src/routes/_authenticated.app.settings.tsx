@@ -69,10 +69,10 @@ function GorgiasCard() {
 
   const save = useMutation({
     mutationFn: () => saveFn({ data: { ...form, enabled: true } }),
-    onSuccess: () => {
-      toast.success("Gorgias connected — SMS replies will appear as tickets.");
+    onSuccess: async () => {
       setForm((f) => ({ ...f, apiKey: "" }));
-      qc.invalidateQueries({ queryKey: ["gorgias-settings"] });
+      await qc.refetchQueries({ queryKey: ["gorgias-settings"] });
+      toast.success("Gorgias connected — SMS replies will appear as tickets.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
