@@ -219,6 +219,21 @@ function TollfreeVerificationPage() {
   const load = useServerFn(getMyTollfreeVerification);
   const submit = useServerFn(submitTollfreeVerification);
   const refresh = useServerFn(refreshTollfreeVerification);
+  const feeStatusFn = useServerFn(getTollfreeFeeStatus);
+  const payFeeFn = useServerFn(payTollfreeFee);
+
+  const feeQuery = useQuery({
+    queryKey: ["tollfree-fee-status"],
+    queryFn: () => feeStatusFn(),
+  });
+  const payFeeMut = useMutation({
+    mutationFn: () => payFeeFn(),
+    onSuccess: () => {
+      toast.success("Verification fee paid. You can now fill in the details.");
+      qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Payment failed"),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["tollfree-verification"],
