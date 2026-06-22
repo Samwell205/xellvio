@@ -1197,3 +1197,49 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
       friendlyRejectionReason: reason ? friendlyReason(reason) : null,
     };
   });
+
+const TOLLFREE_FEE_MARKER = "tollfree-verification";
+const TOLLFREE_FEE_TAG = `[number-fee:${TOLLFREE_FEE_MARKER}]`;
+
+export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { NUMBER_VERIFICATION_FEE_USD } = await import("./number-fee.server");
+
+    const [{ data: existing }, { data: acct }] = await Promise.all([
+      supabaseAdmin
+        .from("credit_transactions")
+        .select("id")
+        .eq("account_id", userId)
+        .eq("type", "debit")
+        .ilike("description", `%${TOLLFREE_FEE_TAG}%`)
+        .limit(1)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("accounts")
+        .select("credit_balance")
+        .eq("id", userId)
+        .single(),
+    ]);
+
+    return {
+      paid: !!existing,
+      fee: NUMBER_VERIFICATION_FEE_USD,
+      balance: Number(acct?.credit_balance ?? 0),
+    };
+  });
+
+export const payTollfreeFee = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { userId } = context;
+    const { chargeNumberVerificationFee } = await import("./number-fee.server");
+    const res = await chargeNumberVerificationFee({
+      accountId: userId,
+      marker: TOLLFREE_FEE_MARKER,
+      description: "Toll-free phone number & verification fee",
+    });
+    return { ok: true as const, ...res };
+  });
