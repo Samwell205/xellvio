@@ -748,6 +748,15 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // One-time $5 phone-number / verification fee (idempotent — won't re-charge on resubmit).
+    const { chargeNumberVerificationFee } = await import("./number-fee.server");
+    await chargeNumberVerificationFee({
+      accountId: userId,
+      marker: "tollfree-verification",
+      description: "Toll-free phone number & verification fee",
+    });
+
     const attemptId = await createAttemptLog(supabaseAdmin, {
       account_id: userId,
       actor_user_id: userId,
