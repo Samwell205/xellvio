@@ -28,8 +28,18 @@ async function gorgias<T = any>(creds: GorgiasCreds, path: string, init: Request
       ...(init.headers ?? {}),
     },
   });
-  const json: any = await res.json().catch(() => ({}));
+  const text = await res.text();
+  let json: any = {};
+  try { json = text ? JSON.parse(text) : {}; } catch { /* non-JSON (e.g. Cloudflare 530 HTML) */ }
   if (!res.ok) {
+    if (res.status === 530 || res.status === 522 || res.status === 523) {
+      throw new Error(
+        `Gorgias subdomain "${creds.domain}" is not reachable. Double-check the subdomain — it's the part before .gorgias.com in your Gorgias URL (e.g. "mybrand" from mybrand.gorgias.com), not your API key.`,
+      );
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new Error("Gorgias rejected the credentials. Check the account email and API key (Settings → REST API → Generate in Gorgias).");
+    }
     throw new Error(`Gorgias ${res.status}: ${json?.error?.message ?? json?.message ?? "request failed"}`);
   }
   return json as T;
