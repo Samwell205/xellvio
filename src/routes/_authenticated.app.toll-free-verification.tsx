@@ -473,7 +473,52 @@ function TollfreeVerificationPage() {
         </div>
       )}
 
+      {!feeQuery.isLoading && !feeQuery.data?.paid && (
+        <Card className="border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/20">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldCheck className="size-5 text-amber-600" />
+              Pay the ${feeQuery.data?.fee ?? 5} verification fee to continue
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              A one-time ${feeQuery.data?.fee ?? 5} fee covers your toll-free phone number and carrier verification. You'll be able to fill out the verification form right after payment. Resubmissions after a rejection are free.
+            </p>
+            <div className="flex items-center justify-between rounded-md border bg-background p-3 text-sm">
+              <span className="text-muted-foreground">Your credit balance</span>
+              <span className="font-semibold tabular-nums">
+                ${(feeQuery.data?.balance ?? 0).toFixed(2)}
+              </span>
+            </div>
+            {(feeQuery.data?.balance ?? 0) < (feeQuery.data?.fee ?? 5) ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <p className="text-sm text-destructive flex-1">
+                  Insufficient balance. Top up at least ${feeQuery.data?.fee ?? 5} to continue.
+                </p>
+                <Button asChild>
+                  <Link to="/app/billing">Top up balance</Link>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() => payFeeMut.mutate()}
+                disabled={payFeeMut.isPending}
+                className="w-full sm:w-auto"
+              >
+                {payFeeMut.isPending ? (
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                ) : null}
+                Pay ${feeQuery.data?.fee ?? 5} and continue
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {feeQuery.data?.paid && (
       <form onSubmit={handleSubmit} className="space-y-6">
+
         <fieldset disabled={isLocked} className={isLocked ? "opacity-70 pointer-events-none" : ""} aria-disabled={isLocked}>
         <Section title="Step 1 / 3 — Business and contact information">
           <Two>
