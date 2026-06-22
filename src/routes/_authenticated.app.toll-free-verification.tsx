@@ -6,8 +6,11 @@ import {
   getMyTollfreeVerification,
   refreshTollfreeVerification,
   submitTollfreeVerification,
+  getTollfreeFeeStatus,
+  payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
