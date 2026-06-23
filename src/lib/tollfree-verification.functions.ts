@@ -749,11 +749,12 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // One-time $5 phone-number / verification fee (idempotent — won't re-charge on resubmit).
-    const { chargeNumberVerificationFee } = await import("./number-fee.server");
+    // One-time $3.50 phone-number / verification fee (idempotent — won't re-charge on resubmit).
+    const { chargeNumberVerificationFee, TOLLFREE_VERIFICATION_FEE_USD } = await import("./number-fee.server");
     await chargeNumberVerificationFee({
       accountId: userId,
       marker: "tollfree-verification",
+      amount: TOLLFREE_VERIFICATION_FEE_USD,
       description: "Toll-free phone number & verification fee",
     });
 
