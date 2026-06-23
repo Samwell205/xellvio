@@ -1236,10 +1236,11 @@ export const payTollfreeFee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
-    const { chargeNumberVerificationFee } = await import("./number-fee.server");
+    const { chargeNumberVerificationFee, TOLLFREE_VERIFICATION_FEE_USD } = await import("./number-fee.server");
     const res = await chargeNumberVerificationFee({
       accountId: userId,
       marker: TOLLFREE_FEE_MARKER,
+      amount: TOLLFREE_VERIFICATION_FEE_USD,
       description: "Toll-free phone number & verification fee",
     });
     return { ok: true as const, ...res };
