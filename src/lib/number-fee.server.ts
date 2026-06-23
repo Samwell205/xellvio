@@ -34,15 +34,16 @@ export async function chargeNumberVerificationFee(opts: {
     .single();
   if (aErr) throw new Error(aErr.message);
   const bal = Number(acct?.credit_balance ?? 0);
-  if (bal < NUMBER_VERIFICATION_FEE_USD) {
+  const fee = opts.amount ?? NUMBER_VERIFICATION_FEE_USD;
+  if (bal < fee) {
     throw new Error(
-      `Insufficient credit balance. A one-time $${NUMBER_VERIFICATION_FEE_USD} phone-number fee is required — please top up and try again.`,
+      `Insufficient credit balance. A one-time $${fee} phone-number fee is required — please top up and try again.`,
     );
   }
 
   const { error: rpcErr } = await supabaseAdmin.rpc("debit_account", {
     _account_id: opts.accountId,
-    _amount: NUMBER_VERIFICATION_FEE_USD,
+    _amount: fee,
     _campaign_id: null as any,
     _description: `${opts.description} ${tag}`,
   });
