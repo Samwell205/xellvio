@@ -1207,7 +1207,7 @@ export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { NUMBER_VERIFICATION_FEE_USD } = await import("./number-fee.server");
+    const { TOLLFREE_VERIFICATION_FEE_USD } = await import("./number-fee.server");
 
     const [{ data: existing }, { data: acct }] = await Promise.all([
       supabaseAdmin
