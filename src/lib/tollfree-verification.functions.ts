@@ -1227,7 +1227,7 @@ export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
 
     return {
       paid: !!existing,
-      fee: NUMBER_VERIFICATION_FEE_USD,
+      fee: TOLLFREE_VERIFICATION_FEE_USD,
       balance: Number(acct?.credit_balance ?? 0),
     };
   });
