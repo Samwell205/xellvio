@@ -54,6 +54,7 @@ import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
 import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated.app.onboarding'
+import { Route as AuthenticatedAppInboxRouteImport } from './routes/_authenticated.app.inbox'
 import { Route as AuthenticatedAppCheckoutRouteImport } from './routes/_authenticated.app.checkout'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
@@ -314,6 +315,11 @@ const AuthenticatedAppOnboardingRoute =
     path: '/onboarding',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppInboxRoute = AuthenticatedAppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppCheckoutRoute =
   AuthenticatedAppCheckoutRouteImport.update({
     id: '/checkout',
@@ -491,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/app/inbox': typeof AuthenticatedAppInboxRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -557,6 +564,7 @@ export interface FileRoutesByTo {
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/app/inbox': typeof AuthenticatedAppInboxRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -627,6 +635,7 @@ export interface FileRoutesById {
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/_authenticated/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/_authenticated/app/inbox': typeof AuthenticatedAppInboxRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -698,6 +707,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/campaigns'
     | '/app/checkout'
+    | '/app/inbox'
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/segments'
@@ -764,6 +774,7 @@ export interface FileRouteTypes {
     | '/app/audience'
     | '/app/billing'
     | '/app/checkout'
+    | '/app/inbox'
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/settings'
@@ -833,6 +844,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
     | '/_authenticated/app/checkout'
+    | '/_authenticated/app/inbox'
     | '/_authenticated/app/onboarding'
     | '/_authenticated/app/pricing-calculator'
     | '/_authenticated/app/segments'
@@ -1219,6 +1231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppOnboardingRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/inbox': {
+      id: '/_authenticated/app/inbox'
+      path: '/inbox'
+      fullPath: '/app/inbox'
+      preLoaderRoute: typeof AuthenticatedAppInboxRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/checkout': {
       id: '/_authenticated/app/checkout'
       path: '/checkout'
@@ -1454,6 +1473,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
   AuthenticatedAppCheckoutRoute: typeof AuthenticatedAppCheckoutRoute
+  AuthenticatedAppInboxRoute: typeof AuthenticatedAppInboxRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
   AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
   AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -1469,6 +1489,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
   AuthenticatedAppCheckoutRoute: AuthenticatedAppCheckoutRoute,
+  AuthenticatedAppInboxRoute: AuthenticatedAppInboxRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
   AuthenticatedAppPricingCalculatorRoute:
     AuthenticatedAppPricingCalculatorRoute,

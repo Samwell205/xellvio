@@ -93,28 +93,48 @@ export const Route = createFileRoute("/api/public/twilio-inbound")({
           return twiml("You're resubscribed. Reply STOP to opt out.");
         }
 
-        // Forward the inbound message to each matched tenant's Gorgias helpdesk (if connected).
+        // Record this inbound message on the conversation thread and mirror to Gorgias.
         const rawBody = (params.Body ?? "").trim();
-        if (rawBody && (profiles?.length ?? 0) > 0) {
-          const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
-          const seen = new Set<string>();
-          await Promise.all(
-            (profiles ?? [])
-              .filter((p) => {
-                if (seen.has(p.account_id)) return false;
-                seen.add(p.account_id);
-                return true;
-              })
-              .map((p) =>
+        if (rawBody) {
+          // The account that owns the destination number is the canonical owner of this reply.
+          const accountIds = new Set<string>();
+          if (to) {
+            const { data: asset } = await supabaseAdmin
+              .from("sender_assets")
+              .select("account_id")
+              .eq("phone_number", to)
+              .maybeSingle();
+            if (asset?.account_id) accountIds.add(asset.account_id);
+          }
+          for (const p of profiles ?? []) accountIds.add(p.account_id);
+
+          if (accountIds.size > 0) {
+            await supabaseAdmin.from("sms_thread_messages").insert(
+              Array.from(accountIds).map((account_id) => ({
+                account_id,
+                phone_e164: from,
+                direction: "inbound" as const,
+                body: rawBody,
+                from_number: from,
+                to_number: to ?? null,
+                provider_sid: params.MessageSid ?? null,
+                status: "received",
+              })),
+            );
+
+            const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
+            await Promise.all(
+              Array.from(accountIds).map((accountId) =>
                 forwardSmsToGorgias({
-                  accountId: p.account_id,
+                  accountId,
                   phone: from,
                   fromNumber: to ?? null,
                   body: rawBody,
                   direction: "inbound",
                 }),
               ),
-          );
+            );
+          }
         }
 
         return twiml();
