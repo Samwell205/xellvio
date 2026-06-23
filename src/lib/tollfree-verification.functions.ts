@@ -749,11 +749,12 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // One-time $5 phone-number / verification fee (idempotent — won't re-charge on resubmit).
-    const { chargeNumberVerificationFee } = await import("./number-fee.server");
+    // One-time $3.50 phone-number / verification fee (idempotent — won't re-charge on resubmit).
+    const { chargeNumberVerificationFee, TOLLFREE_VERIFICATION_FEE_USD } = await import("./number-fee.server");
     await chargeNumberVerificationFee({
       accountId: userId,
       marker: "tollfree-verification",
+      amount: TOLLFREE_VERIFICATION_FEE_USD,
       description: "Toll-free phone number & verification fee",
     });
 
@@ -1206,7 +1207,7 @@ export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { NUMBER_VERIFICATION_FEE_USD } = await import("./number-fee.server");
+    const { TOLLFREE_VERIFICATION_FEE_USD } = await import("./number-fee.server");
 
     const [{ data: existing }, { data: acct }] = await Promise.all([
       supabaseAdmin
@@ -1226,7 +1227,7 @@ export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
 
     return {
       paid: !!existing,
-      fee: NUMBER_VERIFICATION_FEE_USD,
+      fee: TOLLFREE_VERIFICATION_FEE_USD,
       balance: Number(acct?.credit_balance ?? 0),
     };
   });
@@ -1235,10 +1236,11 @@ export const payTollfreeFee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
-    const { chargeNumberVerificationFee } = await import("./number-fee.server");
+    const { chargeNumberVerificationFee, TOLLFREE_VERIFICATION_FEE_USD } = await import("./number-fee.server");
     const res = await chargeNumberVerificationFee({
       accountId: userId,
       marker: TOLLFREE_FEE_MARKER,
+      amount: TOLLFREE_VERIFICATION_FEE_USD,
       description: "Toll-free phone number & verification fee",
     });
     return { ok: true as const, ...res };
