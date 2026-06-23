@@ -1,13 +1,15 @@
-// Charges a one-time $5 phone-number / verification fee against an account's
+// Charges a one-time phone-number / verification fee against an account's
 // credit balance. Idempotent per marker — if the same marker has already been
 // debited for that account, we don't charge again (so retrying a rejected
 // toll-free submission, for example, doesn't keep costing).
 
 export const NUMBER_VERIFICATION_FEE_USD = 5;
+export const TOLLFREE_VERIFICATION_FEE_USD = 3.5;
 
 export async function chargeNumberVerificationFee(opts: {
   accountId: string;
   marker: string; // unique identifier of what this fee is for
+  amount?: number; // override the default $5 fee
   description: string;
 }): Promise<{ charged: boolean; alreadyPaid: boolean }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
