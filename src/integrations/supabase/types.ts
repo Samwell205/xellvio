@@ -1111,6 +1111,45 @@ export type Database = {
           },
         ]
       }
+      sms_thread_messages: {
+        Row: {
+          account_id: string
+          body: string
+          created_at: string
+          direction: string
+          from_number: string | null
+          id: string
+          phone_e164: string
+          provider_sid: string | null
+          status: string | null
+          to_number: string | null
+        }
+        Insert: {
+          account_id: string
+          body: string
+          created_at?: string
+          direction: string
+          from_number?: string | null
+          id?: string
+          phone_e164: string
+          provider_sid?: string | null
+          status?: string | null
+          to_number?: string | null
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          created_at?: string
+          direction?: string
+          from_number?: string | null
+          id?: string
+          phone_e164?: string
+          provider_sid?: string | null
+          status?: string | null
+          to_number?: string | null
+        }
+        Relationships: []
+      }
       suppressed_emails: {
         Row: {
           created_at: string
