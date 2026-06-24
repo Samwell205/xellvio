@@ -147,12 +147,20 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
 export const updateTeamMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ memberId: z.string().uuid(), role: roleEnum }).parse(input),
+    z
+      .object({
+        memberId: z.string().uuid(),
+        role: roleEnum,
+        permissions: permissionsSchema,
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const patch: Record<string, unknown> = { role: data.role };
+    if (data.permissions) patch.permissions = data.permissions;
     const { error } = await context.supabase
       .from("account_members")
-      .update({ role: data.role })
+      .update(patch)
       .eq("id", data.memberId)
       .eq("account_id", context.userId);
     if (error) throw new Error(error.message);
