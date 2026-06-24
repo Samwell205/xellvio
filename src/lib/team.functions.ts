@@ -156,7 +156,7 @@ export const updateTeamMemberRole = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = { role: data.role };
+    const patch: any = { role: data.role };
     if (data.permissions) patch.permissions = data.permissions;
     const { error } = await context.supabase
       .from("account_members")
