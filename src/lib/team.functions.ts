@@ -13,7 +13,7 @@ export const listMyTeam = createServerFn({ method: "GET" })
     // Owner team = members invited to MY account (where account_id == my user id).
     const { data: members, error } = await supabase
       .from("account_members")
-      .select("id,account_id,user_id,invited_email,role,status,accepted_at,created_at,invited_by")
+      .select("id,account_id,user_id,invited_email,role,permissions,status,accepted_at,created_at,invited_by")
       .eq("account_id", userId)
       .neq("status", "removed")
       .order("created_at", { ascending: true });
