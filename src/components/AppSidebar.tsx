@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
@@ -18,6 +18,7 @@ const items = [
   { title: "Audience", url: "/app/audience", icon: Users },
   { title: "Segments", url: "/app/segments", icon: Filter },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff },
+  { title: "Team", url: "/app/team", icon: UserPlus },
 ];
 
 const settingsChildren = [

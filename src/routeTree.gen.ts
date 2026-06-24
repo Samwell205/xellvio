@@ -48,6 +48,7 @@ import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.publi
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './routes/_authenticated.app.toll-free-verification'
+import { Route as AuthenticatedAppTeamRouteImport } from './routes/_authenticated.app.team'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSetupSmsRouteImport } from './routes/_authenticated.app.setup-sms'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
@@ -279,6 +280,11 @@ const AuthenticatedAppTollFreeVerificationRoute =
     path: '/toll-free-verification',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppTeamRoute = AuthenticatedAppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
 const AuthenticatedAppSuppressionsRoute =
   AuthenticatedAppSuppressionsRouteImport.update({
     id: '/suppressions',
@@ -504,6 +510,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
+  '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
@@ -570,6 +577,7 @@ export interface FileRoutesByTo {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
+  '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
@@ -642,6 +650,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
+  '/_authenticated/app/team': typeof AuthenticatedAppTeamRoute
   '/_authenticated/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
@@ -714,6 +723,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup-sms'
     | '/app/suppressions'
+    | '/app/team'
     | '/app/toll-free-verification'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
@@ -780,6 +790,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup-sms'
     | '/app/suppressions'
+    | '/app/team'
     | '/app/toll-free-verification'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
@@ -851,6 +862,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup-sms'
     | '/_authenticated/app/suppressions'
+    | '/_authenticated/app/team'
     | '/_authenticated/app/toll-free-verification'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
@@ -1189,6 +1201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppTollFreeVerificationRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/team': {
+      id: '/_authenticated/app/team'
+      path: '/team'
+      fullPath: '/app/team'
+      preLoaderRoute: typeof AuthenticatedAppTeamRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/suppressions': {
       id: '/_authenticated/app/suppressions'
       path: '/suppressions'
@@ -1480,6 +1499,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSetupSmsRoute: typeof AuthenticatedAppSetupSmsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
+  AuthenticatedAppTeamRoute: typeof AuthenticatedAppTeamRoute
   AuthenticatedAppTollFreeVerificationRoute: typeof AuthenticatedAppTollFreeVerificationRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
 }
@@ -1497,6 +1517,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSetupSmsRoute: AuthenticatedAppSetupSmsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
+  AuthenticatedAppTeamRoute: AuthenticatedAppTeamRoute,
   AuthenticatedAppTollFreeVerificationRoute:
     AuthenticatedAppTollFreeVerificationRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
