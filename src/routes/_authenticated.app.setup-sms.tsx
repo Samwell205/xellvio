@@ -38,25 +38,9 @@ export const Route = createFileRoute("/_authenticated/app/setup-sms")({
   component: SetupSmsPage,
 });
 
-const COUNTRIES = [
-  { code: "US", name: "United States" },
-  { code: "CA", name: "Canada" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "AU", name: "Australia" },
-  { code: "NG", name: "Nigeria" },
-  { code: "KE", name: "Kenya" },
-  { code: "ZA", name: "South Africa" },
-  { code: "GH", name: "Ghana" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "ES", name: "Spain" },
-  { code: "NL", name: "Netherlands" },
-  { code: "IN", name: "India" },
-  { code: "AE", name: "UAE" },
-  { code: "SA", name: "Saudi Arabia" },
-  { code: "BR", name: "Brazil" },
-  { code: "MX", name: "Mexico" },
-];
+import { COUNTRIES as ALL_COUNTRIES } from "@/lib/countries";
+
+const COUNTRIES = ALL_COUNTRIES.map((c) => ({ code: c.iso, name: c.name }));
 
 const VOLUMES = [
   { v: 1000, label: "Under 1,000 / month" },
