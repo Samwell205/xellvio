@@ -75,7 +75,7 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
           invited_by: userId,
           accepted_at: null,
           user_id: null,
-        })
+        } as any)
         .eq("id", existing.id)
         .select("id")
         .single();
@@ -91,7 +91,7 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
           permissions: perms,
           status: "invited",
           invited_by: userId,
-        })
+        } as any)
         .select("id")
         .single();
       if (error) throw new Error(error.message);
