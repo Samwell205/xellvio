@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_members: {
+        Row: {
+          accepted_at: string | null
+          account_id: string
+          created_at: string
+          id: string
+          invited_by: string | null
+          invited_email: string
+          role: Database["public"]["Enums"]["account_member_role"]
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          account_id: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          invited_email: string
+          role?: Database["public"]["Enums"]["account_member_role"]
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          account_id?: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          invited_email?: string
+          role?: Database["public"]["Enums"]["account_member_role"]
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_members_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           auto_recharge_amount: number
@@ -1323,6 +1370,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_account_invites: { Args: never; Returns: number }
       debit_account: {
         Args: {
           _account_id: string
@@ -1366,6 +1414,13 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      has_account_access: {
+        Args: {
+          _account_id: string
+          _min_role?: Database["public"]["Enums"]["account_member_role"]
+        }
+        Returns: boolean
       }
       has_role: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
@@ -1419,6 +1474,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_member_role: "viewer" | "editor" | "admin"
       app_role: "admin" | "user"
       number_request_country: "US" | "CA"
       number_request_status: "pending" | "approved" | "rejected" | "provisioned"
@@ -1553,6 +1609,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_member_role: ["viewer", "editor", "admin"],
       app_role: ["admin", "user"],
       number_request_country: ["US", "CA"],
       number_request_status: ["pending", "approved", "rejected", "provisioned"],
