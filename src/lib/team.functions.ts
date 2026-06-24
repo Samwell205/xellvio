@@ -45,11 +45,13 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
       .object({
         email: z.string().email().transform((v) => v.trim().toLowerCase()),
         role: roleEnum,
+        permissions: permissionsSchema,
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const perms = data.permissions ?? {};
     // The inviter is the owner; account_id = userId.
     const { data: existing } = await supabase
       .from("account_members")
@@ -68,6 +70,7 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
         .from("account_members")
         .update({
           role: data.role,
+          permissions: perms,
           status: "invited",
           invited_by: userId,
           accepted_at: null,
@@ -85,6 +88,7 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
           account_id: userId,
           invited_email: data.email,
           role: data.role,
+          permissions: perms,
           status: "invited",
           invited_by: userId,
         })
