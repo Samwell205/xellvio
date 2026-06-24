@@ -175,6 +175,7 @@ export async function runTwilioPricingSync(): Promise<{
           sell_price: sell,
           number_type_used: extracted.number_type_used,
           last_synced_at: new Date().toISOString(),
+          active: true,
         })
         .eq("id", c.id);
       if (uErr) throw new Error(uErr.message);

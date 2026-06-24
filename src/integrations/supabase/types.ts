@@ -22,6 +22,7 @@ export type Database = {
           id: string
           invited_by: string | null
           invited_email: string
+          permissions: Json
           role: Database["public"]["Enums"]["account_member_role"]
           status: string
           updated_at: string
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           invited_by?: string | null
           invited_email: string
+          permissions?: Json
           role?: Database["public"]["Enums"]["account_member_role"]
           status?: string
           updated_at?: string
@@ -46,6 +48,7 @@ export type Database = {
           id?: string
           invited_by?: string | null
           invited_email?: string
+          permissions?: Json
           role?: Database["public"]["Enums"]["account_member_role"]
           status?: string
           updated_at?: string

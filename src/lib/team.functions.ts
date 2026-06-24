@@ -1,8 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { PERMISSION_KEYS } from "@/lib/team-permissions";
 
 const roleEnum = z.enum(["viewer", "editor", "admin"]);
+const permissionsSchema = z.record(z.enum(PERMISSION_KEYS), z.boolean()).optional();
 
 export const listMyTeam = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -11,7 +13,7 @@ export const listMyTeam = createServerFn({ method: "GET" })
     // Owner team = members invited to MY account (where account_id == my user id).
     const { data: members, error } = await supabase
       .from("account_members")
-      .select("id,account_id,user_id,invited_email,role,status,accepted_at,created_at,invited_by")
+      .select("id,account_id,user_id,invited_email,role,permissions,status,accepted_at,created_at,invited_by")
       .eq("account_id", userId)
       .neq("status", "removed")
       .order("created_at", { ascending: true });
@@ -43,11 +45,13 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
       .object({
         email: z.string().email().transform((v) => v.trim().toLowerCase()),
         role: roleEnum,
+        permissions: permissionsSchema,
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const perms = data.permissions ?? {};
     // The inviter is the owner; account_id = userId.
     const { data: existing } = await supabase
       .from("account_members")
@@ -66,11 +70,12 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
         .from("account_members")
         .update({
           role: data.role,
+          permissions: perms,
           status: "invited",
           invited_by: userId,
           accepted_at: null,
           user_id: null,
-        })
+        } as any)
         .eq("id", existing.id)
         .select("id")
         .single();
@@ -83,9 +88,10 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
           account_id: userId,
           invited_email: data.email,
           role: data.role,
+          permissions: perms,
           status: "invited",
           invited_by: userId,
-        })
+        } as any)
         .select("id")
         .single();
       if (error) throw new Error(error.message);
@@ -141,12 +147,20 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
 export const updateTeamMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({ memberId: z.string().uuid(), role: roleEnum }).parse(input),
+    z
+      .object({
+        memberId: z.string().uuid(),
+        role: roleEnum,
+        permissions: permissionsSchema,
+      })
+      .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const patch: any = { role: data.role };
+    if (data.permissions) patch.permissions = data.permissions;
     const { error } = await context.supabase
       .from("account_members")
-      .update({ role: data.role })
+      .update(patch)
       .eq("id", data.memberId)
       .eq("account_id", context.userId);
     if (error) throw new Error(error.message);
