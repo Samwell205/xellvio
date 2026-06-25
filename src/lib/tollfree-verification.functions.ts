@@ -65,7 +65,7 @@ function friendlyReason(raw: string | undefined): string {
   if (t.includes("usecasecategories"))
     return "The selected use case category was not accepted by Twilio. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
   if (t.includes("opt") || t.includes("consent"))
-    return "We need clearer proof of how subscribers opt in. Add a screenshot or public URL of your sign-up form.";
+    return "The carrier needs clearer proof of subscriber consent. The screenshot or opt-in page must visibly show your business name, an unchecked SMS opt-in checkbox/form, Msg & data rates may apply, Reply STOP to opt out, HELP for help, and Privacy/Terms links.";
   if (t.includes("sample") || t.includes("message"))
     return "Your sample message needs revision so it matches what carriers expect.";
   if (t.includes("website") || t.includes("url"))
@@ -106,6 +106,81 @@ function requestSummary(data: TollfreeVerificationPayload) {
     hasPrivacyPolicyUrl: !!data.privacyPolicyUrl,
     hasTermsUrl: !!data.termsUrl,
   };
+}
+
+function isPrivateProofHost(hostname: string) {
+  const h = hostname.toLowerCase();
+  return (
+    h === "localhost" ||
+    h.endsWith(".localhost") ||
+    h.endsWith(".local") ||
+    h === "0.0.0.0" ||
+    h.startsWith("127.") ||
+    h.startsWith("10.") ||
+    h.startsWith("192.168.") ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(h) ||
+    h.startsWith("169.254.")
+  );
+}
+
+async function assertPublicOptInProofUrl(url: string) {
+  const proof = url.trim();
+  if (!proof) {
+    throw new Error("Add a public sign-up form URL or upload a screenshot of the SMS opt-in before submitting.");
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(proof);
+  } catch {
+    throw new Error("The proof of consent must be a valid public URL.");
+  }
+
+  if (parsed.protocol !== "https:") {
+    throw new Error("The proof of consent URL must use HTTPS so the carrier can open it securely.");
+  }
+  if (isPrivateProofHost(parsed.hostname)) {
+    throw new Error("The proof of consent URL must be public, not a localhost or private network URL.");
+  }
+
+  const acceptedTypes = ["image/", "application/pdf", "text/html"];
+  let response: Response | null = null;
+  try {
+    response = await fetch(proof, { method: "HEAD", redirect: "follow" });
+  } catch {
+    response = null;
+  }
+  if (!response?.ok) {
+    try {
+      response = await fetch(proof, {
+        method: "GET",
+        redirect: "follow",
+        headers: { Range: "bytes=0-2047" },
+      });
+    } catch {
+      response = null;
+    }
+  }
+
+  if (!response?.ok) {
+    throw new Error("The proof of consent URL could not be opened publicly. Upload the screenshot again or use a public sign-up page URL.");
+  }
+
+  const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+  if (contentType && !acceptedTypes.some((prefix) => contentType.startsWith(prefix))) {
+    throw new Error("The proof of consent URL must open as an image, PDF, or public web page.");
+  }
+}
+
+function splitOptInKeywords(value: string | undefined) {
+  return Array.from(
+    new Set(
+      (value ?? "")
+        .split(/[\s,]+/)
+        .map((keyword) => keyword.trim().toUpperCase())
+        .filter(Boolean),
+    ),
+  ).slice(0, 20);
 }
 
 async function createAttemptLog(supabaseAdmin: any, values: Record<string, any>) {
@@ -797,6 +872,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       });
       throw new Error(reason);
     }
+    await assertPublicOptInProofUrl(data.proofOfOptInUrl ?? "");
 
     // Persist the questionnaire snapshot onto the account too, so it round-trips on load.
     await supabaseAdmin
@@ -932,10 +1008,18 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     }
     if (data.addressLine2) body.BusinessStreetAddress2 = data.addressLine2;
     if (data.proofOfOptInUrl) body.OptInImageUrls = [data.proofOfOptInUrl];
+    if (data.privacyPolicyUrl) body.PrivacyPolicyUrl = data.privacyPolicyUrl;
+    if (data.termsUrl) body.TermsAndConditionsUrl = data.termsUrl;
+    if (data.optInConfirmationMessage) body.OptInConfirmationMessage = data.optInConfirmationMessage;
+    if (data.helpMessageSample) body.HelpMessageSample = data.helpMessageSample;
+    const optInKeywords = splitOptInKeywords(data.optInKeywords);
+    if (optInKeywords.length) body.OptInKeywords = optInKeywords;
+    body.AgeGatedContent = data.containsAgeGatedContent ? "true" : "false";
     const callbackBase = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
     body.StatusCallback = `${callbackBase}/api/public/twilio-tollfree-status`;
     body.StatusCallbackMethod = "POST";
     const extra: string[] = [];
+    if (data.proofOfOptInUrl) extra.push(`Opt-in proof URL: ${data.proofOfOptInUrl}`);
     if (data.businessDba) extra.push(`DBA: ${data.businessDba}`);
     if (data.businessType) extra.push(`Business type: ${data.businessType}`);
     if (data.privacyPolicyUrl) extra.push(`Privacy: ${data.privacyPolicyUrl}`);

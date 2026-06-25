@@ -204,6 +204,9 @@ function friendlyRejectionDisplay(asset: any) {
   if (raw.includes("usecasecategories")) {
     return "The selected use case category was not accepted by the carrier. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
   }
+  if (raw.includes("opt") || raw.includes("consent")) {
+    return "The carrier could open the proof, but the proof did not clearly show compliant SMS consent. Upload a screenshot or use a public form page that visibly shows SAMWELL Agency, the phone field, an unchecked SMS opt-in checkbox, Msg & data rates may apply, Reply STOP to opt out, HELP for help, plus Privacy Policy and Terms links.";
+  }
   return asset?.friendly_rejection_reason ?? asset?.rejection_reason ?? "No reason provided.";
 }
 
@@ -778,7 +781,8 @@ function TollfreeVerificationPage() {
             </Field>
             <Field
               label="Proof of consent (URL or screenshot)"
-              hint="Paste the public URL of your sign-up page, OR upload a screenshot showing the SMS opt-in checkbox / form. Required for non-verbal opt-in."
+              required
+              hint="Required. Paste the public URL of your sign-up page, OR upload a screenshot showing the SMS opt-in checkbox / form."
             >
               <Input
                 value={form.proofOfOptInUrl ?? ""}
@@ -1121,6 +1125,7 @@ function isValid(f: ReturnType<typeof defaultForm>) {
         !!f.businessRegistrationIdentifier.trim() &&
         /^[A-Z]{2}$/.test(f.businessRegistrationCountry.trim()))) &&
     f.useCaseCategories.length > 0 &&
+    /^https:\/\//.test((f.proofOfOptInUrl ?? "").trim()) &&
     f.useCaseDescription.trim().length >= 40 &&
     f.sampleMessage.trim().length >= 20 &&
     /^[^@]+@[^@]+\.[^@]+$/.test(f.notificationEmail) &&
@@ -1204,8 +1209,9 @@ function OptInProofUpload({
       <p className="text-[11px] text-muted-foreground leading-relaxed">
         Tip: the screenshot must clearly show your business name, an SMS opt-in
         checkbox, and the disclosure “Msg &amp; data rates may apply. Reply STOP
-        to opt out.” Carriers reject screenshots that don't show explicit SMS
-        consent.
+        to opt out. HELP for help.” Include Privacy Policy and Terms links in
+        the same screenshot. Carriers reject screenshots that don't show explicit
+        SMS consent.
       </p>
     </div>
   );
