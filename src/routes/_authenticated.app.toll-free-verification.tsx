@@ -9,6 +9,7 @@ import {
   getTollfreeFeeStatus,
   payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
+import { uploadOptInProof } from "@/lib/opt-in-proof.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
