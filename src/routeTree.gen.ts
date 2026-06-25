@@ -75,6 +75,7 @@ import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_au
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
 import { Route as ApiPublicCronTwilioBalanceCheckRouteImport } from './routes/api.public.cron.twilio-balance-check'
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
@@ -437,6 +438,12 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicOptInProofSplatRoute =
+  ApiPublicOptInProofSplatRouteImport.update({
+    id: '/api/public/opt-in-proof/$',
+    path: '/api/public/opt-in-proof/$',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronTwilioBalanceCheckRoute =
   ApiPublicCronTwilioBalanceCheckRouteImport.update({
     id: '/api/public/cron/twilio-balance-check',
@@ -527,6 +534,7 @@ export interface FileRoutesByFullPath {
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/api/public/cron/twilio-balance-check': typeof ApiPublicCronTwilioBalanceCheckRoute
+  '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
@@ -594,6 +602,7 @@ export interface FileRoutesByTo {
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/api/public/cron/twilio-balance-check': typeof ApiPublicCronTwilioBalanceCheckRoute
+  '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
@@ -667,6 +676,7 @@ export interface FileRoutesById {
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/api/public/cron/twilio-balance-check': typeof ApiPublicCronTwilioBalanceCheckRoute
+  '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
@@ -740,6 +750,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/new'
     | '/app/segments/new'
     | '/api/public/cron/twilio-balance-check'
+    | '/api/public/opt-in-proof/$'
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
@@ -807,6 +818,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/new'
     | '/app/segments/new'
     | '/api/public/cron/twilio-balance-check'
+    | '/api/public/opt-in-proof/$'
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
@@ -879,6 +891,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
     | '/api/public/cron/twilio-balance-check'
+    | '/api/public/opt-in-proof/$'
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
@@ -921,6 +934,7 @@ export interface RootRouteChildren {
   ApiPublicTwilioTollfreeStatusRoute: typeof ApiPublicTwilioTollfreeStatusRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicCronTwilioBalanceCheckRoute: typeof ApiPublicCronTwilioBalanceCheckRoute
+  ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
   LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
@@ -1390,6 +1404,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/opt-in-proof/$': {
+      id: '/api/public/opt-in-proof/$'
+      path: '/api/public/opt-in-proof/$'
+      fullPath: '/api/public/opt-in-proof/$'
+      preLoaderRoute: typeof ApiPublicOptInProofSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/twilio-balance-check': {
       id: '/api/public/cron/twilio-balance-check'
       path: '/api/public/cron/twilio-balance-check'
@@ -1587,6 +1608,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTwilioTollfreeStatusRoute: ApiPublicTwilioTollfreeStatusRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicCronTwilioBalanceCheckRoute: ApiPublicCronTwilioBalanceCheckRoute,
+  ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
   LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,

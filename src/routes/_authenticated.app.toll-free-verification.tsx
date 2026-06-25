@@ -9,6 +9,7 @@ import {
   getTollfreeFeeStatus,
   payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
+import { uploadOptInProof } from "@/lib/opt-in-proof.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -776,13 +777,17 @@ function TollfreeVerificationPage() {
               </Select>
             </Field>
             <Field
-              label="Proof of consent URL"
-              hint="Public URL to the page or screenshot where subscribers opt in. Required for non-verbal opt-in."
+              label="Proof of consent (URL or screenshot)"
+              hint="Paste the public URL of your sign-up page, OR upload a screenshot showing the SMS opt-in checkbox / form. Required for non-verbal opt-in."
             >
               <Input
                 value={form.proofOfOptInUrl ?? ""}
                 onChange={(e) => update("proofOfOptInUrl", e.target.value)}
                 placeholder="https://yourcompany.com/optin"
+              />
+              <OptInProofUpload
+                currentUrl={form.proofOfOptInUrl ?? ""}
+                onUploaded={(url) => update("proofOfOptInUrl", url)}
               />
             </Field>
           </Two>
@@ -1120,5 +1125,88 @@ function isValid(f: ReturnType<typeof defaultForm>) {
     f.sampleMessage.trim().length >= 20 &&
     /^[^@]+@[^@]+\.[^@]+$/.test(f.notificationEmail) &&
     f.agreeToTos === true
+  );
+}
+
+function OptInProofUpload({
+  currentUrl,
+  onUploaded,
+}: {
+  currentUrl: string;
+  onUploaded: (url: string) => void;
+}) {
+  const upload = useServerFn(uploadOptInProof);
+  const [busy, setBusy] = useState(false);
+  const isUploaded = /\/api\/public\/opt-in-proof\//.test(currentUrl);
+
+  async function handleFile(file: File) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large. Max 5MB.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const buf = await file.arrayBuffer();
+      // base64 encode
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      const dataBase64 = btoa(binary);
+      const res = await upload({
+        data: {
+          filename: file.name,
+          contentType: file.type || "application/octet-stream",
+          dataBase64,
+        },
+      });
+      onUploaded(res.url);
+      toast.success("Screenshot uploaded — carriers can now view your opt-in proof.");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 space-y-1.5">
+      <div className="flex items-center gap-2">
+        <label className="inline-flex items-center gap-2 text-xs font-medium rounded-md border border-dashed px-3 py-2 cursor-pointer hover:bg-muted/50">
+          {busy ? <Loader2 className="size-3 animate-spin" /> : <span>📎</span>}
+          {busy ? "Uploading…" : "Upload screenshot (PNG, JPG, PDF — max 5MB)"}
+          <input
+            type="file"
+            className="hidden"
+            accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+            disabled={busy}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleFile(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {isUploaded && (
+          <a
+            href={currentUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-primary underline"
+          >
+            View uploaded file
+          </a>
+        )}
+      </div>
+      <p className="text-[11px] text-muted-foreground leading-relaxed">
+        Tip: the screenshot must clearly show your business name, an SMS opt-in
+        checkbox, and the disclosure “Msg &amp; data rates may apply. Reply STOP
+        to opt out.” Carriers reject screenshots that don't show explicit SMS
+        consent.
+      </p>
+    </div>
   );
 }
