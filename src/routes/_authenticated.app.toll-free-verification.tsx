@@ -776,13 +776,17 @@ function TollfreeVerificationPage() {
               </Select>
             </Field>
             <Field
-              label="Proof of consent URL"
-              hint="Public URL to the page or screenshot where subscribers opt in. Required for non-verbal opt-in."
+              label="Proof of consent (URL or screenshot)"
+              hint="Paste the public URL of your sign-up page, OR upload a screenshot showing the SMS opt-in checkbox / form. Required for non-verbal opt-in."
             >
               <Input
                 value={form.proofOfOptInUrl ?? ""}
                 onChange={(e) => update("proofOfOptInUrl", e.target.value)}
                 placeholder="https://yourcompany.com/optin"
+              />
+              <OptInProofUpload
+                currentUrl={form.proofOfOptInUrl ?? ""}
+                onUploaded={(url) => update("proofOfOptInUrl", url)}
               />
             </Field>
           </Two>
