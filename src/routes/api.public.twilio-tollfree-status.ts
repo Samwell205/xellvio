@@ -20,7 +20,7 @@ function friendlyReason(raw: string | undefined): string {
   if (t.includes("privacy")) return "Your website needs a visible Privacy Policy link.";
   if (t.includes("terms")) return "Your website needs a visible Terms of Service link.";
   if (t.includes("opt") || t.includes("consent"))
-    return "We need clearer proof of how subscribers opt in. Add a screenshot or public URL of your sign-up form.";
+    return "The carrier needs clearer proof of subscriber consent. The screenshot or opt-in page must visibly show your business name, an unchecked SMS opt-in checkbox/form, Msg & data rates may apply, Reply STOP to opt out, HELP for help, and Privacy/Terms links.";
   if (t.includes("sample") || t.includes("message"))
     return "Your sample message needs revision so it matches what carriers expect.";
   if (t.includes("website") || t.includes("url"))
