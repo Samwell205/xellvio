@@ -353,13 +353,10 @@ export const setupSms = createServerFn({ method: "POST" })
         const status: "submitted" | "verified" = kind === "toll_free" ? "submitted" : "verified";
 
         if (kind === "toll_free") {
-          // Build absolute opt-in screenshot URL (signed) if uploaded
+          // Build an absolute public proof URL so the carrier can reopen it for the full review window.
           let optInImageUrl: string | undefined;
           if (data.optInScreenshotPath) {
-            const signed = await supabaseAdmin.storage
-              .from("opt-in-assets")
-              .createSignedUrl(data.optInScreenshotPath, 60 * 60 * 24 * 30);
-            if (signed.data?.signedUrl) optInImageUrl = signed.data.signedUrl;
+            optInImageUrl = `${base}/api/public/opt-in-proof/${data.optInScreenshotPath.replace(/^\/+/, "")}`;
           }
           const addr = (acct.business_address ?? "")
             .split(/\n|,/)
