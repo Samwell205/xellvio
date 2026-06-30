@@ -65,7 +65,7 @@ function friendlyReason(raw: string | undefined): string {
   if (t.includes("usecasecategories"))
     return "The selected use case category was not accepted by Twilio. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
   if (t.includes("opt") || t.includes("consent"))
-    return "The carrier needs clearer proof of subscriber consent. The screenshot or opt-in page must visibly show your business name, an unchecked SMS opt-in checkbox/form, Msg & data rates may apply, Reply STOP to opt out, HELP for help, and Privacy/Terms links.";
+    return "The carrier received the opt-in proof, but it did not clearly match the submitted SMS use case. Resubmit proof that visibly shows your business name, phone field or SMS sign-up form, an optional/unchecked SMS opt-in checkbox, message purpose, Msg & data rates may apply, Reply STOP to opt out, HELP for help, and Privacy/Terms links.";
   if (t.includes("sample") || t.includes("message"))
     return "Your sample message needs revision so it matches what carriers expect.";
   if (t.includes("website") || t.includes("url"))
