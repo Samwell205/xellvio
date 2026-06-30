@@ -205,7 +205,7 @@ function friendlyRejectionDisplay(asset: any) {
     return "The selected use case category was not accepted by the carrier. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
   }
   if (raw.includes("opt") || raw.includes("consent")) {
-    return "The carrier could open the proof, but the proof did not clearly show compliant SMS consent. Upload a screenshot or use a public form page that visibly shows SAMWELL Agency, the phone field, an unchecked SMS opt-in checkbox, Msg & data rates may apply, Reply STOP to opt out, HELP for help, plus Privacy Policy and Terms links.";
+    return "The carrier received and could open the opt-in proof, but the proof did not clearly match the submitted SMS use case. Resubmit with a screenshot or public form page that visibly shows the same business name, phone field, an optional/unchecked SMS opt-in checkbox, the marketing/message purpose, Msg & data rates may apply, Reply STOP to opt out, HELP for help, plus Privacy Policy and Terms links.";
   }
   return asset?.friendly_rejection_reason ?? asset?.rejection_reason ?? "No reason provided.";
 }
@@ -793,6 +793,18 @@ function TollfreeVerificationPage() {
                 currentUrl={form.proofOfOptInUrl ?? ""}
                 onUploaded={(url) => update("proofOfOptInUrl", url)}
               />
+              <label className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-xs leading-relaxed">
+                <Checkbox
+                  checked={form.proofShowsRequiredConsent}
+                  onCheckedChange={(v) => update("proofShowsRequiredConsent", v === true)}
+                  className="mt-0.5"
+                />
+                <span>
+                  I confirm this proof visibly shows the business name, phone field or SMS sign-up form,
+                  an optional/unchecked SMS opt-in checkbox, the message purpose, Msg &amp; data rates may apply,
+                  Reply STOP to opt out, HELP for help, and Privacy Policy / Terms links.
+                </span>
+              </label>
             </Field>
           </Two>
           <Two>
@@ -1092,6 +1104,7 @@ function defaultForm() {
     optInType: "WEB_FORM" as (typeof OPT_IN_TYPES)[number]["v"],
     useCaseCategories: ["MARKETING"] as string[],
     proofOfOptInUrl: "",
+    proofShowsRequiredConsent: false,
     useCaseDescription: "",
     sampleMessage: "",
     notificationEmail: "",
@@ -1126,6 +1139,7 @@ function isValid(f: ReturnType<typeof defaultForm>) {
         /^[A-Z]{2}$/.test(f.businessRegistrationCountry.trim()))) &&
     f.useCaseCategories.length > 0 &&
     /^https:\/\//.test((f.proofOfOptInUrl ?? "").trim()) &&
+    f.proofShowsRequiredConsent === true &&
     f.useCaseDescription.trim().length >= 40 &&
     f.sampleMessage.trim().length >= 20 &&
     /^[^@]+@[^@]+\.[^@]+$/.test(f.notificationEmail) &&
@@ -1207,11 +1221,10 @@ function OptInProofUpload({
         )}
       </div>
       <p className="text-[11px] text-muted-foreground leading-relaxed">
-        Tip: the screenshot must clearly show your business name, an SMS opt-in
-        checkbox, and the disclosure “Msg &amp; data rates may apply. Reply STOP
-        to opt out. HELP for help.” Include Privacy Policy and Terms links in
-        the same screenshot. Carriers reject screenshots that don't show explicit
-        SMS consent.
+        Tip: the screenshot must show the exact opt-in experience for the same
+        messages described in your use case. Carriers reject proof that is only a
+        generic contact form, or proof where the checkbox/disclosures do not visibly
+        match the marketing or notification messages you are asking to send.
       </p>
     </div>
   );
