@@ -72,6 +72,41 @@ function friendlyReason(raw: string | undefined): string {
   return "The carrier needs some details corrected. Please review your business info and try again.";
 }
 
+function withRequiredSmsDisclosures(value: string | undefined, opts: {
+  businessName: string;
+  contactEmail: string;
+  websiteUrl: string;
+}) {
+  const text = (value ?? "").trim() || `${opts.businessName}: You are subscribed to receive SMS updates.`;
+  const parts = [text];
+  const upper = text.toUpperCase();
+  if (!upper.includes("STOP")) parts.push("Reply STOP to opt out.");
+  if (!upper.includes("HELP")) parts.push("Reply HELP for help.");
+  if (!/MSG|MESSAGE/.test(upper) || !/DATA/.test(upper) || !/RATE/.test(upper)) {
+    parts.push("Msg & data rates may apply.");
+  }
+  return parts.join(" ").replace(/\s+/g, " ").trim().slice(0, 1600);
+}
+
+function tollfreeAdditionalInformation(opts: {
+  businessName: string;
+  optInDescription: string;
+  optInImageUrl?: string;
+  privacyPolicyUrl?: string | null;
+}) {
+  return [
+    opts.optInImageUrl
+      ? `Opt-in proof URL: ${opts.optInImageUrl}`
+      : "Opt-in proof was described by the customer; no screenshot URL was provided in this setup path.",
+    `Opt-in proof review note: this proof/description is for ${opts.businessName}'s marketing SMS use case and should visibly match the submitted message purpose.`,
+    `Subscriber opt-in method: ${opts.optInDescription}`,
+    "Required opt-in elements: business name, phone field or SMS sign-up form, optional/unchecked SMS consent checkbox when web-based, Msg & data rates may apply, Reply STOP to opt out, HELP for help, and Privacy Policy / Terms links.",
+    opts.privacyPolicyUrl ? `Privacy: ${opts.privacyPolicyUrl}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   const { encryptToken, decryptToken } = await import("./tenant-crypto.server");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -270,10 +305,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       const status: "submitted" | "verified" = "submitted";
       let optInImageUrl: string | undefined;
       if (data.optInScreenshotPath) {
-        const signed = await supabaseAdmin.storage
-          .from("opt-in-assets")
-          .createSignedUrl(data.optInScreenshotPath, 60 * 60 * 24 * 30);
-        if (signed.data?.signedUrl) optInImageUrl = signed.data.signedUrl;
+        optInImageUrl = `${base}/api/public/opt-in-proof/${data.optInScreenshotPath.replace(/^\/+/, "")}`;
       }
       const addr = (acct.business_address ?? "")
         .split(/\n|,/)
@@ -285,9 +317,13 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         BusinessWebsite: acct.website_url!,
         NotificationEmail: acct.contact_email!,
         UseCaseCategories: ["MARKETING"],
-        UseCaseSummary: data.useCase,
-        ProductionMessageSample: data.sampleMessage,
-        OptInType: "VERBAL",
+        UseCaseSummary: `${data.useCase}\n\nOpt-in method: ${data.optInDescription}`,
+        ProductionMessageSample: withRequiredSmsDisclosures(data.sampleMessage, {
+          businessName: acct.legal_business_name!,
+          contactEmail: acct.contact_email!,
+          websiteUrl: acct.website_url!,
+        }),
+        OptInType: optInImageUrl ? "WEB_FORM" : "VERBAL",
         MessageVolume:
           data.monthlyVolume <= 1000
             ? "10"
@@ -305,10 +341,31 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         BusinessContactLastName: (acct.full_name ?? "").split(" ").slice(1).join(" ") || "Account",
         BusinessContactEmail: acct.contact_email!,
         BusinessContactPhone: acct.phone ?? "",
+        OptInConfirmationMessage: withRequiredSmsDisclosures(
+          `${acct.legal_business_name}: You are subscribed to receive marketing SMS updates.`,
+          {
+            businessName: acct.legal_business_name!,
+            contactEmail: acct.contact_email!,
+            websiteUrl: acct.website_url!,
+          },
+        ),
+        HelpMessageSample: withRequiredSmsDisclosures(
+          `${acct.legal_business_name}: For help, contact ${acct.contact_email} or visit ${acct.website_url}.`,
+          {
+            businessName: acct.legal_business_name!,
+            contactEmail: acct.contact_email!,
+            websiteUrl: acct.website_url!,
+          },
+        ),
+        AdditionalInformation: tollfreeAdditionalInformation({
+          businessName: acct.legal_business_name!,
+          optInDescription: data.optInDescription,
+          optInImageUrl,
+          privacyPolicyUrl: acct.privacy_policy_url,
+        }),
       };
       if (optInImageUrl) verifBody.OptInImageUrls = [optInImageUrl];
-      if (acct.privacy_policy_url)
-        verifBody.AdditionalInformation = `Privacy: ${acct.privacy_policy_url}`;
+      if (acct.privacy_policy_url) verifBody.PrivacyPolicyUrl = acct.privacy_policy_url;
 
       try {
         const ver = await twilio<{ sid: string }>(`${MESSAGING_API}/Tollfree/Verifications`, {

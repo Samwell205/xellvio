@@ -1,23 +1,38 @@
-# Fix: blank `/app#` after Google sign-in
+## What I found
 
-## What's happening
-After the Google OAuth round-trip, the user lands on `https://xellvio.com/app#`. The Lovable OAuth handler writes the session to storage, but the React tree has *already* mounted and the `_authenticated` route's `beforeLoad` (which calls `supabase.auth.getUser()` + `ensureMyAccount()`) ran before the session was available — so the loader resolved to "no user / blank" and never re-ran. A manual refresh re-runs `beforeLoad`, the session is now in storage, and the dashboard renders. Classic OAuth/session race.
+The uploaded opt-in proof is reaching Twilio:
 
-## Fix
-Subscribe to Supabase auth events at the root and invalidate the router whenever the session changes. The `_authenticated` loader then re-runs the moment the OAuth callback writes the session, and the dashboard renders without a refresh.
+- The latest verification attempt includes `OptInImageUrls` with the uploaded proof URL.
+- The proof URL opens publicly as an image.
+- Twilio returned a verification ID and put the submission into review, so the submission did reach Twilio.
 
-### Change `src/routes/__root.tsx`
-Inside `RootComponent`, add a `useEffect` that:
-- Calls `supabase.auth.onAuthStateChange((event) => { ... })`
-- On `SIGNED_IN`, `TOKEN_REFRESHED`, `SIGNED_OUT`, or `USER_UPDATED`, calls `router.invalidate()` so route loaders re-evaluate against the new session.
-- Cleans up the subscription on unmount.
+The rejection is likely because the screenshot/page content does not match the submitted use case clearly enough. The screenshot shows a generic contact form consent, while the submitted use case says recurring marketing/promotional SMS. Twilio rejected it as: `Opt-In Does Not Match the Use Case`.
 
-This is a tiny, isolated change — no other files need edits. It also makes sign-out reactive across tabs.
+## Fix plan
 
-## Why this works
-- `router.invalidate()` forces TanStack Router to re-run `beforeLoad`/`loader` for active matches.
-- The Lovable OAuth callback only writes the session after navigation has already started, so without invalidation the gate sees "no user" on first render. Refreshing works only because it restarts the whole loader chain — which is exactly what `invalidate()` does, just automatically.
+1. **Make the app validate proof quality before resubmission**
+   - Require proof of opt-in for toll-free submission.
+   - Keep the existing public URL check.
+   - Add clearer pre-submit requirements so the user cannot submit a weak screenshot/page that omits the required consent elements.
 
-## Out of scope
-- No changes to the auth page, OAuth call, or `_authenticated` loader logic.
-- No new dependencies.
+2. **Improve the Twilio payload for opt-in matching**
+   - Make `AdditionalInformation` explicitly describe where the reviewer can see the checkbox and how it matches the marketing use case.
+   - Make the submitted opt-in confirmation/help text and sample message consistently include business name, marketing purpose, STOP, HELP, and rates language.
+   - Avoid conflicting/weak wording that makes the use case look different from the opt-in proof.
+
+3. **Fix the old Set up SMS path too**
+   - The older `/app/setup-sms` flow currently submits `OptInType: VERBAL` even when the user uploads a web-form screenshot. That can cause mismatch rejections.
+   - Change it to submit web-form opt-in when a screenshot is uploaded and include the opt-in description in the carrier payload.
+   - Include privacy/terms/disclosure details in the payload when available.
+
+4. **Improve the rejected-state UI**
+   - Show a clearer explanation that Twilio did receive the proof, but the proof content did not match the submitted use case.
+   - Tell the user exactly what the screenshot/page must show before clicking Resubmit.
+
+5. **Verify after implementation**
+   - Confirm the proof URL route still opens publicly.
+   - Confirm the generated Twilio payload includes the proof URL and matching opt-in/use-case fields.
+
+## Important note
+
+This fix cannot force Twilio/carriers to approve a non-compliant opt-in page. It will make sure the image reaches Twilio, remove mismatch-causing payload issues, and guide the user to submit proof that matches the stated marketing use case.

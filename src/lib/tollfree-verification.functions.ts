@@ -65,7 +65,7 @@ function friendlyReason(raw: string | undefined): string {
   if (t.includes("usecasecategories"))
     return "The selected use case category was not accepted by Twilio. Choose one of the allowed categories below and retry; the reserved toll-free number will be reused.";
   if (t.includes("opt") || t.includes("consent"))
-    return "The carrier needs clearer proof of subscriber consent. The screenshot or opt-in page must visibly show your business name, an unchecked SMS opt-in checkbox/form, Msg & data rates may apply, Reply STOP to opt out, HELP for help, and Privacy/Terms links.";
+    return "The carrier received the opt-in proof, but it did not clearly match the submitted SMS use case. Resubmit proof that visibly shows your business name, phone field or SMS sign-up form, an optional/unchecked SMS opt-in checkbox, message purpose, Msg & data rates may apply, Reply STOP to opt out, HELP for help, and Privacy/Terms links.";
   if (t.includes("sample") || t.includes("message"))
     return "Your sample message needs revision so it matches what carriers expect.";
   if (t.includes("website") || t.includes("url"))
@@ -103,9 +103,47 @@ function requestSummary(data: TollfreeVerificationPayload) {
     useCaseCategories: data.useCaseCategories,
     monthlyVolume: data.monthlyVolume,
     hasProofOfOptInUrl: !!data.proofOfOptInUrl,
+    proofShowsRequiredConsent: data.proofShowsRequiredConsent === true,
     hasPrivacyPolicyUrl: !!data.privacyPolicyUrl,
     hasTermsUrl: !!data.termsUrl,
   };
+}
+
+function businessDisplayName(data: Pick<TollfreeVerificationPayload, "businessDba" | "legalEntityName">) {
+  return (data.businessDba || data.legalEntityName).trim();
+}
+
+function useCaseLabel(categories: string[]) {
+  return categories.map((c) => c.replaceAll("_", " ").toLowerCase()).join(", ") || "SMS";
+}
+
+function withRequiredSmsDisclosures(value: string | undefined, opts: {
+  businessName: string;
+  contactEmail: string;
+  websiteUrl: string;
+}) {
+  const text = (value ?? "").trim();
+  const parts = [
+    text || `${opts.businessName}: You are subscribed to receive SMS updates.`,
+  ];
+  const upper = parts.join(" ").toUpperCase();
+  if (!upper.includes("STOP")) parts.push("Reply STOP to opt out.");
+  if (!upper.includes("HELP")) parts.push("Reply HELP for help.");
+  if (!/MSG|MESSAGE/.test(upper) || !/DATA/.test(upper) || !/RATE/.test(upper)) {
+    parts.push("Msg & data rates may apply.");
+  }
+  if (!upper.includes("HELP") && opts.contactEmail) parts.push(`Support: ${opts.contactEmail}.`);
+  const joined = parts.join(" ").replace(/\s+/g, " ").trim();
+  return joined.slice(0, 1600);
+}
+
+function optInReviewerNote(data: TollfreeVerificationPayload) {
+  const name = businessDisplayName(data);
+  return [
+    `Opt-in proof review note: the OptInImageUrls proof is the web-form/screenshot for ${name}'s ${useCaseLabel(data.useCaseCategories)} SMS program.`,
+    "The user confirmed before submission that this proof visibly shows the same business name and message purpose as the use case, a phone-number collection field or SMS opt-in control, an unchecked/optional SMS opt-in checkbox or form, Msg & data rates may apply, Reply STOP to opt out, HELP for help, and Privacy Policy / Terms links.",
+    "Consent is not a condition of purchase and the proof is intended to match the submitted marketing/use-case description.",
+  ].join("\n");
 }
 
 function isPrivateProofHost(hostname: string) {
@@ -374,6 +412,7 @@ export const TollfreeVerificationInput = z.object({
     z.array(z.enum(USE_CASE_CATEGORIES)).min(1).max(5),
   ),
   proofOfOptInUrl: z.string().trim().url().optional().or(z.literal("")),
+  proofShowsRequiredConsent: z.literal(true),
   useCaseDescription: z.string().trim().min(40).max(2000),
   sampleMessage: z.string().trim().min(20).max(1600),
   notificationEmail: z.string().trim().email(),
@@ -968,6 +1007,28 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const businessCountry = (data.businessCountry || "US").toUpperCase();
     const twilioRegistrationCountry = (registrationCountry || businessCountry).toUpperCase();
     const twilioRegistrationAuthority = normalizedRegistrationAuthority;
+    const displayName = businessDisplayName(data);
+    const sampleForCarrier = withRequiredSmsDisclosures(data.sampleMessage, {
+      businessName: displayName,
+      contactEmail: data.contactEmail,
+      websiteUrl: data.websiteUrl,
+    });
+    const optInConfirmationForCarrier = withRequiredSmsDisclosures(
+      data.optInConfirmationMessage,
+      {
+        businessName: displayName,
+        contactEmail: data.contactEmail,
+        websiteUrl: data.websiteUrl,
+      },
+    );
+    const helpMessageForCarrier = withRequiredSmsDisclosures(
+      data.helpMessageSample || `${displayName}: For help, contact ${data.contactEmail} or visit ${data.websiteUrl}.`,
+      {
+        businessName: displayName,
+        contactEmail: data.contactEmail,
+        websiteUrl: data.websiteUrl,
+      },
+    );
 
     // Build the Twilio Tollfree Verifications payload.
     const body: Record<string, string | string[]> = {
@@ -980,7 +1041,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       NotificationEmail: INTERNAL_TFV_CONTACT_EMAIL,
       UseCaseCategories: data.useCaseCategories,
       UseCaseSummary: data.useCaseDescription,
-      ProductionMessageSample: data.sampleMessage,
+      ProductionMessageSample: sampleForCarrier,
       OptInType: data.optInType,
       MessageVolume: data.monthlyVolume,
       BusinessStreetAddress: data.addressLine1,
@@ -1010,8 +1071,8 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     if (data.proofOfOptInUrl) body.OptInImageUrls = [data.proofOfOptInUrl];
     if (data.privacyPolicyUrl) body.PrivacyPolicyUrl = data.privacyPolicyUrl;
     if (data.termsUrl) body.TermsAndConditionsUrl = data.termsUrl;
-    if (data.optInConfirmationMessage) body.OptInConfirmationMessage = data.optInConfirmationMessage;
-    if (data.helpMessageSample) body.HelpMessageSample = data.helpMessageSample;
+    body.OptInConfirmationMessage = optInConfirmationForCarrier;
+    body.HelpMessageSample = helpMessageForCarrier;
     const optInKeywords = splitOptInKeywords(data.optInKeywords);
     if (optInKeywords.length) body.OptInKeywords = optInKeywords;
     body.AgeGatedContent = data.containsAgeGatedContent ? "true" : "false";
@@ -1019,6 +1080,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     body.StatusCallback = `${callbackBase}/api/public/twilio-tollfree-status`;
     body.StatusCallbackMethod = "POST";
     const extra: string[] = [];
+    extra.push(optInReviewerNote(data));
     if (data.proofOfOptInUrl) extra.push(`Opt-in proof URL: ${data.proofOfOptInUrl}`);
     if (data.businessDba) extra.push(`DBA: ${data.businessDba}`);
     if (data.businessType) extra.push(`Business type: ${data.businessType}`);
