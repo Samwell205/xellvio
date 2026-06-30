@@ -305,10 +305,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       const status: "submitted" | "verified" = "submitted";
       let optInImageUrl: string | undefined;
       if (data.optInScreenshotPath) {
-        const signed = await supabaseAdmin.storage
-          .from("opt-in-assets")
-          .createSignedUrl(data.optInScreenshotPath, 60 * 60 * 24 * 30);
-        if (signed.data?.signedUrl) optInImageUrl = signed.data.signedUrl;
+        optInImageUrl = `${base}/api/public/opt-in-proof/${data.optInScreenshotPath.replace(/^\/+/, "")}`;
       }
       const addr = (acct.business_address ?? "")
         .split(/\n|,/)
