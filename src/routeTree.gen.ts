@@ -15,6 +15,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as SmsTermsRouteImport } from './routes/sms-terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SellersRouteImport } from './routes/sellers'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -47,6 +48,7 @@ import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.pub
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
+import { Route as AuthenticatedSellersDashboardRouteImport } from './routes/_authenticated.sellers.dashboard'
 import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './routes/_authenticated.app.toll-free-verification'
 import { Route as AuthenticatedAppTeamRouteImport } from './routes/_authenticated.app.team'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
@@ -66,6 +68,7 @@ import { Route as AuthenticatedAdminRatesRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminNumberRequestsRouteImport } from './routes/_authenticated.admin.number-requests'
 import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authenticated.admin.messaging'
 import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated.admin.messages'
+import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated.admin.marketplace'
 import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_authenticated.admin.compliance'
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
 import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
@@ -109,6 +112,11 @@ const SmsTermsRoute = SmsTermsRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SellersRoute = SellersRouteImport.update({
+  id: '/sellers',
+  path: '/sellers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -275,6 +283,12 @@ const ApiPublicDispatchCampaignRoute =
     path: '/api/public/dispatch-campaign',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedSellersDashboardRoute =
+  AuthenticatedSellersDashboardRouteImport.update({
+    id: '/sellers/dashboard',
+    path: '/sellers/dashboard',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAppTollFreeVerificationRoute =
   AuthenticatedAppTollFreeVerificationRouteImport.update({
     id: '/toll-free-verification',
@@ -384,6 +398,12 @@ const AuthenticatedAdminMessagesRoute =
     path: '/messages',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminMarketplaceRoute =
+  AuthenticatedAdminMarketplaceRouteImport.update({
+    id: '/marketplace',
+    path: '/marketplace',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminComplianceRoute =
   AuthenticatedAdminComplianceRouteImport.update({
     id: '/compliance',
@@ -484,6 +504,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sms-terms': typeof SmsTermsRoute
   '/solutions': typeof SolutionsRouteWithChildren
@@ -500,6 +521,7 @@ export interface FileRoutesByFullPath {
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
+  '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
@@ -519,6 +541,7 @@ export interface FileRoutesByFullPath {
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
+  '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -556,6 +579,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sms-terms': typeof SmsTermsRoute
   '/solutions': typeof SolutionsRouteWithChildren
@@ -570,6 +594,7 @@ export interface FileRoutesByTo {
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
+  '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
@@ -587,6 +612,7 @@ export interface FileRoutesByTo {
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
+  '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -626,6 +652,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sms-terms': typeof SmsTermsRoute
   '/solutions': typeof SolutionsRouteWithChildren
@@ -642,6 +669,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/_authenticated/admin/compliance': typeof AuthenticatedAdminComplianceRoute
+  '/_authenticated/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/_authenticated/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/_authenticated/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
@@ -661,6 +689,7 @@ export interface FileRoutesById {
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/_authenticated/app/team': typeof AuthenticatedAppTeamRoute
   '/_authenticated/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
+  '/_authenticated/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -700,6 +729,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/reset-password'
+    | '/sellers'
     | '/sitemap.xml'
     | '/sms-terms'
     | '/solutions'
@@ -716,6 +746,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/billing'
     | '/admin/compliance'
+    | '/admin/marketplace'
     | '/admin/messages'
     | '/admin/messaging'
     | '/admin/number-requests'
@@ -735,6 +766,7 @@ export interface FileRouteTypes {
     | '/app/suppressions'
     | '/app/team'
     | '/app/toll-free-verification'
+    | '/sellers/dashboard'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
@@ -772,6 +804,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/reset-password'
+    | '/sellers'
     | '/sitemap.xml'
     | '/sms-terms'
     | '/solutions'
@@ -786,6 +819,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/billing'
     | '/admin/compliance'
+    | '/admin/marketplace'
     | '/admin/messages'
     | '/admin/messaging'
     | '/admin/number-requests'
@@ -803,6 +837,7 @@ export interface FileRouteTypes {
     | '/app/suppressions'
     | '/app/team'
     | '/app/toll-free-verification'
+    | '/sellers/dashboard'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
@@ -841,6 +876,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/reset-password'
+    | '/sellers'
     | '/sitemap.xml'
     | '/sms-terms'
     | '/solutions'
@@ -857,6 +893,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/activity'
     | '/_authenticated/admin/billing'
     | '/_authenticated/admin/compliance'
+    | '/_authenticated/admin/marketplace'
     | '/_authenticated/admin/messages'
     | '/_authenticated/admin/messaging'
     | '/_authenticated/admin/number-requests'
@@ -876,6 +913,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/suppressions'
     | '/_authenticated/app/team'
     | '/_authenticated/app/toll-free-verification'
+    | '/_authenticated/sellers/dashboard'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
@@ -915,6 +953,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SellersRoute: typeof SellersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SmsTermsRoute: typeof SmsTermsRoute
   SolutionsRoute: typeof SolutionsRouteWithChildren
@@ -982,6 +1021,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sellers': {
+      id: '/sellers'
+      path: '/sellers'
+      fullPath: '/sellers'
+      preLoaderRoute: typeof SellersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -1208,6 +1254,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicDispatchCampaignRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/sellers/dashboard': {
+      id: '/_authenticated/sellers/dashboard'
+      path: '/sellers/dashboard'
+      fullPath: '/sellers/dashboard'
+      preLoaderRoute: typeof AuthenticatedSellersDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/app/toll-free-verification': {
       id: '/_authenticated/app/toll-free-verification'
       path: '/toll-free-verification'
@@ -1341,6 +1394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminMessagesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/marketplace': {
+      id: '/_authenticated/admin/marketplace'
+      path: '/marketplace'
+      fullPath: '/admin/marketplace'
+      preLoaderRoute: typeof AuthenticatedAdminMarketplaceRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/compliance': {
       id: '/_authenticated/admin/compliance'
       path: '/compliance'
@@ -1447,6 +1507,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
   AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
   AuthenticatedAdminComplianceRoute: typeof AuthenticatedAdminComplianceRoute
+  AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
   AuthenticatedAdminMessagingRoute: typeof AuthenticatedAdminMessagingRoute
   AuthenticatedAdminNumberRequestsRoute: typeof AuthenticatedAdminNumberRequestsRoute
@@ -1461,6 +1522,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminActivityRoute: AuthenticatedAdminActivityRoute,
   AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
   AuthenticatedAdminComplianceRoute: AuthenticatedAdminComplianceRoute,
+  AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
   AuthenticatedAdminMessagingRoute: AuthenticatedAdminMessagingRoute,
   AuthenticatedAdminNumberRequestsRoute: AuthenticatedAdminNumberRequestsRoute,
@@ -1550,11 +1612,13 @@ const AuthenticatedAppRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedAppRoute: typeof AuthenticatedAppRouteWithChildren
+  AuthenticatedSellersDashboardRoute: typeof AuthenticatedSellersDashboardRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedAppRoute: AuthenticatedAppRouteWithChildren,
+  AuthenticatedSellersDashboardRoute: AuthenticatedSellersDashboardRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -1589,6 +1653,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SellersRoute: SellersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SmsTermsRoute: SmsTermsRoute,
   SolutionsRoute: SolutionsRouteWithChildren,
