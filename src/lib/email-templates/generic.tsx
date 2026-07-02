@@ -17,7 +17,7 @@ const Email = ({ heading, body, ctaText, ctaUrl }: Props) => (
     {(body ?? "").split("\n").map((line, i) => (
       <Text key={i} style={p}>{line || "\u00A0"}</Text>
     ))}
-    {ctaUrl && ctaText && <CTA href={ctaUrl}>{ctaText}</CTA>}
+    {ctaUrl && ctaText && <CTA href={ctaUrl} label={ctaText} />}
   </XellvioLayout>
 );
 
