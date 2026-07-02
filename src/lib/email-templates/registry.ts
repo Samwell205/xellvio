@@ -4,6 +4,7 @@ import { template as tollfreeApproved } from './tollfree-approved'
 import { template as tollfreeRejected } from './tollfree-rejected'
 import { template as tollfreeInfoRequested } from './tollfree-info-requested'
 import { template as teamInvite } from './team-invite'
+import { template as generic } from './generic'
 
 
 export interface TemplateEntry {
@@ -24,4 +25,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'tollfree-rejected': tollfreeRejected,
   'tollfree-info-requested': tollfreeInfoRequested,
   'team-invite': teamInvite,
+  'generic': generic,
 }
