@@ -1413,6 +1413,7 @@ export type Database = {
           profile_id: string
         }[]
       }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       encrypt_twilio_token: { Args: { _plain: string }; Returns: string }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
