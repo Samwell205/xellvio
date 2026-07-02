@@ -83,6 +83,7 @@ export type Database = {
           gorgias_email: string | null
           gorgias_enabled: boolean
           id: string
+          is_seller: boolean
           legal_business_name: string | null
           monthly_volume_estimate: number | null
           onboarding_status: string
@@ -93,6 +94,8 @@ export type Database = {
           policies_accepted_version: string | null
           privacy_policy_url: string | null
           sample_message: string | null
+          seller_balance: number
+          seller_lifetime_earnings: number
           sms_consent_disclosures_confirmed_at: string | null
           sms_consent_disclosures_version: string | null
           sms_target_countries: string[] | null
@@ -126,6 +129,7 @@ export type Database = {
           gorgias_email?: string | null
           gorgias_enabled?: boolean
           id: string
+          is_seller?: boolean
           legal_business_name?: string | null
           monthly_volume_estimate?: number | null
           onboarding_status?: string
@@ -136,6 +140,8 @@ export type Database = {
           policies_accepted_version?: string | null
           privacy_policy_url?: string | null
           sample_message?: string | null
+          seller_balance?: number
+          seller_lifetime_earnings?: number
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
@@ -169,6 +175,7 @@ export type Database = {
           gorgias_email?: string | null
           gorgias_enabled?: boolean
           id?: string
+          is_seller?: boolean
           legal_business_name?: string | null
           monthly_volume_estimate?: number | null
           onboarding_status?: string
@@ -179,6 +186,8 @@ export type Database = {
           policies_accepted_version?: string | null
           privacy_policy_url?: string | null
           sample_message?: string | null
+          seller_balance?: number
+          seller_lifetime_earnings?: number
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
@@ -736,6 +745,80 @@ export type Database = {
           },
         ]
       }
+      marketplace_listings: {
+        Row: {
+          buyer_account_id: string | null
+          buyer_price_amount: number | null
+          created_at: string
+          id: string
+          phone_number: string | null
+          seller_account_id: string
+          seller_payout_amount: number | null
+          sender_asset_id: string | null
+          sold_at: string | null
+          status: string
+          tollfree_attempt_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          buyer_account_id?: string | null
+          buyer_price_amount?: number | null
+          created_at?: string
+          id?: string
+          phone_number?: string | null
+          seller_account_id: string
+          seller_payout_amount?: number | null
+          sender_asset_id?: string | null
+          sold_at?: string | null
+          status?: string
+          tollfree_attempt_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          buyer_account_id?: string | null
+          buyer_price_amount?: number | null
+          created_at?: string
+          id?: string
+          phone_number?: string | null
+          seller_account_id?: string
+          seller_payout_amount?: number | null
+          sender_asset_id?: string | null
+          sold_at?: string | null
+          status?: string
+          tollfree_attempt_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_buyer_account_id_fkey"
+            columns: ["buyer_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_seller_account_id_fkey"
+            columns: ["seller_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_sender_asset_id_fkey"
+            columns: ["sender_asset_id"]
+            isOneToOne: false
+            referencedRelation: "sender_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_tollfree_attempt_id_fkey"
+            columns: ["tollfree_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "tollfree_verification_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           campaign_id: string
@@ -1099,6 +1182,101 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_ledger: {
+        Row: {
+          account_id: string
+          amount: number
+          balance_after: number
+          created_at: string
+          description: string | null
+          id: string
+          listing_id: string | null
+          type: string
+          withdrawal_id: string | null
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          balance_after: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          listing_id?: string | null
+          type: string
+          withdrawal_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          listing_id?: string | null
+          type?: string
+          withdrawal_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_ledger_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      seller_payout_accounts: {
+        Row: {
+          account_id: string
+          account_name: string
+          account_number: string
+          bank_code: string
+          bank_name: string
+          created_at: string
+          id: string
+          resolved_at: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          account_name: string
+          account_number: string
+          bank_code: string
+          bank_name: string
+          created_at?: string
+          id?: string
+          resolved_at?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          account_name?: string
+          account_number?: string
+          bank_code?: string
+          bank_name?: string
+          created_at?: string
+          id?: string
+          resolved_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_payout_accounts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sender_assets: {
         Row: {
           account_id: string
@@ -1368,18 +1546,83 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawal_requests: {
+        Row: {
+          admin_notes: string | null
+          amount: number
+          created_at: string
+          id: string
+          paid_at: string | null
+          paid_by: string | null
+          payout_account_snapshot: Json
+          seller_account_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_account_snapshot: Json
+          seller_account_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          payout_account_snapshot?: Json
+          seller_account_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_requests_seller_account_id_fkey"
+            columns: ["seller_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       claim_account_invites: { Args: never; Returns: number }
+      credit_seller: {
+        Args: {
+          _account_id: string
+          _amount: number
+          _description: string
+          _listing_id: string
+        }
+        Returns: number
+      }
       debit_account: {
         Args: {
           _account_id: string
           _amount: number
           _campaign_id: string
           _description: string
+        }
+        Returns: number
+      }
+      debit_seller_withdrawal: {
+        Args: {
+          _account_id: string
+          _amount: number
+          _description: string
+          _withdrawal_id: string
         }
         Returns: number
       }
