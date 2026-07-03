@@ -13,7 +13,6 @@ import {
 interface SignupEmailProps {
   siteName: string
   recipient: string
-  confirmationUrl: string
   token?: string
 }
 

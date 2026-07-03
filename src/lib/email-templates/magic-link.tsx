@@ -12,13 +12,11 @@ import {
 
 interface MagicLinkEmailProps {
   siteName: string
-  confirmationUrl: string
   token?: string
 }
 
 export const MagicLinkEmail = ({
   siteName,
-  confirmationUrl,
   token,
 }: MagicLinkEmailProps) => (
   <Html lang="en" dir="ltr">
@@ -29,7 +27,7 @@ export const MagicLinkEmail = ({
         <Heading style={h1}>Your verification code</Heading>
         {token ? <Text style={codeStyle}>{token}</Text> : null}
         <Text style={text}>
-          Enter this 6-digit code on {siteName} to finish signing in. It expires shortly.
+          Enter this 6-digit code on {siteName}. It expires shortly.
         </Text>
         <Text style={footer}>
           If you didn't request this code, you can safely ignore this email.
