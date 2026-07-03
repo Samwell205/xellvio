@@ -35,7 +35,11 @@ export const TollfreeVerificationInput = z.object({
   zip: z.string().trim().min(3).max(20),
   monthlyVolume: z.enum(VOLUME_VALUES),
   optInType: z.enum(OPT_IN_VALUES),
-  useCaseCategories: z.array(z.enum(USE_CASE_CATEGORIES)).min(1).max(5),
+  useCaseCategories: z.array(z.string().transform((v) => normalizeUseCase(v) ?? v))
+    .min(1).max(5)
+    .refine((arr) => arr.every((v) => (TOLLFREE_USE_CASES as readonly string[]).includes(v)), {
+      message: "Invalid use-case",
+    }),
   proofOfOptInUrl: z.string().trim().url().optional().or(z.literal("")),
   proofShowsRequiredConsent: z.literal(true),
   useCaseDescription: z.string().trim().min(40).max(2000),
