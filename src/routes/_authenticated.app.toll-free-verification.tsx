@@ -290,7 +290,7 @@ function TollfreeVerificationPage() {
                 ? "Continue verification with reserved number"
                 : "Submit registration"
           }
-          onSubmit={(form) => submitMut.mutateAsync({ ...form, agreeToTos: true })}
+          onSubmit={async (form) => { await submitMut.mutateAsync({ ...form, agreeToTos: true }); }}
           helperBanner={
             !isLocked ? (
               <div className="text-xs text-muted-foreground rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
