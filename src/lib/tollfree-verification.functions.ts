@@ -12,7 +12,6 @@ import { TOLLFREE_USE_CASES, TOLLFREE_VOLUMES, normalizeUseCase } from "./tollfr
 
 const VOLUME_VALUES = TOLLFREE_VOLUMES;
 const OPT_IN_VALUES = ["VERBAL","WEB_FORM","PAPER_FORM","VIA_TEXT","MOBILE_QR_CODE"] as const;
-const USE_CASE_CATEGORIES = TOLLFREE_USE_CASES;
 
 export const TollfreeVerificationInput = z.object({
   legalEntityName: z.string().trim().min(2).max(255),
