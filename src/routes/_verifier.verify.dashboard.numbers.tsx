@@ -189,7 +189,7 @@ function NumbersPage() {
               onSubmit={async (form: WizardForm) => {
                 await submitAssignedMut.mutateAsync({
                   id: wizardTfnId,
-                  notes: JSON.stringify(form),
+                  payload: form,
                 });
                 setWizardTfnId(null);
               }}
