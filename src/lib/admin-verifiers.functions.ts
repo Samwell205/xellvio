@@ -340,3 +340,121 @@ export const adminDeleteVerifierTfn = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// List sold TFNs with buyer + verifier info for payout auditing
+export const adminListSoldTfns = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: sold } = await supabaseAdmin
+      .from("verifier_tfns")
+      .select("id,phone_number,country,verifier_id,sold_to_account_id,sold_at,sale_price_ngn,payout_ngn,commission_ngn,verifiers(full_name,email)")
+      .eq("status", "sold")
+      .order("sold_at", { ascending: false })
+      .limit(500);
+    const buyerIds = Array.from(new Set((sold ?? []).map((s: any) => s.sold_to_account_id).filter(Boolean)));
+    const { data: buyers } = await supabaseAdmin
+      .from("accounts").select("id,email,full_name")
+      .in("id", buyerIds.length ? buyerIds : ["00000000-0000-0000-0000-000000000000"]);
+    const bMap = Object.fromEntries((buyers ?? []).map((b: any) => [b.id, b]));
+    return (sold ?? []).map((s: any) => ({ ...s, buyer: bMap[s.sold_to_account_id] ?? null }));
+  });
+
+// Twilio direct integration — list all approved toll-free verifications on the main account
+export const adminListTwilioApprovedTfns = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase);
+    const sid = process.env.TWILIO_ACCOUNT_SID;
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    if (!sid || !token) throw new Error("Twilio credentials not configured");
+    const auth = "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
+
+    // Pull approved verifications (paginated)
+    const rows: Array<{ sid: string; phone_number: string | null; phone_sid: string | null; status: string; business_name: string | null; date_created: string | null }> = [];
+    let url: string | null = `https://messaging.twilio.com/v1/Tollfree/Verifications?Status=TWILIO_APPROVED&PageSize=50`;
+    let safety = 20;
+    while (url && safety-- > 0) {
+      const res = await fetch(url, { headers: { Authorization: auth } });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Twilio ${res.status}: ${body.slice(0, 300)}`);
+      }
+      const page: any = await res.json();
+      const list = page.tollfree_verifications ?? page.verifications ?? [];
+      for (const v of list) {
+        rows.push({
+          sid: v.sid,
+          phone_number: v.tollfree_phone_number ?? null,
+          phone_sid: v.tollfree_phone_number_sid ?? null,
+          status: v.status,
+          business_name: v.business_name ?? null,
+          date_created: v.date_created ?? null,
+        });
+      }
+      const next = page.meta?.next_page_url ?? null;
+      url = next && typeof next === "string" ? next : null;
+    }
+
+    // Cross-reference with sender_assets to show current assignment
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const numbers = rows.map(r => r.phone_number).filter(Boolean) as string[];
+    const { data: assets } = await supabaseAdmin
+      .from("sender_assets")
+      .select("phone_number,account_id,accounts:account_id(email,full_name)")
+      .in("phone_number", numbers.length ? numbers : ["__none__"]);
+    const aMap = Object.fromEntries((assets ?? []).map((a: any) => [a.phone_number, a]));
+    return rows.map(r => ({
+      ...r,
+      assigned_to: r.phone_number ? (aMap[r.phone_number]?.accounts ?? null) : null,
+      assigned_account_id: r.phone_number ? (aMap[r.phone_number]?.account_id ?? null) : null,
+    }));
+  });
+
+export const adminAssignTwilioNumberToAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      phone_number: z.string().min(6),
+      account_id: z.string().uuid(),
+      country: z.string().default("US"),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Check if already assigned
+    const { data: existing } = await supabaseAdmin
+      .from("sender_assets")
+      .select("id,account_id")
+      .eq("phone_number", data.phone_number)
+      .maybeSingle();
+    if (existing) {
+      if (existing.account_id === data.account_id) return { ok: true, already: true };
+      throw new Error("This number is already assigned to another tenant");
+    }
+    const { error } = await supabaseAdmin.from("sender_assets").insert({
+      account_id: data.account_id,
+      country_code: data.country,
+      sender_kind: "toll_free",
+      phone_number: data.phone_number,
+      verification_status: "verified",
+      last_synced_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminUnassignSenderAsset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ phone_number: z.string().min(6) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("sender_assets").delete().eq("phone_number", data.phone_number);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
