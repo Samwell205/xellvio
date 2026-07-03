@@ -53,6 +53,59 @@ function normalizePayload(payload: any): Partial<WizardForm> {
   return { ...payload, businessType: bt };
 }
 
+// Best-effort parse of a single-line address like "651 N Broad Street, Middletown, DE 19709, US"
+function parseAddress(s: string | null | undefined): { addressLine1: string; city: string; state: string; zip: string; businessCountry: string } {
+  const empty = { addressLine1: "", city: "", state: "", zip: "", businessCountry: "" };
+  if (!s) return empty;
+  const parts = s.split(",").map((x) => x.trim()).filter(Boolean);
+  if (parts.length < 2) return { ...empty, addressLine1: s.trim() };
+  const country = parts.length >= 4 ? parts[parts.length - 1] : "";
+  const stateZip = parts.length >= 3 ? parts[parts.length - (country ? 2 : 1)] : "";
+  const city = parts.length >= 3 ? parts[parts.length - (country ? 3 : 2)] : parts[1];
+  const line1 = parts.slice(0, parts.length - (country ? 3 : 2)).join(", ") || parts[0];
+  // "DE 19709" or "London SW1A 1AA"
+  const m = stateZip.match(/^(.*?)\s+([A-Za-z0-9 -]{3,10})$/);
+  const state = m ? m[1].trim() : stateZip;
+  const zip = m ? m[2].trim() : "";
+  return {
+    addressLine1: line1,
+    city,
+    state,
+    zip,
+    businessCountry: /^[A-Z]{2}$/.test(country) ? country.toUpperCase() : "",
+  };
+}
+
+function accountAutofillToForm(a: any | null | undefined): Partial<WizardForm> {
+  if (!a) return {};
+  const addr = parseAddress(a.business_address);
+  const fullName = String(a.full_name ?? "").trim();
+  const [firstName, ...rest] = fullName.split(/\s+/);
+  const lastName = rest.join(" ");
+  const phone = String(a.phone ?? "");
+  const phoneMatch = phone.match(/^(\+\d{1,4})(.*)$/);
+  return {
+    legalEntityName: a.legal_business_name ?? "",
+    websiteUrl: a.website_url ?? "",
+    contactEmail: a.contact_email ?? "",
+    contactFirstName: firstName ?? "",
+    contactLastName: lastName ?? "",
+    contactPhoneCountry: phoneMatch?.[1] ?? "+1",
+    contactPhone: (phoneMatch?.[2] ?? phone).replace(/\D/g, ""),
+    businessCountry: addr.businessCountry || "US",
+    addressLine1: addr.addressLine1,
+    city: addr.city,
+    state: addr.state,
+    zip: addr.zip,
+    useCaseDescription: a.use_case_description ?? "",
+    sampleMessage: a.sample_message ?? "",
+    privacyPolicyUrl: a.privacy_policy_url ?? "",
+    termsUrl: a.terms_url ?? "",
+    monthlyVolume: a.monthly_volume_estimate ? String(a.monthly_volume_estimate) : "10,000",
+    notificationEmail: a.contact_email ?? "",
+  };
+}
+
 function StatusBadge({ status }: { status: Status | null | undefined }) {
   if (!status) return <Badge variant="outline" className="gap-1"><Clock className="size-3" />Not submitted</Badge>;
   if (status === "verified") return <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" />Approved by carrier</Badge>;
