@@ -1032,6 +1032,7 @@ function ProgressPanel({
   const inFlight = queued + sending;
   const processed = total - inFlight;
   const processedPct = total > 0 ? Math.round((processed / total) * 100) : 0;
+  const isPausedForCapacity = status === "paused_low_balance";
   const isDraining = inFlight > 0 && (status === "sending" || status === "queued");
   const topReasons = Object.entries(failures?.byReason ?? {})
     .sort((a, b) => b[1] - a[1])
@@ -1066,6 +1067,11 @@ function ProgressPanel({
           {status === "queued" && sending === 0 && sent === 0 && (
             <span className="text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400">
               starting within 1 min…
+            </span>
+          )}
+          {isPausedForCapacity && (
+            <span className="text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400">
+              paused · waiting for provider capacity
             </span>
           )}
         </div>
@@ -1146,8 +1152,10 @@ function ProgressPanel({
 
       <div className="text-[11px] text-muted-foreground mt-3">
         {isDraining
-          ? `Processing ~200 messages/minute. ${processedPct}% complete — you can leave this page and come back later.`
-          : inFlight === 0
+          ? `Processing up to ~600 messages/minute when provider capacity is available. ${processedPct}% complete — you can leave this page and come back later.`
+          : isPausedForCapacity
+            ? `Paused after checking provider capacity. ${inFlight.toLocaleString()} message${inFlight === 1 ? "" : "s"} remain queued and will resume automatically after top-up.`
+            : inFlight === 0
             ? "All messages have been processed."
             : `${processedPct}% complete.`}
       </div>
