@@ -6,13 +6,13 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import path from "node:path";
-import { loadEnv } from "vite";
+import { loadEnv, type ConfigEnv } from "vite";
 
-export default defineConfig(({ mode }) => {
-  const serverEnv = loadEnv(mode, process.cwd(), "");
+export default async function config(env: ConfigEnv) {
+  const serverEnv = loadEnv(env.mode, process.cwd(), "");
   Object.assign(process.env, serverEnv);
 
-  return {
+  return defineConfig({
     tanstackStart: {
       // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
       // nitro/vite builds from this
@@ -27,5 +27,5 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-  };
-});
+  })(env);
+}
