@@ -61,13 +61,16 @@ export const getMyTollfreeVerification = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: asset } = await context.supabase
       .from("sender_assets")
-      .select("id,phone_number,verification_status,verification_sid,rejection_reason,friendly_rejection_reason,submitted_at,in_review_at,verified_at,rejected_at")
+      .select("id,phone_number,phone_sid,verification_status,verification_sid,rejection_reason,friendly_rejection_reason,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_phone_number_id,telnyx_messaging_profile_id")
       .eq("account_id", context.userId)
       .eq("sender_kind", "toll_free")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    return { asset: asset ?? null };
+    const withExtras = asset
+      ? { ...asset, verification_payload: null as any }
+      : null;
+    return { asset: withExtras };
   });
 
 export const submitTollfreeVerification = createServerFn({ method: "POST" })
@@ -128,7 +131,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       submitted_at: new Date().toISOString(),
     }).eq("id", asset.id);
 
-    return { ok: true, verificationSid: result.verificationSid, status: result.status };
+    return { ok: true, verificationSid: result.verificationSid, status: result.status, friendlyRejectionReason: result.rejectionReason ?? null };
   });
 
 export const refreshTollfreeVerification = createServerFn({ method: "POST" })
@@ -155,7 +158,14 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
 export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
-    return { paid: true, feeCents: 0, currency: "USD", note: "Telnyx does not charge a separate toll-free verification fee." };
+    return {
+      paid: true,
+      feeCents: 0,
+      fee: { amount: 0, amount_cents: 0, currency: "USD", label: "$0.00" },
+      balance: { amount: 0, currency: "USD", label: "$0.00" },
+      currency: "USD",
+      note: "Telnyx does not charge a separate toll-free verification fee.",
+    };
   });
 
 export const payTollfreeFee = createServerFn({ method: "POST" })

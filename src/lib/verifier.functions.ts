@@ -541,14 +541,11 @@ export const refreshMyTfn = createServerFn({ method: "POST" })
       .eq("verifier_id", verifier.id)
       .maybeSingle();
     if (!row?.twilio_verification_sid) return { ok: false, reason: "not_submitted" };
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    if (!accountSid || !authToken) throw new Error("Carrier credentials not configured");
     const { fetchTwilioTollfreeVerification } = await import("./tollfree-submit.server");
     const result = await fetchTwilioTollfreeVerification({
       verificationSid: row.twilio_verification_sid,
-      accountSid,
-      authToken,
+      accountSid: "",
+      authToken: "",
     });
     const dbStatus =
       result.status === "verified" ? "verified" :
