@@ -771,6 +771,7 @@ function TollfreeVerificationPage() {
               </Select>
             </Field>
           </Two>
+          <OptInExamplePanel type={form.optInType} />
           <Two>
             <Field label="Use case category" required>
               <Select
