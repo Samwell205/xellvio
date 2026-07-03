@@ -18,6 +18,7 @@ export async function resumePausedCampaigns(): Promise<string[]> {
 
   const { balance, ok } = await getMasterTwilioBalance();
   if (!ok) return [];
+  const buffer = await getBalanceBuffer();
   let remainingBalance = balance - buffer;
   const resumed: string[] = [];
   if (remainingBalance <= 0) return [];
