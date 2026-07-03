@@ -263,6 +263,10 @@ function CampaignReport() {
         </div>
       )}
 
+      <ProgressPanel data={progressQ.data} status={c.status} isFetching={progressQ.isFetching} />
+
+
+
       <Tabs defaultValue="overview">
 
         <TabsList>
