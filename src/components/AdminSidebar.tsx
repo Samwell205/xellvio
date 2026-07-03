@@ -24,6 +24,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
       { title: "Tenant accounts", url: "/admin/accounts", icon: Building2 },
       { title: "User management", url: "/admin/users", icon: UserCog },
       { title: "Number requests", url: "/admin/number-requests", icon: PhoneCall },
+      { title: "Tenant senders", url: "/admin/senders", icon: Radio },
     ],
   },
   {
