@@ -88,11 +88,13 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
 
         try {
           const { decryptToken } = await import("@/lib/tenant-crypto.server");
-          const { data: acct } = await supabaseAdmin
-            .from("accounts")
-            .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
-            .eq("id", asset.account_id)
-            .maybeSingle();
+          const { data: acct } = asset
+            ? await supabaseAdmin
+                .from("accounts")
+                .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
+                .eq("id", asset.account_id)
+                .maybeSingle()
+            : { data: null as any };
           let subSid = acct?.twilio_subaccount_sid ?? null;
           let subToken: string | null = null;
           if (subSid && acct?.twilio_subaccount_auth_token_enc) {
