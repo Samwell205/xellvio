@@ -28,7 +28,7 @@ function VerifierShell() {
     window.location.href = "/verify";
   }
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex">
+    <div className="dark min-h-screen bg-slate-950 text-slate-100 flex">
       <aside className="w-60 border-r border-slate-800/60 p-4 flex flex-col">
         <Link to="/verify" className="font-semibold text-lg mb-6">Xellvio Verifier</Link>
         <nav className="flex-1 space-y-1">
