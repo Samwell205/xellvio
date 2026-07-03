@@ -156,24 +156,165 @@ async function flagAccountForReview(
   }
 }
 
-async function dispatchOne(
+// Send a single already-queued message row through the SMS provider.
+async function sendOneMessage(
+  supabaseAdmin: any,
+  campaign: any,
+  sender: Sender,
+  m: any,
+  callback: string,
+): Promise<{ ok: boolean; shaft: boolean; debited: number }> {
+  try {
+    const sendAsMms = !!campaign.media_url && supportsMms(m.country_code);
+    const messageBody =
+      campaign.media_url && !sendAsMms ? fallbackMediaBody(m.rendered_body, m.id) : m.rendered_body;
+    const body = new URLSearchParams({
+      To: m.phone_e164,
+      Body: messageBody,
+      StatusCallback: callback,
+    });
+    if (sender.kind === "tenant") {
+      const matchedSender = sender.assets?.find(
+        (asset) =>
+          asset.country_code === m.country_code &&
+          (asset.messaging_service_sid || asset.phone_number),
+      );
+      const messagingService = matchedSender?.messaging_service_sid ?? sender.messagingService;
+      const fromNumber = matchedSender?.phone_number ?? sender.fromNumber;
+      if (messagingService) body.append("MessagingServiceSid", messagingService);
+      else body.append("From", fromNumber!);
+    } else {
+      body.append("MessagingServiceSid", sender.messagingService);
+    }
+    if (sendAsMms) body.append("MediaUrl", campaign.media_url);
+
+    const fetchInit: RequestInit =
+      sender.kind === "tenant"
+        ? {
+            method: "POST",
+            headers: {
+              Authorization:
+                "Basic " +
+                Buffer.from(`${sender.subaccountSid}:${sender.subaccountToken}`).toString("base64"),
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body,
+          }
+        : {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${sender.lovableKey}`,
+              "X-Connection-Api-Key": sender.twilioKey,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body,
+          };
+
+    const url =
+      sender.kind === "tenant"
+        ? `https://api.twilio.com/2010-04-01/Accounts/${sender.subaccountSid}/Messages.json`
+        : `${GATEWAY_URL}/Messages.json`;
+    const res = await fetch(url, fetchInit);
+    const json: any = await res.json().catch(() => ({}));
+    const twilioCode = String(json?.code ?? "");
+    if (!res.ok) {
+      await supabaseAdmin
+        .from("messages")
+        .update({ status: "failed", error_code: twilioCode || String(res.status) })
+        .eq("id", m.id);
+      return { ok: false, shaft: isShaftError(twilioCode), debited: 0 };
+    }
+    const providerSegments = Number(json.num_segments ?? m.segments_count ?? 1);
+    await supabaseAdmin
+      .from("messages")
+      .update({
+        status: "sent",
+        provider_message_id: json.sid,
+        sent_at: new Date().toISOString(),
+        segments_count: providerSegments,
+      })
+      .eq("id", m.id);
+
+    let debited = 0;
+    try {
+      await supabaseAdmin.rpc("debit_account", {
+        _account_id: campaign.account_id,
+        _amount: Number(m.cost),
+        _campaign_id: campaign.id,
+        _description: `SMS → ${m.phone_e164} (${m.country_code ?? "??"}) × ${m.segments_count}`,
+      });
+      debited = Number(m.cost);
+    } catch (e) {
+      await supabaseAdmin.from("events").insert({
+        message_id: m.id,
+        type: "debit_failed",
+        payload: { error: String(e) },
+      });
+    }
+
+    // Mirror to Gorgias (best effort).
+    try {
+      const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
+      const ourNumber =
+        sender.kind === "tenant"
+          ? (sender.assets?.find((a: any) => a.country_code === m.country_code)?.phone_number ??
+              sender.fromNumber ??
+              null)
+          : null;
+      await forwardSmsToGorgias({
+        accountId: campaign.account_id,
+        phone: m.phone_e164,
+        fromNumber: ourNumber,
+        body: messageBody,
+        direction: "outbound",
+      });
+    } catch (e) {
+      console.error("[dispatch] gorgias mirror failed", e);
+    }
+
+    return { ok: true, shaft: false, debited };
+  } catch (e) {
+    await supabaseAdmin
+      .from("messages")
+      .update({ status: "failed", error_code: "exception" })
+      .eq("id", m.id);
+    return { ok: false, shaft: false, debited: 0 };
+  }
+}
+
+async function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
+  let idx = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (idx < items.length) {
+      const i = idx++;
+      await fn(items[i]);
+    }
+  });
+  await Promise.all(workers);
+}
+
+// Plan phase: compute recipients, run balance preflight, and bulk-insert all
+// message rows (as "queued" or "failed"). Does NOT call the SMS provider — that
+// happens on subsequent cron ticks in the deliver phase. This ensures large
+// campaigns don't exceed a single Worker invocation's CPU/subrequest limits.
+async function planCampaign(
   supabaseAdmin: any,
   campaign: any,
   rates: Rate[],
-  sender: Sender,
-): Promise<{ queued: number; failed: number; debited: number; cost: number; skipped?: string; paused?: boolean }> {
-  await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
-
-  // Defense-in-depth: keyword scan at dispatch time. If SHAFT content slipped through,
-  // fail the campaign immediately and flag the account.
+): Promise<{ planned: number; skipped: number; cost: number; paused?: boolean; reason?: string }> {
   const preScan = keywordScan(campaign.message_body ?? "");
   if (!preScan.allowed) {
     await supabaseAdmin
       .from("campaigns")
       .update({ status: "blocked_content", paused_reason: preScan.reason })
       .eq("id", campaign.id);
-    await flagAccountForReview(supabaseAdmin, campaign.account_id, "content_violation_dispatch", preScan.reason ?? "Keyword hit at dispatch");
-    return { queued: 0, failed: 0, debited: 0, cost: 0, skipped: "blocked_content" };
+    await flagAccountForReview(
+      supabaseAdmin,
+      campaign.account_id,
+      "content_violation_dispatch",
+      preScan.reason ?? "Keyword hit at dispatch",
+    );
+    return { planned: 0, skipped: 0, cost: 0, reason: "blocked_content" };
   }
 
   const list = await loadEligibleRecipients(
@@ -183,16 +324,15 @@ async function dispatchOne(
   );
   if (list.length === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
-    return { queued: 0, failed: 0, debited: 0, cost: 0 };
+    return { planned: 0, skipped: 0, cost: 0 };
   }
 
-  // Compute segments once per recipient (after personalization)
   const dial = rates.map((r) => ({ country_code: r.country_code, dial_prefix: r.dial_prefix }));
   const rateByCC: Record<string, Rate> = {};
   for (const r of rates) rateByCC[r.country_code] = r;
   const hasMedia = !!campaign.media_url;
 
-  const enriched = list.map((p) => {
+  const enriched = list.map((p: any) => {
     const body = render(campaign.message_body, p);
     const seg = calculateSegments(body);
     const cc = p.country_code || countryFromPhone(p.phone_e164, dial);
@@ -203,11 +343,8 @@ async function dispatchOne(
     return { ...p, body, segments: seg.segments, country_code: cc, cost };
   });
 
-  const totalCost = +enriched.reduce((s, x) => s + x.cost, 0).toFixed(4);
+  const totalCost = +enriched.reduce((s: number, x: any) => s + x.cost, 0).toFixed(4);
 
-  // Master Twilio balance pre-flight: if not enough to cover this campaign,
-  // pause it (don't fail) and fire urgent admin alert. Auto-resume cron picks
-  // it up once admin funds Twilio.
   try {
     const { getMasterTwilioBalance, getBalanceBuffer, fireCapacityAlert } = await import(
       "@/lib/twilio-alerts.server"
@@ -242,26 +379,24 @@ async function dispatchOne(
         tenantEmail: (pausedAcct as any)?.email ?? null,
         twilioBalance: twBal,
         currency,
-          campaignCost: totalCost,
-          shortfall: +(totalCost - twBal).toFixed(4),
+        campaignCost: totalCost,
+        shortfall: +(totalCost - twBal).toFixed(4),
         pausedCampaignCount: pausedCount ?? undefined,
       });
-      return { queued: 0, failed: 0, debited: 0, cost: totalCost, paused: true };
+      return { planned: 0, skipped: 0, cost: totalCost, paused: true };
     }
-      if (ok && totalCost > 0 && twBal < totalCost + buffer) {
-        console.warn("[dispatch] provider balance is below reserve but can cover campaign", {
-          campaignId: campaign.id,
-          balance: twBal,
-          cost: totalCost,
-          reserve: buffer,
-        });
-      }
+    if (ok && totalCost > 0 && twBal < totalCost + buffer) {
+      console.warn("[dispatch] provider balance is below reserve but can cover campaign", {
+        campaignId: campaign.id,
+        balance: twBal,
+        cost: totalCost,
+        reserve: buffer,
+      });
+    }
   } catch (e) {
     console.error("[dispatch] balance preflight failed (continuing)", e);
   }
 
-
-  // Balance check up front — never charge more than the user has on file.
   const { data: acct, error: aErr } = await supabaseAdmin
     .from("accounts")
     .select("credit_balance")
@@ -270,208 +405,102 @@ async function dispatchOne(
   if (aErr || !acct) throw new Error("Account lookup failed");
   const startingBalance = Number(acct.credit_balance);
 
-  // Sort cheapest-first so a low balance still reaches as many people as possible.
-  enriched.sort((a, b) => a.cost - b.cost);
+  enriched.sort((a: any, b: any) => a.cost - b.cost);
 
-  // Pre-mark recipients we can't afford as skipped (no debit, no Twilio call).
   let remaining = startingBalance;
-  const affordable: typeof enriched = [];
-  const skippedRows: any[] = [];
+  const queuedRows: any[] = [];
+  const failedRows: any[] = [];
   for (const r of enriched) {
-    if (r.cost > 0 && r.cost <= remaining) {
+    const base = {
+      campaign_id: campaign.id,
+      profile_id: r.profile_id,
+      phone_e164: r.phone_e164,
+      country_code: r.country_code,
+      segments_count: r.segments,
+      cost: r.cost,
+      rendered_body: r.body,
+    };
+    if (r.cost === 0) {
+      queuedRows.push({ ...base, status: "queued" });
+    } else if (r.cost <= remaining) {
       remaining -= r.cost;
-      affordable.push(r);
-    } else if (r.cost === 0) {
-      // Free routes (no rate row) — still send, no debit.
-      affordable.push(r);
+      queuedRows.push({ ...base, status: "queued" });
     } else {
-      skippedRows.push({
-        campaign_id: campaign.id,
-        profile_id: r.profile_id,
-        phone_e164: r.phone_e164,
-        country_code: r.country_code,
-        segments_count: r.segments,
-        cost: r.cost,
-        rendered_body: r.body,
-        status: "failed",
-        error_code: "insufficient_balance",
-      });
+      failedRows.push({ ...base, status: "failed", error_code: "insufficient_balance" });
     }
   }
-  if (skippedRows.length > 0) {
-    await supabaseAdmin.from("messages").insert(skippedRows);
+
+  const allRows = [...queuedRows, ...failedRows];
+  for (let i = 0; i < allRows.length; i += PLAN_INSERT_CHUNK) {
+    const chunk = allRows.slice(i, i + PLAN_INSERT_CHUNK);
+    const { error: insErr } = await supabaseAdmin.from("messages").insert(chunk);
+    if (insErr) throw new Error(`Failed to insert message batch: ${insErr.message}`);
   }
-  if (affordable.length === 0) {
+
+  if (queuedRows.length === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
     return {
-      queued: 0,
-      failed: skippedRows.length,
-      debited: 0,
+      planned: 0,
+      skipped: failedRows.length,
       cost: totalCost,
-      skipped: "insufficient_balance",
+      reason: "insufficient_balance",
     };
   }
 
-  let queued = 0;
-  let failed = skippedRows.length;
-  let debited = 0;
-  let shaftErrors = 0;
+  await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
+  return { planned: queuedRows.length, skipped: failedRows.length, cost: totalCost };
+}
+
+// Deliver phase: send a bounded batch of queued messages for a campaign.
+async function deliverPending(
+  supabaseAdmin: any,
+  campaign: any,
+  sender: Sender,
+): Promise<{ sent: number; failed: number; debited: number; remaining: number }> {
   const callback = await statusCallbackUrl();
-  // From here on, dispatch only affordable recipients.
-  const dispatchList = affordable;
 
+  const { data: batch, error: qErr } = await supabaseAdmin
+    .from("messages")
+    .select("id, phone_e164, rendered_body, country_code, segments_count, cost")
+    .eq("campaign_id", campaign.id)
+    .eq("status", "queued")
+    .order("cost", { ascending: true })
+    .limit(DELIVER_PER_TICK);
+  if (qErr) throw new Error(qErr.message);
 
-  for (let i = 0; i < dispatchList.length; i += BATCH_SIZE) {
-    const batch = dispatchList.slice(i, i + BATCH_SIZE);
-
-
-    const rows = batch.map((p) => ({
-      campaign_id: campaign.id,
-      profile_id: p.profile_id,
-      phone_e164: p.phone_e164,
-      country_code: p.country_code,
-      segments_count: p.segments,
-      cost: p.cost,
-      rendered_body: p.body,
-      status: "queued",
-    }));
-    const { data: inserted, error: insErr } = await supabaseAdmin
+  const rows = batch ?? [];
+  if (rows.length === 0) {
+    const { count: stillPending } = await supabaseAdmin
       .from("messages")
-      .insert(rows)
-      .select("id, phone_e164, rendered_body, country_code, segments_count, cost");
-    if (insErr) {
-      failed += rows.length;
-      continue;
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaign.id)
+      .in("status", ["queued", "sending"]);
+    if ((stillPending ?? 0) === 0) {
+      await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
     }
-
-    await Promise.all(
-      (inserted ?? []).map(async (m: any) => {
-        try {
-          const sendAsMms = !!campaign.media_url && supportsMms(m.country_code);
-          const messageBody =
-            campaign.media_url && !sendAsMms ? fallbackMediaBody(m.rendered_body, m.id) : m.rendered_body;
-          const body = new URLSearchParams({
-            To: m.phone_e164,
-            Body: messageBody,
-            StatusCallback: callback,
-          });
-          if (sender.kind === "tenant") {
-            const matchedSender = sender.assets?.find(
-              (asset) =>
-                asset.country_code === m.country_code &&
-                (asset.messaging_service_sid || asset.phone_number),
-            );
-            const messagingService = matchedSender?.messaging_service_sid ?? sender.messagingService;
-            const fromNumber = matchedSender?.phone_number ?? sender.fromNumber;
-            if (messagingService) body.append("MessagingServiceSid", messagingService);
-            else body.append("From", fromNumber!);
-          } else {
-            body.append("MessagingServiceSid", sender.messagingService);
-          }
-          if (sendAsMms) body.append("MediaUrl", campaign.media_url);
-
-          const fetchInit: RequestInit =
-            sender.kind === "tenant"
-              ? {
-                  method: "POST",
-                  headers: {
-                    Authorization:
-                      "Basic " +
-                      Buffer.from(`${sender.subaccountSid}:${sender.subaccountToken}`).toString(
-                        "base64",
-                      ),
-                    "Content-Type": "application/x-www-form-urlencoded",
-                  },
-                  body,
-                }
-              : {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${sender.lovableKey}`,
-                    "X-Connection-Api-Key": sender.twilioKey,
-                    "Content-Type": "application/x-www-form-urlencoded",
-                  },
-                  body,
-                };
-
-          const url =
-            sender.kind === "tenant"
-              ? `https://api.twilio.com/2010-04-01/Accounts/${sender.subaccountSid}/Messages.json`
-              : `${GATEWAY_URL}/Messages.json`;
-          const res = await fetch(url, fetchInit);
-          const json: any = await res.json().catch(() => ({}));
-          const twilioCode = String(json?.code ?? "");
-          if (!res.ok) {
-            await supabaseAdmin
-              .from("messages")
-              .update({
-                status: "failed",
-                error_code: twilioCode || String(res.status),
-              })
-              .eq("id", m.id);
-            failed++;
-            if (isShaftError(twilioCode)) shaftErrors++;
-          } else {
-            const providerSegments = Number(json.num_segments ?? m.segments_count ?? 1);
-            await supabaseAdmin
-              .from("messages")
-              .update({
-                status: "sent",
-                provider_message_id: json.sid,
-                sent_at: new Date().toISOString(),
-                segments_count: providerSegments,
-              })
-              .eq("id", m.id);
-
-            // Debit the account for this message
-            try {
-              await supabaseAdmin.rpc("debit_account", {
-                _account_id: campaign.account_id,
-                _amount: Number(m.cost),
-                _campaign_id: campaign.id,
-                _description: `SMS → ${m.phone_e164} (${m.country_code ?? "??"}) × ${m.segments_count}`,
-              });
-              debited += Number(m.cost);
-            } catch (e) {
-              // balance was pre-checked; log via events table
-              await supabaseAdmin.from("events").insert({
-                message_id: m.id,
-                type: "debit_failed",
-                payload: { error: String(e) },
-              });
-            }
-            queued++;
-
-            // Mirror this outbound to the tenant's Gorgias helpdesk (no-op if not connected).
-            try {
-              const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
-              const ourNumber =
-                sender.kind === "tenant"
-                  ? (sender.assets?.find((a: any) => a.country_code === m.country_code)?.phone_number ?? sender.fromNumber ?? null)
-                  : null;
-              await forwardSmsToGorgias({
-                accountId: campaign.account_id,
-                phone: m.phone_e164,
-                fromNumber: ourNumber,
-                body: messageBody,
-                direction: "outbound",
-              });
-            } catch (e) {
-              console.error("[dispatch] gorgias mirror failed", e);
-            }
-          }
-        } catch (e) {
-          await supabaseAdmin
-            .from("messages")
-            .update({ status: "failed", error_code: "exception" })
-            .eq("id", m.id);
-          failed++;
-        }
-      }),
-    );
+    return { sent: 0, failed: 0, debited: 0, remaining: stillPending ?? 0 };
   }
 
-  // Auto-suspend: if multiple SHAFT-related carrier errors occur, flag account for review.
+  const ids = rows.map((r: any) => r.id);
+  // Claim rows so a concurrent tick can't double-send them.
+  await supabaseAdmin.from("messages").update({ status: "sending" }).in("id", ids);
+
+  let sent = 0;
+  let failed = 0;
+  let debited = 0;
+  let shaftErrors = 0;
+
+  await runWithConcurrency(rows, DELIVER_CONCURRENCY, async (m: any) => {
+    const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, callback);
+    if (r.ok) {
+      sent++;
+      debited += r.debited;
+    } else {
+      failed++;
+      if (r.shaft) shaftErrors++;
+    }
+  });
+
   if (shaftErrors >= 2) {
     await flagAccountForReview(
       supabaseAdmin,
@@ -481,9 +510,38 @@ async function dispatchOne(
     );
   }
 
-  const finalStatus = queued > 0 ? "sent" : failed > 0 ? "failed" : "sent";
-  await supabaseAdmin.from("campaigns").update({ status: finalStatus }).eq("id", campaign.id);
-  return { queued, failed, debited: +debited.toFixed(4), cost: totalCost };
+  const { count: remaining } = await supabaseAdmin
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaign.id)
+    .eq("status", "queued");
+
+  if ((remaining ?? 0) === 0) {
+    await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
+  } else {
+    // Bump updated_at so the stall-recovery watchdog doesn't reset us.
+    await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
+  }
+
+  return { sent, failed, debited: +debited.toFixed(4), remaining: remaining ?? 0 };
+}
+
+// Route entry point per campaign: decides whether to plan or deliver.
+async function processCampaign(
+  supabaseAdmin: any,
+  campaign: any,
+  rates: Rate[],
+  sender: Sender,
+): Promise<any> {
+  const { count: existing } = await supabaseAdmin
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaign.id);
+
+  if ((existing ?? 0) === 0) {
+    return await planCampaign(supabaseAdmin, campaign, rates);
+  }
+  return await deliverPending(supabaseAdmin, campaign, sender);
 }
 
 export const Route = createFileRoute("/api/public/dispatch-campaign")({
