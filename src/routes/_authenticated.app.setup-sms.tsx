@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/app/setup-sms")({
   component: SetupSmsPage,
 });
 
-import { COUNTRIES as ALL_COUNTRIES } from "@/lib/countries";
+import { COUNTRIES as ALL_COUNTRIES, ALPHA_SENDER_REQUIRES_REGISTRATION_SET } from "@/lib/countries";
 
 const COUNTRIES = ALL_COUNTRIES.map((c) => ({ code: c.iso, name: c.name }));
 
