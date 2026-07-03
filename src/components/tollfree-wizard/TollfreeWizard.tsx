@@ -20,10 +20,7 @@ import { toast } from "sonner";
 
 // ---------- Constants (mirrors Twilio's own wizard) ----------
 
-const VOLUMES = [
-  "10", "100", "1,000", "10,000", "100,000", "250,000",
-  "500,000", "750,000", "1,000,000", "5,000,000+",
-] as const;
+const VOLUMES = TOLLFREE_VOLUMES;
 
 const OPT_IN_TYPES = [
   { v: "VERBAL", l: "Verbal" },
@@ -51,22 +48,8 @@ const REGISTRATION_AUTHORITIES = [
   { v: "OTHER", l: "Other" },
 ] as const;
 
-const CATEGORIES = [
-  "ACCOUNT_NOTIFICATIONS",
-  "CUSTOMER_CARE",
-  "MARKETING",
-  "TWO_FACTOR_AUTHENTICATION",
-  "CHARITY_NONPROFIT",
-  "DELIVERY_NOTIFICATIONS",
-  "FRAUD_ALERT_MESSAGING",
-  "EVENTS",
-  "HIGHER_EDUCATION",
-  "K12",
-  "POLLING_AND_VOTING_NON_POLITICAL",
-  "POLITICAL_ELECTION_CAMPAIGNS",
-  "PUBLIC_SERVICE_ANNOUNCEMENT",
-  "SECURITY_ALERT",
-] as const;
+const CATEGORIES = TOLLFREE_USE_CASES;
+
 
 const OPT_IN_HELP: Record<string, { title: string; example: string; include: string[]; notes: string[] }> = {
   VERBAL: {
