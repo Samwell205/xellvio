@@ -357,6 +357,15 @@ export const submitTfn = createServerFn({ method: "POST" })
     const { data: bank } = await supabaseAdmin
       .from("verifier_bank_accounts").select("id").eq("verifier_id", verifier.id).maybeSingle();
     if (!bank) throw new Error("Add your bank details before submitting numbers");
+    const { count: activeCount } = await supabaseAdmin
+      .from("verifier_tfns")
+      .select("id", { count: "exact", head: true })
+      .eq("verifier_id", verifier.id)
+      .neq("status", "sold");
+    if ((activeCount ?? 0) >= 3) {
+      throw new Error("You can have at most 3 numbers in the marketplace at a time. Sell one before submitting a new number.");
+    }
+
     const { error } = await supabaseAdmin
       .from("verifier_tfns")
       .insert({
