@@ -93,6 +93,7 @@ import { Route as VerifierVerifyDashboardEarningsRouteImport } from './routes/_v
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
+import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
@@ -551,6 +552,12 @@ const AuthenticatedAppCampaignsIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const AuthenticatedAppCampaignsIdReportRoute =
+  AuthenticatedAppCampaignsIdReportRouteImport.update({
+    id: '/report',
+    path: '/report',
+    getParentRoute: () => AuthenticatedAppCampaignsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -619,7 +626,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
-  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
+  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
@@ -635,6 +642,7 @@ export interface FileRoutesByFullPath {
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
+  '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -699,7 +707,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
-  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
+  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
@@ -715,6 +723,7 @@ export interface FileRoutesByTo {
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
+  '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -786,7 +795,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
-  '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
+  '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/_verifier/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
@@ -802,6 +811,7 @@ export interface FileRoutesById {
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
+  '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -888,6 +898,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/'
     | '/app/segments/'
     | '/verify/dashboard/'
+    | '/app/campaigns/$id/report'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -968,6 +979,7 @@ export interface FileRouteTypes {
     | '/app/campaigns'
     | '/app/segments'
     | '/verify/dashboard'
+    | '/app/campaigns/$id/report'
   id:
     | '__root__'
     | '/'
@@ -1054,6 +1066,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/segments/'
     | '/_verifier/verify/dashboard/'
+    | '/_authenticated/app/campaigns/$id/report'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1691,6 +1704,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/_authenticated/app/campaigns/$id/report': {
+      id: '/_authenticated/app/campaigns/$id/report'
+      path: '/report'
+      fullPath: '/app/campaigns/$id/report'
+      preLoaderRoute: typeof AuthenticatedAppCampaignsIdReportRouteImport
+      parentRoute: typeof AuthenticatedAppCampaignsIdRoute
+    }
   }
 }
 
@@ -1732,15 +1752,31 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedAppCampaignsIdRouteChildren {
+  AuthenticatedAppCampaignsIdReportRoute: typeof AuthenticatedAppCampaignsIdReportRoute
+}
+
+const AuthenticatedAppCampaignsIdRouteChildren: AuthenticatedAppCampaignsIdRouteChildren =
+  {
+    AuthenticatedAppCampaignsIdReportRoute:
+      AuthenticatedAppCampaignsIdReportRoute,
+  }
+
+const AuthenticatedAppCampaignsIdRouteWithChildren =
+  AuthenticatedAppCampaignsIdRoute._addFileChildren(
+    AuthenticatedAppCampaignsIdRouteChildren,
+  )
+
 interface AuthenticatedAppCampaignsRouteChildren {
-  AuthenticatedAppCampaignsIdRoute: typeof AuthenticatedAppCampaignsIdRoute
+  AuthenticatedAppCampaignsIdRoute: typeof AuthenticatedAppCampaignsIdRouteWithChildren
   AuthenticatedAppCampaignsNewRoute: typeof AuthenticatedAppCampaignsNewRoute
   AuthenticatedAppCampaignsIndexRoute: typeof AuthenticatedAppCampaignsIndexRoute
 }
 
 const AuthenticatedAppCampaignsRouteChildren: AuthenticatedAppCampaignsRouteChildren =
   {
-    AuthenticatedAppCampaignsIdRoute: AuthenticatedAppCampaignsIdRoute,
+    AuthenticatedAppCampaignsIdRoute:
+      AuthenticatedAppCampaignsIdRouteWithChildren,
     AuthenticatedAppCampaignsNewRoute: AuthenticatedAppCampaignsNewRoute,
     AuthenticatedAppCampaignsIndexRoute: AuthenticatedAppCampaignsIndexRoute,
   }
