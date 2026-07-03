@@ -119,15 +119,7 @@ export async function wireAssignedTollfreeForTenant(opts: {
   }
 
 
-  // 4) Upsert sender_assets
-  const { data: existing } = await supabaseAdmin
-    .from("sender_assets")
-    .select("id")
-    .eq("account_id", opts.accountId)
-    .eq("country_code", country)
-    .eq("sender_kind", "toll_free")
-    .maybeSingle();
-
+  // 4) Upsert sender_assets (unique on account_id, country_code, sender_kind)
   const row = {
     account_id: opts.accountId,
     country_code: country,
@@ -139,11 +131,14 @@ export async function wireAssignedTollfreeForTenant(opts: {
     last_synced_at: new Date().toISOString(),
   } as const;
 
-  if (existing?.id) {
-    await supabaseAdmin.from("sender_assets").update(row).eq("id", existing.id);
-  } else {
-    await supabaseAdmin.from("sender_assets").insert(row);
+  const { error: upsertErr } = await supabaseAdmin
+    .from("sender_assets")
+    .upsert(row, { onConflict: "account_id,country_code,sender_kind" });
+  if (upsertErr) {
+    console.error("[assign-tfn] upsert sender_assets failed", upsertErr);
+    throw upsertErr;
   }
+
 
   // 5) Activate tenant account with this sender as default
   await supabaseAdmin
