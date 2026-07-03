@@ -63,36 +63,61 @@ export async function wireAssignedTollfreeForTenant(opts: {
     console.warn("[assign-tfn] IncomingPhoneNumbers lookup failed", e);
   }
 
-  // 2) Create MessagingService + 3) attach number
+  // 2) Reuse an existing MessagingService that already owns this number, or create one.
   const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
   let msSid: string | null = null;
-  try {
-    const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
-      method: "POST",
-      sid,
-      token,
-      body: {
-        FriendlyName: `Tenant ${opts.accountId.slice(0, 8)} ${country} TF`.slice(0, 64),
-        InboundRequestUrl: `${base}/api/public/twilio-inbound`,
-        StatusCallback: `${base}/api/public/twilio-status`,
-      },
-    });
-    msSid = ms.sid;
-    if (phoneSid) {
-      try {
-        await twilio(`${MESSAGING_API}/Services/${msSid}/PhoneNumbers`, {
-          method: "POST",
-          sid,
-          token,
-          body: { PhoneNumberSid: phoneSid },
-        });
-      } catch (e) {
-        console.warn("[assign-tfn] attach number to service failed", e);
+  if (phoneSid) {
+    try {
+      let url: string | null = `${MESSAGING_API}/Services?PageSize=50`;
+      let safety = 20;
+      while (url && safety-- > 0 && !msSid) {
+        const page = await twilio<any>(url, { sid, token });
+        for (const s of page.services ?? []) {
+          const pr = await twilio<any>(
+            `${MESSAGING_API}/Services/${s.sid}/PhoneNumbers?PageSize=50`,
+            { sid, token },
+          );
+          if ((pr.phone_numbers ?? []).some((p: any) => p.sid === phoneSid)) {
+            msSid = s.sid;
+            break;
+          }
+        }
+        url = page.meta?.next_page_url ?? null;
       }
+    } catch (e) {
+      console.warn("[assign-tfn] existing service lookup failed", e);
     }
-  } catch (e) {
-    console.warn("[assign-tfn] create MessagingService failed", e);
   }
+  if (!msSid) {
+    try {
+      const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
+        method: "POST",
+        sid,
+        token,
+        body: {
+          FriendlyName: `Tenant ${opts.accountId.slice(0, 8)} ${country} TF`.slice(0, 64),
+          InboundRequestUrl: `${base}/api/public/twilio-inbound`,
+          StatusCallback: `${base}/api/public/twilio-status`,
+        },
+      });
+      msSid = ms.sid;
+      if (phoneSid) {
+        try {
+          await twilio(`${MESSAGING_API}/Services/${msSid}/PhoneNumbers`, {
+            method: "POST",
+            sid,
+            token,
+            body: { PhoneNumberSid: phoneSid },
+          });
+        } catch (e) {
+          console.warn("[assign-tfn] attach number to service failed", e);
+        }
+      }
+    } catch (e) {
+      console.warn("[assign-tfn] create MessagingService failed", e);
+    }
+  }
+
 
   // 4) Upsert sender_assets
   const { data: existing } = await supabaseAdmin
