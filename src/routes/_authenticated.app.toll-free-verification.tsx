@@ -911,24 +911,51 @@ function TollfreeVerificationPage() {
             </label>
           </div>
         </Section>
+        </>)}
         </fieldset>
 
         {!isLocked && (
-          <div className="flex flex-col items-end gap-2">
-            <div className="text-xs text-muted-foreground rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
-              A one-time <strong>$3.50</strong> fee will be deducted from your credit balance for the toll-free number &amp; carrier verification. Resubmissions after a rejection are free.
-            </div>
-            <Button type="submit" disabled={!canSubmit || submitMut.isPending} size="lg">
-              {submitMut.isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
-              {status === "rejected"
-                ? "Resubmit for verification"
-                : hasReservedNumber
-                  ? "Continue verification with reserved number"
-                  : "Send information for verification"}
+          <div className="flex items-center justify-between gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep(1)}
+              disabled={step === 1}
+            >
+              <ChevronLeft className="size-4 mr-1" /> Back
             </Button>
+            {step === 1 ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  if (!isBasicValid(form)) {
+                    toast.error("Please complete all required Basic Information fields.");
+                    return;
+                  }
+                  setStep(2);
+                }}
+              >
+                Next: Registration Details <ChevronRight className="size-4 ml-1" />
+              </Button>
+            ) : (
+              <div className="flex flex-col items-end gap-2">
+                <div className="text-xs text-muted-foreground rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
+                  A one-time <strong>$3.50</strong> fee will be deducted from your credit balance for the toll-free number &amp; carrier verification. Resubmissions after a rejection are free.
+                </div>
+                <Button type="submit" disabled={!canSubmit || submitMut.isPending} size="lg">
+                  {submitMut.isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
+                  {status === "rejected"
+                    ? "Resubmit for verification"
+                    : hasReservedNumber
+                      ? "Continue verification with reserved number"
+                      : "Submit registration"}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </form>
+      </div>
       )}
 
       {isLoading && (
