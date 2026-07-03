@@ -103,8 +103,13 @@ async function sendOneMessage(
     const matched = sender.assets.find(
       (a) => a.country_code === m.country_code && (a.messaging_service_sid || a.phone_number),
     );
-    const messagingProfileId = matched?.messaging_service_sid ?? sender.messagingProfileId ?? undefined;
-    const fromNumber = matched?.phone_number ?? sender.fromNumber ?? undefined;
+    if (!matched) {
+      await supabaseAdmin.from("messages")
+        .update({ status: "failed", error_code: "sender_not_registered_for_country" }).eq("id", m.id);
+      return { ok: false, shaft: false, debited: 0 };
+    }
+    const messagingProfileId = matched.messaging_service_sid ?? sender.messagingProfileId ?? undefined;
+    const fromNumber = matched.phone_number ?? sender.fromNumber ?? undefined;
 
     if (!messagingProfileId && !fromNumber) {
       await supabaseAdmin.from("messages")
