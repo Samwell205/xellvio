@@ -1,9 +1,11 @@
 import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Bell, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { provisionCurrentAccount } from "@/lib/provision-account.functions";
 
 export const Route = createFileRoute("/_authenticated/app")({
   beforeLoad: async () => {
@@ -15,6 +17,15 @@ export const Route = createFileRoute("/_authenticated/app")({
 });
 
 function AppShell() {
+  // Ensure this tenant has a carrier messaging profile provisioned.
+  // Idempotent: no-op if already set. Covers new signups AND existing users.
+  const provisioned = useRef(false);
+  useEffect(() => {
+    if (provisioned.current) return;
+    provisioned.current = true;
+    provisionCurrentAccount().catch(() => { /* non-fatal */ });
+  }, []);
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-muted/30">
