@@ -58,10 +58,14 @@ export const Route = createFileRoute("/api/public/twilio-status")({
         }
         if (!valid) return new Response("Invalid signature", { status: 401 });
 
-        const update: { status: string; delivered_at?: string; error_code?: string } = { status };
-        if (status === "delivered") update.delivered_at = new Date().toISOString();
+        // If Twilio reports "sent" but attaches an ErrorCode, the carrier
+        // rejected it — treat as undelivered so it doesn't inflate Sent counts.
+        const effectiveStatus = status === "sent" && errorCode ? "undelivered" : status;
+        const update: { status: string; delivered_at?: string; error_code?: string } = { status: effectiveStatus };
+        if (effectiveStatus === "delivered") update.delivered_at = new Date().toISOString();
         if (errorCode) update.error_code = errorCode;
         await supabaseAdmin.from("messages").update(update).eq("id", msg.id);
+
         await supabaseAdmin.from("events").insert({ message_id: msg.id, type: `status:${status}`, payload: params });
 
         return new Response("ok");
