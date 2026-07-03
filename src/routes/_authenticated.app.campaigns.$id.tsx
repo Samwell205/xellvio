@@ -31,8 +31,9 @@ import {
 import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
   Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
-  DollarSign, Wallet, Activity, XCircle, Download, RotateCw,
+  DollarSign, Wallet, Activity, XCircle, Download, RotateCw, ExternalLink,
 } from "lucide-react";
+
 import { useEffect, useMemo, useState } from "react";
 import { formatUSD } from "@/lib/money";
 
@@ -102,11 +103,16 @@ function CampaignReport() {
     queryFn: async () => {
       const base = () =>
         supabase.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", id);
-      const [total, queued, sending, sent, delivered, failed] = await Promise.all([
+      // "Sent" = handed to carrier and NO error yet. "Failed" includes
+      // status=failed/undelivered PLUS rows that Twilio marked `sent` with an
+      // error code (carrier rejection / silent DLR failure) — those are not
+      // real deliveries and should not inflate the Sent bucket.
+      const [total, queued, sending, sentClean, sentErr, delivered, failedRaw] = await Promise.all([
         base(),
-        base().eq("status", "queued"),
+        base().in("status", ["queued", "pending"]),
         base().eq("status", "sending"),
-        base().eq("status", "sent"),
+        base().eq("status", "sent").is("error_code", null),
+        base().eq("status", "sent").not("error_code", "is", null),
         base().eq("status", "delivered"),
         base().in("status", ["failed", "undelivered"]),
       ]);
@@ -114,12 +120,13 @@ function CampaignReport() {
         total: total.count ?? 0,
         queued: queued.count ?? 0,
         sending: sending.count ?? 0,
-        sent: sent.count ?? 0,
+        sent: sentClean.count ?? 0,
         delivered: delivered.count ?? 0,
-        failed: failed.count ?? 0,
+        failed: (failedRaw.count ?? 0) + (sentErr.count ?? 0),
       };
     },
   });
+
 
   // Failure breakdown by error_code (drives the "Failure reasons" panel and
   // the per-reason retry button). Sender/provider is inferred from
@@ -399,9 +406,20 @@ function CampaignReport() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
+            <Button asChild variant="outline" size="sm" title="Open this campaign's messages in the Twilio Console (filter by date on the page).">
+              <a
+                href={`https://console.twilio.com/us1/monitor/logs/sms?frameUrl=%2Fconsole%2Fsms%2Flogs%3FstartDate%3D${encodeURIComponent(new Date(new Date(sentAt).getTime() - 60 * 60 * 1000).toISOString())}%26endDate%3D${encodeURIComponent(new Date(new Date(sentAt).getTime() + 24 * 60 * 60 * 1000).toISOString())}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink className="size-3 mr-1" />
+                View on Twilio
+              </a>
+            </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
             </Button>
+
           </div>
         </div>
       </div>
