@@ -535,10 +535,13 @@ export const refreshMyTfn = createServerFn({ method: "POST" })
     const dbStatus =
       result.status === "verified" ? "verified" :
       result.status === "rejected" ? "rejected" : "pending_verification";
-    await supabaseAdmin
-      .from("verifier_tfns")
-      .update({ status: dbStatus, rejection_reason: result.rejectionReason })
-      .eq("id", data.id);
+    const nowIso = new Date().toISOString();
+    const patch: any = { status: dbStatus, rejection_reason: result.rejectionReason };
+    if (result.status === "in_review") patch.in_review_at = nowIso;
+    if (dbStatus === "verified") patch.verified_at = nowIso;
+    if (dbStatus === "rejected") patch.rejected_at = nowIso;
+    await supabaseAdmin.from("verifier_tfns").update(patch).eq("id", data.id);
+
     return { ok: true, status: dbStatus };
   });
 
