@@ -294,7 +294,7 @@ function TollfreeVerificationPage() {
           helperBanner={
             !isLocked ? (
               <div className="text-xs text-muted-foreground rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
-                A one-time <strong>$3.50</strong> fee will be deducted from your credit balance for the toll-free number &amp; carrier verification. Resubmissions after a rejection are free.
+                One-time <strong>$5</strong> setup fee already paid. Covers the toll-free number rental &amp; carrier verification. Resubmissions after a rejection are free. One US toll-free number also covers Canada.
               </div>
             ) : null
           }

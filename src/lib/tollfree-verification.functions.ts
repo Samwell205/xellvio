@@ -70,6 +70,8 @@ export const getMyTollfreeVerification = createServerFn({ method: "GET" })
     return { asset: asset ?? null };
   });
 
+export const TOLLFREE_SETUP_FEE_USD = 5;
+
 export const submitTollfreeVerification = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: TollfreeVerificationPayload) => TollfreeVerificationInput.parse(input))
@@ -79,6 +81,16 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const { ensureMessagingProfileForAccount, searchAvailableNumbers, orderNumber } = await import("./telnyx.server");
     const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
 
+    // Fee gate: the $5 setup fee must be paid before we buy a number or hit the carrier.
+    const { data: acct } = await supabaseAdmin
+      .from("accounts")
+      .select("tollfree_setup_fee_paid_at")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!acct?.tollfree_setup_fee_paid_at) {
+      throw new Error(`Please pay the $${TOLLFREE_SETUP_FEE_USD} verification setup fee before submitting.`);
+    }
+
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
     let { data: asset } = await supabaseAdmin
       .from("sender_assets")
@@ -86,27 +98,36 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       .eq("account_id", userId).eq("sender_kind", "toll_free")
       .maybeSingle();
 
-    // If no toll-free asset yet, buy one on Telnyx into the tenant's profile.
     if (!asset) {
-      const avail = await searchAvailableNumbers({ country: data.businessCountry || "US", numberType: "toll-free", limit: 5 });
-      const pick = avail[0];
-      if (!pick) throw new Error("No toll-free numbers are available right now.");
-      const order = await orderNumber({ phoneNumber: pick.phone_number, messagingProfileId });
-      const bought = order.phone_numbers?.[0];
-      if (!bought) throw new Error("Telnyx did not return a purchased number.");
-      const { data: inserted, error: insErr } = await supabaseAdmin.from("sender_assets").insert({
-        account_id: userId,
-        country_code: (data.businessCountry || "US").toUpperCase(),
-        sender_kind: "toll_free",
-        phone_number: bought.phone_number,
-        phone_sid: bought.id,
-        telnyx_phone_number_id: bought.id,
-        telnyx_messaging_profile_id: messagingProfileId,
-        messaging_service_sid: messagingProfileId,
-        verification_status: "pending",
-      }).select("id,phone_number,phone_sid,verification_sid").single();
-      if (insErr) throw new Error(insErr.message);
-      asset = inserted;
+      try {
+        const avail = await searchAvailableNumbers({ country: data.businessCountry || "US", numberType: "toll-free", limit: 5 });
+        const pick = avail[0];
+        if (!pick) throw new Error("No toll-free numbers are available right now.");
+        const order = await orderNumber({ phoneNumber: pick.phone_number, messagingProfileId });
+        const bought = order.phone_numbers?.[0];
+        if (!bought) throw new Error("Telnyx did not return a purchased number.");
+        const { data: inserted, error: insErr } = await supabaseAdmin.from("sender_assets").insert({
+          account_id: userId,
+          country_code: (data.businessCountry || "US").toUpperCase(),
+          sender_kind: "toll_free",
+          phone_number: bought.phone_number,
+          phone_sid: bought.id,
+          telnyx_phone_number_id: bought.id,
+          telnyx_messaging_profile_id: messagingProfileId,
+          messaging_service_sid: messagingProfileId,
+          verification_status: "pending",
+        }).select("id,phone_number,phone_sid,verification_sid").single();
+        if (insErr) throw new Error(insErr.message);
+        asset = inserted;
+      } catch (e: any) {
+        // Refund fee: purchase didn't complete.
+        await supabaseAdmin.rpc("topup_account", {
+          _account_id: userId, _amount: TOLLFREE_SETUP_FEE_USD,
+          _description: "Toll-free setup refund (purchase failed)",
+        });
+        await supabaseAdmin.from("accounts").update({ tollfree_setup_fee_paid_at: null }).eq("id", userId);
+        throw e;
+      }
     }
 
     if (!asset?.phone_sid) throw new Error("No toll-free number id on file for this account.");
@@ -149,27 +170,51 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
     await supabaseAdmin.from("sender_assets").update({
       verification_status: result.status === "verified" ? "verified" : result.status,
       rejection_reason: result.rejectionReason,
+      last_synced_at: new Date().toISOString(),
     }).eq("id", asset.id);
     return { ok: true, status: result.status };
   });
 
 export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
-    const zeroMoney = { amount: 0, amount_cents: 0, currency: "USD", label: "$0.00" };
+  .handler(async ({ context }) => {
+    const { data: acct } = await context.supabase
+      .from("accounts")
+      .select("credit_balance, tollfree_setup_fee_paid_at")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const balance = Number(acct?.credit_balance ?? 0);
+    const paid = !!acct?.tollfree_setup_fee_paid_at;
     return {
-      paid: true,
-      feeCents: 0,
-      fee: 0 as number,
-      balance: 0 as number,
+      paid,
+      feeCents: TOLLFREE_SETUP_FEE_USD * 100,
+      fee: TOLLFREE_SETUP_FEE_USD,
+      balance,
       currency: "USD",
-      note: "Telnyx does not charge a separate toll-free verification fee.",
-      _money: zeroMoney, // reserved for future currency-aware UI
+      note: `One-time $${TOLLFREE_SETUP_FEE_USD} covers the toll-free number rental & carrier verification. Resubmissions after a rejection are free.`,
     };
   });
 
 export const payTollfreeFee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
-    return { ok: true, note: "Telnyx: no verification fee required." };
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: acct } = await supabaseAdmin
+      .from("accounts")
+      .select("tollfree_setup_fee_paid_at, credit_balance")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (acct?.tollfree_setup_fee_paid_at) return { ok: true, alreadyPaid: true };
+    if (Number(acct?.credit_balance ?? 0) < TOLLFREE_SETUP_FEE_USD) {
+      throw new Error(`Insufficient credit balance. Top up at least $${TOLLFREE_SETUP_FEE_USD} to continue.`);
+    }
+    const { error: debitErr } = await supabaseAdmin.rpc("debit_account", {
+      _account_id: context.userId,
+      _amount: TOLLFREE_SETUP_FEE_USD,
+      _campaign_id: undefined as any,
+      _description: "Toll-free verification setup fee",
+    });
+    if (debitErr) throw new Error(debitErr.message);
+    await supabaseAdmin.from("accounts").update({ tollfree_setup_fee_paid_at: new Date().toISOString() }).eq("id", context.userId);
+    return { ok: true, alreadyPaid: false };
   });

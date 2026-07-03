@@ -1,62 +1,53 @@
-## Goal
 
-Rebuild the toll-free verification submission UI to mirror Twilio's own wizard (screenshots provided), for both the tenant flow (`/app/toll-free-verification`) and the verifier submission flow (assigned TFN → "Submit for verification" on `/verify/dashboard/numbers`). The backend already posts to Twilio via `submitTollfreeVerification`; the plan focuses on wiring the new wizard UI to that existing pipeline (and to `submitAssignedTfn` for verifiers) with no protocol changes.
+## 1. Toll-free (US/CA) — charge $5 one-time in credits
 
-## Wizard structure (matches Twilio exactly)
+**How the flow works after the change**
+- Tenant fills the Toll-Free Wizard → clicks Submit.
+- Server checks tenant credit balance ≥ $5. If not, returns `insufficient_credits` and the UI shows "Top up $5 to submit toll-free verification".
+- Server debits $5 via `debit_account(..., description: 'Toll-free verification setup')`, then:
+  1. Buys a US toll-free number on **your** Telnyx account (unchanged).
+  2. Attaches it to the tenant's messaging profile.
+  3. Submits the verification form to Telnyx.
+- If Telnyx purchase or submission fails after debit → automatic refund via `topup_account` with description `Toll-free setup refund`.
+- One US toll-free covers Canada — no separate purchase.
 
-Left rail with two sections and check/loader status icons:
-1. **Basic Information** (already collected by us — auto-checked once the account/business fields exist).
-2. **Registration Details** (the wizard the user steps through).
+**Where it lives**
+- `src/lib/tollfree-verification.functions.ts` — add `TOLLFREE_SETUP_FEE_USD = 5`, wrap `submitTollfreeVerification` with debit/refund. Update `getTollfreeFeeStatus` to return `{ amount: 5, label: "$5.00" }`.
+- `src/routes/_authenticated.app.setup-sms.tsx` — surface the fee in the wizard header ("One-time $5 setup fee — covers carrier verification") and on the Submit button.
 
-Registration Details sub-steps, in this order:
+## 2. Auto-refresh toll-free status
 
-```text
-1. Intro          — "Register your toll-free number" + checklist + Start
-2. Business info  — Legal name, DBA (optional), Company type, Website URL
-3. Business address — Country → address autocomplete → manual fields
-4. Authorized rep — First/Last name, Email, Phone (country picker)
-5. Use case       — Monthly SMS volume, Use case(s) multi-select,
-                    Use case description (500), Sample message (1000)
-6. Opt-in         — Opt-in type dropdown (Verbal / Web form / Paper form /
-                    Via text / Mobile QR code) with the matching help panel,
-                    Opt-in policy proof URLs (multi-line), T&Cs URL,
-                    Privacy Policy URL
-7. Additional     — Opt-in keywords, Opt-in message, Help message,
-                    Age-gated content checkbox
-8. Review & Submit — Read-only summary → Submit
-```
+- New pg_cron job `refresh-tollfree-verifications` every 10 minutes → hits `/api/public/refresh-tollfree-statuses` (new server route).
+- Route iterates `sender_assets` where `sender_kind='toll_free'` and `verification_status IN ('submitted','in_review','pending')`, calls Telnyx `GET /verified_numbers/{id}` per row, updates status + timestamps.
+- Client side: on the Set up SMS page, if a toll-free row is in `submitted`/`in_review`, poll `refreshTollfreeVerification` every 30s via TanStack Query `refetchInterval` so the tenant sees the transition without manual refresh.
 
-Each step: Back / Next buttons, per-step Zod validation, progress persisted in local component state (and draft saved to the existing tenant record between steps so a refresh doesn't lose data).
+## 3. "Requires registration" countries — polish
 
-## Backend wiring (no protocol changes)
+- Verify the amber chip + `RegistrationRequiredDialog` render for every country in `ALPHA_SENDER_REQUIRES_REGISTRATION`.
+- Add a persistent banner at the top of Set up SMS when the tenant has ≥1 country in `requires_registration`: "3 countries need carrier registration before you can send. [Review]".
+- Inside the dialog: link to the Telnyx portal deep link (`https://portal.telnyx.com/#/app/messaging/sender-ids`), 6-step walkthrough (already scaffolded), and a "I've registered — mark ready" button that flips `verification_status` to `verified`.
 
-- Tenant submission continues to call the existing `submitTollfreeVerification` server fn (already POSTs to `https://messaging.twilio.com/v1/Tollfree/Verifications` and stores status).
-- Verifier submission (assigned TFN) continues to call `submitAssignedTfn`, but the notes textarea is replaced by the same wizard; on final submit we serialise the wizard payload into the `notes` field (JSON) so admins see the full submission, and — when the verifier is submitting on behalf of a tenant — also call `submitTollfreeVerification` with those fields against the tenant's Twilio subaccount.
-- Twilio push happens server-side only; the wizard never talks to Twilio directly.
-- Draft autosave: add a lightweight `saveTollfreeDraft` server fn that upserts partial JSON into the existing verification row (nullable columns already exist) so Back/Next survives refresh.
+## 4. Admin view of all tenant senders
 
-## UI/UX details from the screenshots
+New route `src/routes/_authenticated.admin.senders.tsx` (gated by `has_role('admin')`):
+- Table of every `sender_assets` row across all accounts.
+- Columns: Tenant email, Country, Kind (toll_free / alpha / local), Sender, Status (color chip), Submitted at, Rejection reason, Telnyx IDs.
+- Filters: status, country, kind.
+- Actions per row: "Refresh from Telnyx", "Mark verified" (admin override), "Delete".
+- Server functions in `src/lib/admin-senders.functions.ts` — all guarded by `has_role(userId, 'admin')` check.
+- Link added to admin nav.
 
-- Two-column layout: sticky left rail (step list with check + spinner icons) + wide content column, matching the Twilio white/dark neutral look but using this project's existing Tailwind tokens (no hard-coded colors).
-- Opt-in type dropdown shows a contextual help card (bullet checklist + example screenshot area) that swaps based on the selected value — copy taken verbatim from the Twilio screenshots (Web form, Verbal, Paper form, Via text, Mobile QR code).
-- Business address step: country select first, then Google Places-style autocomplete input with a "or edit address manually" link that reveals the 5 manual fields (street, apt/suite, city, state, zip). We'll use plain manual fields by default (no Places API dependency) with an optional autocomplete stub — the manual form matches Twilio's fallback exactly.
-- Close (X) button top-right returns to the app dashboard.
+## Answers to your questions (in-app)
 
-## Files
+- US/CA toll-free: **purchased automatically in your Telnyx account** the moment the tenant submits the wizard. The tenant never touches Telnyx.
+- Tenant pays **$5 in Xellvio credits, one-time**, at submit. You keep the number and pay Telnyx's ~$2/mo + $15 verification out of that + your ongoing margin from per-message rates.
+- One US toll-free = US + Canada coverage. No second purchase for CA.
 
-New:
-- `src/components/tollfree-wizard/` — `WizardShell.tsx`, `StepRail.tsx`, and one file per step (`StepIntro`, `StepBusinessInfo`, `StepAddress`, `StepAuthorizedRep`, `StepUseCase`, `StepOptIn`, `StepAdditional`, `StepReview`).
-- `src/components/tollfree-wizard/schema.ts` — per-step Zod slices derived from the existing `TollfreeVerificationInput`.
+## What's next after this batch
 
-Edited:
-- `src/routes/_authenticated.app.toll-free-verification.tsx` — replace the current single long form with `<WizardShell mode="tenant" />` while keeping status/marketplace/fee sections above it.
-- `src/routes/_verifier.verify.dashboard.numbers.tsx` — replace the plain notes textarea for `assigned` rows with `<WizardShell mode="verifier" tfnId={...} />` opened in a dialog; on submit calls `submitAssignedTfn` with the serialized payload.
-- `src/lib/tollfree-verification.functions.ts` — add `saveTollfreeDraft` (partial upsert) and export a shared `WIZARD_STEP_KEYS` map. `submitTollfreeVerification` untouched.
-- `src/lib/verifier.functions.ts` — extend `submitAssignedTfn` input to accept a structured `payload` object (still stored in `notes` as JSON); when the verifier is bound to a tenant TFN request, also invoke `submitTollfreeVerification` server-side using the tenant's account.
+1. **Per-country pricing surfaced in the UI** — currently `country_rates` exists; show tenants "SMS to NG = $X.XX / segment" on the composer.
+2. **Sender rotation / fallback** — if a tenant has both an alpha ID and a toll-free, prefer toll-free for US/CA and alpha elsewhere (partially done, needs polish).
+3. **Delivery reports dashboard** — per-campaign delivered / failed / undelivered chart pulled from `messages`.
+4. **10DLC (US local)** — right now only toll-free covers US at low volume; 10DLC is the proper US path for scale.
 
-No DB migration needed — existing `tollfree_verification_attempts` columns already cover every field.
-
-## Out of scope (unchanged)
-
-- Twilio subaccount setup, fee/payment flow, marketplace purchase flow, admin views — all remain as-is.
-- Email delivery / auth flows.
+Say "go" and I'll implement 1–4 above.

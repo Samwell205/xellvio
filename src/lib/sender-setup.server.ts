@@ -154,8 +154,49 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   return { created, errors };
 }
 
-// Retained for compatibility with cron poller; Telnyx TF verification is
-// handled separately by the wizard flow so this is now a no-op.
+// Poll Telnyx for every toll-free asset that's still awaiting a decision, and
+// update our row so tenants see submitted → in_review → verified without any
+// manual refresh. Called every 10 minutes by pg_cron via
+// /api/public/poll-verifications.
 export async function syncToollfreeVerifications(_opts: { onlyAccountId?: string } = {}) {
-  return { checked: 0, updated: 0 };
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { fetchTwilioTollfreeVerification } = await import("./tollfree-submit.server");
+
+  let q = supabaseAdmin
+    .from("sender_assets")
+    .select("id, account_id, verification_sid, verification_status")
+    .eq("sender_kind", "toll_free")
+    .not("verification_sid", "is", null)
+    .in("verification_status", ["submitted", "in_review", "pending"]);
+  if (_opts.onlyAccountId) q = q.eq("account_id", _opts.onlyAccountId);
+  const { data: rows, error } = await q;
+  if (error) return { checked: 0, updated: 0, error: error.message };
+
+  let updated = 0;
+  const errors: Array<{ id: string; reason: string }> = [];
+  for (const row of rows ?? []) {
+    if (!row.verification_sid) continue;
+    try {
+      const res = await fetchTwilioTollfreeVerification({
+        verificationSid: row.verification_sid, accountSid: "", authToken: "",
+      });
+      const next = res.status === "verified" ? "verified" : res.status;
+      if (next !== row.verification_status || res.rejectionReason) {
+        await supabaseAdmin.from("sender_assets").update({
+          verification_status: next,
+          rejection_reason: res.rejectionReason,
+          last_synced_at: new Date().toISOString(),
+        }).eq("id", row.id);
+        updated++;
+      } else {
+        await supabaseAdmin.from("sender_assets").update({
+          last_synced_at: new Date().toISOString(),
+        }).eq("id", row.id);
+      }
+    } catch (e: any) {
+      errors.push({ id: row.id, reason: e?.message ?? "unknown" });
+    }
+  }
+
+  return { checked: rows?.length ?? 0, updated, errors };
 }
