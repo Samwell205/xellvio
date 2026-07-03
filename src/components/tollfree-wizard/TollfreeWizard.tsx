@@ -587,8 +587,20 @@ function BusinessAddressStep({ form, update }: StepProps) {
           <Input value={form.city} onChange={(e) => update("city", e.target.value)} />
         </Field>
         <Field label="State / region" required>
-          <Input value={form.state} onChange={(e) => update("state", e.target.value)} />
+          {form.businessCountry === "US" || form.businessCountry === "CA" ? (
+            <Select value={form.state} onValueChange={(v) => update("state", v)}>
+              <SelectTrigger><SelectValue placeholder={form.businessCountry === "CA" ? "Select province" : "Select state"} /></SelectTrigger>
+              <SelectContent>
+                {(form.businessCountry === "CA" ? CA_PROVINCES : US_STATES).map((s) => (
+                  <SelectItem key={s.v} value={s.v}>{s.v} — {s.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input value={form.state} onChange={(e) => update("state", e.target.value)} />
+          )}
         </Field>
+
         <Field label="Zip / postal code" required>
           <Input value={form.zip} onChange={(e) => update("zip", e.target.value)} />
         </Field>
