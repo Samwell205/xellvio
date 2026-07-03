@@ -79,7 +79,9 @@ export const reconcileCampaignMessages = createServerFn({ method: "POST" })
           const newStatus = String(json?.status ?? "").toLowerCase();
           if (!newStatus || newStatus === m.status) return;
 
-          const update: Record<string, any> = { status: newStatus };
+          const update: { status: string; delivered_at?: string; error_code?: string } = {
+            status: newStatus,
+          };
           if (newStatus === "delivered") update.delivered_at = new Date().toISOString();
           if (json?.error_code) update.error_code = String(json.error_code);
 
