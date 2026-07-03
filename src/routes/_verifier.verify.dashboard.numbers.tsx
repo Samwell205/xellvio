@@ -28,7 +28,7 @@ function NumbersPage() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [showManual, setShowManual] = useState(false);
-  const [assignedNotes, setAssignedNotes] = useState<Record<string, string>>({});
+  const [wizardTfnId, setWizardTfnId] = useState<string | null>(null);
 
   const claimMut = useMutation({
     mutationFn: () => claim(),
