@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { checkVerifierEmailAvailable, createVerifierProfile } from "@/lib/verifier.functions";
+import { createVerifierAccountWithCode, sendVerifierSignupCode } from "@/lib/verifier.functions";
 
 export const Route = createFileRoute("/verify/auth")({
   validateSearch: (s: Record<string, unknown>) =>
@@ -20,8 +20,8 @@ export const Route = createFileRoute("/verify/auth")({
 function VerifierAuth() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
-  const checkEmail = useServerFn(checkVerifierEmailAvailable);
-  const createProfile = useServerFn(createVerifierProfile);
+  const sendCode = useServerFn(sendVerifierSignupCode);
+  const createAccount = useServerFn(createVerifierAccountWithCode);
 
   const [signinEmail, setSigninEmail] = useState("");
   const [signinPassword, setSigninPassword] = useState("");
@@ -72,11 +72,6 @@ function VerifierAuth() {
   async function sendSignupCode() {
     setBusy(true);
     try {
-      const check = await checkEmail({ data: { email: signupEmail } });
-      if (!check.available) {
-        toast.error("An account with this email already exists — please sign in instead.");
-        return;
-      }
       if (signupPassword.length < 8) {
         toast.error("Password must be at least 8 characters.");
         return;
@@ -85,15 +80,8 @@ function VerifierAuth() {
         toast.error("Passwords do not match.");
         return;
       }
-      const { error } = await supabase.auth.signUp({
-        email: signupEmail,
-        password: signupPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/verify/auth?tab=signup`,
-          data: { full_name: signupName, verifier_signup: true },
-        },
-      });
-      if (error) throw error;
+      await sendCode({ data: { full_name: signupName, email: signupEmail } });
+      setSignupCode("");
       setSignupStage("code");
       toast.success("We sent a 6-digit code to your email");
     } catch (e: any) {
@@ -106,13 +94,19 @@ function VerifierAuth() {
   async function verifySignupCode() {
     setBusy(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({
+      await createAccount({
+        data: {
+          full_name: signupName,
+          email: signupEmail,
+          password: signupPassword,
+          code: signupCode.trim(),
+        },
+      });
+      const { error } = await supabase.auth.signInWithPassword({
         email: signupEmail,
-        token: signupCode.trim(),
-        type: "signup",
+        password: signupPassword,
       });
       if (error) throw error;
-      await createProfile({ data: { full_name: signupName } }).catch(() => null);
       toast.success("Email confirmed — welcome!");
       navigate({ to: "/verify/dashboard" });
     } catch (e: any) {

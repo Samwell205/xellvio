@@ -34,12 +34,19 @@ export interface SendInternalArgs {
   recipientEmail: string;
   idempotencyKey: string;
   templateData?: Record<string, any>;
+  includeUnsubscribe?: boolean;
 }
 
 export async function sendBrandedEmail(
   args: SendInternalArgs,
 ): Promise<{ success: boolean; reason?: string }> {
-  const { templateName, recipientEmail, idempotencyKey, templateData = {} } = args;
+  const {
+    templateName,
+    recipientEmail,
+    idempotencyKey,
+    templateData = {},
+    includeUnsubscribe = true,
+  } = args;
 
   const template: TemplateEntry | undefined = TEMPLATES[templateName as string];
   if (!template) {
@@ -81,16 +88,18 @@ export async function sendBrandedEmail(
 
   // Mint an unsubscribe token (best effort).
   let unsubscribeToken: string | null = null;
-  try {
-    const token = generateToken();
-    const { data: row } = await supabaseAdmin
-      .from("email_unsubscribe_tokens")
-      .upsert({ email: recipient, token }, { onConflict: "email" })
-      .select("token")
-      .maybeSingle();
-    unsubscribeToken = row?.token ?? token;
-  } catch (err) {
-    console.warn("[send-internal] could not mint unsubscribe token", err);
+  if (includeUnsubscribe) {
+    try {
+      const token = generateToken();
+      const { data: row } = await supabaseAdmin
+        .from("email_unsubscribe_tokens")
+        .upsert({ email: recipient, token }, { onConflict: "email" })
+        .select("token")
+        .maybeSingle();
+      unsubscribeToken = row?.token ?? token;
+    } catch (err) {
+      console.warn("[send-internal] could not mint unsubscribe token", err);
+    }
   }
 
   const element = React.createElement(template.component, templateData);
@@ -121,7 +130,7 @@ export async function sendBrandedEmail(
       purpose: "transactional",
       label: templateName,
       idempotency_key: idempotencyKey,
-      unsubscribe_token: unsubscribeToken,
+      ...(unsubscribeToken ? { unsubscribe_token: unsubscribeToken } : {}),
       queued_at: new Date().toISOString(),
       site_name: SITE_NAME,
     },
