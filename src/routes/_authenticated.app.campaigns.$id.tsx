@@ -82,6 +82,35 @@ function CampaignReport() {
     },
   });
 
+  // Live progress counts across the full campaign (not limited to the 2k row
+  // window used by `messagesQ`). Uses head:true count queries so it's cheap
+  // even for very large campaigns and stays accurate while messages drain
+  // out of the queue in the background.
+  const progressQ = useQuery({
+    queryKey: ["campaign-progress", id],
+    refetchInterval: 3_000,
+    queryFn: async () => {
+      const base = () =>
+        supabase.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", id);
+      const [total, queued, sending, sent, delivered, failed] = await Promise.all([
+        base(),
+        base().eq("status", "queued"),
+        base().eq("status", "sending"),
+        base().eq("status", "sent"),
+        base().eq("status", "delivered"),
+        base().in("status", ["failed", "undelivered"]),
+      ]);
+      return {
+        total: total.count ?? 0,
+        queued: queued.count ?? 0,
+        sending: sending.count ?? 0,
+        sent: sent.count ?? 0,
+        delivered: delivered.count ?? 0,
+        failed: failed.count ?? 0,
+      };
+    },
+  });
+
   const eligibleQ = useQuery({
     queryKey: ["campaign-eligible", id, campaignQ.data?.audience],
     enabled: !!campaignQ.data,
