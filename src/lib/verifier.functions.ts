@@ -497,7 +497,8 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
 
     const { error: upErr } = await supabaseAdmin
       .from("verifier_tfns")
-      .update(patch)
+      .update(patch as any)
+
       .eq("id", data.id)
       .eq("verifier_id", verifier.id);
     if (upErr) throw new Error(upErr.message);
