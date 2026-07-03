@@ -61,16 +61,13 @@ export const getMyTollfreeVerification = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: asset } = await context.supabase
       .from("sender_assets")
-      .select("id,phone_number,phone_sid,verification_status,verification_sid,rejection_reason,friendly_rejection_reason,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_phone_number_id,telnyx_messaging_profile_id")
+      .select("id,phone_number,phone_sid,verification_status,verification_sid,verification_payload,rejection_reason,friendly_rejection_reason,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_phone_number_id,telnyx_messaging_profile_id")
       .eq("account_id", context.userId)
       .eq("sender_kind", "toll_free")
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const withExtras = asset
-      ? { ...asset, verification_payload: null as any }
-      : null;
-    return { asset: withExtras };
+    return { asset: asset ?? null };
   });
 
 export const submitTollfreeVerification = createServerFn({ method: "POST" })
