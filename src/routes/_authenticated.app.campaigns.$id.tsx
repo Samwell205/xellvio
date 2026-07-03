@@ -584,7 +584,11 @@ function CampaignReport() {
             rows={messagesQ.data ?? []}
             stats={stats}
             optOuts={optOutsQ.data ?? 0}
+            onRetry={(mid) => retryOneM.mutate(mid)}
+            retryingId={retryOneM.isPending ? (retryOneM.variables as string | undefined) : undefined}
+            canRetry={c.status !== "cancelled"}
           />
+
         </TabsContent>
 
         {/* ───────────── LINKS ───────────── */}
