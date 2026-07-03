@@ -681,7 +681,21 @@ function CampaignReport() {
 
 /* ───────────── Sub-components ───────────── */
 
-function RecipientActivity({ rows, stats, optOuts }: { rows: any[]; stats: any; optOuts: number }) {
+function RecipientActivity({
+  rows,
+  stats,
+  optOuts,
+  onRetry,
+  retryingId,
+  canRetry,
+}: {
+  rows: any[];
+  stats: any;
+  optOuts: number;
+  onRetry?: (messageId: string) => void;
+  retryingId?: string;
+  canRetry?: boolean;
+}) {
   const [filter, setFilter] = useState<string>("all");
   const buckets = useMemo(() => {
     const f = {
