@@ -67,6 +67,7 @@ import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminVerifiersRouteImport } from './routes/_authenticated.admin.verifiers'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated.admin.users'
 import { Route as AuthenticatedAdminTollfreeAttemptsRouteImport } from './routes/_authenticated.admin.tollfree-attempts'
+import { Route as AuthenticatedAdminSendersRouteImport } from './routes/_authenticated.admin.senders'
 import { Route as AuthenticatedAdminRatesRouteImport } from './routes/_authenticated.admin.rates'
 import { Route as AuthenticatedAdminNumberRequestsRouteImport } from './routes/_authenticated.admin.number-requests'
 import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authenticated.admin.messaging'
@@ -397,6 +398,12 @@ const AuthenticatedAdminTollfreeAttemptsRoute =
     path: '/tollfree-attempts',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminSendersRoute =
+  AuthenticatedAdminSendersRouteImport.update({
+    id: '/senders',
+    path: '/senders',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminRatesRoute = AuthenticatedAdminRatesRouteImport.update({
   id: '/rates',
   path: '/rates',
@@ -585,6 +592,7 @@ export interface FileRoutesByFullPath {
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/admin/senders': typeof AuthenticatedAdminSendersRoute
   '/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verifiers': typeof AuthenticatedAdminVerifiersRoute
@@ -666,6 +674,7 @@ export interface FileRoutesByTo {
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/admin/senders': typeof AuthenticatedAdminSendersRoute
   '/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verifiers': typeof AuthenticatedAdminVerifiersRoute
@@ -750,6 +759,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/_authenticated/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
   '/_authenticated/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/_authenticated/admin/senders': typeof AuthenticatedAdminSendersRoute
   '/_authenticated/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/verifiers': typeof AuthenticatedAdminVerifiersRoute
@@ -835,6 +845,7 @@ export interface FileRouteTypes {
     | '/admin/messaging'
     | '/admin/number-requests'
     | '/admin/rates'
+    | '/admin/senders'
     | '/admin/tollfree-attempts'
     | '/admin/users'
     | '/admin/verifiers'
@@ -916,6 +927,7 @@ export interface FileRouteTypes {
     | '/admin/messaging'
     | '/admin/number-requests'
     | '/admin/rates'
+    | '/admin/senders'
     | '/admin/tollfree-attempts'
     | '/admin/users'
     | '/admin/verifiers'
@@ -999,6 +1011,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/messaging'
     | '/_authenticated/admin/number-requests'
     | '/_authenticated/admin/rates'
+    | '/_authenticated/admin/senders'
     | '/_authenticated/admin/tollfree-attempts'
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/verifiers'
@@ -1496,6 +1509,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTollfreeAttemptsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/senders': {
+      id: '/_authenticated/admin/senders'
+      path: '/senders'
+      fullPath: '/admin/senders'
+      preLoaderRoute: typeof AuthenticatedAdminSendersRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/rates': {
       id: '/_authenticated/admin/rates'
       path: '/rates'
@@ -1684,6 +1704,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminMessagingRoute: typeof AuthenticatedAdminMessagingRoute
   AuthenticatedAdminNumberRequestsRoute: typeof AuthenticatedAdminNumberRequestsRoute
   AuthenticatedAdminRatesRoute: typeof AuthenticatedAdminRatesRoute
+  AuthenticatedAdminSendersRoute: typeof AuthenticatedAdminSendersRoute
   AuthenticatedAdminTollfreeAttemptsRoute: typeof AuthenticatedAdminTollfreeAttemptsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminVerifiersRoute: typeof AuthenticatedAdminVerifiersRoute
@@ -1700,6 +1721,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminMessagingRoute: AuthenticatedAdminMessagingRoute,
   AuthenticatedAdminNumberRequestsRoute: AuthenticatedAdminNumberRequestsRoute,
   AuthenticatedAdminRatesRoute: AuthenticatedAdminRatesRoute,
+  AuthenticatedAdminSendersRoute: AuthenticatedAdminSendersRoute,
   AuthenticatedAdminTollfreeAttemptsRoute:
     AuthenticatedAdminTollfreeAttemptsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
