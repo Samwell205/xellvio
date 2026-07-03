@@ -360,11 +360,11 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         })}
       </div>
 
-      {ALPHA_SENDER_REQUIRES_REGISTRATION_SET.size > 0 && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-900 dark:text-amber-200">
-          <strong>Heads up:</strong> Nigeria, India, UAE, Saudi Arabia, Egypt, Turkey, and several others require your sender ID to be pre-registered with the local mobile operator before carriers deliver it. Click any amber chip for step-by-step instructions.
-        </div>
-      )}
+      <RegistrationCountryDropdown
+        assets={assets}
+        senderId={senderId}
+        onOpen={(cc) => setRegCountry(cc)}
+      />
 
       <UsCanadaInfoDialog code={infoCountry} assets={assets} onClose={() => setInfoCountry(null)} />
       <RegistrationRequiredDialog
@@ -375,6 +375,51 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         onClose={() => setRegCountry(null)}
       />
     </Card>
+  );
+}
+
+function RegistrationCountryDropdown({
+  assets, senderId, onOpen,
+}: { assets: any[]; senderId: string; onOpen: (cc: string) => void }) {
+  const regCountries = COUNTRIES.filter((c) => ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code));
+  const [pick, setPick] = useState<string>("");
+  const statusFor = (cc: string) => {
+    const a = assets.find((x) => x.country_code === cc && x.sender_kind === "sender_id");
+    const s = a?.verification_status as string | undefined;
+    if (s === "verified") return "Registered";
+    if (s === "submitted" || s === "in_review") return "In review";
+    if (s === "requires_registration") return "Needs registration";
+    if (s === "rejected") return "Rejected";
+    return "Not started";
+  };
+  return (
+    <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
+      <div className="text-sm">
+        <strong>Countries that require carrier registration.</strong>
+        <span className="text-muted-foreground"> Pick a country to submit your business details here — we file the registration for you, no external portal needed.</span>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Select value={pick} onValueChange={setPick}>
+          <SelectTrigger className="w-full sm:w-[320px]">
+            <SelectValue placeholder="Select a country to register…" />
+          </SelectTrigger>
+          <SelectContent>
+            {regCountries.map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                {c.name} — {statusFor(c.code)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          disabled={!pick || !senderId}
+          onClick={() => pick && onOpen(pick)}
+        >
+          {senderId ? "Register sender ID" : "Save Sender ID first"}
+        </Button>
+      </div>
+    </div>
   );
 }
 
