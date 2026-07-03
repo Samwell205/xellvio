@@ -539,6 +539,21 @@ function NewCampaignPage() {
                 <span>{seg.encoding} · {seg.charCount} chars · {seg.segments} SMS segment{seg.segments !== 1 ? "s" : ""}</span>
                 <span>Personalization: <code>{"{{first_name}}"}</code> <code>{"{{last_name}}"}</code></span>
               </div>
+              {seg.encoding === "Unicode" && unicodeOffenders.length > 0 && (
+                <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs">
+                  <div className="font-medium text-amber-900 dark:text-amber-200">
+                    Unicode characters detected — segments shrink from 160 to 70 chars, so cost goes up.
+                  </div>
+                  <div className="mt-1 text-amber-800 dark:text-amber-300">
+                    Non-GSM characters in your message: <code className="font-mono">{unicodeOffenders.join(" ")}</code>
+                  </div>
+                  {canFixUnicode && (
+                    <Button type="button" size="sm" variant="outline" className="mt-2" onClick={fixUnicode}>
+                      Auto-replace with GSM-safe equivalents
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <Label>Website link (optional)</Label>
