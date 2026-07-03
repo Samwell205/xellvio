@@ -26,7 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { TollfreeWizard, defaultWizardForm, type WizardForm } from "@/components/tollfree-wizard/TollfreeWizard";
+import { TollfreeWizard, type WizardForm } from "@/components/tollfree-wizard/TollfreeWizard";
 
 export const Route = createFileRoute("/_authenticated/app/toll-free-verification")({
   component: TollfreeVerificationPage,
