@@ -43,16 +43,20 @@ function AdminVerifiersPage() {
         <p className="text-muted-foreground text-sm mt-1">Manage independent verifiers, their submitted numbers, sales, and payouts.</p>
       </div>
       <Tabs defaultValue="verifiers">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="verifiers">Verifiers</TabsTrigger>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
           <TabsTrigger value="pool">Verified pool</TabsTrigger>
+          <TabsTrigger value="sold">Sold / payouts</TabsTrigger>
+          <TabsTrigger value="twilio">Twilio approved</TabsTrigger>
           <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="verifiers"><VerifiersTab /></TabsContent>
         <TabsContent value="submissions"><SubmissionsTab /></TabsContent>
         <TabsContent value="pool"><PoolTab /></TabsContent>
+        <TabsContent value="sold"><SoldTab /></TabsContent>
+        <TabsContent value="twilio"><TwilioTab /></TabsContent>
         <TabsContent value="withdrawals"><WithdrawalsTab /></TabsContent>
         <TabsContent value="settings"><SettingsTab /></TabsContent>
       </Tabs>
