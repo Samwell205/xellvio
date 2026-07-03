@@ -207,6 +207,34 @@ function NewCampaignPage() {
   );
   const seg = calculateSegments(bodyWithStop);
 
+  // Detect non-GSM-7 characters that force Unicode encoding (70/67-char segments
+  // instead of 160/153). Common culprits: • “ ” ‘ ’ — – … and non-breaking space.
+  const UNICODE_REPLACEMENTS: Array<[RegExp, string]> = [
+    [/[\u2022\u00B7]/g, "-"],          // • ·
+    [/[\u201C\u201D\u201E\u201F]/g, '"'], // “ ” „ ‟
+    [/[\u2018\u2019\u201A\u201B]/g, "'"], // ‘ ’ ‚ ‛
+    [/[\u2013\u2014\u2015]/g, "-"],    // – — ―
+    [/\u2026/g, "..."],                 // …
+    [/\u00A0/g, " "],                   // non-breaking space
+    [/\u200B/g, ""],                    // zero-width space
+  ];
+  const unicodeOffenders = useMemo(() => {
+    if (seg.encoding !== "Unicode") return [] as string[];
+    const found = new Set<string>();
+    for (const ch of s.body) {
+      if (ch.charCodeAt(0) > 127 && ch !== "€") found.add(ch);
+    }
+    return Array.from(found);
+  }, [s.body, seg.encoding]);
+  const canFixUnicode = unicodeOffenders.some((ch) =>
+    UNICODE_REPLACEMENTS.some(([re]) => re.test(ch)),
+  );
+  const fixUnicode = () => {
+    let out = s.body;
+    for (const [re, rep] of UNICODE_REPLACEMENTS) out = out.replace(re, rep);
+    setS({ ...s, body: out });
+  };
+
   // Resolve country code per recipient (memoized)
   const recipientCountries = useMemo(() => {
     return audienceList.map((p: any) => ({
@@ -511,6 +539,21 @@ function NewCampaignPage() {
                 <span>{seg.encoding} · {seg.charCount} chars · {seg.segments} SMS segment{seg.segments !== 1 ? "s" : ""}</span>
                 <span>Personalization: <code>{"{{first_name}}"}</code> <code>{"{{last_name}}"}</code></span>
               </div>
+              {seg.encoding === "Unicode" && unicodeOffenders.length > 0 && (
+                <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs">
+                  <div className="font-medium text-amber-900 dark:text-amber-200">
+                    Unicode characters detected — segments shrink from 160 to 70 chars, so cost goes up.
+                  </div>
+                  <div className="mt-1 text-amber-800 dark:text-amber-300">
+                    Non-GSM characters in your message: <code className="font-mono">{unicodeOffenders.join(" ")}</code>
+                  </div>
+                  {canFixUnicode && (
+                    <Button type="button" size="sm" variant="outline" className="mt-2" onClick={fixUnicode}>
+                      Auto-replace with GSM-safe equivalents
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <Label>Website link (optional)</Label>
