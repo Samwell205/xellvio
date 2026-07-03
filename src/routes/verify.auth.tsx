@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { z } from "zod";
+import { checkVerifierEmailAvailable } from "@/lib/verifier.functions";
 
 export const Route = createFileRoute("/verify/auth")({
   validateSearch: (s: Record<string, unknown>) =>
@@ -31,6 +33,7 @@ function VerifierAuth() {
   const [signupCode, setSignupCode] = useState("");
 
   const [busy, setBusy] = useState(false);
+  const checkEmail = useServerFn(checkVerifierEmailAvailable);
 
   async function sendSigninCode() {
     setBusy(true);
@@ -69,6 +72,12 @@ function VerifierAuth() {
   async function sendSignupCode() {
     setBusy(true);
     try {
+      // Prevent duplicate registrations for the same email
+      const check = await checkEmail({ data: { email: signupEmail } });
+      if (!check.available) {
+        toast.error("An account with this email already exists — please sign in instead.");
+        return;
+      }
       const { error } = await supabase.auth.signInWithOtp({
         email: signupEmail,
         options: {

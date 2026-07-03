@@ -256,3 +256,72 @@ export const adminListAccountsLite = createServerFn({ method: "GET" })
       .from("accounts").select("id,email,full_name").order("email").limit(500);
     return data ?? [];
   });
+
+// ---- New admin controls ----
+
+export const adminSetVerifierActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ verifier_id: z.string().uuid(), is_active: z.boolean() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("verifiers")
+      .update({ is_active: data.is_active })
+      .eq("id", data.verifier_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminAdjustVerifierWallet = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      verifier_id: z.string().uuid(),
+      delta_ngn: z.number().refine((n) => Number.isFinite(n) && n !== 0, "Amount required"),
+      reason: z.string().min(3).max(500),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.rpc("ensure_verifier_wallet", { _verifier_id: data.verifier_id });
+    const { data: wallet } = await supabaseAdmin
+      .from("verifier_wallets")
+      .select("balance_ngn,lifetime_earned_ngn")
+      .eq("verifier_id", data.verifier_id).maybeSingle();
+    const newBalance = Math.max(0, Number(wallet?.balance_ngn ?? 0) + data.delta_ngn);
+    const lifetime = Number(wallet?.lifetime_earned_ngn ?? 0) + (data.delta_ngn > 0 ? data.delta_ngn : 0);
+    const { error: uErr } = await supabaseAdmin
+      .from("verifier_wallets")
+      .update({ balance_ngn: newBalance, lifetime_earned_ngn: lifetime })
+      .eq("verifier_id", data.verifier_id);
+    if (uErr) throw new Error(uErr.message);
+    await supabaseAdmin.from("verifier_transactions").insert({
+      verifier_id: data.verifier_id,
+      type: "adjustment",
+      amount_ngn: data.delta_ngn,
+      balance_after: newBalance,
+      description: `Admin ${data.delta_ngn > 0 ? "credit" : "debit"}: ${data.reason}`,
+    });
+    return { ok: true, balance_ngn: newBalance };
+  });
+
+export const adminDeleteVerifierTfn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ tfn_id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: tfn } = await supabaseAdmin
+      .from("verifier_tfns").select("status").eq("id", data.tfn_id).maybeSingle();
+    if (!tfn) throw new Error("Number not found");
+    if (tfn.status === "sold") throw new Error("Cannot delete a sold number");
+    const { error } = await supabaseAdmin.from("verifier_tfns").delete().eq("id", data.tfn_id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
