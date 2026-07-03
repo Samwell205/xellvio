@@ -44,10 +44,8 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
-import { Route as ApiPublicTwilioTollfreeStatusRouteImport } from './routes/api.public.twilio-tollfree-status'
-import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api.public.twilio-status'
-import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api.public.twilio-inbound'
-import { Route as ApiPublicSyncTwilioPricingRouteImport } from './routes/api.public.sync-twilio-pricing'
+import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.telnyx-status'
+import { Route as ApiPublicTelnyxInboundRouteImport } from './routes/api.public.telnyx-inbound'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
@@ -87,7 +85,6 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
-import { Route as ApiPublicCronTwilioBalanceCheckRouteImport } from './routes/api.public.cron.twilio-balance-check'
 import { Route as VerifierVerifyDashboardWithdrawalsRouteImport } from './routes/_verifier.verify.dashboard.withdrawals'
 import { Route as VerifierVerifyDashboardSettingsRouteImport } from './routes/_verifier.verify.dashboard.settings'
 import { Route as VerifierVerifyDashboardNumbersRouteImport } from './routes/_verifier.verify.dashboard.numbers'
@@ -269,28 +266,16 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicTwilioTollfreeStatusRoute =
-  ApiPublicTwilioTollfreeStatusRouteImport.update({
-    id: '/api/public/twilio-tollfree-status',
-    path: '/api/public/twilio-tollfree-status',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicTwilioStatusRoute = ApiPublicTwilioStatusRouteImport.update({
-  id: '/api/public/twilio-status',
-  path: '/api/public/twilio-status',
+const ApiPublicTelnyxStatusRoute = ApiPublicTelnyxStatusRouteImport.update({
+  id: '/api/public/telnyx-status',
+  path: '/api/public/telnyx-status',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicTwilioInboundRoute = ApiPublicTwilioInboundRouteImport.update({
-  id: '/api/public/twilio-inbound',
-  path: '/api/public/twilio-inbound',
+const ApiPublicTelnyxInboundRoute = ApiPublicTelnyxInboundRouteImport.update({
+  id: '/api/public/telnyx-inbound',
+  path: '/api/public/telnyx-inbound',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicSyncTwilioPricingRoute =
-  ApiPublicSyncTwilioPricingRouteImport.update({
-    id: '/api/public/sync-twilio-pricing',
-    path: '/api/public/sync-twilio-pricing',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiPublicPollVerificationsRoute =
   ApiPublicPollVerificationsRouteImport.update({
     id: '/api/public/poll-verifications',
@@ -517,12 +502,6 @@ const ApiPublicOptInProofSplatRoute =
     path: '/api/public/opt-in-proof/$',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicCronTwilioBalanceCheckRoute =
-  ApiPublicCronTwilioBalanceCheckRouteImport.update({
-    id: '/api/public/cron/twilio-balance-check',
-    path: '/api/public/cron/twilio-balance-check',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const VerifierVerifyDashboardWithdrawalsRoute =
   VerifierVerifyDashboardWithdrawalsRouteImport.update({
     id: '/verify/dashboard/withdrawals',
@@ -627,10 +606,8 @@ export interface FileRoutesByFullPath {
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
-  '/api/public/sync-twilio-pricing': typeof ApiPublicSyncTwilioPricingRoute
-  '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
-  '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
-  '/api/public/twilio-tollfree-status': typeof ApiPublicTwilioTollfreeStatusRoute
+  '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
+  '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
@@ -641,7 +618,6 @@ export interface FileRoutesByFullPath {
   '/verify/dashboard/numbers': typeof VerifierVerifyDashboardNumbersRoute
   '/verify/dashboard/settings': typeof VerifierVerifyDashboardSettingsRoute
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
-  '/api/public/cron/twilio-balance-check': typeof ApiPublicCronTwilioBalanceCheckRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -709,10 +685,8 @@ export interface FileRoutesByTo {
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
-  '/api/public/sync-twilio-pricing': typeof ApiPublicSyncTwilioPricingRoute
-  '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
-  '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
-  '/api/public/twilio-tollfree-status': typeof ApiPublicTwilioTollfreeStatusRoute
+  '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
+  '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
@@ -723,7 +697,6 @@ export interface FileRoutesByTo {
   '/verify/dashboard/numbers': typeof VerifierVerifyDashboardNumbersRoute
   '/verify/dashboard/settings': typeof VerifierVerifyDashboardSettingsRoute
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
-  '/api/public/cron/twilio-balance-check': typeof ApiPublicCronTwilioBalanceCheckRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -798,10 +771,8 @@ export interface FileRoutesById {
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
-  '/api/public/sync-twilio-pricing': typeof ApiPublicSyncTwilioPricingRoute
-  '/api/public/twilio-inbound': typeof ApiPublicTwilioInboundRoute
-  '/api/public/twilio-status': typeof ApiPublicTwilioStatusRoute
-  '/api/public/twilio-tollfree-status': typeof ApiPublicTwilioTollfreeStatusRoute
+  '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
+  '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
@@ -812,7 +783,6 @@ export interface FileRoutesById {
   '/_verifier/verify/dashboard/numbers': typeof VerifierVerifyDashboardNumbersRoute
   '/_verifier/verify/dashboard/settings': typeof VerifierVerifyDashboardSettingsRoute
   '/_verifier/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
-  '/api/public/cron/twilio-balance-check': typeof ApiPublicCronTwilioBalanceCheckRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -886,10 +856,8 @@ export interface FileRouteTypes {
     | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
-    | '/api/public/sync-twilio-pricing'
-    | '/api/public/twilio-inbound'
-    | '/api/public/twilio-status'
-    | '/api/public/twilio-tollfree-status'
+    | '/api/public/telnyx-inbound'
+    | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
     | '/admin/'
     | '/app/'
@@ -900,7 +868,6 @@ export interface FileRouteTypes {
     | '/verify/dashboard/numbers'
     | '/verify/dashboard/settings'
     | '/verify/dashboard/withdrawals'
-    | '/api/public/cron/twilio-balance-check'
     | '/api/public/opt-in-proof/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -968,10 +935,8 @@ export interface FileRouteTypes {
     | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
-    | '/api/public/sync-twilio-pricing'
-    | '/api/public/twilio-inbound'
-    | '/api/public/twilio-status'
-    | '/api/public/twilio-tollfree-status'
+    | '/api/public/telnyx-inbound'
+    | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
     | '/admin'
     | '/app'
@@ -982,7 +947,6 @@ export interface FileRouteTypes {
     | '/verify/dashboard/numbers'
     | '/verify/dashboard/settings'
     | '/verify/dashboard/withdrawals'
-    | '/api/public/cron/twilio-balance-check'
     | '/api/public/opt-in-proof/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1056,10 +1020,8 @@ export interface FileRouteTypes {
     | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
-    | '/api/public/sync-twilio-pricing'
-    | '/api/public/twilio-inbound'
-    | '/api/public/twilio-status'
-    | '/api/public/twilio-tollfree-status'
+    | '/api/public/telnyx-inbound'
+    | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
@@ -1070,7 +1032,6 @@ export interface FileRouteTypes {
     | '/_verifier/verify/dashboard/numbers'
     | '/_verifier/verify/dashboard/settings'
     | '/_verifier/verify/dashboard/withdrawals'
-    | '/api/public/cron/twilio-balance-check'
     | '/api/public/opt-in-proof/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1116,12 +1077,9 @@ export interface RootRouteChildren {
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
-  ApiPublicSyncTwilioPricingRoute: typeof ApiPublicSyncTwilioPricingRoute
-  ApiPublicTwilioInboundRoute: typeof ApiPublicTwilioInboundRoute
-  ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
-  ApiPublicTwilioTollfreeStatusRoute: typeof ApiPublicTwilioTollfreeStatusRoute
+  ApiPublicTelnyxInboundRoute: typeof ApiPublicTelnyxInboundRoute
+  ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
-  ApiPublicCronTwilioBalanceCheckRoute: typeof ApiPublicCronTwilioBalanceCheckRoute
   ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -1377,32 +1335,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/twilio-tollfree-status': {
-      id: '/api/public/twilio-tollfree-status'
-      path: '/api/public/twilio-tollfree-status'
-      fullPath: '/api/public/twilio-tollfree-status'
-      preLoaderRoute: typeof ApiPublicTwilioTollfreeStatusRouteImport
+    '/api/public/telnyx-status': {
+      id: '/api/public/telnyx-status'
+      path: '/api/public/telnyx-status'
+      fullPath: '/api/public/telnyx-status'
+      preLoaderRoute: typeof ApiPublicTelnyxStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/twilio-status': {
-      id: '/api/public/twilio-status'
-      path: '/api/public/twilio-status'
-      fullPath: '/api/public/twilio-status'
-      preLoaderRoute: typeof ApiPublicTwilioStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/twilio-inbound': {
-      id: '/api/public/twilio-inbound'
-      path: '/api/public/twilio-inbound'
-      fullPath: '/api/public/twilio-inbound'
-      preLoaderRoute: typeof ApiPublicTwilioInboundRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/sync-twilio-pricing': {
-      id: '/api/public/sync-twilio-pricing'
-      path: '/api/public/sync-twilio-pricing'
-      fullPath: '/api/public/sync-twilio-pricing'
-      preLoaderRoute: typeof ApiPublicSyncTwilioPricingRouteImport
+    '/api/public/telnyx-inbound': {
+      id: '/api/public/telnyx-inbound'
+      path: '/api/public/telnyx-inbound'
+      fullPath: '/api/public/telnyx-inbound'
+      preLoaderRoute: typeof ApiPublicTelnyxInboundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/poll-verifications': {
@@ -1678,13 +1622,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOptInProofSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/cron/twilio-balance-check': {
-      id: '/api/public/cron/twilio-balance-check'
-      path: '/api/public/cron/twilio-balance-check'
-      fullPath: '/api/public/cron/twilio-balance-check'
-      preLoaderRoute: typeof ApiPublicCronTwilioBalanceCheckRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_verifier/verify/dashboard/withdrawals': {
       id: '/_verifier/verify/dashboard/withdrawals'
       path: '/verify/dashboard/withdrawals'
@@ -1929,12 +1866,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
-  ApiPublicSyncTwilioPricingRoute: ApiPublicSyncTwilioPricingRoute,
-  ApiPublicTwilioInboundRoute: ApiPublicTwilioInboundRoute,
-  ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
-  ApiPublicTwilioTollfreeStatusRoute: ApiPublicTwilioTollfreeStatusRoute,
+  ApiPublicTelnyxInboundRoute: ApiPublicTelnyxInboundRoute,
+  ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
-  ApiPublicCronTwilioBalanceCheckRoute: ApiPublicCronTwilioBalanceCheckRoute,
   ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,

@@ -1,96 +1,57 @@
+// Tenant-facing Telnyx provisioning server fns.
+// Provisions the tenant's Messaging Profile, searches Telnyx numbers,
+// and purchases them into that profile.
+
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-const TWILIO_API = "https://api.twilio.com/2010-04-01";
-
-function masterAuth(): { sid: string; token: string } {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  if (!sid || !token) throw new Error("Twilio master credentials not configured");
-  return { sid, token };
-}
-
-function basicAuth(sid: string, token: string) {
-  return "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
-}
-
-async function twilio<T = any>(path: string, opts: { method?: string; sid: string; token: string; body?: Record<string, string> }): Promise<T> {
-  const init: RequestInit = {
-    method: opts.method ?? "GET",
-    headers: {
-      Authorization: basicAuth(opts.sid, opts.token),
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  };
-  if (opts.body) init.body = new URLSearchParams(opts.body).toString();
-  const res = await fetch(`${TWILIO_API}${path}`, init);
-  const json: any = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`Twilio ${res.status}: ${json?.message ?? "request failed"}`);
-  return json as T;
-}
-
-/** Assign the main SMS account for the current tenant. Idempotent. */
 export const provisionSubaccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { userId } = context;
-    const { encryptToken } = await import("./tenant-crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const { data: acct, error } = await supabaseAdmin
       .from("accounts")
-      .select("id,legal_business_name,onboarding_status,twilio_subaccount_sid")
-      .eq("id", userId)
-      .maybeSingle();
+      .select("id,legal_business_name,onboarding_status,telnyx_messaging_profile_id")
+      .eq("id", userId).maybeSingle();
     if (error || !acct) throw new Error("Account not found");
     if (acct.onboarding_status === "suspended") throw new Error("Account suspended");
     if (!acct.legal_business_name) throw new Error("Complete your business profile first");
-    if (acct.twilio_subaccount_sid) return { subaccount_sid: acct.twilio_subaccount_sid, already: true };
-
-    const master = masterAuth();
-    const enc = encryptToken(master.token);
-    const { error: upErr } = await supabaseAdmin
-      .from("accounts")
-      .update({
-        twilio_subaccount_sid: master.sid,
-        twilio_subaccount_auth_token_enc: enc as any,
-        onboarding_status: "sender_pending",
-      })
-      .eq("id", userId);
-    if (upErr) throw upErr;
-    return { subaccount_sid: master.sid, already: false };
+    if (acct.telnyx_messaging_profile_id) {
+      return { subaccount_sid: acct.telnyx_messaging_profile_id, already: true };
+    }
+    const { ensureMessagingProfileForAccount } = await import("./telnyx.server");
+    const id = await ensureMessagingProfileForAccount(userId);
+    return { subaccount_sid: id, already: false };
   });
 
-/** Search available phone numbers in a country, using the tenant subaccount. */
 export const searchNumbers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { country: string; smsEnabled?: boolean }) =>
-    z.object({ country: z.string().length(2), smsEnabled: z.boolean().optional() }).parse(input),
+  .inputValidator((input: { country: string; areaCode?: string; numberType?: "local" | "toll-free" | "mobile" | "national" }) =>
+    z.object({
+      country: z.string().length(2),
+      areaCode: z.string().optional(),
+      numberType: z.enum(["local", "toll-free", "mobile", "national"]).optional(),
+    }).parse(input),
   )
-  .handler(async ({ data, context }) => {
-    const { userId } = context;
-    const { decryptToken } = await import("./tenant-crypto.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: acct } = await supabaseAdmin
-      .from("accounts")
-      .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
-      .eq("id", userId)
-      .maybeSingle();
-    if (!acct?.twilio_subaccount_sid || !acct.twilio_subaccount_auth_token_enc) {
-      throw new Error("Provision your subaccount first");
-    }
-    const token = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
-
-    const list = await twilio<{ available_phone_numbers: Array<{ phone_number: string; friendly_name: string; locality?: string; region?: string; capabilities: { SMS: boolean; MMS: boolean; voice: boolean } }> }>(
-      `/Accounts/${acct.twilio_subaccount_sid}/AvailablePhoneNumbers/${data.country.toUpperCase()}/Local.json?SmsEnabled=true&PageSize=10`,
-      { sid: acct.twilio_subaccount_sid, token },
-    );
-    return list.available_phone_numbers ?? [];
+  .handler(async ({ data }) => {
+    const { searchAvailableNumbers } = await import("./telnyx.server");
+    const list = await searchAvailableNumbers({
+      country: data.country,
+      numberType: data.numberType,
+      areaCode: data.areaCode,
+      limit: 20,
+    });
+    return list.map((n) => ({
+      phone_number: n.phone_number,
+      friendly_name: n.phone_number,
+      region: n.region_information?.[0]?.region_name ?? null,
+      cost: n.cost_information ?? null,
+      capabilities: { SMS: true, MMS: true, voice: (n.features ?? []).some((f) => f.name === "voice") },
+    }));
   });
 
-/** Purchase a phone number on the tenant's subaccount and save it. */
 export const purchaseNumber = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { phoneNumber: string }) =>
@@ -98,43 +59,36 @@ export const purchaseNumber = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const { decryptToken } = await import("./tenant-crypto.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { ensureMessagingProfileForAccount, orderNumber, safeTelnyxCall } = await import("./telnyx.server");
 
     const { data: acct } = await supabaseAdmin
-      .from("accounts")
-      .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc,subaccount_phone_sid")
-      .eq("id", userId)
-      .maybeSingle();
-    if (!acct?.twilio_subaccount_sid || !acct.twilio_subaccount_auth_token_enc) {
-      throw new Error("Provision your subaccount first");
-    }
-    if (acct.subaccount_phone_sid) throw new Error("A number is already provisioned for this account");
-    const token = decryptToken(acct.twilio_subaccount_auth_token_enc as unknown as string);
+      .from("accounts").select("subaccount_phone_sid").eq("id", userId).maybeSingle();
+    if (acct?.subaccount_phone_sid) throw new Error("A number is already provisioned for this account");
 
-    const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
-    const result = await twilio<{ sid: string; phone_number: string }>(
-      `/Accounts/${acct.twilio_subaccount_sid}/IncomingPhoneNumbers.json`,
-      {
-        method: "POST",
-        sid: acct.twilio_subaccount_sid,
-        token,
-        body: {
-          PhoneNumber: data.phoneNumber,
-          SmsUrl: `${base}/api/public/twilio-inbound`,
-          StatusCallback: `${base}/api/public/twilio-status`,
-        },
-      },
+    const messagingProfileId = await ensureMessagingProfileForAccount(userId);
+    const order = await safeTelnyxCall(
+      "purchase_number",
+      { userId, messagingProfileId },
+      () => orderNumber({ phoneNumber: data.phoneNumber, messagingProfileId }),
     );
+    const purchased = order.phone_numbers?.[0];
+    if (!purchased) throw new Error("Telnyx accepted the order but did not return a phone number");
 
-    const { error: upErr } = await supabaseAdmin
-      .from("accounts")
-      .update({
-        subaccount_phone_number: result.phone_number,
-        subaccount_phone_sid: result.sid,
-        onboarding_status: "active",
-      })
-      .eq("id", userId);
-    if (upErr) throw upErr;
-    return { phone_number: result.phone_number, sid: result.sid };
+    await supabaseAdmin.from("numbers").upsert({
+      account_id: userId,
+      phone_number: purchased.phone_number,
+      telnyx_number_id: purchased.id,
+      telnyx_messaging_profile_id: messagingProfileId,
+      status: "active",
+    }, { onConflict: "phone_number" });
+
+    await supabaseAdmin.from("accounts").update({
+      subaccount_phone_number: purchased.phone_number,
+      subaccount_phone_sid: purchased.id,
+      subaccount_messaging_service_sid: messagingProfileId,
+      onboarding_status: "active",
+    }).eq("id", userId);
+
+    return { phone_number: purchased.phone_number, sid: purchased.id };
   });
