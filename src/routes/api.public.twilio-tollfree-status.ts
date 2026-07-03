@@ -71,7 +71,15 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
           .select("id,account_id")
           .eq("verification_sid", verificationSid)
           .maybeSingle();
-        if (!asset) return new Response("ok");
+
+        // Also try matching a verifier-owned toll-free number.
+        const { data: verifierTfn } = await supabaseAdmin
+          .from("verifier_tfns")
+          .select("id")
+          .eq("twilio_verification_sid", verificationSid)
+          .maybeSingle();
+
+        if (!asset && !verifierTfn) return new Response("ok");
 
         // Re-fetch from Twilio to get the authoritative status + reason.
         let status = mapStatus(statusHint);
@@ -80,11 +88,13 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
 
         try {
           const { decryptToken } = await import("@/lib/tenant-crypto.server");
-          const { data: acct } = await supabaseAdmin
-            .from("accounts")
-            .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
-            .eq("id", asset.account_id)
-            .maybeSingle();
+          const { data: acct } = asset
+            ? await supabaseAdmin
+                .from("accounts")
+                .select("twilio_subaccount_sid,twilio_subaccount_auth_token_enc")
+                .eq("id", asset.account_id)
+                .maybeSingle()
+            : { data: null as any };
           let subSid = acct?.twilio_subaccount_sid ?? null;
           let subToken: string | null = null;
           if (subSid && acct?.twilio_subaccount_auth_token_enc) {
@@ -118,74 +128,86 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
           // fall back to hints from the webhook body
         }
 
-        await supabaseAdmin
-          .from("sender_assets")
-          .update({
-            verification_status: status,
-            rejection_reason: reason,
-            friendly_rejection_reason: reason ? friendlyReason(reason) : null,
-            last_synced_at: new Date().toISOString(),
-          })
-          .eq("id", asset.id);
-
-        if (status === "verified") {
+        if (asset) {
           await supabaseAdmin
-            .from("accounts")
-            .update({ onboarding_status: "active" })
-            .eq("id", asset.account_id);
+            .from("sender_assets")
+            .update({
+              verification_status: status,
+              rejection_reason: reason,
+              friendly_rejection_reason: reason ? friendlyReason(reason) : null,
+              last_synced_at: new Date().toISOString(),
+            })
+            .eq("id", asset.id);
+
+          if (status === "verified") {
+            await supabaseAdmin
+              .from("accounts")
+              .update({ onboarding_status: "active" })
+              .eq("id", asset.account_id);
+          }
+
+          // Send branded status email to the customer (approved / rejected).
+          if (status === "verified" || status === "rejected") {
+            try {
+              const { data: acct } = await supabaseAdmin
+                .from("accounts")
+                .select("contact_email,email,full_name,legal_business_name")
+                .eq("id", asset.account_id)
+                .maybeSingle();
+              const { data: assetFull } = await supabaseAdmin
+                .from("sender_assets")
+                .select("phone_number")
+                .eq("id", asset.id)
+                .maybeSingle();
+              const recipient = (acct?.contact_email || acct?.email || "").trim();
+              if (recipient) {
+                const firstName = (acct?.full_name ?? "").split(" ")[0] || undefined;
+                const baseUrl =
+                  process.env.PUBLIC_BASE_URL ?? "https://xellvio.lovable.app";
+                const { sendBrandedEmail } = await import(
+                  "@/lib/email/send-internal.server"
+                );
+                if (status === "verified") {
+                  await sendBrandedEmail({
+                    templateName: "tollfree-approved",
+                    recipientEmail: recipient,
+                    idempotencyKey: `tfv-${verificationSid}-approved`,
+                    templateData: {
+                      firstName,
+                      businessName: acct?.legal_business_name ?? undefined,
+                      phoneNumber: assetFull?.phone_number ?? undefined,
+                      dashboardUrl: `${baseUrl}/app/campaigns/new`,
+                    },
+                  });
+                } else {
+                  await sendBrandedEmail({
+                    templateName: "tollfree-rejected",
+                    recipientEmail: recipient,
+                    idempotencyKey: `tfv-${verificationSid}-rejected`,
+                    templateData: {
+                      firstName,
+                      businessName: acct?.legal_business_name ?? undefined,
+                      phoneNumber: assetFull?.phone_number ?? undefined,
+                      reason: reason ? friendlyReason(reason) : undefined,
+                      setupUrl: `${baseUrl}/app/setup-sms`,
+                    },
+                  });
+                }
+              }
+            } catch (err) {
+              console.warn("[twilio-tollfree-status] branded email failed", err);
+            }
+          }
         }
 
-        // Send branded status email to the customer (approved / rejected).
-        if (status === "verified" || status === "rejected") {
-          try {
-            const { data: acct } = await supabaseAdmin
-              .from("accounts")
-              .select("contact_email,email,full_name,legal_business_name")
-              .eq("id", asset.account_id)
-              .maybeSingle();
-            const { data: assetFull } = await supabaseAdmin
-              .from("sender_assets")
-              .select("phone_number")
-              .eq("id", asset.id)
-              .maybeSingle();
-            const recipient = (acct?.contact_email || acct?.email || "").trim();
-            if (recipient) {
-              const firstName = (acct?.full_name ?? "").split(" ")[0] || undefined;
-              const baseUrl =
-                process.env.PUBLIC_BASE_URL ?? "https://xellvio.lovable.app";
-              const { sendBrandedEmail } = await import(
-                "@/lib/email/send-internal.server"
-              );
-              if (status === "verified") {
-                await sendBrandedEmail({
-                  templateName: "tollfree-approved",
-                  recipientEmail: recipient,
-                  idempotencyKey: `tfv-${verificationSid}-approved`,
-                  templateData: {
-                    firstName,
-                    businessName: acct?.legal_business_name ?? undefined,
-                    phoneNumber: assetFull?.phone_number ?? undefined,
-                    dashboardUrl: `${baseUrl}/app/campaigns/new`,
-                  },
-                });
-              } else {
-                await sendBrandedEmail({
-                  templateName: "tollfree-rejected",
-                  recipientEmail: recipient,
-                  idempotencyKey: `tfv-${verificationSid}-rejected`,
-                  templateData: {
-                    firstName,
-                    businessName: acct?.legal_business_name ?? undefined,
-                    phoneNumber: assetFull?.phone_number ?? undefined,
-                    reason: reason ? friendlyReason(reason) : undefined,
-                    setupUrl: `${baseUrl}/app/setup-sms`,
-                  },
-                });
-              }
-            }
-          } catch (err) {
-            console.warn("[twilio-tollfree-status] branded email failed", err);
-          }
+        if (verifierTfn) {
+          const dbStatus =
+            status === "verified" ? "verified" :
+            status === "rejected" ? "rejected" : "pending_verification";
+          await supabaseAdmin
+            .from("verifier_tfns")
+            .update({ status: dbStatus, rejection_reason: reason })
+            .eq("id", verifierTfn.id);
         }
 
         return new Response("ok");

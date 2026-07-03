@@ -424,7 +424,8 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({
       id: z.string().uuid(),
-      notes: z.string().max(1000).optional(),
+      notes: z.string().max(10000).optional(),
+      payload: z.any().optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -434,15 +435,102 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     if (!verifier) throw new Error("Complete your verifier profile first");
     const { data: row, error } = await supabaseAdmin
       .from("verifier_tfns")
-      .update({ status: "pending_verification", notes: data.notes ?? null })
+      .select("id,twilio_phone_sid,twilio_verification_sid,phone_number,status")
       .eq("id", data.id)
       .eq("verifier_id", verifier.id)
-      .eq("status", "assigned")
-      .select("id")
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!row) throw new Error("This number is no longer awaiting submission");
-    return { ok: true };
+    if (!row) throw new Error("Number not found");
+    if (row.status !== "assigned" && row.status !== "rejected") {
+      throw new Error("This number is no longer awaiting submission");
+    }
+
+    // Parse structured payload out of notes JSON when caller didn't pass one.
+    let payload: any = data.payload ?? null;
+    if (!payload && data.notes) {
+      try { payload = JSON.parse(data.notes); } catch { payload = null; }
+    }
+
+    let twilioVerificationSid: string | null = row.twilio_verification_sid ?? null;
+    let carrierStatus: "submitted" | "in_review" | "verified" | "rejected" = "submitted";
+    let rejectionReason: string | null = null;
+
+    if (payload && row.twilio_phone_sid) {
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      if (!accountSid || !authToken) throw new Error("Carrier credentials not configured");
+      const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
+      const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
+      try {
+        const result = await submitTwilioTollfreeVerification({
+          phoneSid: row.twilio_phone_sid,
+          accountSid,
+          authToken,
+          existingVerificationSid: twilioVerificationSid,
+          statusCallbackUrl: `${base}/api/public/twilio-tollfree-status`,
+          payload: payload as any,
+        });
+        twilioVerificationSid = result.verificationSid;
+        carrierStatus = result.status;
+        rejectionReason = result.rejectionReason;
+      } catch (e: any) {
+        console.error("[verifier submit tfn] carrier submit failed", e?.message, e?.twilioResponse);
+        throw new Error(e?.message ?? "Carrier rejected the submission");
+      }
+    }
+
+    const dbStatus =
+      carrierStatus === "verified" ? "verified" :
+      carrierStatus === "rejected" ? "rejected" : "pending_verification";
+
+    const { error: upErr } = await supabaseAdmin
+      .from("verifier_tfns")
+      .update({
+        status: dbStatus,
+        notes: data.notes ?? null,
+        twilio_verification_sid: twilioVerificationSid,
+        rejection_reason: rejectionReason,
+      })
+      .eq("id", data.id)
+      .eq("verifier_id", verifier.id);
+    if (upErr) throw new Error(upErr.message);
+
+    return { ok: true, verificationSid: twilioVerificationSid, status: dbStatus };
+  });
+
+// Poll Twilio for the current verification status of this verifier's TFN.
+export const refreshMyTfn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: verifier } = await supabaseAdmin
+      .from("verifiers").select("id").eq("user_id", context.userId).maybeSingle();
+    if (!verifier) throw new Error("Complete your verifier profile first");
+    const { data: row } = await supabaseAdmin
+      .from("verifier_tfns")
+      .select("id,twilio_verification_sid,status")
+      .eq("id", data.id)
+      .eq("verifier_id", verifier.id)
+      .maybeSingle();
+    if (!row?.twilio_verification_sid) return { ok: false, reason: "not_submitted" };
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (!accountSid || !authToken) throw new Error("Carrier credentials not configured");
+    const { fetchTwilioTollfreeVerification } = await import("./tollfree-submit.server");
+    const result = await fetchTwilioTollfreeVerification({
+      verificationSid: row.twilio_verification_sid,
+      accountSid,
+      authToken,
+    });
+    const dbStatus =
+      result.status === "verified" ? "verified" :
+      result.status === "rejected" ? "rejected" : "pending_verification";
+    await supabaseAdmin
+      .from("verifier_tfns")
+      .update({ status: dbStatus, rejection_reason: result.rejectionReason })
+      .eq("id", data.id);
+    return { ok: true, status: dbStatus };
   });
 
 // ============ Wallet Transactions ============
