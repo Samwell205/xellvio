@@ -30,6 +30,18 @@ export const getTfnMarketplaceStatus = createServerFn({ method: "GET" })
     return { available: count ?? 0, priceNgn: settings.priceNgn };
   });
 
+export const getTfnMarketplaceOffer = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { count } = await supabaseAdmin
+      .from("verifier_tfns")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "verified");
+    const settings = await readSettings();
+    return { available_count: count ?? 0, price_ngn: settings.priceNgn };
+  });
+
 export const buyVerifiedTfn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
