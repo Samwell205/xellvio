@@ -104,7 +104,9 @@ export const sendTestSms = createServerFn({ method: "POST" })
       messagingProfileId = acct?.telnyx_messaging_profile_id ?? acct?.twilio_subaccount_sid ?? null;
     }
     if (!messagingProfileId) {
-      throw new Error("No Telnyx messaging profile is linked to this account. Complete SMS setup first.");
+      // Auto-provision a Telnyx Messaging Profile for this account on first use.
+      const { ensureMessagingProfileForAccount } = await import("./telnyx.server");
+      messagingProfileId = await ensureMessagingProfileForAccount(userId);
     }
 
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
