@@ -217,11 +217,12 @@ export const adminGetTfnSettings = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin
       .from("platform_settings").select("key,value")
-      .in("key", ["tfn_flat_price_ngn","tfn_commission_pct"]);
+      .in("key", ["tfn_buyer_price_usd", "tfn_commission_pct", "tfn_ngn_per_usd"]);
     const map = Object.fromEntries((data ?? []).map((r: any) => [r.key, Number(r.value)]));
     return {
-      price_ngn: Number.isFinite(map.tfn_flat_price_ngn) ? map.tfn_flat_price_ngn : 15000,
+      price_usd: Number.isFinite(map.tfn_buyer_price_usd) ? map.tfn_buyer_price_usd : 15,
       commission_pct: Number.isFinite(map.tfn_commission_pct) ? map.tfn_commission_pct : 25,
+      ngn_per_usd: Number.isFinite(map.tfn_ngn_per_usd) ? map.tfn_ngn_per_usd : 1500,
     };
   });
 
@@ -229,19 +230,22 @@ export const adminSetTfnSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({
-      price_ngn: z.number().nonnegative().max(1_000_000),
+      price_usd: z.number().nonnegative().max(10_000),
       commission_pct: z.number().min(0).max(90),
+      ngn_per_usd: z.number().positive().max(100_000),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("platform_settings").upsert([
-      { key: "tfn_flat_price_ngn", value: data.price_ngn as any },
+      { key: "tfn_buyer_price_usd", value: data.price_usd as any },
       { key: "tfn_commission_pct", value: data.commission_pct as any },
+      { key: "tfn_ngn_per_usd", value: data.ngn_per_usd as any },
     ], { onConflict: "key" });
     return { ok: true };
   });
+
 
 export const adminListAccountsLite = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
