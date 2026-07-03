@@ -526,10 +526,13 @@ function TollfreeVerificationPage() {
       )}
 
       {feeQuery.data?.paid && (
+      <div className="grid md:grid-cols-[220px_1fr] gap-6">
+        <TollfreeStepper step={step} onGoTo={(s) => setStep(s)} canGoTo2={isBasicValid(form)} />
       <form onSubmit={handleSubmit} className="space-y-6">
 
         <fieldset disabled={isLocked} className={isLocked ? "opacity-70 pointer-events-none" : ""} aria-disabled={isLocked}>
-        <Section title="Step 1 / 3 — Business and contact information">
+        {step === 1 && (<>
+        <Section title="Business information">
           <Two>
             <Field label="Legal entity name" required>
               <Input
