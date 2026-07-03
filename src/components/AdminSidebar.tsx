@@ -40,6 +40,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
       { title: "Country rates", url: "/admin/rates", icon: Settings2 },
       { title: "Toll-free logs", url: "/admin/tollfree-attempts", icon: ClipboardList },
       { title: "Marketplace", url: "/admin/marketplace", icon: CreditCard },
+      { title: "Verifier marketplace", url: "/admin/verifiers", icon: ShieldCheck },
     ],
   },
 ];

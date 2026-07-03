@@ -1546,6 +1546,282 @@ export type Database = {
         }
         Relationships: []
       }
+      verifier_bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_code: string
+          bank_name: string
+          created_at: string
+          id: string
+          resolved_at: string
+          updated_at: string
+          verifier_id: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_code: string
+          bank_name: string
+          created_at?: string
+          id?: string
+          resolved_at?: string
+          updated_at?: string
+          verifier_id: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_code?: string
+          bank_name?: string
+          created_at?: string
+          id?: string
+          resolved_at?: string
+          updated_at?: string
+          verifier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verifier_bank_accounts_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: true
+            referencedRelation: "verifiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verifier_tfns: {
+        Row: {
+          commission_ngn: number | null
+          country: string
+          created_at: string
+          id: string
+          notes: string | null
+          payout_ngn: number | null
+          phone_number: string
+          rejection_reason: string | null
+          sale_price_ngn: number | null
+          sold_at: string | null
+          sold_to_account_id: string | null
+          status: Database["public"]["Enums"]["verifier_tfn_status"]
+          twilio_phone_sid: string | null
+          twilio_verification_sid: string | null
+          updated_at: string
+          verifier_id: string
+        }
+        Insert: {
+          commission_ngn?: number | null
+          country?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payout_ngn?: number | null
+          phone_number: string
+          rejection_reason?: string | null
+          sale_price_ngn?: number | null
+          sold_at?: string | null
+          sold_to_account_id?: string | null
+          status?: Database["public"]["Enums"]["verifier_tfn_status"]
+          twilio_phone_sid?: string | null
+          twilio_verification_sid?: string | null
+          updated_at?: string
+          verifier_id: string
+        }
+        Update: {
+          commission_ngn?: number | null
+          country?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payout_ngn?: number | null
+          phone_number?: string
+          rejection_reason?: string | null
+          sale_price_ngn?: number | null
+          sold_at?: string | null
+          sold_to_account_id?: string | null
+          status?: Database["public"]["Enums"]["verifier_tfn_status"]
+          twilio_phone_sid?: string | null
+          twilio_verification_sid?: string | null
+          updated_at?: string
+          verifier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verifier_tfns_sold_to_account_id_fkey"
+            columns: ["sold_to_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verifier_tfns_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "verifiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verifier_transactions: {
+        Row: {
+          amount_ngn: number
+          balance_after: number
+          created_at: string
+          description: string | null
+          id: string
+          tfn_id: string | null
+          type: Database["public"]["Enums"]["verifier_tx_type"]
+          verifier_id: string
+          withdrawal_id: string | null
+        }
+        Insert: {
+          amount_ngn: number
+          balance_after: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          tfn_id?: string | null
+          type: Database["public"]["Enums"]["verifier_tx_type"]
+          verifier_id: string
+          withdrawal_id?: string | null
+        }
+        Update: {
+          amount_ngn?: number
+          balance_after?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          tfn_id?: string | null
+          type?: Database["public"]["Enums"]["verifier_tx_type"]
+          verifier_id?: string
+          withdrawal_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verifier_transactions_tfn_id_fkey"
+            columns: ["tfn_id"]
+            isOneToOne: false
+            referencedRelation: "verifier_tfns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verifier_transactions_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "verifiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verifier_wallets: {
+        Row: {
+          balance_ngn: number
+          id: string
+          lifetime_earned_ngn: number
+          updated_at: string
+          verifier_id: string
+        }
+        Insert: {
+          balance_ngn?: number
+          id?: string
+          lifetime_earned_ngn?: number
+          updated_at?: string
+          verifier_id: string
+        }
+        Update: {
+          balance_ngn?: number
+          id?: string
+          lifetime_earned_ngn?: number
+          updated_at?: string
+          verifier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verifier_wallets_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: true
+            referencedRelation: "verifiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verifier_withdrawals: {
+        Row: {
+          admin_note: string | null
+          amount_ngn: number
+          created_at: string
+          id: string
+          paid_at: string | null
+          paid_by: string | null
+          requested_at: string
+          status: Database["public"]["Enums"]["verifier_withdrawal_status"]
+          updated_at: string
+          verifier_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount_ngn: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          requested_at?: string
+          status?: Database["public"]["Enums"]["verifier_withdrawal_status"]
+          updated_at?: string
+          verifier_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount_ngn?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          paid_by?: string | null
+          requested_at?: string
+          status?: Database["public"]["Enums"]["verifier_withdrawal_status"]
+          updated_at?: string
+          verifier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verifier_withdrawals_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "verifiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verifiers: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           admin_notes: string | null
@@ -1599,6 +1875,21 @@ export type Database = {
     }
     Functions: {
       claim_account_invites: { Args: never; Returns: number }
+      claim_and_sell_verified_tfn: {
+        Args: {
+          _account_id: string
+          _commission_pct: number
+          _price_ngn: number
+        }
+        Returns: {
+          commission_ngn: number
+          country: string
+          payout_ngn: number
+          phone_number: string
+          tfn_id: string
+          verifier_id: string
+        }[]
+      }
       credit_seller: {
         Args: {
           _account_id: string
@@ -1662,6 +1953,10 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      ensure_verifier_wallet: {
+        Args: { _verifier_id: string }
+        Returns: string
+      }
       has_account_access: {
         Args: {
           _account_id: string
@@ -1672,6 +1967,10 @@ export type Database = {
       has_role: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
+      }
+      mark_verifier_withdrawal_paid: {
+        Args: { _admin_note?: string; _withdrawal_id: string }
+        Returns: number
       }
       move_to_dlq: {
         Args: {
@@ -1715,6 +2014,10 @@ export type Database = {
           read_ct: number
         }[]
       }
+      reject_verifier_withdrawal: {
+        Args: { _admin_note: string; _withdrawal_id: string }
+        Returns: undefined
+      }
       topup_account: {
         Args: { _account_id: string; _amount: number; _description: string }
         Returns: number
@@ -1729,6 +2032,17 @@ export type Database = {
       phone_number_status: "active" | "pending" | "released"
       phone_number_type: "toll_free" | "personal"
       sender_id_status: "pending" | "approved" | "rejected"
+      verifier_tfn_status:
+        | "pending_verification"
+        | "verified"
+        | "sold"
+        | "rejected"
+      verifier_tx_type:
+        | "sale_credit"
+        | "commission"
+        | "withdrawal_debit"
+        | "adjustment"
+      verifier_withdrawal_status: "pending" | "paid" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1864,6 +2178,19 @@ export const Constants = {
       phone_number_status: ["active", "pending", "released"],
       phone_number_type: ["toll_free", "personal"],
       sender_id_status: ["pending", "approved", "rejected"],
+      verifier_tfn_status: [
+        "pending_verification",
+        "verified",
+        "sold",
+        "rejected",
+      ],
+      verifier_tx_type: [
+        "sale_credit",
+        "commission",
+        "withdrawal_debit",
+        "adjustment",
+      ],
+      verifier_withdrawal_status: ["pending", "paid", "rejected"],
     },
   },
 } as const
