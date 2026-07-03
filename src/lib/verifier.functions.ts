@@ -484,17 +484,23 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
       carrierStatus === "verified" ? "verified" :
       carrierStatus === "rejected" ? "rejected" : "pending_verification";
 
+    const nowIso = new Date().toISOString();
+    const patch: Record<string, unknown> = {
+      status: dbStatus,
+      notes: data.notes ?? null,
+      twilio_verification_sid: twilioVerificationSid,
+      rejection_reason: rejectionReason,
+      submitted_at: nowIso,
+    };
+    if (dbStatus === "verified") patch.verified_at = nowIso;
+    if (dbStatus === "rejected") patch.rejected_at = nowIso;
     const { error: upErr } = await supabaseAdmin
       .from("verifier_tfns")
-      .update({
-        status: dbStatus,
-        notes: data.notes ?? null,
-        twilio_verification_sid: twilioVerificationSid,
-        rejection_reason: rejectionReason,
-      })
+      .update(patch)
       .eq("id", data.id)
       .eq("verifier_id", verifier.id);
     if (upErr) throw new Error(upErr.message);
+
 
     return { ok: true, verificationSid: twilioVerificationSid, status: dbStatus };
   });
