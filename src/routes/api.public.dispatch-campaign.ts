@@ -4,7 +4,14 @@ import { countryFromPhone } from "@/lib/country-from-phone";
 import { keywordScan } from "@/lib/content-scanner";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
-const BATCH_SIZE = 500;
+// How many messages to insert per DB batch during the "plan" phase.
+const PLAN_INSERT_CHUNK = 500;
+// How many messages to actually send to the SMS provider per cron invocation.
+// Keeps each Worker invocation well within CPU / subrequest limits so large
+// campaigns (thousands of recipients) drain safely over multiple ticks.
+const DELIVER_PER_TICK = 200;
+// Max parallel HTTP calls to the SMS provider inside one invocation.
+const DELIVER_CONCURRENCY = 20;
 
 function render(body: string, p: { first_name?: string | null; last_name?: string | null }) {
   return body
