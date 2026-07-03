@@ -152,44 +152,27 @@ function VerifierAuth() {
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-3 pt-4">
-                {signupStage === "details" ? (
-                  <>
-                    <div>
-                      <Label>Full name</Label>
-                      <Input value={signupName} onChange={(e) => setSignupName(e.target.value)} placeholder="Jane Doe" />
-                    </div>
-                    <div>
-                      <Label>Email</Label>
-                      <Input type="email" autoComplete="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="you@example.com" />
-                    </div>
-                    <div>
-                      <Label>Password</Label>
-                      <Input type="password" autoComplete="new-password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="Minimum 8 characters" />
-                    </div>
-                    <div>
-                      <Label>Confirm password</Label>
-                      <Input type="password" autoComplete="new-password" value={signupPasswordConfirm} onChange={(e) => setSignupPasswordConfirm(e.target.value)} placeholder="Repeat password" />
-                    </div>
-                    <Button className="w-full" disabled={busy || !signupName || !signupEmail || !signupPassword || !signupPasswordConfirm} onClick={sendSignupCode}>
-                      {busy ? "Sending…" : "Send verification code"}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-sm text-slate-400">Code sent to <span className="text-slate-200">{signupEmail}</span></div>
-                    <div>
-                      <Label>6-digit code</Label>
-                      <Input inputMode="numeric" maxLength={6} value={signupCode} onChange={(e) => setSignupCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" />
-                    </div>
-                    <Button className="w-full" disabled={busy || signupCode.length !== 6} onClick={verifySignupCode}>
-                      {busy ? "Creating account…" : "Confirm & create account"}
-                    </Button>
-                    <button type="button" className="text-xs text-slate-400 underline hover:text-slate-200" onClick={() => { setSignupStage("details"); setSignupCode(""); }}>
-                      Edit details
-                    </button>
-                  </>
-                )}
+                <div>
+                  <Label>Full name</Label>
+                  <Input value={signupName} onChange={(e) => setSignupName(e.target.value)} placeholder="Jane Doe" />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" autoComplete="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="you@example.com" />
+                </div>
+                <div>
+                  <Label>Password</Label>
+                  <Input type="password" autoComplete="new-password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="Minimum 8 characters" />
+                </div>
+                <div>
+                  <Label>Confirm password</Label>
+                  <Input type="password" autoComplete="new-password" value={signupPasswordConfirm} onChange={(e) => setSignupPasswordConfirm(e.target.value)} placeholder="Repeat password" />
+                </div>
+                <Button className="w-full" disabled={busy || !signupName || !signupEmail || !signupPassword || !signupPasswordConfirm} onClick={signUp}>
+                  {busy ? "Creating account…" : "Create account"}
+                </Button>
               </TabsContent>
+
             </Tabs>
           </CardContent>
         </Card>
