@@ -370,12 +370,21 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
               results.push({ id: c.id, skipped: "sender_pending_verification" });
               continue;
             }
+            // Auto-provision the Telnyx Messaging Profile if this account has none yet.
+            let profileId: string | null =
+              acct?.telnyx_messaging_profile_id ?? acct?.twilio_subaccount_sid ?? null;
+            if (!profileId) {
+              try {
+                const { ensureMessagingProfileForAccount } = await import("@/lib/telnyx.server");
+                profileId = await ensureMessagingProfileForAccount(c.account_id);
+              } catch (e: any) {
+                await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
+                results.push({ id: c.id, error: `profile_provision_failed: ${e?.message ?? e}` });
+                continue;
+              }
+            }
             const sender: Sender = {
-              messagingProfileId:
-                verifiedSender?.messaging_service_sid ??
-                acct?.telnyx_messaging_profile_id ??
-                acct?.twilio_subaccount_sid ??
-                null,
+              messagingProfileId: verifiedSender?.messaging_service_sid ?? profileId,
               fromNumber: verifiedSender?.phone_number ?? acct?.subaccount_phone_number ?? null,
               assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
             };
