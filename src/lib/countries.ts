@@ -5,6 +5,17 @@ export interface Country {
   dial: string; // E.164 dial code prefixed with "+"
 }
 
+// Countries where carriers require alphanumeric sender IDs to be pre-registered
+// with the local operator. Sending an unregistered alpha SID (e.g. "SAMWELL")
+// to these destinations gets rejected by Telnyx with a 400 "not registered"
+// error, so we surface them as "Requires registration" in the UI and skip them
+// at send time. US / CA have their own toll-free flow and are handled separately.
+export const ALPHA_SENDER_REQUIRES_REGISTRATION: readonly string[] = [
+  "NG", "IN", "CN", "SA", "AE", "QA", "KW", "BH", "OM", "EG", "TR",
+  "PH", "VN", "TH", "ID", "MY", "BD", "PK", "LK", "MA", "DZ", "TN",
+];
+export const ALPHA_SENDER_REQUIRES_REGISTRATION_SET = new Set(ALPHA_SENDER_REQUIRES_REGISTRATION);
+
 export const COUNTRIES: Country[] = [
   { iso: "US", name: "United States", dial: "+1" },
   { iso: "CA", name: "Canada", dial: "+1" },
