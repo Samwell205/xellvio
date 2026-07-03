@@ -19,7 +19,7 @@ function formatMoney(n: number, currency: string) {
   }
 }
 
-export function TwilioBalanceCard() {
+export function BalanceCard() {
   const getFn = useServerFn(getTwilioBalance);
   const refreshFn = useServerFn(refreshTwilioBalance);
   const updateFn = useServerFn(updateTwilioBalanceSettings);
@@ -233,7 +233,7 @@ function StatusBadge({ status }: { status: "healthy" | "low" | "critical" | "err
   return <Badge variant="outline" className="gap-1"><XCircle className="size-3" />Error</Badge>;
 }
 
-export function TwilioLowBalanceBanner() {
+export function LowBalanceBanner() {
   const getFn = useServerFn(getTwilioBalance);
   const q = useQuery({
     queryKey: ["twilio-balance"],
