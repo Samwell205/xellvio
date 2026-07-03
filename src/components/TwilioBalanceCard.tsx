@@ -273,7 +273,7 @@ export function TwilioLowBalanceBanner() {
         )}
       </div>
       <a
-        href="https://console.twilio.com/us1/billing/manage-billing/recharge"
+        href="https://portal.telnyx.com/#/app/billing/payments"
         target="_blank"
         rel="noreferrer"
         className="font-semibold underline shrink-0"
