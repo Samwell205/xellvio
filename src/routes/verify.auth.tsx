@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -9,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { createVerifierAccountWithCode, sendVerifierSignupCode } from "@/lib/verifier.functions";
 
 export const Route = createFileRoute("/verify/auth")({
   validateSearch: (s: Record<string, unknown>) =>
@@ -20,8 +18,6 @@ export const Route = createFileRoute("/verify/auth")({
 function VerifierAuth() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
-  const sendCode = useServerFn(sendVerifierSignupCode);
-  const createAccount = useServerFn(createVerifierAccountWithCode);
 
   const [signinEmail, setSigninEmail] = useState("");
   const [signinPassword, setSigninPassword] = useState("");
@@ -29,8 +25,6 @@ function VerifierAuth() {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
-  const [signupStage, setSignupStage] = useState<"details" | "code">("details");
-  const [signupCode, setSignupCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -69,7 +63,7 @@ function VerifierAuth() {
     }
   }
 
-  async function sendSignupCode() {
+  async function signUp() {
     setBusy(true);
     try {
       if (signupPassword.length < 8) {
@@ -80,10 +74,19 @@ function VerifierAuth() {
         toast.error("Passwords do not match.");
         return;
       }
-      await sendCode({ data: { full_name: signupName, email: signupEmail } });
-      setSignupCode("");
-      setSignupStage("code");
-      toast.success("We sent a 6-digit code to your email");
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: { data: { full_name: signupName } },
+      });
+      if (signUpError) throw signUpError;
+      const { error } = await supabase.auth.signInWithPassword({
+        email: signupEmail,
+        password: signupPassword,
+      });
+      if (error) throw error;
+      toast.success("Welcome!");
+      navigate({ to: "/verify/dashboard" });
     } catch (e: any) {
       toast.error(e.message ?? "Could not create account");
     } finally {
@@ -91,30 +94,6 @@ function VerifierAuth() {
     }
   }
 
-  async function verifySignupCode() {
-    setBusy(true);
-    try {
-      await createAccount({
-        data: {
-          full_name: signupName,
-          email: signupEmail,
-          password: signupPassword,
-          code: signupCode.trim(),
-        },
-      });
-      const { error } = await supabase.auth.signInWithPassword({
-        email: signupEmail,
-        password: signupPassword,
-      });
-      if (error) throw error;
-      toast.success("Email confirmed — welcome!");
-      navigate({ to: "/verify/dashboard" });
-    } catch (e: any) {
-      toast.error(e.message ?? "Invalid code");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="dark grid min-h-screen place-items-center bg-slate-950 px-6 py-12 text-slate-100">
@@ -167,44 +146,27 @@ function VerifierAuth() {
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-3 pt-4">
-                {signupStage === "details" ? (
-                  <>
-                    <div>
-                      <Label>Full name</Label>
-                      <Input value={signupName} onChange={(e) => setSignupName(e.target.value)} placeholder="Jane Doe" />
-                    </div>
-                    <div>
-                      <Label>Email</Label>
-                      <Input type="email" autoComplete="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="you@example.com" />
-                    </div>
-                    <div>
-                      <Label>Password</Label>
-                      <Input type="password" autoComplete="new-password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="Minimum 8 characters" />
-                    </div>
-                    <div>
-                      <Label>Confirm password</Label>
-                      <Input type="password" autoComplete="new-password" value={signupPasswordConfirm} onChange={(e) => setSignupPasswordConfirm(e.target.value)} placeholder="Repeat password" />
-                    </div>
-                    <Button className="w-full" disabled={busy || !signupName || !signupEmail || !signupPassword || !signupPasswordConfirm} onClick={sendSignupCode}>
-                      {busy ? "Sending…" : "Send verification code"}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-sm text-slate-400">Code sent to <span className="text-slate-200">{signupEmail}</span></div>
-                    <div>
-                      <Label>6-digit code</Label>
-                      <Input inputMode="numeric" maxLength={6} value={signupCode} onChange={(e) => setSignupCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" />
-                    </div>
-                    <Button className="w-full" disabled={busy || signupCode.length !== 6} onClick={verifySignupCode}>
-                      {busy ? "Creating account…" : "Confirm & create account"}
-                    </Button>
-                    <button type="button" className="text-xs text-slate-400 underline hover:text-slate-200" onClick={() => { setSignupStage("details"); setSignupCode(""); }}>
-                      Edit details
-                    </button>
-                  </>
-                )}
+                <div>
+                  <Label>Full name</Label>
+                  <Input value={signupName} onChange={(e) => setSignupName(e.target.value)} placeholder="Jane Doe" />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" autoComplete="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="you@example.com" />
+                </div>
+                <div>
+                  <Label>Password</Label>
+                  <Input type="password" autoComplete="new-password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="Minimum 8 characters" />
+                </div>
+                <div>
+                  <Label>Confirm password</Label>
+                  <Input type="password" autoComplete="new-password" value={signupPasswordConfirm} onChange={(e) => setSignupPasswordConfirm(e.target.value)} placeholder="Repeat password" />
+                </div>
+                <Button className="w-full" disabled={busy || !signupName || !signupEmail || !signupPassword || !signupPasswordConfirm} onClick={signUp}>
+                  {busy ? "Creating account…" : "Create account"}
+                </Button>
               </TabsContent>
+
             </Tabs>
           </CardContent>
         </Card>

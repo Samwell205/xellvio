@@ -9,8 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
-import { createAccountWithCode, sendAccountSignupCode } from "@/lib/account-auth.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in — Xellvio" }, { name: "description", content: "Sign in or create your Xellvio account." }] }),
@@ -25,22 +23,17 @@ function AuthPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">(search.mode);
-  const [signupStage, setSignupStage] = useState<"details" | "code">("details");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [signupCode, setSignupCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const sendCode = useServerFn(sendAccountSignupCode);
-  const createAccount = useServerFn(createAccountWithCode);
 
   useEffect(() => {
     setMode(search.mode);
-    setSignupStage("details");
     setErrorMsg(null);
   }, [search.mode]);
 
@@ -67,28 +60,19 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        if (signupStage === "details") {
-          await sendCode({ data: { full_name: name, email } });
-          setSignupCode("");
-          setSignupStage("code");
-          toast.success("We sent a 6-digit code to your email.");
-          return;
-        }
-        await createAccount({ data: { full_name: name, email, password, code: signupCode.trim() } });
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: name } },
+        });
+        if (signUpError) throw signUpError;
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Account created — welcome!");
         navigate({ href: destination });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          if (error.message.toLowerCase().includes("not confirmed") || error.message.toLowerCase().includes("confirm")) {
-            toast.message("Please verify your email to continue.");
-            navigate({ to: "/verify-email", search: { email, status: "unverified" } });
-            return;
-          }
-          throw error;
-        }
+        if (error) throw error;
         toast.success("Welcome back");
         navigate({ href: destination });
       }
@@ -104,6 +88,7 @@ function AuthPage() {
       setLoading(false);
     }
   }
+
 
   async function handleGoogle() {
     setLoading(true);
@@ -149,12 +134,12 @@ function AuthPage() {
             {mode === "signup" && (
               <div className="space-y-1.5">
                 <Label htmlFor="name">Full name</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={signupStage === "code"} />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
             )}
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" disabled={mode === "signup" && signupStage === "code"} />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -175,7 +160,6 @@ function AuthPage() {
                   minLength={mode === "signup" ? 8 : 6}
                   autoComplete={mode === "signin" ? "current-password" : "new-password"}
                   className="pr-10"
-                  disabled={mode === "signup" && signupStage === "code"}
                 />
                 <button
                   type="button"
@@ -203,7 +187,6 @@ function AuthPage() {
                     autoComplete="new-password"
                     aria-invalid={passwordMismatch}
                     className={passwordMismatch ? "border-destructive focus-visible:ring-destructive" : ""}
-                    disabled={signupStage === "code"}
                   />
                 </div>
                 {passwordMismatch && <p className="text-xs text-destructive">Passwords do not match.</p>}
@@ -227,38 +210,18 @@ function AuthPage() {
                 </span>
               </label>
             )}
-            {mode === "signup" && signupStage === "code" && (
-              <div className="space-y-1.5 rounded-md border border-border bg-muted/30 p-3">
-                <Label htmlFor="signupCode">6-digit code</Label>
-                <Input
-                  id="signupCode"
-                  inputMode="numeric"
-                  maxLength={6}
-                  value={signupCode}
-                  onChange={(e) => setSignupCode(e.target.value.replace(/\D/g, ""))}
-                  placeholder="123456"
-                  required
-                />
-                <button
-                  type="button"
-                  className="text-xs text-primary hover:underline"
-                  onClick={() => { setSignupStage("details"); setSignupCode(""); }}
-                >
-                  Edit details
-                </button>
-              </div>
-            )}
-            <Button type="submit" className="w-full" disabled={loading || passwordMismatch || (mode === "signup" && (!termsAccepted || (signupStage === "code" && signupCode.length !== 6)))}>
+            <Button type="submit" className="w-full" disabled={loading || passwordMismatch || (mode === "signup" && !termsAccepted)}>
               {loading && <Loader2 className="size-4 animate-spin mr-2" />}
-              {mode === "signin" ? "Sign in" : signupStage === "details" ? "Send verification code" : "Confirm & create account"}
+              {mode === "signin" ? "Sign in" : "Create account"}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "signin" ? "No account?" : "Have an account?"}{" "}
-            <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setSignupStage("details"); setSignupCode(""); }} className="text-primary font-medium hover:underline">
+            <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); }} className="text-primary font-medium hover:underline">
               {mode === "signin" ? "Sign up" : "Sign in"}
             </button>
           </p>
+
         </Card>
       </div>
     </div>
