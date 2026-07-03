@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, XCircle, AlertTriangle, Loader2, ShieldOff } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, AlertTriangle, Loader2, ShieldOff, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Status =
@@ -7,6 +7,9 @@ type Status =
   | "active"
   | "rejected"
   | "failed"
+  | "undelivered"
+  | "skipped"
+  | "canceled"
   | "queued"
   | "sending"
   | "sent"
@@ -35,6 +38,9 @@ const map: Record<Status, { label: string; cls: string; Icon: React.ComponentTyp
   running: { label: "Running", cls: "bg-primary/15 text-primary border-primary/30", Icon: Loader2 },
   rejected: { label: "Rejected", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: XCircle },
   blocked_content: { label: "Blocked — content violation", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: ShieldOff },
+  undelivered: { label: "Undelivered", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: AlertTriangle },
+  skipped: { label: "Skipped", cls: "bg-muted text-muted-foreground border-border", Icon: SkipForward },
+  canceled: { label: "Canceled", cls: "bg-muted text-muted-foreground border-border", Icon: XCircle },
   failed: { label: "Failed", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: AlertTriangle },
 };
 
