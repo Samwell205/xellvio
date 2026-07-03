@@ -387,6 +387,8 @@ function TollfreeVerificationPage() {
         
       </div>
 
+      <MarketplaceBuyCard />
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
