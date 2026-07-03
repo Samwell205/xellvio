@@ -407,17 +407,20 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
     //    as claimable). Since verifier_id is NOT NULL we simply skip this
     //    step here and always purchase fresh; future pool logic can plug in.
 
-    // 2) Buy a fresh toll-free from Twilio.
+    // 2) Buy a fresh toll-free from Telnyx into the verifier owner's account
+    //    (the platform's messaging profile — verifier does not have a tenant
+    //    account, so we use the current user's own account id).
     const { autoPurchaseNumber } = await import("./auto-provision-number.server");
-    let purchased: { sid: string; phone_number: string };
+    let purchased: { id: string; phone_number: string; messaging_profile_id: string };
     try {
       purchased = await autoPurchaseNumber({
         country: "US",
         number_type: "toll_free",
+        accountId: context.userId,
         friendlyName: `Verifier ${verifier.id.slice(0, 8)}`,
       });
     } catch (e: any) {
-      throw new Error(e?.message ?? "Could not purchase a number from Twilio");
+      throw new Error(e?.message ?? "Could not purchase a number from Telnyx");
     }
 
     const { data: row, error } = await supabaseAdmin
@@ -427,8 +430,8 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
         phone_number: purchased.phone_number,
         country: "US",
         status: "assigned",
-        twilio_phone_sid: purchased.sid,
-        notes: "Auto-provisioned from Twilio pool",
+        twilio_phone_sid: purchased.id,
+        notes: "Auto-provisioned from Telnyx pool",
       })
       .select("id,phone_number")
       .single();

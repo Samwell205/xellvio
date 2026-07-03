@@ -71,6 +71,7 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
         const purchased = await autoPurchaseNumber({
           country: data.country,
           number_type: data.number_type as "toll_free" | "ten_dlc",
+          accountId: userId,
           friendlyName: `${data.business_name} (${data.country})`,
         });
         await supabaseAdmin
@@ -82,7 +83,6 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
             reviewed_at: new Date().toISOString(),
           })
           .eq("id", row.id);
-        // Register the purchased number as an active sender asset for this tenant.
         await supabaseAdmin
           .from("sender_assets")
           .upsert(
@@ -91,7 +91,10 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
               country_code: data.country,
               sender_kind: data.number_type === "toll_free" ? "toll_free" : "local",
               phone_number: purchased.phone_number,
-              phone_sid: purchased.sid,
+              phone_sid: purchased.id,
+              telnyx_phone_number_id: purchased.id,
+              telnyx_messaging_profile_id: purchased.messaging_profile_id,
+              messaging_service_sid: purchased.messaging_profile_id,
               verification_status: "verified",
               last_synced_at: new Date().toISOString(),
             },
