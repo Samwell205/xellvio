@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { COUNTRIES, isoFromDial } from "@/lib/countries";
 import { uploadOptInProof } from "@/lib/opt-in-proof.functions";
+import { TOLLFREE_USE_CASES, TOLLFREE_VOLUMES, normalizeUseCase } from "@/lib/tollfree-use-cases";
 import { toast } from "sonner";
 
 // ---------- Constants (mirrors Twilio's own wizard) ----------
