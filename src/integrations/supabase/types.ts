@@ -2102,6 +2102,7 @@ export type Database = {
       phone_number_type: "toll_free" | "personal"
       sender_id_status: "pending" | "approved" | "rejected"
       verifier_tfn_status:
+        | "assigned"
         | "pending_verification"
         | "verified"
         | "sold"
@@ -2248,6 +2249,7 @@ export const Constants = {
       phone_number_type: ["toll_free", "personal"],
       sender_id_status: ["pending", "approved", "rejected"],
       verifier_tfn_status: [
+        "assigned",
         "pending_verification",
         "verified",
         "sold",
