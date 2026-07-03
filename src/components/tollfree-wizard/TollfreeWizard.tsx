@@ -50,6 +50,31 @@ const REGISTRATION_AUTHORITIES = [
 
 const CATEGORIES = TOLLFREE_USE_CASES;
 
+const US_STATES: Array<{ v: string; l: string }> = [
+  { v: "AL", l: "Alabama" }, { v: "AK", l: "Alaska" }, { v: "AZ", l: "Arizona" }, { v: "AR", l: "Arkansas" },
+  { v: "CA", l: "California" }, { v: "CO", l: "Colorado" }, { v: "CT", l: "Connecticut" }, { v: "DE", l: "Delaware" },
+  { v: "DC", l: "District of Columbia" }, { v: "FL", l: "Florida" }, { v: "GA", l: "Georgia" }, { v: "HI", l: "Hawaii" },
+  { v: "ID", l: "Idaho" }, { v: "IL", l: "Illinois" }, { v: "IN", l: "Indiana" }, { v: "IA", l: "Iowa" },
+  { v: "KS", l: "Kansas" }, { v: "KY", l: "Kentucky" }, { v: "LA", l: "Louisiana" }, { v: "ME", l: "Maine" },
+  { v: "MD", l: "Maryland" }, { v: "MA", l: "Massachusetts" }, { v: "MI", l: "Michigan" }, { v: "MN", l: "Minnesota" },
+  { v: "MS", l: "Mississippi" }, { v: "MO", l: "Missouri" }, { v: "MT", l: "Montana" }, { v: "NE", l: "Nebraska" },
+  { v: "NV", l: "Nevada" }, { v: "NH", l: "New Hampshire" }, { v: "NJ", l: "New Jersey" }, { v: "NM", l: "New Mexico" },
+  { v: "NY", l: "New York" }, { v: "NC", l: "North Carolina" }, { v: "ND", l: "North Dakota" }, { v: "OH", l: "Ohio" },
+  { v: "OK", l: "Oklahoma" }, { v: "OR", l: "Oregon" }, { v: "PA", l: "Pennsylvania" }, { v: "PR", l: "Puerto Rico" },
+  { v: "RI", l: "Rhode Island" }, { v: "SC", l: "South Carolina" }, { v: "SD", l: "South Dakota" }, { v: "TN", l: "Tennessee" },
+  { v: "TX", l: "Texas" }, { v: "UT", l: "Utah" }, { v: "VT", l: "Vermont" }, { v: "VA", l: "Virginia" },
+  { v: "WA", l: "Washington" }, { v: "WV", l: "West Virginia" }, { v: "WI", l: "Wisconsin" }, { v: "WY", l: "Wyoming" },
+];
+
+const CA_PROVINCES: Array<{ v: string; l: string }> = [
+  { v: "AB", l: "Alberta" }, { v: "BC", l: "British Columbia" }, { v: "MB", l: "Manitoba" },
+  { v: "NB", l: "New Brunswick" }, { v: "NL", l: "Newfoundland and Labrador" }, { v: "NS", l: "Nova Scotia" },
+  { v: "NT", l: "Northwest Territories" }, { v: "NU", l: "Nunavut" }, { v: "ON", l: "Ontario" },
+  { v: "PE", l: "Prince Edward Island" }, { v: "QC", l: "Quebec" }, { v: "SK", l: "Saskatchewan" },
+  { v: "YT", l: "Yukon" },
+];
+
+
 
 const OPT_IN_HELP: Record<string, { title: string; example: string; include: string[]; notes: string[] }> = {
   VERBAL: {
@@ -562,8 +587,20 @@ function BusinessAddressStep({ form, update }: StepProps) {
           <Input value={form.city} onChange={(e) => update("city", e.target.value)} />
         </Field>
         <Field label="State / region" required>
-          <Input value={form.state} onChange={(e) => update("state", e.target.value)} />
+          {form.businessCountry === "US" || form.businessCountry === "CA" ? (
+            <Select value={form.state} onValueChange={(v) => update("state", v)}>
+              <SelectTrigger><SelectValue placeholder={form.businessCountry === "CA" ? "Select province" : "Select state"} /></SelectTrigger>
+              <SelectContent>
+                {(form.businessCountry === "CA" ? CA_PROVINCES : US_STATES).map((s) => (
+                  <SelectItem key={s.v} value={s.v}>{s.v} — {s.l}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input value={form.state} onChange={(e) => update("state", e.target.value)} />
+          )}
         </Field>
+
         <Field label="Zip / postal code" required>
           <Input value={form.zip} onChange={(e) => update("zip", e.target.value)} />
         </Field>
