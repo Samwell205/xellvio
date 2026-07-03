@@ -69,7 +69,7 @@ function VerifierAuth() {
     }
   }
 
-  async function sendSignupCode() {
+  async function signUp() {
     setBusy(true);
     try {
       if (signupPassword.length < 8) {
@@ -80,10 +80,19 @@ function VerifierAuth() {
         toast.error("Passwords do not match.");
         return;
       }
-      await sendCode({ data: { full_name: signupName, email: signupEmail } });
-      setSignupCode("");
-      setSignupStage("code");
-      toast.success("We sent a 6-digit code to your email");
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: { data: { full_name: signupName } },
+      });
+      if (signUpError) throw signUpError;
+      const { error } = await supabase.auth.signInWithPassword({
+        email: signupEmail,
+        password: signupPassword,
+      });
+      if (error) throw error;
+      toast.success("Welcome!");
+      navigate({ to: "/verify/dashboard" });
     } catch (e: any) {
       toast.error(e.message ?? "Could not create account");
     } finally {
@@ -91,30 +100,6 @@ function VerifierAuth() {
     }
   }
 
-  async function verifySignupCode() {
-    setBusy(true);
-    try {
-      await createAccount({
-        data: {
-          full_name: signupName,
-          email: signupEmail,
-          password: signupPassword,
-          code: signupCode.trim(),
-        },
-      });
-      const { error } = await supabase.auth.signInWithPassword({
-        email: signupEmail,
-        password: signupPassword,
-      });
-      if (error) throw error;
-      toast.success("Email confirmed — welcome!");
-      navigate({ to: "/verify/dashboard" });
-    } catch (e: any) {
-      toast.error(e.message ?? "Invalid code");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div className="dark grid min-h-screen place-items-center bg-slate-950 px-6 py-12 text-slate-100">
