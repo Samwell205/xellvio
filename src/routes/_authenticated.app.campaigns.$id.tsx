@@ -2,6 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { reconcileCampaignMessages } from "@/lib/reconcile-messages.functions";
+import {
+  cancelCampaign,
+  retryMessage,
+  retryFailedMessages,
+} from "@/lib/campaign-control.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -19,12 +24,18 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
   Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
-  DollarSign, Wallet, Activity,
+  DollarSign, Wallet, Activity, XCircle, Download, RotateCw,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatUSD } from "@/lib/money";
+
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign report — Xellvio" }] }),
@@ -57,7 +68,8 @@ function CampaignReport() {
 
   const messagesQ = useQuery({
     queryKey: ["campaign-messages", id],
-    refetchInterval: 5_000,
+    // Realtime keeps this in sync; polling is a safety net in case a WS event is missed.
+    refetchInterval: 30_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("messages")
@@ -71,7 +83,7 @@ function CampaignReport() {
 
   const eventsQ = useQuery({
     queryKey: ["campaign-events", id],
-    refetchInterval: 10_000,
+    refetchInterval: 15_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
@@ -82,13 +94,11 @@ function CampaignReport() {
     },
   });
 
-  // Live progress counts across the full campaign (not limited to the 2k row
-  // window used by `messagesQ`). Uses head:true count queries so it's cheap
-  // even for very large campaigns and stays accurate while messages drain
-  // out of the queue in the background.
+  // Live progress counts across the full campaign. Realtime pushes updates
+  // whenever a message row changes; the interval below is a fallback.
   const progressQ = useQuery({
     queryKey: ["campaign-progress", id],
-    refetchInterval: 3_000,
+    refetchInterval: 15_000,
     queryFn: async () => {
       const base = () =>
         supabase.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", id);
@@ -110,6 +120,102 @@ function CampaignReport() {
       };
     },
   });
+
+  // Failure breakdown by error_code (drives the "Failure reasons" panel and
+  // the per-reason retry button). Sender/provider is inferred from
+  // sender_map on the campaign.
+  const failuresQ = useQuery({
+    queryKey: ["campaign-failures", id],
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("error_code, country_code")
+        .eq("campaign_id", id)
+        .in("status", ["failed", "undelivered"])
+        .limit(5000);
+      const byReason: Record<string, number> = {};
+      const byCountry: Record<string, number> = {};
+      for (const r of data ?? []) {
+        const code = (r as any).error_code ?? "unknown";
+        byReason[code] = (byReason[code] ?? 0) + 1;
+        const cc = (r as any).country_code ?? "—";
+        byCountry[cc] = (byCountry[cc] ?? 0) + 1;
+      }
+      return { byReason, byCountry, total: data?.length ?? 0 };
+    },
+  });
+
+  // Realtime: subscribe to message + campaign changes and invalidate the
+  // relevant queries. This gives sub-second UI updates instead of waiting
+  // for the polling interval.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`campaign-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages", filter: `campaign_id=eq.${id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+          queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+          queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "campaigns", filter: `id=eq.${id}` },
+        () => queryClient.invalidateQueries({ queryKey: ["campaign", id] }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient]);
+
+  const cancelFn = useServerFn(cancelCampaign);
+  const cancelM = useMutation({
+    mutationFn: () => cancelFn({ data: { campaignId: id } }),
+    onSuccess: (r) => {
+      toast.success(
+        r.alreadyStopped
+          ? "Campaign was already stopped."
+          : `Campaign cancelled. ${r.cancelledMessages.toLocaleString()} queued message${
+              r.cancelledMessages === 1 ? "" : "s"
+            } will not be sent.`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to cancel campaign"),
+  });
+
+  const retryOneFn = useServerFn(retryMessage);
+  const retryOneM = useMutation({
+    mutationFn: (messageId: string) => retryOneFn({ data: { messageId } }),
+    onSuccess: () => {
+      toast.success("Message re-queued.");
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
+  });
+
+  const retryAllFn = useServerFn(retryFailedMessages);
+  const retryAllM = useMutation({
+    mutationFn: (errorCode?: string | null) =>
+      retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null } }),
+    onSuccess: (r) => {
+      toast.success(`Re-queued ${r.retried.toLocaleString()} failed message${r.retried === 1 ? "" : "s"}.`);
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
+  });
+
 
   const eligibleQ = useQuery({
     queryKey: ["campaign-eligible", id, campaignQ.data?.audience],
@@ -242,6 +348,57 @@ function CampaignReport() {
               <RefreshCw className={`size-3 mr-1 ${reconcileM.isPending ? "animate-spin" : ""}`} />
               {reconcileM.isPending ? "Refreshing…" : "Refresh statuses"}
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportProgressCsv({
+                  campaign: c,
+                  progress: progressQ.data,
+                  failures: failuresQ.data,
+                  messages: messagesQ.data ?? [],
+                })
+              }
+              title="Download queued / sending / delivered / failed metrics as CSV."
+            >
+              <Download className="size-3 mr-1" />
+              Export CSV
+            </Button>
+            {!["sent", "cancelled", "failed"].includes(c.status) && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={cancelM.isPending}
+                    title="Stop further dispatch. Already-delivered messages are not affected."
+                  >
+                    <XCircle className="size-3 mr-1" />
+                    {cancelM.isPending ? "Cancelling…" : "Cancel campaign"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel this campaign?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      No further messages will be sent. Messages that have already been
+                      handed to the carrier will still be delivered — those cannot be
+                      recalled. You will not be charged for any queued messages that are
+                      cancelled.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep sending</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => cancelM.mutate()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Yes, cancel
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <Button asChild variant="outline" size="sm">
               <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
             </Button>
@@ -263,7 +420,28 @@ function CampaignReport() {
         </div>
       )}
 
-      <ProgressPanel data={progressQ.data} status={c.status} isFetching={progressQ.isFetching} />
+      {c.status === "cancelled" && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 flex items-start gap-3">
+          <XCircle className="size-5 text-destructive shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <div className="font-semibold mb-0.5">Campaign cancelled</div>
+            <div className="text-muted-foreground">
+              Dispatch is stopped. Messages already handed to the carrier will still be delivered.
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ProgressPanel
+        data={progressQ.data}
+        status={c.status}
+        isFetching={progressQ.isFetching}
+        failures={failuresQ.data}
+        onRetryReason={(code) => retryAllM.mutate(code)}
+        onRetryAll={() => retryAllM.mutate(null)}
+        isRetrying={retryAllM.isPending}
+      />
+
 
 
 
@@ -406,7 +584,11 @@ function CampaignReport() {
             rows={messagesQ.data ?? []}
             stats={stats}
             optOuts={optOutsQ.data ?? 0}
+            onRetry={(mid) => retryOneM.mutate(mid)}
+            retryingId={retryOneM.isPending ? (retryOneM.variables as string | undefined) : undefined}
+            canRetry={c.status !== "cancelled"}
           />
+
         </TabsContent>
 
         {/* ───────────── LINKS ───────────── */}
@@ -499,7 +681,21 @@ function CampaignReport() {
 
 /* ───────────── Sub-components ───────────── */
 
-function RecipientActivity({ rows, stats, optOuts }: { rows: any[]; stats: any; optOuts: number }) {
+function RecipientActivity({
+  rows,
+  stats,
+  optOuts,
+  onRetry,
+  retryingId,
+  canRetry,
+}: {
+  rows: any[];
+  stats: any;
+  optOuts: number;
+  onRetry?: (messageId: string) => void;
+  retryingId?: string;
+  canRetry?: boolean;
+}) {
   const [filter, setFilter] = useState<string>("all");
   const buckets = useMemo(() => {
     const f = {
@@ -578,11 +774,15 @@ function RecipientActivity({ rows, stats, optOuts }: { rows: any[]; stats: any; 
                   <TableHead>Segments</TableHead>
                   <TableHead>Cost</TableHead>
                   <TableHead>Sent</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {shown.slice(0, 300).map((m: any) => {
                   const name = [m.profile?.first_name, m.profile?.last_name].filter(Boolean).join(" ");
+                  const isFailed = ["failed", "undelivered"].includes(m.status);
+                  const retryable =
+                    isFailed && canRetry && m.error_code !== "cancelled_by_user";
                   return (
                     <TableRow key={m.id}>
                       <TableCell>
@@ -599,12 +799,26 @@ function RecipientActivity({ rows, stats, optOuts }: { rows: any[]; stats: any; 
                       <TableCell className="text-xs text-muted-foreground">
                         {m.sent_at ? new Date(m.sent_at).toLocaleString() : "—"}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {retryable && onRetry && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onRetry(m.id)}
+                            disabled={retryingId === m.id}
+                            title="Re-queue this message for another attempt."
+                          >
+                            <RotateCw className={`size-3 ${retryingId === m.id ? "animate-spin" : ""}`} />
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
           )}
+
         </Card>
       </div>
     </div>
@@ -800,10 +1014,18 @@ function ProgressPanel({
   data,
   status,
   isFetching,
+  failures,
+  onRetryReason,
+  onRetryAll,
+  isRetrying,
 }: {
   data?: { total: number; queued: number; sending: number; sent: number; delivered: number; failed: number };
   status?: string;
   isFetching?: boolean;
+  failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
+  onRetryReason?: (code: string) => void;
+  onRetryAll?: () => void;
+  isRetrying?: boolean;
 }) {
   if (!data || data.total === 0) return null;
   const { total, queued, sending, sent, delivered, failed } = data;
@@ -811,6 +1033,9 @@ function ProgressPanel({
   const processed = total - inFlight;
   const processedPct = total > 0 ? Math.round((processed / total) * 100) : 0;
   const isDraining = inFlight > 0 && (status === "sending" || status === "queued");
+  const topReasons = Object.entries(failures?.byReason ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
 
   return (
     <Card className="p-5">
@@ -819,6 +1044,9 @@ function ProgressPanel({
           <div className="font-semibold flex items-center gap-2">
             <Activity className="size-4 text-primary" /> Campaign progress
           </div>
+          <span className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+            <span className="inline-block size-1.5 rounded-full bg-emerald-500 animate-pulse" /> live
+          </span>
           {isDraining && (
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
               <RefreshCw className={`size-3 ${isFetching ? "animate-spin" : ""}`} />
@@ -848,6 +1076,59 @@ function ProgressPanel({
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
       </div>
 
+      {failed > 0 && topReasons.length > 0 && (
+        <div className="mt-5 border-t pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+              <AlertTriangle className="size-3.5 text-destructive" />
+              Failure breakdown ({failed.toLocaleString()} failed)
+            </div>
+            {onRetryAll && status !== "cancelled" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRetryAll}
+                disabled={isRetrying}
+                title="Re-queue every failed message on this campaign."
+              >
+                <RotateCw className={`size-3 mr-1 ${isRetrying ? "animate-spin" : ""}`} />
+                Retry all failed
+              </Button>
+            )}
+          </div>
+          <ul className="space-y-1.5">
+            {topReasons.map(([code, n]) => (
+              <li
+                key={code}
+                className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="font-mono text-xs">{code}</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {friendlyReason(code)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <Badge variant="outline" className="text-destructive border-destructive/30 tabular-nums">
+                    {n.toLocaleString()}
+                  </Badge>
+                  {onRetryReason && status !== "cancelled" && code !== "cancelled_by_user" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRetryReason(code)}
+                      disabled={isRetrying}
+                    >
+                      <RotateCw className="size-3 mr-1" /> Retry
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="text-[11px] text-muted-foreground mt-3">
         {isDraining
           ? `Processing ~200 messages/minute. ${processedPct}% complete — you can leave this page and come back later.`
@@ -858,6 +1139,125 @@ function ProgressPanel({
     </Card>
   );
 }
+
+const REASON_LABELS: Record<string, string> = {
+  cancelled_by_user: "Stopped by user before dispatch",
+  insufficient_balance: "Account credit ran out before this message was sent",
+  exception: "Provider request failed unexpectedly",
+  "30007": "Carrier filtered — likely SHAFT/spam content",
+  "30003": "Unreachable handset (off / roaming / disconnected)",
+  "30004": "Message blocked by carrier",
+  "30005": "Unknown destination handset",
+  "30006": "Landline or unreachable carrier",
+  "30008": "Unknown delivery error",
+  "30034": "Blocked — 10DLC not registered (US)",
+  "21610": "Recipient replied STOP — number opted out",
+  "21614": "Not a valid mobile number",
+};
+function friendlyReason(code: string): string {
+  return REASON_LABELS[code] ?? "See carrier documentation";
+}
+
+// Build a CSV report of the campaign's progress metrics + time-bucketed
+// delivery counts + failure breakdown, and trigger a browser download.
+function exportProgressCsv({
+  campaign,
+  progress,
+  failures,
+  messages,
+}: {
+  campaign: any;
+  progress?: { total: number; queued: number; sending: number; sent: number; delivered: number; failed: number };
+  failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
+  messages: any[];
+}) {
+  const lines: string[] = [];
+  const now = new Date();
+  lines.push("Campaign progress report");
+  lines.push(`Campaign,${csv(campaign?.name ?? "")}`);
+  lines.push(`Campaign ID,${csv(campaign?.id ?? "")}`);
+  lines.push(`Status,${csv(campaign?.status ?? "")}`);
+  lines.push(`Generated at,${csv(now.toISOString())}`);
+  lines.push("");
+  lines.push("Totals");
+  lines.push("metric,count");
+  if (progress) {
+    lines.push(`total,${progress.total}`);
+    lines.push(`queued,${progress.queued}`);
+    lines.push(`sending,${progress.sending}`);
+    lines.push(`sent,${progress.sent}`);
+    lines.push(`delivered,${progress.delivered}`);
+    lines.push(`failed,${progress.failed}`);
+  }
+  lines.push("");
+  lines.push("Delivery by hour");
+  lines.push("hour_iso,sent,delivered,failed");
+  const buckets = new Map<number, { sent: number; delivered: number; failed: number }>();
+  const bucket = (iso: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    d.setMinutes(0, 0, 0);
+    return d.getTime();
+  };
+  for (const m of messages) {
+    const ts = bucket(m.sent_at);
+    if (ts != null) {
+      const b = buckets.get(ts) ?? { sent: 0, delivered: 0, failed: 0 };
+      b.sent++;
+      buckets.set(ts, b);
+    }
+    const td = bucket(m.delivered_at);
+    if (td != null) {
+      const b = buckets.get(td) ?? { sent: 0, delivered: 0, failed: 0 };
+      b.delivered++;
+      buckets.set(td, b);
+    }
+    if (["failed", "undelivered"].includes(m.status)) {
+      const tf = bucket(m.sent_at ?? m.created_at);
+      if (tf != null) {
+        const b = buckets.get(tf) ?? { sent: 0, delivered: 0, failed: 0 };
+        b.failed++;
+        buckets.set(tf, b);
+      }
+    }
+  }
+  const sorted = [...buckets.entries()].sort((a, b) => a[0] - b[0]);
+  for (const [t, v] of sorted) {
+    lines.push(`${new Date(t).toISOString()},${v.sent},${v.delivered},${v.failed}`);
+  }
+  lines.push("");
+  lines.push("Failures by reason");
+  lines.push("error_code,description,count");
+  for (const [code, n] of Object.entries(failures?.byReason ?? {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`${csv(code)},${csv(REASON_LABELS[code] ?? "")},${n}`);
+  }
+  lines.push("");
+  lines.push("Failures by country");
+  lines.push("country,count");
+  for (const [cc, n] of Object.entries(failures?.byCountry ?? {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`${csv(cc)},${n}`);
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const safeName = (campaign?.name ?? "campaign")
+    .toString()
+    .replace(/[^a-z0-9-_]+/gi, "_")
+    .slice(0, 40);
+  a.download = `${safeName}-progress-${now.toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function csv(v: string): string {
+  if (v == null) return "";
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
+}
+
 
 function Seg({ pct, className }: { pct: number; className: string }) {
   const w = Math.max(0, Math.min(100, pct));
