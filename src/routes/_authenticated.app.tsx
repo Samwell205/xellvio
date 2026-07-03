@@ -1,9 +1,11 @@
 import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Bell, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { provisionCurrentAccount } from "@/lib/provision-account.functions";
 
 export const Route = createFileRoute("/_authenticated/app")({
   beforeLoad: async () => {
