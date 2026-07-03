@@ -873,12 +873,15 @@ export type Database = {
           delivered_at: string | null
           dispatch_started_at: string | null
           error_code: string | null
+          failure_reason: string | null
           id: string
           phone_e164: string
           profile_id: string | null
           provider_message_id: string | null
           rendered_body: string
           segments_count: number | null
+          sender_kind: string | null
+          sender_used: string | null
           sent_at: string | null
           status: string
         }
@@ -890,12 +893,15 @@ export type Database = {
           delivered_at?: string | null
           dispatch_started_at?: string | null
           error_code?: string | null
+          failure_reason?: string | null
           id?: string
           phone_e164: string
           profile_id?: string | null
           provider_message_id?: string | null
           rendered_body: string
           segments_count?: number | null
+          sender_kind?: string | null
+          sender_used?: string | null
           sent_at?: string | null
           status?: string
         }
@@ -907,12 +913,15 @@ export type Database = {
           delivered_at?: string | null
           dispatch_started_at?: string | null
           error_code?: string | null
+          failure_reason?: string | null
           id?: string
           phone_e164?: string
           profile_id?: string | null
           provider_message_id?: string | null
           rendered_body?: string
           segments_count?: number | null
+          sender_kind?: string | null
+          sender_used?: string | null
           sent_at?: string | null
           status?: string
         }
