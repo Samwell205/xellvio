@@ -1,15 +1,15 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
+import { z } from "zod";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
-import { z } from "zod";
-import { checkVerifierEmailAvailable } from "@/lib/verifier.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { checkVerifierEmailAvailable, createVerifierProfile } from "@/lib/verifier.functions";
 
 export const Route = createFileRoute("/verify/auth")({
   validateSearch: (s: Record<string, unknown>) =>
@@ -20,50 +20,30 @@ export const Route = createFileRoute("/verify/auth")({
 function VerifierAuth() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
+  const checkEmail = useServerFn(checkVerifierEmailAvailable);
+  const createProfile = useServerFn(createVerifierProfile);
 
-  // Sign in (magic-link OTP)
   const [signinEmail, setSigninEmail] = useState("");
-  const [signinStage, setSigninStage] = useState<"email" | "code">("email");
-  const [signinCode, setSigninCode] = useState("");
-
-  // Sign up: name + email -> code -> account created
+  const [signinPassword, setSigninPassword] = useState("");
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
   const [signupStage, setSignupStage] = useState<"details" | "code">("details");
   const [signupCode, setSignupCode] = useState("");
-
   const [busy, setBusy] = useState(false);
-  const checkEmail = useServerFn(checkVerifierEmailAvailable);
 
-  async function sendSigninCode() {
+  async function signInWithPassword() {
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithPassword({
         email: signinEmail,
-        options: { shouldCreateUser: false },
-      });
-      if (error) throw error;
-      setSigninStage("code");
-      toast.success("We sent a 6-digit code to your email");
-    } catch (e: any) {
-      toast.error(e.message ?? "Could not send code");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function verifySigninCode() {
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: signinEmail,
-        token: signinCode.trim(),
-        type: "email",
+        password: signinPassword,
       });
       if (error) throw error;
       navigate({ to: "/verify/dashboard" });
     } catch (e: any) {
-      toast.error(e.message ?? "Invalid code");
+      toast.error(e.message ?? "Invalid email or password");
     } finally {
       setBusy(false);
     }
@@ -72,16 +52,24 @@ function VerifierAuth() {
   async function sendSignupCode() {
     setBusy(true);
     try {
-      // Prevent duplicate registrations for the same email
       const check = await checkEmail({ data: { email: signupEmail } });
       if (!check.available) {
         toast.error("An account with this email already exists — please sign in instead.");
         return;
       }
-      const { error } = await supabase.auth.signInWithOtp({
+      if (signupPassword.length < 8) {
+        toast.error("Password must be at least 8 characters.");
+        return;
+      }
+      if (signupPassword !== signupPasswordConfirm) {
+        toast.error("Passwords do not match.");
+        return;
+      }
+      const { error } = await supabase.auth.signUp({
         email: signupEmail,
+        password: signupPassword,
         options: {
-          shouldCreateUser: true,
+          emailRedirectTo: `${window.location.origin}/verify/auth?tab=signup`,
           data: { full_name: signupName, verifier_signup: true },
         },
       });
@@ -89,7 +77,7 @@ function VerifierAuth() {
       setSignupStage("code");
       toast.success("We sent a 6-digit code to your email");
     } catch (e: any) {
-      toast.error(e.message ?? "Could not send code");
+      toast.error(e.message ?? "Could not create account");
     } finally {
       setBusy(false);
     }
@@ -101,9 +89,10 @@ function VerifierAuth() {
       const { error } = await supabase.auth.verifyOtp({
         email: signupEmail,
         token: signupCode.trim(),
-        type: "email",
+        type: "signup",
       });
       if (error) throw error;
+      await createProfile({ data: { full_name: signupName } }).catch(() => null);
       toast.success("Email confirmed — welcome!");
       navigate({ to: "/verify/dashboard" });
     } catch (e: any) {
@@ -114,14 +103,14 @@ function VerifierAuth() {
   }
 
   return (
-    <div className="dark min-h-screen bg-slate-950 text-slate-100 grid place-items-center px-6 py-12">
+    <div className="dark grid min-h-screen place-items-center bg-slate-950 px-6 py-12 text-slate-100">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <Link to="/verify" className="text-sm text-slate-400 hover:text-slate-200">← Verifier portal</Link>
-          <h1 className="text-2xl font-semibold mt-2">Xellvio Verifier</h1>
-          <p className="text-sm text-slate-400 mt-1">Passwordless — we email you a 6-digit code.</p>
+          <h1 className="mt-2 text-2xl font-semibold">Xellvio Verifier</h1>
+          <p className="mt-1 text-sm text-slate-400">Sign in with email and password. New accounts confirm by code once.</p>
         </div>
-        <Card className="bg-slate-900 border-slate-800">
+        <Card className="border-slate-800 bg-slate-900">
           <CardContent className="pt-6">
             <Tabs defaultValue={tab ?? "signin"}>
               <TabsList className="grid w-full grid-cols-2 bg-slate-800">
@@ -130,31 +119,17 @@ function VerifierAuth() {
               </TabsList>
 
               <TabsContent value="signin" className="space-y-3 pt-4">
-                {signinStage === "email" ? (
-                  <>
-                    <div>
-                      <Label>Email</Label>
-                      <Input type="email" value={signinEmail} onChange={(e) => setSigninEmail(e.target.value)} placeholder="you@example.com" />
-                    </div>
-                    <Button className="w-full" disabled={busy || !signinEmail} onClick={sendSigninCode}>
-                      {busy ? "Sending…" : "Email me a code"}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-sm text-slate-400">Code sent to <span className="text-slate-200">{signinEmail}</span></div>
-                    <div>
-                      <Label>6-digit code</Label>
-                      <Input inputMode="numeric" maxLength={6} value={signinCode} onChange={(e) => setSigninCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" />
-                    </div>
-                    <Button className="w-full" disabled={busy || signinCode.length !== 6} onClick={verifySigninCode}>
-                      {busy ? "Verifying…" : "Verify & sign in"}
-                    </Button>
-                    <button type="button" className="text-xs text-slate-400 hover:text-slate-200 underline" onClick={() => { setSigninStage("email"); setSigninCode(""); }}>
-                      Use a different email
-                    </button>
-                  </>
-                )}
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" autoComplete="email" value={signinEmail} onChange={(e) => setSigninEmail(e.target.value)} placeholder="you@example.com" />
+                </div>
+                <div>
+                  <Label>Password</Label>
+                  <Input type="password" autoComplete="current-password" value={signinPassword} onChange={(e) => setSigninPassword(e.target.value)} placeholder="Enter your password" />
+                </div>
+                <Button className="w-full" disabled={busy || !signinEmail || !signinPassword} onClick={signInWithPassword}>
+                  {busy ? "Signing in…" : "Sign in"}
+                </Button>
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-3 pt-4">
@@ -166,9 +141,17 @@ function VerifierAuth() {
                     </div>
                     <div>
                       <Label>Email</Label>
-                      <Input type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="you@example.com" />
+                      <Input type="email" autoComplete="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="you@example.com" />
                     </div>
-                    <Button className="w-full" disabled={busy || !signupName || !signupEmail} onClick={sendSignupCode}>
+                    <div>
+                      <Label>Password</Label>
+                      <Input type="password" autoComplete="new-password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="Minimum 8 characters" />
+                    </div>
+                    <div>
+                      <Label>Confirm password</Label>
+                      <Input type="password" autoComplete="new-password" value={signupPasswordConfirm} onChange={(e) => setSignupPasswordConfirm(e.target.value)} placeholder="Repeat password" />
+                    </div>
+                    <Button className="w-full" disabled={busy || !signupName || !signupEmail || !signupPassword || !signupPasswordConfirm} onClick={sendSignupCode}>
                       {busy ? "Sending…" : "Send verification code"}
                     </Button>
                   </>
@@ -182,7 +165,7 @@ function VerifierAuth() {
                     <Button className="w-full" disabled={busy || signupCode.length !== 6} onClick={verifySignupCode}>
                       {busy ? "Creating account…" : "Confirm & create account"}
                     </Button>
-                    <button type="button" className="text-xs text-slate-400 hover:text-slate-200 underline" onClick={() => { setSignupStage("details"); setSignupCode(""); }}>
+                    <button type="button" className="text-xs text-slate-400 underline hover:text-slate-200" onClick={() => { setSignupStage("details"); setSignupCode(""); }}>
                       Edit details
                     </button>
                   </>
