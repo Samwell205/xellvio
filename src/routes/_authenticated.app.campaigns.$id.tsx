@@ -33,6 +33,22 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
 
 function CampaignReport() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
+  const reconcileFn = useServerFn(reconcileCampaignMessages);
+  const reconcileM = useMutation({
+    mutationFn: () => reconcileFn({ data: { campaignId: id } }),
+    onSuccess: (r) => {
+      toast.success(
+        r.updated > 0
+          ? `Refreshed ${r.updated} of ${r.checked} pending message${r.checked === 1 ? "" : "s"} from Twilio.`
+          : r.checked > 0
+            ? `Checked ${r.checked} pending message${r.checked === 1 ? "" : "s"} — Twilio has no new delivery receipt yet.`
+            : "No pending messages to refresh.",
+      );
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to refresh from Twilio"),
+  });
 
   const campaignQ = useQuery({
     queryKey: ["campaign", id],
