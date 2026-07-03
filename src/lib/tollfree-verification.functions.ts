@@ -161,6 +161,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
     const result = await submitTwilioTollfreeVerification({
       phoneSid: asset.phone_sid,
+      phoneNumberE164: asset.phone_number ?? undefined,
       accountSid: "",
       authToken: "",
       existingVerificationSid: asset.verification_sid ?? null,
