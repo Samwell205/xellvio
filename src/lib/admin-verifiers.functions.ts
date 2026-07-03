@@ -450,8 +450,8 @@ export const adminUnassignSenderAsset = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("sender_assets").delete().eq("phone_number", data.phone_number);
-    if (error) throw new Error(error.message);
+    const { unwireAssignedTollfreeForTenant } = await import("./assign-tfn-to-tenant.server");
+    await unwireAssignedTollfreeForTenant({ phoneNumber: data.phone_number });
     return { ok: true };
   });
+
