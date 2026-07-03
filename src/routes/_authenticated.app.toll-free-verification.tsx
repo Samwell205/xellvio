@@ -731,8 +731,10 @@ function TollfreeVerificationPage() {
             </Field>
           </Three>
         </Section>
+        </>)}
 
-        <Section title="Step 3 / 3 — Messaging use case">
+        {step === 2 && (<>
+        <Section title="Registration details">
           <Two>
             <Field label="Estimated monthly volume" required>
               <Select
