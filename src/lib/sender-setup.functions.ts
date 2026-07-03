@@ -47,9 +47,13 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { ensureMessagingProfileForAccount } = await import("./telnyx.server");
+    const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET } = await import("./countries");
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
+    const results: Array<{ cc: string; status: string }> = [];
     for (const raw of data.countries) {
       const cc = raw.toUpperCase();
+      const needsReg = ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(cc);
+      const status = needsReg ? "requires_registration" : "verified";
       const { data: existing } = await supabaseAdmin
         .from("sender_assets").select("id").eq("account_id", userId).eq("country_code", cc).maybeSingle();
       if (existing) {
@@ -58,7 +62,7 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
           phone_number: data.senderId,
           messaging_service_sid: messagingProfileId,
           telnyx_messaging_profile_id: messagingProfileId,
-          verification_status: "verified",
+          verification_status: status,
           last_synced_at: new Date().toISOString(),
         }).eq("id", existing.id);
       } else {
@@ -69,9 +73,15 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
           phone_number: data.senderId,
           messaging_service_sid: messagingProfileId,
           telnyx_messaging_profile_id: messagingProfileId,
-          verification_status: "verified",
+          verification_status: status,
         });
       }
+      results.push({ cc, status });
     }
-    return { ok: true, senderId: data.senderId, countries: data.countries };
+    return {
+      ok: true,
+      senderId: data.senderId,
+      countries: data.countries,
+      requiresRegistration: results.filter(r => r.status === "requires_registration").map(r => r.cc),
+    };
   });
