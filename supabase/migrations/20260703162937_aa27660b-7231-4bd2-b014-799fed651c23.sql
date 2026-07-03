@@ -1,0 +1,1 @@
+UPDATE campaigns SET status='queued' WHERE id='3575bb31-a9d4-4cab-bd87-2b2ba7d7ea84' AND status='sending';
