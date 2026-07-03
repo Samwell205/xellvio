@@ -17,20 +17,35 @@ export const adminListVerifiers = createServerFn({ method: "GET" })
       .select("id,user_id,full_name,email,is_active,created_at")
       .order("created_at", { ascending: false });
     const ids = (verifiers ?? []).map(v => v.id);
-    const [{ data: banks }, { data: wallets }] = await Promise.all([
+    const idFilter = ids.length ? ids : ["00000000-0000-0000-0000-000000000000"];
+    const [{ data: banks }, { data: wallets }, { data: tfns }] = await Promise.all([
       supabaseAdmin.from("verifier_bank_accounts")
         .select("verifier_id,bank_name,account_number,account_name")
-        .in("verifier_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+        .in("verifier_id", idFilter),
       supabaseAdmin.from("verifier_wallets")
         .select("verifier_id,balance_ngn,lifetime_earned_ngn")
-        .in("verifier_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]),
+        .in("verifier_id", idFilter),
+      supabaseAdmin.from("verifier_tfns")
+        .select("verifier_id,status")
+        .in("verifier_id", idFilter),
     ]);
     const bMap = Object.fromEntries((banks ?? []).map(b => [b.verifier_id, b]));
     const wMap = Object.fromEntries((wallets ?? []).map(w => [w.verifier_id, w]));
+    const statsMap: Record<string, { total: number; pending: number; verified: number; rejected: number; sold: number }> = {};
+    for (const t of tfns ?? []) {
+      const k = t.verifier_id as string;
+      const s = statsMap[k] ?? (statsMap[k] = { total: 0, pending: 0, verified: 0, rejected: 0, sold: 0 });
+      s.total++;
+      if (t.status === "pending_verification") s.pending++;
+      else if (t.status === "verified") s.verified++;
+      else if (t.status === "rejected") s.rejected++;
+      else if (t.status === "sold") s.sold++;
+    }
     return (verifiers ?? []).map(v => ({
       ...v,
       bank: bMap[v.id] ?? null,
       wallet: wMap[v.id] ?? null,
+      stats: statsMap[v.id] ?? { total: 0, pending: 0, verified: 0, rejected: 0, sold: 0 },
     }));
   });
 
