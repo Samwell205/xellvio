@@ -68,7 +68,8 @@ function CampaignReport() {
 
   const messagesQ = useQuery({
     queryKey: ["campaign-messages", id],
-    refetchInterval: 5_000,
+    // Realtime keeps this in sync; polling is a safety net in case a WS event is missed.
+    refetchInterval: 30_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("messages")
@@ -82,7 +83,7 @@ function CampaignReport() {
 
   const eventsQ = useQuery({
     queryKey: ["campaign-events", id],
-    refetchInterval: 10_000,
+    refetchInterval: 15_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
@@ -93,13 +94,11 @@ function CampaignReport() {
     },
   });
 
-  // Live progress counts across the full campaign (not limited to the 2k row
-  // window used by `messagesQ`). Uses head:true count queries so it's cheap
-  // even for very large campaigns and stays accurate while messages drain
-  // out of the queue in the background.
+  // Live progress counts across the full campaign. Realtime pushes updates
+  // whenever a message row changes; the interval below is a fallback.
   const progressQ = useQuery({
     queryKey: ["campaign-progress", id],
-    refetchInterval: 3_000,
+    refetchInterval: 15_000,
     queryFn: async () => {
       const base = () =>
         supabase.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", id);
@@ -121,6 +120,102 @@ function CampaignReport() {
       };
     },
   });
+
+  // Failure breakdown by error_code (drives the "Failure reasons" panel and
+  // the per-reason retry button). Sender/provider is inferred from
+  // sender_map on the campaign.
+  const failuresQ = useQuery({
+    queryKey: ["campaign-failures", id],
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("error_code, country_code")
+        .eq("campaign_id", id)
+        .in("status", ["failed", "undelivered"])
+        .limit(5000);
+      const byReason: Record<string, number> = {};
+      const byCountry: Record<string, number> = {};
+      for (const r of data ?? []) {
+        const code = (r as any).error_code ?? "unknown";
+        byReason[code] = (byReason[code] ?? 0) + 1;
+        const cc = (r as any).country_code ?? "—";
+        byCountry[cc] = (byCountry[cc] ?? 0) + 1;
+      }
+      return { byReason, byCountry, total: data?.length ?? 0 };
+    },
+  });
+
+  // Realtime: subscribe to message + campaign changes and invalidate the
+  // relevant queries. This gives sub-second UI updates instead of waiting
+  // for the polling interval.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`campaign-${id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages", filter: `campaign_id=eq.${id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+          queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+          queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "campaigns", filter: `id=eq.${id}` },
+        () => queryClient.invalidateQueries({ queryKey: ["campaign", id] }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient]);
+
+  const cancelFn = useServerFn(cancelCampaign);
+  const cancelM = useMutation({
+    mutationFn: () => cancelFn({ data: { campaignId: id } }),
+    onSuccess: (r) => {
+      toast.success(
+        r.alreadyStopped
+          ? "Campaign was already stopped."
+          : `Campaign cancelled. ${r.cancelledMessages.toLocaleString()} queued message${
+              r.cancelledMessages === 1 ? "" : "s"
+            } will not be sent.`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to cancel campaign"),
+  });
+
+  const retryOneFn = useServerFn(retryMessage);
+  const retryOneM = useMutation({
+    mutationFn: (messageId: string) => retryOneFn({ data: { messageId } }),
+    onSuccess: () => {
+      toast.success("Message re-queued.");
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
+  });
+
+  const retryAllFn = useServerFn(retryFailedMessages);
+  const retryAllM = useMutation({
+    mutationFn: (errorCode?: string | null) =>
+      retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null } }),
+    onSuccess: (r) => {
+      toast.success(`Re-queued ${r.retried.toLocaleString()} failed message${r.retried === 1 ? "" : "s"}.`);
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
+  });
+
 
   const eligibleQ = useQuery({
     queryKey: ["campaign-eligible", id, campaignQ.data?.audience],
