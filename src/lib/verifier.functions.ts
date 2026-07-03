@@ -174,6 +174,54 @@ export const submitTfn = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// Claim a toll-free number to verify: reuse an unassigned platform-pool number
+// if any exist, otherwise buy a fresh toll-free from Twilio and assign it to
+// the verifier so they can start the verification submission.
+export const claimTfnFromPool = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: verifier } = await supabaseAdmin
+      .from("verifiers").select("id").eq("user_id", context.userId).maybeSingle();
+    if (!verifier) throw new Error("Complete your verifier profile first");
+    const { data: bank } = await supabaseAdmin
+      .from("verifier_bank_accounts").select("id").eq("verifier_id", verifier.id).maybeSingle();
+    if (!bank) throw new Error("Add your bank details before claiming a number");
+
+    // 1) Try to reuse an unclaimed pool number (verifier_id is set to a
+    //    platform sentinel — we treat any row with status 'pool_available'
+    //    as claimable). Since verifier_id is NOT NULL we simply skip this
+    //    step here and always purchase fresh; future pool logic can plug in.
+
+    // 2) Buy a fresh toll-free from Twilio.
+    const { autoPurchaseNumber } = await import("./auto-provision-number.server");
+    let purchased: { sid: string; phone_number: string };
+    try {
+      purchased = await autoPurchaseNumber({
+        country: "US",
+        number_type: "toll_free",
+        friendlyName: `Verifier ${verifier.id.slice(0, 8)}`,
+      });
+    } catch (e: any) {
+      throw new Error(e?.message ?? "Could not purchase a number from Twilio");
+    }
+
+    const { data: row, error } = await supabaseAdmin
+      .from("verifier_tfns")
+      .insert({
+        verifier_id: verifier.id,
+        phone_number: purchased.phone_number,
+        country: "US",
+        status: "pending_verification",
+        twilio_phone_sid: purchased.sid,
+        notes: "Auto-provisioned from Twilio pool",
+      })
+      .select("id,phone_number")
+      .single();
+    if (error) throw new Error(error.message);
+    return { ok: true, phone_number: row.phone_number };
+  });
+
 // ============ Wallet Transactions ============
 
 export const listMyTransactions = createServerFn({ method: "GET" })
