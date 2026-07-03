@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listMyTfns, submitTfn, claimTfnFromPool, submitAssignedTfn } from "@/lib/verifier.functions";
+import { listMyTfns, submitTfn, claimTfnFromPool, submitAssignedTfn, refreshMyTfn } from "@/lib/verifier.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TollfreeWizard, type WizardForm } from "@/components/tollfree-wizard/TollfreeWizard";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Sparkles, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_verifier/verify/dashboard/numbers")({
   component: NumbersPage,
@@ -23,12 +24,41 @@ function NumbersPage() {
   const submit = useServerFn(submitTfn);
   const claim = useServerFn(claimTfnFromPool);
   const submitAssigned = useServerFn(submitAssignedTfn);
+  const refresh = useServerFn(refreshMyTfn);
   const qc = useQueryClient();
-  const { data: rows } = useQuery({ queryKey: ["verifier", "tfns"], queryFn: () => list() });
+  const { data: rows } = useQuery({
+    queryKey: ["verifier", "tfns"],
+    queryFn: () => list(),
+    refetchInterval: (q) => {
+      const list = (q.state.data as any[]) ?? [];
+      const pending = list.some((r) => r.status === "pending_verification");
+      return pending ? 20_000 : false;
+    },
+  });
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [showManual, setShowManual] = useState(false);
   const [wizardTfnId, setWizardTfnId] = useState<string | null>(null);
+
+  // Realtime: any row change for this verifier's TFNs invalidates the list.
+  useEffect(() => {
+    const channel = supabase
+      .channel("verifier-tfns-changes")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "verifier_tfns" },
+        () => qc.invalidateQueries({ queryKey: ["verifier", "tfns"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
+
+  // Poll Twilio directly for any pending rows so status reflects carrier state.
+  useEffect(() => {
+    const pendingIds = (rows ?? []).filter((r: any) => r.status === "pending_verification").map((r: any) => r.id);
+    if (pendingIds.length === 0) return;
+    const timer = setInterval(() => {
+      pendingIds.forEach((id) => refresh({ data: { id } }).catch(() => {}));
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, [rows, refresh]);
 
   const claimMut = useMutation({
     mutationFn: () => claim(),
@@ -50,12 +80,22 @@ function NumbersPage() {
   });
 
   const submitAssignedMut = useMutation({
-    mutationFn: (v: { id: string; notes: string }) => submitAssigned({ data: v }),
-    onSuccess: () => {
-      toast.success("Submitted for verification");
+    mutationFn: (v: { id: string; payload: WizardForm }) =>
+      submitAssigned({ data: { id: v.id, notes: JSON.stringify(v.payload), payload: v.payload } }),
+    onSuccess: (r: any) => {
+      toast.success(
+        r?.status === "verified" ? "Approved by the carrier." :
+        r?.status === "rejected" ? "Carrier rejected the submission." :
+        "Submitted to the carrier — status will update automatically.",
+      );
       qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
     },
     onError: (e: any) => toast.error(e.message),
+  });
+
+  const refreshMut = useMutation({
+    mutationFn: (id: string) => refresh({ data: { id } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["verifier", "tfns"] }),
   });
 
   return (
