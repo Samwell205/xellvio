@@ -74,7 +74,7 @@ function VerifyLanding() {
               <Button size="lg">Create verifier account</Button>
             </Link>
             <Link to="/verify/auth">
-              <Button size="lg" variant="outline" className="border-slate-700">
+              <Button size="lg" variant="outline" className="border-white bg-white text-slate-950 hover:bg-slate-200 hover:text-slate-950">
                 I already have an account
               </Button>
             </Link>
@@ -308,7 +308,7 @@ function VerifyLanding() {
               <Button size="lg">Create verifier account</Button>
             </Link>
             <Link to="/verify/auth">
-              <Button size="lg" variant="outline" className="border-slate-700">Sign in</Button>
+              <Button size="lg" variant="outline" className="border-white bg-white text-slate-950 hover:bg-slate-200 hover:text-slate-950">Sign in</Button>
             </Link>
           </div>
         </section>
