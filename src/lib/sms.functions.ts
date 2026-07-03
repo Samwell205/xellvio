@@ -90,16 +90,33 @@ export const sendTestSms = createServerFn({ method: "POST" })
       );
     }
 
+    // Telnyx requires messaging_profile_id for alphanumeric sends, and it's
+    // safer to always send it. Prefer the per-asset profile; fall back to the
+    // account-level profile stored on `accounts`.
+    let messagingProfileId: string | null | undefined = asset.messaging_service_sid;
+    if (!messagingProfileId) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: acct } = await supabaseAdmin
+        .from("accounts")
+        .select("telnyx_messaging_profile_id, twilio_subaccount_sid")
+        .eq("id", userId)
+        .maybeSingle();
+      messagingProfileId = acct?.telnyx_messaging_profile_id ?? acct?.twilio_subaccount_sid ?? null;
+    }
+    if (!messagingProfileId) {
+      throw new Error("No Telnyx messaging profile is linked to this account. Complete SMS setup first.");
+    }
+
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
     try {
       const result = await safeTelnyxCall(
         "send_test_sms",
-        { userId, messagingProfileId: asset.messaging_service_sid ?? null },
+        { userId, messagingProfileId },
         () => sendMessage({
           to: data.to,
           text: data.body,
           from: asset.phone_number ?? undefined,
-          messagingProfileId: asset.messaging_service_sid ?? undefined,
+          messagingProfileId,
         }),
       );
       await supabase.from("campaign_test_sends").insert({
