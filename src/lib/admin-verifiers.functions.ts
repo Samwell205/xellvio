@@ -301,10 +301,10 @@ export const adminAdjustVerifierWallet = createServerFn({ method: "POST" })
     if (uErr) throw new Error(uErr.message);
     await supabaseAdmin.from("verifier_transactions").insert({
       verifier_id: data.verifier_id,
-      type: data.delta_ngn > 0 ? "admin_credit" : "admin_debit",
+      type: "adjustment",
       amount_ngn: data.delta_ngn,
       balance_after: newBalance,
-      description: `Admin adjustment: ${data.reason}`,
+      description: `Admin ${data.delta_ngn > 0 ? "credit" : "debit"}: ${data.reason}`,
     });
     return { ok: true, balance_ngn: newBalance };
   });
