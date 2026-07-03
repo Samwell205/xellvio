@@ -93,47 +93,52 @@ export const adminAssignTfnToAccount = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Read settings for pricing
+    // Read settings for pricing (USD buyer price + NGN conversion for verifier payout)
     const { data: settingsRows } = await supabaseAdmin
       .from("platform_settings").select("key,value")
-      .in("key", ["tfn_flat_price_ngn","tfn_commission_pct"]);
+      .in("key", ["tfn_buyer_price_usd", "tfn_commission_pct", "tfn_ngn_per_usd"]);
     const map = Object.fromEntries((settingsRows ?? []).map((r: any) => [r.key, Number(r.value)]));
-    const price = Number.isFinite(map.tfn_flat_price_ngn) ? map.tfn_flat_price_ngn : 15000;
+    const priceUsd = Number.isFinite(map.tfn_buyer_price_usd) ? map.tfn_buyer_price_usd : 15;
     const commission = Number.isFinite(map.tfn_commission_pct) ? map.tfn_commission_pct : 25;
+    const ngnPerUsd = Number.isFinite(map.tfn_ngn_per_usd) ? map.tfn_ngn_per_usd : 1500;
+    const priceNgn = priceUsd * ngnPerUsd;
 
     const { data: tfn } = await supabaseAdmin
-      .from("verifier_tfns").select("verifier_id,phone_number,country,status")
+      .from("verifier_tfns").select("verifier_id,phone_number,country,status,sold_to_account_id")
       .eq("id", data.tfn_id).maybeSingle();
     if (!tfn) throw new Error("TFN not found");
-    if (tfn.status !== "verified") throw new Error("Only verified numbers can be assigned");
+    if (tfn.status !== "verified" || tfn.sold_to_account_id) {
+      throw new Error("Only verified & unassigned numbers can be assigned");
+    }
 
-    const commissionAmt = Math.round(price * commission) / 100;
-    const payoutAmt = price - commissionAmt;
+    const commissionNgn = Math.round(priceNgn * commission) / 100;
+    const payoutNgn = priceNgn - commissionNgn;
 
     // Mark sold
     const { error: uErr } = await supabaseAdmin.from("verifier_tfns").update({
       status: "sold",
       sold_to_account_id: data.account_id,
       sold_at: new Date().toISOString(),
-      sale_price_ngn: price,
-      commission_ngn: commissionAmt,
-      payout_ngn: payoutAmt,
+      sale_price_ngn: priceNgn,
+      commission_ngn: commissionNgn,
+      payout_ngn: payoutNgn,
     }).eq("id", data.tfn_id);
     if (uErr) throw new Error(uErr.message);
 
-    // Credit wallet
+    // Credit verifier wallet
     await supabaseAdmin.rpc("ensure_verifier_wallet", { _verifier_id: tfn.verifier_id });
     const { data: walletRow } = await supabaseAdmin.from("verifier_wallets")
-      .select("balance_ngn").eq("verifier_id", tfn.verifier_id).maybeSingle();
-    const newBalance = Number(walletRow?.balance_ngn ?? 0) + payoutAmt;
+      .select("balance_ngn,lifetime_earned_ngn").eq("verifier_id", tfn.verifier_id).maybeSingle();
+    const newBalance = Number(walletRow?.balance_ngn ?? 0) + payoutNgn;
+    const newLifetime = Number(walletRow?.lifetime_earned_ngn ?? 0) + payoutNgn;
     await supabaseAdmin.from("verifier_wallets").update({
       balance_ngn: newBalance,
-      lifetime_earned_ngn: newBalance,
+      lifetime_earned_ngn: newLifetime,
     }).eq("verifier_id", tfn.verifier_id);
     await supabaseAdmin.from("verifier_transactions").insert({
       verifier_id: tfn.verifier_id,
       type: "sale_credit",
-      amount_ngn: payoutAmt,
+      amount_ngn: payoutNgn,
       balance_after: newBalance,
       tfn_id: data.tfn_id,
       description: `Admin-assigned sale of ${tfn.phone_number}`,
@@ -151,6 +156,7 @@ export const adminAssignTfnToAccount = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
 
 export const adminListWithdrawals = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -211,11 +217,12 @@ export const adminGetTfnSettings = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin
       .from("platform_settings").select("key,value")
-      .in("key", ["tfn_flat_price_ngn","tfn_commission_pct"]);
+      .in("key", ["tfn_buyer_price_usd", "tfn_commission_pct", "tfn_ngn_per_usd"]);
     const map = Object.fromEntries((data ?? []).map((r: any) => [r.key, Number(r.value)]));
     return {
-      price_ngn: Number.isFinite(map.tfn_flat_price_ngn) ? map.tfn_flat_price_ngn : 15000,
+      price_usd: Number.isFinite(map.tfn_buyer_price_usd) ? map.tfn_buyer_price_usd : 15,
       commission_pct: Number.isFinite(map.tfn_commission_pct) ? map.tfn_commission_pct : 25,
+      ngn_per_usd: Number.isFinite(map.tfn_ngn_per_usd) ? map.tfn_ngn_per_usd : 1500,
     };
   });
 
@@ -223,19 +230,22 @@ export const adminSetTfnSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({
-      price_ngn: z.number().nonnegative().max(1_000_000),
+      price_usd: z.number().nonnegative().max(10_000),
       commission_pct: z.number().min(0).max(90),
+      ngn_per_usd: z.number().positive().max(100_000),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("platform_settings").upsert([
-      { key: "tfn_flat_price_ngn", value: data.price_ngn as any },
+      { key: "tfn_buyer_price_usd", value: data.price_usd as any },
       { key: "tfn_commission_pct", value: data.commission_pct as any },
+      { key: "tfn_ngn_per_usd", value: data.ngn_per_usd as any },
     ], { onConflict: "key" });
     return { ok: true };
   });
+
 
 export const adminListAccountsLite = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

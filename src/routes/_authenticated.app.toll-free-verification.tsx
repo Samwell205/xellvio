@@ -1307,7 +1307,7 @@ function MarketplaceBuyCard() {
         </p>
         <div className="flex items-center gap-3 flex-wrap">
           <div className="text-lg font-semibold">
-            ₦{Number(offer.price_ngn).toLocaleString()}
+            ${Number(offer.price_usd).toFixed(2)}
           </div>
           <Badge variant={available ? "default" : "outline"}>
             {available ? `${offer.available_count} available` : "Sold out — check back soon"}

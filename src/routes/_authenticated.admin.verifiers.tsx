@@ -231,12 +231,17 @@ function SettingsTab() {
   const { data } = useQuery({ queryKey: ["admin","tfn-settings"], queryFn: () => getFn() });
   const [price, setPrice] = useState("");
   const [commission, setCommission] = useState("");
+  const [ngnRate, setNgnRate] = useState("");
   useEffect(() => {
-    if (data) { setPrice(String(data.price_ngn)); setCommission(String(data.commission_pct)); }
+    if (data) {
+      setPrice(String(data.price_usd));
+      setCommission(String(data.commission_pct));
+      setNgnRate(String(data.ngn_per_usd));
+    }
   }, [data]);
 
   const save = useMutation({
-    mutationFn: () => setFn({ data: { price_ngn: Number(price), commission_pct: Number(commission) } }),
+    mutationFn: () => setFn({ data: { price_usd: Number(price), commission_pct: Number(commission), ngn_per_usd: Number(ngnRate) } }),
     onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["admin","tfn-settings"] }); },
     onError: (e: any) => toast.error(e.message),
   });
@@ -245,10 +250,16 @@ function SettingsTab() {
     <Card>
       <CardHeader><CardTitle>Marketplace settings</CardTitle></CardHeader>
       <CardContent className="space-y-3 max-w-md">
-        <div><Label>Flat TFN price (₦)</Label><Input type="number" value={price} onChange={e=>setPrice(e.target.value)} /></div>
+        <div><Label>Buyer price (USD)</Label><Input type="number" step="0.01" value={price} onChange={e=>setPrice(e.target.value)} /></div>
         <div><Label>Platform commission (%)</Label><Input type="number" value={commission} onChange={e=>setCommission(e.target.value)} /></div>
+        <div>
+          <Label>NGN per USD (verifier payout rate)</Label>
+          <Input type="number" value={ngnRate} onChange={e=>setNgnRate(e.target.value)} />
+          <p className="text-xs text-muted-foreground mt-1">Verifiers are paid in NGN; buyer's USD price is converted at this rate.</p>
+        </div>
         <Button onClick={()=>save.mutate()} disabled={save.isPending}>Save settings</Button>
       </CardContent>
     </Card>
   );
 }
+
