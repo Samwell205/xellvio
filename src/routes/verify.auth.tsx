@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -9,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { createVerifierAccountWithCode, sendVerifierSignupCode } from "@/lib/verifier.functions";
 
 export const Route = createFileRoute("/verify/auth")({
   validateSearch: (s: Record<string, unknown>) =>
@@ -20,8 +18,6 @@ export const Route = createFileRoute("/verify/auth")({
 function VerifierAuth() {
   const { tab } = Route.useSearch();
   const navigate = useNavigate();
-  const sendCode = useServerFn(sendVerifierSignupCode);
-  const createAccount = useServerFn(createVerifierAccountWithCode);
 
   const [signinEmail, setSigninEmail] = useState("");
   const [signinPassword, setSigninPassword] = useState("");
@@ -29,8 +25,6 @@ function VerifierAuth() {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupPasswordConfirm, setSignupPasswordConfirm] = useState("");
-  const [signupStage, setSignupStage] = useState<"details" | "code">("details");
-  const [signupCode, setSignupCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
