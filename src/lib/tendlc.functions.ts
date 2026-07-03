@@ -75,7 +75,7 @@ export const submitTenDlcRegistration = createServerFn({ method: "POST" })
       await supabaseAdmin.rpc("debit_account", {
         _account_id: userId,
         _amount: TENDLC_SETUP_FEE_USD,
-        _campaign_id: null,
+        _campaign_id: undefined as unknown as string,
         _description: "10DLC brand + campaign registration setup fee",
       });
     } catch (e: any) {
