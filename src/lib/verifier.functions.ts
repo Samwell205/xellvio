@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const PAYSTACK_API = "https://api.paystack.co";
 const SIGNUP_CODE_TTL_MINUTES = 15;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -81,6 +82,18 @@ export const sendVerifierSignupCode = createServerFn({ method: "POST" })
 
     if (await verifierEmailExists(supabaseAdmin, email)) {
       throw new Error("An account with this email already exists — please sign in instead.");
+    }
+
+    const { data: existingCode } = await supabaseAdmin
+      .from("verifier_signup_codes")
+      .select("updated_at")
+      .eq("email", email)
+      .maybeSingle();
+    if (
+      existingCode?.updated_at &&
+      Date.now() - new Date(existingCode.updated_at).getTime() < RESEND_COOLDOWN_SECONDS * 1000
+    ) {
+      throw new Error("Please wait 60 seconds before requesting another code.");
     }
 
     const code = generateSignupCode();
