@@ -353,7 +353,8 @@ async function planCampaign(
       getMasterTwilioBalance(),
       getBalanceBuffer(),
     ]);
-    if (ok && totalCost > 0 && twBal < totalCost) {
+    const availableToSend = Math.max(0, twBal - buffer);
+    if (ok && totalCost > 0 && availableToSend <= 0) {
       const { data: pausedAcct } = await supabaseAdmin
         .from("accounts")
         .select("email")
@@ -380,17 +381,18 @@ async function planCampaign(
         twilioBalance: twBal,
         currency,
         campaignCost: totalCost,
-        shortfall: +(totalCost - twBal).toFixed(4),
+        shortfall: +(buffer - twBal).toFixed(4),
         pausedCampaignCount: pausedCount ?? undefined,
       });
       return { planned: 0, skipped: 0, cost: totalCost, paused: true };
     }
-    if (ok && totalCost > 0 && twBal < totalCost + buffer) {
-      console.warn("[dispatch] provider balance is below reserve but can cover campaign", {
+    if (ok && totalCost > 0 && availableToSend < totalCost) {
+      console.warn("[dispatch] provider balance cannot cover the full campaign yet; sending what is safely available", {
         campaignId: campaign.id,
         balance: twBal,
         cost: totalCost,
         reserve: buffer,
+        availableToSend,
       });
     }
   } catch (e) {
@@ -470,6 +472,49 @@ async function deliverPending(
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
 
+  let providerBudget = Number.POSITIVE_INFINITY;
+  try {
+    const { getMasterTwilioBalance, getBalanceBuffer, fireCapacityAlert } = await import(
+      "@/lib/twilio-alerts.server"
+    );
+    const [{ balance, currency, ok }, buffer] = await Promise.all([
+      getMasterTwilioBalance(),
+      getBalanceBuffer(),
+    ]);
+    if (ok) {
+      providerBudget = Math.max(0, balance - buffer);
+      if (providerBudget <= 0) {
+        const { count: remainingQueued } = await supabaseAdmin
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("campaign_id", campaign.id)
+          .eq("status", "queued");
+        await supabaseAdmin
+          .from("campaigns")
+          .update({
+            status: "paused_low_balance",
+            paused_reason:
+              "SMS sending is temporarily paused while provider capacity is topped up. It will resume automatically.",
+            paused_at: new Date().toISOString(),
+          })
+          .eq("id", campaign.id);
+        await fireCapacityAlert({
+          kind: "mid_campaign_exhausted",
+          campaignId: campaign.id,
+          campaignName: campaign.name,
+          tenantEmail: null,
+          twilioBalance: balance,
+          currency,
+          campaignCost: 0,
+          shortfall: +(buffer - balance).toFixed(4),
+        });
+        return { sent: 0, failed: 0, debited: 0, remaining: remainingQueued ?? 0 };
+      }
+    }
+  } catch (e) {
+    console.error("[dispatch] provider budget check failed (continuing)", e);
+  }
+
   const { data: batch, error: qErr } = await supabaseAdmin
     .from("messages")
     .select("id, phone_e164, rendered_body, country_code, segments_count, cost")
@@ -492,7 +537,28 @@ async function deliverPending(
     return { sent: 0, failed: 0, debited: 0, remaining: stillPending ?? 0 };
   }
 
-  const ids = rows.map((r: any) => r.id);
+  let runningCost = 0;
+  const affordableRows = rows.filter((r: any) => {
+    const next = runningCost + Number(r.cost ?? 0);
+    if (next > providerBudget) return false;
+    runningCost = next;
+    return true;
+  });
+
+  if (affordableRows.length === 0) {
+    await supabaseAdmin
+      .from("campaigns")
+      .update({
+        status: "paused_low_balance",
+        paused_reason:
+          "SMS sending is temporarily paused while provider capacity is topped up. It will resume automatically.",
+        paused_at: new Date().toISOString(),
+      })
+      .eq("id", campaign.id);
+    return { sent: 0, failed: 0, debited: 0, remaining: rows.length };
+  }
+
+  const ids = affordableRows.map((r: any) => r.id);
   // Claim rows so a concurrent tick can't double-send them.
   await supabaseAdmin.from("messages").update({ status: "sending" }).in("id", ids);
 
@@ -501,7 +567,7 @@ async function deliverPending(
   let debited = 0;
   let shaftErrors = 0;
 
-  await runWithConcurrency(rows, DELIVER_CONCURRENCY, async (m: any) => {
+  await runWithConcurrency(affordableRows, DELIVER_CONCURRENCY, async (m: any) => {
     const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, callback);
     if (r.ok) {
       sent++;
@@ -529,6 +595,16 @@ async function deliverPending(
 
   if ((remaining ?? 0) === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
+  } else if (Number.isFinite(providerBudget) && runningCost >= providerBudget) {
+    await supabaseAdmin
+      .from("campaigns")
+      .update({
+        status: "paused_low_balance",
+        paused_reason:
+          "Some messages were sent. The remaining queued messages will resume automatically when provider capacity is topped up.",
+        paused_at: new Date().toISOString(),
+      })
+      .eq("id", campaign.id);
   } else {
     // Bump updated_at so the stall-recovery watchdog doesn't reset us.
     await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
@@ -550,7 +626,12 @@ async function processCampaign(
     .eq("campaign_id", campaign.id);
 
   if ((existing ?? 0) === 0) {
-    return await planCampaign(supabaseAdmin, campaign, rates);
+    const planned = await planCampaign(supabaseAdmin, campaign, rates);
+    if (planned.planned > 0 && !planned.paused) {
+      const delivered = await deliverPending(supabaseAdmin, campaign, sender);
+      return { ...planned, delivered_now: delivered.sent, failed_now: delivered.failed, remaining: delivered.remaining };
+    }
+    return planned;
   }
   return await deliverPending(supabaseAdmin, campaign, sender);
 }
