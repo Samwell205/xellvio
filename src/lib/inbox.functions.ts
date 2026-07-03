@@ -14,22 +14,35 @@ export const listConversations = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
 
-    // Pull recent thread messages (inbound + manual outbound) for this account.
+    // Only conversations where the contact has actually replied (has an inbound message).
+    const { data: inbound } = await supabase
+      .from("sms_thread_messages")
+      .select("phone_e164")
+      .eq("account_id", userId)
+      .eq("direction", "inbound")
+      .order("created_at", { ascending: false })
+      .limit(1000);
+
+    const phones = Array.from(new Set((inbound ?? []).map((r) => r.phone_e164)));
+    if (phones.length === 0) return [];
+
+    // Pull the full thread (inbound + outbound replies) for those phones only.
     const { data: thread } = await supabase
       .from("sms_thread_messages")
       .select("phone_e164,direction,body,created_at")
       .eq("account_id", userId)
+      .in("phone_e164", phones)
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(2000);
 
-    // Also pull recent campaign-outbound messages so a contact that only ever
-    // received campaign sends still shows up.
+    // Include recent campaign-outbound messages to those phones for last-message preview.
     const { data: campaignMsgs } = await supabase
       .from("messages")
       .select("phone_e164,rendered_body,created_at,campaigns!inner(account_id)")
       .eq("campaigns.account_id", userId)
+      .in("phone_e164", phones)
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(2000);
 
     const map = new Map<string, { phone: string; lastBody: string; lastAt: string; lastDirection: "inbound" | "outbound" }>();
     for (const r of thread ?? []) {
@@ -56,6 +69,7 @@ export const listConversations = createServerFn({ method: "GET" })
     }
     return Array.from(map.values()).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
   });
+
 
 /** Get the full merged conversation (inbound + outbound + campaign sends) for a phone. */
 export const getConversation = createServerFn({ method: "GET" })
