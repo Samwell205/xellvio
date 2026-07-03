@@ -7,7 +7,7 @@ import { Wallet, TrendingUp, ClipboardList } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/_verifier/verify/dashboard")({
+export const Route = createFileRoute("/_verifier/verify/dashboard/")({
   component: DashboardHome,
 });
 

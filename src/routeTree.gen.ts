@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
-import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SolutionsRouteImport } from './routes/solutions'
@@ -33,6 +32,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as VerifierRouteImport } from './routes/_verifier'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as VerifyIndexRouteImport } from './routes/verify.index'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
@@ -51,7 +51,6 @@ import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.pub
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
-import { Route as VerifierVerifyDashboardRouteImport } from './routes/_verifier.verify.dashboard'
 import { Route as AuthenticatedSellersDashboardRouteImport } from './routes/_authenticated.sellers.dashboard'
 import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './routes/_authenticated.app.toll-free-verification'
 import { Route as AuthenticatedAppTeamRouteImport } from './routes/_authenticated.app.team'
@@ -78,6 +77,7 @@ import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
 import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated.admin.accounts'
+import { Route as VerifierVerifyDashboardIndexRouteImport } from './routes/_verifier.verify.dashboard.index'
 import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
@@ -96,11 +96,6 @@ import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authe
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VerifyRoute = VerifyRouteImport.update({
-  id: '/verify',
-  path: '/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
@@ -211,10 +206,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerifyIndexRoute = VerifyIndexRouteImport.update({
+  id: '/verify/',
+  path: '/verify/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyAuthRoute = VerifyAuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => VerifyRoute,
+  id: '/verify/auth',
+  path: '/verify/auth',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SolutionsEmailToSmsRoute = SolutionsEmailToSmsRouteImport.update({
   id: '/email-to-sms',
@@ -306,11 +306,6 @@ const ApiPublicDispatchCampaignRoute =
     path: '/api/public/dispatch-campaign',
     getParentRoute: () => rootRouteImport,
   } as any)
-const VerifierVerifyDashboardRoute = VerifierVerifyDashboardRouteImport.update({
-  id: '/verify/dashboard',
-  path: '/verify/dashboard',
-  getParentRoute: () => VerifierRoute,
-} as any)
 const AuthenticatedSellersDashboardRoute =
   AuthenticatedSellersDashboardRouteImport.update({
     id: '/sellers/dashboard',
@@ -462,6 +457,12 @@ const AuthenticatedAdminAccountsRoute =
     path: '/accounts',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const VerifierVerifyDashboardIndexRoute =
+  VerifierVerifyDashboardIndexRouteImport.update({
+    id: '/verify/dashboard/',
+    path: '/verify/dashboard/',
+    getParentRoute: () => VerifierRoute,
+  } as any)
 const AuthenticatedAppSegmentsIndexRoute =
   AuthenticatedAppSegmentsIndexRouteImport.update({
     id: '/',
@@ -506,27 +507,27 @@ const ApiPublicCronTwilioBalanceCheckRoute =
   } as any)
 const VerifierVerifyDashboardWithdrawalsRoute =
   VerifierVerifyDashboardWithdrawalsRouteImport.update({
-    id: '/withdrawals',
-    path: '/withdrawals',
-    getParentRoute: () => VerifierVerifyDashboardRoute,
+    id: '/verify/dashboard/withdrawals',
+    path: '/verify/dashboard/withdrawals',
+    getParentRoute: () => VerifierRoute,
   } as any)
 const VerifierVerifyDashboardSettingsRoute =
   VerifierVerifyDashboardSettingsRouteImport.update({
-    id: '/settings',
-    path: '/settings',
-    getParentRoute: () => VerifierVerifyDashboardRoute,
+    id: '/verify/dashboard/settings',
+    path: '/verify/dashboard/settings',
+    getParentRoute: () => VerifierRoute,
   } as any)
 const VerifierVerifyDashboardNumbersRoute =
   VerifierVerifyDashboardNumbersRouteImport.update({
-    id: '/numbers',
-    path: '/numbers',
-    getParentRoute: () => VerifierVerifyDashboardRoute,
+    id: '/verify/dashboard/numbers',
+    path: '/verify/dashboard/numbers',
+    getParentRoute: () => VerifierRoute,
   } as any)
 const VerifierVerifyDashboardEarningsRoute =
   VerifierVerifyDashboardEarningsRouteImport.update({
-    id: '/earnings',
-    path: '/earnings',
-    getParentRoute: () => VerifierVerifyDashboardRoute,
+    id: '/verify/dashboard/earnings',
+    path: '/verify/dashboard/earnings',
+    getParentRoute: () => VerifierRoute,
   } as any)
 const AuthenticatedAppSegmentsNewRoute =
   AuthenticatedAppSegmentsNewRouteImport.update({
@@ -568,7 +569,6 @@ export interface FileRoutesByFullPath {
   '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/verify': typeof VerifyRouteWithChildren
   '/verify-email': typeof VerifyEmailRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/app': typeof AuthenticatedAppRouteWithChildren
@@ -577,6 +577,7 @@ export interface FileRoutesByFullPath {
   '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
+  '/verify/': typeof VerifyIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -603,7 +604,6 @@ export interface FileRoutesByFullPath {
   '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
-  '/verify/dashboard': typeof VerifierVerifyDashboardRouteWithChildren
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -629,6 +629,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
+  '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -651,13 +652,13 @@ export interface FileRoutesByTo {
   '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/verify': typeof VerifyRouteWithChildren
   '/verify-email': typeof VerifyEmailRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
+  '/verify': typeof VerifyIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -682,7 +683,6 @@ export interface FileRoutesByTo {
   '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
-  '/verify/dashboard': typeof VerifierVerifyDashboardRouteWithChildren
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -708,6 +708,7 @@ export interface FileRoutesByTo {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
+  '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -733,7 +734,6 @@ export interface FileRoutesById {
   '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/verify': typeof VerifyRouteWithChildren
   '/verify-email': typeof VerifyEmailRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
@@ -742,6 +742,7 @@ export interface FileRoutesById {
   '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
+  '/verify/': typeof VerifyIndexRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -768,7 +769,6 @@ export interface FileRoutesById {
   '/_authenticated/app/team': typeof AuthenticatedAppTeamRoute
   '/_authenticated/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/_authenticated/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
-  '/_verifier/verify/dashboard': typeof VerifierVerifyDashboardRouteWithChildren
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -794,6 +794,7 @@ export interface FileRoutesById {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
+  '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -818,7 +819,6 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/unsubscribe'
-    | '/verify'
     | '/verify-email'
     | '/admin'
     | '/app'
@@ -827,6 +827,7 @@ export interface FileRouteTypes {
     | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/verify/auth'
+    | '/verify/'
     | '/admin/accounts'
     | '/admin/activity'
     | '/admin/billing'
@@ -853,7 +854,6 @@ export interface FileRouteTypes {
     | '/app/team'
     | '/app/toll-free-verification'
     | '/sellers/dashboard'
-    | '/verify/dashboard'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
@@ -879,6 +879,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/app/campaigns/'
     | '/app/segments/'
+    | '/verify/dashboard/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -901,13 +902,13 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/unsubscribe'
-    | '/verify'
     | '/verify-email'
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/verify/auth'
+    | '/verify'
     | '/admin/accounts'
     | '/admin/activity'
     | '/admin/billing'
@@ -932,7 +933,6 @@ export interface FileRouteTypes {
     | '/app/team'
     | '/app/toll-free-verification'
     | '/sellers/dashboard'
-    | '/verify/dashboard'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
@@ -958,6 +958,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/app/campaigns'
     | '/app/segments'
+    | '/verify/dashboard'
   id:
     | '__root__'
     | '/'
@@ -982,7 +983,6 @@ export interface FileRouteTypes {
     | '/solutions'
     | '/terms'
     | '/unsubscribe'
-    | '/verify'
     | '/verify-email'
     | '/_authenticated/admin'
     | '/_authenticated/app'
@@ -991,6 +991,7 @@ export interface FileRouteTypes {
     | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/verify/auth'
+    | '/verify/'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/activity'
     | '/_authenticated/admin/billing'
@@ -1017,7 +1018,6 @@ export interface FileRouteTypes {
     | '/_authenticated/app/team'
     | '/_authenticated/app/toll-free-verification'
     | '/_authenticated/sellers/dashboard'
-    | '/_verifier/verify/dashboard'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
     | '/api/public/paystack-webhook'
@@ -1043,6 +1043,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/segments/'
+    | '/_verifier/verify/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1068,11 +1069,12 @@ export interface RootRouteChildren {
   SolutionsRoute: typeof SolutionsRouteWithChildren
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
-  VerifyRoute: typeof VerifyRouteWithChildren
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   MMessageIdRoute: typeof MMessageIdRoute
+  VerifyAuthRoute: typeof VerifyAuthRoute
+  VerifyIndexRoute: typeof VerifyIndexRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
@@ -1096,13 +1098,6 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/verify': {
-      id: '/verify'
-      path: '/verify'
-      fullPath: '/verify'
-      preLoaderRoute: typeof VerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/unsubscribe': {
@@ -1259,12 +1254,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verify/': {
+      id: '/verify/'
+      path: '/verify'
+      fullPath: '/verify/'
+      preLoaderRoute: typeof VerifyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify/auth': {
       id: '/verify/auth'
-      path: '/auth'
+      path: '/verify/auth'
       fullPath: '/verify/auth'
       preLoaderRoute: typeof VerifyAuthRouteImport
-      parentRoute: typeof VerifyRoute
+      parentRoute: typeof rootRouteImport
     }
     '/solutions/email-to-sms': {
       id: '/solutions/email-to-sms'
@@ -1384,13 +1386,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/dispatch-campaign'
       preLoaderRoute: typeof ApiPublicDispatchCampaignRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_verifier/verify/dashboard': {
-      id: '/_verifier/verify/dashboard'
-      path: '/verify/dashboard'
-      fullPath: '/verify/dashboard'
-      preLoaderRoute: typeof VerifierVerifyDashboardRouteImport
-      parentRoute: typeof VerifierRoute
     }
     '/_authenticated/sellers/dashboard': {
       id: '/_authenticated/sellers/dashboard'
@@ -1574,6 +1569,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAccountsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_verifier/verify/dashboard/': {
+      id: '/_verifier/verify/dashboard/'
+      path: '/verify/dashboard'
+      fullPath: '/verify/dashboard/'
+      preLoaderRoute: typeof VerifierVerifyDashboardIndexRouteImport
+      parentRoute: typeof VerifierRoute
+    }
     '/_authenticated/app/segments/': {
       id: '/_authenticated/app/segments/'
       path: '/'
@@ -1625,31 +1627,31 @@ declare module '@tanstack/react-router' {
     }
     '/_verifier/verify/dashboard/withdrawals': {
       id: '/_verifier/verify/dashboard/withdrawals'
-      path: '/withdrawals'
+      path: '/verify/dashboard/withdrawals'
       fullPath: '/verify/dashboard/withdrawals'
       preLoaderRoute: typeof VerifierVerifyDashboardWithdrawalsRouteImport
-      parentRoute: typeof VerifierVerifyDashboardRoute
+      parentRoute: typeof VerifierRoute
     }
     '/_verifier/verify/dashboard/settings': {
       id: '/_verifier/verify/dashboard/settings'
-      path: '/settings'
+      path: '/verify/dashboard/settings'
       fullPath: '/verify/dashboard/settings'
       preLoaderRoute: typeof VerifierVerifyDashboardSettingsRouteImport
-      parentRoute: typeof VerifierVerifyDashboardRoute
+      parentRoute: typeof VerifierRoute
     }
     '/_verifier/verify/dashboard/numbers': {
       id: '/_verifier/verify/dashboard/numbers'
-      path: '/numbers'
+      path: '/verify/dashboard/numbers'
       fullPath: '/verify/dashboard/numbers'
       preLoaderRoute: typeof VerifierVerifyDashboardNumbersRouteImport
-      parentRoute: typeof VerifierVerifyDashboardRoute
+      parentRoute: typeof VerifierRoute
     }
     '/_verifier/verify/dashboard/earnings': {
       id: '/_verifier/verify/dashboard/earnings'
-      path: '/earnings'
+      path: '/verify/dashboard/earnings'
       fullPath: '/verify/dashboard/earnings'
       preLoaderRoute: typeof VerifierVerifyDashboardEarningsRouteImport
-      parentRoute: typeof VerifierVerifyDashboardRoute
+      parentRoute: typeof VerifierRoute
     }
     '/_authenticated/app/segments/new': {
       id: '/_authenticated/app/segments/new'
@@ -1800,33 +1802,21 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
-interface VerifierVerifyDashboardRouteChildren {
+interface VerifierRouteChildren {
   VerifierVerifyDashboardEarningsRoute: typeof VerifierVerifyDashboardEarningsRoute
   VerifierVerifyDashboardNumbersRoute: typeof VerifierVerifyDashboardNumbersRoute
   VerifierVerifyDashboardSettingsRoute: typeof VerifierVerifyDashboardSettingsRoute
   VerifierVerifyDashboardWithdrawalsRoute: typeof VerifierVerifyDashboardWithdrawalsRoute
-}
-
-const VerifierVerifyDashboardRouteChildren: VerifierVerifyDashboardRouteChildren =
-  {
-    VerifierVerifyDashboardEarningsRoute: VerifierVerifyDashboardEarningsRoute,
-    VerifierVerifyDashboardNumbersRoute: VerifierVerifyDashboardNumbersRoute,
-    VerifierVerifyDashboardSettingsRoute: VerifierVerifyDashboardSettingsRoute,
-    VerifierVerifyDashboardWithdrawalsRoute:
-      VerifierVerifyDashboardWithdrawalsRoute,
-  }
-
-const VerifierVerifyDashboardRouteWithChildren =
-  VerifierVerifyDashboardRoute._addFileChildren(
-    VerifierVerifyDashboardRouteChildren,
-  )
-
-interface VerifierRouteChildren {
-  VerifierVerifyDashboardRoute: typeof VerifierVerifyDashboardRouteWithChildren
+  VerifierVerifyDashboardIndexRoute: typeof VerifierVerifyDashboardIndexRoute
 }
 
 const VerifierRouteChildren: VerifierRouteChildren = {
-  VerifierVerifyDashboardRoute: VerifierVerifyDashboardRouteWithChildren,
+  VerifierVerifyDashboardEarningsRoute: VerifierVerifyDashboardEarningsRoute,
+  VerifierVerifyDashboardNumbersRoute: VerifierVerifyDashboardNumbersRoute,
+  VerifierVerifyDashboardSettingsRoute: VerifierVerifyDashboardSettingsRoute,
+  VerifierVerifyDashboardWithdrawalsRoute:
+    VerifierVerifyDashboardWithdrawalsRoute,
+  VerifierVerifyDashboardIndexRoute: VerifierVerifyDashboardIndexRoute,
 }
 
 const VerifierRouteWithChildren = VerifierRoute._addFileChildren(
@@ -1844,17 +1834,6 @@ const SolutionsRouteChildren: SolutionsRouteChildren = {
 const SolutionsRouteWithChildren = SolutionsRoute._addFileChildren(
   SolutionsRouteChildren,
 )
-
-interface VerifyRouteChildren {
-  VerifyAuthRoute: typeof VerifyAuthRoute
-}
-
-const VerifyRouteChildren: VerifyRouteChildren = {
-  VerifyAuthRoute: VerifyAuthRoute,
-}
-
-const VerifyRouteWithChildren =
-  VerifyRoute._addFileChildren(VerifyRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -1879,11 +1858,12 @@ const rootRouteChildren: RootRouteChildren = {
   SolutionsRoute: SolutionsRouteWithChildren,
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
-  VerifyRoute: VerifyRouteWithChildren,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiSetupSmsRoute: ApiSetupSmsRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   MMessageIdRoute: MMessageIdRoute,
+  VerifyAuthRoute: VerifyAuthRoute,
+  VerifyIndexRoute: VerifyIndexRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
