@@ -456,8 +456,19 @@ async function deliverPending(
   supabaseAdmin: any,
   campaign: any,
   sender: Sender,
-): Promise<{ sent: number; failed: number; debited: number; remaining: number }> {
+): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean }> {
   const callback = await statusCallbackUrl();
+
+  // Re-read the campaign status just before delivery so a user Cancel that
+  // landed between the picker and here stops us cleanly.
+  const { data: fresh } = await supabaseAdmin
+    .from("campaigns")
+    .select("status")
+    .eq("id", campaign.id)
+    .maybeSingle();
+  if (fresh?.status === "cancelled") {
+    return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
+  }
 
   const { data: batch, error: qErr } = await supabaseAdmin
     .from("messages")
