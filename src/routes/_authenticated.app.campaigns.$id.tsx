@@ -1,5 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { reconcileCampaignMessages } from "@/lib/reconcile-messages.functions";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +33,22 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
 
 function CampaignReport() {
   const { id } = Route.useParams();
+  const queryClient = useQueryClient();
+  const reconcileFn = useServerFn(reconcileCampaignMessages);
+  const reconcileM = useMutation({
+    mutationFn: () => reconcileFn({ data: { campaignId: id } }),
+    onSuccess: (r) => {
+      toast.success(
+        r.updated > 0
+          ? `Refreshed ${r.updated} of ${r.checked} pending message${r.checked === 1 ? "" : "s"} from Twilio.`
+          : r.checked > 0
+            ? `Checked ${r.checked} pending message${r.checked === 1 ? "" : "s"} — Twilio has no new delivery receipt yet.`
+            : "No pending messages to refresh.",
+      );
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to refresh from Twilio"),
+  });
 
   const campaignQ = useQuery({
     queryKey: ["campaign", id],
@@ -184,6 +203,16 @@ function CampaignReport() {
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
               <RefreshCw className={`size-3 ${messagesQ.isFetching ? "animate-spin" : ""}`} /> live
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => reconcileM.mutate()}
+              disabled={reconcileM.isPending}
+              title="Poll Twilio for the latest status of messages still marked as sent/queued (some carriers don't return delivery receipts)."
+            >
+              <RefreshCw className={`size-3 mr-1 ${reconcileM.isPending ? "animate-spin" : ""}`} />
+              {reconcileM.isPending ? "Refreshing…" : "Refresh from Twilio"}
+            </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
             </Button>
