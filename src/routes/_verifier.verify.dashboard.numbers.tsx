@@ -20,16 +20,18 @@ function NumbersPage() {
   const list = useServerFn(listMyTfns);
   const submit = useServerFn(submitTfn);
   const claim = useServerFn(claimTfnFromPool);
+  const submitAssigned = useServerFn(submitAssignedTfn);
   const qc = useQueryClient();
   const { data: rows } = useQuery({ queryKey: ["verifier", "tfns"], queryFn: () => list() });
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [showManual, setShowManual] = useState(false);
+  const [assignedNotes, setAssignedNotes] = useState<Record<string, string>>({});
 
   const claimMut = useMutation({
     mutationFn: () => claim(),
     onSuccess: (r: any) => {
-      toast.success(`Assigned ${r.phone_number} — start the verification below`);
+      toast.success(`Assigned ${r.phone_number} — fill in the verification details below`);
       qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -40,6 +42,15 @@ function NumbersPage() {
     onSuccess: () => {
       toast.success("Number submitted for verification");
       setPhone(""); setNotes("");
+      qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const submitAssignedMut = useMutation({
+    mutationFn: (v: { id: string; notes: string }) => submitAssigned({ data: v }),
+    onSuccess: () => {
+      toast.success("Submitted for verification");
       qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
     },
     onError: (e: any) => toast.error(e.message),
