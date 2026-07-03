@@ -169,6 +169,21 @@ function NumbersPage() {
                       </Button>
                     </div>
                   )}
+                  {r.status === "pending_verification" && (
+                    <div className="border-t border-slate-800 pt-3 flex items-center justify-between">
+                      <span className="text-xs text-slate-400">Carrier review in progress — updates automatically.</span>
+                      <Button size="sm" variant="outline" disabled={refreshMut.isPending} onClick={() => refreshMut.mutate(r.id)}>
+                        <RefreshCw className="size-3 mr-1" /> Refresh
+                      </Button>
+                    </div>
+                  )}
+                  {r.status === "rejected" && (
+                    <div className="border-t border-slate-800 pt-3">
+                      <Button size="sm" onClick={() => setWizardTfnId(r.id)}>
+                        Fix &amp; resubmit
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
