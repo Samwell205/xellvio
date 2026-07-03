@@ -71,7 +71,7 @@ export async function wireAssignedTollfreeForTenant(opts: {
       let url: string | null = `${MESSAGING_API}/Services?PageSize=50`;
       let safety = 20;
       while (url && safety-- > 0 && !msSid) {
-        const page = await twilio<any>(url, { sid, token });
+        const page: any = await twilio<any>(url, { sid, token });
         for (const s of page.services ?? []) {
           const pr = await twilio<any>(
             `${MESSAGING_API}/Services/${s.sid}/PhoneNumbers?PageSize=50`,
