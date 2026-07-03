@@ -266,13 +266,13 @@ function TwilioTab() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Twilio approved toll-free numbers</CardTitle>
-        <p className="text-xs text-muted-foreground">Live list of TWILIO_APPROVED verifications on your main Twilio account. Assign any of them to a tenant.</p>
+        <CardTitle>Carrier-approved toll-free numbers</CardTitle>
+        <p className="text-xs text-muted-foreground">Live list of carrier-approved verifications on your main upstream account. Assign any of them to a tenant.</p>
       </CardHeader>
       <CardContent>
-        {isLoading && <div className="text-sm text-muted-foreground">Loading from Twilio…</div>}
-        {error && <div className="text-sm text-destructive">Twilio error: {(error as any).message}</div>}
-        {!isLoading && !error && (data ?? []).length === 0 && <div className="text-sm text-muted-foreground">No approved toll-free numbers on Twilio yet.</div>}
+        {isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
+        {error && <div className="text-sm text-destructive">Upstream error: {(error as any).message}</div>}
+        {!isLoading && !error && (data ?? []).length === 0 && <div className="text-sm text-muted-foreground">No approved toll-free numbers yet.</div>}
         <div className="space-y-2">
           {(data ?? []).map((r: any) => (
             <div key={r.sid} className="border rounded-md p-3 flex items-center justify-between gap-3 flex-wrap">
