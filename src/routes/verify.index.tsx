@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BadgeCheck, Coins, ShieldCheck, Wallet } from "lucide-react";
 
-export const Route = createFileRoute("/verify")({
+export const Route = createFileRoute("/verify/")({
   head: () => ({
     meta: [
       { title: "Xellvio Verifier Marketplace — Earn by verifying toll-free numbers" },
