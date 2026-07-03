@@ -71,7 +71,15 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
           .select("id,account_id")
           .eq("verification_sid", verificationSid)
           .maybeSingle();
-        if (!asset) return new Response("ok");
+
+        // Also try matching a verifier-owned toll-free number.
+        const { data: verifierTfn } = await supabaseAdmin
+          .from("verifier_tfns")
+          .select("id")
+          .eq("twilio_verification_sid", verificationSid)
+          .maybeSingle();
+
+        if (!asset && !verifierTfn) return new Response("ok");
 
         // Re-fetch from Twilio to get the authoritative status + reason.
         let status = mapStatus(statusHint);
