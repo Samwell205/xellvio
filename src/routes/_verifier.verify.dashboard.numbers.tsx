@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listMyTfns, submitTfn, claimTfnFromPool } from "@/lib/verifier.functions";
+import { listMyTfns, submitTfn, claimTfnFromPool, submitAssignedTfn } from "@/lib/verifier.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
