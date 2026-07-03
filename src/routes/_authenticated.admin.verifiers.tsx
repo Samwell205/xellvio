@@ -106,6 +106,13 @@ function VerifiersTab() {
                     {v.bank ? (
                       <div className="text-xs text-muted-foreground mt-1">Bank: {v.bank.bank_name} · {v.bank.account_number} · {v.bank.account_name}</div>
                     ) : <div className="text-xs text-amber-600 mt-1">No bank details</div>}
+                    <div className="flex flex-wrap gap-1 mt-2 text-xs">
+                      <Badge variant="outline">Submitted: {v.stats?.total ?? 0}</Badge>
+                      <Badge variant="secondary">Pending: {v.stats?.pending ?? 0}</Badge>
+                      <Badge className="bg-emerald-600 hover:bg-emerald-600">Verified: {v.stats?.verified ?? 0}</Badge>
+                      <Badge variant="destructive">Rejected: {v.stats?.rejected ?? 0}</Badge>
+                      <Badge className="bg-blue-600 hover:bg-blue-600">Sold: {v.stats?.sold ?? 0}</Badge>
+                    </div>
                   </div>
                   <Button size="sm" variant={v.is_active === false ? "default" : "outline"} onClick={() => toggleMut.mutate({ id: v.id, on: v.is_active === false })}>
                     {v.is_active === false ? "Reactivate" : "Suspend"}
