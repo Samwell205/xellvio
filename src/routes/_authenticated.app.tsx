@@ -17,6 +17,15 @@ export const Route = createFileRoute("/_authenticated/app")({
 });
 
 function AppShell() {
+  // Ensure this tenant has a carrier messaging profile provisioned.
+  // Idempotent: no-op if already set. Covers new signups AND existing users.
+  const provisioned = useRef(false);
+  useEffect(() => {
+    if (provisioned.current) return;
+    provisioned.current = true;
+    provisionCurrentAccount().catch(() => { /* non-fatal */ });
+  }, []);
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-muted/30">
