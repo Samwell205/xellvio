@@ -12,9 +12,9 @@ import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
+  signup: 'Your Xellvio verification code',
   invite: "You've been invited",
-  magiclink: 'Your login link',
+  magiclink: 'Your Xellvio verification code',
   recovery: 'Reset your password',
   email_change: 'Confirm your new email',
   reauthentication: 'Your verification code',
@@ -137,7 +137,7 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
           siteUrl: `https://${ROOT_DOMAIN}`,
           recipient: payload.data.email,
           confirmationUrl: payload.data.url,
-          token: payload.data.token,
+          token: payload.data.token ?? payload.data.email_otp,
           email: payload.data.email,
           oldEmail: payload.data.old_email,
           newEmail: payload.data.new_email,
