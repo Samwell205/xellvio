@@ -1037,10 +1037,20 @@ function ProgressPanel({
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
 
+  // Dispatcher processes ~600 messages / minute (DELIVER_PER_TICK on a 1-min cron).
+  const RATE_PER_MIN = 600;
+  const etaMinutes = isDraining ? Math.max(1, Math.ceil(inFlight / RATE_PER_MIN)) : 0;
+  const etaLabel =
+    etaMinutes === 0
+      ? ""
+      : etaMinutes < 60
+      ? `~${etaMinutes} min remaining`
+      : `~${Math.floor(etaMinutes / 60)}h ${etaMinutes % 60}m remaining`;
+
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="font-semibold flex items-center gap-2">
             <Activity className="size-4 text-primary" /> Campaign progress
           </div>
@@ -1050,7 +1060,12 @@ function ProgressPanel({
           {isDraining && (
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
               <RefreshCw className={`size-3 ${isFetching ? "animate-spin" : ""}`} />
-              sending in progress · {inFlight.toLocaleString()} remaining
+              sending · {inFlight.toLocaleString()} left · {etaLabel}
+            </span>
+          )}
+          {status === "queued" && sending === 0 && sent === 0 && (
+            <span className="text-[10px] uppercase tracking-wide text-amber-600 dark:text-amber-400">
+              starting within 1 min…
             </span>
           )}
         </div>
