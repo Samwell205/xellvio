@@ -207,6 +207,34 @@ function NewCampaignPage() {
   );
   const seg = calculateSegments(bodyWithStop);
 
+  // Detect non-GSM-7 characters that force Unicode encoding (70/67-char segments
+  // instead of 160/153). Common culprits: • “ ” ‘ ’ — – … and non-breaking space.
+  const UNICODE_REPLACEMENTS: Array<[RegExp, string]> = [
+    [/[\u2022\u00B7]/g, "-"],          // • ·
+    [/[\u201C\u201D\u201E\u201F]/g, '"'], // “ ” „ ‟
+    [/[\u2018\u2019\u201A\u201B]/g, "'"], // ‘ ’ ‚ ‛
+    [/[\u2013\u2014\u2015]/g, "-"],    // – — ―
+    [/\u2026/g, "..."],                 // …
+    [/\u00A0/g, " "],                   // non-breaking space
+    [/\u200B/g, ""],                    // zero-width space
+  ];
+  const unicodeOffenders = useMemo(() => {
+    if (seg.encoding !== "Unicode") return [] as string[];
+    const found = new Set<string>();
+    for (const ch of s.body) {
+      if (ch.charCodeAt(0) > 127 && ch !== "€") found.add(ch);
+    }
+    return Array.from(found);
+  }, [s.body, seg.encoding]);
+  const canFixUnicode = unicodeOffenders.some((ch) =>
+    UNICODE_REPLACEMENTS.some(([re]) => re.test(ch)),
+  );
+  const fixUnicode = () => {
+    let out = s.body;
+    for (const [re, rep] of UNICODE_REPLACEMENTS) out = out.replace(re, rep);
+    setS({ ...s, body: out });
+  };
+
   // Resolve country code per recipient (memoized)
   const recipientCountries = useMemo(() => {
     return audienceList.map((p: any) => ({
