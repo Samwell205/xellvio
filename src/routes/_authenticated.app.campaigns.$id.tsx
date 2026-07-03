@@ -348,6 +348,57 @@ function CampaignReport() {
               <RefreshCw className={`size-3 mr-1 ${reconcileM.isPending ? "animate-spin" : ""}`} />
               {reconcileM.isPending ? "Refreshing…" : "Refresh statuses"}
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                exportProgressCsv({
+                  campaign: c,
+                  progress: progressQ.data,
+                  failures: failuresQ.data,
+                  messages: messagesQ.data ?? [],
+                })
+              }
+              title="Download queued / sending / delivered / failed metrics as CSV."
+            >
+              <Download className="size-3 mr-1" />
+              Export CSV
+            </Button>
+            {!["sent", "cancelled", "failed"].includes(c.status) && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={cancelM.isPending}
+                    title="Stop further dispatch. Already-delivered messages are not affected."
+                  >
+                    <XCircle className="size-3 mr-1" />
+                    {cancelM.isPending ? "Cancelling…" : "Cancel campaign"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel this campaign?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      No further messages will be sent. Messages that have already been
+                      handed to the carrier will still be delivered — those cannot be
+                      recalled. You will not be charged for any queued messages that are
+                      cancelled.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep sending</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => cancelM.mutate()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Yes, cancel
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <Button asChild variant="outline" size="sm">
               <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
             </Button>
@@ -369,7 +420,28 @@ function CampaignReport() {
         </div>
       )}
 
-      <ProgressPanel data={progressQ.data} status={c.status} isFetching={progressQ.isFetching} />
+      {c.status === "cancelled" && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 flex items-start gap-3">
+          <XCircle className="size-5 text-destructive shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <div className="font-semibold mb-0.5">Campaign cancelled</div>
+            <div className="text-muted-foreground">
+              Dispatch is stopped. Messages already handed to the carrier will still be delivered.
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ProgressPanel
+        data={progressQ.data}
+        status={c.status}
+        isFetching={progressQ.isFetching}
+        failures={failuresQ.data}
+        onRetryReason={(code) => retryAllM.mutate(code)}
+        onRetryAll={() => retryAllM.mutate(null)}
+        isRetrying={retryAllM.isPending}
+      />
+
 
 
 
