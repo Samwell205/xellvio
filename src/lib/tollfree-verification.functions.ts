@@ -211,7 +211,7 @@ export const payTollfreeFee = createServerFn({ method: "POST" })
     const { error: debitErr } = await supabaseAdmin.rpc("debit_account", {
       _account_id: context.userId,
       _amount: TOLLFREE_SETUP_FEE_USD,
-      _campaign_id: null,
+      _campaign_id: undefined as any,
       _description: "Toll-free verification setup fee",
     });
     if (debitErr) throw new Error(debitErr.message);
