@@ -680,7 +680,7 @@ function TollfreeVerificationPage() {
         </Section>
 
 
-        <Section title="Step 2 / 3 — Business location">
+        <Section title="Business address">
           <Two>
             <Field label="Country" required>
               <Select
