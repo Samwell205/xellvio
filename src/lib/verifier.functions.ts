@@ -407,7 +407,7 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
         verifier_id: verifier.id,
         phone_number: purchased.phone_number,
         country: "US",
-        status: "pending_verification",
+        status: "assigned",
         twilio_phone_sid: purchased.sid,
         notes: "Auto-provisioned from Twilio pool",
       })
@@ -415,6 +415,34 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return { ok: true, phone_number: row.phone_number };
+  });
+
+// Move an assigned number into pending_verification once the verifier has
+// actually submitted the verification details.
+export const submitAssignedTfn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      notes: z.string().max(1000).optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: verifier } = await supabaseAdmin
+      .from("verifiers").select("id").eq("user_id", context.userId).maybeSingle();
+    if (!verifier) throw new Error("Complete your verifier profile first");
+    const { data: row, error } = await supabaseAdmin
+      .from("verifier_tfns")
+      .update({ status: "pending_verification", notes: data.notes ?? null })
+      .eq("id", data.id)
+      .eq("verifier_id", verifier.id)
+      .eq("status", "assigned")
+      .select("id")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("This number is no longer awaiting submission");
+    return { ok: true };
   });
 
 // ============ Wallet Transactions ============
