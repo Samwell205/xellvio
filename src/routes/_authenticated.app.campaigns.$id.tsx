@@ -40,14 +40,14 @@ function CampaignReport() {
     onSuccess: (r) => {
       toast.success(
         r.updated > 0
-          ? `Refreshed ${r.updated} of ${r.checked} pending message${r.checked === 1 ? "" : "s"} from Twilio.`
+          ? `Refreshed ${r.updated} of ${r.checked} pending message${r.checked === 1 ? "" : "s"}.`
           : r.checked > 0
-            ? `Checked ${r.checked} pending message${r.checked === 1 ? "" : "s"} — Twilio has no new delivery receipt yet.`
+            ? `Checked ${r.checked} pending message${r.checked === 1 ? "" : "s"} — no new delivery receipt yet.`
             : "No pending messages to refresh.",
       );
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Failed to refresh from Twilio"),
+    onError: (e: any) => toast.error(e?.message ?? "Failed to refresh delivery statuses"),
   });
 
   const campaignQ = useQuery({
@@ -208,10 +208,10 @@ function CampaignReport() {
               size="sm"
               onClick={() => reconcileM.mutate()}
               disabled={reconcileM.isPending}
-              title="Poll Twilio for the latest status of messages still marked as sent/queued (some carriers don't return delivery receipts)."
+              title="Fetch the latest carrier delivery status for messages still marked as sent or queued."
             >
               <RefreshCw className={`size-3 mr-1 ${reconcileM.isPending ? "animate-spin" : ""}`} />
-              {reconcileM.isPending ? "Refreshing…" : "Refresh from Twilio"}
+              {reconcileM.isPending ? "Refreshing…" : "Refresh statuses"}
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
