@@ -406,14 +406,14 @@ function CampaignReport() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            <Button asChild variant="outline" size="sm" title="Open this campaign's messages in the Twilio Console (filter by date on the page).">
+            <Button asChild variant="outline" size="sm" title="Open messaging logs in the Telnyx Portal (filter by date on the page).">
               <a
-                href={`https://console.twilio.com/us1/monitor/logs/sms?frameUrl=%2Fconsole%2Fsms%2Flogs%3FstartDate%3D${encodeURIComponent(new Date(new Date(sentAt).getTime() - 60 * 60 * 1000).toISOString())}%26endDate%3D${encodeURIComponent(new Date(new Date(sentAt).getTime() + 24 * 60 * 60 * 1000).toISOString())}`}
+                href="https://portal.telnyx.com/#/app/messaging/logs"
                 target="_blank"
                 rel="noreferrer"
               >
                 <ExternalLink className="size-3 mr-1" />
-                View on Twilio
+                View on Telnyx
               </a>
             </Button>
             <Button asChild variant="outline" size="sm">
