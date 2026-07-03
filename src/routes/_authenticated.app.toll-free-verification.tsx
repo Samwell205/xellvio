@@ -1333,3 +1333,214 @@ function MarketplaceBuyCard() {
   );
 }
 
+function isBasicValid(f: ReturnType<typeof defaultForm>) {
+  return (
+    f.legalEntityName.trim().length >= 2 &&
+    /^https?:\/\//.test(f.websiteUrl) &&
+    !!f.businessType &&
+    f.contactFirstName.trim() !== "" &&
+    f.contactLastName.trim() !== "" &&
+    /^[^@]+@[^@]+\.[^@]+$/.test(f.contactEmail) &&
+    /^\+\d{1,4}$/.test(f.contactPhoneCountry) &&
+    f.contactPhone.replace(/\D/g, "").length >= 5 &&
+    f.addressLine1.trim() !== "" &&
+    f.city.trim() !== "" &&
+    f.state.trim() !== "" &&
+    f.zip.trim() !== "" &&
+    (f.businessType === "Sole Proprietor" ||
+      (!!f.businessRegistrationNumber?.trim() &&
+        !!f.businessRegistrationIdentifier?.trim() &&
+        /^[A-Z]{2}$/.test((f.businessRegistrationCountry ?? "").trim())))
+  );
+}
+
+function TollfreeStepper({
+  step,
+  onGoTo,
+  canGoTo2,
+}: {
+  step: 1 | 2;
+  onGoTo: (s: 1 | 2) => void;
+  canGoTo2: boolean;
+}) {
+  const steps: Array<{ n: 1 | 2; label: string }> = [
+    { n: 1, label: "Basic Information" },
+    { n: 2, label: "Registration Details" },
+  ];
+  return (
+    <aside className="md:sticky md:top-6 h-fit">
+      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+        Toll-free registration
+      </div>
+      <ol className="space-y-4 border-l md:border-l-2 border-border pl-4">
+        {steps.map((s) => {
+          const done = step > s.n;
+          const current = step === s.n;
+          const disabled = s.n === 2 && !canGoTo2 && !done && !current;
+          return (
+            <li key={s.n}>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onGoTo(s.n)}
+                className={`flex items-center gap-2 text-sm font-medium w-full text-left ${
+                  disabled ? "opacity-50 cursor-not-allowed" : "hover:text-foreground"
+                } ${current ? "text-foreground" : "text-muted-foreground"}`}
+              >
+                <span
+                  className={`inline-flex size-5 items-center justify-center rounded-full border text-[11px] ${
+                    done
+                      ? "bg-emerald-500 border-emerald-500 text-white"
+                      : current
+                        ? "border-primary text-primary"
+                        : "border-border"
+                  }`}
+                >
+                  {done ? <CheckIcon className="size-3" /> : s.n}
+                </span>
+                {s.label}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </aside>
+  );
+}
+
+const OPT_IN_EXAMPLES: Record<
+  string,
+  {
+    title: string;
+    example: string;
+    include: string[];
+    notes: string[];
+  }
+> = {
+  WEB_FORM: {
+    title: "Web form",
+    example:
+      "An embedded form on your website that prompts customers to enter their mobile phone number and opt into your texting campaign.",
+    include: [
+      "Phone number input field",
+      "Checkbox for consent (must NOT be pre-selected)",
+      "Clear description of what type of messages they'll receive",
+      "Message frequency information",
+      "Standard disclaimers about message and data rates",
+      "HELP and STOP instructions",
+      "Links to Terms of Service and Privacy Policy",
+      'Submit button with clear language (e.g., "Yes, sign me up!")',
+    ],
+    notes: [
+      "Checkbox must be actively selected by the user, not pre-checked.",
+      "If the web opt-in is behind a login or not yet published, host a screenshot on a publicly accessible site (OneDrive/Google Drive) and provide the URL in the Opt-in Policy Proof.",
+    ],
+  },
+  VERBAL: {
+    title: "Verbal",
+    example:
+      "A customer verbally agrees on a phone call to receive text messages. You must keep a recording or written script proving consent.",
+    include: [
+      "Script the agent uses to obtain consent",
+      "Clear description of the messages the customer will receive",
+      "Message frequency information",
+      "Standard message and data rates disclaimer",
+      "HELP and STOP instructions",
+      "Reference to Terms of Service and Privacy Policy",
+    ],
+    notes: [
+      "Keep call recordings or a signed script as records of consent.",
+      "Host the script or a recording transcript on a publicly accessible URL and provide the link as your Opt-in Policy Proof.",
+    ],
+  },
+  PAPER_FORM: {
+    title: "Paper form",
+    example:
+      "An in-store visitor completes a physical form that collects their phone number and their consent to subscribe to your texting campaign.",
+    include: [
+      "Field for customer's mobile phone number",
+      "Clear description of the texting service",
+      "Message frequency information",
+      "Checkbox or signature line for explicit consent",
+      "Standard message and data rates disclaimer",
+      "HELP and STOP instructions",
+      "Links to Terms of Service and Privacy Policy (or QR code linking to them)",
+      "Date field",
+      "Customer signature",
+    ],
+    notes: [
+      "Host a screenshot of the paper form on a publicly accessible website and provide the URL in the Opt-in Policy Proof.",
+      "Keep physical copies as records of consent.",
+      "If you choose Paper Form, you must provide the form in the Opt-in Policy Proof.",
+    ],
+  },
+  VIA_TEXT: {
+    title: "Via text (keyword campaign)",
+    example:
+      'Customer sees advertisement: "Text DEALS to 12345 to get exclusive offers from Acme!" Customer texts "DEALS" to 12345 and Acme responds with a welcome + terms message.',
+    include: [
+      "Clear keyword that customers text to opt-in",
+      "Short code or long code number to text",
+      "Welcome message explaining the service",
+      "Message frequency information",
+      "Standard disclaimers",
+      "HELP and STOP instructions",
+      "Links to Terms and Privacy Policy",
+      "Request for final confirmation",
+      "Confirmation message",
+    ],
+    notes: [
+      "Host a screenshot of the campaign collateral on a publicly accessible website and provide the URL in the Opt-in Policy Proof.",
+      "If you choose Via Text, you must provide the keyword campaign information (e.g. text 'Subscribe') in the Opt-in Policy Proof.",
+    ],
+  },
+  MOBILE_QR_CODE: {
+    title: "Mobile / QR code",
+    example:
+      "A QR code displayed in-store, on marketing materials, or online that either links to a web form for opt-in, OR opens the customer's messaging app with a pre-populated opt-in message.",
+    include: [
+      "Pre-populated message with keyword and short code (for text flow)",
+      "Clear instructions on the QR code itself",
+      "Follow-up confirmation flow as in the 'Via Text' method",
+      "Mobile-optimized form design (for web flow)",
+      "Clear call-to-action",
+      "Value proposition for signing up",
+      "Basic frequency information",
+      "Your brand/company name clearly visible",
+    ],
+    notes: [
+      "If the QR code leads to an online form that is behind a login or not yet published, host a screenshot of the form on a publicly accessible website and provide the URL in the Opt-in Policy Proof.",
+      "Test QR codes on multiple devices before deployment.",
+      "If you choose Mobile QR Code, you must provide the QR Code in the Opt-in Policy Proof.",
+    ],
+  },
+};
+
+function OptInExamplePanel({ type }: { type: string }) {
+  const info = OPT_IN_EXAMPLES[type] ?? OPT_IN_EXAMPLES.WEB_FORM;
+  return (
+    <div className="rounded-lg border bg-muted/40 p-4 space-y-3 text-sm">
+      <div>
+        <div className="font-semibold">Example — {info.title}</div>
+        <p className="text-muted-foreground mt-1">{info.example}</p>
+      </div>
+      <div>
+        <div className="font-semibold">What to include:</div>
+        <ul className="list-disc pl-5 mt-1 space-y-0.5 text-muted-foreground">
+          {info.include.map((i) => (
+            <li key={i}>{i}</li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <div className="font-semibold">Important notes:</div>
+        <ul className="list-disc pl-5 mt-1 space-y-0.5 text-muted-foreground">
+          {info.notes.map((i) => (
+            <li key={i}>{i}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
