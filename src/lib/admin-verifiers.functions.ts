@@ -159,15 +159,14 @@ export const adminAssignTfnToAccount = createServerFn({ method: "POST" })
       description: `Admin-assigned sale of ${tfn.phone_number}`,
     });
 
-    // Register as tenant sender asset
-    await supabaseAdmin.from("sender_assets").insert({
-      account_id: data.account_id,
-      country_code: tfn.country,
-      sender_kind: "toll_free",
-      phone_number: tfn.phone_number,
-      verification_status: "verified",
-      last_synced_at: new Date().toISOString(),
+    // Register as tenant sender asset + provision MessagingService so tenant can send.
+    const { wireAssignedTollfreeForTenant } = await import("./assign-tfn-to-tenant.server");
+    await wireAssignedTollfreeForTenant({
+      accountId: data.account_id,
+      phoneNumber: tfn.phone_number,
+      countryCode: tfn.country,
     });
+
 
     return { ok: true };
   });
@@ -434,17 +433,15 @@ export const adminAssignTwilioNumberToAccount = createServerFn({ method: "POST" 
       if (existing.account_id === data.account_id) return { ok: true, already: true };
       throw new Error("This number is already assigned to another tenant");
     }
-    const { error } = await supabaseAdmin.from("sender_assets").insert({
-      account_id: data.account_id,
-      country_code: data.country,
-      sender_kind: "toll_free",
-      phone_number: data.phone_number,
-      verification_status: "verified",
-      last_synced_at: new Date().toISOString(),
+    const { wireAssignedTollfreeForTenant } = await import("./assign-tfn-to-tenant.server");
+    await wireAssignedTollfreeForTenant({
+      accountId: data.account_id,
+      phoneNumber: data.phone_number,
+      countryCode: data.country,
     });
-    if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 export const adminUnassignSenderAsset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -453,8 +450,8 @@ export const adminUnassignSenderAsset = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("sender_assets").delete().eq("phone_number", data.phone_number);
-    if (error) throw new Error(error.message);
+    const { unwireAssignedTollfreeForTenant } = await import("./assign-tfn-to-tenant.server");
+    await unwireAssignedTollfreeForTenant({ phoneNumber: data.phone_number });
     return { ok: true };
   });
+
