@@ -23,22 +23,17 @@ function AuthPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">(search.mode);
-  const [signupStage, setSignupStage] = useState<"details" | "code">("details");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [signupCode, setSignupCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const sendCode = useServerFn(sendAccountSignupCode);
-  const createAccount = useServerFn(createAccountWithCode);
 
   useEffect(() => {
     setMode(search.mode);
-    setSignupStage("details");
     setErrorMsg(null);
   }, [search.mode]);
 
@@ -65,28 +60,19 @@ function AuthPage() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        if (signupStage === "details") {
-          await sendCode({ data: { full_name: name, email } });
-          setSignupCode("");
-          setSignupStage("code");
-          toast.success("We sent a 6-digit code to your email.");
-          return;
-        }
-        await createAccount({ data: { full_name: name, email, password, code: signupCode.trim() } });
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: name } },
+        });
+        if (signUpError) throw signUpError;
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Account created — welcome!");
         navigate({ href: destination });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          if (error.message.toLowerCase().includes("not confirmed") || error.message.toLowerCase().includes("confirm")) {
-            toast.message("Please verify your email to continue.");
-            navigate({ to: "/verify-email", search: { email, status: "unverified" } });
-            return;
-          }
-          throw error;
-        }
+        if (error) throw error;
         toast.success("Welcome back");
         navigate({ href: destination });
       }
@@ -102,6 +88,7 @@ function AuthPage() {
       setLoading(false);
     }
   }
+
 
   async function handleGoogle() {
     setLoading(true);
