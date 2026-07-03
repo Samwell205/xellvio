@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createHash, createHmac, timingSafeEqual } from "crypto";
 
 const MESSAGING_API = "https://messaging.twilio.com/v1";
 
@@ -31,48 +32,113 @@ function friendlyReason(raw: string | undefined): string {
   return raw!;
 }
 
+/**
+ * Verify Twilio's X-Twilio-Signature header.
+ * Twilio computes: HMAC-SHA1(authToken, fullUrl + sortedFormParamsConcatenated)
+ * and base64-encodes it. For JSON payloads, it uses HMAC-SHA256 of the raw body
+ * and puts it in X-Twilio-Signature after the URL prefix, but the reliable form
+ * is: SHA1(url + sortedForm) — we support the classic form signature which is
+ * what Messaging status callbacks send.
+ */
+function verifyTwilioSignature(opts: {
+  authToken: string;
+  signature: string | null;
+  url: string;
+  form: URLSearchParams | null;
+  rawBody: string;
+}): boolean {
+  if (!opts.signature) return false;
+  // Classic (form-encoded) signature
+  if (opts.form) {
+    const keys = Array.from(opts.form.keys()).sort();
+    let payload = opts.url;
+    for (const k of keys) payload += k + (opts.form.get(k) ?? "");
+    const expected = createHmac("sha1", opts.authToken).update(payload).digest("base64");
+    const a = Buffer.from(expected);
+    const b = Buffer.from(opts.signature);
+    if (a.length === b.length && timingSafeEqual(a, b)) return true;
+  }
+  // JSON body signature: sha256(url + rawBody), base64
+  const expectedJson = createHmac("sha256", opts.authToken)
+    .update(opts.url + opts.rawBody)
+    .digest("base64");
+  const aj = Buffer.from(expectedJson);
+  const bj = Buffer.from(opts.signature);
+  return aj.length === bj.length && timingSafeEqual(aj, bj);
+}
+
 export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        let verificationSid: string | null = null;
-        let statusHint: string | undefined;
-        let reasonHint: string | undefined;
+        const authToken = process.env.TWILIO_AUTH_TOKEN;
+        const signature = request.headers.get("x-twilio-signature");
         const ctype = request.headers.get("content-type") ?? "";
+        const rawBody = await request.text();
+
+        // Reconstruct full URL as Twilio saw it — respect x-forwarded-proto/host
+        // because we run behind a proxy.
+        const proto = request.headers.get("x-forwarded-proto") ?? "https";
+        const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
+        const pathAndQuery = new URL(request.url).pathname + new URL(request.url).search;
+        const fullUrl = `${proto}://${host}${pathAndQuery}`;
+
+        let form: URLSearchParams | null = null;
+        let payload: any = null;
         try {
           if (ctype.includes("application/json")) {
-            const j: any = await request.json();
-            verificationSid =
-              j?.tollfree_verification_sid ?? j?.TollfreeVerificationSid ?? j?.sid ?? j?.Sid ?? null;
-            statusHint = j?.status ?? j?.Status;
-            reasonHint = Array.isArray(j?.rejection_reason)
-              ? j.rejection_reason.join("; ")
-              : j?.rejection_reason ?? j?.RejectionReason;
+            payload = rawBody ? JSON.parse(rawBody) : {};
           } else {
-            const form = await request.formData();
-            const get = (k: string) => {
-              const v = form.get(k);
-              return typeof v === "string" ? v : null;
-            };
-            verificationSid =
-              get("TollfreeVerificationSid") ?? get("VerificationSid") ?? get("Sid");
-            statusHint = get("Status") ?? undefined;
-            reasonHint = get("RejectionReason") ?? undefined;
+            form = new URLSearchParams(rawBody);
+            payload = Object.fromEntries(form.entries());
           }
         } catch {
-          // ignore parse errors
+          return new Response("bad body", { status: 400 });
         }
+
+        // 1) Signature verification (skip only if TWILIO_AUTH_TOKEN missing — dev only).
+        if (authToken) {
+          const ok = verifyTwilioSignature({ authToken, signature, url: fullUrl, form, rawBody });
+          if (!ok) {
+            console.warn("[twilio-tollfree-status] signature verification failed", { url: fullUrl });
+            return new Response("invalid signature", { status: 403 });
+          }
+        }
+
+        const verificationSid: string | null =
+          payload?.tollfree_verification_sid ??
+          payload?.TollfreeVerificationSid ??
+          payload?.VerificationSid ??
+          payload?.sid ??
+          payload?.Sid ??
+          null;
+        const statusHint: string | undefined = payload?.status ?? payload?.Status;
+        const reasonHint: string | undefined = Array.isArray(payload?.rejection_reason)
+          ? payload.rejection_reason.join("; ")
+          : payload?.rejection_reason ?? payload?.RejectionReason;
 
         if (!verificationSid) return new Response("ok");
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // 2) Idempotency — dedupe on a stable hash of the raw body.
+        const bodyHash = createHash("sha256")
+          .update(`${verificationSid}|${statusHint ?? ""}|${rawBody}`)
+          .digest("hex");
+        const { error: dupErr } = await supabaseAdmin
+          .from("twilio_webhook_events")
+          .insert({ body_hash: bodyHash, verification_sid: verificationSid, status: statusHint ?? null });
+        if (dupErr && (dupErr as any).code === "23505") {
+          // already processed — ack silently
+          return new Response("ok");
+        }
+
         const { data: asset } = await supabaseAdmin
           .from("sender_assets")
           .select("id,account_id")
           .eq("verification_sid", verificationSid)
           .maybeSingle();
 
-        // Also try matching a verifier-owned toll-free number.
         const { data: verifierTfn } = await supabaseAdmin
           .from("verifier_tfns")
           .select("id")
@@ -81,11 +147,9 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
 
         if (!asset && !verifierTfn) return new Response("ok");
 
-        // Re-fetch from Twilio to get the authoritative status + reason.
+        // Re-fetch authoritative status from Twilio.
         let status = mapStatus(statusHint);
-        let reason: string | null =
-          status === "rejected" ? (reasonHint ?? "rejected") : null;
-
+        let reason: string | null = status === "rejected" ? (reasonHint ?? "rejected") : null;
         try {
           const { decryptToken } = await import("@/lib/tenant-crypto.server");
           const { data: acct } = asset
@@ -125,19 +189,23 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
             }
           }
         } catch {
-          // fall back to hints from the webhook body
+          /* fall back to hints */
         }
 
+        const nowIso = new Date().toISOString();
+
         if (asset) {
-          await supabaseAdmin
-            .from("sender_assets")
-            .update({
-              verification_status: status,
-              rejection_reason: reason,
-              friendly_rejection_reason: reason ? friendlyReason(reason) : null,
-              last_synced_at: new Date().toISOString(),
-            })
-            .eq("id", asset.id);
+          const patch: any = {
+            verification_status: status,
+            rejection_reason: reason,
+            friendly_rejection_reason: reason ? friendlyReason(reason) : null,
+            last_synced_at: nowIso,
+          };
+          if (status === "submitted") patch.submitted_at = nowIso;
+          if (status === "in_review") patch.in_review_at = nowIso;
+          if (status === "verified") patch.verified_at = nowIso;
+          if (status === "rejected") patch.rejected_at = nowIso;
+          await supabaseAdmin.from("sender_assets").update(patch).eq("id", asset.id);
 
           if (status === "verified") {
             await supabaseAdmin
@@ -146,7 +214,6 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
               .eq("id", asset.account_id);
           }
 
-          // Send branded status email to the customer (approved / rejected).
           if (status === "verified" || status === "rejected") {
             try {
               const { data: acct } = await supabaseAdmin
@@ -162,11 +229,8 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
               const recipient = (acct?.contact_email || acct?.email || "").trim();
               if (recipient) {
                 const firstName = (acct?.full_name ?? "").split(" ")[0] || undefined;
-                const baseUrl =
-                  process.env.PUBLIC_BASE_URL ?? "https://xellvio.lovable.app";
-                const { sendBrandedEmail } = await import(
-                  "@/lib/email/send-internal.server"
-                );
+                const baseUrl = process.env.PUBLIC_BASE_URL ?? "https://xellvio.lovable.app";
+                const { sendBrandedEmail } = await import("@/lib/email/send-internal.server");
                 if (status === "verified") {
                   await sendBrandedEmail({
                     templateName: "tollfree-approved",
@@ -204,10 +268,12 @@ export const Route = createFileRoute("/api/public/twilio-tollfree-status")({
           const dbStatus =
             status === "verified" ? "verified" :
             status === "rejected" ? "rejected" : "pending_verification";
-          await supabaseAdmin
-            .from("verifier_tfns")
-            .update({ status: dbStatus, rejection_reason: reason })
-            .eq("id", verifierTfn.id);
+          const patch: any = { status: dbStatus, rejection_reason: reason };
+          if (status === "submitted") patch.submitted_at = nowIso;
+          if (status === "in_review") patch.in_review_at = nowIso;
+          if (status === "verified") patch.verified_at = nowIso;
+          if (status === "rejected") patch.rejected_at = nowIso;
+          await supabaseAdmin.from("verifier_tfns").update(patch).eq("id", verifierTfn.id);
         }
 
         return new Response("ok");
