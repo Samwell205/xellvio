@@ -31,8 +31,9 @@ import {
 import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
   Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
-  DollarSign, Wallet, Activity, XCircle, Download, RotateCw,
+  DollarSign, Wallet, Activity, XCircle, Download, RotateCw, ExternalLink,
 } from "lucide-react";
+
 import { useEffect, useMemo, useState } from "react";
 import { formatUSD } from "@/lib/money";
 
