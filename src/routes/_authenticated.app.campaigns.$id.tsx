@@ -2,6 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { reconcileCampaignMessages } from "@/lib/reconcile-messages.functions";
+import {
+  cancelCampaign,
+  retryMessage,
+  retryFailedMessages,
+} from "@/lib/campaign-control.functions";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -19,12 +24,18 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
 } from "recharts";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
   Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
-  DollarSign, Wallet, Activity,
+  DollarSign, Wallet, Activity, XCircle, Download, RotateCw,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatUSD } from "@/lib/money";
+
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign report — Xellvio" }] }),
