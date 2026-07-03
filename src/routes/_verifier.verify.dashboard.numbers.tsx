@@ -162,6 +162,11 @@ function NumbersPage() {
                       )}
                     </div>
                   </div>
+
+                  {(r.submitted_at || r.in_review_at || r.verified_at || r.rejected_at) && (
+                    <StatusTimeline row={r} />
+                  )}
+
                   {r.status === "assigned" && (
                     <div className="border-t border-slate-800 pt-3">
                       <Button size="sm" onClick={() => setWizardTfnId(r.id)}>
@@ -190,6 +195,7 @@ function NumbersPage() {
           )}
         </CardContent>
       </Card>
+
 
       <Dialog open={!!wizardTfnId} onOpenChange={(o) => !o && setWizardTfnId(null)}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
