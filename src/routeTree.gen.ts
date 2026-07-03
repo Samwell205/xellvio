@@ -55,6 +55,7 @@ import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './rout
 import { Route as AuthenticatedAppTeamRouteImport } from './routes/_authenticated.app.team'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSetupSmsRouteImport } from './routes/_authenticated.app.setup-sms'
+import { Route as AuthenticatedAppSetup10dlcRouteImport } from './routes/_authenticated.app.setup-10dlc'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
 import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
 import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
@@ -328,6 +329,12 @@ const AuthenticatedAppSetupSmsRoute =
   AuthenticatedAppSetupSmsRouteImport.update({
     id: '/setup-sms',
     path: '/setup-sms',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppSetup10dlcRoute =
+  AuthenticatedAppSetup10dlcRouteImport.update({
+    id: '/setup-10dlc',
+    path: '/setup-10dlc',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppSettingsRoute =
@@ -612,6 +619,7 @@ export interface FileRoutesByFullPath {
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/setup-10dlc': typeof AuthenticatedAppSetup10dlcRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/team': typeof AuthenticatedAppTeamRoute
@@ -693,6 +701,7 @@ export interface FileRoutesByTo {
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/setup-10dlc': typeof AuthenticatedAppSetup10dlcRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/team': typeof AuthenticatedAppTeamRoute
@@ -781,6 +790,7 @@ export interface FileRoutesById {
   '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/setup-10dlc': typeof AuthenticatedAppSetup10dlcRoute
   '/_authenticated/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/_authenticated/app/team': typeof AuthenticatedAppTeamRoute
@@ -868,6 +878,7 @@ export interface FileRouteTypes {
     | '/app/pricing-calculator'
     | '/app/segments'
     | '/app/settings'
+    | '/app/setup-10dlc'
     | '/app/setup-sms'
     | '/app/suppressions'
     | '/app/team'
@@ -949,6 +960,7 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/settings'
+    | '/app/setup-10dlc'
     | '/app/setup-sms'
     | '/app/suppressions'
     | '/app/team'
@@ -1036,6 +1048,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/pricing-calculator'
     | '/_authenticated/app/segments'
     | '/_authenticated/app/settings'
+    | '/_authenticated/app/setup-10dlc'
     | '/_authenticated/app/setup-sms'
     | '/_authenticated/app/suppressions'
     | '/_authenticated/app/team'
@@ -1438,6 +1451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSetupSmsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/setup-10dlc': {
+      id: '/_authenticated/app/setup-10dlc'
+      path: '/setup-10dlc'
+      fullPath: '/app/setup-10dlc'
+      preLoaderRoute: typeof AuthenticatedAppSetup10dlcRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
       path: '/settings'
@@ -1812,6 +1832,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
   AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppSetup10dlcRoute: typeof AuthenticatedAppSetup10dlcRoute
   AuthenticatedAppSetupSmsRoute: typeof AuthenticatedAppSetupSmsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
   AuthenticatedAppTeamRoute: typeof AuthenticatedAppTeamRoute
@@ -1830,6 +1851,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
     AuthenticatedAppPricingCalculatorRoute,
   AuthenticatedAppSegmentsRoute: AuthenticatedAppSegmentsRouteWithChildren,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppSetup10dlcRoute: AuthenticatedAppSetup10dlcRoute,
   AuthenticatedAppSetupSmsRoute: AuthenticatedAppSetupSmsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
   AuthenticatedAppTeamRoute: AuthenticatedAppTeamRoute,
