@@ -978,10 +978,18 @@ function ProgressPanel({
   data,
   status,
   isFetching,
+  failures,
+  onRetryReason,
+  onRetryAll,
+  isRetrying,
 }: {
   data?: { total: number; queued: number; sending: number; sent: number; delivered: number; failed: number };
   status?: string;
   isFetching?: boolean;
+  failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
+  onRetryReason?: (code: string) => void;
+  onRetryAll?: () => void;
+  isRetrying?: boolean;
 }) {
   if (!data || data.total === 0) return null;
   const { total, queued, sending, sent, delivered, failed } = data;
@@ -989,6 +997,9 @@ function ProgressPanel({
   const processed = total - inFlight;
   const processedPct = total > 0 ? Math.round((processed / total) * 100) : 0;
   const isDraining = inFlight > 0 && (status === "sending" || status === "queued");
+  const topReasons = Object.entries(failures?.byReason ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
 
   return (
     <Card className="p-5">
@@ -997,6 +1008,9 @@ function ProgressPanel({
           <div className="font-semibold flex items-center gap-2">
             <Activity className="size-4 text-primary" /> Campaign progress
           </div>
+          <span className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+            <span className="inline-block size-1.5 rounded-full bg-emerald-500 animate-pulse" /> live
+          </span>
           {isDraining && (
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
               <RefreshCw className={`size-3 ${isFetching ? "animate-spin" : ""}`} />
@@ -1026,6 +1040,59 @@ function ProgressPanel({
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
       </div>
 
+      {failed > 0 && topReasons.length > 0 && (
+        <div className="mt-5 border-t pt-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+              <AlertTriangle className="size-3.5 text-destructive" />
+              Failure breakdown ({failed.toLocaleString()} failed)
+            </div>
+            {onRetryAll && status !== "cancelled" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRetryAll}
+                disabled={isRetrying}
+                title="Re-queue every failed message on this campaign."
+              >
+                <RotateCw className={`size-3 mr-1 ${isRetrying ? "animate-spin" : ""}`} />
+                Retry all failed
+              </Button>
+            )}
+          </div>
+          <ul className="space-y-1.5">
+            {topReasons.map(([code, n]) => (
+              <li
+                key={code}
+                className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="font-mono text-xs">{code}</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {friendlyReason(code)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <Badge variant="outline" className="text-destructive border-destructive/30 tabular-nums">
+                    {n.toLocaleString()}
+                  </Badge>
+                  {onRetryReason && status !== "cancelled" && code !== "cancelled_by_user" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onRetryReason(code)}
+                      disabled={isRetrying}
+                    >
+                      <RotateCw className="size-3 mr-1" /> Retry
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="text-[11px] text-muted-foreground mt-3">
         {isDraining
           ? `Processing ~200 messages/minute. ${processedPct}% complete — you can leave this page and come back later.`
@@ -1036,6 +1103,125 @@ function ProgressPanel({
     </Card>
   );
 }
+
+const REASON_LABELS: Record<string, string> = {
+  cancelled_by_user: "Stopped by user before dispatch",
+  insufficient_balance: "Account credit ran out before this message was sent",
+  exception: "Provider request failed unexpectedly",
+  "30007": "Carrier filtered — likely SHAFT/spam content",
+  "30003": "Unreachable handset (off / roaming / disconnected)",
+  "30004": "Message blocked by carrier",
+  "30005": "Unknown destination handset",
+  "30006": "Landline or unreachable carrier",
+  "30008": "Unknown delivery error",
+  "30034": "Blocked — 10DLC not registered (US)",
+  "21610": "Recipient replied STOP — number opted out",
+  "21614": "Not a valid mobile number",
+};
+function friendlyReason(code: string): string {
+  return REASON_LABELS[code] ?? "See carrier documentation";
+}
+
+// Build a CSV report of the campaign's progress metrics + time-bucketed
+// delivery counts + failure breakdown, and trigger a browser download.
+function exportProgressCsv({
+  campaign,
+  progress,
+  failures,
+  messages,
+}: {
+  campaign: any;
+  progress?: { total: number; queued: number; sending: number; sent: number; delivered: number; failed: number };
+  failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
+  messages: any[];
+}) {
+  const lines: string[] = [];
+  const now = new Date();
+  lines.push("Campaign progress report");
+  lines.push(`Campaign,${csv(campaign?.name ?? "")}`);
+  lines.push(`Campaign ID,${csv(campaign?.id ?? "")}`);
+  lines.push(`Status,${csv(campaign?.status ?? "")}`);
+  lines.push(`Generated at,${csv(now.toISOString())}`);
+  lines.push("");
+  lines.push("Totals");
+  lines.push("metric,count");
+  if (progress) {
+    lines.push(`total,${progress.total}`);
+    lines.push(`queued,${progress.queued}`);
+    lines.push(`sending,${progress.sending}`);
+    lines.push(`sent,${progress.sent}`);
+    lines.push(`delivered,${progress.delivered}`);
+    lines.push(`failed,${progress.failed}`);
+  }
+  lines.push("");
+  lines.push("Delivery by hour");
+  lines.push("hour_iso,sent,delivered,failed");
+  const buckets = new Map<number, { sent: number; delivered: number; failed: number }>();
+  const bucket = (iso: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    d.setMinutes(0, 0, 0);
+    return d.getTime();
+  };
+  for (const m of messages) {
+    const ts = bucket(m.sent_at);
+    if (ts != null) {
+      const b = buckets.get(ts) ?? { sent: 0, delivered: 0, failed: 0 };
+      b.sent++;
+      buckets.set(ts, b);
+    }
+    const td = bucket(m.delivered_at);
+    if (td != null) {
+      const b = buckets.get(td) ?? { sent: 0, delivered: 0, failed: 0 };
+      b.delivered++;
+      buckets.set(td, b);
+    }
+    if (["failed", "undelivered"].includes(m.status)) {
+      const tf = bucket(m.sent_at ?? m.created_at);
+      if (tf != null) {
+        const b = buckets.get(tf) ?? { sent: 0, delivered: 0, failed: 0 };
+        b.failed++;
+        buckets.set(tf, b);
+      }
+    }
+  }
+  const sorted = [...buckets.entries()].sort((a, b) => a[0] - b[0]);
+  for (const [t, v] of sorted) {
+    lines.push(`${new Date(t).toISOString()},${v.sent},${v.delivered},${v.failed}`);
+  }
+  lines.push("");
+  lines.push("Failures by reason");
+  lines.push("error_code,description,count");
+  for (const [code, n] of Object.entries(failures?.byReason ?? {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`${csv(code)},${csv(REASON_LABELS[code] ?? "")},${n}`);
+  }
+  lines.push("");
+  lines.push("Failures by country");
+  lines.push("country,count");
+  for (const [cc, n] of Object.entries(failures?.byCountry ?? {}).sort((a, b) => b[1] - a[1])) {
+    lines.push(`${csv(cc)},${n}`);
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const safeName = (campaign?.name ?? "campaign")
+    .toString()
+    .replace(/[^a-z0-9-_]+/gi, "_")
+    .slice(0, 40);
+  a.download = `${safeName}-progress-${now.toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function csv(v: string): string {
+  if (v == null) return "";
+  const s = String(v);
+  return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
+}
+
 
 function Seg({ pct, className }: { pct: number; className: string }) {
   const w = Math.max(0, Math.min(100, pct));
