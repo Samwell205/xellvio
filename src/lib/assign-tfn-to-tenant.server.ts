@@ -103,7 +103,7 @@ export async function wireAssignedTollfreeForTenant(opts: {
     .eq("sender_kind", "toll_free")
     .maybeSingle();
 
-  const row: Record<string, unknown> = {
+  const row = {
     account_id: opts.accountId,
     country_code: country,
     sender_kind: "toll_free",
@@ -112,7 +112,8 @@ export async function wireAssignedTollfreeForTenant(opts: {
     messaging_service_sid: msSid,
     verification_status: "verified",
     last_synced_at: new Date().toISOString(),
-  };
+  } as const;
+
   if (existing?.id) {
     await supabaseAdmin.from("sender_assets").update(row).eq("id", existing.id);
   } else {
