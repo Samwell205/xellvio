@@ -158,13 +158,15 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
 export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
+    const zeroMoney = { amount: 0, amount_cents: 0, currency: "USD", label: "$0.00" };
     return {
       paid: true,
       feeCents: 0,
-      fee: { amount: 0, amount_cents: 0, currency: "USD", label: "$0.00" },
-      balance: { amount: 0, currency: "USD", label: "$0.00" },
+      fee: 0 as number,
+      balance: 0 as number,
       currency: "USD",
       note: "Telnyx does not charge a separate toll-free verification fee.",
+      _money: zeroMoney, // reserved for future currency-aware UI
     };
   });
 
