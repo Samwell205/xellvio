@@ -124,6 +124,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     await supabaseAdmin.from("sender_assets").update({
       verification_status: result.status === "verified" ? "verified" : result.status,
       verification_sid: result.verificationSid,
+      verification_payload: data as any,
       rejection_reason: result.rejectionReason,
       submitted_at: new Date().toISOString(),
     }).eq("id", asset.id);
