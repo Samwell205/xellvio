@@ -17,6 +17,28 @@ async function paystack<T = any>(path: string): Promise<T> {
   return json.data as T;
 }
 
+// ============ Email pre-check (used before signup) ============
+
+export const checkVerifierEmailAvailable = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ email: z.string().email() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Look through all users (paged) to see if this email exists.
+    // For small user bases this is fine; for scale, switch to a dedicated RPC.
+    let page = 1;
+    while (page <= 20) {
+      const { data: pageData, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
+      if (error) throw new Error(error.message);
+      const hit = pageData.users.find((u) => u.email?.toLowerCase() === data.email.toLowerCase());
+      if (hit) return { available: false };
+      if (pageData.users.length < 200) break;
+      page++;
+    }
+    return { available: true };
+  });
+
 // ============ Status / signup ============
 
 export const getMyVerifier = createServerFn({ method: "GET" })
