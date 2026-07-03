@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/app/setup-sms")({
   component: SetupSmsPage,
 });
 
-import { COUNTRIES as ALL_COUNTRIES } from "@/lib/countries";
+import { COUNTRIES as ALL_COUNTRIES, ALPHA_SENDER_REQUIRES_REGISTRATION_SET } from "@/lib/countries";
 
 const COUNTRIES = ALL_COUNTRIES.map((c) => ({ code: c.iso, name: c.name }));
 
@@ -174,6 +174,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
   );
   const [busy, setBusy] = useState(false);
   const [infoCountry, setInfoCountry] = useState<string | null>(null);
+  const [regCountry, setRegCountry] = useState<string | null>(null);
 
 
   function toggleCountry(cc: string) {
@@ -241,6 +242,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         {senderCountries.map((c) => {
           const on = countries.includes(c.code);
           const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(c.code);
+          const requiresRegistration = ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code);
           // US toll-free verification also covers Canada — surface the US status on the CA chip.
           const usTfAsset = assets.find((a) => a.country_code === "US" && a.sender_kind === "toll_free");
           const usReq = reqByCountry.get("US");
@@ -248,11 +250,9 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
             ? assets.find((a) => a.country_code === c.code && a.sender_kind === "toll_free")
             : null;
           const ownReq = isAlphaUnsupported ? reqByCountry.get(c.code) : null;
-          // For Canada, fall back to US's toll-free (since one US toll-free verification covers both).
           const coveredByUs = c.code === "CA" && !ownTfAsset && !ownReq && (!!usTfAsset || !!usReq);
           const tfAsset = ownTfAsset ?? (coveredByUs ? usTfAsset : null);
           const req = ownReq ?? (coveredByUs ? usReq : null);
-          // Only trust the carrier status when there's an actual our SMS provider verification SID.
           const vStatus: string | undefined = tfAsset?.verification_sid
             ? (tfAsset?.verification_status ?? undefined)
             : undefined;
@@ -261,76 +261,87 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           const isInReview =
             vStatus === "in_review" ||
             vStatus === "submitted" ||
-            // Number provisioned but no verification SID yet → still awaiting carrier review.
             (!!tfAsset && !vStatus) ||
             req?.status === "approved" ||
             req?.status === "provisioned" ||
             req?.status === "pending";
           const isTfRejected = vStatus === "rejected" || req?.status === "rejected";
           const notStarted = isAlphaUnsupported && !tfAsset && !req;
+
+          // Registration-required countries (Nigeria, India, UAE, etc.) — look up
+          // this account's saved sender_id asset to show its status pill.
+          const regAsset = requiresRegistration
+            ? assets.find((a) => a.country_code === c.code && a.sender_kind === "sender_id")
+            : null;
+          const regStatus = regAsset?.verification_status as string | undefined;
+          const regVerified = regStatus === "verified";
+          const regPending = regStatus === "requires_registration" || regStatus === "submitted" || regStatus === "in_review";
+
           let chipCls: string;
           if (isAlphaUnsupported) {
-            if (isVerified) {
-              chipCls = "border-success bg-success/10 text-success hover:bg-success/15";
-            } else if (isTfRejected) {
-              chipCls = "border-dashed border-destructive/50 bg-destructive/5 text-destructive hover:bg-destructive/10";
-            } else {
-              chipCls = "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
-            }
+            if (isVerified) chipCls = "border-success bg-success/10 text-success hover:bg-success/15";
+            else if (isTfRejected) chipCls = "border-dashed border-destructive/50 bg-destructive/5 text-destructive hover:bg-destructive/10";
+            else chipCls = "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
+          } else if (requiresRegistration) {
+            chipCls = regVerified
+              ? "border-success bg-success/10 text-success hover:bg-success/15"
+              : "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
           } else {
-            chipCls = on
-              ? "bg-primary text-primary-foreground border-primary"
-              : "border-border hover:bg-muted";
+            chipCls = on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted";
           }
-          const titleText = coveredByUs
-            ? `Covered by your US toll-free number${tfAsset?.phone_number ? ` (${tfAsset.phone_number})` : ""}. No separate Canada request needed.`
+
+          const titleText = requiresRegistration
+            ? (regVerified
+                ? `Sender ID registered with local operator for ${c.name}.`
+                : `${c.name} carriers block unregistered alphanumeric sender IDs. Register your sender ID with Telnyx before sending.`)
+            : coveredByUs
+              ? `Covered by your US toll-free number${tfAsset?.phone_number ? ` (${tfAsset.phone_number})` : ""}.`
+              : isVerified
+                ? `Verified by carrier · ${tfAsset?.phone_number ?? ""}`
+                : isTfRejected
+                  ? `Rejected by carrier${tfAsset?.friendly_rejection_reason ? ` · ${tfAsset.friendly_rejection_reason}` : tfAsset?.rejection_reason ? ` · ${tfAsset.rejection_reason}` : ""}`
+                  : isInReview
+                    ? "Awaiting carrier review — typically 1–3 weeks."
+                    : notStarted
+                      ? "Submit toll-free verification to begin the review."
+                      : "Pending";
+
+          const chipStatusLabel = requiresRegistration
+            ? (regVerified ? "Registered" : regPending ? "Needs registration" : "Not started")
             : isVerified
-              ? `Verified by carrier · ${tfAsset?.phone_number ?? ""}`
+              ? "Verified"
               : isTfRejected
-                ? `Rejected by carrier${tfAsset?.friendly_rejection_reason ? ` · ${tfAsset.friendly_rejection_reason}` : tfAsset?.rejection_reason ? ` · ${tfAsset.rejection_reason}` : ""}`
+                ? "Rejected"
                 : isInReview
-                  ? "Awaiting carrier review — only the carrier can approve this (typically 1–3 weeks)."
-                  : notStarted
-                    ? "Submit toll-free verification to begin the our SMS provider review."
-                    : "Pending";
-          const chipStatusLabel = isVerified
-            ? "Verified"
-            : isTfRejected
-              ? "Rejected"
-              : isInReview
-                ? coveredByUs ? "Covered by US" : "In review"
-                : "Not started";
+                  ? (coveredByUs ? "Covered by US" : "In review")
+                  : "Not started";
+
           const chipLabel = coveredByUs
             ? `${c.name} · covered by US`
             : `${c.name}${isAlphaUnsupported && hasNumber ? ` · ${tfAsset?.phone_number}` : isAlphaUnsupported && !hasNumber ? " · phone number" : ""}`;
+
           return (
             <button
               key={c.code}
               type="button"
               onClick={() => {
-                if (isAlphaUnsupported) {
-                  setInfoCountry(c.code);
-                } else {
-                  toggleCountry(c.code);
-                }
+                if (isAlphaUnsupported) setInfoCountry(c.code);
+                else if (requiresRegistration) setRegCountry(c.code);
+                else toggleCountry(c.code);
               }}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition ${chipCls}`}
               title={titleText}
             >
-              {isVerified && <CheckCircle2 className="size-3.5" />}
-              {(isInReview || (isAlphaUnsupported && !isVerified && !isTfRejected)) && (
+              {(isVerified || regVerified) && <CheckCircle2 className="size-3.5" />}
+              {(isInReview || (isAlphaUnsupported && !isVerified && !isTfRejected) || (requiresRegistration && !regVerified)) && (
                 <Clock className="size-3.5" />
               )}
               {isTfRejected && <AlertCircle className="size-3.5" />}
               <span>{chipLabel}</span>
-              {isAlphaUnsupported && (
+              {(isAlphaUnsupported || requiresRegistration) && (
                 <span
                   className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                    isVerified
-                      ? "bg-success/20"
-                      : isTfRejected
-                        ? "bg-destructive/20"
-                        : "bg-amber-500/20"
+                    (isVerified || regVerified) ? "bg-success/20" : isTfRejected ? "bg-destructive/20" : "bg-amber-500/20"
                   }`}
                 >
                   {chipStatusLabel}
@@ -341,8 +352,83 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         })}
       </div>
 
+      {ALPHA_SENDER_REQUIRES_REGISTRATION_SET.size > 0 && (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-900 dark:text-amber-200">
+          <strong>Heads up:</strong> Nigeria, India, UAE, Saudi Arabia, Egypt, Turkey, and several others require your sender ID to be pre-registered with the local mobile operator before carriers deliver it. Click any amber chip for step-by-step instructions.
+        </div>
+      )}
+
       <UsCanadaInfoDialog code={infoCountry} assets={assets} onClose={() => setInfoCountry(null)} />
+      <RegistrationRequiredDialog
+        code={regCountry}
+        countryName={COUNTRIES.find((c) => c.code === regCountry)?.name ?? ""}
+        senderId={senderId}
+        asset={assets.find((a) => a.country_code === regCountry && a.sender_kind === "sender_id") ?? null}
+        onClose={() => setRegCountry(null)}
+      />
     </Card>
+  );
+}
+
+function RegistrationRequiredDialog({
+  code, countryName, senderId, asset, onClose,
+}: {
+  code: string | null;
+  countryName: string;
+  senderId: string;
+  asset: any | null;
+  onClose: () => void;
+}) {
+  const status = asset?.verification_status as string | undefined;
+  const isRegistered = status === "verified";
+  return (
+    <Dialog open={!!code} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Sender ID registration required — {countryName}</DialogTitle>
+          <DialogDescription>
+            {countryName} mobile operators only deliver alphanumeric sender IDs that have been
+            pre-registered with the local carrier. Until registration is complete, campaigns to{" "}
+            {countryName} numbers will be skipped with a clear error instead of failing at the carrier.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div className="rounded-md border p-3 bg-muted/40">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">Your sender ID</div>
+                <div className="font-mono font-semibold">{asset?.phone_number || senderId || "—"}</div>
+              </div>
+              <Badge variant={isRegistered ? "default" : "secondary"}>
+                {isRegistered ? "Registered" : "Needs registration"}
+              </Badge>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="font-medium">How to register</div>
+            <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
+              <li>Open your Telnyx Mission Control Portal.</li>
+              <li>Go to <strong>Messaging → Alphanumeric Sender IDs</strong>.</li>
+              <li>Create a request for your sender ID and select <strong>{countryName}</strong> as a destination.</li>
+              <li>Provide the business name, use-case, and any documents the local carrier requires (varies by country — Nigeria and India typically need a NOC letter or DLT registration).</li>
+              <li>Submit. Approval usually takes 3–10 business days.</li>
+              <li>Come back here and click <strong>"Mark as registered"</strong> — or we'll pick it up automatically the next time you send successfully.</li>
+            </ol>
+          </div>
+          <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+            Prefer a local long-code or short-code instead? Contact support and we'll help you provision one for {countryName}.
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button asChild>
+            <a href="https://portal.telnyx.com/#/app/messaging/senders" target="_blank" rel="noreferrer">
+              Open Telnyx portal
+            </a>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
