@@ -247,7 +247,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
-        {senderCountries.map((c) => {
+        {senderCountries.filter((c) => !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code)).map((c) => {
           const on = countries.includes(c.code);
           const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(c.code);
           const requiresRegistration = ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code);
