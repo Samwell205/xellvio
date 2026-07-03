@@ -862,6 +862,7 @@ export type Database = {
           country_code: string | null
           created_at: string
           delivered_at: string | null
+          dispatch_started_at: string | null
           error_code: string | null
           id: string
           phone_e164: string
@@ -878,6 +879,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           delivered_at?: string | null
+          dispatch_started_at?: string | null
           error_code?: string | null
           id?: string
           phone_e164: string
@@ -894,6 +896,7 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           delivered_at?: string | null
+          dispatch_started_at?: string | null
           error_code?: string | null
           id?: string
           phone_e164?: string
@@ -2005,6 +2008,17 @@ export type Database = {
           phone_number: string
           tfn_id: string
           verifier_id: string
+        }[]
+      }
+      claim_campaign_messages: {
+        Args: { _campaign_id: string; _limit: number }
+        Returns: {
+          cost: number
+          country_code: string
+          id: string
+          phone_e164: string
+          rendered_body: string
+          segments_count: number
         }[]
       }
       credit_seller: {
