@@ -159,15 +159,14 @@ export const adminAssignTfnToAccount = createServerFn({ method: "POST" })
       description: `Admin-assigned sale of ${tfn.phone_number}`,
     });
 
-    // Register as tenant sender asset
-    await supabaseAdmin.from("sender_assets").insert({
-      account_id: data.account_id,
-      country_code: tfn.country,
-      sender_kind: "toll_free",
-      phone_number: tfn.phone_number,
-      verification_status: "verified",
-      last_synced_at: new Date().toISOString(),
+    // Register as tenant sender asset + provision MessagingService so tenant can send.
+    const { wireAssignedTollfreeForTenant } = await import("./assign-tfn-to-tenant.server");
+    await wireAssignedTollfreeForTenant({
+      accountId: data.account_id,
+      phoneNumber: tfn.phone_number,
+      countryCode: tfn.country,
     });
+
 
     return { ok: true };
   });
