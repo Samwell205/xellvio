@@ -271,11 +271,8 @@ function TollfreeVerificationPage() {
             Telnyx blocks US toll-free orders on accounts that use a freemail address or have not reached the required account level. That is why the direct portal order failed.
           </p>
           <p>
-            Your tenants should not buy inside Telnyx. In Xellvio they submit this wizard, are charged ${feeQuery.data?.fee ?? 5} in credits, and the platform handles number assignment plus verification.
+            Your tenants should not buy inside Telnyx. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits — if the balance is $0, submission still goes through and the fee is collected automatically from the next top-up.
           </p>
-          {(feeQuery.data?.balance ?? 0) < (feeQuery.data?.fee ?? 5) && !feePaid && (
-            <Button asChild size="sm"><Link to="/app/billing">Top up balance</Link></Button>
-          )}
         </CardContent>
       </Card>
 
