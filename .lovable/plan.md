@@ -1,96 +1,62 @@
+## Goal
 
-# Verified Toll-Free Marketplace — /verify Portal
+Rebuild the toll-free verification submission UI to mirror Twilio's own wizard (screenshots provided), for both the tenant flow (`/app/toll-free-verification`) and the verifier submission flow (assigned TFN → "Submit for verification" on `/verify/dashboard/numbers`). The backend already posts to Twilio via `submitTollfreeVerification`; the plan focuses on wiring the new wizard UI to that existing pipeline (and to `submitAssignedTfn` for verifiers) with no protocol changes.
 
-Separate portal for independent "Verifiers" who submit toll-free numbers, get them verified through our existing Twilio flow, and earn when tenants buy them. Tenants requesting a TFN see both options (buy verified vs verify their own); the "buy" option is disabled when the pool is empty. Flat price set by admin. Platform keeps 25% commission.
+## Wizard structure (matches Twilio exactly)
 
-## 1. Data model (new tables, all separate from existing sellers system)
+Left rail with two sections and check/loader status icons:
+1. **Basic Information** (already collected by us — auto-checked once the account/business fields exist).
+2. **Registration Details** (the wizard the user steps through).
 
-```text
-verifiers                 (id, user_id [auth.users], full_name, email, created_at)
-verifier_bank_accounts    (id, verifier_id, bank_name, bank_code, account_number,
-                           account_name, resolved_at)
-verifier_wallets          (id, verifier_id, balance_ngn, lifetime_earned_ngn, updated_at)
-verifier_tfns             (id, verifier_id, phone_number, country, status
-                           [pending_verification | verified | sold | rejected],
-                           twilio_verification_sid, rejection_reason,
-                           sold_to_account_id, sold_at, sale_price_ngn,
-                           commission_ngn, payout_ngn, created_at)
-verifier_transactions     (id, verifier_id, type [sale_credit | withdrawal_debit
-                           | commission], amount_ngn, balance_after, tfn_id,
-                           withdrawal_id, description, created_at)
-verifier_withdrawals      (id, verifier_id, amount_ngn, status [pending | paid | rejected],
-                           admin_note, requested_at, paid_at, paid_by)
-platform_settings additions: tfn_flat_price_ngn (default e.g. 15000),
-                             tfn_commission_pct (default 25)
-```
-
-RLS: verifiers can only read/write their own rows (`verifier_id` scoped to `auth.uid()` via `verifiers.user_id`). Admin (`has_role('admin')`) can read/write all. Service role bypasses.
-
-Wallet mutations happen only through SECURITY DEFINER RPCs: `credit_verifier_on_sale`, `debit_verifier_withdrawal`, `mark_withdrawal_paid`.
-
-## 2. Verifier portal — routes
+Registration Details sub-steps, in this order:
 
 ```text
-/verify                          Landing / marketing page (portal-specific)
-/verify/auth                     Login + signup (independent session, same Supabase auth)
-/verify/dashboard                Wallet, stats
-/verify/dashboard/numbers        List TFNs + submit new
-/verify/dashboard/numbers/new    Submit TFN → Twilio verification
-/verify/dashboard/earnings       Transactions log
-/verify/dashboard/withdrawals    Request + history
-/verify/dashboard/settings       Bank details (Paystack resolve)
+1. Intro          — "Register your toll-free number" + checklist + Start
+2. Business info  — Legal name, DBA (optional), Company type, Website URL
+3. Business address — Country → address autocomplete → manual fields
+4. Authorized rep — First/Last name, Email, Phone (country picker)
+5. Use case       — Monthly SMS volume, Use case(s) multi-select,
+                    Use case description (500), Sample message (1000)
+6. Opt-in         — Opt-in type dropdown (Verbal / Web form / Paper form /
+                    Via text / Mobile QR code) with the matching help panel,
+                    Opt-in policy proof URLs (multi-line), T&Cs URL,
+                    Privacy Policy URL
+7. Additional     — Opt-in keywords, Opt-in message, Help message,
+                    Age-gated content checkbox
+8. Review & Submit — Read-only summary → Submit
 ```
 
-Session is the same Supabase auth, but users get a `verifier` row instead of an `account`. Guard: `_verifier/route.tsx` layout checks `verifiers` row exists for `auth.uid()`, redirects to `/verify/auth` otherwise. Existing tenant `_authenticated` layout is untouched.
+Each step: Back / Next buttons, per-step Zod validation, progress persisted in local component state (and draft saved to the existing tenant record between steps so a refresh doesn't lose data).
 
-Signup collects full name + email + password, then routes to a mandatory bank setup step (bank dropdown from Paystack `/bank`, account number → Paystack `/bank/resolve`, submit blocked until `account_name` returned).
+## Backend wiring (no protocol changes)
 
-## 3. Tenant TFN request flow (existing route updated)
+- Tenant submission continues to call the existing `submitTollfreeVerification` server fn (already POSTs to `https://messaging.twilio.com/v1/Tollfree/Verifications` and stores status).
+- Verifier submission (assigned TFN) continues to call `submitAssignedTfn`, but the notes textarea is replaced by the same wizard; on final submit we serialise the wizard payload into the `notes` field (JSON) so admins see the full submission, and — when the verifier is submitting on behalf of a tenant — also call `submitTollfreeVerification` with those fields against the tenant's Twilio subaccount.
+- Twilio push happens server-side only; the wizard never talks to Twilio directly.
+- Draft autosave: add a lightweight `saveTollfreeDraft` server fn that upserts partial JSON into the existing verification row (nullable columns already exist) so Back/Next survives refresh.
 
-`/app/toll-free-verification` now shows two cards up top:
+## UI/UX details from the screenshots
 
-- **Buy Verified Number** — instant. Shows current flat price. Button disabled with "No numbers available right now" when the pool is empty. On click: charge tenant balance, RPC picks one random `verifier_tfns` row where `status='verified'`, flips to `sold`, sets `sold_to_account_id`, inserts into `sender_assets` + `number_requests` as approved/provisioned, credits verifier wallet (75%), records 25% commission, sends emails to tenant + verifier.
-- **Verify My Own Number** — existing flow, unchanged.
+- Two-column layout: sticky left rail (step list with check + spinner icons) + wide content column, matching the Twilio white/dark neutral look but using this project's existing Tailwind tokens (no hard-coded colors).
+- Opt-in type dropdown shows a contextual help card (bullet checklist + example screenshot area) that swaps based on the selected value — copy taken verbatim from the Twilio screenshots (Web form, Verbal, Paper form, Via text, Mobile QR code).
+- Business address step: country select first, then Google Places-style autocomplete input with a "or edit address manually" link that reveals the 5 manual fields (street, apt/suite, city, state, zip). We'll use plain manual fields by default (no Places API dependency) with an optional autocomplete stub — the manual form matches Twilio's fallback exactly.
+- Close (X) button top-right returns to the app dashboard.
 
-Both always visible; only the buy button toggles disabled state.
+## Files
 
-## 4. Admin panel additions (extend existing admin, don't duplicate)
+New:
+- `src/components/tollfree-wizard/` — `WizardShell.tsx`, `StepRail.tsx`, and one file per step (`StepIntro`, `StepBusinessInfo`, `StepAddress`, `StepAuthorizedRep`, `StepUseCase`, `StepOptIn`, `StepAdditional`, `StepReview`).
+- `src/components/tollfree-wizard/schema.ts` — per-step Zod slices derived from the existing `TollfreeVerificationInput`.
 
-New admin route `/admin/verifiers` with tabs:
+Edited:
+- `src/routes/_authenticated.app.toll-free-verification.tsx` — replace the current single long form with `<WizardShell mode="tenant" />` while keeping status/marketplace/fee sections above it.
+- `src/routes/_verifier.verify.dashboard.numbers.tsx` — replace the plain notes textarea for `assigned` rows with `<WizardShell mode="verifier" tfnId={...} />` opened in a dialog; on submit calls `submitAssignedTfn` with the serialized payload.
+- `src/lib/tollfree-verification.functions.ts` — add `saveTollfreeDraft` (partial upsert) and export a shared `WIZARD_STEP_KEYS` map. `submitTollfreeVerification` untouched.
+- `src/lib/verifier.functions.ts` — extend `submitAssignedTfn` input to accept a structured `payload` object (still stored in `notes` as JSON); when the verifier is bound to a tenant TFN request, also invoke `submitTollfreeVerification` server-side using the tenant's account.
 
-- **Verifiers** — list, bank details, submitted TFNs, wallet balance
-- **Verified Pool** — all `verified` TFNs, ability to manually assign one to any tenant account (dropdown of accounts) → triggers same sale flow
-- **Submissions** — pending TFNs, manual approve/reject override
-- **Withdrawals** — pending list, "Mark Paid" button (calls RPC that debits wallet + logs), rejection with note
-- **Settings** — flat price + commission % (writes to `platform_settings`)
+No DB migration needed — existing `tollfree_verification_attempts` columns already cover every field.
 
-Existing `/admin/marketplace` and sellers system stays as-is (parallel, unaffected).
+## Out of scope (unchanged)
 
-## 5. Landing page update
-
-Add a section on `/` (marketing home) titled "Verified Toll-Free Marketplace" with two CTAs: "Buy verified numbers" (→ tenant signup) and "Earn by verifying" (→ `/verify`).
-
-## 6. Integrations reused
-
-- Paystack List Banks + Resolve Account (already wired in `src/lib/paystack.server.ts` for sellers — reuse the same helpers).
-- Twilio toll-free verification (reuse `src/lib/tollfree-verification.functions.ts` submit path, but keyed to `verifier_tfns` instead of `tollfree_verification_attempts`).
-- Email notifications via existing email queue (`enqueue_email`) for: verifier signup welcome, TFN submitted, TFN verified, TFN sold (to verifier), TFN purchased (to tenant), withdrawal requested (to admin), withdrawal paid (to verifier).
-
-## 7. Order of implementation
-
-1. Migration: all tables, RLS, GRANTs, RPCs, `platform_settings` rows.
-2. Server functions: `verifier.functions.ts`, `verifier-tfn.functions.ts`, `verifier-withdrawal.functions.ts`, `tfn-marketplace.functions.ts` (tenant buy).
-3. `_verifier` layout + `/verify/auth` + `/verify/dashboard/*` routes.
-4. Update `/app/toll-free-verification` with the two-option UI.
-5. Admin `/admin/verifiers` route with the tabs above.
-6. Landing page section + CTA.
-7. Email templates.
-
-## Technical notes
-
-- Currency stored as NGN integers to match existing seller ledger; price and commission are configurable via `platform_settings`.
-- Random pool selection uses `ORDER BY random() LIMIT 1 FOR UPDATE SKIP LOCKED` inside the sale RPC to avoid double-selling under concurrency.
-- All money mutations are RPCs with `SECURITY DEFINER`; verifier UI never writes to `verifier_wallets` directly.
-- All new tables get `GRANT` blocks in the same migration per project conventions.
-
-Approve this and I'll ship it in order (migration first, then code).
+- Twilio subaccount setup, fee/payment flow, marketplace purchase flow, admin views — all remain as-is.
+- Email delivery / auth flows.

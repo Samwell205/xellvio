@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TollfreeWizard, type WizardForm } from "@/components/tollfree-wizard/TollfreeWizard";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
@@ -26,7 +28,7 @@ function NumbersPage() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [showManual, setShowManual] = useState(false);
-  const [assignedNotes, setAssignedNotes] = useState<Record<string, string>>({});
+  const [wizardTfnId, setWizardTfnId] = useState<string | null>(null);
 
   const claimMut = useMutation({
     mutationFn: () => claim(),
@@ -121,19 +123,8 @@ function NumbersPage() {
                     </div>
                   </div>
                   {r.status === "assigned" && (
-                    <div className="space-y-2 border-t border-slate-800 pt-3">
-                      <Label className="text-xs">Verification notes (business name, use case, sample messages)</Label>
-                      <Textarea
-                        rows={3}
-                        value={assignedNotes[r.id] ?? ""}
-                        onChange={(e) => setAssignedNotes((s) => ({ ...s, [r.id]: e.target.value }))}
-                        placeholder="Tell our team what this number will be used for"
-                      />
-                      <Button
-                        size="sm"
-                        disabled={submitAssignedMut.isPending || !(assignedNotes[r.id] ?? "").trim()}
-                        onClick={() => submitAssignedMut.mutate({ id: r.id, notes: assignedNotes[r.id] ?? "" })}
-                      >
+                    <div className="border-t border-slate-800 pt-3">
+                      <Button size="sm" onClick={() => setWizardTfnId(r.id)}>
                         Submit for verification
                       </Button>
                     </div>
@@ -144,6 +135,28 @@ function NumbersPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!wizardTfnId} onOpenChange={(o) => !o && setWizardTfnId(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Toll-free registration</DialogTitle>
+          </DialogHeader>
+          {wizardTfnId && (
+            <TollfreeWizard
+              submitting={submitAssignedMut.isPending}
+              onClose={() => setWizardTfnId(null)}
+              submitLabel="Submit for verification"
+              onSubmit={async (form: WizardForm) => {
+                await submitAssignedMut.mutateAsync({
+                  id: wizardTfnId,
+                  notes: JSON.stringify(form),
+                });
+                setWizardTfnId(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
