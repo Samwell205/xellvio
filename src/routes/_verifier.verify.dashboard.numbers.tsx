@@ -112,7 +112,7 @@ function NumbersPage() {
         <CardContent className="space-y-3">
           <p className="text-sm text-slate-400">
             One click assigns you a toll-free number to verify. We first check the platform pool for
-            an unclaimed number, and if none is available we buy a fresh toll-free from Twilio and
+            an unclaimed number, and if none is available we provision a fresh toll-free number and
             assign it to you automatically.
           </p>
           <p className="text-xs text-slate-400">
