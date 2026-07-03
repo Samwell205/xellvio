@@ -1320,16 +1320,20 @@ export type Database = {
           created_at: string
           friendly_rejection_reason: string | null
           id: string
+          in_review_at: string | null
           last_synced_at: string | null
           messaging_service_sid: string | null
           phone_number: string | null
           phone_sid: string | null
+          rejected_at: string | null
           rejection_reason: string | null
           sender_kind: string
+          submitted_at: string | null
           updated_at: string
           verification_payload: Json | null
           verification_sid: string | null
           verification_status: string
+          verified_at: string | null
         }
         Insert: {
           account_id: string
@@ -1337,16 +1341,20 @@ export type Database = {
           created_at?: string
           friendly_rejection_reason?: string | null
           id?: string
+          in_review_at?: string | null
           last_synced_at?: string | null
           messaging_service_sid?: string | null
           phone_number?: string | null
           phone_sid?: string | null
+          rejected_at?: string | null
           rejection_reason?: string | null
           sender_kind: string
+          submitted_at?: string | null
           updated_at?: string
           verification_payload?: Json | null
           verification_sid?: string | null
           verification_status?: string
+          verified_at?: string | null
         }
         Update: {
           account_id?: string
@@ -1354,16 +1362,20 @@ export type Database = {
           created_at?: string
           friendly_rejection_reason?: string | null
           id?: string
+          in_review_at?: string | null
           last_synced_at?: string | null
           messaging_service_sid?: string | null
           phone_number?: string | null
           phone_sid?: string | null
+          rejected_at?: string | null
           rejection_reason?: string | null
           sender_kind?: string
+          submitted_at?: string | null
           updated_at?: string
           verification_payload?: Json | null
           verification_sid?: string | null
           verification_status?: string
+          verified_at?: string | null
         }
         Relationships: [
           {
@@ -1561,6 +1573,30 @@ export type Database = {
         }
         Relationships: []
       }
+      twilio_webhook_events: {
+        Row: {
+          body_hash: string
+          id: string
+          received_at: string
+          status: string | null
+          verification_sid: string | null
+        }
+        Insert: {
+          body_hash: string
+          id?: string
+          received_at?: string
+          status?: string | null
+          verification_sid?: string | null
+        }
+        Update: {
+          body_hash?: string
+          id?: string
+          received_at?: string
+          status?: string | null
+          verification_sid?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1665,17 +1701,21 @@ export type Database = {
           country: string
           created_at: string
           id: string
+          in_review_at: string | null
           notes: string | null
           payout_ngn: number | null
           phone_number: string
+          rejected_at: string | null
           rejection_reason: string | null
           sale_price_ngn: number | null
           sold_at: string | null
           sold_to_account_id: string | null
           status: Database["public"]["Enums"]["verifier_tfn_status"]
+          submitted_at: string | null
           twilio_phone_sid: string | null
           twilio_verification_sid: string | null
           updated_at: string
+          verified_at: string | null
           verifier_id: string
         }
         Insert: {
@@ -1683,17 +1723,21 @@ export type Database = {
           country?: string
           created_at?: string
           id?: string
+          in_review_at?: string | null
           notes?: string | null
           payout_ngn?: number | null
           phone_number: string
+          rejected_at?: string | null
           rejection_reason?: string | null
           sale_price_ngn?: number | null
           sold_at?: string | null
           sold_to_account_id?: string | null
           status?: Database["public"]["Enums"]["verifier_tfn_status"]
+          submitted_at?: string | null
           twilio_phone_sid?: string | null
           twilio_verification_sid?: string | null
           updated_at?: string
+          verified_at?: string | null
           verifier_id: string
         }
         Update: {
@@ -1701,17 +1745,21 @@ export type Database = {
           country?: string
           created_at?: string
           id?: string
+          in_review_at?: string | null
           notes?: string | null
           payout_ngn?: number | null
           phone_number?: string
+          rejected_at?: string | null
           rejection_reason?: string | null
           sale_price_ngn?: number | null
           sold_at?: string | null
           sold_to_account_id?: string | null
           status?: Database["public"]["Enums"]["verifier_tfn_status"]
+          submitted_at?: string | null
           twilio_phone_sid?: string | null
           twilio_verification_sid?: string | null
           updated_at?: string
+          verified_at?: string | null
           verifier_id?: string
         }
         Relationships: [
