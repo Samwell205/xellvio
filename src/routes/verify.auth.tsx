@@ -33,6 +33,7 @@ function VerifierAuth() {
   const [signupCode, setSignupCode] = useState("");
 
   const [busy, setBusy] = useState(false);
+  const checkEmail = useServerFn(checkVerifierEmailAvailable);
 
   async function sendSigninCode() {
     setBusy(true);
