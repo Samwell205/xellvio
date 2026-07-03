@@ -221,3 +221,41 @@ function NumbersPage() {
     </div>
   );
 }
+
+function StatusTimeline({ row }: { row: any }) {
+  const steps: Array<{ key: string; label: string; at: string | null }> = [
+    { key: "submitted", label: "Submitted", at: row.submitted_at ?? null },
+    { key: "in_review", label: "In review", at: row.in_review_at ?? null },
+    { key: "verified", label: "Verified", at: row.verified_at ?? null },
+    { key: "rejected", label: "Rejected", at: row.rejected_at ?? null },
+  ].filter((s) => (s.key === "rejected" ? !!row.rejected_at : s.key !== "rejected"))
+   .concat(row.rejected_at ? [{ key: "rejected", label: "Rejected", at: row.rejected_at }] : []);
+
+  return (
+    <div className="border-t border-slate-800 pt-3">
+      <div className="text-xs text-slate-400 mb-2">Timeline</div>
+      <ol className="space-y-1">
+        {steps.map((s) => (
+          <li key={s.key} className="flex items-center gap-2 text-xs">
+            <span
+              className={`inline-block size-2 rounded-full ${
+                s.at
+                  ? s.key === "rejected"
+                    ? "bg-red-500"
+                    : s.key === "verified"
+                    ? "bg-green-500"
+                    : "bg-blue-500"
+                  : "bg-slate-700"
+              }`}
+            />
+            <span className={s.at ? "text-slate-200" : "text-slate-500"}>{s.label}</span>
+            <span className="text-slate-500 ml-auto">
+              {s.at ? new Date(s.at).toLocaleString() : "—"}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
