@@ -273,19 +273,13 @@ export async function ensureMessagingProfileForAccount(accountId: string): Promi
     .maybeSingle();
   if (error || !acct) throw new Error("Account not found");
 
-  const existing = acct.telnyx_messaging_profile_id ?? acct.twilio_subaccount_sid ?? null;
-  if (existing && existing.startsWith("40")) {
-    // Telnyx messaging profile IDs are UUIDs beginning with "40..." for some
-    // resources; simpler: just verify by fetching.
-    const p = await getMessagingProfile(existing);
+  const candidate = acct.telnyx_messaging_profile_id ?? null;
+  if (isValidTelnyxUuid(candidate)) {
+    const p = await getMessagingProfile(candidate);
     if (p) {
-      if (!acct.telnyx_messaging_profile_id) {
-        await supabaseAdmin
-          .from("accounts")
-          .update({ telnyx_messaging_profile_id: existing, telnyx_messaging_profile_created_at: new Date().toISOString() })
-          .eq("id", accountId);
-      }
-      return existing;
+      // Make sure existing profiles have whitelisted destinations set.
+      try { await updateMessagingProfileWhitelist(candidate); } catch { /* non-fatal */ }
+      return candidate;
     }
   }
 
@@ -296,8 +290,6 @@ export async function ensureMessagingProfileForAccount(accountId: string): Promi
     .update({
       telnyx_messaging_profile_id: profile.id,
       telnyx_messaging_profile_created_at: new Date().toISOString(),
-      // Mirror into legacy columns so untouched code paths still work.
-      twilio_subaccount_sid: profile.id,
       onboarding_status: "sender_pending",
     })
     .eq("id", accountId);
