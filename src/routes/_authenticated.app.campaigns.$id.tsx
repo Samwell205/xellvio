@@ -795,3 +795,95 @@ function PhonePreview({ body, mediaUrl }: { body: string; mediaUrl?: string | nu
     </div>
   );
 }
+
+function ProgressPanel({
+  data,
+  status,
+  isFetching,
+}: {
+  data?: { total: number; queued: number; sending: number; sent: number; delivered: number; failed: number };
+  status?: string;
+  isFetching?: boolean;
+}) {
+  if (!data || data.total === 0) return null;
+  const { total, queued, sending, sent, delivered, failed } = data;
+  const inFlight = queued + sending;
+  const processed = total - inFlight;
+  const processedPct = total > 0 ? Math.round((processed / total) * 100) : 0;
+  const isDraining = inFlight > 0 && (status === "sending" || status === "queued");
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="font-semibold flex items-center gap-2">
+            <Activity className="size-4 text-primary" /> Campaign progress
+          </div>
+          {isDraining && (
+            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+              <RefreshCw className={`size-3 ${isFetching ? "animate-spin" : ""}`} />
+              sending in progress · {inFlight.toLocaleString()} remaining
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {processed.toLocaleString()} / {total.toLocaleString()} processed
+        </div>
+      </div>
+
+      {/* Segmented progress bar */}
+      <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
+        <Seg pct={(delivered / total) * 100} className="bg-emerald-500" />
+        <Seg pct={((sent - delivered) / total) * 100} className="bg-sky-500" />
+        <Seg pct={(sending / total) * 100} className="bg-amber-500 animate-pulse" />
+        <Seg pct={(failed / total) * 100} className="bg-destructive" />
+        <Seg pct={(queued / total) * 100} className="bg-muted-foreground/30" />
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
+        <ProgTile label="Queued" value={queued} dotClass="bg-muted-foreground/40" />
+        <ProgTile label="Sending" value={sending} dotClass="bg-amber-500" pulse={sending > 0} />
+        <ProgTile label="Sent" value={sent} dotClass="bg-sky-500" />
+        <ProgTile label="Delivered" value={delivered} dotClass="bg-emerald-500" />
+        <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
+      </div>
+
+      <div className="text-[11px] text-muted-foreground mt-3">
+        {isDraining
+          ? `Processing ~200 messages/minute. ${processedPct}% complete — you can leave this page and come back later.`
+          : inFlight === 0
+            ? "All messages have been processed."
+            : `${processedPct}% complete.`}
+      </div>
+    </Card>
+  );
+}
+
+function Seg({ pct, className }: { pct: number; className: string }) {
+  const w = Math.max(0, Math.min(100, pct));
+  if (w === 0) return null;
+  return <div className={className} style={{ width: `${w}%` }} />;
+}
+
+function ProgTile({
+  label,
+  value,
+  dotClass,
+  pulse,
+}: {
+  label: string;
+  value: number;
+  dotClass: string;
+  pulse?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span className={`inline-block size-2 rounded-full ${dotClass} ${pulse ? "animate-pulse" : ""}`} />
+        {label}
+      </div>
+      <div className="text-xl font-bold mt-1 tabular-nums">{value.toLocaleString()}</div>
+    </div>
+  );
+}
+
