@@ -81,32 +81,39 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const { ensureMessagingProfileForAccount, searchAvailableNumbers, orderNumber } = await import("./telnyx.server");
     const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
 
-    // Charge the one-time $5 setup fee at submit time before buying a number
-    // or hitting carrier verification. If the number purchase fails during this
-    // same submission, refund it below so the tenant can retry cleanly.
+    // One-time $5 setup fee. If the tenant has enough credits, charge it now.
+    // If they don't, defer the charge (record it as due) so provisioning is
+    // never blocked by a $0 balance — it'll be auto-settled on their next top-up.
     const { data: acct } = await supabaseAdmin
       .from("accounts")
-      .select("tollfree_setup_fee_paid_at, credit_balance")
+      .select("tollfree_setup_fee_paid_at, tollfree_setup_fee_due_cents, credit_balance")
       .eq("id", userId)
       .maybeSingle();
     let chargedSetupFee = false;
+    let deferredFee = false;
     if (!acct?.tollfree_setup_fee_paid_at) {
-      if (Number(acct?.credit_balance ?? 0) < TOLLFREE_SETUP_FEE_USD) {
-        throw new Error(`Insufficient credit balance. Top up at least $${TOLLFREE_SETUP_FEE_USD} to submit toll-free verification.`);
+      if (Number(acct?.credit_balance ?? 0) >= TOLLFREE_SETUP_FEE_USD) {
+        const { error: debitErr } = await supabaseAdmin.rpc("debit_account", {
+          _account_id: userId,
+          _amount: TOLLFREE_SETUP_FEE_USD,
+          _campaign_id: undefined as any,
+          _description: "Toll-free verification setup fee",
+        });
+        if (debitErr) throw new Error(debitErr.message);
+        await supabaseAdmin
+          .from("accounts")
+          .update({ tollfree_setup_fee_paid_at: new Date().toISOString(), tollfree_setup_fee_due_cents: 0 })
+          .eq("id", userId);
+        chargedSetupFee = true;
+      } else if (!acct?.tollfree_setup_fee_due_cents || acct.tollfree_setup_fee_due_cents < TOLLFREE_SETUP_FEE_USD * 100) {
+        await supabaseAdmin
+          .from("accounts")
+          .update({ tollfree_setup_fee_due_cents: TOLLFREE_SETUP_FEE_USD * 100 })
+          .eq("id", userId);
+        deferredFee = true;
       }
-      const { error: debitErr } = await supabaseAdmin.rpc("debit_account", {
-        _account_id: userId,
-        _amount: TOLLFREE_SETUP_FEE_USD,
-        _campaign_id: undefined as any,
-        _description: "Toll-free verification setup fee",
-      });
-      if (debitErr) throw new Error(debitErr.message);
-      await supabaseAdmin
-        .from("accounts")
-        .update({ tollfree_setup_fee_paid_at: new Date().toISOString() })
-        .eq("id", userId);
-      chargedSetupFee = true;
     }
+    void deferredFee;
 
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
     let { data: asset } = await supabaseAdmin

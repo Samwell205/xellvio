@@ -143,6 +143,7 @@ export type Database = {
           telnyx_messaging_profile_id: string | null
           terms_accepted_at: string | null
           terms_url: string | null
+          tollfree_setup_fee_due_cents: number
           tollfree_setup_fee_paid_at: string | null
           twilio_subaccount_auth_token_enc: string | null
           twilio_subaccount_sid: string | null
@@ -192,6 +193,7 @@ export type Database = {
           telnyx_messaging_profile_id?: string | null
           terms_accepted_at?: string | null
           terms_url?: string | null
+          tollfree_setup_fee_due_cents?: number
           tollfree_setup_fee_paid_at?: string | null
           twilio_subaccount_auth_token_enc?: string | null
           twilio_subaccount_sid?: string | null
@@ -241,6 +243,7 @@ export type Database = {
           telnyx_messaging_profile_id?: string | null
           terms_accepted_at?: string | null
           terms_url?: string | null
+          tollfree_setup_fee_due_cents?: number
           tollfree_setup_fee_paid_at?: string | null
           twilio_subaccount_auth_token_enc?: string | null
           twilio_subaccount_sid?: string | null

@@ -591,7 +591,7 @@ function BusinessAddressStep({ form, update }: StepProps) {
 function AssignNumbersStep({
   reservedNumber, verificationStatus, feeAmount, creditBalance, feePaid,
 }: { reservedNumber?: string | null; verificationStatus?: string | null; feeAmount: number; creditBalance: number; feePaid: boolean }) {
-  const canSubmit = feePaid || creditBalance >= feeAmount;
+  const willDeferFee = !feePaid && creditBalance < feeAmount;
   return (
     <>
       <StepHeader
@@ -635,7 +635,11 @@ function AssignNumbersStep({
       </div>
       <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
         Submit this wizard to reserve a number and start verification. The one-time ${feeAmount} setup fee is charged from credits at submit time.
-        {!canSubmit && <span className="block pt-1 text-destructive">Current balance is ${creditBalance.toFixed(2)}. Top up before submitting.</span>}
+        {willDeferFee && (
+          <span className="block pt-1">
+            Your balance is ${creditBalance.toFixed(2)}. We'll still submit your request now and collect the ${feeAmount} fee automatically from your next top-up.
+          </span>
+        )}
       </div>
     </>
   );
