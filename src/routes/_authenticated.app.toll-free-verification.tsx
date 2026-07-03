@@ -9,6 +9,7 @@ import {
   getTollfreeFeeStatus,
   payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
+import { getTfnMarketplaceOffer, purchaseTfnFromMarketplace } from "@/lib/tfn-marketplace.functions";
 import { uploadOptInProof } from "@/lib/opt-in-proof.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "@tanstack/react-router";
@@ -386,6 +387,8 @@ function TollfreeVerificationPage() {
         </div>
         
       </div>
+
+      <MarketplaceBuyCard />
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
@@ -1229,3 +1232,69 @@ function OptInProofUpload({
     </div>
   );
 }
+
+function MarketplaceBuyCard() {
+  const offerFn = useServerFn(getTfnMarketplaceOffer);
+  const buyFn = useServerFn(purchaseTfnFromMarketplace);
+  const qc = useQueryClient();
+  const { data: offer, isLoading } = useQuery({
+    queryKey: ["tfn-marketplace-offer"],
+    queryFn: () => offerFn(),
+    refetchInterval: 60_000,
+  });
+
+  const buy = useMutation({
+    mutationFn: () => buyFn(),
+    onSuccess: (r: any) => {
+      toast.success(`Number purchased: ${r.phone_number}`);
+      qc.invalidateQueries({ queryKey: ["tfn-marketplace-offer"] });
+      qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  if (isLoading || !offer) return null;
+
+  const available = offer.available_count > 0;
+
+  return (
+    <Card className="border-primary/40">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <BadgeCheck className="size-5 text-primary" />
+          Skip the wait — buy a pre-verified toll-free number
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Get an already-verified toll-free number from our marketplace and start
+          sending immediately. No forms, no carrier review, no waiting.
+        </p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="text-lg font-semibold">
+            ₦{Number(offer.price_ngn).toLocaleString()}
+          </div>
+          <Badge variant={available ? "default" : "outline"}>
+            {available ? `${offer.available_count} available` : "Sold out — check back soon"}
+          </Badge>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            disabled={!available || buy.isPending}
+            onClick={() => buy.mutate()}
+          >
+            {buy.isPending ? (
+              <><Loader2 className="size-4 mr-2 animate-spin" />Purchasing…</>
+            ) : (
+              "Buy a verified number now"
+            )}
+          </Button>
+          <span className="text-xs text-muted-foreground self-center">
+            Prefer verifying your own number? Continue below.
+          </span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
