@@ -102,7 +102,18 @@ function TollfreeVerificationPage() {
   const localSubmissionFailure = status === "rejected" && !asset?.verification_sid;
   const isLocked = status === "submitted" || status === "in_review" || status === "verified";
 
-  const initialForm = useMemo(() => normalizePayload(payload), [payload]);
+  const accountAutofill = useQuery({
+    queryKey: ["tollfree-autofill-account"],
+    queryFn: async () =>
+      (await supabase
+        .from("accounts")
+        .select("legal_business_name,business_address,website_url,contact_email,full_name,phone,use_case_description,sample_message,privacy_policy_url,terms_url,monthly_volume_estimate")
+        .maybeSingle()).data,
+  });
+  const initialForm = useMemo(
+    () => ({ ...accountAutofillToForm(accountAutofill.data), ...normalizePayload(payload) }),
+    [payload, accountAutofill.data],
+  );
 
   const submitMut = useMutation({
     mutationFn: (input: any) => submit({ data: input }),
