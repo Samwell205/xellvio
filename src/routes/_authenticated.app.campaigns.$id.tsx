@@ -774,11 +774,15 @@ function RecipientActivity({
                   <TableHead>Segments</TableHead>
                   <TableHead>Cost</TableHead>
                   <TableHead>Sent</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {shown.slice(0, 300).map((m: any) => {
                   const name = [m.profile?.first_name, m.profile?.last_name].filter(Boolean).join(" ");
+                  const isFailed = ["failed", "undelivered"].includes(m.status);
+                  const retryable =
+                    isFailed && canRetry && m.error_code !== "cancelled_by_user";
                   return (
                     <TableRow key={m.id}>
                       <TableCell>
@@ -795,12 +799,26 @@ function RecipientActivity({
                       <TableCell className="text-xs text-muted-foreground">
                         {m.sent_at ? new Date(m.sent_at).toLocaleString() : "—"}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {retryable && onRetry && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onRetry(m.id)}
+                            disabled={retryingId === m.id}
+                            title="Re-queue this message for another attempt."
+                          >
+                            <RotateCw className={`size-3 ${retryingId === m.id ? "animate-spin" : ""}`} />
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
           )}
+
         </Card>
       </div>
     </div>
