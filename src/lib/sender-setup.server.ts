@@ -75,6 +75,8 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
       if (kind === "sender_id") {
         const sid = senderIdFromName(acct.legal_business_name || "Sender", data.customSenderId);
+        const { ALPHA_SENDER_REQUIRES_REGISTRATION } = await import("./telnyx.server");
+        const needsReg = ALPHA_SENDER_REQUIRES_REGISTRATION.has(cc);
         await supabaseAdmin.from("sender_assets").insert({
           account_id: userId,
           country_code: cc,
@@ -83,14 +85,16 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
           phone_sid: null,
           messaging_service_sid: messagingProfileId,
           telnyx_messaging_profile_id: messagingProfileId,
-          verification_status: "verified",
+          verification_status: needsReg ? "requires_registration" : "verified",
         });
-        await setPrimarySender({
-          subaccount_phone_number: sid,
-          subaccount_messaging_service_sid: messagingProfileId,
-          onboarding_status: "active",
-        });
-        created.push(`${cc}:sender_id`);
+        if (!needsReg) {
+          await setPrimarySender({
+            subaccount_phone_number: sid,
+            subaccount_messaging_service_sid: messagingProfileId,
+            onboarding_status: "active",
+          });
+        }
+        created.push(needsReg ? `${cc}:requires_registration` : `${cc}:sender_id`);
         continue;
       }
 
