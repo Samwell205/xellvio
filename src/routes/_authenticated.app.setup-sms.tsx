@@ -174,6 +174,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
   );
   const [busy, setBusy] = useState(false);
   const [infoCountry, setInfoCountry] = useState<string | null>(null);
+  const [regCountry, setRegCountry] = useState<string | null>(null);
 
 
   function toggleCountry(cc: string) {
