@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TollfreeWizard, type WizardForm } from "@/components/tollfree-wizard/TollfreeWizard";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
