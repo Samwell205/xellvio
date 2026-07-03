@@ -433,17 +433,15 @@ export const adminAssignTwilioNumberToAccount = createServerFn({ method: "POST" 
       if (existing.account_id === data.account_id) return { ok: true, already: true };
       throw new Error("This number is already assigned to another tenant");
     }
-    const { error } = await supabaseAdmin.from("sender_assets").insert({
-      account_id: data.account_id,
-      country_code: data.country,
-      sender_kind: "toll_free",
-      phone_number: data.phone_number,
-      verification_status: "verified",
-      last_synced_at: new Date().toISOString(),
+    const { wireAssignedTollfreeForTenant } = await import("./assign-tfn-to-tenant.server");
+    await wireAssignedTollfreeForTenant({
+      accountId: data.account_id,
+      phoneNumber: data.phone_number,
+      countryCode: data.country,
     });
-    if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 export const adminUnassignSenderAsset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
