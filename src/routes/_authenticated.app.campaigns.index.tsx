@@ -105,6 +105,11 @@ function CampaignsPage() {
                   <td className="py-3 px-4 text-muted-foreground">{c.schedule_at ? new Date(c.schedule_at).toLocaleString() : "—"}</td>
                   <td className="py-3 px-4 text-muted-foreground">{new Date(c.created_at).toLocaleString()}</td>
                   <td className="py-3 px-4 text-right">
+                    {c.status !== "draft" && (
+                      <Link to="/app/campaigns/$id/report" params={{ id: c.id }}>
+                        <Button variant="ghost" size="sm" className="mr-1">Report</Button>
+                      </Link>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -115,6 +120,7 @@ function CampaignsPage() {
                       <Trash2 className="size-4" />
                     </Button>
                   </td>
+
                 </tr>
               ))}
             </tbody>
