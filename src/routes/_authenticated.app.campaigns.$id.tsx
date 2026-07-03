@@ -102,11 +102,16 @@ function CampaignReport() {
     queryFn: async () => {
       const base = () =>
         supabase.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", id);
-      const [total, queued, sending, sent, delivered, failed] = await Promise.all([
+      // "Sent" = handed to carrier and NO error yet. "Failed" includes
+      // status=failed/undelivered PLUS rows that Twilio marked `sent` with an
+      // error code (carrier rejection / silent DLR failure) — those are not
+      // real deliveries and should not inflate the Sent bucket.
+      const [total, queued, sending, sentClean, sentErr, delivered, failedRaw] = await Promise.all([
         base(),
-        base().eq("status", "queued"),
+        base().in("status", ["queued", "pending"]),
         base().eq("status", "sending"),
-        base().eq("status", "sent"),
+        base().eq("status", "sent").is("error_code", null),
+        base().eq("status", "sent").not("error_code", "is", null),
         base().eq("status", "delivered"),
         base().in("status", ["failed", "undelivered"]),
       ]);
@@ -114,12 +119,13 @@ function CampaignReport() {
         total: total.count ?? 0,
         queued: queued.count ?? 0,
         sending: sending.count ?? 0,
-        sent: sent.count ?? 0,
+        sent: sentClean.count ?? 0,
         delivered: delivered.count ?? 0,
-        failed: failed.count ?? 0,
+        failed: (failedRaw.count ?? 0) + (sentErr.count ?? 0),
       };
     },
   });
+
 
   // Failure breakdown by error_code (drives the "Failure reasons" panel and
   // the per-reason retry button). Sender/provider is inferred from
