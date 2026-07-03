@@ -425,7 +425,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     z.object({
       id: z.string().uuid(),
       notes: z.string().max(10000).optional(),
-      payload: z.record(z.any()).optional(),
+      payload: z.any().optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
