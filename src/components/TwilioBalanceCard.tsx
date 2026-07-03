@@ -152,7 +152,7 @@ export function TwilioBalanceCard() {
       </div>
 
       <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-        <strong>Tip:</strong> Enable <a className="underline" href="https://console.twilio.com/us1/billing/manage-billing/recharge" target="_blank" rel="noreferrer">Auto-Recharge</a> so the provider automatically charges your card when your balance drops below your chosen threshold. This card is your safety net in case Auto-Recharge fails or is off.
+        <strong>Tip:</strong> Enable <a className="underline" href="https://portal.telnyx.com/#/app/billing/auto-recharge" target="_blank" rel="noreferrer">Auto-Recharge</a> in the Telnyx Portal so your account is topped up automatically when your balance drops below your chosen threshold. This card is your safety net in case Auto-Recharge fails or is off.
       </div>
 
       {pausedCount > 0 && (
