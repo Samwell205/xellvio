@@ -1,35 +1,29 @@
-// Server-only admin notification helpers.
-// Sends SMS via the master Twilio account using the workspace MessagingServiceSid.
+// Server-only admin SMS notification via Telnyx.
 
 export const ADMIN_NOTIFY_PHONE = "+2347056089052";
 export const ADMIN_NOTIFY_EMAIL = "admin@xellvio.com";
 
-const TWILIO_API = "https://api.twilio.com/2010-04-01";
-
 export async function sendAdminSms(body: string): Promise<void> {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const msSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-  if (!sid || !token || !msSid) {
-    console.warn("[admin-notify] Twilio env not configured; skipping SMS");
+  if (!process.env.TELNYX_API_KEY) {
+    console.warn("[admin-notify] TELNYX_API_KEY not configured; skipping SMS");
     return;
   }
-  const auth = "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
-  const params = new URLSearchParams({
-    To: ADMIN_NOTIFY_PHONE,
-    MessagingServiceSid: msSid,
-    Body: body.slice(0, 1500),
-  });
-  const res = await fetch(`${TWILIO_API}/Accounts/${sid}/Messages.json`, {
-    method: "POST",
-    headers: {
-      Authorization: auth,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: params.toString(),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("[admin-notify] Twilio SMS failed", res.status, text);
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: adminAcct } = await supabaseAdmin
+      .from("accounts")
+      .select("telnyx_messaging_profile_id, subaccount_phone_number")
+      .not("telnyx_messaging_profile_id", "is", null)
+      .limit(1)
+      .maybeSingle();
+    const { sendMessage } = await import("./telnyx.server");
+    await sendMessage({
+      to: ADMIN_NOTIFY_PHONE,
+      text: body.slice(0, 1500),
+      messagingProfileId: adminAcct?.telnyx_messaging_profile_id ?? undefined,
+      from: adminAcct?.subaccount_phone_number ?? undefined,
+    });
+  } catch (e) {
+    console.error("[admin-notify] Telnyx SMS failed", e);
   }
 }

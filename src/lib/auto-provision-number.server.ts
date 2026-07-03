@@ -1,41 +1,13 @@
-// Server-only helpers to auto-review and auto-purchase a US/CA number on
-// Twilio when a customer submits a number request. Short codes are never
-// auto-provisioned (carrier process is weeks-long and manual).
+// Auto-buy a US/CA toll-free or local number on Telnyx and attach it to a
+// tenant's Messaging Profile. Replaces the previous Twilio-based helper.
 
-const TWILIO_API = "https://api.twilio.com/2010-04-01";
+import {
+  searchAvailableNumbers,
+  orderNumber,
+  ensureMessagingProfileForAccount,
+  safeTelnyxCall,
+} from "./telnyx.server";
 
-function masterAuth() {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  if (!sid || !token) throw new Error("Twilio master credentials not configured");
-  return { sid, token };
-}
-
-function basic(sid: string, token: string) {
-  return "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
-}
-
-async function twilio<T = any>(path: string, opts: { method?: string; body?: Record<string, string> } = {}): Promise<T> {
-  const { sid, token } = masterAuth();
-  const init: RequestInit = {
-    method: opts.method ?? "GET",
-    headers: {
-      Authorization: basic(sid, token),
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  };
-  if (opts.body) init.body = new URLSearchParams(opts.body).toString();
-  const res = await fetch(`${TWILIO_API}/Accounts/${sid}${path}`, init);
-  const json: any = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(`Twilio ${res.status}: ${json?.message ?? "request failed"}`);
-    (err as any).code = json?.code;
-    throw err;
-  }
-  return json as T;
-}
-
-// Conservative content rules. If matched, request stays pending for human review.
 const BANNED_PATTERNS = [
   /\b(loan|payday|bitcoin|crypto|forex|casino|gambling|porn|escort|cannabis|cbd|kratom|weed)\b/i,
   /\b(guaranteed (income|profit)|get rich|click here to win)\b/i,
@@ -51,13 +23,11 @@ export type AutoReviewInput = {
   expected_monthly_volume: number;
 };
 
-export type AutoReviewResult =
-  | { ok: true }
-  | { ok: false; reason: string };
+export type AutoReviewResult = { ok: true } | { ok: false; reason: string };
 
 export function autoReview(input: AutoReviewInput): AutoReviewResult {
   if (input.number_type === "short_code") {
-    return { ok: false, reason: "Short codes require a manual carrier registration (4–8 weeks). Our team will follow up." };
+    return { ok: false, reason: "Short codes require a manual carrier registration and cannot be auto-provisioned." };
   }
   if (input.use_case.trim().length < 30) {
     return { ok: false, reason: "Use case is too short for automatic approval — please describe your messaging program in more detail." };
@@ -76,31 +46,49 @@ export function autoReview(input: AutoReviewInput): AutoReviewResult {
   return { ok: true };
 }
 
-type Available = { phone_number: string; friendly_name?: string };
-
-async function searchAvailable(country: "US" | "CA", numberType: "toll_free" | "ten_dlc"): Promise<Available | null> {
-  const bucket = numberType === "toll_free" ? "TollFree" : "Local";
-  const qs = new URLSearchParams({ SmsEnabled: "true", PageSize: "5" }).toString();
-  const result = await twilio<{ available_phone_numbers: Available[] }>(
-    `/AvailablePhoneNumbers/${country}/${bucket}.json?${qs}`,
+/**
+ * Buy a fresh number on Telnyx and attach it to the given account's Messaging
+ * Profile. Returns provider identifiers we persist for later reference.
+ */
+export async function autoPurchaseNumber(input: {
+  country: "US" | "CA";
+  number_type: "toll_free" | "ten_dlc";
+  accountId: string;
+  friendlyName: string;
+}): Promise<{ id: string; phone_number: string; messaging_profile_id: string }> {
+  const messagingProfileId = await ensureMessagingProfileForAccount(input.accountId);
+  const numberType = input.number_type === "toll_free" ? "toll-free" : "local";
+  const available = await safeTelnyxCall(
+    "search_numbers",
+    { userId: input.accountId, messagingProfileId },
+    () => searchAvailableNumbers({ country: input.country, numberType, limit: 5 }),
   );
-  return result.available_phone_numbers?.[0] ?? null;
-}
+  const pick = available[0];
+  if (!pick) throw new Error(`No ${input.number_type === "toll_free" ? "toll-free" : "local"} numbers available right now in ${input.country}.`);
 
-export async function autoPurchaseNumber(input: { country: "US" | "CA"; number_type: "toll_free" | "ten_dlc"; friendlyName: string }) {
-  const available = await searchAvailable(input.country, input.number_type);
-  if (!available) throw new Error(`No ${input.number_type === "toll_free" ? "toll-free" : "local"} numbers available right now in ${input.country}.`);
+  const order = await safeTelnyxCall(
+    "order_number",
+    { userId: input.accountId, messagingProfileId },
+    () => orderNumber({ phoneNumber: pick.phone_number, messagingProfileId }),
+  );
+  const purchased = order.phone_numbers?.[0];
+  if (!purchased) throw new Error("Telnyx accepted the order but returned no phone number");
 
-  const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
-  const body: Record<string, string> = {
-    PhoneNumber: available.phone_number,
-    FriendlyName: input.friendlyName.slice(0, 64),
-    SmsUrl: `${base}/api/public/twilio-inbound`,
-    StatusCallback: `${base}/api/public/twilio-status`,
+  // Persist to numbers table (mirror + audit)
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin.from("numbers").upsert({
+    account_id: input.accountId,
+    phone_number: purchased.phone_number,
+    telnyx_number_id: purchased.id,
+    telnyx_messaging_profile_id: messagingProfileId,
+    country_code: input.country,
+    number_type: input.number_type,
+    status: "active",
+  }, { onConflict: "phone_number" });
+
+  return {
+    id: purchased.id,
+    phone_number: purchased.phone_number,
+    messaging_profile_id: messagingProfileId,
   };
-  const purchased = await twilio<{ sid: string; phone_number: string }>(
-    `/IncomingPhoneNumbers.json`,
-    { method: "POST", body },
-  );
-  return purchased;
 }

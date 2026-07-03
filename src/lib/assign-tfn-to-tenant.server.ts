@@ -1,43 +1,7 @@
-// Wire a Twilio-approved toll-free number to a tenant so it can actually send SMS.
-// Called by both admin assign flows (marketplace pool + Twilio approved list).
-//
-// Steps:
-//   1) Look up the IncomingPhoneNumber SID on Twilio (by phone number).
-//   2) Create a MessagingService in the main Twilio account with our webhooks.
-//   3) Attach the phone number SID to that MessagingService.
-//   4) Upsert sender_assets so the tenant sees it as a verified sender.
-//   5) Mark the tenant account active with this number as the default sender.
-
-const TWILIO_API = "https://api.twilio.com/2010-04-01";
-const MESSAGING_API = "https://messaging.twilio.com/v1";
-
-function basic(sid: string, token: string) {
-  return "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
-}
-
-async function twilio<T = any>(
-  url: string,
-  opts: { method?: string; sid: string; token: string; body?: Record<string, string> },
-): Promise<T> {
-  const init: RequestInit = {
-    method: opts.method ?? "GET",
-    headers: {
-      Authorization: basic(opts.sid, opts.token),
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  };
-  if (opts.body) {
-    const p = new URLSearchParams();
-    for (const [k, v] of Object.entries(opts.body)) p.append(k, v);
-    init.body = p.toString();
-  }
-  const res = await fetch(url, init);
-  const json: any = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(`Twilio ${res.status}: ${json?.message ?? "request failed"}`);
-  }
-  return json as T;
-}
+// Wire a Telnyx toll-free number to a tenant so they can send SMS.
+// Called by admin assign flows. On Telnyx the concept of "MessagingService"
+// is a "Messaging Profile" — we ensure the tenant has one, then reassign the
+// number's messaging_profile_id to that tenant's profile.
 
 export async function wireAssignedTollfreeForTenant(opts: {
   accountId: string;
@@ -45,88 +9,38 @@ export async function wireAssignedTollfreeForTenant(opts: {
   countryCode?: string;
 }): Promise<{ phone_sid: string | null; messaging_service_sid: string | null }> {
   const country = (opts.countryCode ?? "US").toUpperCase();
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  if (!sid || !token) throw new Error("Twilio credentials are not configured");
+  if (!process.env.TELNYX_API_KEY) throw new Error("TELNYX_API_KEY is not configured");
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { ensureMessagingProfileForAccount, getPhoneNumberByE164, reassignNumberToProfile, safeTelnyxCall } =
+    await import("./telnyx.server");
 
-  // 1) Look up phone SID
-  let phoneSid: string | null = null;
+  const messagingProfileId = await ensureMessagingProfileForAccount(opts.accountId);
+
+  let phoneId: string | null = null;
   try {
-    const list = await twilio<{ incoming_phone_numbers: Array<{ sid: string; phone_number: string }> }>(
-      `${TWILIO_API}/Accounts/${sid}/IncomingPhoneNumbers.json?PhoneNumber=${encodeURIComponent(opts.phoneNumber)}`,
-      { sid, token },
-    );
-    phoneSid = list.incoming_phone_numbers?.[0]?.sid ?? null;
+    const found = await getPhoneNumberByE164(opts.phoneNumber);
+    phoneId = found?.id ?? null;
+    if (phoneId) {
+      await safeTelnyxCall(
+        "reassign_number",
+        { userId: opts.accountId, messagingProfileId },
+        () => reassignNumberToProfile({ phoneNumberId: phoneId!, messagingProfileId }),
+      );
+    }
   } catch (e) {
-    console.warn("[assign-tfn] IncomingPhoneNumbers lookup failed", e);
+    console.warn("[assign-tfn] Telnyx lookup/reassign failed", e);
   }
 
-  // 2) Reuse an existing MessagingService that already owns this number, or create one.
-  const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
-  let msSid: string | null = null;
-  if (phoneSid) {
-    try {
-      let url: string | null = `${MESSAGING_API}/Services?PageSize=50`;
-      let safety = 20;
-      while (url && safety-- > 0 && !msSid) {
-        const page: any = await twilio<any>(url, { sid, token });
-        for (const s of page.services ?? []) {
-          const pr = await twilio<any>(
-            `${MESSAGING_API}/Services/${s.sid}/PhoneNumbers?PageSize=50`,
-            { sid, token },
-          );
-          if ((pr.phone_numbers ?? []).some((p: any) => p.sid === phoneSid)) {
-            msSid = s.sid;
-            break;
-          }
-        }
-        url = page.meta?.next_page_url ?? null;
-      }
-    } catch (e) {
-      console.warn("[assign-tfn] existing service lookup failed", e);
-    }
-  }
-  if (!msSid) {
-    try {
-      const ms = await twilio<{ sid: string }>(`${MESSAGING_API}/Services`, {
-        method: "POST",
-        sid,
-        token,
-        body: {
-          FriendlyName: `Tenant ${opts.accountId.slice(0, 8)} ${country} TF`.slice(0, 64),
-          InboundRequestUrl: `${base}/api/public/twilio-inbound`,
-          StatusCallback: `${base}/api/public/twilio-status`,
-        },
-      });
-      msSid = ms.sid;
-      if (phoneSid) {
-        try {
-          await twilio(`${MESSAGING_API}/Services/${msSid}/PhoneNumbers`, {
-            method: "POST",
-            sid,
-            token,
-            body: { PhoneNumberSid: phoneSid },
-          });
-        } catch (e) {
-          console.warn("[assign-tfn] attach number to service failed", e);
-        }
-      }
-    } catch (e) {
-      console.warn("[assign-tfn] create MessagingService failed", e);
-    }
-  }
-
-
-  // 4) Upsert sender_assets (unique on account_id, country_code, sender_kind)
   const row = {
     account_id: opts.accountId,
     country_code: country,
     sender_kind: "toll_free",
     phone_number: opts.phoneNumber,
-    phone_sid: phoneSid,
-    messaging_service_sid: msSid,
+    phone_sid: phoneId,
+    telnyx_phone_number_id: phoneId,
+    telnyx_messaging_profile_id: messagingProfileId,
+    messaging_service_sid: messagingProfileId, // legacy column reused
     verification_status: "verified",
     last_synced_at: new Date().toISOString(),
   } as const;
@@ -139,50 +53,36 @@ export async function wireAssignedTollfreeForTenant(opts: {
     throw upsertErr;
   }
 
+  await supabaseAdmin.from("numbers").upsert({
+    account_id: opts.accountId,
+    phone_number: opts.phoneNumber,
+    telnyx_number_id: phoneId,
+    telnyx_messaging_profile_id: messagingProfileId,
+    country_code: country,
+    number_type: "toll_free",
+    status: "active",
+  }, { onConflict: "phone_number" });
 
-  // 5) Activate tenant account with this sender as default
-  await supabaseAdmin
-    .from("accounts")
-    .update({
-      subaccount_phone_number: opts.phoneNumber,
-      subaccount_phone_sid: phoneSid,
-      subaccount_messaging_service_sid: msSid,
-      onboarding_status: "active",
-    })
-    .eq("id", opts.accountId);
+  await supabaseAdmin.from("accounts").update({
+    subaccount_phone_number: opts.phoneNumber,
+    subaccount_phone_sid: phoneId,
+    subaccount_messaging_service_sid: messagingProfileId,
+    onboarding_status: "active",
+  }).eq("id", opts.accountId);
 
-  return { phone_sid: phoneSid, messaging_service_sid: msSid };
+  return { phone_sid: phoneId, messaging_service_sid: messagingProfileId };
 }
 
 export async function unwireAssignedTollfreeForTenant(opts: { phoneNumber: string }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: asset } = await supabaseAdmin
-    .from("sender_assets")
-    .select("id,account_id,messaging_service_sid")
-    .eq("phone_number", opts.phoneNumber)
-    .maybeSingle();
+    .from("sender_assets").select("id,account_id").eq("phone_number", opts.phoneNumber).maybeSingle();
   if (!asset) return;
-
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  if (asset.messaging_service_sid && sid && token) {
-    try {
-      await fetch(`${MESSAGING_API}/Services/${asset.messaging_service_sid}`, {
-        method: "DELETE",
-        headers: { Authorization: basic(sid, token) },
-      });
-    } catch (e) {
-      console.warn("[unwire-tfn] delete service failed", e);
-    }
-  }
   await supabaseAdmin.from("sender_assets").delete().eq("id", asset.id);
-  await supabaseAdmin
-    .from("accounts")
-    .update({
-      subaccount_phone_number: null,
-      subaccount_phone_sid: null,
-      subaccount_messaging_service_sid: null,
-    })
-    .eq("id", asset.account_id)
-    .eq("subaccount_phone_number", opts.phoneNumber);
+  await supabaseAdmin.from("numbers").delete().eq("phone_number", opts.phoneNumber);
+  await supabaseAdmin.from("accounts").update({
+    subaccount_phone_number: null,
+    subaccount_phone_sid: null,
+    subaccount_messaging_service_sid: null,
+  }).eq("id", asset.account_id).eq("subaccount_phone_number", opts.phoneNumber);
 }

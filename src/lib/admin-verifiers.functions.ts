@@ -360,54 +360,48 @@ export const adminListSoldTfns = createServerFn({ method: "GET" })
     return (sold ?? []).map((s: any) => ({ ...s, buyer: bMap[s.sold_to_account_id] ?? null }));
   });
 
-// Twilio direct integration — list all approved toll-free verifications on the main account
+// List platform-owned Telnyx toll-free numbers currently attached to any
+// tenant Messaging Profile. Replaces the previous Twilio-based enumerator.
 export const adminListTwilioApprovedTfns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase);
-    const sid = process.env.TWILIO_ACCOUNT_SID;
-    const token = process.env.TWILIO_AUTH_TOKEN;
-    if (!sid || !token) throw new Error("Twilio credentials not configured");
-    const auth = "Basic " + Buffer.from(`${sid}:${token}`).toString("base64");
-
-    // Pull approved verifications (paginated)
+    const key = process.env.TELNYX_API_KEY;
+    if (!key) throw new Error("TELNYX_API_KEY is not configured");
     const rows: Array<{ sid: string; phone_number: string | null; phone_sid: string | null; status: string; business_name: string | null; date_created: string | null }> = [];
-    let url: string | null = `https://messaging.twilio.com/v1/Tollfree/Verifications?Status=TWILIO_APPROVED&PageSize=50`;
+    // Paginate through Telnyx phone_numbers filtered to toll-free.
+    let page = 1;
     let safety = 20;
-    while (url && safety-- > 0) {
-      const res = await fetch(url, { headers: { Authorization: auth } });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`Twilio ${res.status}: ${body.slice(0, 300)}`);
-      }
-      const page: any = await res.json();
-      const list = page.tollfree_verifications ?? page.verifications ?? [];
-      for (const v of list) {
+    while (safety-- > 0) {
+      const res = await fetch(`https://api.telnyx.com/v2/phone_numbers?filter[phone_number_type]=toll-free&page[number]=${page}&page[size]=100`, {
+        headers: { Authorization: `Bearer ${key}` },
+      });
+      if (!res.ok) throw new Error(`Telnyx ${res.status}`);
+      const j: any = await res.json();
+      for (const n of j.data ?? []) {
         rows.push({
-          sid: v.sid,
-          phone_number: v.tollfree_phone_number ?? null,
-          phone_sid: v.tollfree_phone_number_sid ?? null,
-          status: v.status,
-          business_name: v.business_name ?? null,
-          date_created: v.date_created ?? null,
+          sid: n.id,
+          phone_number: n.phone_number ?? null,
+          phone_sid: n.id,
+          status: n.status ?? "active",
+          business_name: n.tags?.[0] ?? null,
+          date_created: n.created_at ?? null,
         });
       }
-      const next = page.meta?.next_page_url ?? null;
-      url = next && typeof next === "string" ? next : null;
+      if ((j.data ?? []).length < 100) break;
+      page += 1;
     }
-
-    // Cross-reference with sender_assets to show current assignment
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const numbers = rows.map(r => r.phone_number).filter(Boolean) as string[];
+    const numbers = rows.map((r) => r.phone_number).filter(Boolean) as string[];
     const { data: assets } = await supabaseAdmin
       .from("sender_assets")
       .select("phone_number,account_id,accounts:account_id(email,full_name)")
       .in("phone_number", numbers.length ? numbers : ["__none__"]);
     const aMap = Object.fromEntries((assets ?? []).map((a: any) => [a.phone_number, a]));
-    return rows.map(r => ({
+    return rows.map((r) => ({
       ...r,
-      assigned_to: r.phone_number ? (aMap[r.phone_number]?.accounts ?? null) : null,
-      assigned_account_id: r.phone_number ? (aMap[r.phone_number]?.account_id ?? null) : null,
+      assigned_to: r.phone_number ? aMap[r.phone_number]?.accounts ?? null : null,
+      assigned_account_id: r.phone_number ? aMap[r.phone_number]?.account_id ?? null : null,
     }));
   });
 

@@ -139,6 +139,8 @@ export type Database = {
           subaccount_phone_number: string | null
           subaccount_phone_sid: string | null
           suspended_at: string | null
+          telnyx_messaging_profile_created_at: string | null
+          telnyx_messaging_profile_id: string | null
           terms_accepted_at: string | null
           terms_url: string | null
           twilio_subaccount_auth_token_enc: string | null
@@ -185,6 +187,8 @@ export type Database = {
           subaccount_phone_number?: string | null
           subaccount_phone_sid?: string | null
           suspended_at?: string | null
+          telnyx_messaging_profile_created_at?: string | null
+          telnyx_messaging_profile_id?: string | null
           terms_accepted_at?: string | null
           terms_url?: string | null
           twilio_subaccount_auth_token_enc?: string | null
@@ -231,6 +235,8 @@ export type Database = {
           subaccount_phone_number?: string | null
           subaccount_phone_sid?: string | null
           suspended_at?: string | null
+          telnyx_messaging_profile_created_at?: string | null
+          telnyx_messaging_profile_id?: string | null
           terms_accepted_at?: string | null
           terms_url?: string | null
           twilio_subaccount_auth_token_enc?: string | null
@@ -992,6 +998,56 @@ export type Database = {
           },
         ]
       }
+      numbers: {
+        Row: {
+          account_id: string
+          country_code: string | null
+          created_at: string
+          id: string
+          number_type: string | null
+          phone_number: string
+          purchased_at: string
+          status: string
+          telnyx_messaging_profile_id: string | null
+          telnyx_number_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          number_type?: string | null
+          phone_number: string
+          purchased_at?: string
+          status?: string
+          telnyx_messaging_profile_id?: string | null
+          telnyx_number_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          country_code?: string | null
+          created_at?: string
+          id?: string
+          number_type?: string | null
+          phone_number?: string
+          purchased_at?: string
+          status?: string
+          telnyx_messaging_profile_id?: string | null
+          telnyx_number_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "numbers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           account_id: string
@@ -1332,6 +1388,8 @@ export type Database = {
           rejection_reason: string | null
           sender_kind: string
           submitted_at: string | null
+          telnyx_messaging_profile_id: string | null
+          telnyx_phone_number_id: string | null
           updated_at: string
           verification_payload: Json | null
           verification_sid: string | null
@@ -1353,6 +1411,8 @@ export type Database = {
           rejection_reason?: string | null
           sender_kind: string
           submitted_at?: string | null
+          telnyx_messaging_profile_id?: string | null
+          telnyx_phone_number_id?: string | null
           updated_at?: string
           verification_payload?: Json | null
           verification_sid?: string | null
@@ -1374,6 +1434,8 @@ export type Database = {
           rejection_reason?: string | null
           sender_kind?: string
           submitted_at?: string | null
+          telnyx_messaging_profile_id?: string | null
+          telnyx_phone_number_id?: string | null
           updated_at?: string
           verification_payload?: Json | null
           verification_sid?: string | null
@@ -1479,6 +1541,62 @@ export type Database = {
           source?: string | null
         }
         Relationships: []
+      }
+      tenant_10dlc_registrations: {
+        Row: {
+          account_id: string
+          approved_at: string | null
+          brand_id: string | null
+          campaign_id: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          telnyx_brand_id: string | null
+          telnyx_campaign_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          approved_at?: string | null
+          brand_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          telnyx_brand_id?: string | null
+          telnyx_campaign_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          approved_at?: string | null
+          brand_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          telnyx_brand_id?: string | null
+          telnyx_campaign_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_10dlc_registrations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tollfree_verification_attempts: {
         Row: {

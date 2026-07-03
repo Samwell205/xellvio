@@ -407,17 +407,20 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
     //    as claimable). Since verifier_id is NOT NULL we simply skip this
     //    step here and always purchase fresh; future pool logic can plug in.
 
-    // 2) Buy a fresh toll-free from Twilio.
+    // 2) Buy a fresh toll-free from Telnyx into the verifier owner's account
+    //    (the platform's messaging profile — verifier does not have a tenant
+    //    account, so we use the current user's own account id).
     const { autoPurchaseNumber } = await import("./auto-provision-number.server");
-    let purchased: { sid: string; phone_number: string };
+    let purchased: { id: string; phone_number: string; messaging_profile_id: string };
     try {
       purchased = await autoPurchaseNumber({
         country: "US",
         number_type: "toll_free",
+        accountId: context.userId,
         friendlyName: `Verifier ${verifier.id.slice(0, 8)}`,
       });
     } catch (e: any) {
-      throw new Error(e?.message ?? "Could not purchase a number from Twilio");
+      throw new Error(e?.message ?? "Could not purchase a number from Telnyx");
     }
 
     const { data: row, error } = await supabaseAdmin
@@ -427,8 +430,8 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
         phone_number: purchased.phone_number,
         country: "US",
         status: "assigned",
-        twilio_phone_sid: purchased.sid,
-        notes: "Auto-provisioned from Twilio pool",
+        twilio_phone_sid: purchased.id,
+        notes: "Auto-provisioned from Telnyx pool",
       })
       .select("id,phone_number")
       .single();
@@ -475,25 +478,22 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     let rejectionReason: string | null = null;
 
     if (payload && row.twilio_phone_sid) {
-      const accountSid = process.env.TWILIO_ACCOUNT_SID;
-      const authToken = process.env.TWILIO_AUTH_TOKEN;
-      if (!accountSid || !authToken) throw new Error("Carrier credentials not configured");
       const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
       const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
       try {
         const result = await submitTwilioTollfreeVerification({
           phoneSid: row.twilio_phone_sid,
-          accountSid,
-          authToken,
+          accountSid: "",
+          authToken: "",
           existingVerificationSid: twilioVerificationSid,
-          statusCallbackUrl: `${base}/api/public/twilio-tollfree-status`,
+          statusCallbackUrl: `${base}/api/public/telnyx-status`,
           payload: payload as any,
         });
         twilioVerificationSid = result.verificationSid;
         carrierStatus = result.status;
         rejectionReason = result.rejectionReason;
       } catch (e: any) {
-        console.error("[verifier submit tfn] carrier submit failed", e?.message, e?.twilioResponse);
+        console.error("[verifier submit tfn] carrier submit failed", e?.message, e?.telnyxResponse);
         throw new Error(e?.message ?? "Carrier rejected the submission");
       }
     }
@@ -541,14 +541,11 @@ export const refreshMyTfn = createServerFn({ method: "POST" })
       .eq("verifier_id", verifier.id)
       .maybeSingle();
     if (!row?.twilio_verification_sid) return { ok: false, reason: "not_submitted" };
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    if (!accountSid || !authToken) throw new Error("Carrier credentials not configured");
     const { fetchTwilioTollfreeVerification } = await import("./tollfree-submit.server");
     const result = await fetchTwilioTollfreeVerification({
       verificationSid: row.twilio_verification_sid,
-      accountSid,
-      authToken,
+      accountSid: "",
+      authToken: "",
     });
     const dbStatus =
       result.status === "verified" ? "verified" :
