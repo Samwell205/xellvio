@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { LEGAL_VERSION } from "@/content/legal";
 
 const SIGNUP_CODE_TTL_MINUTES = 15;
+const LEGAL_VERSION = "2026-06-20";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();

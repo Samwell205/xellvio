@@ -203,7 +203,7 @@ function AuthPage() {
                     autoComplete="new-password"
                     aria-invalid={passwordMismatch}
                     className={passwordMismatch ? "border-destructive focus-visible:ring-destructive" : ""}
-                  disabled={signupStage === "code"}
+                    disabled={signupStage === "code"}
                   />
                 </div>
                 {passwordMismatch && <p className="text-xs text-destructive">Passwords do not match.</p>}
@@ -248,14 +248,14 @@ function AuthPage() {
                 </button>
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={loading || passwordMismatch || (mode === "signup" && !termsAccepted)}>
+            <Button type="submit" className="w-full" disabled={loading || passwordMismatch || (mode === "signup" && (!termsAccepted || (signupStage === "code" && signupCode.length !== 6)))}>
               {loading && <Loader2 className="size-4 animate-spin mr-2" />}
               {mode === "signin" ? "Sign in" : signupStage === "details" ? "Send verification code" : "Confirm & create account"}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "signin" ? "No account?" : "Have an account?"}{" "}
-            <button type="button" onClick={() => setMode(mode === "signin" ? "signup" : "signin")} className="text-primary font-medium hover:underline">
+            <button type="button" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setSignupStage("details"); setSignupCode(""); }} className="text-primary font-medium hover:underline">
               {mode === "signin" ? "Sign up" : "Sign in"}
             </button>
           </p>
