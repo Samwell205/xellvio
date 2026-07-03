@@ -100,20 +100,38 @@ async function sendOneMessage(
     const messageBody =
       campaign.media_url && !sendAsMms ? fallbackMediaBody(m.rendered_body, m.id) : m.rendered_body;
 
-    const matched = sender.assets.find(
-      (a) => a.country_code === m.country_code && (a.messaging_service_sid || a.phone_number),
-    );
+    // Sender fallback rules — pick best available sender for this recipient.
+    // Priority: US/CA → toll_free > local > sender_id; other countries → sender_id > local > toll_free.
+    const cc = (m.country_code ?? "").toUpperCase();
+    const isNanp = cc === "US" || cc === "CA";
+    const rank = (kind: string | null | undefined) => {
+      const k = kind ?? "";
+      if (isNanp) return k === "toll_free" ? 0 : k === "local" ? 1 : k === "sender_id" ? 2 : 3;
+      return k === "sender_id" ? 0 : k === "local" ? 1 : k === "toll_free" ? 2 : 3;
+    };
+    const candidates = sender.assets
+      .filter((a) => a.country_code === m.country_code && (a.messaging_service_sid || a.phone_number))
+      .sort((a, b) => rank(a.sender_kind) - rank(b.sender_kind));
+    const matched = candidates[0];
+
     if (!matched) {
       await supabaseAdmin.from("messages")
-        .update({ status: "failed", error_code: "sender_not_registered_for_country" }).eq("id", m.id);
+        .update({
+          status: "failed",
+          error_code: "sender_not_registered_for_country",
+          failure_reason: `No verified sender configured for ${m.country_code ?? "unknown country"}`,
+        }).eq("id", m.id);
       return { ok: false, shaft: false, debited: 0 };
     }
     const messagingProfileId = matched.messaging_service_sid ?? sender.messagingProfileId ?? undefined;
     const fromNumber = matched.phone_number ?? sender.fromNumber ?? undefined;
+    const senderKindUsed = matched.sender_kind ?? "unknown";
+    const senderUsed = fromNumber ?? messagingProfileId ?? "unknown";
 
     if (!messagingProfileId && !fromNumber) {
       await supabaseAdmin.from("messages")
-        .update({ status: "failed", error_code: "no_sender" }).eq("id", m.id);
+        .update({ status: "failed", error_code: "no_sender", failure_reason: "No sender available" })
+        .eq("id", m.id);
       return { ok: false, shaft: false, debited: 0 };
     }
 
@@ -135,6 +153,8 @@ async function sendOneMessage(
       provider_message_id: result.id,
       sent_at: new Date().toISOString(),
       segments_count: providerSegments,
+      sender_used: senderUsed,
+      sender_kind: senderKindUsed,
     }).eq("id", m.id);
 
     let debited = 0;
@@ -168,11 +188,14 @@ async function sendOneMessage(
     return { ok: true, shaft: false, debited };
   } catch (e: any) {
     const code = String(e?.telnyxCode ?? "");
+    const reason = e?.telnyxMessage ?? e?.message ?? "Send failed";
     await supabaseAdmin.from("messages")
-      .update({ status: "failed", error_code: code || "exception" }).eq("id", m.id);
+      .update({ status: "failed", error_code: code || "exception", failure_reason: String(reason).slice(0, 500) })
+      .eq("id", m.id);
     return { ok: false, shaft: isShaftLikeCode(code), debited: 0 };
   }
 }
+
 
 async function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
   let idx = 0;

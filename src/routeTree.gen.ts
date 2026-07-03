@@ -55,6 +55,7 @@ import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './rout
 import { Route as AuthenticatedAppTeamRouteImport } from './routes/_authenticated.app.team'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
 import { Route as AuthenticatedAppSetupSmsRouteImport } from './routes/_authenticated.app.setup-sms'
+import { Route as AuthenticatedAppSetup10dlcRouteImport } from './routes/_authenticated.app.setup-10dlc'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
 import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
 import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
@@ -93,6 +94,7 @@ import { Route as VerifierVerifyDashboardEarningsRouteImport } from './routes/_v
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
+import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
@@ -329,6 +331,12 @@ const AuthenticatedAppSetupSmsRoute =
     path: '/setup-sms',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppSetup10dlcRoute =
+  AuthenticatedAppSetup10dlcRouteImport.update({
+    id: '/setup-10dlc',
+    path: '/setup-10dlc',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppSettingsRoute =
   AuthenticatedAppSettingsRouteImport.update({
     id: '/settings',
@@ -551,6 +559,12 @@ const AuthenticatedAppCampaignsIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const AuthenticatedAppCampaignsIdReportRoute =
+  AuthenticatedAppCampaignsIdReportRouteImport.update({
+    id: '/report',
+    path: '/report',
+    getParentRoute: () => AuthenticatedAppCampaignsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -605,6 +619,7 @@ export interface FileRoutesByFullPath {
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/setup-10dlc': typeof AuthenticatedAppSetup10dlcRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/team': typeof AuthenticatedAppTeamRoute
@@ -619,7 +634,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
-  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
+  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
@@ -635,6 +650,7 @@ export interface FileRoutesByFullPath {
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
+  '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -685,6 +701,7 @@ export interface FileRoutesByTo {
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/app/setup-10dlc': typeof AuthenticatedAppSetup10dlcRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/team': typeof AuthenticatedAppTeamRoute
@@ -699,7 +716,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
-  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
+  '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
@@ -715,6 +732,7 @@ export interface FileRoutesByTo {
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
+  '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -772,6 +790,7 @@ export interface FileRoutesById {
   '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
+  '/_authenticated/app/setup-10dlc': typeof AuthenticatedAppSetup10dlcRoute
   '/_authenticated/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/_authenticated/app/team': typeof AuthenticatedAppTeamRoute
@@ -786,7 +805,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
-  '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRoute
+  '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/_verifier/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
@@ -802,6 +821,7 @@ export interface FileRoutesById {
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
+  '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -858,6 +878,7 @@ export interface FileRouteTypes {
     | '/app/pricing-calculator'
     | '/app/segments'
     | '/app/settings'
+    | '/app/setup-10dlc'
     | '/app/setup-sms'
     | '/app/suppressions'
     | '/app/team'
@@ -888,6 +909,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/'
     | '/app/segments/'
     | '/verify/dashboard/'
+    | '/app/campaigns/$id/report'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -938,6 +960,7 @@ export interface FileRouteTypes {
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/settings'
+    | '/app/setup-10dlc'
     | '/app/setup-sms'
     | '/app/suppressions'
     | '/app/team'
@@ -968,6 +991,7 @@ export interface FileRouteTypes {
     | '/app/campaigns'
     | '/app/segments'
     | '/verify/dashboard'
+    | '/app/campaigns/$id/report'
   id:
     | '__root__'
     | '/'
@@ -1024,6 +1048,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/pricing-calculator'
     | '/_authenticated/app/segments'
     | '/_authenticated/app/settings'
+    | '/_authenticated/app/setup-10dlc'
     | '/_authenticated/app/setup-sms'
     | '/_authenticated/app/suppressions'
     | '/_authenticated/app/team'
@@ -1054,6 +1079,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/segments/'
     | '/_verifier/verify/dashboard/'
+    | '/_authenticated/app/campaigns/$id/report'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1425,6 +1451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSetupSmsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/setup-10dlc': {
+      id: '/_authenticated/app/setup-10dlc'
+      path: '/setup-10dlc'
+      fullPath: '/app/setup-10dlc'
+      preLoaderRoute: typeof AuthenticatedAppSetup10dlcRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/settings': {
       id: '/_authenticated/app/settings'
       path: '/settings'
@@ -1691,6 +1724,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/_authenticated/app/campaigns/$id/report': {
+      id: '/_authenticated/app/campaigns/$id/report'
+      path: '/report'
+      fullPath: '/app/campaigns/$id/report'
+      preLoaderRoute: typeof AuthenticatedAppCampaignsIdReportRouteImport
+      parentRoute: typeof AuthenticatedAppCampaignsIdRoute
+    }
   }
 }
 
@@ -1732,15 +1772,31 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
+interface AuthenticatedAppCampaignsIdRouteChildren {
+  AuthenticatedAppCampaignsIdReportRoute: typeof AuthenticatedAppCampaignsIdReportRoute
+}
+
+const AuthenticatedAppCampaignsIdRouteChildren: AuthenticatedAppCampaignsIdRouteChildren =
+  {
+    AuthenticatedAppCampaignsIdReportRoute:
+      AuthenticatedAppCampaignsIdReportRoute,
+  }
+
+const AuthenticatedAppCampaignsIdRouteWithChildren =
+  AuthenticatedAppCampaignsIdRoute._addFileChildren(
+    AuthenticatedAppCampaignsIdRouteChildren,
+  )
+
 interface AuthenticatedAppCampaignsRouteChildren {
-  AuthenticatedAppCampaignsIdRoute: typeof AuthenticatedAppCampaignsIdRoute
+  AuthenticatedAppCampaignsIdRoute: typeof AuthenticatedAppCampaignsIdRouteWithChildren
   AuthenticatedAppCampaignsNewRoute: typeof AuthenticatedAppCampaignsNewRoute
   AuthenticatedAppCampaignsIndexRoute: typeof AuthenticatedAppCampaignsIndexRoute
 }
 
 const AuthenticatedAppCampaignsRouteChildren: AuthenticatedAppCampaignsRouteChildren =
   {
-    AuthenticatedAppCampaignsIdRoute: AuthenticatedAppCampaignsIdRoute,
+    AuthenticatedAppCampaignsIdRoute:
+      AuthenticatedAppCampaignsIdRouteWithChildren,
     AuthenticatedAppCampaignsNewRoute: AuthenticatedAppCampaignsNewRoute,
     AuthenticatedAppCampaignsIndexRoute: AuthenticatedAppCampaignsIndexRoute,
   }
@@ -1776,6 +1832,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
   AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
+  AuthenticatedAppSetup10dlcRoute: typeof AuthenticatedAppSetup10dlcRoute
   AuthenticatedAppSetupSmsRoute: typeof AuthenticatedAppSetupSmsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
   AuthenticatedAppTeamRoute: typeof AuthenticatedAppTeamRoute
@@ -1794,6 +1851,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
     AuthenticatedAppPricingCalculatorRoute,
   AuthenticatedAppSegmentsRoute: AuthenticatedAppSegmentsRouteWithChildren,
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
+  AuthenticatedAppSetup10dlcRoute: AuthenticatedAppSetup10dlcRoute,
   AuthenticatedAppSetupSmsRoute: AuthenticatedAppSetupSmsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
   AuthenticatedAppTeamRoute: AuthenticatedAppTeamRoute,
