@@ -98,6 +98,9 @@ function NumbersPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["verifier", "tfns"] }),
   });
 
+  const activeCount = (rows ?? []).filter((r: any) => r.status !== "sold").length;
+  const atCap = activeCount >= 3;
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">My numbers</h1>
@@ -112,9 +115,13 @@ function NumbersPage() {
             an unclaimed number, and if none is available we buy a fresh toll-free from Twilio and
             assign it to you automatically.
           </p>
-          <Button disabled={claimMut.isPending} onClick={() => claimMut.mutate()}>
-            {claimMut.isPending ? "Assigning a number…" : "Claim a number"}
+          <p className="text-xs text-slate-400">
+            Marketplace slots used: <span className={atCap ? "text-red-400 font-medium" : "text-slate-200 font-medium"}>{activeCount}/3</span>. Sell one to free a slot.
+          </p>
+          <Button disabled={claimMut.isPending || atCap} onClick={() => claimMut.mutate()}>
+            {claimMut.isPending ? "Assigning a number…" : atCap ? "Limit reached (3/3)" : "Claim a number"}
           </Button>
+
           <div>
             <button type="button" className="text-xs text-slate-400 hover:text-slate-200 underline" onClick={() => setShowManual((s) => !s)}>
               {showManual ? "Hide manual entry" : "I already have a number to submit"}
