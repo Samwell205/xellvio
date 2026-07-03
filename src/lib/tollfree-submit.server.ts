@@ -87,7 +87,8 @@ export type TollfreeSubmitResult = {
  * The Telnyx endpoint is POST /messaging_tollfree/verification/requests.
  */
 export async function submitTwilioTollfreeVerification(opts: {
-  phoneSid: string;             // Telnyx phone number ID
+  phoneSid: string;             // Telnyx phone number ID (unused in body)
+  phoneNumberE164?: string;     // Actual E.164 number — required by verification API
   accountSid: string;           // unused for Telnyx (kept for signature compat)
   authToken: string;            // unused for Telnyx
   existingVerificationSid?: string | null;
@@ -95,35 +96,48 @@ export async function submitTwilioTollfreeVerification(opts: {
   statusCallbackUrl?: string;
 }): Promise<TollfreeSubmitResult> {
   const p = opts.payload;
-  const body = {
-    additional_information: p.additionalInformation ?? undefined,
+  const { normalizeUseCase } = await import("./tollfree-use-cases");
+  const primaryUseCase = normalizeUseCase(p.useCaseCategories?.[0] ?? "") ?? "General Marketing";
+
+  if (!opts.phoneNumberE164) throw new Error("Missing toll-free phone number for verification submission.");
+
+  const optInImages = p.proofOfOptInUrl ? [{ url: p.proofOfOptInUrl }] : [];
+
+  const body: Record<string, unknown> = {
+    additional_information: p.additionalInformation || "N/A",
     business_addr1: p.addressLine1,
-    business_addr2: p.addressLine2 ?? undefined,
+    business_addr2: p.addressLine2 || undefined,
     business_city: p.city,
     business_contact_email: p.contactEmail,
     business_contact_first_name: p.contactFirstName,
     business_contact_last_name: p.contactLastName,
-    business_contact_phone: `${p.contactPhoneCountry}${p.contactPhone}`,
+    business_contact_phone: `${p.contactPhoneCountry}${p.contactPhone}`.replace(/[^\d+]/g, ""),
     business_country: (p.businessCountry || "US").toUpperCase(),
-    business_dba: p.businessDba ?? undefined,
+    business_dba: p.businessDba || undefined,
     business_name: p.legalEntityName,
     business_state: p.state,
     business_website: p.websiteUrl,
     business_zip: p.zip,
     corporate_website: p.websiteUrl,
-    isv_reseller: null,
+    isv_reseller: "",
     message_volume: p.monthlyVolume || "10",
     opt_in_workflow: {
       description: p.useCaseDescription,
-      image_urls: p.proofOfOptInUrl ? [p.proofOfOptInUrl] : [],
+      image_urls: optInImages,
     },
-    opt_in_workflow_image_urls: p.proofOfOptInUrl ? [{ url: p.proofOfOptInUrl }] : [],
-    phone_numbers: [{ phone_number: null as any, phone_number_id: opts.phoneSid }],
+    phone_numbers: [{ phone_number: opts.phoneNumberE164 }],
     production_message_sample: p.sampleMessage,
-    use_case: (p.useCaseCategories?.[0] || "MARKETING").toUpperCase(),
-    use_case_categories: p.useCaseCategories?.length ? p.useCaseCategories : ["MARKETING"],
-    webhook_url: opts.statusCallbackUrl ?? undefined,
+    use_case: primaryUseCase,
+    use_case_categories: [primaryUseCase],
+    webhook_url: opts.statusCallbackUrl || undefined,
+    // Optional but improves acceptance rate
+    help_message: p.helpMessageSample || undefined,
+    privacy_policy_url: p.privacyPolicyUrl || undefined,
+    terms_and_conditions_url: p.termsUrl || undefined,
+    opt_in_keywords: p.optInKeywords || undefined,
+    age_gated: !!p.containsAgeGatedContent,
   };
+
   const path = opts.existingVerificationSid
     ? `/messaging_tollfree/verification/requests/${opts.existingVerificationSid}`
     : `/messaging_tollfree/verification/requests`;

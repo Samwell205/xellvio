@@ -8,14 +8,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-const VOLUME_VALUES = ["10","100","1,000","10,000","100,000","250,000","500,000","750,000","1,000,000","5,000,000+"] as const;
+import { TOLLFREE_USE_CASES, TOLLFREE_VOLUMES, normalizeUseCase } from "./tollfree-use-cases";
+
+const VOLUME_VALUES = TOLLFREE_VOLUMES;
 const OPT_IN_VALUES = ["VERBAL","WEB_FORM","PAPER_FORM","VIA_TEXT","MOBILE_QR_CODE"] as const;
-const USE_CASE_CATEGORIES = [
-  "TWO_FACTOR_AUTHENTICATION","ACCOUNT_NOTIFICATIONS","CUSTOMER_CARE","CHARITY_NONPROFIT",
-  "DELIVERY_NOTIFICATIONS","FRAUD_ALERT_MESSAGING","EVENTS","HIGHER_EDUCATION","K12",
-  "MARKETING","POLLING_AND_VOTING_NON_POLITICAL","POLITICAL_ELECTION_CAMPAIGNS",
-  "PUBLIC_SERVICE_ANNOUNCEMENT","SECURITY_ALERT",
-] as const;
 
 export const TollfreeVerificationInput = z.object({
   legalEntityName: z.string().trim().min(2).max(255),
@@ -38,7 +34,11 @@ export const TollfreeVerificationInput = z.object({
   zip: z.string().trim().min(3).max(20),
   monthlyVolume: z.enum(VOLUME_VALUES),
   optInType: z.enum(OPT_IN_VALUES),
-  useCaseCategories: z.array(z.enum(USE_CASE_CATEGORIES)).min(1).max(5),
+  useCaseCategories: z.array(z.string().transform((v) => normalizeUseCase(v) ?? v))
+    .min(1).max(5)
+    .refine((arr) => arr.every((v) => (TOLLFREE_USE_CASES as readonly string[]).includes(v)), {
+      message: "Invalid use-case",
+    }),
   proofOfOptInUrl: z.string().trim().url().optional().or(z.literal("")),
   proofShowsRequiredConsent: z.literal(true),
   useCaseDescription: z.string().trim().min(40).max(2000),
@@ -161,6 +161,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
     const result = await submitTwilioTollfreeVerification({
       phoneSid: asset.phone_sid,
+      phoneNumberE164: asset.phone_number ?? undefined,
       accountSid: "",
       authToken: "",
       existingVerificationSid: asset.verification_sid ?? null,
