@@ -2,7 +2,6 @@ import * as React from 'react'
 
 import {
   Body,
-  Button,
   Container,
   Head,
   Heading,
@@ -32,9 +31,6 @@ export const MagicLinkEmail = ({
         <Text style={text}>
           Enter this 6-digit code on {siteName} to finish signing in. It expires shortly.
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Continue to {siteName}
-        </Button>
         <Text style={footer}>
           If you didn't request this code, you can safely ignore this email.
         </Text>
@@ -72,13 +68,5 @@ const codeStyle = {
   margin: '0 0 22px',
   padding: '18px 22px',
   textAlign: 'center' as const,
-}
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
 }
 const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
