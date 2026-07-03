@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check as CheckIcon, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Check as CheckIcon, ChevronLeft, ChevronRight, Info, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -216,8 +216,9 @@ export function defaultWizardForm(): WizardForm {
 
 type SubStepKey =
   | "business-info"
-  | "business-address"
   | "authorized-rep"
+  | "business-address"
+  | "assign-numbers"
   | "use-case"
   | "opt-in"
   | "additional"
@@ -225,12 +226,19 @@ type SubStepKey =
 
 const SUB_STEPS: Array<{ key: SubStepKey; label: string }> = [
   { key: "business-info", label: "Business info" },
+  { key: "authorized-rep", label: "Contact details" },
   { key: "business-address", label: "Business address" },
-  { key: "authorized-rep", label: "Authorized rep" },
+  { key: "assign-numbers", label: "Assign numbers" },
   { key: "use-case", label: "Use case" },
   { key: "opt-in", label: "Opt-in" },
   { key: "additional", label: "Additional details" },
   { key: "review", label: "Review & submit" },
+];
+
+const MAIN_STEPS = [
+  { label: "Business Details", keys: ["business-info", "authorized-rep", "business-address"] as SubStepKey[] },
+  { label: "Assign Numbers", keys: ["assign-numbers"] as SubStepKey[] },
+  { label: "Use Case Details", keys: ["use-case", "opt-in", "additional", "review"] as SubStepKey[] },
 ];
 
 // ---------- Per-substep validation ----------
@@ -257,6 +265,8 @@ function stepValid(f: WizardForm, key: SubStepKey): string | null {
       if (!f.city.trim()) return "Enter city.";
       if (!f.state.trim()) return "Enter state / region.";
       if (!f.zip.trim()) return "Enter zip / postal code.";
+      return null;
+    case "assign-numbers":
       return null;
     case "authorized-rep":
       if (!f.contactFirstName.trim()) return "Enter first name.";
@@ -295,11 +305,17 @@ export type TollfreeWizardProps = {
   onSubmit: (form: WizardForm) => void | Promise<void>;
   submitting?: boolean;
   onClose?: () => void;
+  reservedNumber?: string | null;
+  verificationStatus?: string | null;
+  feeAmount?: number;
+  creditBalance?: number;
+  feePaid?: boolean;
 };
 
 export function TollfreeWizard({
   initial, disabled, submitLabel = "Submit registration",
-  helperBanner, onSubmit, submitting, onClose,
+  helperBanner, onSubmit, submitting, onClose, reservedNumber,
+  verificationStatus, feeAmount = 5, creditBalance = 0, feePaid = false,
 }: TollfreeWizardProps) {
   const [form, setForm] = useState<WizardForm>(() => ({ ...defaultWizardForm(), ...(initial ?? {}) }));
   const [subIdx, setSubIdx] = useState(0);
@@ -309,7 +325,7 @@ export function TollfreeWizard({
   const update = <K extends keyof WizardForm>(k: K, v: WizardForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const basicComplete = useMemo(() => !!(initial && initial.legalEntityName), [initial]);
+  const currentMainStep = MAIN_STEPS.findIndex((step) => step.keys.includes(sub.key));
 
   function goNext() {
     const err = stepValid(form, sub.key);
@@ -336,96 +352,81 @@ export function TollfreeWizard({
   }
 
   return (
-    <div className="grid md:grid-cols-[240px_1fr] gap-6 md:gap-8">
-      {/* Left rail */}
-      <aside className="md:sticky md:top-6 h-fit space-y-6">
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs text-muted-foreground hover:text-foreground"
-          >
-            ← Back to overview
+    <div className="rounded-lg border bg-card overflow-hidden">
+      {onClose && (
+        <div className="border-b px-6 py-3">
+          <button type="button" onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground">
+            ← Back to Toll Free Verification
           </button>
-        )}
-        <div>
-          <div className="text-sm font-semibold mb-3">Toll-free registration</div>
-          <ol className="space-y-3">
-            <RailRow index={1} label="Basic Information" state={basicComplete ? "done" : "current"} />
-            <RailRow
-              index={2}
-              label="Registration Details"
-              state={subIdx >= SUB_STEPS.length - 1 && completed.has("review") ? "done" : "current"}
-            />
-          </ol>
-          <ol className="mt-4 ml-6 space-y-2 border-l pl-4">
-            {SUB_STEPS.map((s, i) => {
-              const state: "done" | "current" | "pending" =
-                completed.has(s.key) && i !== subIdx ? "done" : i === subIdx ? "current" : "pending";
-              return (
-                <li key={s.key}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // allow jumping back to completed steps
-                      if (state === "done" || i <= subIdx) setSubIdx(i);
-                    }}
-                    className={`flex items-center gap-2 text-xs w-full text-left ${
-                      state === "current" ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <span
-                      className={`inline-flex size-4 items-center justify-center rounded-full border text-[10px] ${
-                        state === "done"
-                          ? "bg-emerald-500 border-emerald-500 text-white"
-                          : state === "current"
-                            ? "border-primary text-primary"
-                            : "border-border"
-                      }`}
-                    >
-                      {state === "done" ? <CheckIcon className="size-2.5" /> : i + 1}
-                    </span>
-                    {s.label}
-                  </button>
-                </li>
-              );
+        </div>
+      )}
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="space-y-5 p-5 sm:p-6 lg:p-8">
+          {helperBanner}
+          <fieldset disabled={disabled} className={disabled ? "opacity-70 pointer-events-none" : ""}>
+            <div className="space-y-5">
+              {sub.key === "business-info" && <BusinessInfoStep form={form} update={update} />}
+              {sub.key === "business-address" && <BusinessAddressStep form={form} update={update} />}
+              {sub.key === "authorized-rep" && <AuthorizedRepStep form={form} update={update} />}
+              {sub.key === "assign-numbers" && (
+                <AssignNumbersStep
+                  reservedNumber={reservedNumber}
+                  verificationStatus={verificationStatus}
+                  feeAmount={feeAmount}
+                  creditBalance={creditBalance}
+                  feePaid={feePaid}
+                />
+              )}
+              {sub.key === "use-case" && <UseCaseStep form={form} update={update} />}
+              {sub.key === "opt-in" && <OptInStep form={form} update={update} />}
+              {sub.key === "additional" && <AdditionalStep form={form} update={update} />}
+              {sub.key === "review" && <ReviewStep form={form} update={update} />}
+            </div>
+          </fieldset>
+
+          {!disabled && (
+            <div className="flex items-center justify-between gap-2">
+              <Button type="button" variant="outline" onClick={goBack} disabled={subIdx === 0}>
+                <ChevronLeft className="size-4 mr-1" /> Back
+              </Button>
+              {subIdx < SUB_STEPS.length - 1 ? (
+                <Button type="button" onClick={goNext}>
+                  Next <ChevronRight className="size-4 ml-1" />
+                </Button>
+              ) : (
+                <Button type="button" onClick={handleSubmit} disabled={submitting} size="lg">
+                  {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
+                  {submitLabel}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <aside className="border-t bg-muted/20 p-5 lg:border-l lg:border-t-0 lg:p-6">
+          <ol className="space-y-0">
+            {MAIN_STEPS.map((step, i) => {
+              const allDone = step.keys.every((key) => completed.has(key));
+              const state: "done" | "current" | "pending" = allDone && i !== currentMainStep ? "done" : i === currentMainStep ? "current" : "pending";
+              return <RailRow key={step.label} index={i + 1} label={step.label} state={state} />;
             })}
           </ol>
-        </div>
-      </aside>
-
-      {/* Content */}
-      <div className="space-y-6">
-        {helperBanner}
-        <fieldset disabled={disabled} className={disabled ? "opacity-70 pointer-events-none" : ""}>
-          <div className="rounded-lg border bg-card p-6 space-y-5">
-            {sub.key === "business-info" && <BusinessInfoStep form={form} update={update} />}
-            {sub.key === "business-address" && <BusinessAddressStep form={form} update={update} />}
-            {sub.key === "authorized-rep" && <AuthorizedRepStep form={form} update={update} />}
-            {sub.key === "use-case" && <UseCaseStep form={form} update={update} />}
-            {sub.key === "opt-in" && <OptInStep form={form} update={update} />}
-            {sub.key === "additional" && <AdditionalStep form={form} update={update} />}
-            {sub.key === "review" && <ReviewStep form={form} update={update} />}
+          <div className="mt-5 border-l pl-4 space-y-2">
+            {SUB_STEPS.map((s, i) => {
+              const state = completed.has(s.key) && i !== subIdx ? "done" : i === subIdx ? "current" : "pending";
+              return (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => { if (state === "done" || i <= subIdx) setSubIdx(i); }}
+                  className={`block w-full text-left text-xs ${state === "current" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
           </div>
-        </fieldset>
-
-        {!disabled && (
-          <div className="flex items-center justify-between gap-2">
-            <Button type="button" variant="outline" onClick={goBack} disabled={subIdx === 0}>
-              <ChevronLeft className="size-4 mr-1" /> Back
-            </Button>
-            {subIdx < SUB_STEPS.length - 1 ? (
-              <Button type="button" onClick={goNext}>
-                Next <ChevronRight className="size-4 ml-1" />
-              </Button>
-            ) : (
-              <Button type="button" onClick={handleSubmit} disabled={submitting} size="lg">
-                {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
-                {submitLabel}
-              </Button>
-            )}
-          </div>
-        )}
+        </aside>
       </div>
     </div>
   );
@@ -435,11 +436,11 @@ export function TollfreeWizard({
 
 function RailRow({ index, label, state }: { index: number; label: string; state: "done" | "current" | "pending" }) {
   return (
-    <li className="flex items-center gap-2 text-sm font-medium">
+    <li className={`flex items-center gap-3 border-l-4 px-3 py-3 text-sm font-medium ${state === "current" ? "border-primary" : "border-border"}`}>
       <span
         className={`inline-flex size-5 items-center justify-center rounded-full border text-[11px] ${
           state === "done"
-            ? "bg-emerald-500 border-emerald-500 text-white"
+            ? "bg-success border-success text-success-foreground"
             : state === "current"
               ? "border-primary text-primary"
               : "border-border text-muted-foreground"
@@ -465,9 +466,9 @@ function Field({
 }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-sm">
-        {required && <span className="text-destructive mr-0.5">•</span>}
-        {label}
+      <Label className="flex items-center justify-between gap-3 text-sm">
+        <span>{label}</span>
+        {required && <span className="text-xs italic text-muted-foreground">Required</span>}
       </Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -477,7 +478,7 @@ function Field({
 function StepHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div>
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <h2 className="text-xl font-semibold">{title}</h2>
       {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
     </div>
   );
@@ -494,9 +495,13 @@ function BusinessInfoStep({ form, update }: StepProps) {
   return (
     <>
       <StepHeader
-        title="Tell us about your business"
+        title="Business Details"
         subtitle="Enter the legal details of the business that will send SMS. These are shared with US carriers during verification."
       />
+      <div className="flex items-start gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-muted-foreground">
+        <Info className="mt-0.5 size-4 text-primary" />
+        <span>Fill in all details according to business details, not personal details.</span>
+      </div>
       <Two>
         <Field label="Legal entity name" required>
           <Input value={form.legalEntityName} onChange={(e) => update("legalEntityName", e.target.value)} placeholder="Acme LLC" />
@@ -579,6 +584,59 @@ function BusinessAddressStep({ form, update }: StepProps) {
           <Input value={form.zip} onChange={(e) => update("zip", e.target.value)} />
         </Field>
       </Three>
+    </>
+  );
+}
+
+function AssignNumbersStep({
+  reservedNumber, verificationStatus, feeAmount, creditBalance, feePaid,
+}: { reservedNumber?: string | null; verificationStatus?: string | null; feeAmount: number; creditBalance: number; feePaid: boolean }) {
+  const canSubmit = feePaid || creditBalance >= feeAmount;
+  return (
+    <>
+      <StepHeader
+        title="Assign Numbers"
+        subtitle="A US toll-free number is attached to this request automatically when you submit."
+      />
+      <div className="rounded-lg border">
+        <div className="flex flex-wrap gap-3 border-b p-4">
+          <Button type="button" variant="outline" size="sm" className="border-primary text-primary hover:text-primary">
+            My Xellvio Numbers
+          </Button>
+          <Button type="button" variant="ghost" size="sm">Messaging Profiles</Button>
+          <Button type="button" variant="ghost" size="sm">Hosted Numbers</Button>
+        </div>
+        <div className="overflow-x-auto p-4">
+          <table className="w-full min-w-[560px] text-sm">
+            <thead className="text-left text-muted-foreground">
+              <tr className="border-b">
+                <th className="py-2 font-medium">Number</th>
+                <th className="py-2 font-medium">Status</th>
+                <th className="py-2 font-medium">Messaging Profile</th>
+                <th className="py-2 font-medium">Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reservedNumber ? (
+                <tr className="border-b">
+                  <td className="py-3 font-mono">{reservedNumber}</td>
+                  <td className="py-3 capitalize">{(verificationStatus ?? "pending").replaceAll("_", " ")}</td>
+                  <td className="py-3 text-muted-foreground">Default messaging profile</td>
+                  <td className="py-3">Toll-free</td>
+                </tr>
+              ) : (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-muted-foreground">No toll free numbers assigned yet</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+        Submit this wizard to reserve a number and start verification. The one-time ${feeAmount} setup fee is charged from credits at submit time.
+        {!canSubmit && <span className="block pt-1 text-destructive">Current balance is ${creditBalance.toFixed(2)}. Top up before submitting.</span>}
+      </div>
     </>
   );
 }

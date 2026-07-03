@@ -81,14 +81,31 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const { ensureMessagingProfileForAccount, searchAvailableNumbers, orderNumber } = await import("./telnyx.server");
     const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
 
-    // Fee gate: the $5 setup fee must be paid before we buy a number or hit the carrier.
+    // Charge the one-time $5 setup fee at submit time before buying a number
+    // or hitting carrier verification. If the number purchase fails during this
+    // same submission, refund it below so the tenant can retry cleanly.
     const { data: acct } = await supabaseAdmin
       .from("accounts")
-      .select("tollfree_setup_fee_paid_at")
+      .select("tollfree_setup_fee_paid_at, credit_balance")
       .eq("id", userId)
       .maybeSingle();
+    let chargedSetupFee = false;
     if (!acct?.tollfree_setup_fee_paid_at) {
-      throw new Error(`Please pay the $${TOLLFREE_SETUP_FEE_USD} verification setup fee before submitting.`);
+      if (Number(acct?.credit_balance ?? 0) < TOLLFREE_SETUP_FEE_USD) {
+        throw new Error(`Insufficient credit balance. Top up at least $${TOLLFREE_SETUP_FEE_USD} to submit toll-free verification.`);
+      }
+      const { error: debitErr } = await supabaseAdmin.rpc("debit_account", {
+        _account_id: userId,
+        _amount: TOLLFREE_SETUP_FEE_USD,
+        _campaign_id: undefined as any,
+        _description: "Toll-free verification setup fee",
+      });
+      if (debitErr) throw new Error(debitErr.message);
+      await supabaseAdmin
+        .from("accounts")
+        .update({ tollfree_setup_fee_paid_at: new Date().toISOString() })
+        .eq("id", userId);
+      chargedSetupFee = true;
     }
 
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
@@ -120,12 +137,14 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
         if (insErr) throw new Error(insErr.message);
         asset = inserted;
       } catch (e: any) {
-        // Refund fee: purchase didn't complete.
-        await supabaseAdmin.rpc("topup_account", {
-          _account_id: userId, _amount: TOLLFREE_SETUP_FEE_USD,
-          _description: "Toll-free setup refund (purchase failed)",
-        });
-        await supabaseAdmin.from("accounts").update({ tollfree_setup_fee_paid_at: null }).eq("id", userId);
+        // Refund only if this submit charged the fee and purchase didn't complete.
+        if (chargedSetupFee) {
+          await supabaseAdmin.rpc("topup_account", {
+            _account_id: userId, _amount: TOLLFREE_SETUP_FEE_USD,
+            _description: "Toll-free setup refund (purchase failed)",
+          });
+          await supabaseAdmin.from("accounts").update({ tollfree_setup_fee_paid_at: null }).eq("id", userId);
+        }
         throw e;
       }
     }
