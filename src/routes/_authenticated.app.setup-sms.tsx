@@ -27,7 +27,15 @@ import {
   getMySenderAssets,
   refreshMyVerificationStatus,
   saveCustomSenderId,
+  submitSenderIdRegistration,
 } from "@/lib/sender-setup.functions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 import { sendTestSms } from "@/lib/sms.functions";
 import { submitNumberRequest, listMyNumberRequests, cancelMyNumberRequest } from "@/lib/number-requests.functions";
@@ -239,7 +247,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
-        {senderCountries.map((c) => {
+        {senderCountries.filter((c) => !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code)).map((c) => {
           const on = countries.includes(c.code);
           const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(c.code);
           const requiresRegistration = ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code);
@@ -352,11 +360,11 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         })}
       </div>
 
-      {ALPHA_SENDER_REQUIRES_REGISTRATION_SET.size > 0 && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs text-amber-900 dark:text-amber-200">
-          <strong>Heads up:</strong> Nigeria, India, UAE, Saudi Arabia, Egypt, Turkey, and several others require your sender ID to be pre-registered with the local mobile operator before carriers deliver it. Click any amber chip for step-by-step instructions.
-        </div>
-      )}
+      <RegistrationCountryDropdown
+        assets={assets}
+        senderId={senderId}
+        onOpen={(cc) => setRegCountry(cc)}
+      />
 
       <UsCanadaInfoDialog code={infoCountry} assets={assets} onClose={() => setInfoCountry(null)} />
       <RegistrationRequiredDialog
@@ -370,6 +378,51 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
   );
 }
 
+function RegistrationCountryDropdown({
+  assets, senderId, onOpen,
+}: { assets: any[]; senderId: string; onOpen: (cc: string) => void }) {
+  const regCountries = COUNTRIES.filter((c) => ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code));
+  const [pick, setPick] = useState<string>("");
+  const statusFor = (cc: string) => {
+    const a = assets.find((x) => x.country_code === cc && x.sender_kind === "sender_id");
+    const s = a?.verification_status as string | undefined;
+    if (s === "verified") return "Registered";
+    if (s === "submitted" || s === "in_review") return "In review";
+    if (s === "requires_registration") return "Needs registration";
+    if (s === "rejected") return "Rejected";
+    return "Not started";
+  };
+  return (
+    <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
+      <div className="text-sm">
+        <strong>Countries that require carrier registration.</strong>
+        <span className="text-muted-foreground"> Pick a country to submit your business details here — we file the registration for you, no external portal needed.</span>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Select value={pick} onValueChange={setPick}>
+          <SelectTrigger className="w-full sm:w-[320px]">
+            <SelectValue placeholder="Select a country to register…" />
+          </SelectTrigger>
+          <SelectContent>
+            {regCountries.map((c) => (
+              <SelectItem key={c.code} value={c.code}>
+                {c.name} — {statusFor(c.code)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          disabled={!pick || !senderId}
+          onClick={() => pick && onOpen(pick)}
+        >
+          {senderId ? "Register sender ID" : "Save Sender ID first"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function RegistrationRequiredDialog({
   code, countryName, senderId, asset, onClose,
 }: {
@@ -379,52 +432,105 @@ function RegistrationRequiredDialog({
   asset: any | null;
   onClose: () => void;
 }) {
+  const qc = useQueryClient();
+  const submitFn = useServerFn(submitSenderIdRegistration);
   const status = asset?.verification_status as string | undefined;
   const isRegistered = status === "verified";
+  const isSubmitted = status === "submitted" || status === "in_review";
+
+  const account = useQuery({
+    queryKey: ["account"],
+    queryFn: async () =>
+      (await supabase.from("accounts").select(
+        "legal_business_name,website_url,use_case_description,sample_message,opt_in_description,monthly_volume_estimate",
+      ).maybeSingle()).data,
+  });
+  const a = account.data;
+
+  const [form, setForm] = useState({
+    businessName: "",
+    businessWebsite: "",
+    useCase: "",
+    sampleMessage: "",
+    optInDescription: "",
+    monthlyVolume: 1000,
+  });
+  useEffect(() => {
+    if (!code) return;
+    setForm({
+      businessName: a?.legal_business_name ?? "",
+      businessWebsite: a?.website_url ?? "",
+      useCase: a?.use_case_description ?? "",
+      sampleMessage: a?.sample_message ?? "",
+      optInDescription: a?.opt_in_description ?? "",
+      monthlyVolume: a?.monthly_volume_estimate ?? 1000,
+    });
+  }, [code, a]);
+
+  const mut = useMutation({
+    mutationFn: () => submitFn({ data: { country: code as string, senderId, ...form } }),
+    onSuccess: (r) => {
+      if (r.status === "requires_registration") {
+        toast.warning("Submitted — this destination needs extra carrier docs. Our team will reach out shortly.");
+      } else {
+        toast.success(`Registration submitted for ${countryName}. Carrier approval typically takes 3–10 business days.`);
+      }
+      qc.invalidateQueries({ queryKey: ["sender-assets"] });
+      onClose();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not submit registration"),
+  });
+
   return (
     <Dialog open={!!code} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Sender ID registration required — {countryName}</DialogTitle>
+          <DialogTitle>Register sender ID — {countryName}</DialogTitle>
           <DialogDescription>
-            {countryName} mobile operators only deliver alphanumeric sender IDs that have been
-            pre-registered with the local carrier. Until registration is complete, campaigns to{" "}
-            {countryName} numbers will be skipped with a clear error instead of failing at the carrier.
+            Fill in your business details below. We'll submit the registration to the local carrier
+            for you — no need to leave this page.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 text-sm">
-          <div className="rounded-md border p-3 bg-muted/40">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Your sender ID</div>
-                <div className="font-mono font-semibold">{asset?.phone_number || senderId || "—"}</div>
-              </div>
-              <Badge variant={isRegistered ? "default" : "secondary"}>
-                {isRegistered ? "Registered" : "Needs registration"}
-              </Badge>
+          <div className="rounded-md border p-3 bg-muted/40 flex items-center justify-between">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Your sender ID</div>
+              <div className="font-mono font-semibold">{senderId || asset?.phone_number || "—"}</div>
             </div>
+            <Badge variant={isRegistered ? "default" : isSubmitted ? "secondary" : "outline"}>
+              {isRegistered ? "Registered" : isSubmitted ? "In review" : "Not started"}
+            </Badge>
           </div>
-          <div className="space-y-2">
-            <div className="font-medium">How to register</div>
-            <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
-              <li>Open your Telnyx Mission Control Portal.</li>
-              <li>Go to <strong>Messaging → Alphanumeric Sender IDs</strong>.</li>
-              <li>Create a request for your sender ID and select <strong>{countryName}</strong> as a destination.</li>
-              <li>Provide the business name, use-case, and any documents the local carrier requires (varies by country — Nigeria and India typically need a NOC letter or DLT registration).</li>
-              <li>Submit. Approval usually takes 3–10 business days.</li>
-              <li>Come back here and click <strong>"Mark as registered"</strong> — or we'll pick it up automatically the next time you send successfully.</li>
-            </ol>
+          <div className="space-y-1.5">
+            <Label>Legal business name</Label>
+            <Input value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} placeholder="Acme Ltd." />
           </div>
-          <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-            Prefer a local long-code or short-code instead? Contact support and we'll help you provision one for {countryName}.
+          <div className="space-y-1.5">
+            <Label>Business website</Label>
+            <Input type="url" value={form.businessWebsite} onChange={(e) => setForm({ ...form, businessWebsite: e.target.value })} placeholder="https://acme.com" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Use case</Label>
+            <Input value={form.useCase} onChange={(e) => setForm({ ...form, useCase: e.target.value })} placeholder="Order updates, 2FA, marketing…" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Sample message</Label>
+            <Textarea rows={3} value={form.sampleMessage} onChange={(e) => setForm({ ...form, sampleMessage: e.target.value })} placeholder="Hi {name}, your order #1234 has shipped. Reply STOP to opt out." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>How recipients opted in</Label>
+            <Textarea rows={3} value={form.optInDescription} onChange={(e) => setForm({ ...form, optInDescription: e.target.value })} placeholder="Customers check a consent box at checkout on acme.com/signup." />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Expected monthly volume</Label>
+            <Input type="number" min={1} value={form.monthlyVolume} onChange={(e) => setForm({ ...form, monthlyVolume: Number(e.target.value) || 0 })} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Close</Button>
-          <Button asChild>
-            <a href="https://portal.telnyx.com/#/app/messaging/senders" target="_blank" rel="noreferrer">
-              Open Telnyx portal
-            </a>
+          <Button variant="ghost" onClick={onClose} disabled={mut.isPending}>Close</Button>
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending || !senderId}>
+            {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+            Submit registration
           </Button>
         </DialogFooter>
       </DialogContent>

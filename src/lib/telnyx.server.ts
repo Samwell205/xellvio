@@ -226,6 +226,39 @@ export async function sendMessage(opts: {
   return res.data;
 }
 
+// ============ Alphanumeric Sender IDs ============
+
+export type AlphaSenderId = {
+  id: string;
+  alphanumeric_sender_id: string;
+  iso_country_code: string;
+  status?: string;
+};
+
+/**
+ * Register an alphanumeric sender ID on a messaging profile. For countries
+ * that require pre-registration (NG, IN, UAE, etc.) this creates the request
+ * with Telnyx — carrier-side approval still happens out of band but we do NOT
+ * send the user to the Telnyx portal.
+ */
+export async function createAlphanumericSenderId(opts: {
+  messagingProfileId: string;
+  senderId: string;
+  isoCountryCode: string;
+}): Promise<AlphaSenderId> {
+  const res = await telnyx<{ data: AlphaSenderId }>(
+    `/messaging_profiles/${opts.messagingProfileId}/alphanumeric_sender_ids`,
+    {
+      method: "POST",
+      body: {
+        alphanumeric_sender_id: opts.senderId,
+        iso_country_code: opts.isoCountryCode.toUpperCase(),
+      },
+    },
+  );
+  return res.data;
+}
+
 export async function getMessage(id: string): Promise<any> {
   const res = await telnyx<{ data: any }>(`/messages/${id}`);
   return res.data;
