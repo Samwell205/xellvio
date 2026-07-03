@@ -274,6 +274,7 @@ function TollfreeVerificationPage() {
     status === "verified";
 
   const [form, setForm] = useState(() => defaultForm());
+  const [step, setStep] = useState<1 | 2>(1);
   useEffect(() => {
     if (payload) {
       const normalizedCategories = normalizeCategories(payload.useCaseCategories);
