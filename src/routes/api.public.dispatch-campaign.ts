@@ -681,7 +681,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
               sender = { kind: "platform", lovableKey, twilioKey, messagingService };
             }
 
-            const r = await dispatchOne(supabaseAdmin, c, rates, sender);
+            const r = await processCampaign(supabaseAdmin, c, rates, sender);
             results.push({ id: c.id, ...r });
           } catch (e: any) {
             await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
