@@ -187,7 +187,7 @@ export function defaultWizardForm(): WizardForm {
     businessCountry: "US", addressLine1: "", addressLine2: "",
     city: "", state: "", zip: "",
     monthlyVolume: "10,000", optInType: "WEB_FORM",
-    useCaseCategories: ["MARKETING"],
+    useCaseCategories: ["General Marketing"],
     proofOfOptInUrl: "", proofShowsRequiredConsent: false,
     useCaseDescription: "", sampleMessage: "", notificationEmail: "",
     additionalInformation: "", optInConfirmationMessage: "", helpMessageSample: "",
