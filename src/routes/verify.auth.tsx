@@ -32,6 +32,26 @@ function VerifierAuth() {
   const [signupStage, setSignupStage] = useState<"details" | "code">("details");
   const [signupCode, setSignupCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+
+  async function sendResetEmail() {
+    if (!forgotEmail) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/verify/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Password reset link sent — check your email.");
+      setForgotOpen(false);
+      setForgotEmail("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not send reset email");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function signInWithPassword() {
     setBusy(true);
@@ -130,6 +150,26 @@ function VerifierAuth() {
                 <Button className="w-full" disabled={busy || !signinEmail || !signinPassword} onClick={signInWithPassword}>
                   {busy ? "Signing in…" : "Sign in"}
                 </Button>
+                {!forgotOpen ? (
+                  <button
+                    type="button"
+                    className="text-xs text-slate-400 underline hover:text-slate-200"
+                    onClick={() => { setForgotOpen(true); setForgotEmail(signinEmail); }}
+                  >
+                    Forgot password?
+                  </button>
+                ) : (
+                  <div className="space-y-2 rounded-md border border-slate-800 bg-slate-950/60 p-3">
+                    <Label className="text-xs text-slate-300">Reset password — enter your email</Label>
+                    <Input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="you@example.com" />
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1" disabled={busy || !forgotEmail} onClick={sendResetEmail}>
+                        {busy ? "Sending…" : "Send reset link"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setForgotOpen(false)}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-3 pt-4">

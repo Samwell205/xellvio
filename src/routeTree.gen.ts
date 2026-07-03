@@ -33,6 +33,7 @@ import { Route as VerifierRouteImport } from './routes/_verifier'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VerifyIndexRouteImport } from './routes/verify.index'
+import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
@@ -211,6 +212,11 @@ const IndexRoute = IndexRouteImport.update({
 const VerifyIndexRoute = VerifyIndexRouteImport.update({
   id: '/verify/',
   path: '/verify/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyResetPasswordRoute = VerifyResetPasswordRouteImport.update({
+  id: '/verify/reset-password',
+  path: '/verify/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerifyAuthRoute = VerifyAuthRouteImport.update({
@@ -589,6 +595,7 @@ export interface FileRoutesByFullPath {
   '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
+  '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/verify/': typeof VerifyIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
@@ -672,6 +679,7 @@ export interface FileRoutesByTo {
   '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
+  '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/verify': typeof VerifyIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
@@ -758,6 +766,7 @@ export interface FileRoutesById {
   '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
+  '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/verify/': typeof VerifyIndexRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
@@ -845,6 +854,7 @@ export interface FileRouteTypes {
     | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/verify/auth'
+    | '/verify/reset-password'
     | '/verify/'
     | '/admin/accounts'
     | '/admin/activity'
@@ -928,6 +938,7 @@ export interface FileRouteTypes {
     | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/verify/auth'
+    | '/verify/reset-password'
     | '/verify'
     | '/admin/accounts'
     | '/admin/activity'
@@ -1013,6 +1024,7 @@ export interface FileRouteTypes {
     | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/verify/auth'
+    | '/verify/reset-password'
     | '/verify/'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/activity'
@@ -1098,6 +1110,7 @@ export interface RootRouteChildren {
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   MMessageIdRoute: typeof MMessageIdRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
+  VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
@@ -1285,6 +1298,13 @@ declare module '@tanstack/react-router' {
       path: '/verify'
       fullPath: '/verify/'
       preLoaderRoute: typeof VerifyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify/reset-password': {
+      id: '/verify/reset-password'
+      path: '/verify/reset-password'
+      fullPath: '/verify/reset-password'
+      preLoaderRoute: typeof VerifyResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verify/auth': {
@@ -1903,6 +1923,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   MMessageIdRoute: MMessageIdRoute,
   VerifyAuthRoute: VerifyAuthRoute,
+  VerifyResetPasswordRoute: VerifyResetPasswordRoute,
   VerifyIndexRoute: VerifyIndexRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
