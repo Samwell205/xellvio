@@ -674,48 +674,39 @@ function AuthorizedRepStep({ form, update }: StepProps) {
 }
 
 function UseCaseStep({ form, update }: StepProps) {
-  const toggleCategory = (c: string) => {
-    const has = form.useCaseCategories.includes(c);
-    const next = has ? form.useCaseCategories.filter((x) => x !== c) : [...form.useCaseCategories, c].slice(0, 5);
-    update("useCaseCategories", next);
-  };
+  const currentUseCase = normalizeUseCase(form.useCaseCategories[0] ?? "") ?? "General Marketing";
   return (
     <>
       <StepHeader
         title="How you'll use this number"
         subtitle="Carriers use this to decide whether your traffic matches the toll-free program."
       />
-      <Field label="Estimated monthly SMS volume" required>
-        <Select value={form.monthlyVolume} onValueChange={(v) => update("monthlyVolume", v)}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {VOLUMES.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <Two>
+        <Field label="Expected messaging volume per month" required>
+          <Select value={form.monthlyVolume} onValueChange={(v) => update("monthlyVolume", v)}>
+            <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+            <SelectContent>
+              {VOLUMES.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Use-case" required>
+          <Select
+            value={currentUseCase}
+            onValueChange={(v) => update("useCaseCategories", [v])}
+          >
+            <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Field>
+      </Two>
+      <Field label="Summarize use-case" required hint="Explain who you're texting, what they'll receive, and how they signed up.">
+        <Textarea rows={4} value={form.useCaseDescription} onChange={(e) => update("useCaseDescription", e.target.value)} placeholder="Use case details" />
       </Field>
-      <Field label="Use case categories" required hint="Pick up to 5 that describe the messages you'll send.">
-        <div className="grid sm:grid-cols-2 gap-2">
-          {CATEGORIES.map((c) => {
-            const checked = form.useCaseCategories.includes(c);
-            return (
-              <label
-                key={c}
-                className={`flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer ${
-                  checked ? "border-primary bg-primary/5" : "hover:bg-muted/50"
-                }`}
-              >
-                <Checkbox checked={checked} onCheckedChange={() => toggleCategory(c)} />
-                <span>{c.replaceAll("_", " ").toLowerCase().replace(/(^|\s)\S/g, (m) => m.toUpperCase())}</span>
-              </label>
-            );
-          })}
-        </div>
-      </Field>
-      <Field label="Use case description" required hint="Explain who you're texting, what they'll receive, and how they signed up.">
-        <Textarea rows={4} value={form.useCaseDescription} onChange={(e) => update("useCaseDescription", e.target.value)} />
-      </Field>
-      <Field label="Sample message" required hint="Must include STOP / HELP language and your business name.">
-        <Textarea rows={4} value={form.sampleMessage} onChange={(e) => update("sampleMessage", e.target.value)} placeholder="Hi {first_name}, this is Acme with 20% off code SAVE20. Msg & data rates may apply. Reply STOP to opt out, HELP for help." />
+      <Field label="Message content" required hint="A representative sample message. Must include STOP / HELP language and your business name.">
+        <Textarea rows={4} value={form.sampleMessage} onChange={(e) => update("sampleMessage", e.target.value)} placeholder="Hi {first_name}, this is Acme with your appointment reminder. Msg & data rates may apply. Reply STOP to opt out, HELP for help." />
       </Field>
     </>
   );
