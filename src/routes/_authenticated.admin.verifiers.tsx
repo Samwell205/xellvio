@@ -147,40 +147,161 @@ function SubmissionsTab() {
   const listFn = useServerFn(adminListTfns);
   const updateFn = useServerFn(adminUpdateTfnStatus);
   const qc = useQueryClient();
-  const { data } = useQuery({ queryKey: ["admin","tfns","pending"], queryFn: () => listFn({ data: { status: "pending_verification" } }) });
+  const [status, setStatusFilter] = useState<"pending_verification"|"rejected"|"all">("pending_verification");
+  const { data } = useQuery({ queryKey: ["admin","tfns",status], queryFn: () => listFn({ data: { status } }) });
   const [reasonMap, setReasonMap] = useState<Record<string,string>>({});
 
   const setStatus = useMutation({
-    mutationFn: (args: { id: string; status: "verified" | "rejected"; reason?: string }) =>
+    mutationFn: (args: { id: string; status: "verified" | "rejected" | "pending_verification"; reason?: string }) =>
       updateFn({ data: { tfn_id: args.id, status: args.status, rejection_reason: args.reason } }),
-    onSuccess: () => { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["admin","tfns","pending"] }); },
+    onSuccess: () => { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["admin","tfns"] }); qc.invalidateQueries({ queryKey: ["admin","verifiers"] }); },
     onError: (e: any) => toast.error(e.message),
   });
 
   return (
     <Card>
-      <CardHeader><CardTitle>Pending submissions</CardTitle></CardHeader>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Submissions</CardTitle>
+        <Select value={status} onValueChange={(v: any) => setStatusFilter(v)}>
+          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pending_verification">Pending</SelectItem>
+            <SelectItem value="rejected">Rejected</SelectItem>
+            <SelectItem value="all">All</SelectItem>
+          </SelectContent>
+        </Select>
+      </CardHeader>
       <CardContent>
-        {(data ?? []).length === 0 ? <div className="text-sm text-muted-foreground">Nothing pending.</div> : (
+        {(data ?? []).length === 0 ? <div className="text-sm text-muted-foreground">Nothing here.</div> : (
           <div className="space-y-2">
             {(data ?? []).map((t: any) => (
               <div key={t.id} className="border rounded-md p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-mono">{t.phone_number}</div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-mono">{t.phone_number} <Badge variant="outline" className="ml-2">{t.status}</Badge></div>
                     <div className="text-xs text-muted-foreground">{t.verifiers?.full_name} · {t.verifiers?.email}</div>
                     {t.notes && <div className="text-xs mt-1">Notes: {t.notes}</div>}
+                    {t.rejection_reason && <div className="text-xs text-destructive mt-1">Rejected: {t.rejection_reason}</div>}
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={()=>setStatus.mutate({ id: t.id, status: "verified" })}>Approve</Button>
-                    <Button size="sm" variant="destructive" onClick={()=>setStatus.mutate({ id: t.id, status: "rejected", reason: reasonMap[t.id] || "Did not meet requirements" })}>Reject</Button>
+                  <div className="flex gap-2 shrink-0">
+                    {t.status !== "verified" && (
+                      <Button size="sm" onClick={()=>setStatus.mutate({ id: t.id, status: "verified" })}>Approve</Button>
+                    )}
+                    {t.status !== "rejected" && (
+                      <Button size="sm" variant="destructive" onClick={()=>setStatus.mutate({ id: t.id, status: "rejected", reason: reasonMap[t.id] || "Did not meet requirements" })}>Reject</Button>
+                    )}
+                    {t.status === "rejected" && (
+                      <Button size="sm" variant="outline" onClick={()=>setStatus.mutate({ id: t.id, status: "pending_verification" })}>Reopen</Button>
+                    )}
                   </div>
                 </div>
-                <Input placeholder="Rejection reason (optional)" value={reasonMap[t.id] || ""} onChange={e=>setReasonMap({ ...reasonMap, [t.id]: e.target.value })} />
+                {t.status !== "verified" && (
+                  <Input placeholder="Rejection reason (optional)" value={reasonMap[t.id] || ""} onChange={e=>setReasonMap({ ...reasonMap, [t.id]: e.target.value })} />
+                )}
               </div>
             ))}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SoldTab() {
+  const listFn = useServerFn(adminListSoldTfns);
+  const { data } = useQuery({ queryKey: ["admin","tfns","sold"], queryFn: () => listFn() });
+  return (
+    <Card>
+      <CardHeader><CardTitle>Sold numbers & payouts ({(data ?? []).length})</CardTitle></CardHeader>
+      <CardContent>
+        {(data ?? []).length === 0 ? <div className="text-sm text-muted-foreground">No sales yet.</div> : (
+          <div className="space-y-2">
+            {(data ?? []).map((s: any) => (
+              <div key={s.id} className="border rounded-md p-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="font-mono">{s.phone_number}</div>
+                    <div className="text-xs text-muted-foreground">Sold {s.sold_at ? new Date(s.sold_at).toLocaleString() : "—"}</div>
+                  </div>
+                  <div className="text-xs">
+                    <div><span className="text-muted-foreground">Buyer:</span> {s.buyer?.email ?? s.sold_to_account_id}</div>
+                    <div><span className="text-muted-foreground">Verifier (payee):</span> <b>{s.verifiers?.full_name}</b> · {s.verifiers?.email}</div>
+                  </div>
+                  <div className="text-xs text-right">
+                    <div>Sale: ₦{Number(s.sale_price_ngn ?? 0).toLocaleString()}</div>
+                    <div>Payout: <b>₦{Number(s.payout_ngn ?? 0).toLocaleString()}</b></div>
+                    <div className="text-muted-foreground">Commission: ₦{Number(s.commission_ngn ?? 0).toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TwilioTab() {
+  const listFn = useServerFn(adminListTwilioApprovedTfns);
+  const assignFn = useServerFn(adminAssignTwilioNumberToAccount);
+  const unassignFn = useServerFn(adminUnassignSenderAsset);
+  const accountsFn = useServerFn(adminListAccountsLite);
+  const qc = useQueryClient();
+  const { data, isLoading, error } = useQuery({ queryKey: ["admin","twilio-tfns"], queryFn: () => listFn(), retry: false });
+  const { data: accounts } = useQuery({ queryKey: ["admin","accounts","lite"], queryFn: () => accountsFn() });
+  const [assignMap, setAssignMap] = useState<Record<string,string>>({});
+
+  const assign = useMutation({
+    mutationFn: (args: { phone: string; account: string }) => assignFn({ data: { phone_number: args.phone, account_id: args.account, country: "US" } }),
+    onSuccess: () => { toast.success("Assigned to tenant"); qc.invalidateQueries({ queryKey: ["admin","twilio-tfns"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const unassign = useMutation({
+    mutationFn: (phone: string) => unassignFn({ data: { phone_number: phone } }),
+    onSuccess: () => { toast.success("Unassigned"); qc.invalidateQueries({ queryKey: ["admin","twilio-tfns"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Twilio approved toll-free numbers</CardTitle>
+        <p className="text-xs text-muted-foreground">Live list of TWILIO_APPROVED verifications on your main Twilio account. Assign any of them to a tenant.</p>
+      </CardHeader>
+      <CardContent>
+        {isLoading && <div className="text-sm text-muted-foreground">Loading from Twilio…</div>}
+        {error && <div className="text-sm text-destructive">Twilio error: {(error as any).message}</div>}
+        {!isLoading && !error && (data ?? []).length === 0 && <div className="text-sm text-muted-foreground">No approved toll-free numbers on Twilio yet.</div>}
+        <div className="space-y-2">
+          {(data ?? []).map((r: any) => (
+            <div key={r.sid} className="border rounded-md p-3 flex items-center justify-between gap-3 flex-wrap">
+              <div className="min-w-0">
+                <div className="font-mono">{r.phone_number ?? <span className="text-muted-foreground">(no phone)</span>}</div>
+                <div className="text-xs text-muted-foreground">{r.business_name ?? "—"} · {r.status} · {r.date_created ? new Date(r.date_created).toLocaleDateString() : ""}</div>
+                {r.assigned_to && (
+                  <div className="text-xs mt-1">Assigned to <b>{r.assigned_to.email}</b></div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {r.phone_number && !r.assigned_account_id && (
+                  <>
+                    <Select value={assignMap[r.sid] || ""} onValueChange={v => setAssignMap({ ...assignMap, [r.sid]: v })}>
+                      <SelectTrigger className="w-64"><SelectValue placeholder="Assign to tenant…" /></SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        {(accounts ?? []).map((a: any) => <SelectItem key={a.id} value={a.id}>{a.email}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm" disabled={!assignMap[r.sid] || assign.isPending} onClick={() => assign.mutate({ phone: r.phone_number, account: assignMap[r.sid] })}>Assign</Button>
+                  </>
+                )}
+                {r.assigned_account_id && (
+                  <Button size="sm" variant="outline" onClick={() => { if (confirm(`Unassign ${r.phone_number}?`)) unassign.mutate(r.phone_number); }}>Unassign</Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
