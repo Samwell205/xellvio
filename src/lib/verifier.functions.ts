@@ -478,25 +478,22 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     let rejectionReason: string | null = null;
 
     if (payload && row.twilio_phone_sid) {
-      const accountSid = process.env.TWILIO_ACCOUNT_SID;
-      const authToken = process.env.TWILIO_AUTH_TOKEN;
-      if (!accountSid || !authToken) throw new Error("Carrier credentials not configured");
       const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
       const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
       try {
         const result = await submitTwilioTollfreeVerification({
           phoneSid: row.twilio_phone_sid,
-          accountSid,
-          authToken,
+          accountSid: "",
+          authToken: "",
           existingVerificationSid: twilioVerificationSid,
-          statusCallbackUrl: `${base}/api/public/twilio-tollfree-status`,
+          statusCallbackUrl: `${base}/api/public/telnyx-status`,
           payload: payload as any,
         });
         twilioVerificationSid = result.verificationSid;
         carrierStatus = result.status;
         rejectionReason = result.rejectionReason;
       } catch (e: any) {
-        console.error("[verifier submit tfn] carrier submit failed", e?.message, e?.twilioResponse);
+        console.error("[verifier submit tfn] carrier submit failed", e?.message, e?.telnyxResponse);
         throw new Error(e?.message ?? "Carrier rejected the submission");
       }
     }
