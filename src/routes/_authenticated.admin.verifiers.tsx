@@ -180,9 +180,15 @@ function PoolTab() {
   const { data: accounts } = useQuery({ queryKey: ["admin","accounts","lite"], queryFn: () => accountsFn() });
   const [assignMap, setAssignMap] = useState<Record<string,string>>({});
 
+  const deleteFn = useServerFn(adminDeleteVerifierTfn);
   const assign = useMutation({
     mutationFn: (args: { tfn: string; account: string }) => assignFn({ data: { tfn_id: args.tfn, account_id: args.account } }),
     onSuccess: () => { toast.success("Number assigned"); qc.invalidateQueries({ queryKey: ["admin","tfns","verified"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const del = useMutation({
+    mutationFn: (id: string) => deleteFn({ data: { tfn_id: id } }),
+    onSuccess: () => { toast.success("Removed"); qc.invalidateQueries({ queryKey: ["admin","tfns","verified"] }); },
     onError: (e: any) => toast.error(e.message),
   });
 
