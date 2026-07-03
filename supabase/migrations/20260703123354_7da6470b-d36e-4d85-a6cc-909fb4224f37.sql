@@ -1,0 +1,1 @@
+ALTER TYPE public.verifier_tfn_status ADD VALUE IF NOT EXISTS 'assigned' BEFORE 'pending_verification';

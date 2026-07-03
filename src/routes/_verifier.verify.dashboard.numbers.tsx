@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listMyTfns, submitTfn, claimTfnFromPool } from "@/lib/verifier.functions";
+import { listMyTfns, submitTfn, claimTfnFromPool, submitAssignedTfn } from "@/lib/verifier.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,16 +20,18 @@ function NumbersPage() {
   const list = useServerFn(listMyTfns);
   const submit = useServerFn(submitTfn);
   const claim = useServerFn(claimTfnFromPool);
+  const submitAssigned = useServerFn(submitAssignedTfn);
   const qc = useQueryClient();
   const { data: rows } = useQuery({ queryKey: ["verifier", "tfns"], queryFn: () => list() });
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [showManual, setShowManual] = useState(false);
+  const [assignedNotes, setAssignedNotes] = useState<Record<string, string>>({});
 
   const claimMut = useMutation({
     mutationFn: () => claim(),
     onSuccess: (r: any) => {
-      toast.success(`Assigned ${r.phone_number} — start the verification below`);
+      toast.success(`Assigned ${r.phone_number} — fill in the verification details below`);
       qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -40,6 +42,15 @@ function NumbersPage() {
     onSuccess: () => {
       toast.success("Number submitted for verification");
       setPhone(""); setNotes("");
+      qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const submitAssignedMut = useMutation({
+    mutationFn: (v: { id: string; notes: string }) => submitAssigned({ data: v }),
+    onSuccess: () => {
+      toast.success("Submitted for verification");
       qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -87,24 +98,46 @@ function NumbersPage() {
           {(rows ?? []).length === 0 ? (
             <div className="text-sm text-slate-400">No numbers submitted yet.</div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {(rows ?? []).map((r: any) => (
-                <div key={r.id} className="flex items-center justify-between border border-slate-800 rounded-md p-3">
-                  <div>
-                    <div className="font-mono">{r.phone_number}</div>
-                    <div className="text-xs text-slate-400">{new Date(r.created_at).toLocaleString()}</div>
-                    {r.rejection_reason && <div className="text-xs text-red-400 mt-1">Reason: {r.rejection_reason}</div>}
+                <div key={r.id} className="border border-slate-800 rounded-md p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-mono">{r.phone_number}</div>
+                      <div className="text-xs text-slate-400">{new Date(r.created_at).toLocaleString()}</div>
+                      {r.rejection_reason && <div className="text-xs text-red-400 mt-1">Reason: {r.rejection_reason}</div>}
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={
+                        r.status === "verified" ? "default" :
+                        r.status === "sold" ? "secondary" :
+                        r.status === "rejected" ? "destructive" : "outline"
+                      }>
+                        {r.status === "assigned" ? "awaiting your submission" : r.status.replace("_", " ")}
+                      </Badge>
+                      {r.status === "sold" && (
+                        <div className="text-xs text-green-400 mt-1">+₦{Number(r.payout_ngn ?? 0).toLocaleString()}</div>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <Badge variant={
-                      r.status === "verified" ? "default" :
-                      r.status === "sold" ? "secondary" :
-                      r.status === "rejected" ? "destructive" : "outline"
-                    }>{r.status.replace("_", " ")}</Badge>
-                    {r.status === "sold" && (
-                      <div className="text-xs text-green-400 mt-1">+₦{Number(r.payout_ngn ?? 0).toLocaleString()}</div>
-                    )}
-                  </div>
+                  {r.status === "assigned" && (
+                    <div className="space-y-2 border-t border-slate-800 pt-3">
+                      <Label className="text-xs">Verification notes (business name, use case, sample messages)</Label>
+                      <Textarea
+                        rows={3}
+                        value={assignedNotes[r.id] ?? ""}
+                        onChange={(e) => setAssignedNotes((s) => ({ ...s, [r.id]: e.target.value }))}
+                        placeholder="Tell our team what this number will be used for"
+                      />
+                      <Button
+                        size="sm"
+                        disabled={submitAssignedMut.isPending || !(assignedNotes[r.id] ?? "").trim()}
+                        onClick={() => submitAssignedMut.mutate({ id: r.id, notes: assignedNotes[r.id] ?? "" })}
+                      >
+                        Submit for verification
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
