@@ -6,12 +6,12 @@ import { keywordScan } from "@/lib/content-scanner";
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 // How many messages to insert per DB batch during the "plan" phase.
 const PLAN_INSERT_CHUNK = 500;
-// How many messages to actually send to the SMS provider per cron invocation.
-// Keeps each Worker invocation well within CPU / subrequest limits so large
-// campaigns (thousands of recipients) drain safely over multiple ticks.
-const DELIVER_PER_TICK = 600;
+// How many messages one dispatcher invocation claims. Multiple cron-triggered
+// invocations can run in parallel, and the database claim uses row locks so
+// they do not double-send the same recipient.
+const DELIVER_PER_WORKER = 450;
 // Max parallel HTTP calls to the SMS provider inside one invocation.
-const DELIVER_CONCURRENCY = 50;
+const DELIVER_CONCURRENCY = 75;
 
 function render(body: string, p: { first_name?: string | null; last_name?: string | null }) {
   return body
@@ -515,13 +515,10 @@ async function deliverPending(
     console.error("[dispatch] provider budget check failed (continuing)", e);
   }
 
-  const { data: batch, error: qErr } = await supabaseAdmin
-    .from("messages")
-    .select("id, phone_e164, rendered_body, country_code, segments_count, cost")
-    .eq("campaign_id", campaign.id)
-    .eq("status", "queued")
-    .order("cost", { ascending: true })
-    .limit(DELIVER_PER_TICK);
+  const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
+    _campaign_id: campaign.id,
+    _limit: DELIVER_PER_WORKER,
+  });
   if (qErr) throw new Error(qErr.message);
 
   const rows = batch ?? [];
@@ -544,6 +541,11 @@ async function deliverPending(
     runningCost = next;
     return true;
   });
+  const affordableIds = new Set(affordableRows.map((r: any) => r.id));
+  const deferredIds = rows.filter((r: any) => !affordableIds.has(r.id)).map((r: any) => r.id);
+  if (deferredIds.length > 0) {
+    await supabaseAdmin.from("messages").update({ status: "queued" }).in("id", deferredIds);
+  }
 
   if (affordableRows.length === 0) {
     await supabaseAdmin
@@ -557,10 +559,6 @@ async function deliverPending(
       .eq("id", campaign.id);
     return { sent: 0, failed: 0, debited: 0, remaining: rows.length };
   }
-
-  const ids = affordableRows.map((r: any) => r.id);
-  // Claim rows so a concurrent tick can't double-send them.
-  await supabaseAdmin.from("messages").update({ status: "sending" }).in("id", ids);
 
   let sent = 0;
   let failed = 0;
@@ -591,7 +589,7 @@ async function deliverPending(
     .from("messages")
     .select("id", { count: "exact", head: true })
     .eq("campaign_id", campaign.id)
-    .eq("status", "queued");
+    .in("status", ["queued", "sending"]);
 
   if ((remaining ?? 0) === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
