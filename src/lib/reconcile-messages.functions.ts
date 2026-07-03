@@ -76,16 +76,20 @@ export const reconcileCampaignMessages = createServerFn({ method: "POST" })
           );
           if (!res.ok) return;
           const json: any = await res.json();
-          const newStatus = String(json?.status ?? "").toLowerCase();
+          let newStatus = String(json?.status ?? "").toLowerCase();
+          const errCode = json?.error_code ? String(json.error_code) : null;
+          // Carrier rejection surfaced as `sent` + ErrorCode → treat as undelivered.
+          if (newStatus === "sent" && errCode) newStatus = "undelivered";
           if (!newStatus || newStatus === m.status) return;
 
           const update: { status: string; delivered_at?: string; error_code?: string } = {
             status: newStatus,
           };
           if (newStatus === "delivered") update.delivered_at = new Date().toISOString();
-          if (json?.error_code) update.error_code = String(json.error_code);
+          if (errCode) update.error_code = errCode;
 
           await supabaseAdmin.from("messages").update(update).eq("id", m.id);
+
           await supabaseAdmin.from("events").insert({
             message_id: m.id,
             type: `reconcile:${newStatus}`,
