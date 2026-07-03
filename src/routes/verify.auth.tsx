@@ -32,6 +32,26 @@ function VerifierAuth() {
   const [signupStage, setSignupStage] = useState<"details" | "code">("details");
   const [signupCode, setSignupCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+
+  async function sendResetEmail() {
+    if (!forgotEmail) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/verify/reset-password`,
+      });
+      if (error) throw error;
+      toast.success("Password reset link sent — check your email.");
+      setForgotOpen(false);
+      setForgotEmail("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not send reset email");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function signInWithPassword() {
     setBusy(true);
