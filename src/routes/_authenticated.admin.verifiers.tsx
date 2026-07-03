@@ -58,23 +58,67 @@ function AdminVerifiersPage() {
 
 function VerifiersTab() {
   const list = useServerFn(adminListVerifiers);
-  const { data } = useQuery({ queryKey: ["admin","verifiers"], queryFn: () => list() });
+  const setActive = useServerFn(adminSetVerifierActive);
+  const adjust = useServerFn(adminAdjustVerifierWallet);
+  const qc = useQueryClient();
+  const { data } = useQuery({ queryKey: ["admin", "verifiers"], queryFn: () => list() });
+  const [amountMap, setAmountMap] = useState<Record<string, string>>({});
+  const [reasonMap, setReasonMap] = useState<Record<string, string>>({});
+
+  const toggleMut = useMutation({
+    mutationFn: (a: { id: string; on: boolean }) => setActive({ data: { verifier_id: a.id, is_active: a.on } }),
+    onSuccess: () => { toast.success("Updated"); qc.invalidateQueries({ queryKey: ["admin", "verifiers"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const adjustMut = useMutation({
+    mutationFn: (a: { id: string; delta: number; reason: string }) =>
+      adjust({ data: { verifier_id: a.id, delta_ngn: a.delta, reason: a.reason } }),
+    onSuccess: () => {
+      toast.success("Wallet updated");
+      qc.invalidateQueries({ queryKey: ["admin", "verifiers"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <Card>
       <CardHeader><CardTitle>All verifiers</CardTitle></CardHeader>
       <CardContent>
         {(data ?? []).length === 0 ? <div className="text-sm text-muted-foreground">No verifiers yet.</div> : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {(data ?? []).map((v: any) => (
-              <div key={v.id} className="border rounded-md p-3">
-                <div className="font-medium">{v.full_name}</div>
-                <div className="text-xs text-muted-foreground">{v.email} · joined {new Date(v.created_at).toLocaleDateString()}</div>
-                <div className="text-xs mt-1">
-                  Wallet: <b>₦{Number(v.wallet?.balance_ngn ?? 0).toLocaleString()}</b> · Earned: ₦{Number(v.wallet?.lifetime_earned_ngn ?? 0).toLocaleString()}
+              <div key={v.id} className="border rounded-md p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-medium">{v.full_name} {v.is_active === false && <Badge variant="destructive" className="ml-2">Suspended</Badge>}</div>
+                    <div className="text-xs text-muted-foreground">{v.email} · joined {new Date(v.created_at).toLocaleDateString()}</div>
+                    <div className="text-xs mt-1">
+                      Wallet: <b>₦{Number(v.wallet?.balance_ngn ?? 0).toLocaleString()}</b> · Earned: ₦{Number(v.wallet?.lifetime_earned_ngn ?? 0).toLocaleString()}
+                    </div>
+                    {v.bank ? (
+                      <div className="text-xs text-muted-foreground mt-1">Bank: {v.bank.bank_name} · {v.bank.account_number} · {v.bank.account_name}</div>
+                    ) : <div className="text-xs text-amber-600 mt-1">No bank details</div>}
+                  </div>
+                  <Button size="sm" variant={v.is_active === false ? "default" : "outline"} onClick={() => toggleMut.mutate({ id: v.id, on: v.is_active === false })}>
+                    {v.is_active === false ? "Reactivate" : "Suspend"}
+                  </Button>
                 </div>
-                {v.bank ? (
-                  <div className="text-xs text-muted-foreground mt-1">Bank: {v.bank.bank_name} · {v.bank.account_number} · {v.bank.account_name}</div>
-                ) : <div className="text-xs text-amber-600 mt-1">No bank details</div>}
+                <div className="flex items-end gap-2 pt-2 border-t">
+                  <div className="flex-1">
+                    <Label className="text-xs">Adjust wallet (₦, negative to debit)</Label>
+                    <Input type="number" placeholder="e.g. 5000 or -2000" value={amountMap[v.id] ?? ""} onChange={(e) => setAmountMap({ ...amountMap, [v.id]: e.target.value })} />
+                  </div>
+                  <div className="flex-1">
+                    <Label className="text-xs">Reason</Label>
+                    <Input placeholder="Bonus / correction / clawback" value={reasonMap[v.id] ?? ""} onChange={(e) => setReasonMap({ ...reasonMap, [v.id]: e.target.value })} />
+                  </div>
+                  <Button size="sm" disabled={!amountMap[v.id] || !reasonMap[v.id] || adjustMut.isPending} onClick={() => {
+                    const delta = Number(amountMap[v.id]);
+                    if (!Number.isFinite(delta) || delta === 0) return toast.error("Enter a non-zero amount");
+                    adjustMut.mutate({ id: v.id, delta, reason: reasonMap[v.id] });
+                    setAmountMap({ ...amountMap, [v.id]: "" });
+                  }}>Apply</Button>
+                </div>
               </div>
             ))}
           </div>
