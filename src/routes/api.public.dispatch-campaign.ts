@@ -580,10 +580,14 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           .eq("status", "sending")
           .lt("updated_at", stalledCutoff);
 
+        // Pick campaigns that are queued, scheduled and due, OR already sending
+        // (so we continue draining their queued messages across ticks).
         const { data: due, error } = await supabaseAdmin
           .from("campaigns")
           .select("*")
-          .or(`status.eq.queued,and(status.eq.scheduled,schedule_at.lte.${nowIso})`)
+          .or(
+            `status.eq.queued,status.eq.sending,and(status.eq.scheduled,schedule_at.lte.${nowIso})`,
+          )
           .limit(10);
         if (error) return Response.json({ error: error.message }, { status: 500 });
 
