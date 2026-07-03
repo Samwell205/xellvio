@@ -90,22 +90,25 @@ export const sendTestSms = createServerFn({ method: "POST" })
       );
     }
 
-    // Telnyx requires messaging_profile_id for alphanumeric sends, and it's
-    // safer to always send it. Prefer the per-asset profile; fall back to the
-    // account-level profile stored on `accounts`.
-    let messagingProfileId: string | null | undefined = asset.messaging_service_sid;
+    // Telnyx requires messaging_profile_id for alphanumeric sends, and it
+    // must be a Telnyx UUID — never a Twilio MG/AC SID.
+    const { isValidTelnyxUuid, ensureMessagingProfileForAccount } = await import("./telnyx.server");
+    let messagingProfileId: string | null | undefined = isValidTelnyxUuid(asset.messaging_service_sid)
+      ? asset.messaging_service_sid
+      : null;
     if (!messagingProfileId) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: acct } = await supabaseAdmin
         .from("accounts")
-        .select("telnyx_messaging_profile_id, twilio_subaccount_sid")
+        .select("telnyx_messaging_profile_id")
         .eq("id", userId)
         .maybeSingle();
-      messagingProfileId = acct?.telnyx_messaging_profile_id ?? acct?.twilio_subaccount_sid ?? null;
+      messagingProfileId = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
+        ? acct!.telnyx_messaging_profile_id
+        : null;
     }
     if (!messagingProfileId) {
       // Auto-provision a Telnyx Messaging Profile for this account on first use.
-      const { ensureMessagingProfileForAccount } = await import("./telnyx.server");
       messagingProfileId = await ensureMessagingProfileForAccount(userId);
     }
 

@@ -67,6 +67,23 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
 
 export type MessagingProfile = { id: string; name: string; enabled: boolean; webhook_url?: string | null };
 
+// Broad set of ISO-2 country codes we allow tenants to send SMS to. Telnyx
+// requires whitelisted_destinations to be non-empty or it rejects sends with
+// "Messaging profile is missing whitelisted destinations".
+export const DEFAULT_WHITELISTED_DESTINATIONS = [
+  "US","CA","GB","IE","AU","NZ","DE","FR","ES","IT","PT","NL","BE","LU","CH","AT",
+  "DK","SE","NO","FI","IS","PL","CZ","SK","HU","RO","BG","GR","HR","SI","EE","LV","LT",
+  "MT","CY","TR","UA","RU","IL","AE","SA","QA","KW","BH","OM","JO","LB","EG",
+  "ZA","NG","KE","GH","UG","TZ","RW","CI","SN","CM","MA","DZ","TN","ET",
+  "IN","PK","BD","LK","NP","MY","SG","TH","VN","ID","PH","JP","KR","HK","TW",
+  "MX","BR","AR","CL","CO","PE","VE","EC","UY","PY","BO","CR","GT","PA","DO","PR",
+];
+
+export function isValidTelnyxUuid(id: string | null | undefined): id is string {
+  if (!id) return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
 export async function createMessagingProfile(name: string): Promise<MessagingProfile> {
   const res = await telnyx<{ data: MessagingProfile }>("/messaging_profiles", {
     method: "POST",
@@ -76,12 +93,21 @@ export async function createMessagingProfile(name: string): Promise<MessagingPro
       webhook_url: statusWebhookUrl(),
       webhook_failover_url: null,
       webhook_api_version: "2",
+      whitelisted_destinations: DEFAULT_WHITELISTED_DESTINATIONS,
     },
   });
   return res.data;
 }
 
+export async function updateMessagingProfileWhitelist(id: string, countries: string[] = DEFAULT_WHITELISTED_DESTINATIONS): Promise<void> {
+  await telnyx(`/messaging_profiles/${id}`, {
+    method: "PATCH",
+    body: { whitelisted_destinations: countries, webhook_url: statusWebhookUrl(), webhook_api_version: "2" },
+  });
+}
+
 export async function getMessagingProfile(id: string): Promise<MessagingProfile | null> {
+  if (!isValidTelnyxUuid(id)) return null;
   try {
     const res = await telnyx<{ data: MessagingProfile }>(`/messaging_profiles/${id}`);
     return res.data;
@@ -247,19 +273,13 @@ export async function ensureMessagingProfileForAccount(accountId: string): Promi
     .maybeSingle();
   if (error || !acct) throw new Error("Account not found");
 
-  const existing = acct.telnyx_messaging_profile_id ?? acct.twilio_subaccount_sid ?? null;
-  if (existing && existing.startsWith("40")) {
-    // Telnyx messaging profile IDs are UUIDs beginning with "40..." for some
-    // resources; simpler: just verify by fetching.
-    const p = await getMessagingProfile(existing);
+  const candidate = acct.telnyx_messaging_profile_id ?? null;
+  if (isValidTelnyxUuid(candidate)) {
+    const p = await getMessagingProfile(candidate);
     if (p) {
-      if (!acct.telnyx_messaging_profile_id) {
-        await supabaseAdmin
-          .from("accounts")
-          .update({ telnyx_messaging_profile_id: existing, telnyx_messaging_profile_created_at: new Date().toISOString() })
-          .eq("id", accountId);
-      }
-      return existing;
+      // Make sure existing profiles have whitelisted destinations set.
+      try { await updateMessagingProfileWhitelist(candidate); } catch { /* non-fatal */ }
+      return candidate;
     }
   }
 
@@ -270,8 +290,6 @@ export async function ensureMessagingProfileForAccount(accountId: string): Promi
     .update({
       telnyx_messaging_profile_id: profile.id,
       telnyx_messaging_profile_created_at: new Date().toISOString(),
-      // Mirror into legacy columns so untouched code paths still work.
-      twilio_subaccount_sid: profile.id,
       onboarding_status: "sender_pending",
     })
     .eq("id", accountId);

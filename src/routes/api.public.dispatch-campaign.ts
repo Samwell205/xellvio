@@ -352,7 +352,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           try {
             const { data: acct } = await supabaseAdmin
               .from("accounts")
-              .select("telnyx_messaging_profile_id, twilio_subaccount_sid, subaccount_phone_number, onboarding_status")
+              .select("telnyx_messaging_profile_id, subaccount_phone_number, onboarding_status")
               .eq("id", c.account_id).maybeSingle();
             if (acct?.onboarding_status === "suspended") {
               await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
@@ -370,12 +370,13 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
               results.push({ id: c.id, skipped: "sender_pending_verification" });
               continue;
             }
-            // Auto-provision the Telnyx Messaging Profile if this account has none yet.
-            let profileId: string | null =
-              acct?.telnyx_messaging_profile_id ?? acct?.twilio_subaccount_sid ?? null;
+            const { isValidTelnyxUuid, ensureMessagingProfileForAccount } = await import("@/lib/telnyx.server");
+            // Auto-provision the Telnyx Messaging Profile if none valid on this account.
+            let profileId: string | null = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
+              ? (acct!.telnyx_messaging_profile_id as string)
+              : null;
             if (!profileId) {
               try {
-                const { ensureMessagingProfileForAccount } = await import("@/lib/telnyx.server");
                 profileId = await ensureMessagingProfileForAccount(c.account_id);
               } catch (e: any) {
                 await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
@@ -383,8 +384,11 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
                 continue;
               }
             }
+            const assetProfileId = isValidTelnyxUuid(verifiedSender?.messaging_service_sid)
+              ? (verifiedSender!.messaging_service_sid as string)
+              : null;
             const sender: Sender = {
-              messagingProfileId: verifiedSender?.messaging_service_sid ?? profileId,
+              messagingProfileId: assetProfileId ?? profileId,
               fromNumber: verifiedSender?.phone_number ?? acct?.subaccount_phone_number ?? null,
               assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
             };
