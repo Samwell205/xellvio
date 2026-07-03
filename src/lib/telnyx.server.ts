@@ -79,6 +79,17 @@ export const DEFAULT_WHITELISTED_DESTINATIONS = [
   "MX","BR","AR","CL","CO","PE","VE","EC","UY","PY","BO","CR","GT","PA","DO","PR",
 ];
 
+// Countries where unregistered alphanumeric sender IDs are NOT delivered by
+// carriers (Telnyx returns 400 "sender not registered"). Sending to these
+// requires a pre-registered sender ID / short code / long code with the local
+// operator — we cannot ship an alpha SID out of the box. We still allow the
+// country in the whitelist so registered senders / long codes work later, but
+// we won't mark an auto-created alpha SID as `verified` for these.
+export const ALPHA_SENDER_REQUIRES_REGISTRATION = new Set([
+  "US","CA","NG","IN","CN","SA","AE","QA","KW","BH","OM","EG","TR",
+  "PH","VN","TH","ID","MY","BD","PK","LK","MA","DZ","TN",
+]);
+
 export function isValidTelnyxUuid(id: string | null | undefined): id is string {
   if (!id) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
