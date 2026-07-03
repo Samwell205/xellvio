@@ -72,6 +72,12 @@ function VerifierAuth() {
   async function sendSignupCode() {
     setBusy(true);
     try {
+      // Prevent duplicate registrations for the same email
+      const check = await checkEmail({ data: { email: signupEmail } });
+      if (!check.available) {
+        toast.error("An account with this email already exists — please sign in instead.");
+        return;
+      }
       const { error } = await supabase.auth.signInWithOtp({
         email: signupEmail,
         options: {
