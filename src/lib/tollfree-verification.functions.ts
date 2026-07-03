@@ -8,14 +8,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-const VOLUME_VALUES = ["10","100","1,000","10,000","100,000","250,000","500,000","750,000","1,000,000","5,000,000+"] as const;
+import { TOLLFREE_USE_CASES, TOLLFREE_VOLUMES, normalizeUseCase } from "./tollfree-use-cases";
+
+const VOLUME_VALUES = TOLLFREE_VOLUMES;
 const OPT_IN_VALUES = ["VERBAL","WEB_FORM","PAPER_FORM","VIA_TEXT","MOBILE_QR_CODE"] as const;
-const USE_CASE_CATEGORIES = [
-  "TWO_FACTOR_AUTHENTICATION","ACCOUNT_NOTIFICATIONS","CUSTOMER_CARE","CHARITY_NONPROFIT",
-  "DELIVERY_NOTIFICATIONS","FRAUD_ALERT_MESSAGING","EVENTS","HIGHER_EDUCATION","K12",
-  "MARKETING","POLLING_AND_VOTING_NON_POLITICAL","POLITICAL_ELECTION_CAMPAIGNS",
-  "PUBLIC_SERVICE_ANNOUNCEMENT","SECURITY_ALERT",
-] as const;
+const USE_CASE_CATEGORIES = TOLLFREE_USE_CASES;
 
 export const TollfreeVerificationInput = z.object({
   legalEntityName: z.string().trim().min(2).max(255),
