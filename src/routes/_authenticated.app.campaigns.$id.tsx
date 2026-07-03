@@ -203,6 +203,16 @@ function CampaignReport() {
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
               <RefreshCw className={`size-3 ${messagesQ.isFetching ? "animate-spin" : ""}`} /> live
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => reconcileM.mutate()}
+              disabled={reconcileM.isPending}
+              title="Poll Twilio for the latest status of messages still marked as sent/queued (some carriers don't return delivery receipts)."
+            >
+              <RefreshCw className={`size-3 mr-1 ${reconcileM.isPending ? "animate-spin" : ""}`} />
+              {reconcileM.isPending ? "Refreshing…" : "Refresh from Twilio"}
+            </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
             </Button>
