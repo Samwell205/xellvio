@@ -42,6 +42,45 @@ export const getTfnMarketplaceOffer = createServerFn({ method: "GET" })
     return { available_count: count ?? 0, price_ngn: settings.priceNgn };
   });
 
+export const purchaseTfnFromMarketplace = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }: any) => {
+    return await buyVerifiedTfnImpl(context.userId);
+  });
+
+async function buyVerifiedTfnImpl(userId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { priceNgn, commissionPct } = await readSettings();
+  const { data: acct } = await supabaseAdmin
+    .from("accounts").select("credit_balance").eq("id", userId).maybeSingle();
+  if (!acct || Number(acct.credit_balance) < priceNgn) {
+    throw new Error(`Insufficient balance. This number costs ₦${priceNgn.toLocaleString()}`);
+  }
+  const { data: sold, error: rpcErr } = await supabaseAdmin.rpc("claim_and_sell_verified_tfn", {
+    _account_id: userId,
+    _price_ngn: priceNgn,
+    _commission_pct: commissionPct,
+  });
+  if (rpcErr) throw new Error(rpcErr.message);
+  const row = Array.isArray(sold) ? sold[0] : sold;
+  if (!row) throw new Error("No verified numbers available right now");
+  await supabaseAdmin.rpc("debit_account", {
+    _account_id: userId,
+    _amount: priceNgn,
+    _campaign_id: undefined as any,
+    _description: `Purchased verified TFN ${row.phone_number}`,
+  });
+  await supabaseAdmin.from("sender_assets").insert({
+    account_id: userId,
+    country_code: row.country,
+    sender_kind: "toll_free",
+    phone_number: row.phone_number,
+    verification_status: "verified",
+    last_synced_at: new Date().toISOString(),
+  }).select().maybeSingle();
+  return { ok: true, phone_number: row.phone_number, country: row.country };
+}
+
 export const buyVerifiedTfn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
