@@ -212,6 +212,7 @@ function PoolTab() {
                     </SelectContent>
                   </Select>
                   <Button size="sm" disabled={!assignMap[t.id]} onClick={()=>assign.mutate({ tfn: t.id, account: assignMap[t.id] })}>Assign</Button>
+                  <Button size="sm" variant="destructive" onClick={() => { if (confirm(`Remove ${t.phone_number} from pool?`)) del.mutate(t.id); }}>Delete</Button>
                 </div>
               </div>
             ))}
