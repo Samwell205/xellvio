@@ -1,0 +1,1 @@
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS tollfree_setup_fee_due_cents integer NOT NULL DEFAULT 0;
