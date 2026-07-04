@@ -458,18 +458,7 @@ function RegistrationRequiredDialog({
 function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; assets: any[]; onClose: () => void }) {
   const qc = useQueryClient();
   const name = code === "US" ? "United States" : code === "CA" ? "Canada" : "";
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    number_type: "toll_free" as "toll_free" | "ten_dlc" | "short_code",
-    business_name: "",
-    business_website: "",
-    use_case: "",
-    sample_message: "",
-    expected_monthly_volume: 1000,
-  });
-
   const listFn = useServerFn(listMyNumberRequests);
-  const submitFn = useServerFn(submitNumberRequest);
   const cancelFn = useServerFn(cancelMyNumberRequest);
 
   const reqs = useQuery({
@@ -529,22 +518,8 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
     carrierVariant = "secondary";
   }
 
-  const submit = useMutation({
-    mutationFn: () => submitFn({ data: { country: code as "US" | "CA", ...form } }),
-    onSuccess: (res: any) => {
-      if (res?.auto?.provisioned) {
-        toast.success(`Your ${code} number ${res.auto.phone_number} is provisioned and now in carrier review.`);
-      } else if (res?.auto?.note) {
-        toast.message("Request submitted — manual review needed", { description: res.auto.note });
-      } else {
-        toast.success("Request submitted. We'll review it shortly.");
-      }
-      qc.invalidateQueries({ queryKey: ["my-number-requests"] });
-      qc.invalidateQueries({ queryKey: ["sender-assets"] });
-      setShowForm(false);
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Failed to submit request"),
-  });
+  // Submission has moved to the dedicated Toll-free Verification wizard route.
+
 
   const cancel = useMutation({
     mutationFn: (id: string) => cancelFn({ data: { id } }),
@@ -555,7 +530,7 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
   });
 
   return (
-    <Dialog open={!!code} onOpenChange={(v) => { if (!v) { setShowForm(false); onClose(); } }}>
+    <Dialog open={!!code} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>How sending to {name} works</DialogTitle>
@@ -572,7 +547,7 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
           </div>
         )}
 
-        {existing && !showForm ? (
+        {existing ? (
           <div className="space-y-3 text-sm">
             <div className="rounded-md border p-3">
               <div className="flex items-center justify-between gap-2">
@@ -604,84 +579,40 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
               </Button>
             )}
           </div>
-        ) : !showForm ? (
-          <div className="space-y-3 text-sm">
-            <div className="rounded-md border p-3 bg-muted/40 space-y-2">
-              <p className="font-medium">Your options for {name}:</p>
-              <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                <li><strong>Toll-free number</strong> (recommended) — fast to provision, high-volume marketing & alerts, requires brand verification.</li>
-                <li><strong>10DLC long-code</strong> — local US/CA number, requires brand + campaign registration (~1–2 weeks).</li>
-                <li><strong>Short code</strong> — 5–6 digits for very high volume, slower approval and higher cost.</li>
-              </ul>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Submit a request below and an admin will review it. Once approved we'll provision the number and assign it to your account.
-            </p>
-          </div>
         ) : (
           <div className="space-y-3 text-sm">
-            <div className="grid gap-2">
-              <Label>Number type</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["toll_free", "ten_dlc", "short_code"] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, number_type: t }))}
-                    className={`rounded-md border px-2 py-2 text-xs font-medium transition ${form.number_type === t ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
-                  >
-                    {t === "toll_free" ? "Toll-free" : t === "ten_dlc" ? "10DLC" : "Short code"}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label>Business / brand name</Label>
-              <Input value={form.business_name} onChange={(e) => setForm({ ...form, business_name: e.target.value })} placeholder="Acme Inc." />
-            </div>
-            <div className="grid gap-2">
-              <Label>Business website (optional)</Label>
-              <Input value={form.business_website} onChange={(e) => setForm({ ...form, business_website: e.target.value })} placeholder="https://acme.com" />
-            </div>
-            <div className="grid gap-2">
-              <Label>Use case</Label>
-              <Textarea rows={2} value={form.use_case} onChange={(e) => setForm({ ...form, use_case: e.target.value })} placeholder="What you'll send (marketing, alerts, OTP, etc.)" />
-            </div>
-            <div className="grid gap-2">
-              <Label>Sample message</Label>
-              <Textarea rows={2} value={form.sample_message} onChange={(e) => setForm({ ...form, sample_message: e.target.value })} placeholder="Hi {first_name}, your order #1234 has shipped..." />
-            </div>
-            <div className="grid gap-2">
-              <Label>Expected monthly volume</Label>
-              <Input type="number" min={0} value={form.expected_monthly_volume} onChange={(e) => setForm({ ...form, expected_monthly_volume: Number(e.target.value) })} />
+            <div className="rounded-md border p-3 bg-muted/40 space-y-2">
+              <p className="font-medium">How {name} sending works:</p>
+              <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                <li>We provision a <strong>toll-free number</strong> for you automatically.</li>
+                <li>You submit a one-time <strong>toll-free verification</strong> with your business details — we file it with the carriers for you.</li>
+                <li>Approval typically takes <strong>1–3 weeks</strong>. The same approval covers both US and Canada.</li>
+              </ul>
             </div>
             <div className="rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs">
-              A one-time <strong>$5</strong> fee will be deducted from your credit balance to cover the phone-number provisioning &amp; carrier verification. You won't be re-charged if you retry the same request.
+              A one-time <strong>$5</strong> fee will be deducted from your credit balance to cover the phone-number provisioning &amp; carrier verification. You won't be re-charged if you retry the same submission.
             </div>
           </div>
         )}
 
         <DialogFooter>
-          {showForm ? (
-            <>
-              <Button variant="ghost" onClick={() => setShowForm(false)}>Back</Button>
-              <Button onClick={() => submit.mutate()} disabled={submit.isPending || !form.business_name || form.use_case.length < 10 || form.sample_message.length < 10}>
-                {submit.isPending ? "Submitting…" : "Submit request"}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="ghost" onClick={onClose}>Close</Button>
-              {!existing && !coveredByUs && (
-                <Button onClick={() => setShowForm(true)}>Request a {name} number</Button>
-              )}
-            </>
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+          {!existing && !coveredByUs && (
+            <Button asChild>
+              <Link to="/app/toll-free-verification">Start toll-free verification</Link>
+            </Button>
+          )}
+          {existing?.status === "rejected" && !coveredByUs && (
+            <Button asChild>
+              <Link to="/app/toll-free-verification">Fix &amp; resubmit</Link>
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
 
 
 function senderKindLabel(kind: string) {
