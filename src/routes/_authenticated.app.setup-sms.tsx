@@ -106,18 +106,18 @@ function SetupSmsPage() {
 
 
 
-      {hasAssets ? (
-        <SenderStatusList
-          assets={assets.data ?? []}
-          accountPhone={a?.phone ?? undefined}
-          onRefresh={() => refreshMut.mutate()}
-          refreshing={refreshMut.isPending}
-          onSaved={() => {
-            qc.invalidateQueries({ queryKey: ["sender-assets"] });
-            qc.invalidateQueries({ queryKey: ["account"] });
-          }}
-        />
-      ) : (
+      <SenderStatusList
+        assets={assets.data ?? []}
+        accountPhone={a?.phone ?? undefined}
+        onRefresh={() => refreshMut.mutate()}
+        refreshing={refreshMut.isPending}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["sender-assets"] });
+          qc.invalidateQueries({ queryKey: ["account"] });
+        }}
+      />
+
+      {!hasAssets && (
         <Wizard
           account={a}
           onDone={() => {
