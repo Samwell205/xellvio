@@ -56,6 +56,50 @@ export const TollfreeVerificationInput = z.object({
 
 export type TollfreeVerificationPayload = z.infer<typeof TollfreeVerificationInput>;
 
+type TollfreeAssetRow = {
+  id: string;
+  phone_number: string | null;
+  telnyx_phone_number_id: string | null;
+  telnyx_verification_id: string | null;
+};
+
+const tollfreeAssetSelect = "id,phone_number,telnyx_phone_number_id,telnyx_verification_id";
+
+async function resolveTollfreeNumberId(params: {
+  supabaseAdmin: any;
+  userId: string;
+  asset: TollfreeAssetRow;
+  messagingProfileId: string;
+}): Promise<TollfreeAssetRow> {
+  const { supabaseAdmin, userId, asset, messagingProfileId } = params;
+  if (asset.telnyx_phone_number_id || !asset.phone_number) return asset;
+
+  const { getPhoneNumberByE164, reassignNumberToProfile, safeTelnyxCall } = await import("./telnyx.server");
+  const found = await getPhoneNumberByE164(asset.phone_number);
+  if (!found?.id) {
+    throw new Error("This toll-free number is not in the platform carrier account yet. Please ask support to assign a platform-owned toll-free number, then resubmit.");
+  }
+
+  await safeTelnyxCall(
+    "reassign_number",
+    { userId, messagingProfileId },
+    () => reassignNumberToProfile({ phoneNumberId: found.id, messagingProfileId }),
+  );
+
+  const { data: updated, error } = await supabaseAdmin
+    .from("sender_assets")
+    .update({
+      telnyx_phone_number_id: found.id,
+      telnyx_messaging_profile_id: messagingProfileId,
+      last_synced_at: new Date().toISOString(),
+    })
+    .eq("id", asset.id)
+    .select(tollfreeAssetSelect)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return updated ?? { ...asset, telnyx_phone_number_id: found.id };
+}
+
 export const getMyTollfreeVerification = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -118,33 +162,11 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
     let { data: asset } = await supabaseAdmin
       .from("sender_assets")
-      .select("id,phone_number,telnyx_phone_number_id,telnyx_verification_id")
+      .select(tollfreeAssetSelect)
       .eq("account_id", userId).eq("sender_kind", "toll_free")
       .maybeSingle();
 
-    // If asset exists but Telnyx phone-number id is missing (e.g. admin-assigned
-    // pool number where the earlier Telnyx lookup failed), try to resolve it
-    // now from Telnyx by E.164 before considering a fresh purchase.
-    if (asset && !asset.telnyx_phone_number_id && asset.phone_number) {
-      try {
-        const { getPhoneNumberByE164, reassignNumberToProfile, safeTelnyxCall } = await import("./telnyx.server");
-        const found = await getPhoneNumberByE164(asset.phone_number);
-        if (found?.id) {
-          await safeTelnyxCall(
-            "reassign_number",
-            { userId, messagingProfileId },
-            () => reassignNumberToProfile({ phoneNumberId: found.id, messagingProfileId }),
-          );
-          const { data: updated } = await supabaseAdmin.from("sender_assets").update({
-            telnyx_phone_number_id: found.id,
-            telnyx_messaging_profile_id: messagingProfileId,
-          }).eq("id", asset.id).select("id,phone_number,telnyx_phone_number_id,telnyx_verification_id").single();
-          if (updated) asset = updated;
-        }
-      } catch (e) {
-        console.warn("[tf-submit] Telnyx lookup for existing asset failed", e);
-      }
-    }
+    if (asset) asset = await resolveTollfreeNumberId({ supabaseAdmin, userId, asset, messagingProfileId });
 
     if (!asset) {
       try {
@@ -162,7 +184,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
           telnyx_phone_number_id: bought.id,
           telnyx_messaging_profile_id: messagingProfileId,
           verification_status: "pending",
-        }).select("id,phone_number,telnyx_phone_number_id,telnyx_verification_id").single();
+        }).select(tollfreeAssetSelect).single();
         if (insErr) throw new Error(insErr.message);
         asset = inserted;
       } catch (e: any) {
@@ -180,7 +202,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
 
     if (!asset?.telnyx_phone_number_id) {
       throw new Error(
-        "We couldn't find your toll-free number in Telnyx. Please contact support so we can re-link it to your account before resubmitting.",
+        "This toll-free number is not in the platform carrier account yet. Please ask support to assign a platform-owned toll-free number, then resubmit.",
       );
     }
 
