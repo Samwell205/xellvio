@@ -40,6 +40,7 @@ function HomePage() {
         <EditorialActivity />
         <EditorialAttribution />
         <EditorialReach />
+        <SenderIdExplainer />
         <HowItWorks />
         <FAQ />
         <CTA />
