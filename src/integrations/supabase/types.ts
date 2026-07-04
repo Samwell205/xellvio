@@ -1849,17 +1849,17 @@ export type Database = {
           failure_reason: string | null
           friendly_failure_reason: string | null
           id: string
-          messaging_service_sid: string | null
           phone_number: string | null
-          phone_sid: string | null
+          provider_code: string | null
+          provider_more_info: string | null
+          provider_response: Json | null
+          provider_status: number | null
           request_summary: Json | null
           sender_asset_id: string | null
-          twilio_code: string | null
-          twilio_more_info: string | null
-          twilio_response: Json | null
-          twilio_status: number | null
+          telnyx_messaging_profile_id: string | null
+          telnyx_number_id: string | null
+          telnyx_verification_id: string | null
           updated_at: string
-          verification_sid: string | null
         }
         Insert: {
           account_id: string
@@ -1869,17 +1869,17 @@ export type Database = {
           failure_reason?: string | null
           friendly_failure_reason?: string | null
           id?: string
-          messaging_service_sid?: string | null
           phone_number?: string | null
-          phone_sid?: string | null
+          provider_code?: string | null
+          provider_more_info?: string | null
+          provider_response?: Json | null
+          provider_status?: number | null
           request_summary?: Json | null
           sender_asset_id?: string | null
-          twilio_code?: string | null
-          twilio_more_info?: string | null
-          twilio_response?: Json | null
-          twilio_status?: number | null
+          telnyx_messaging_profile_id?: string | null
+          telnyx_number_id?: string | null
+          telnyx_verification_id?: string | null
           updated_at?: string
-          verification_sid?: string | null
         }
         Update: {
           account_id?: string
@@ -1889,17 +1889,17 @@ export type Database = {
           failure_reason?: string | null
           friendly_failure_reason?: string | null
           id?: string
-          messaging_service_sid?: string | null
           phone_number?: string | null
-          phone_sid?: string | null
+          provider_code?: string | null
+          provider_more_info?: string | null
+          provider_response?: Json | null
+          provider_status?: number | null
           request_summary?: Json | null
           sender_asset_id?: string | null
-          twilio_code?: string | null
-          twilio_more_info?: string | null
-          twilio_response?: Json | null
-          twilio_status?: number | null
+          telnyx_messaging_profile_id?: string | null
+          telnyx_number_id?: string | null
+          telnyx_verification_id?: string | null
           updated_at?: string
-          verification_sid?: string | null
         }
         Relationships: []
       }

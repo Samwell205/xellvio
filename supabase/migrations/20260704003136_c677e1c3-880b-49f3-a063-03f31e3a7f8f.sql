@@ -1,0 +1,8 @@
+
+ALTER TABLE public.tollfree_verification_attempts RENAME COLUMN phone_sid TO telnyx_number_id;
+ALTER TABLE public.tollfree_verification_attempts RENAME COLUMN messaging_service_sid TO telnyx_messaging_profile_id;
+ALTER TABLE public.tollfree_verification_attempts RENAME COLUMN verification_sid TO telnyx_verification_id;
+ALTER TABLE public.tollfree_verification_attempts RENAME COLUMN twilio_status TO provider_status;
+ALTER TABLE public.tollfree_verification_attempts RENAME COLUMN twilio_code TO provider_code;
+ALTER TABLE public.tollfree_verification_attempts RENAME COLUMN twilio_more_info TO provider_more_info;
+ALTER TABLE public.tollfree_verification_attempts RENAME COLUMN twilio_response TO provider_response;
