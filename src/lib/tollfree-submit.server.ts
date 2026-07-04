@@ -101,7 +101,12 @@ export async function submitTwilioTollfreeVerification(opts: {
 
   if (!opts.phoneNumberE164) throw new Error("Missing toll-free phone number for verification submission.");
 
-  const optInImages = p.proofOfOptInUrl ? [{ url: p.proofOfOptInUrl }] : [];
+  if (!p.proofOfOptInUrl) {
+    throw new Error(
+      "Proof of opt-in is required. Please upload a screenshot of your sign-up form/checkbox (or paste a public URL to it) in the Opt-in step before submitting.",
+    );
+  }
+  const optInImages = [p.proofOfOptInUrl];
 
   const body: Record<string, unknown> = {
     additional_information: p.additionalInformation || "N/A",
