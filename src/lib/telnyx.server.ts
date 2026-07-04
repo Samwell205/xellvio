@@ -183,9 +183,17 @@ export async function orderNumber(opts: {
 }
 
 export async function getPhoneNumberByE164(phone: string): Promise<{ id: string; phone_number: string; messaging_profile_id: string | null } | null> {
+  const normalized = phone.trim();
+
+  const messaging = await telnyx<{ data: Array<{ id: string; phone_number: string; messaging_profile_id: string | null }> }>(
+    "/phone_numbers/messaging",
+    { query: { "filter[phone_number]": normalized } },
+  );
+  if (messaging.data?.[0]) return messaging.data[0];
+
   const res = await telnyx<{ data: Array<{ id: string; phone_number: string; messaging_profile_id: string | null }> }>(
     "/phone_numbers",
-    { query: { "filter[phone_number]": phone } },
+    { query: { "filter[phone_number]": normalized } },
   );
   return res.data?.[0] ?? null;
 }
@@ -195,7 +203,7 @@ export async function reassignNumberToProfile(opts: {
   phoneNumberId: string;
   messagingProfileId: string;
 }): Promise<void> {
-  await telnyx(`/phone_numbers/messaging/${opts.phoneNumberId}`, {
+  await telnyx(`/phone_numbers/${opts.phoneNumberId}/messaging`, {
     method: "PATCH",
     body: { messaging_profile_id: opts.messagingProfileId },
   });
