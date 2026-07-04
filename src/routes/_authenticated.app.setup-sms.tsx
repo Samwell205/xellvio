@@ -604,20 +604,6 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
               </Button>
             )}
           </div>
-        ) : !showForm ? (
-          <div className="space-y-3 text-sm">
-            <div className="rounded-md border p-3 bg-muted/40 space-y-2">
-              <p className="font-medium">Your options for {name}:</p>
-              <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                <li><strong>Toll-free number</strong> (recommended) — fast to provision, high-volume marketing & alerts, requires brand verification.</li>
-                <li><strong>10DLC long-code</strong> — local US/CA number, requires brand + campaign registration (~1–2 weeks).</li>
-                <li><strong>Short code</strong> — 5–6 digits for very high volume, slower approval and higher cost.</li>
-              </ul>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Submit a request below and an admin will review it. Once approved we'll provision the number and assign it to your account.
-            </p>
-          </div>
         ) : (
           <div className="space-y-3 text-sm">
             <div className="rounded-md border p-3 bg-muted/40 space-y-2">
