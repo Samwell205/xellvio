@@ -87,7 +87,8 @@ export const saveBusinessProfile = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("accounts")
-      .update({
+      .upsert({
+        id: userId,
         legal_business_name: data.legal_business_name,
         business_address: data.business_address,
         business_reg_number: data.business_reg_number,
@@ -96,8 +97,7 @@ export const saveBusinessProfile = createServerFn({ method: "POST" })
         terms_url: data.terms_url ?? null,
         contact_email: data.contact_email,
         onboarding_status: "profile_complete",
-      })
-      .eq("id", userId);
+      }, { onConflict: "id" });
     if (error) throw error;
     return { ok: true };
   });

@@ -39,6 +39,7 @@ import {
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 import { sendTestSms } from "@/lib/sms.functions";
 import { submitNumberRequest, listMyNumberRequests, cancelMyNumberRequest } from "@/lib/number-requests.functions";
+import { saveBusinessProfile } from "@/lib/account.functions";
 import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/setup-sms")({
@@ -841,6 +842,7 @@ type WizardForm = {
 };
 
 function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
+  const saveBusinessProfileFn = useServerFn(saveBusinessProfile);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [consentConfirmed, setConsentConfirmed] = useState<boolean>(!!account?.sms_consent_disclosures_confirmed_at);
   const [uploading, setUploading] = useState(false);
@@ -912,23 +914,14 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   }
 
   const saveProfile = useMutation({
-    mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
-      const { error } = await supabase
-        .from("accounts")
-        .update({
-          legal_business_name: form.legal_business_name,
-          business_address: form.business_address,
-          business_reg_number: form.business_reg_number,
-          website_url: form.website_url,
-          privacy_policy_url: form.privacy_policy_url || null,
-          contact_email: form.contact_email,
-          phone: form.phone || null,
-        })
-        .eq("id", u.user.id);
-      if (error) throw error;
-    },
+    mutationFn: () => saveBusinessProfileFn({ data: {
+      legal_business_name: form.legal_business_name,
+      business_address: form.business_address,
+      business_reg_number: form.business_reg_number,
+      website_url: form.website_url,
+      privacy_policy_url: form.privacy_policy_url || undefined,
+      contact_email: form.contact_email,
+    } }),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -1232,6 +1225,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 !consentConfirmed ||
                 !form.legal_business_name ||
                 !form.business_address ||
+                !form.business_reg_number ||
                 !form.website_url ||
                 !form.contact_email ||
                 saveProfile.isPending
