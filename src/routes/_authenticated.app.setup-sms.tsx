@@ -246,119 +246,86 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           </Button>
         </div>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {senderCountries.filter((c) => !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code)).map((c) => {
-          const on = countries.includes(c.code);
-          const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(c.code);
-          const requiresRegistration = ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code);
-          // US toll-free verification also covers Canada — surface the US status on the CA chip.
+      {(() => {
+        const visible = senderCountries.filter((c) => !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code));
+        const statusFor = (code: string) => {
+          const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(code);
           const usTfAsset = assets.find((a) => a.country_code === "US" && a.sender_kind === "toll_free");
           const usReq = reqByCountry.get("US");
           const ownTfAsset = isAlphaUnsupported
-            ? assets.find((a) => a.country_code === c.code && a.sender_kind === "toll_free")
+            ? assets.find((a) => a.country_code === code && a.sender_kind === "toll_free")
             : null;
-          const ownReq = isAlphaUnsupported ? reqByCountry.get(c.code) : null;
-          const coveredByUs = c.code === "CA" && !ownTfAsset && !ownReq && (!!usTfAsset || !!usReq);
+          const ownReq = isAlphaUnsupported ? reqByCountry.get(code) : null;
+          const coveredByUs = code === "CA" && !ownTfAsset && !ownReq && (!!usTfAsset || !!usReq);
           const tfAsset = ownTfAsset ?? (coveredByUs ? usTfAsset : null);
           const req = ownReq ?? (coveredByUs ? usReq : null);
-          const vStatus: string | undefined = tfAsset?.verification_sid
-            ? (tfAsset?.verification_status ?? undefined)
-            : undefined;
-          const hasNumber = !!tfAsset?.phone_number;
+          const vStatus: string | undefined = tfAsset?.verification_sid ? (tfAsset?.verification_status ?? undefined) : undefined;
           const isVerified = vStatus === "verified";
           const isInReview =
-            vStatus === "in_review" ||
-            vStatus === "submitted" ||
-            (!!tfAsset && !vStatus) ||
-            req?.status === "approved" ||
-            req?.status === "provisioned" ||
-            req?.status === "pending";
+            vStatus === "in_review" || vStatus === "submitted" || (!!tfAsset && !vStatus) ||
+            req?.status === "approved" || req?.status === "provisioned" || req?.status === "pending";
           const isTfRejected = vStatus === "rejected" || req?.status === "rejected";
-          const notStarted = isAlphaUnsupported && !tfAsset && !req;
-
-          // Registration-required countries (Nigeria, India, UAE, etc.) — look up
-          // this account's saved sender_id asset to show its status pill.
-          const regAsset = requiresRegistration
-            ? assets.find((a) => a.country_code === c.code && a.sender_kind === "sender_id")
-            : null;
-          const regStatus = regAsset?.verification_status as string | undefined;
-          const regVerified = regStatus === "verified";
-          const regPending = regStatus === "requires_registration" || regStatus === "submitted" || regStatus === "in_review";
-
-          let chipCls: string;
-          if (isAlphaUnsupported) {
-            if (isVerified) chipCls = "border-success bg-success/10 text-success hover:bg-success/15";
-            else if (isTfRejected) chipCls = "border-dashed border-destructive/50 bg-destructive/5 text-destructive hover:bg-destructive/10";
-            else chipCls = "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
-          } else if (requiresRegistration) {
-            chipCls = regVerified
-              ? "border-success bg-success/10 text-success hover:bg-success/15"
-              : "border-dashed border-amber-500/50 bg-amber-500/5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10";
-          } else {
-            chipCls = on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted";
-          }
-
-          const titleText = requiresRegistration
-            ? (regVerified
-                ? `Sender ID registered with local operator for ${c.name}.`
-                : `${c.name} carriers block unregistered alphanumeric sender IDs. Register your sender ID with Telnyx before sending.`)
-            : coveredByUs
-              ? `Covered by your US toll-free number${tfAsset?.phone_number ? ` (${tfAsset.phone_number})` : ""}.`
-              : isVerified
-                ? `Verified by carrier · ${tfAsset?.phone_number ?? ""}`
-                : isTfRejected
-                  ? `Rejected by carrier${tfAsset?.friendly_rejection_reason ? ` · ${tfAsset.friendly_rejection_reason}` : tfAsset?.rejection_reason ? ` · ${tfAsset.rejection_reason}` : ""}`
-                  : isInReview
-                    ? "Awaiting carrier review — typically 1–3 weeks."
-                    : notStarted
-                      ? "Submit toll-free verification to begin the review."
-                      : "Pending";
-
-          const chipStatusLabel = requiresRegistration
-            ? (regVerified ? "Registered" : regPending ? "Needs registration" : "Not started")
-            : isVerified
-              ? "Verified"
-              : isTfRejected
-                ? "Rejected"
-                : isInReview
-                  ? (coveredByUs ? "Covered by US" : "In review")
-                  : "Not started";
-
-          const chipLabel = coveredByUs
-            ? `${c.name} · covered by US`
-            : `${c.name}${isAlphaUnsupported && hasNumber ? ` · ${tfAsset?.phone_number}` : isAlphaUnsupported && !hasNumber ? " · phone number" : ""}`;
-
-          return (
-            <button
-              key={c.code}
-              type="button"
-              onClick={() => {
-                if (isAlphaUnsupported) setInfoCountry(c.code);
-                else if (requiresRegistration) setRegCountry(c.code);
-                else toggleCountry(c.code);
+          let label = "Not started";
+          if (isVerified) label = "Verified";
+          else if (isTfRejected) label = "Rejected";
+          else if (isInReview) label = coveredByUs ? "Covered by US" : "In review";
+          return { isAlphaUnsupported, coveredByUs, isVerified, isInReview, isTfRejected, label, phone: tfAsset?.phone_number as string | undefined };
+        };
+        return (
+          <div className="space-y-3">
+            <Label>Countries</Label>
+            <Select
+              value=""
+              onValueChange={(cc) => {
+                if (ALPHA_UNSUPPORTED.has(cc)) setInfoCountry(cc);
+                else toggleCountry(cc);
               }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm transition ${chipCls}`}
-              title={titleText}
             >
-              {(isVerified || regVerified) && <CheckCircle2 className="size-3.5" />}
-              {(isInReview || (isAlphaUnsupported && !isVerified && !isTfRejected) || (requiresRegistration && !regVerified)) && (
-                <Clock className="size-3.5" />
-              )}
-              {isTfRejected && <AlertCircle className="size-3.5" />}
-              <span>{chipLabel}</span>
-              {(isAlphaUnsupported || requiresRegistration) && (
-                <span
-                  className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                    (isVerified || regVerified) ? "bg-success/20" : isTfRejected ? "bg-destructive/20" : "bg-amber-500/20"
-                  }`}
-                >
-                  {chipStatusLabel}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a country…" />
+              </SelectTrigger>
+              <SelectContent className="max-h-80">
+                {visible.map((c) => {
+                  const s = statusFor(c.code);
+                  const on = countries.includes(c.code);
+                  return (
+                    <SelectItem key={c.code} value={c.code}>
+                      <span className="flex items-center gap-2">
+                        <span>{c.name}</span>
+                        {s.isAlphaUnsupported ? (
+                          <span className={`text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 ${
+                            s.isVerified ? "bg-success/20 text-success" :
+                            s.isTfRejected ? "bg-destructive/20 text-destructive" :
+                            "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                          }`}>{s.label}</span>
+                        ) : on ? (
+                          <span className="text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 bg-primary/20 text-primary">Selected</span>
+                        ) : null}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            {countries.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {countries.map((cc) => {
+                  const c = visible.find((x) => x.code === cc);
+                  if (!c) return null;
+                  return (
+                    <span key={cc} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary bg-primary/10 text-primary text-xs">
+                      {c.name}
+                      <button type="button" onClick={() => toggleCountry(cc)} className="hover:bg-primary/20 rounded-full p-0.5" aria-label={`Remove ${c.name}`}>
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <RegistrationCountryDropdown
         assets={assets}
