@@ -104,7 +104,8 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
           alphaSenderId = alpha.id ?? null;
         } catch (e: any) {
           telnyxError = e?.message ?? String(e);
-          const alreadyExists = telnyxError.toLowerCase().includes("already") || telnyxError.toLowerCase().includes("duplicate");
+          const telnyxErrorText = telnyxError.toLowerCase();
+          const alreadyExists = telnyxErrorText.includes("already") || telnyxErrorText.includes("duplicate");
           status = alreadyExists ? (needsReg ? "submitted" : "verified") : "requires_registration";
         }
         await supabaseAdmin.from("sender_assets").insert({
