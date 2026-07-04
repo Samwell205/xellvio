@@ -118,7 +118,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
     let { data: asset } = await supabaseAdmin
       .from("sender_assets")
-      .select("id,phone_number,telnyx_number_id,telnyx_verification_id")
+      .select("id,phone_number,telnyx_phone_number_id,telnyx_verification_id")
       .eq("account_id", userId).eq("sender_kind", "toll_free")
       .maybeSingle();
 
@@ -135,12 +135,10 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
           country_code: (data.businessCountry || "US").toUpperCase(),
           sender_kind: "toll_free",
           phone_number: bought.phone_number,
-          telnyx_number_id: bought.id,
           telnyx_phone_number_id: bought.id,
           telnyx_messaging_profile_id: messagingProfileId,
-          telnyx_messaging_profile_id: messagingProfileId,
           verification_status: "pending",
-        }).select("id,phone_number,telnyx_number_id,telnyx_verification_id").single();
+        }).select("id,phone_number,telnyx_phone_number_id,telnyx_verification_id").single();
         if (insErr) throw new Error(insErr.message);
         asset = inserted;
       } catch (e: any) {
