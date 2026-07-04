@@ -18,7 +18,6 @@ export const TOLLFREE_USE_CASES = [
   "Conversational / Alerts",
   "Courier Services & Deliveries",
   "Emergency Alerts",
-  "Employee Alerts",
   "Events & Planning",
   "Financial Services",
   "Fraud Alerts",
@@ -34,7 +33,6 @@ export const TOLLFREE_USE_CASES = [
   "Mixed",
   "Motivational Reminders",
   "Notary Notifications",
-  "Notifications",
   "Order Notifications",
   "Political",
   "Public Works",
@@ -62,14 +60,15 @@ export const TOLLFREE_VOLUMES = [
   "500,000",
   "750,000",
   "1,000,000",
-  "5,000,000+",
+  "5,000,000",
+  "10,000,000+",
 ] as const;
 
 // Legacy uppercase enum values map into the new Telnyx-style labels so old
 // saved wizard forms don't blow up validation on resubmit.
 export const LEGACY_USE_CASE_MAP: Record<string, TollfreeUseCase> = {
   TWO_FACTOR_AUTHENTICATION: "2FA",
-  ACCOUNT_NOTIFICATIONS: "Notifications",
+  ACCOUNT_NOTIFICATIONS: "App Notifications",
   CUSTOMER_CARE: "Conversational / Alerts",
   CHARITY_NONPROFIT: "Fundraising",
   DELIVERY_NOTIFICATIONS: "Courier Services & Deliveries",
@@ -82,6 +81,9 @@ export const LEGACY_USE_CASE_MAP: Record<string, TollfreeUseCase> = {
   POLITICAL_ELECTION_CAMPAIGNS: "Political",
   PUBLIC_SERVICE_ANNOUNCEMENT: "Public Works",
   SECURITY_ALERT: "Fraud Alerts",
+  "Employee Alerts": "HR / Staffing",
+  Notifications: "App Notifications",
+  "5,000,000+": "5,000,000" as TollfreeUseCase,
 };
 
 export function normalizeUseCase(raw: string): TollfreeUseCase | null {
