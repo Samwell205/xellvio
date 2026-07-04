@@ -117,15 +117,6 @@ function SetupSmsPage() {
         }}
       />
 
-      {!hasAssets && (
-        <Wizard
-          account={a}
-          onDone={() => {
-            qc.invalidateQueries({ queryKey: ["sender-assets"] });
-            qc.invalidateQueries({ queryKey: ["account"] });
-          }}
-        />
-      )}
     </div>
   );
 }
