@@ -135,6 +135,17 @@ async function sendOneMessage(
       return { ok: false, shaft: false, debited: 0 };
     }
 
+    // ── Per-recipient compliance gate (suspension + frequency cap).
+    const { fastPerRecipientGate } = await import("@/lib/content-screening.server");
+    const gate = await fastPerRecipientGate(campaign.account_id, m.phone_e164);
+    if (!gate.ok) {
+      await supabaseAdmin.from("messages")
+        .update({ status: "failed", error_code: gate.reason, failure_reason: `Blocked pre-send: ${gate.reason}` })
+        .eq("id", m.id);
+      return { ok: false, shaft: false, debited: 0 };
+    }
+
+
     const result = await safeTelnyxCall(
       "send_message",
       { userId: campaign.account_id, messagingProfileId },
