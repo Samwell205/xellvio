@@ -406,16 +406,7 @@ function CampaignReport() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
-            <Button asChild variant="outline" size="sm" title="Open messaging logs in the Telnyx Portal (filter by date on the page).">
-              <a
-                href="https://portal.telnyx.com/#/app/messaging/logs"
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalLink className="size-3 mr-1" />
-                View on Telnyx
-              </a>
-            </Button>
+            {/* Provider portal link removed — tenants shouldn't see upstream provider */}
             <Button asChild variant="outline" size="sm">
               <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
             </Button>

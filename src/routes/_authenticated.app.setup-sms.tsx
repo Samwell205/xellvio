@@ -426,7 +426,7 @@ function RegistrationRequiredDialog({
         <DialogHeader>
           <DialogTitle>Register sender ID — {countryName}</DialogTitle>
           <DialogDescription>
-            We'll submit this Sender ID through Telnyx for this country. No extra business form is needed here.
+            We'll submit this Sender ID to the local carriers for this country. No extra business form is needed here.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 text-sm">
@@ -440,14 +440,14 @@ function RegistrationRequiredDialog({
             </Badge>
           </div>
           <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-muted-foreground">
-            Telnyx will register <span className="font-mono text-foreground">{senderId}</span> for {countryName}. If local carriers need manual review, this status will stay in review until they approve it.
+            We'll register <span className="font-mono text-foreground">{senderId}</span> for {countryName}. If local carriers need manual review, this status will stay in review until they approve it.
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={mut.isPending}>Close</Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending || !senderId}>
             {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-            Register with Telnyx
+            Submit registration
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1034,7 +1034,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 maxLength={11}
               />
               <p className="text-xs text-muted-foreground">
-                Use 3–11 letters or numbers. Telnyx will register this sender for the countries you choose.
+                Use 3–11 letters or numbers. We'll register this sender for the countries you choose.
               </p>
             </div>
           )}
