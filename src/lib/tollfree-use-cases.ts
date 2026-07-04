@@ -61,6 +61,7 @@ export const TOLLFREE_VOLUMES = [
   "750,000",
   "1,000,000",
   "5,000,000",
+  "5,000,000+",
   "10,000,000+",
 ] as const;
 
@@ -83,7 +84,6 @@ export const LEGACY_USE_CASE_MAP: Record<string, TollfreeUseCase> = {
   SECURITY_ALERT: "Fraud Alerts",
   "Employee Alerts": "HR / Staffing",
   Notifications: "App Notifications",
-  "5,000,000+": "5,000,000" as TollfreeUseCase,
 };
 
 export function normalizeUseCase(raw: string): TollfreeUseCase | null {
