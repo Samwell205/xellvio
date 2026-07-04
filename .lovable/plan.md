@@ -1,51 +1,96 @@
-# What's left — status & remaining work
+## Goal
 
-Based on the last few rounds of changes (toll-free wizard, sender-ID dropdown, per-tenant messaging profile provisioning, content screening, ToS gate), here is a concrete list of what is DONE and what still needs work.
+Replicate Telnyx's 3-step Toll-Free Verification wizard **exactly** inside Xellvio's Set up SMS page, and on submit auto-provision a US toll-free number on Telnyx and auto-submit the Verification Request via the Telnyx API. Also fix the `debit_account` RPC failure that currently blocks Submit.
 
-## Done
-- Toll-free wizard submits to Telnyx end-to-end (address auto-fill, state dropdown, no external Telnyx redirects).
-- Sender-ID country picker converted to a searchable dropdown with removable selected chips.
-- Carrier-registration countries served via a second dropdown.
-- Auto-creation of a Telnyx Messaging Profile per tenant on first `/app` visit (covers new signups and backfills existing accounts).
-- Content screening firewall (score < 40 pass, 40–69 review queue, ≥ 70 block) wired into campaign dispatch, test sends, and inbox replies.
-- ToS acceptance gate at account level (modal) and campaign level (checkbox), with `tos_acceptances` and `campaign_tos_acceptances` tables.
-- Admin review queue page + tenant "kill switch" that disables the Messaging Profile and pauses active campaigns.
-- Deferred $5 toll-free setup fee: `tollfree_setup_fee_due_cents` column exists and the wizard no longer blocks on $0 balance.
+## What the videos show (Telnyx's exact flow)
 
-## Still to do
+Right-side stepper stays visible across all 3 steps: **1. Business Details → 2. Assign Numbers → 3. Use Case Details**. Purple info banner on step 1: *"Fill in all details according to business details, not personal details."*
 
-### 1. Settle the deferred toll-free setup fee on next top-up
-The plan called for this but the top-up server function does not yet check `tollfree_setup_fee_due_cents` and auto-debit. Right now a deferred fee sits on the account forever.
-- Update the credit top-up handler (NowPayments IPN, Paystack webhook, admin top-up) so that after crediting: if `tollfree_setup_fee_due_cents > 0` and new balance ≥ that amount, debit it, clear the column, and set `tollfree_setup_fee_paid_at`.
+### Step 1 — Business Details (two-column grid, Next / Cancel)
+- Business Name * · Corporate Website *
+- What type of legal form is the organisation? (Sole Proprietor, Private company / LLC / Partnership, Public company, Non-profit, Government)
+- DBA or brand name
+- Business Registration Country * (defaults United States of America)
+- First Name * · Last Name *
+- Email * · Phone Number * (country-flag selector + national number)
+- Status update webhook URL (optional)
+- **Search for an address** (single search field) with *"Or enter it manually"* divider
+- Address * · Extended Address
+- City * · State * (dropdown for US = `DE - Delaware` style)
+- ZIP * · Country * (dropdown)
 
-### 2. Verify the end-to-end sender-ID flow after the dropdown refactor
-The chip grid was replaced with a dropdown in one pass. Worth a live check:
-- Selecting a normal country adds/removes it (chip appears, save persists).
-- Selecting US/CA opens the toll-free info dialog.
-- Registration-required countries (Nigeria, India, UAE, …) still open the registration dialog from the second dropdown.
-- Status pills (Verified / In review / Rejected / Covered by US) render inside dropdown items.
+### Step 2 — Assign Numbers (Next / Back)
+- Tabs: **My Telnyx Numbers** · **Messaging Profiles** · **Hosted Numbers** (we only need the first)
+- Table: Name / Numbers count / Assign button per row
+- Pagination row
 
-### 3. ToS wording review
-`src/lib/tos.ts` currently holds placeholder legal text and `TOS_CURRENT_VERSION`. You said you'd review before publishing — that hasn't happened. Bumping the version will force every tenant to re-accept via the modal.
+### Step 3 — Use Case Details (Create / Back)
+- Expected messaging volume per month * (dropdown: 10 / 1,000 / 10,000 / 100,000 / 250,000 / 500,000 / 750,000 / 1,000,000 / 5,000,000 / 10,000,000)
+- Use-case * (General Marketing, Account Notification, Customer Care, Delivery Notification, Fraud Alert, Higher Education, Marketing, Polling & Voting, Public Service Announcement, Security Alert, Two-Factor Authentication)
+- Summarize use-case * (large textarea)
+- Message content * (sample message)
+- Opt-In workflow * · Additional use-case details *
+- Opt-In workflow image URL * · Opt in keywords * (e.g. START, YES, UNSTOP)
+- Opt in message · Help message
+- Privacy policy URL * · Terms and conditions URL *
+- ISV Reseller (blank if N/A) · Age-Gated Content (Yes / No, default No)
 
-### 4. Admin visibility for compliance events
-Screening results land in `content_screening_log` and blocked/held messages in `review_queue`, but there is no admin dashboard tile showing:
-- Messages blocked in last 24h / 7d
-- Messages held for review
-- Tenants currently suspended
-Add a small "Compliance" panel on the admin dashboard so you can see abuse trends without opening the review queue.
+Final states seen after Create: page shows *"This request cannot be edited in its current status. Failed requests can be updated and resubmitted."* plus tabs **General / Numbers / Use Case Details** and an **Assigned Numbers** table listing the E.164 number.
 
-### 5. Tenant-facing feedback when a send is blocked or held
-Right now a blocked message throws from the server function. The campaign/inbox UI shows a generic error. Add a friendly message that tells the tenant why it was blocked (category + score) and, for held messages, that it is pending admin review — otherwise tenants will keep retrying identical content.
+## Plan
 
-### 6. Backfill: run `provisionCurrentAccount` for tenants who never open the app
-The provisioning effect fires on first `/app` visit. Dormant accounts never trigger it. Optional one-off admin action or scheduled job to iterate accounts with `telnyx_messaging_profile_id IS NULL` and call `ensureMessagingProfileForAccount` server-side.
+### 1. Fix `debit_account` RPC error (unblocks Submit today)
+In `src/lib/tollfree-verification.functions.ts` change both `submitTollfreeVerification` and `payTollfreeFee` to pass `_campaign_id: null` (not `undefined`) so PostgREST binds all 4 named parameters of `public.debit_account(_account_id, _amount, _campaign_id, _description)`.
 
-### 7. Nice-to-haves (say the word if you want any of these)
-- Search input inside the sender-ID country dropdown (list is long).
-- Bulk-select "All EU" / "All Africa" shortcuts.
-- Auto-refresh of toll-free verification status on the setup page (currently only refreshes on button click).
-- Public status page pulling `content_screening_log` aggregate metrics.
+### 2. Rebuild the wizard UI to mirror Telnyx exactly
+Rewrite `src/components/tollfree-wizard/TollfreeWizard.tsx` as 3 steps with the right-side stepper, using existing shadcn `Input / Select / Textarea / Button / RadioGroup`. New field additions vs current form:
+- Legal form dropdown (map to `business_type`)
+- DBA / brand name
+- Business Registration Country
+- Status update webhook URL (optional; default to our `/api/public/telnyx-status` public URL server-side if blank)
+- Address auto-complete search field (uses browser geolocation-style datalist; graceful fallback to manual)
+- Step-2 number list (see below)
+- Opt-in keywords, Opt-in message, Help message, ISV Reseller, Age-Gated Content
 
-## What I'd tackle first
-Items **1** (settle deferred fee), **5** (tenant feedback on blocked sends), and **2** (verify the dropdown flow with a real send) — they close the loops that most directly affect a paying tenant. Tell me which to start with (or "all of them") and I'll implement.
+### 3. Step 2 — Assign Numbers: pull-from-inventory + one-click auto-purchase
+- New server fn `listAvailableTollfreeSenders` returns rows already in `sender_assets` for the tenant where `sender_kind='toll_free'` (name = friendly business name, phone_number).
+- If none, show a single row **"Provision a new US toll-free number"** with an **Assign** button that calls a new fn `provisionTollfreeForTenant`:
+  1. `POST /v2/available_phone_numbers?filter[features]=sms&filter[phone_number_type]=toll-free&filter[country_code]=US&filter[limit]=1`
+  2. `POST /v2/number_orders` with that number
+  3. Attach it to the tenant's messaging profile (`POST /v2/messaging_profiles` if missing, then `PATCH /v2/phone_numbers/{id}` to set `messaging_profile_id`)
+  4. Insert/upsert into `sender_assets` (`verification_status='pending_verification'`)
+- Charges the existing `$5` phone-number fee via `chargeNumberVerificationFee` (already in `src/lib/number-fee.server.ts`).
+
+### 4. Step 3 — Create: auto-submit Verification Request
+New server fn `submitTollfreeVerificationV2` (auth'd) that:
+1. Validates the full payload with a Zod schema mirroring the fields above.
+2. Debits the one-time $15 toll-free setup fee via `debit_account` (with `_campaign_id: null`) — falls back to `tollfree_setup_fee_due_cents` deferred model already in `topup_account` if balance short.
+3. Calls the existing `submitTwilioTollfreeVerification` in `src/lib/tollfree-submit.server.ts` (already hits Telnyx `POST /messaging_tollfree/verification/requests`) with the assigned toll-free E.164 in `phone_numbers[]`.
+4. Persists to `tollfree_verification_attempts` (verification_sid, status, raw payload).
+5. Updates `sender_assets.telnyx_verification_id` and `verification_status='submitted'`.
+6. Sends admin SMS + tenant email via existing `email-templates/tollfree-submitted.tsx`.
+7. Returns `{ verificationSid, status }` — UI shows the read-only "This request cannot be edited…" screen with tabs **General / Numbers / Use Case Details** and the assigned number.
+
+### 5. Status polling / read-only view
+- Reuse `api.public.poll-verifications.ts` to fetch Telnyx status; on `verified` → set `sender_assets.verification_status='verified'`, on `rejected` → capture reason + email template `tollfree-rejected.tsx`.
+- New route section on `/app/setup-sms` shows the three-tab summary card exactly like Telnyx's post-create screen.
+
+## Technical Details
+
+- **File changes**
+  - `src/lib/tollfree-verification.functions.ts` — fix `_campaign_id: null` in 2 spots; add `submitTollfreeVerificationV2` + `listAvailableTollfreeSenders` + `provisionTollfreeForTenant`.
+  - `src/lib/tollfree-submit.server.ts` — no changes needed; already maps to Telnyx correctly.
+  - `src/lib/telnyx.server.ts` — add helpers: `searchAvailableTollfree`, `orderNumber`, `ensureMessagingProfile`, `attachNumberToProfile`.
+  - `src/components/tollfree-wizard/TollfreeWizard.tsx` — full rewrite to 3-step Telnyx layout.
+  - `src/routes/_authenticated.app.setup-sms.tsx` — render new wizard for `!hasAssets` and read-only summary once submitted.
+
+- **No DB migration required** — `sender_assets`, `tollfree_verification_attempts`, `number_requests`, and `accounts.tollfree_setup_fee_due_cents` already exist.
+
+- **Env / secrets** — `TELNYX_API_KEY` is already set.
+
+- **Webhook** — status callback URL defaults to `https://xellvio.lovable.app/api/public/telnyx-status` (already implemented) so Telnyx's approval / rejection events flow back automatically.
+
+## Out of Scope
+- 10DLC / short-code flows (untouched).
+- Admin-side review UI changes (Assigned Numbers table already exists in admin).
+- Payment provider changes.
