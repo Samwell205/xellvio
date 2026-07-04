@@ -404,10 +404,16 @@ function NewCampaignPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, JSON.stringify(audience), JSON.stringify(s.excludedCountries)]);
 
+  const [complianceAccepted, setComplianceAccepted] = useState(false);
+
   async function saveCampaign(launch: boolean) {
     if (launch && insufficient) { toast.error("Insufficient balance — top up before launching."); return; }
     if (launch && hasMissingSender) {
       toast.error(`No verified sender for: ${missingSenderCountries.join(", ")}. Set up SMS or remove those recipients.`);
+      return;
+    }
+    if (launch && !complianceAccepted) {
+      toast.error("You must confirm the compliance acknowledgement before launching.");
       return;
     }
     setSaving(true);
@@ -424,13 +430,21 @@ function NewCampaignPage() {
         }
       }
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
-      await persistCampaign(status);
+      const savedId = await persistCampaign(status);
+      // Record per-campaign compliance re-confirmation. Dispatcher refuses to send without it.
+      if (launch && savedId) {
+        const { acceptCampaignTos } = await import("@/lib/tos.functions");
+        await acceptCampaignTos({
+          data: { campaignId: savedId, userAgent: navigator.userAgent.slice(0, 500) },
+        });
+      }
       toast.success(launch ? "Campaign launched" : "Saved as draft");
       navigate({ to: "/app/campaigns" });
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
     } finally { setSaving(false); }
   }
+
 
   return (
     <div className="space-y-6 max-w-5xl">
