@@ -59,6 +59,10 @@ function toEntityType(value: string | undefined): string {
   }
 }
 
+function normalizeMessageVolume(value: string | undefined): string {
+  return value === "5,000,000+" ? "5,000,000" : value || "10";
+}
+
 function compact<T extends Record<string, unknown>>(obj: T): T {
   return Object.fromEntries(
     Object.entries(obj).filter(([, value]) => value !== undefined && value !== ""),
@@ -150,7 +154,7 @@ export async function submitTwilioTollfreeVerification(opts: {
     corporateWebsite: p.websiteUrl,
     doingBusinessAs: p.businessDba || undefined,
     isvReseller: "Xellvio",
-    messageVolume: p.monthlyVolume || "10",
+    messageVolume: normalizeMessageVolume(p.monthlyVolume),
     optInWorkflow: p.useCaseDescription,
     optInWorkflowImageURLs: optInImages,
     phoneNumbers: [{ phoneNumber: opts.phoneNumberE164 }],
