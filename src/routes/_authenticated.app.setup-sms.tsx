@@ -856,7 +856,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
     privacy_policy_url: account?.privacy_policy_url ?? "",
     contact_email: account?.contact_email ?? account?.email ?? "",
     phone: account?.phone ?? "",
-    targetCountries: account?.sms_target_countries?.length ? account.sms_target_countries : ["US"],
+    targetCountries: account?.sms_target_countries?.length ? account.sms_target_countries : [],
     monthlyVolume: account?.monthly_volume_estimate ?? 10000,
     useCase: account?.use_case_description ?? "",
     sampleMessage: account?.sample_message ?? "",
@@ -887,6 +887,10 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
         customSenderId: f.customSenderId,
       }));
   }, [account]);
+
+  const needsCarrierDetails = form.targetCountries.some((cc) => cc === "US" || cc === "CA");
+  const hasSenderIdCountry = form.targetCountries.some((cc) => cc !== "US" && cc !== "CA");
+  const senderIdReady = !hasSenderIdCountry || /^[A-Z0-9]{3,11}$/.test(form.customSenderId);
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -990,71 +994,62 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 text-sm">
-        <StepDot n={1} active={step === 1} done={step > 1} label="Confirm business" />
+        <StepDot n={1} active={step === 1} done={step > 1} label="Choose sender" />
         <div className="h-px flex-1 bg-border" />
-        <StepDot n={2} active={step === 2} done={step > 2} label="Tell us about your SMS" />
+        <StepDot n={2} active={step === 2} done={step > 2} label="Carrier details" />
         <div className="h-px flex-1 bg-border" />
         <StepDot n={3} active={step === 3} done={false} label="Set up" />
       </div>
 
       {step === 1 && (
-        <Card className="p-6 space-y-4">
-          <h3 className="font-semibold">Confirm your business details</h3>
-          <p className="text-sm text-muted-foreground">
-            We pre-filled these from your account. Edit if anything's changed.
-          </p>
-          <Field
-            label="Legal business name"
-            v={form.legal_business_name}
-            on={(v) => setForm({ ...form, legal_business_name: v })}
-          />
-          <div className="space-y-1.5">
-            <Label>Business address</Label>
-            <Textarea
-              value={form.business_address}
-              onChange={(e) => setForm({ ...form, business_address: e.target.value })}
-              rows={2}
-              placeholder="Street, City, State, ZIP"
-            />
+        <Card className="p-6 space-y-5">
+          <h3 className="font-semibold">Choose where you want to send</h3>
+          <div className="space-y-2">
+            <Label>Countries</Label>
+            <div className="flex flex-wrap gap-2">
+              {COUNTRIES.map((c) => {
+                const on = form.targetCountries.includes(c.code);
+                return (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => toggleCountry(c.code)}
+                    className={`px-3 py-1.5 rounded-full border text-sm ${on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field
-              label="Business registration #"
-              v={form.business_reg_number}
-              on={(v) => setForm({ ...form, business_reg_number: v })}
-            />
-            <Field
-              label="Website"
-              v={form.website_url}
-              on={(v) => setForm({ ...form, website_url: v })}
-              placeholder="https://"
-            />
-            <Field
-              label="Privacy policy URL"
-              v={form.privacy_policy_url}
-              on={(v) => setForm({ ...form, privacy_policy_url: v })}
-              placeholder="https://"
-            />
-            <Field
-              label="Contact email"
-              v={form.contact_email}
-              on={(v) => setForm({ ...form, contact_email: v })}
-              type="email"
-            />
-            <Field
-              label="Business phone"
-              v={form.phone}
-              on={(v) => setForm({ ...form, phone: v })}
-              placeholder="+15551234567"
-            />
-          </div>
+
+          {hasSenderIdCountry && (
+            <div className="space-y-1.5">
+              <Label>Your Sender ID</Label>
+              <Input
+                value={form.customSenderId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    customSenderId: e.target.value
+                      .replace(/[^A-Za-z0-9]/g, "")
+                      .toUpperCase()
+                      .slice(0, 11),
+                  })
+                }
+                placeholder="XELLIO"
+                maxLength={11}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use 3–11 letters or numbers. Telnyx will register this sender for the countries you choose.
+              </p>
+            </div>
+          )}
+
           <div className="flex justify-end">
             <Button
-              onClick={async () => {
-                await saveProfile.mutateAsync();
-                setStep(2);
-              }}
-              disabled={saveProfile.isPending}
+              onClick={() => setStep(needsCarrierDetails ? 2 : 3)}
+              disabled={form.targetCountries.length === 0 || !senderIdReady}
             >
               Continue
             </Button>
