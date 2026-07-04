@@ -74,12 +74,15 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
           accountId: userId,
           friendlyName: `${data.business_name} (${data.country})`,
         });
+        const requiresTollfreeVerification = data.number_type === "toll_free";
         await supabaseAdmin
           .from("number_requests")
           .update({
             status: "provisioned",
             assigned_phone_number: purchased.phone_number,
-            admin_notes: "Auto-approved and provisioned by system.",
+            admin_notes: requiresTollfreeVerification
+              ? "Auto-approved and provisioned. Toll-free verification is still required before sending."
+              : "Auto-approved and provisioned by system.",
             reviewed_at: new Date().toISOString(),
           })
           .eq("id", row.id);
@@ -93,11 +96,22 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
               phone_number: purchased.phone_number,
               telnyx_phone_number_id: purchased.id,
               telnyx_messaging_profile_id: purchased.messaging_profile_id,
-              verification_status: "verified",
+              verification_status: requiresTollfreeVerification ? "pending" : "verified",
               last_synced_at: new Date().toISOString(),
             },
             { onConflict: "account_id,country_code,phone_number" },
           );
+        if (requiresTollfreeVerification) {
+          await supabaseAdmin
+            .from("accounts")
+            .update({
+              telnyx_phone_number: purchased.phone_number,
+              telnyx_number_id: purchased.id,
+              telnyx_messaging_profile_id: purchased.messaging_profile_id,
+              onboarding_status: "sender_pending",
+            })
+            .eq("id", userId);
+        }
         autoResult = { provisioned: true, phone_number: purchased.phone_number };
       }
     } catch (e: any) {
