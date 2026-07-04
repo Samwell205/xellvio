@@ -265,7 +265,7 @@ export function LowBalanceBanner() {
         {pausedCount > 0 ? (
           <><strong>{pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused</strong> — SMS balance {formatMoney(balance, currency)}. Top up now to auto-resume.</>
         ) : status === "error" ? (
-          <>SMS balance check failed: {latest?.error_message ?? "unknown error"}</>
+          <>SMS balance check failed. Click Refresh in the balance card to retry.</>
         ) : (
           <>
             SMS balance is <strong>{isCritical ? "critically " : ""}low</strong>: {formatMoney(balance, currency)}. Top up to avoid SMS interruptions.
@@ -273,9 +273,7 @@ export function LowBalanceBanner() {
         )}
       </div>
       <a
-        href="https://portal.telnyx.com/#/app/billing/payments"
-        target="_blank"
-        rel="noreferrer"
+        href="#sms-balance"
         className="font-semibold underline shrink-0"
       >
         Top up
