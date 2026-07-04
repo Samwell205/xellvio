@@ -33,10 +33,40 @@ async function telnyx<T = any>(path: string, opts: { method?: string; body?: any
 
 function mapStatus(raw: string | undefined): "submitted" | "in_review" | "verified" | "rejected" {
   const t = (raw ?? "").toLowerCase();
-  if (t === "verified" || t === "approved") return "verified";
+  if (t === "verified" || t === "approved" || t === "approved_verified") return "verified";
   if (t === "rejected" || t === "denied") return "rejected";
-  if (t === "in_review" || t === "in-review" || t === "pending") return "in_review";
+  if (t === "in_review" || t === "in-review" || t === "pending" || t === "in progress") return "in_review";
   return "submitted";
+}
+
+function toEntityType(value: string | undefined): string {
+  switch ((value ?? "").toLowerCase()) {
+    case "sole proprietor":
+    case "sole proprietorship":
+    case "sole_proprietor":
+      return "SOLE_PROPRIETOR";
+    case "public company":
+    case "public_profit":
+      return "PUBLIC_PROFIT";
+    case "non-profit":
+    case "non profit":
+    case "non_profit":
+      return "NON_PROFIT";
+    case "government":
+      return "GOVERNMENT";
+    default:
+      return "PRIVATE_PROFIT";
+  }
+}
+
+function normalizeMessageVolume(value: string | undefined): string {
+  return value === "5,000,000+" ? "5,000,000" : value || "10";
+}
+
+function compact<T extends Record<string, unknown>>(obj: T): T {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, value]) => value !== undefined && value !== ""),
+  ) as T;
 }
 
 export type TollfreeSubmitPayload = {
@@ -106,42 +136,43 @@ export async function submitTwilioTollfreeVerification(opts: {
       "Proof of opt-in is required. Please upload a screenshot of your sign-up form/checkbox (or paste a public URL to it) in the Opt-in step before submitting.",
     );
   }
-  const optInImages = [p.proofOfOptInUrl];
+  const optInImages = [{ url: p.proofOfOptInUrl }];
 
-  const body: Record<string, unknown> = {
-    additional_information: p.additionalInformation || "N/A",
-    business_addr1: p.addressLine1,
-    business_addr2: p.addressLine2 || undefined,
-    business_city: p.city,
-    business_contact_email: p.contactEmail,
-    business_contact_first_name: p.contactFirstName,
-    business_contact_last_name: p.contactLastName,
-    business_contact_phone: `${p.contactPhoneCountry}${p.contactPhone}`.replace(/[^\d+]/g, ""),
-    business_country: (p.businessCountry || "US").toUpperCase(),
-    business_dba: p.businessDba || undefined,
-    business_name: p.legalEntityName,
-    business_state: p.state,
-    business_website: p.websiteUrl,
-    business_zip: p.zip,
-    corporate_website: p.websiteUrl,
-    isv_reseller: "",
-    message_volume: p.monthlyVolume || "10",
-    opt_in_workflow: {
-      description: p.useCaseDescription,
-      image_urls: optInImages,
-    },
-    phone_numbers: [{ phone_number: opts.phoneNumberE164 }],
-    production_message_sample: p.sampleMessage,
-    use_case: primaryUseCase,
-    use_case_categories: [primaryUseCase],
-    webhook_url: opts.statusCallbackUrl || undefined,
-    // Optional but improves acceptance rate
-    help_message: p.helpMessageSample || undefined,
-    privacy_policy_url: p.privacyPolicyUrl || undefined,
-    terms_and_conditions_url: p.termsUrl || undefined,
-    opt_in_keywords: p.optInKeywords || undefined,
-    age_gated: !!p.containsAgeGatedContent,
-  };
+  const body: Record<string, unknown> = compact({
+    additionalInformation: p.additionalInformation || "No additional information provided.",
+    businessAddr1: p.addressLine1,
+    businessAddr2: p.addressLine2 || undefined,
+    businessCity: p.city,
+    businessContactEmail: p.contactEmail,
+    businessContactFirstName: p.contactFirstName,
+    businessContactLastName: p.contactLastName,
+    businessContactPhone: `${p.contactPhoneCountry}${p.contactPhone}`.replace(/[^\d+]/g, ""),
+    businessCountry: (p.businessCountry || "US").toUpperCase(),
+    businessName: p.legalEntityName,
+    businessState: p.state,
+    businessZip: p.zip,
+    corporateWebsite: p.websiteUrl,
+    doingBusinessAs: p.businessDba || undefined,
+    isvReseller: "Xellvio",
+    messageVolume: normalizeMessageVolume(p.monthlyVolume),
+    optInWorkflow: p.useCaseDescription,
+    optInWorkflowImageURLs: optInImages,
+    phoneNumbers: [{ phoneNumber: opts.phoneNumberE164 }],
+    productionMessageContent: p.sampleMessage,
+    useCase: primaryUseCase,
+    useCaseSummary: p.useCaseDescription,
+    webhookUrl: opts.statusCallbackUrl || undefined,
+    businessRegistrationNumber: p.businessRegistrationNumber || null,
+    businessRegistrationType: p.businessRegistrationIdentifier || null,
+    businessRegistrationCountry: (p.businessRegistrationCountry || p.businessCountry || "US").toUpperCase(),
+    entityType: toEntityType(p.businessType),
+    optInConfirmationResponse: p.optInConfirmationMessage || undefined,
+    helpMessageResponse: p.helpMessageSample || undefined,
+    privacyPolicyURL: p.privacyPolicyUrl || undefined,
+    termsAndConditionURL: p.termsUrl || undefined,
+    optInKeywords: p.optInKeywords || undefined,
+    ageGatedContent: !!p.containsAgeGatedContent,
+  });
 
   const path = opts.existingVerificationSid
     ? `/messaging_tollfree/verification/requests/${opts.existingVerificationSid}`

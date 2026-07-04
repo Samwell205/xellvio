@@ -75,21 +75,29 @@ async function resolveTollfreeNumberId(params: {
   if (asset.telnyx_phone_number_id || !asset.phone_number) return asset;
 
   const { getPhoneNumberByE164, reassignNumberToProfile, safeTelnyxCall } = await import("./telnyx.server");
-  const found = await getPhoneNumberByE164(asset.phone_number);
-  if (!found?.id) {
-    throw new Error("This toll-free number is not in the platform carrier account yet. Please ask support to assign a platform-owned toll-free number, then resubmit.");
+  let found: { id: string; phone_number: string; messaging_profile_id: string | null } | null = null;
+  try {
+    found = await getPhoneNumberByE164(asset.phone_number);
+  } catch (e) {
+    console.warn("[tf-submit] Telnyx lookup for existing asset failed", e);
   }
 
-  await safeTelnyxCall(
-    "reassign_number",
-    { userId, messagingProfileId },
-    () => reassignNumberToProfile({ phoneNumberId: found.id, messagingProfileId }),
-  );
+  if (found?.id && found.messaging_profile_id !== messagingProfileId) {
+    try {
+      await safeTelnyxCall(
+        "reassign_number",
+        { userId, messagingProfileId },
+        () => reassignNumberToProfile({ phoneNumberId: found.id, messagingProfileId }),
+      );
+    } catch (e) {
+      console.warn("[tf-submit] Telnyx reassignment skipped; verification can still be submitted by E.164", e);
+    }
+  }
 
   const { data: updated, error } = await supabaseAdmin
     .from("sender_assets")
     .update({
-      telnyx_phone_number_id: found.id,
+      telnyx_phone_number_id: found?.id ?? asset.telnyx_phone_number_id,
       telnyx_messaging_profile_id: messagingProfileId,
       last_synced_at: new Date().toISOString(),
     })
@@ -97,7 +105,7 @@ async function resolveTollfreeNumberId(params: {
     .select(tollfreeAssetSelect)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return updated ?? { ...asset, telnyx_phone_number_id: found.id };
+  return updated ?? { ...asset, telnyx_phone_number_id: found?.id ?? asset.telnyx_phone_number_id };
 }
 
 export const getMyTollfreeVerification = createServerFn({ method: "GET" })
@@ -200,16 +208,16 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       }
     }
 
-    if (!asset?.telnyx_phone_number_id) {
+    if (!asset?.phone_number) {
       throw new Error(
-        "This toll-free number is not in the platform carrier account yet. Please ask support to assign a platform-owned toll-free number, then resubmit.",
+        "Missing toll-free phone number for verification submission. Please reserve or assign a toll-free number, then resubmit.",
       );
     }
 
 
     const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
     const result = await submitTwilioTollfreeVerification({
-      phoneSid: asset.telnyx_phone_number_id,
+      phoneSid: asset.telnyx_phone_number_id ?? asset.phone_number,
       phoneNumberE164: asset.phone_number ?? undefined,
       accountSid: "",
       authToken: "",
