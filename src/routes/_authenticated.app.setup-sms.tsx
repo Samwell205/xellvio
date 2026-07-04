@@ -530,7 +530,7 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
   });
 
   return (
-    <Dialog open={!!code} onOpenChange={(v) => { if (!v) { setShowForm(false); onClose(); } }}>
+    <Dialog open={!!code} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>How sending to {name} works</DialogTitle>
