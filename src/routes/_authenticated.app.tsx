@@ -49,6 +49,7 @@ function AppShell() {
             <Outlet />
           </main>
         </div>
+        <TosReAcceptModal />
       </div>
     </SidebarProvider>
   );
