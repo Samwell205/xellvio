@@ -410,6 +410,25 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         await supabaseAdmin.from("campaigns")
           .update({ status: "queued" }).eq("status", "sending").lt("updated_at", stalledCutoff);
 
+        // ── Auto-approve expired review-queue entries and requeue their campaigns.
+        const nowExpiry = new Date().toISOString();
+        const { data: expiredReviews } = await supabaseAdmin
+          .from("review_queue")
+          .select("id, campaign_id")
+          .eq("status", "pending")
+          .lte("auto_approve_at", nowExpiry);
+        for (const r of expiredReviews ?? []) {
+          await supabaseAdmin.from("review_queue")
+            .update({ status: "auto_approved", resolved_at: nowExpiry })
+            .eq("id", r.id);
+          if (r.campaign_id) {
+            await supabaseAdmin.from("campaigns")
+              .update({ status: "queued", paused_reason: null })
+              .eq("id", r.campaign_id).eq("status", "paused");
+          }
+        }
+
+
         const { data: due, error } = await supabaseAdmin
           .from("campaigns")
           .select("*")
