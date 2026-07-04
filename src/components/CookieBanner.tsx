@@ -31,7 +31,7 @@ export function CookieBanner() {
       role="dialog"
       aria-live="polite"
       aria-label="Cookie preferences"
-      className="fixed bottom-4 left-4 right-4 z-[100] mx-auto max-w-3xl rounded-2xl border border-border bg-card text-card-foreground shadow-2xl"
+      className="fixed bottom-4 left-4 right-4 z-[100] mx-auto max-w-3xl rounded-2xl border border-border bg-card text-card-foreground shadow-2xl pointer-events-auto"
     >
       <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex-1 text-sm">
