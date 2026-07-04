@@ -68,8 +68,12 @@ function AuthPage() {
         if (signUpError) throw signUpError;
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        // Record ToS acceptance server-side so the send gates unblock.
+        // Ensure the accounts row exists BEFORE recording ToS acceptance —
+        // otherwise the accounts.update in acceptTos matches 0 rows and the
+        // re-acceptance modal fires immediately for brand-new signups.
         try {
+          const { ensureMyAccount } = await import("@/lib/account.functions");
+          await ensureMyAccount();
           const { acceptTos } = await import("@/lib/tos.functions");
           await acceptTos({ data: { userAgent: navigator.userAgent.slice(0, 500) } });
         } catch { /* modal will re-prompt if it failed */ }

@@ -38,10 +38,12 @@ export const acceptTos = createServerFn({ method: "POST" })
     }
     const { error: updErr } = await supabaseAdmin
       .from("accounts")
-      .update({ tos_current_version_accepted: TOS_CURRENT_VERSION })
-      .eq("id", userId);
+      .upsert(
+        { id: userId, tos_current_version_accepted: TOS_CURRENT_VERSION },
+        { onConflict: "id" },
+      );
     if (updErr) {
-      console.error("[acceptTos] accounts update failed", updErr);
+      console.error("[acceptTos] accounts upsert failed", updErr);
       throw new Error(`Could not mark account accepted: ${updErr.message}`);
     }
 
