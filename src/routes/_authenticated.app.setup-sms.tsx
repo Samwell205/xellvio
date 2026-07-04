@@ -1034,7 +1034,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 maxLength={11}
               />
               <p className="text-xs text-muted-foreground">
-                Use 3–11 letters or numbers. Telnyx will register this sender for the countries you choose.
+                Use 3–11 letters or numbers. We'll register this sender for the countries you choose.
               </p>
             </div>
           )}
