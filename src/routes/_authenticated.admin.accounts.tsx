@@ -5,10 +5,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, ShieldOff, ShieldCheck, Ban, PlayCircle } from "lucide-react";
+import { Loader2, ShieldOff, ShieldCheck, Ban, PlayCircle, Wand2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminSetSuspension } from "@/lib/account.functions";
 import { adminSuspendTenantSending, adminResumeTenantSending } from "@/lib/compliance-admin.functions";
+import { adminBackfillProvisioning } from "@/lib/provision-account.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/accounts")({
   head: () => ({ meta: [{ title: "Tenant accounts — Admin" }] }),
@@ -64,11 +65,32 @@ function AdminAccountsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const backfillFn = useServerFn(adminBackfillProvisioning);
+  const backfill = useMutation({
+    mutationFn: () => backfillFn({ data: {} }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
+      toast.success(`Provisioned ${r.provisioned}/${r.scanned} dormant accounts${r.failed ? ` · ${r.failed} failed` : ""}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold">Tenant accounts</h1>
-        <p className="text-sm text-muted-foreground">All customer accounts on the platform.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold">Tenant accounts</h1>
+          <p className="text-sm text-muted-foreground">All customer accounts on the platform.</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => backfill.mutate()}
+          disabled={backfill.isPending}
+          title="Create Telnyx Messaging Profiles for any accounts that don't have one yet"
+        >
+          {backfill.isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : <Wand2 className="size-4 mr-2" />}
+          Backfill provisioning
+        </Button>
       </div>
 
       {accounts.isLoading ? (

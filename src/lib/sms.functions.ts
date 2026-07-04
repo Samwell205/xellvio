@@ -133,7 +133,10 @@ export const sendTestSms = createServerFn({ method: "POST" })
       skipReviewQueue: true, // test sends can't wait 2h for review
     });
     if (!screen.passed) {
-      throw new Error(`Blocked: ${screen.blockedReasons[0] ?? "content policy violation"} (risk ${screen.riskScore}/100)`);
+      const top = screen.blockedReasons.slice(0, 2).join(" · ") || "content policy violation";
+      throw new Error(
+        `Message blocked before sending. Reason: ${top}. Edit the message (remove risky links, add STOP to opt out, drop restricted keywords) and try again. Risk score ${screen.riskScore}/100.`,
+      );
     }
 
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
