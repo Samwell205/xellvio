@@ -48,7 +48,7 @@ function AdminVerifiersPage() {
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
           <TabsTrigger value="pool">Verified pool</TabsTrigger>
           <TabsTrigger value="sold">Sold / payouts</TabsTrigger>
-          <TabsTrigger value="twilio">Carrier-approved</TabsTrigger>
+          <TabsTrigger value="carrier">Carrier-approved</TabsTrigger>
           <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
