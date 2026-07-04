@@ -14,10 +14,10 @@ const SenderIdSchema = z.preprocess(
 
 export const SetupInput = z.object({
   targetCountries: z.array(z.string().length(2)).min(1),
-  monthlyVolume: z.number().int().min(1),
-  useCase: z.string().min(20),
-  sampleMessage: z.string().min(20),
-  optInDescription: z.string().min(20),
+  monthlyVolume: z.number().int().min(1).default(1000),
+  useCase: z.string().trim().optional(),
+  sampleMessage: z.string().trim().optional(),
+  optInDescription: z.string().trim().optional(),
   optInScreenshotPath: z.string().optional(),
   customSenderId: SenderIdSchema,
 });
