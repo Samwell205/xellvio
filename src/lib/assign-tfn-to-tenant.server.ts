@@ -39,7 +39,10 @@ export async function wireAssignedTollfreeForTenant(opts: {
     phone_number: opts.phoneNumber,
     telnyx_phone_number_id: phoneId,
     telnyx_messaging_profile_id: messagingProfileId,
-    verification_status: "verified",
+    // Provisioning the number does NOT mean the carrier approved toll-free
+    // verification. The tenant must still submit the TF verification wizard
+    // and wait for carrier approval before this asset becomes "verified".
+    verification_status: "pending",
     last_synced_at: new Date().toISOString(),
   } as const;
 
