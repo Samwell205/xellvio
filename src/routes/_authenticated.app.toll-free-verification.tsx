@@ -151,7 +151,7 @@ function TollfreeVerificationPage() {
     rawStatus === "pending" || (trustsCarrier && !asset?.telnyx_verification_id) ? null : rawStatus;
   const payload = (asset?.verification_payload as any) ?? null;
   const submissionStarted = !!asset?.telnyx_verification_id;
-  const hasReservedNumber = !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset.telnyx_number_id);
+  const hasReservedNumber = !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
   const localSubmissionFailure = status === "rejected" && !asset?.telnyx_verification_id;
   const isLocked = status === "submitted" || status === "in_review" || status === "verified";
 
@@ -243,7 +243,7 @@ function TollfreeVerificationPage() {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={status} />
-            {(asset?.telnyx_verification_id || asset?.telnyx_number_id) && (
+            {(asset?.telnyx_verification_id || asset?.telnyx_phone_number_id) && (
               <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
                 {refreshMut.isPending ? <Loader2 className="size-4 mr-1 animate-spin" /> : <RefreshCw className="size-4 mr-1" />}
                 Refresh
