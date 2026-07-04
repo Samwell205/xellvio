@@ -483,6 +483,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
       try {
         const result = await submitTwilioTollfreeVerification({
           phoneSid: row.telnyx_number_id,
+          phoneNumberE164: row.phone_number,
           accountSid: "",
           authToken: "",
           existingVerificationSid: twilioVerificationSid,
