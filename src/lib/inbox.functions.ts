@@ -121,7 +121,10 @@ export const sendReply = createServerFn({ method: "POST" })
       skipReviewQueue: true, // interactive reply — block or send, don't hold
     });
     if (!screen.passed) {
-      throw new Error(`Blocked: ${screen.blockedReasons[0] ?? "content policy"} (risk ${screen.riskScore}/100)`);
+      const top = screen.blockedReasons.slice(0, 2).join(" · ") || "content policy";
+      throw new Error(
+        `Reply blocked. Reason: ${top}. Rephrase and try again (avoid restricted keywords, shortened links, or missing opt-out language). Risk score ${screen.riskScore}/100.`,
+      );
     }
 
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
