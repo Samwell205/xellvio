@@ -1059,47 +1059,55 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
 
       {step === 2 && (
         <Card className="p-6 space-y-5">
-          <h3 className="font-semibold">Tell us about your SMS program</h3>
+          <h3 className="font-semibold">US/Canada carrier details</h3>
+          <p className="text-sm text-muted-foreground">
+            These details are only needed when you send to the United States or Canada.
+          </p>
 
-          <div className="space-y-2">
-            <Label>Which countries will you send to?</Label>
-            <div className="flex flex-wrap gap-2">
-              {COUNTRIES.map((c) => {
-                const on = form.targetCountries.includes(c.code);
-                return (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => toggleCountry(c.code)}
-                    className={`px-3 py-1.5 rounded-full border text-sm ${on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
-                  >
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
+          <Field
+            label="Legal business name"
+            v={form.legal_business_name}
+            on={(v) => setForm({ ...form, legal_business_name: v })}
+          />
           <div className="space-y-1.5">
-            <Label>Your Sender ID</Label>
-            <Input
-              value={form.customSenderId}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  customSenderId: e.target.value
-                    .replace(/[^A-Za-z0-9]/g, "")
-                    .toUpperCase()
-                    .slice(0, 11),
-                })
-              }
-              placeholder="XELLIO"
-              maxLength={11}
+            <Label>Business address</Label>
+            <Textarea
+              value={form.business_address}
+              onChange={(e) => setForm({ ...form, business_address: e.target.value })}
+              rows={2}
+              placeholder="Street, City, State, ZIP"
             />
-            <p className="text-xs text-muted-foreground">
-              Use 3–11 letters or numbers. Countries that support alphanumeric Sender ID will send
-              from this name; US/Canada still use a number.
-            </p>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field
+              label="Business registration #"
+              v={form.business_reg_number}
+              on={(v) => setForm({ ...form, business_reg_number: v })}
+            />
+            <Field
+              label="Website"
+              v={form.website_url}
+              on={(v) => setForm({ ...form, website_url: v })}
+              placeholder="https://"
+            />
+            <Field
+              label="Privacy policy URL"
+              v={form.privacy_policy_url}
+              on={(v) => setForm({ ...form, privacy_policy_url: v })}
+              placeholder="https://"
+            />
+            <Field
+              label="Contact email"
+              v={form.contact_email}
+              on={(v) => setForm({ ...form, contact_email: v })}
+              type="email"
+            />
+            <Field
+              label="Business phone"
+              v={form.phone}
+              on={(v) => setForm({ ...form, phone: v })}
+              placeholder="+15551234567"
+            />
           </div>
 
           <div className="space-y-2">
@@ -1201,6 +1209,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
             </Button>
             <Button
               onClick={async () => {
+                await saveProfile.mutateAsync();
                 try {
                   const { data: u } = await supabase.auth.getUser();
                   if (u.user) {
@@ -1220,7 +1229,12 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 !form.sampleMessage ||
                 !form.optInDescription ||
                 form.targetCountries.length === 0 ||
-                !consentConfirmed
+                !consentConfirmed ||
+                !form.legal_business_name ||
+                !form.business_address ||
+                !form.website_url ||
+                !form.contact_email ||
+                saveProfile.isPending
               }
             >
               Continue
@@ -1238,7 +1252,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
             registration in the background. You can test each ready sender from this page.
           </p>
           <div className="pt-2 flex justify-center gap-3">
-            <Button variant="outline" onClick={() => setStep(2)}>
+            <Button variant="outline" onClick={() => setStep(needsCarrierDetails ? 2 : 1)}>
               Back
             </Button>
             <Button
