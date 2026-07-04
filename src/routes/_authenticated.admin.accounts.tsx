@@ -26,7 +26,7 @@ function AdminAccountsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,created_at")
+        .select("id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,sending_suspended_at,sending_suspended_reason,created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -40,6 +40,26 @@ function AdminAccountsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
       toast.success("Tenant updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const killFn = useServerFn(adminSuspendTenantSending);
+  const resumeFn = useServerFn(adminResumeTenantSending);
+  const killSwitch = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      killFn({ data: { accountId: id, reason } }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
+      toast.success(r.telnyxOk ? "Sending paused (Telnyx profile disabled)" : `Sending paused locally — Telnyx: ${r.telnyxError ?? "err"}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const resumeSending = useMutation({
+    mutationFn: (id: string) => resumeFn({ data: { accountId: id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
+      toast.success("Sending resumed");
     },
     onError: (e: Error) => toast.error(e.message),
   });
