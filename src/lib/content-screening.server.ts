@@ -185,7 +185,7 @@ export async function screenMessageContent(
       campaign_id: opts.campaignId ?? null,
       message_text: body.slice(0, 4000),
       risk_score: riskScore,
-      blocked_reasons: reasons,
+      blocked_reasons: reasons as unknown as any,
       action_taken: action,
       context: opts.context ?? null,
     });
@@ -207,7 +207,7 @@ export async function screenMessageContent(
           campaign_id: opts.campaignId ?? null,
           message_text: body.slice(0, 4000),
           risk_score: riskScore,
-          blocked_reasons: reasons,
+          blocked_reasons: reasons as unknown as any,
           status: "pending",
           auto_approve_at: autoApproveAt,
         })

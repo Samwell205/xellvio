@@ -69,6 +69,7 @@ import { Route as AuthenticatedAdminVerifiersRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated.admin.users'
 import { Route as AuthenticatedAdminTollfreeAttemptsRouteImport } from './routes/_authenticated.admin.tollfree-attempts'
 import { Route as AuthenticatedAdminSendersRouteImport } from './routes/_authenticated.admin.senders'
+import { Route as AuthenticatedAdminReviewQueueRouteImport } from './routes/_authenticated.admin.review-queue'
 import { Route as AuthenticatedAdminRatesRouteImport } from './routes/_authenticated.admin.rates'
 import { Route as AuthenticatedAdminNumberRequestsRouteImport } from './routes/_authenticated.admin.number-requests'
 import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authenticated.admin.messaging'
@@ -412,6 +413,12 @@ const AuthenticatedAdminSendersRoute =
     path: '/senders',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminReviewQueueRoute =
+  AuthenticatedAdminReviewQueueRouteImport.update({
+    id: '/review-queue',
+    path: '/review-queue',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminRatesRoute = AuthenticatedAdminRatesRouteImport.update({
   id: '/rates',
   path: '/rates',
@@ -606,6 +613,7 @@ export interface FileRoutesByFullPath {
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/admin/senders': typeof AuthenticatedAdminSendersRoute
   '/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -690,6 +698,7 @@ export interface FileRoutesByTo {
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/admin/senders': typeof AuthenticatedAdminSendersRoute
   '/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -777,6 +786,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/messaging': typeof AuthenticatedAdminMessagingRoute
   '/_authenticated/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
   '/_authenticated/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/_authenticated/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/_authenticated/admin/senders': typeof AuthenticatedAdminSendersRoute
   '/_authenticated/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -865,6 +875,7 @@ export interface FileRouteTypes {
     | '/admin/messaging'
     | '/admin/number-requests'
     | '/admin/rates'
+    | '/admin/review-queue'
     | '/admin/senders'
     | '/admin/tollfree-attempts'
     | '/admin/users'
@@ -949,6 +960,7 @@ export interface FileRouteTypes {
     | '/admin/messaging'
     | '/admin/number-requests'
     | '/admin/rates'
+    | '/admin/review-queue'
     | '/admin/senders'
     | '/admin/tollfree-attempts'
     | '/admin/users'
@@ -1035,6 +1047,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/messaging'
     | '/_authenticated/admin/number-requests'
     | '/_authenticated/admin/rates'
+    | '/_authenticated/admin/review-queue'
     | '/_authenticated/admin/senders'
     | '/_authenticated/admin/tollfree-attempts'
     | '/_authenticated/admin/users'
@@ -1549,6 +1562,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSendersRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/review-queue': {
+      id: '/_authenticated/admin/review-queue'
+      path: '/review-queue'
+      fullPath: '/admin/review-queue'
+      preLoaderRoute: typeof AuthenticatedAdminReviewQueueRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/rates': {
       id: '/_authenticated/admin/rates'
       path: '/rates'
@@ -1744,6 +1764,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminMessagingRoute: typeof AuthenticatedAdminMessagingRoute
   AuthenticatedAdminNumberRequestsRoute: typeof AuthenticatedAdminNumberRequestsRoute
   AuthenticatedAdminRatesRoute: typeof AuthenticatedAdminRatesRoute
+  AuthenticatedAdminReviewQueueRoute: typeof AuthenticatedAdminReviewQueueRoute
   AuthenticatedAdminSendersRoute: typeof AuthenticatedAdminSendersRoute
   AuthenticatedAdminTollfreeAttemptsRoute: typeof AuthenticatedAdminTollfreeAttemptsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
@@ -1761,6 +1782,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminMessagingRoute: AuthenticatedAdminMessagingRoute,
   AuthenticatedAdminNumberRequestsRoute: AuthenticatedAdminNumberRequestsRoute,
   AuthenticatedAdminRatesRoute: AuthenticatedAdminRatesRoute,
+  AuthenticatedAdminReviewQueueRoute: AuthenticatedAdminReviewQueueRoute,
   AuthenticatedAdminSendersRoute: AuthenticatedAdminSendersRoute,
   AuthenticatedAdminTollfreeAttemptsRoute:
     AuthenticatedAdminTollfreeAttemptsRoute,
