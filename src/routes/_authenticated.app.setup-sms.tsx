@@ -39,6 +39,7 @@ import {
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 import { sendTestSms } from "@/lib/sms.functions";
 import { submitNumberRequest, listMyNumberRequests, cancelMyNumberRequest } from "@/lib/number-requests.functions";
+import { saveBusinessProfile } from "@/lib/account.functions";
 import { Send } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/setup-sms")({
@@ -405,37 +406,8 @@ function RegistrationRequiredDialog({
   const isRegistered = status === "verified";
   const isSubmitted = status === "submitted" || status === "in_review";
 
-  const account = useQuery({
-    queryKey: ["account"],
-    queryFn: async () =>
-      (await supabase.from("accounts").select(
-        "legal_business_name,website_url,use_case_description,sample_message,opt_in_description,monthly_volume_estimate",
-      ).maybeSingle()).data,
-  });
-  const a = account.data;
-
-  const [form, setForm] = useState({
-    businessName: "",
-    businessWebsite: "",
-    useCase: "",
-    sampleMessage: "",
-    optInDescription: "",
-    monthlyVolume: 1000,
-  });
-  useEffect(() => {
-    if (!code) return;
-    setForm({
-      businessName: a?.legal_business_name ?? "",
-      businessWebsite: a?.website_url ?? "",
-      useCase: a?.use_case_description ?? "",
-      sampleMessage: a?.sample_message ?? "",
-      optInDescription: a?.opt_in_description ?? "",
-      monthlyVolume: a?.monthly_volume_estimate ?? 1000,
-    });
-  }, [code, a]);
-
   const mut = useMutation({
-    mutationFn: () => submitFn({ data: { country: code as string, senderId, ...form } }),
+    mutationFn: () => submitFn({ data: { country: code as string, senderId } }),
     onSuccess: (r) => {
       if (r.status === "requires_registration") {
         toast.warning("Submitted — this destination needs extra carrier docs. Our team will reach out shortly.");
@@ -454,8 +426,7 @@ function RegistrationRequiredDialog({
         <DialogHeader>
           <DialogTitle>Register sender ID — {countryName}</DialogTitle>
           <DialogDescription>
-            Fill in your business details below. We'll submit the registration to the local carrier
-            for you — no need to leave this page.
+            We'll submit this Sender ID through Telnyx for this country. No extra business form is needed here.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 text-sm">
@@ -468,36 +439,15 @@ function RegistrationRequiredDialog({
               {isRegistered ? "Registered" : isSubmitted ? "In review" : "Not started"}
             </Badge>
           </div>
-          <div className="space-y-1.5">
-            <Label>Legal business name</Label>
-            <Input value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} placeholder="Acme Ltd." />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Business website</Label>
-            <Input type="url" value={form.businessWebsite} onChange={(e) => setForm({ ...form, businessWebsite: e.target.value })} placeholder="https://acme.com" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Use case</Label>
-            <Input value={form.useCase} onChange={(e) => setForm({ ...form, useCase: e.target.value })} placeholder="Order updates, 2FA, marketing…" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Sample message</Label>
-            <Textarea rows={3} value={form.sampleMessage} onChange={(e) => setForm({ ...form, sampleMessage: e.target.value })} placeholder="Hi {name}, your order #1234 has shipped. Reply STOP to opt out." />
-          </div>
-          <div className="space-y-1.5">
-            <Label>How recipients opted in</Label>
-            <Textarea rows={3} value={form.optInDescription} onChange={(e) => setForm({ ...form, optInDescription: e.target.value })} placeholder="Customers check a consent box at checkout on acme.com/signup." />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Expected monthly volume</Label>
-            <Input type="number" min={1} value={form.monthlyVolume} onChange={(e) => setForm({ ...form, monthlyVolume: Number(e.target.value) || 0 })} />
+          <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-muted-foreground">
+            Telnyx will register <span className="font-mono text-foreground">{senderId}</span> for {countryName}. If local carriers need manual review, this status will stay in review until they approve it.
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={mut.isPending}>Close</Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending || !senderId}>
             {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-            Submit registration
+            Register with Telnyx
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -892,6 +842,7 @@ type WizardForm = {
 };
 
 function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
+  const saveBusinessProfileFn = useServerFn(saveBusinessProfile);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [consentConfirmed, setConsentConfirmed] = useState<boolean>(!!account?.sms_consent_disclosures_confirmed_at);
   const [uploading, setUploading] = useState(false);
@@ -907,7 +858,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
     privacy_policy_url: account?.privacy_policy_url ?? "",
     contact_email: account?.contact_email ?? account?.email ?? "",
     phone: account?.phone ?? "",
-    targetCountries: account?.sms_target_countries?.length ? account.sms_target_countries : ["US"],
+    targetCountries: account?.sms_target_countries?.length ? account.sms_target_countries : [],
     monthlyVolume: account?.monthly_volume_estimate ?? 10000,
     useCase: account?.use_case_description ?? "",
     sampleMessage: account?.sample_message ?? "",
@@ -939,6 +890,10 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
       }));
   }, [account]);
 
+  const needsCarrierDetails = form.targetCountries.some((cc) => cc === "US" || cc === "CA");
+  const hasSenderIdCountry = form.targetCountries.some((cc) => cc !== "US" && cc !== "CA");
+  const senderIdReady = !hasSenderIdCountry || /^[A-Z0-9]{3,11}$/.test(form.customSenderId);
+
   async function handleUpload(file: File) {
     setUploading(true);
     try {
@@ -959,23 +914,14 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   }
 
   const saveProfile = useMutation({
-    mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not signed in");
-      const { error } = await supabase
-        .from("accounts")
-        .update({
-          legal_business_name: form.legal_business_name,
-          business_address: form.business_address,
-          business_reg_number: form.business_reg_number,
-          website_url: form.website_url,
-          privacy_policy_url: form.privacy_policy_url || null,
-          contact_email: form.contact_email,
-          phone: form.phone || null,
-        })
-        .eq("id", u.user.id);
-      if (error) throw error;
-    },
+    mutationFn: () => saveBusinessProfileFn({ data: {
+      legal_business_name: form.legal_business_name,
+      business_address: form.business_address,
+      business_reg_number: form.business_reg_number,
+      website_url: form.website_url,
+      privacy_policy_url: form.privacy_policy_url || undefined,
+      contact_email: form.contact_email,
+    } }),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -1041,19 +987,76 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 text-sm">
-        <StepDot n={1} active={step === 1} done={step > 1} label="Confirm business" />
+        <StepDot n={1} active={step === 1} done={step > 1} label="Choose sender" />
         <div className="h-px flex-1 bg-border" />
-        <StepDot n={2} active={step === 2} done={step > 2} label="Tell us about your SMS" />
+        <StepDot n={2} active={step === 2} done={step > 2} label="Carrier details" />
         <div className="h-px flex-1 bg-border" />
         <StepDot n={3} active={step === 3} done={false} label="Set up" />
       </div>
 
       {step === 1 && (
-        <Card className="p-6 space-y-4">
-          <h3 className="font-semibold">Confirm your business details</h3>
+        <Card className="p-6 space-y-5">
+          <h3 className="font-semibold">Choose where you want to send</h3>
+          <div className="space-y-2">
+            <Label>Countries</Label>
+            <div className="flex flex-wrap gap-2">
+              {COUNTRIES.map((c) => {
+                const on = form.targetCountries.includes(c.code);
+                return (
+                  <button
+                    key={c.code}
+                    type="button"
+                    onClick={() => toggleCountry(c.code)}
+                    className={`px-3 py-1.5 rounded-full border text-sm ${on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {hasSenderIdCountry && (
+            <div className="space-y-1.5">
+              <Label>Your Sender ID</Label>
+              <Input
+                value={form.customSenderId}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    customSenderId: e.target.value
+                      .replace(/[^A-Za-z0-9]/g, "")
+                      .toUpperCase()
+                      .slice(0, 11),
+                  })
+                }
+                placeholder="XELLIO"
+                maxLength={11}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use 3–11 letters or numbers. Telnyx will register this sender for the countries you choose.
+              </p>
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <Button
+              onClick={() => setStep(needsCarrierDetails ? 2 : 3)}
+              disabled={form.targetCountries.length === 0 || !senderIdReady}
+            >
+              Continue
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {step === 2 && (
+        <Card className="p-6 space-y-5">
+          <h3 className="font-semibold">US/Canada carrier details</h3>
           <p className="text-sm text-muted-foreground">
-            We pre-filled these from your account. Edit if anything's changed.
+            These details are only needed when you send to the United States or Canada.
           </p>
+
           <Field
             label="Legal business name"
             v={form.legal_business_name}
@@ -1098,64 +1101,6 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
               on={(v) => setForm({ ...form, phone: v })}
               placeholder="+15551234567"
             />
-          </div>
-          <div className="flex justify-end">
-            <Button
-              onClick={async () => {
-                await saveProfile.mutateAsync();
-                setStep(2);
-              }}
-              disabled={saveProfile.isPending}
-            >
-              Continue
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {step === 2 && (
-        <Card className="p-6 space-y-5">
-          <h3 className="font-semibold">Tell us about your SMS program</h3>
-
-          <div className="space-y-2">
-            <Label>Which countries will you send to?</Label>
-            <div className="flex flex-wrap gap-2">
-              {COUNTRIES.map((c) => {
-                const on = form.targetCountries.includes(c.code);
-                return (
-                  <button
-                    key={c.code}
-                    type="button"
-                    onClick={() => toggleCountry(c.code)}
-                    className={`px-3 py-1.5 rounded-full border text-sm ${on ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-muted"}`}
-                  >
-                    {c.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Your Sender ID</Label>
-            <Input
-              value={form.customSenderId}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  customSenderId: e.target.value
-                    .replace(/[^A-Za-z0-9]/g, "")
-                    .toUpperCase()
-                    .slice(0, 11),
-                })
-              }
-              placeholder="XELLIO"
-              maxLength={11}
-            />
-            <p className="text-xs text-muted-foreground">
-              Use 3–11 letters or numbers. Countries that support alphanumeric Sender ID will send
-              from this name; US/Canada still use a number.
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -1257,6 +1202,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
             </Button>
             <Button
               onClick={async () => {
+                await saveProfile.mutateAsync();
                 try {
                   const { data: u } = await supabase.auth.getUser();
                   if (u.user) {
@@ -1276,7 +1222,13 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 !form.sampleMessage ||
                 !form.optInDescription ||
                 form.targetCountries.length === 0 ||
-                !consentConfirmed
+                !consentConfirmed ||
+                !form.legal_business_name ||
+                !form.business_address ||
+                !form.business_reg_number ||
+                !form.website_url ||
+                !form.contact_email ||
+                saveProfile.isPending
               }
             >
               Continue
@@ -1294,7 +1246,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
             registration in the background. You can test each ready sender from this page.
           </p>
           <div className="pt-2 flex justify-center gap-3">
-            <Button variant="outline" onClick={() => setStep(2)}>
+            <Button variant="outline" onClick={() => setStep(needsCarrierDetails ? 2 : 1)}>
               Back
             </Button>
             <Button
@@ -1384,7 +1336,7 @@ function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetC
   // Auto-show when verified or in review — status is useful info even if skipped.
   const showAnyway = status === "verified" || status === "in_review" || status === "submitted" || status === "rejected";
 
-  if (skipped && !showAnyway && !needsUsCa) return null;
+  if (!showAnyway && !needsUsCa) return null;
 
   let badge = (
     <Badge variant="outline" className="gap-1"><Clock className="size-3" /> Not started</Badge>

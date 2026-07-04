@@ -18,25 +18,41 @@ function senderIdFromName(name: string, requested?: string): string {
 
 export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { ensureMessagingProfileForAccount, searchAvailableNumbers, orderNumber, safeTelnyxCall } =
+  const { ensureMessagingProfileForAccount, searchAvailableNumbers, orderNumber, safeTelnyxCall, createAlphanumericSenderId } =
     await import("./telnyx.server");
 
-  const { data: acct, error } = await supabaseAdmin
+  let { data: acct, error } = await supabaseAdmin
     .from("accounts")
     .select("id,legal_business_name,business_address,website_url,contact_email,full_name,phone,onboarding_status,telnyx_phone_number,telnyx_messaging_profile_id")
     .eq("id", userId).maybeSingle();
-  if (error || !acct) throw new Error("Account not found");
+  if (error) throw error;
+  if (!acct) {
+    const { error: createAccountError } = await supabaseAdmin
+      .from("accounts")
+      .insert({ id: userId, onboarding_status: "signup" });
+    if (createAccountError) throw createAccountError;
+    const { data: createdAcct, error: reloadError } = await supabaseAdmin
+      .from("accounts")
+      .select("id,legal_business_name,business_address,website_url,contact_email,full_name,phone,onboarding_status,telnyx_phone_number,telnyx_messaging_profile_id")
+      .eq("id", userId).maybeSingle();
+    if (reloadError || !createdAcct) throw new Error("Could not create your account record. Please refresh and try again.");
+    acct = createdAcct;
+  }
   if (acct.onboarding_status === "suspended") throw new Error("Account suspended");
-  if (!acct.legal_business_name || !acct.business_address || !acct.website_url || !acct.contact_email) {
+  const targetsUsOrCanada = data.targetCountries.some((raw) => {
+    const cc = raw.toUpperCase();
+    return cc === "US" || cc === "CA";
+  });
+  if (targetsUsOrCanada && (!acct.legal_business_name || !acct.business_address || !acct.website_url || !acct.contact_email)) {
     throw new Error("Please complete your business profile first (legal name, address, website, contact email).");
   }
 
   await supabaseAdmin.from("accounts").update({
     sms_target_countries: data.targetCountries,
     monthly_volume_estimate: data.monthlyVolume,
-    use_case_description: data.useCase,
-    sample_message: data.sampleMessage,
-    opt_in_description: data.optInDescription,
+    use_case_description: data.useCase ?? null,
+    sample_message: data.sampleMessage ?? null,
+    opt_in_description: data.optInDescription ?? null,
     opt_in_screenshot_url: data.optInScreenshotPath ?? null,
   }).eq("id", userId);
 
@@ -77,6 +93,21 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         const sid = senderIdFromName(acct.legal_business_name || "Sender", data.customSenderId);
         const { ALPHA_SENDER_REQUIRES_REGISTRATION } = await import("./telnyx.server");
         const needsReg = ALPHA_SENDER_REQUIRES_REGISTRATION.has(cc);
+        let status: "verified" | "submitted" | "requires_registration" = needsReg ? "submitted" : "verified";
+        let alphaSenderId: string | null = null;
+        let telnyxError: string | null = null;
+        try {
+          const alpha = await safeTelnyxCall(
+            "create_alpha_sender", { userId, messagingProfileId },
+            () => createAlphanumericSenderId({ messagingProfileId, senderId: sid, isoCountryCode: cc }),
+          );
+          alphaSenderId = alpha.id ?? null;
+        } catch (e: any) {
+          telnyxError = String(e?.message ?? e);
+          const telnyxErrorText = telnyxError.toLowerCase();
+          const alreadyExists = telnyxErrorText.includes("already") || telnyxErrorText.includes("duplicate");
+          status = alreadyExists ? (needsReg ? "submitted" : "verified") : "requires_registration";
+        }
         await supabaseAdmin.from("sender_assets").insert({
           account_id: userId,
           country_code: cc,
@@ -84,16 +115,19 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
           phone_number: sid,
           telnyx_phone_number_id: null,
           telnyx_messaging_profile_id: messagingProfileId,
-          verification_status: needsReg ? "requires_registration" : "verified",
+          telnyx_verification_id: alphaSenderId,
+          verification_status: status,
+          rejection_reason: telnyxError,
+          submitted_at: status === "submitted" || status === "requires_registration" ? new Date().toISOString() : null,
         });
-        if (!needsReg) {
+        if (status === "verified") {
           await setPrimarySender({
             telnyx_phone_number: sid,
             telnyx_messaging_profile_id: messagingProfileId,
             onboarding_status: "active",
           });
         }
-        created.push(needsReg ? `${cc}:requires_registration` : `${cc}:sender_id`);
+        created.push(status === "verified" ? `${cc}:sender_id` : `${cc}:${status}`);
         continue;
       }
 
