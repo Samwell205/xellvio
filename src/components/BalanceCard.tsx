@@ -142,7 +142,7 @@ export function BalanceCard() {
       </div>
 
       {latest?.error_message && (
-        <div className="text-xs text-destructive">Last error: {latest.error_message}</div>
+        <div className="text-xs text-destructive">Last check failed. Click Refresh now to retry.</div>
       )}
 
       <div className="text-xs text-muted-foreground">
@@ -152,7 +152,7 @@ export function BalanceCard() {
       </div>
 
       <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-        <strong>Tip:</strong> Enable <a className="underline" href="https://portal.telnyx.com/#/app/billing/auto-recharge" target="_blank" rel="noreferrer">Auto-Recharge</a> in the Telnyx Portal so your account is topped up automatically when your balance drops below your chosen threshold. This card is your safety net in case Auto-Recharge fails or is off.
+        <strong>Tip:</strong> Enable Auto-Recharge with your SMS provider so your account is topped up automatically when your balance drops below your chosen threshold. This card is your safety net in case Auto-Recharge fails or is off.
       </div>
 
       {pausedCount > 0 && (
