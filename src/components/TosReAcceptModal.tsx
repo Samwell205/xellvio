@@ -15,22 +15,36 @@ import { TOS_LEGAL_TEXT, TOS_CURRENT_VERSION } from "@/lib/tos";
 export function TosReAcceptModal() {
   const qc = useQueryClient();
   const [checked, setChecked] = useState(false);
+  const [locallyAccepted, setLocallyAccepted] = useState(false);
 
   const statusFn = useServerFn(getTosStatus);
-  const statusQ = useQuery({ queryKey: ["tos-status"], queryFn: () => statusFn(), staleTime: 60_000 });
+  const statusQ = useQuery({
+    queryKey: ["tos-status", TOS_CURRENT_VERSION],
+    queryFn: () => statusFn(),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
 
   const acceptFn = useServerFn(acceptTos);
   const accept = useMutation({
     mutationFn: () => acceptFn({ data: { userAgent: navigator.userAgent.slice(0, 500) } }),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["tos-status"] });
-      await statusQ.refetch();
+      setLocallyAccepted(true);
+      qc.setQueryData(["tos-status", TOS_CURRENT_VERSION], {
+        accepted: true,
+        currentVersion: TOS_CURRENT_VERSION,
+      });
       toast.success("Thank you — you can now send campaigns.");
+      await qc.invalidateQueries({ queryKey: ["tos-status", TOS_CURRENT_VERSION] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      console.error("[TosReAcceptModal] accept failed", e);
+      toast.error(e.message || "Could not record acceptance. Please try again.");
+    },
   });
 
-  const open = !!statusQ.data && !statusQ.data.accepted && !accept.isSuccess;
+  const open =
+    !locallyAccepted && !accept.isPending && !!statusQ.data && !statusQ.data.accepted;
 
   return (
     <Dialog open={open}>
