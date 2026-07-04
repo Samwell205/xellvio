@@ -518,22 +518,8 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
     carrierVariant = "secondary";
   }
 
-  const submit = useMutation({
-    mutationFn: () => submitFn({ data: { country: code as "US" | "CA", ...form } }),
-    onSuccess: (res: any) => {
-      if (res?.auto?.provisioned) {
-        toast.success(`Your ${code} number ${res.auto.phone_number} is provisioned and now in carrier review.`);
-      } else if (res?.auto?.note) {
-        toast.message("Request submitted — manual review needed", { description: res.auto.note });
-      } else {
-        toast.success("Request submitted. We'll review it shortly.");
-      }
-      qc.invalidateQueries({ queryKey: ["my-number-requests"] });
-      qc.invalidateQueries({ queryKey: ["sender-assets"] });
-      setShowForm(false);
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Failed to submit request"),
-  });
+  // Submission has moved to the dedicated Toll-free Verification wizard route.
+
 
   const cancel = useMutation({
     mutationFn: (id: string) => cancelFn({ data: { id } }),
