@@ -92,10 +92,10 @@ export const sendReply = createServerFn({ method: "POST" })
       .eq("direction", "inbound").order("created_at", { ascending: false }).limit(1).maybeSingle();
     const { data: assets } = await supabase
       .from("sender_assets")
-      .select("messaging_service_sid,phone_number,sender_kind,country_code,verification_status")
+      .select("telnyx_messaging_profile_id,phone_number,sender_kind,country_code,verification_status")
       .eq("account_id", userId);
     const eligible = (assets ?? []).filter(
-      (a) => a.verification_status === "verified" && (a.messaging_service_sid || a.phone_number),
+      (a) => a.verification_status === "verified" && (a.telnyx_messaging_profile_id || a.phone_number),
     );
     if (eligible.length === 0) throw new Error("No verified sender is available. Finish SMS setup before replying.");
     const matchByLast = lastInbound?.to_number
@@ -130,12 +130,12 @@ export const sendReply = createServerFn({ method: "POST" })
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
     const result = await safeTelnyxCall(
       "send_reply",
-      { userId, messagingProfileId: asset.messaging_service_sid ?? null },
+      { userId, messagingProfileId: asset.telnyx_messaging_profile_id ?? null },
       () => sendMessage({
         to: data.phone,
         text: data.body,
         from: asset.phone_number ?? undefined,
-        messagingProfileId: asset.messaging_service_sid ?? undefined,
+        messagingProfileId: asset.telnyx_messaging_profile_id ?? undefined,
       }),
     );
 

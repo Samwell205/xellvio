@@ -16,7 +16,7 @@ export const getMySenderAssets = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data } = await context.supabase
       .from("sender_assets")
-      .select("id,country_code,sender_kind,phone_number,messaging_service_sid,verification_status,rejection_reason,friendly_rejection_reason,verification_sid,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_phone_number_id,telnyx_messaging_profile_id")
+      .select("id,country_code,sender_kind,phone_number,telnyx_messaging_profile_id,verification_status,rejection_reason,friendly_rejection_reason,telnyx_verification_id,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_phone_number_id")
       .eq("account_id", context.userId)
       .order("country_code", { ascending: true });
     return data ?? [];
@@ -60,7 +60,6 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
         await supabaseAdmin.from("sender_assets").update({
           sender_kind: "sender_id",
           phone_number: data.senderId,
-          messaging_service_sid: messagingProfileId,
           telnyx_messaging_profile_id: messagingProfileId,
           verification_status: status,
           last_synced_at: new Date().toISOString(),
@@ -71,7 +70,6 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
           country_code: cc,
           sender_kind: "sender_id",
           phone_number: data.senderId,
-          messaging_service_sid: messagingProfileId,
           telnyx_messaging_profile_id: messagingProfileId,
           verification_status: status,
         });
@@ -144,7 +142,6 @@ export const submitSenderIdRegistration = createServerFn({ method: "POST" })
     const patch = {
       sender_kind: "sender_id" as const,
       phone_number: data.senderId,
-      messaging_service_sid: messagingProfileId,
       telnyx_messaging_profile_id: messagingProfileId,
       verification_status: submittedStatus,
       rejection_reason: telnyxError,

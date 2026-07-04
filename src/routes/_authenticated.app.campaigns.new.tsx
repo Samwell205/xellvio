@@ -148,7 +148,7 @@ function NewCampaignPage() {
     queryFn: async () =>
       (await supabase
         .from("sender_assets")
-        .select("verification_status,country_code,sender_kind,phone_number,messaging_service_sid,friendly_rejection_reason")
+        .select("verification_status,country_code,sender_kind,phone_number,telnyx_messaging_profile_id,friendly_rejection_reason")
       ).data ?? [],
   });
   const senderList = senderQ.data ?? [];
@@ -157,7 +157,7 @@ function NewCampaignPage() {
   const hasRejected = senderList.some((x) => x.verification_status === "rejected");
   const verifiedSenderSummary = senderList
     .filter((x) => x.verification_status === "verified")
-    .map((x) => `${x.country_code}: ${x.phone_number || x.messaging_service_sid || "Sender ID"}`)
+    .map((x) => `${x.country_code}: ${x.phone_number || x.telnyx_messaging_profile_id || "Sender ID"}`)
     .join(" · ");
 
   // Map country -> verified sender (auto-routing preview)
@@ -368,7 +368,7 @@ function NewCampaignPage() {
           ? {
               sender_kind: sender.sender_kind,
               phone_number: sender.phone_number,
-              messaging_service_sid: sender.messaging_service_sid,
+              telnyx_messaging_profile_id: sender.telnyx_messaging_profile_id,
             }
           : null;
         return acc;
@@ -705,7 +705,7 @@ function NewCampaignPage() {
               <div className="mt-1 mb-2 text-xs rounded-md border bg-muted/30 px-3 py-2 flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Test route: {testCountry}</span>
                 {testSender ? (
-                  <span className="font-mono font-semibold">From {testSender.phone_number || testSender.messaging_service_sid}</span>
+                  <span className="font-mono font-semibold">From {testSender.phone_number || testSender.telnyx_messaging_profile_id}</span>
                 ) : (
                   <span className="text-destructive font-medium">No verified sender for {testCountry}</span>
                 )}
@@ -1024,14 +1024,14 @@ function SenderRoutingCard({
   onToggleCountry,
 }: {
   breakdown: Array<{ country_code: string; country_name: string; recipients: number; excluded?: boolean }>;
-  sendersByCountry: Record<string, { sender_kind: string; phone_number: string | null; messaging_service_sid: string | null }>;
+  sendersByCountry: Record<string, { sender_kind: string; phone_number: string | null; telnyx_messaging_profile_id: string | null }>;
   onToggleCountry?: (cc: string) => void;
 }) {
   function label(s: any) {
     if (!s) return "No verified sender";
     if (s.phone_number) return s.phone_number;
     if (s.sender_kind === "sender_id") return "Alphanumeric Sender ID";
-    if (s.messaging_service_sid) return "Messaging Service";
+    if (s.telnyx_messaging_profile_id) return "Messaging Service";
     return s.sender_kind;
   }
   const excludedCount = breakdown.filter((b) => b.excluded).length;

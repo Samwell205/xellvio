@@ -15,7 +15,7 @@ export const listAllSenders = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: senders, error } = await supabaseAdmin
       .from("sender_assets")
-      .select("id, account_id, country_code, sender_kind, phone_number, verification_status, verification_sid, rejection_reason, friendly_rejection_reason, submitted_at, verified_at, rejected_at, last_synced_at, telnyx_phone_number_id, telnyx_messaging_profile_id, created_at")
+      .select("id, account_id, country_code, sender_kind, phone_number, verification_status, telnyx_verification_id, rejection_reason, friendly_rejection_reason, submitted_at, verified_at, rejected_at, last_synced_at, telnyx_phone_number_id, telnyx_messaging_profile_id, created_at")
       .order("created_at", { ascending: false })
       .limit(500);
     if (error) throw new Error(error.message);
@@ -38,13 +38,13 @@ export const adminRefreshSender = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row } = await supabaseAdmin.from("sender_assets")
-      .select("id, verification_sid, sender_kind").eq("id", data.senderId).maybeSingle();
-    if (!row?.verification_sid || row.sender_kind !== "toll_free") {
+      .select("id, telnyx_verification_id, sender_kind").eq("id", data.senderId).maybeSingle();
+    if (!row?.telnyx_verification_id || row.sender_kind !== "toll_free") {
       return { ok: false, reason: "Only submitted toll-free rows can be refreshed." };
     }
     const { fetchTwilioTollfreeVerification } = await import("./tollfree-submit.server");
     const res = await fetchTwilioTollfreeVerification({
-      verificationSid: row.verification_sid, accountSid: "", authToken: "",
+      verificationSid: row.telnyx_verification_id, accountSid: "", authToken: "",
     });
     await supabaseAdmin.from("sender_assets").update({
       verification_status: res.status,

@@ -305,14 +305,13 @@ export function isShaftLikeTelnyxError(code: string | number | null | undefined)
 
 /**
  * Ensure the given account has a Telnyx Messaging Profile. Idempotent.
- * Stores id in accounts.telnyx_messaging_profile_id (and legacy
- * twilio_subaccount_sid for backwards compat with existing selects).
+ * Stores id in accounts.telnyx_messaging_profile_id.
  */
 export async function ensureMessagingProfileForAccount(accountId: string): Promise<string> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: acct, error } = await supabaseAdmin
     .from("accounts")
-    .select("id, legal_business_name, email, telnyx_messaging_profile_id, twilio_subaccount_sid")
+    .select("id, legal_business_name, email, telnyx_messaging_profile_id")
     .eq("id", accountId)
     .maybeSingle();
   if (error || !acct) throw new Error("Account not found");

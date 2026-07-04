@@ -54,14 +54,14 @@ export const getProvisioningStatus = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data } = await supabaseAdmin
       .from("accounts")
-      .select("twilio_subaccount_sid,subaccount_phone_number,subaccount_messaging_service_sid,onboarding_status")
+      .select("telnyx_number_id,telnyx_phone_number,telnyx_messaging_profile_id,onboarding_status")
       .eq("id", userId)
       .maybeSingle();
     return {
-      hasSubaccount: !!data?.twilio_subaccount_sid,
-      hasNumber: !!data?.subaccount_phone_number,
-      phoneNumber: data?.subaccount_phone_number ?? null,
-      messagingServiceSid: data?.subaccount_messaging_service_sid ? "configured" : null,
+      hasSubaccount: !!data?.telnyx_messaging_profile_id,
+      hasNumber: !!data?.telnyx_phone_number,
+      phoneNumber: data?.telnyx_phone_number ?? null,
+      messagingServiceSid: data?.telnyx_messaging_profile_id ? "configured" : null,
       onboardingStatus: data?.onboarding_status ?? "signup",
     };
   });

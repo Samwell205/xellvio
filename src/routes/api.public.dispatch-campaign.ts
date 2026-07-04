@@ -45,7 +45,7 @@ type Sender = {
   assets: Array<{
     country_code: string;
     sender_kind?: string | null;
-    messaging_service_sid?: string | null; // now stores telnyx messaging_profile_id
+    telnyx_messaging_profile_id?: string | null; // now stores telnyx messaging_profile_id
     phone_number?: string | null;
   }>;
 };
@@ -110,7 +110,7 @@ async function sendOneMessage(
       return k === "sender_id" ? 0 : k === "local" ? 1 : k === "toll_free" ? 2 : 3;
     };
     const candidates = sender.assets
-      .filter((a) => a.country_code === m.country_code && (a.messaging_service_sid || a.phone_number))
+      .filter((a) => a.country_code === m.country_code && (a.telnyx_messaging_profile_id || a.phone_number))
       .sort((a, b) => rank(a.sender_kind) - rank(b.sender_kind));
     const matched = candidates[0];
 
@@ -123,7 +123,7 @@ async function sendOneMessage(
         }).eq("id", m.id);
       return { ok: false, shaft: false, debited: 0 };
     }
-    const messagingProfileId = matched.messaging_service_sid ?? sender.messagingProfileId ?? undefined;
+    const messagingProfileId = matched.telnyx_messaging_profile_id ?? sender.messagingProfileId ?? undefined;
     const fromNumber = matched.phone_number ?? sender.fromNumber ?? undefined;
     const senderKindUsed = matched.sender_kind ?? "unknown";
     const senderUsed = fromNumber ?? messagingProfileId ?? "unknown";
@@ -441,7 +441,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           try {
             const { data: acct } = await supabaseAdmin
               .from("accounts")
-              .select("telnyx_messaging_profile_id, subaccount_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted")
+              .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted")
               .eq("id", c.account_id).maybeSingle();
             if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
               await supabaseAdmin.from("campaigns")
@@ -475,10 +475,10 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 
             const { data: senderAssets } = await supabaseAdmin
               .from("sender_assets")
-              .select("verification_status,country_code,sender_kind,phone_number,messaging_service_sid")
+              .select("verification_status,country_code,sender_kind,phone_number,telnyx_messaging_profile_id")
               .eq("account_id", c.account_id);
             const verifiedSender = (senderAssets ?? []).find(
-              (s: any) => s.verification_status === "verified" && (s.messaging_service_sid || s.phone_number),
+              (s: any) => s.verification_status === "verified" && (s.telnyx_messaging_profile_id || s.phone_number),
             );
             if ((senderAssets ?? []).length > 0 && !verifiedSender) {
               results.push({ id: c.id, skipped: "sender_pending_verification" });
@@ -498,12 +498,12 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
                 continue;
               }
             }
-            const assetProfileId = isValidTelnyxUuid(verifiedSender?.messaging_service_sid)
-              ? (verifiedSender!.messaging_service_sid as string)
+            const assetProfileId = isValidTelnyxUuid(verifiedSender?.telnyx_messaging_profile_id)
+              ? (verifiedSender!.telnyx_messaging_profile_id as string)
               : null;
             const sender: Sender = {
               messagingProfileId: assetProfileId ?? profileId,
-              fromNumber: verifiedSender?.phone_number ?? acct?.subaccount_phone_number ?? null,
+              fromNumber: verifiedSender?.phone_number ?? acct?.telnyx_phone_number ?? null,
               assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
             };
             const r = await processCampaign(supabaseAdmin, c, rates, sender);

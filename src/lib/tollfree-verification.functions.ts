@@ -61,7 +61,7 @@ export const getMyTollfreeVerification = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: asset } = await context.supabase
       .from("sender_assets")
-      .select("id,phone_number,phone_sid,verification_status,verification_sid,verification_payload,rejection_reason,friendly_rejection_reason,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_phone_number_id,telnyx_messaging_profile_id")
+      .select("id,phone_number,telnyx_phone_number_id,verification_status,telnyx_verification_id,verification_payload,rejection_reason,friendly_rejection_reason,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_messaging_profile_id")
       .eq("account_id", context.userId)
       .eq("sender_kind", "toll_free")
       .order("created_at", { ascending: false })
@@ -118,7 +118,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
     let { data: asset } = await supabaseAdmin
       .from("sender_assets")
-      .select("id,phone_number,phone_sid,verification_sid")
+      .select("id,phone_number,telnyx_phone_number_id,telnyx_verification_id")
       .eq("account_id", userId).eq("sender_kind", "toll_free")
       .maybeSingle();
 
@@ -135,12 +135,10 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
           country_code: (data.businessCountry || "US").toUpperCase(),
           sender_kind: "toll_free",
           phone_number: bought.phone_number,
-          phone_sid: bought.id,
           telnyx_phone_number_id: bought.id,
           telnyx_messaging_profile_id: messagingProfileId,
-          messaging_service_sid: messagingProfileId,
           verification_status: "pending",
-        }).select("id,phone_number,phone_sid,verification_sid").single();
+        }).select("id,phone_number,telnyx_phone_number_id,telnyx_verification_id").single();
         if (insErr) throw new Error(insErr.message);
         asset = inserted;
       } catch (e: any) {
@@ -156,22 +154,22 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       }
     }
 
-    if (!asset?.phone_sid) throw new Error("No toll-free number id on file for this account.");
+    if (!asset?.telnyx_phone_number_id) throw new Error("No toll-free number id on file for this account.");
 
     const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
     const result = await submitTwilioTollfreeVerification({
-      phoneSid: asset.phone_sid,
+      phoneSid: asset.telnyx_phone_number_id,
       phoneNumberE164: asset.phone_number ?? undefined,
       accountSid: "",
       authToken: "",
-      existingVerificationSid: asset.verification_sid ?? null,
+      existingVerificationSid: asset.telnyx_verification_id ?? null,
       payload: data as any,
       statusCallbackUrl: `${base}/api/public/telnyx-status`,
     });
 
     await supabaseAdmin.from("sender_assets").update({
       verification_status: result.status === "verified" ? "verified" : result.status,
-      verification_sid: result.verificationSid,
+      telnyx_verification_id: result.verificationSid,
       verification_payload: data as any,
       rejection_reason: result.rejectionReason,
       submitted_at: new Date().toISOString(),
@@ -186,13 +184,13 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: asset } = await supabaseAdmin
       .from("sender_assets")
-      .select("id,verification_sid,verification_status")
+      .select("id,telnyx_verification_id,verification_status")
       .eq("account_id", context.userId).eq("sender_kind", "toll_free")
       .maybeSingle();
-    if (!asset?.verification_sid) return { ok: false, status: asset?.verification_status ?? "pending" };
+    if (!asset?.telnyx_verification_id) return { ok: false, status: asset?.verification_status ?? "pending" };
     const { fetchTwilioTollfreeVerification } = await import("./tollfree-submit.server");
     const result = await fetchTwilioTollfreeVerification({
-      verificationSid: asset.verification_sid, accountSid: "", authToken: "",
+      verificationSid: asset.telnyx_verification_id, accountSid: "", authToken: "",
     });
     await supabaseAdmin.from("sender_assets").update({
       verification_status: result.status === "verified" ? "verified" : result.status,

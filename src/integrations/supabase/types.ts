@@ -137,19 +137,16 @@ export type Database = {
           sms_consent_disclosures_confirmed_at: string | null
           sms_consent_disclosures_version: string | null
           sms_target_countries: string[] | null
-          subaccount_messaging_service_sid: string | null
-          subaccount_phone_number: string | null
-          subaccount_phone_sid: string | null
           suspended_at: string | null
           telnyx_messaging_profile_created_at: string | null
           telnyx_messaging_profile_id: string | null
+          telnyx_number_id: string | null
+          telnyx_phone_number: string | null
           terms_accepted_at: string | null
           terms_url: string | null
           tollfree_setup_fee_due_cents: number
           tollfree_setup_fee_paid_at: string | null
           tos_current_version_accepted: string | null
-          twilio_subaccount_auth_token_enc: string | null
-          twilio_subaccount_sid: string | null
           updated_at: string
           use_case_description: string | null
           website_url: string | null
@@ -190,19 +187,16 @@ export type Database = {
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
-          subaccount_messaging_service_sid?: string | null
-          subaccount_phone_number?: string | null
-          subaccount_phone_sid?: string | null
           suspended_at?: string | null
           telnyx_messaging_profile_created_at?: string | null
           telnyx_messaging_profile_id?: string | null
+          telnyx_number_id?: string | null
+          telnyx_phone_number?: string | null
           terms_accepted_at?: string | null
           terms_url?: string | null
           tollfree_setup_fee_due_cents?: number
           tollfree_setup_fee_paid_at?: string | null
           tos_current_version_accepted?: string | null
-          twilio_subaccount_auth_token_enc?: string | null
-          twilio_subaccount_sid?: string | null
           updated_at?: string
           use_case_description?: string | null
           website_url?: string | null
@@ -243,19 +237,16 @@ export type Database = {
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
-          subaccount_messaging_service_sid?: string | null
-          subaccount_phone_number?: string | null
-          subaccount_phone_sid?: string | null
           suspended_at?: string | null
           telnyx_messaging_profile_created_at?: string | null
           telnyx_messaging_profile_id?: string | null
+          telnyx_number_id?: string | null
+          telnyx_phone_number?: string | null
           terms_accepted_at?: string | null
           terms_url?: string | null
           tollfree_setup_fee_due_cents?: number
           tollfree_setup_fee_paid_at?: string | null
           tos_current_version_accepted?: string | null
-          twilio_subaccount_auth_token_enc?: string | null
-          twilio_subaccount_sid?: string | null
           updated_at?: string
           use_case_description?: string | null
           website_url?: string | null
@@ -1594,18 +1585,16 @@ export type Database = {
           id: string
           in_review_at: string | null
           last_synced_at: string | null
-          messaging_service_sid: string | null
           phone_number: string | null
-          phone_sid: string | null
           rejected_at: string | null
           rejection_reason: string | null
           sender_kind: string
           submitted_at: string | null
           telnyx_messaging_profile_id: string | null
           telnyx_phone_number_id: string | null
+          telnyx_verification_id: string | null
           updated_at: string
           verification_payload: Json | null
-          verification_sid: string | null
           verification_status: string
           verified_at: string | null
         }
@@ -1617,18 +1606,16 @@ export type Database = {
           id?: string
           in_review_at?: string | null
           last_synced_at?: string | null
-          messaging_service_sid?: string | null
           phone_number?: string | null
-          phone_sid?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
           sender_kind: string
           submitted_at?: string | null
           telnyx_messaging_profile_id?: string | null
           telnyx_phone_number_id?: string | null
+          telnyx_verification_id?: string | null
           updated_at?: string
           verification_payload?: Json | null
-          verification_sid?: string | null
           verification_status?: string
           verified_at?: string | null
         }
@@ -1640,18 +1627,16 @@ export type Database = {
           id?: string
           in_review_at?: string | null
           last_synced_at?: string | null
-          messaging_service_sid?: string | null
           phone_number?: string | null
-          phone_sid?: string | null
           rejected_at?: string | null
           rejection_reason?: string | null
           sender_kind?: string
           submitted_at?: string | null
           telnyx_messaging_profile_id?: string | null
           telnyx_phone_number_id?: string | null
+          telnyx_verification_id?: string | null
           updated_at?: string
           verification_payload?: Json | null
-          verification_sid?: string | null
           verification_status?: string
           verified_at?: string | null
         }
@@ -1864,17 +1849,17 @@ export type Database = {
           failure_reason: string | null
           friendly_failure_reason: string | null
           id: string
-          messaging_service_sid: string | null
           phone_number: string | null
-          phone_sid: string | null
+          provider_code: string | null
+          provider_more_info: string | null
+          provider_response: Json | null
+          provider_status: number | null
           request_summary: Json | null
           sender_asset_id: string | null
-          twilio_code: string | null
-          twilio_more_info: string | null
-          twilio_response: Json | null
-          twilio_status: number | null
+          telnyx_messaging_profile_id: string | null
+          telnyx_number_id: string | null
+          telnyx_verification_id: string | null
           updated_at: string
-          verification_sid: string | null
         }
         Insert: {
           account_id: string
@@ -1884,17 +1869,17 @@ export type Database = {
           failure_reason?: string | null
           friendly_failure_reason?: string | null
           id?: string
-          messaging_service_sid?: string | null
           phone_number?: string | null
-          phone_sid?: string | null
+          provider_code?: string | null
+          provider_more_info?: string | null
+          provider_response?: Json | null
+          provider_status?: number | null
           request_summary?: Json | null
           sender_asset_id?: string | null
-          twilio_code?: string | null
-          twilio_more_info?: string | null
-          twilio_response?: Json | null
-          twilio_status?: number | null
+          telnyx_messaging_profile_id?: string | null
+          telnyx_number_id?: string | null
+          telnyx_verification_id?: string | null
           updated_at?: string
-          verification_sid?: string | null
         }
         Update: {
           account_id?: string
@@ -1904,17 +1889,17 @@ export type Database = {
           failure_reason?: string | null
           friendly_failure_reason?: string | null
           id?: string
-          messaging_service_sid?: string | null
           phone_number?: string | null
-          phone_sid?: string | null
+          provider_code?: string | null
+          provider_more_info?: string | null
+          provider_response?: Json | null
+          provider_status?: number | null
           request_summary?: Json | null
           sender_asset_id?: string | null
-          twilio_code?: string | null
-          twilio_more_info?: string | null
-          twilio_response?: Json | null
-          twilio_status?: number | null
+          telnyx_messaging_profile_id?: string | null
+          telnyx_number_id?: string | null
+          telnyx_verification_id?: string | null
           updated_at?: string
-          verification_sid?: string | null
         }
         Relationships: []
       }
@@ -2125,8 +2110,8 @@ export type Database = {
           sold_to_account_id: string | null
           status: Database["public"]["Enums"]["verifier_tfn_status"]
           submitted_at: string | null
-          twilio_phone_sid: string | null
-          twilio_verification_sid: string | null
+          telnyx_number_id: string | null
+          telnyx_verification_id: string | null
           updated_at: string
           verified_at: string | null
           verifier_id: string
@@ -2147,8 +2132,8 @@ export type Database = {
           sold_to_account_id?: string | null
           status?: Database["public"]["Enums"]["verifier_tfn_status"]
           submitted_at?: string | null
-          twilio_phone_sid?: string | null
-          twilio_verification_sid?: string | null
+          telnyx_number_id?: string | null
+          telnyx_verification_id?: string | null
           updated_at?: string
           verified_at?: string | null
           verifier_id: string
@@ -2169,8 +2154,8 @@ export type Database = {
           sold_to_account_id?: string | null
           status?: Database["public"]["Enums"]["verifier_tfn_status"]
           submitted_at?: string | null
-          twilio_phone_sid?: string | null
-          twilio_verification_sid?: string | null
+          telnyx_number_id?: string | null
+          telnyx_verification_id?: string | null
           updated_at?: string
           verified_at?: string | null
           verifier_id?: string

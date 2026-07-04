@@ -7,7 +7,7 @@ export async function wireAssignedTollfreeForTenant(opts: {
   accountId: string;
   phoneNumber: string;
   countryCode?: string;
-}): Promise<{ phone_sid: string | null; messaging_service_sid: string | null }> {
+}): Promise<{ telnyx_phone_number_id: string | null; telnyx_messaging_profile_id: string | null }> {
   const country = (opts.countryCode ?? "US").toUpperCase();
   if (!process.env.TELNYX_API_KEY) throw new Error("TELNYX_API_KEY is not configured");
 
@@ -37,10 +37,8 @@ export async function wireAssignedTollfreeForTenant(opts: {
     country_code: country,
     sender_kind: "toll_free",
     phone_number: opts.phoneNumber,
-    phone_sid: phoneId,
     telnyx_phone_number_id: phoneId,
     telnyx_messaging_profile_id: messagingProfileId,
-    messaging_service_sid: messagingProfileId, // legacy column reused
     verification_status: "verified",
     last_synced_at: new Date().toISOString(),
   } as const;
@@ -64,13 +62,13 @@ export async function wireAssignedTollfreeForTenant(opts: {
   }, { onConflict: "phone_number" });
 
   await supabaseAdmin.from("accounts").update({
-    subaccount_phone_number: opts.phoneNumber,
-    subaccount_phone_sid: phoneId,
-    subaccount_messaging_service_sid: messagingProfileId,
+    telnyx_phone_number: opts.phoneNumber,
+    telnyx_number_id: phoneId,
+    telnyx_messaging_profile_id: messagingProfileId,
     onboarding_status: "active",
   }).eq("id", opts.accountId);
 
-  return { phone_sid: phoneId, messaging_service_sid: messagingProfileId };
+  return { telnyx_phone_number_id: phoneId, telnyx_messaging_profile_id: messagingProfileId };
 }
 
 export async function unwireAssignedTollfreeForTenant(opts: { phoneNumber: string }) {
@@ -81,8 +79,8 @@ export async function unwireAssignedTollfreeForTenant(opts: { phoneNumber: strin
   await supabaseAdmin.from("sender_assets").delete().eq("id", asset.id);
   await supabaseAdmin.from("numbers").delete().eq("phone_number", opts.phoneNumber);
   await supabaseAdmin.from("accounts").update({
-    subaccount_phone_number: null,
-    subaccount_phone_sid: null,
-    subaccount_messaging_service_sid: null,
-  }).eq("id", asset.account_id).eq("subaccount_phone_number", opts.phoneNumber);
+    telnyx_phone_number: null,
+    telnyx_number_id: null,
+    telnyx_messaging_profile_id: null,
+  }).eq("id", asset.account_id).eq("telnyx_phone_number", opts.phoneNumber);
 }

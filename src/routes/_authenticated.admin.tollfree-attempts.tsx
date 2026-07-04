@@ -55,13 +55,13 @@ function AdminTollfreeAttemptsPage() {
                     </td>
                     <td className="p-3 font-mono text-xs">
                       <div>{attempt.phone_number ?? "—"}</div>
-                      <div className="text-muted-foreground">{attempt.phone_sid ?? ""}</div>
+                      <div className="text-muted-foreground">{attempt.telnyx_number_id ?? ""}</div>
                     </td>
-                    <td className="p-3 font-mono text-xs">{attempt.verification_sid ?? "—"}</td>
+                    <td className="p-3 font-mono text-xs">{attempt.telnyx_verification_id ?? "—"}</td>
                     <td className="p-3 text-xs">
-                      <div>{attempt.twilio_status ? `HTTP ${attempt.twilio_status}` : "—"}</div>
-                      {attempt.twilio_code && <div className="text-muted-foreground">Code {attempt.twilio_code}</div>}
-                      {attempt.twilio_more_info && <div className="text-muted-foreground max-w-56 truncate">{attempt.twilio_more_info}</div>}
+                      <div>{attempt.provider_status ? `HTTP ${attempt.provider_status}` : "—"}</div>
+                      {attempt.provider_code && <div className="text-muted-foreground">Code {attempt.provider_code}</div>}
+                      {attempt.provider_more_info && <div className="text-muted-foreground max-w-56 truncate">{attempt.provider_more_info}</div>}
                     </td>
                     <td className="p-3 max-w-md">
                       {(attempt.friendly_rejection_reason || attempt.rejection_reason) && (
@@ -71,7 +71,7 @@ function AdminTollfreeAttemptsPage() {
                         <div className="mb-2 text-destructive font-medium">{attempt.friendly_failure_reason ?? attempt.failure_reason}</div>
                       )}
                       <pre className="text-xs whitespace-pre-wrap text-muted-foreground max-h-44 overflow-auto">
-                        {JSON.stringify({ request: attempt.request_summary, response: attempt.twilio_response }, null, 2)}
+                        {JSON.stringify({ request: attempt.request_summary, response: attempt.provider_response }, null, 2)}
                       </pre>
                     </td>
                   </tr>

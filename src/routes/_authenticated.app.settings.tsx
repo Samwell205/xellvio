@@ -25,7 +25,7 @@ function TollfreeStatusCard() {
     queryFn: () => load(),
   });
   const asset = (data as any)?.asset ?? null;
-  const status = asset?.verification_sid ? (asset?.verification_status as string | null) : null;
+  const status = asset?.telnyx_verification_id ? (asset?.verification_status as string | null) : null;
 
   let badge = (
     <Badge variant="outline" className="gap-1"><Clock className="size-3" /> Not started</Badge>

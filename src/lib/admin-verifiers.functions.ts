@@ -368,7 +368,7 @@ export const adminListTwilioApprovedTfns = createServerFn({ method: "GET" })
     await assertAdmin(context.supabase);
     const key = process.env.TELNYX_API_KEY;
     if (!key) throw new Error("TELNYX_API_KEY is not configured");
-    const rows: Array<{ sid: string; phone_number: string | null; phone_sid: string | null; status: string; business_name: string | null; date_created: string | null }> = [];
+    const rows: Array<{ sid: string; phone_number: string | null; telnyx_number_id: string | null; status: string; business_name: string | null; date_created: string | null }> = [];
     // Paginate through Telnyx phone_numbers filtered to toll-free.
     let page = 1;
     let safety = 20;
@@ -382,7 +382,7 @@ export const adminListTwilioApprovedTfns = createServerFn({ method: "GET" })
         rows.push({
           sid: n.id,
           phone_number: n.phone_number ?? null,
-          phone_sid: n.id,
+          telnyx_number_id: n.id,
           status: n.status ?? "active",
           business_name: n.tags?.[0] ?? null,
           date_created: n.created_at ?? null,

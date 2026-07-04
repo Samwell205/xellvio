@@ -148,11 +148,11 @@ function TollfreeVerificationPage() {
   const rawStatus = (asset?.verification_status as Status | "pending" | null) ?? null;
   const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review" || rawStatus === "verified";
   const status: Status | null =
-    rawStatus === "pending" || (trustsCarrier && !asset?.verification_sid) ? null : rawStatus;
+    rawStatus === "pending" || (trustsCarrier && !asset?.telnyx_verification_id) ? null : rawStatus;
   const payload = (asset?.verification_payload as any) ?? null;
-  const submissionStarted = !!asset?.verification_sid;
-  const hasReservedNumber = !!asset && !asset.verification_sid && (!!asset.phone_number || !!asset.phone_sid);
-  const localSubmissionFailure = status === "rejected" && !asset?.verification_sid;
+  const submissionStarted = !!asset?.telnyx_verification_id;
+  const hasReservedNumber = !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
+  const localSubmissionFailure = status === "rejected" && !asset?.telnyx_verification_id;
   const isLocked = status === "submitted" || status === "in_review" || status === "verified";
 
   const accountAutofill = useQuery({
@@ -193,14 +193,14 @@ function TollfreeVerificationPage() {
 
   useEffect(() => {
     if (status !== "submitted" && status !== "in_review") return;
-    if (!asset?.verification_sid) return;
+    if (!asset?.telnyx_verification_id) return;
     const id = setInterval(() => {
       refresh({ data: undefined as any })
         .then(() => qc.invalidateQueries({ queryKey: ["tollfree-verification"] }))
         .catch(() => {});
     }, 60_000);
     return () => clearInterval(id);
-  }, [status, asset?.verification_sid, refresh, qc]);
+  }, [status, asset?.telnyx_verification_id, refresh, qc]);
 
   useEffect(() => {
     if (!asset?.id) return;
@@ -243,7 +243,7 @@ function TollfreeVerificationPage() {
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={status} />
-            {(asset?.verification_sid || asset?.phone_sid) && (
+            {(asset?.telnyx_verification_id || asset?.telnyx_phone_number_id) && (
               <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
                 {refreshMut.isPending ? <Loader2 className="size-4 mr-1 animate-spin" /> : <RefreshCw className="size-4 mr-1" />}
                 Refresh
@@ -260,7 +260,7 @@ function TollfreeVerificationPage() {
               </div>
               <div>
                 <div className="text-muted-foreground text-xs">Verification ID</div>
-                <div className="font-mono text-xs">{asset.verification_sid ?? "—"}</div>
+                <div className="font-mono text-xs">{asset.telnyx_verification_id ?? "—"}</div>
               </div>
               <div>
                 <div className="text-muted-foreground text-xs">Last checked</div>

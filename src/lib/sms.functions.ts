@@ -64,7 +64,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
 
     const { data: allAssets, error: assetsError } = await supabase
       .from("sender_assets")
-      .select("messaging_service_sid,phone_number,sender_kind,country_code,verification_status")
+      .select("telnyx_messaging_profile_id,phone_number,sender_kind,country_code,verification_status")
       .eq("account_id", userId);
     if (assetsError) throw new Error(assetsError.message);
 
@@ -72,12 +72,12 @@ export const sendTestSms = createServerFn({ method: "POST" })
       let s = 0;
       if (countryCode && a.country_code === countryCode) s += 1000;
       if (a.phone_number) s += 100;
-      if (a.messaging_service_sid) s += 80;
+      if (a.telnyx_messaging_profile_id) s += 80;
       if (a.sender_kind !== "sender_id") s += 20;
       return s;
     }
     const eligible = [...(allAssets ?? [])].filter(
-      (a) => a.verification_status === "verified" && (a.messaging_service_sid || a.phone_number),
+      (a) => a.verification_status === "verified" && (a.telnyx_messaging_profile_id || a.phone_number),
     );
     const countryEligible = countryCode ? eligible.filter((a) => a.country_code === countryCode) : eligible;
     const ranked = countryEligible.sort((x, y) => rank(y) - rank(x));
@@ -93,8 +93,8 @@ export const sendTestSms = createServerFn({ method: "POST" })
     // Telnyx requires messaging_profile_id for alphanumeric sends, and it
     // must be a Telnyx UUID — never a Twilio MG/AC SID.
     const { isValidTelnyxUuid, ensureMessagingProfileForAccount } = await import("./telnyx.server");
-    let messagingProfileId: string | null | undefined = isValidTelnyxUuid(asset.messaging_service_sid)
-      ? asset.messaging_service_sid
+    let messagingProfileId: string | null | undefined = isValidTelnyxUuid(asset.telnyx_messaging_profile_id)
+      ? asset.telnyx_messaging_profile_id
       : null;
     if (!messagingProfileId) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -159,7 +159,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
       return {
         sid: result.id,
         status: result.to?.[0]?.status ?? "queued",
-        from: (asset.phone_number ?? asset.messaging_service_sid) as string,
+        from: (asset.phone_number ?? asset.telnyx_messaging_profile_id) as string,
         sender_kind: asset.sender_kind as string,
         country: asset.country_code as string,
       };

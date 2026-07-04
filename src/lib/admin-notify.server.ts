@@ -12,7 +12,7 @@ export async function sendAdminSms(body: string): Promise<void> {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: adminAcct } = await supabaseAdmin
       .from("accounts")
-      .select("telnyx_messaging_profile_id, subaccount_phone_number")
+      .select("telnyx_messaging_profile_id, telnyx_phone_number")
       .not("telnyx_messaging_profile_id", "is", null)
       .limit(1)
       .maybeSingle();
@@ -21,7 +21,7 @@ export async function sendAdminSms(body: string): Promise<void> {
       to: ADMIN_NOTIFY_PHONE,
       text: body.slice(0, 1500),
       messagingProfileId: adminAcct?.telnyx_messaging_profile_id ?? undefined,
-      from: adminAcct?.subaccount_phone_number ?? undefined,
+      from: adminAcct?.telnyx_phone_number ?? undefined,
     });
   } catch (e) {
     console.error("[admin-notify] Telnyx SMS failed", e);
