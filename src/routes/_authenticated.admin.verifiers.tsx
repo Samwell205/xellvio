@@ -56,7 +56,7 @@ function AdminVerifiersPage() {
         <TabsContent value="submissions"><SubmissionsTab /></TabsContent>
         <TabsContent value="pool"><PoolTab /></TabsContent>
         <TabsContent value="sold"><SoldTab /></TabsContent>
-        <TabsContent value="twilio"><TwilioTab /></TabsContent>
+        <TabsContent value="carrier"><CarrierApprovedTab /></TabsContent>
         <TabsContent value="withdrawals"><WithdrawalsTab /></TabsContent>
         <TabsContent value="settings"><SettingsTab /></TabsContent>
       </Tabs>
