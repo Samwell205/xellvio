@@ -161,7 +161,7 @@ function AdminSendersPage() {
                     {r.friendly_rejection_reason ?? r.rejection_reason ?? "—"}
                   </td>
                   <td className="p-2 text-right whitespace-nowrap">
-                    {r.sender_kind === "toll_free" && r.verification_sid && (
+                    {r.sender_kind === "toll_free" && r.telnyx_verification_id && (
                       <Button size="sm" variant="ghost" onClick={() => refreshMut.mutate(r.id)} disabled={refreshMut.isPending}>
                         <RefreshCw className="size-3" />
                       </Button>

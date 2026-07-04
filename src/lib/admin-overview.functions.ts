@@ -168,7 +168,7 @@ export const adminListTollfreeAttempts = createServerFn({ method: "GET" })
     const [attemptsRes, accountsRes] = await Promise.all([
       (supabaseAdmin as any)
         .from("tollfree_verification_attempts")
-        .select("id,account_id,actor_user_id,sender_asset_id,phone_number,phone_sid,messaging_service_sid,verification_sid,attempt_status,failure_reason,friendly_failure_reason,twilio_status,twilio_code,twilio_more_info,twilio_response,request_summary,created_at,updated_at")
+        .select("id,account_id,actor_user_id,sender_asset_id,phone_number,telnyx_number_id,telnyx_messaging_profile_id,telnyx_verification_id,attempt_status,failure_reason,friendly_failure_reason,provider_status,provider_code,provider_more_info,provider_response,request_summary,created_at,updated_at")
         .order("created_at", { ascending: false })
         .limit(200),
       supabaseAdmin.from("accounts").select("id,email,company,legal_business_name,full_name"),
@@ -180,7 +180,7 @@ export const adminListTollfreeAttempts = createServerFn({ method: "GET" })
     const verificationSids = Array.from(
       new Set(
         (attemptsRes.data ?? [])
-          .map((a: any) => a.verification_sid)
+          .map((a: any) => a.telnyx_verification_id)
           .filter((sid: string | null): sid is string => !!sid),
       ),
     );
@@ -188,14 +188,14 @@ export const adminListTollfreeAttempts = createServerFn({ method: "GET" })
     if (verificationSids.length > 0) {
       const { data: assets } = await (supabaseAdmin as any)
         .from("sender_assets")
-        .select("verification_sid,verification_status,rejection_reason,friendly_rejection_reason,last_synced_at")
-        .in("verification_sid", verificationSids);
-      assetMap = new Map((assets ?? []).map((a: any) => [a.verification_sid, a]));
+        .select("telnyx_verification_id,verification_status,rejection_reason,friendly_rejection_reason,last_synced_at")
+        .in("telnyx_verification_id", verificationSids);
+      assetMap = new Map((assets ?? []).map((a: any) => [a.telnyx_verification_id, a]));
     }
 
     return (attemptsRes.data ?? []).map((attempt: any) => {
       const account = accountMap.get(attempt.account_id);
-      const asset = attempt.verification_sid ? assetMap.get(attempt.verification_sid) : null;
+      const asset = attempt.telnyx_verification_id ? assetMap.get(attempt.telnyx_verification_id) : null;
       return {
         ...attempt,
         account_label: account?.legal_business_name || account?.company || account?.email || attempt.account_id,

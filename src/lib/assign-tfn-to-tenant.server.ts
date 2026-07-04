@@ -7,7 +7,7 @@ export async function wireAssignedTollfreeForTenant(opts: {
   accountId: string;
   phoneNumber: string;
   countryCode?: string;
-}): Promise<{ phone_sid: string | null; messaging_service_sid: string | null }> {
+}): Promise<{ telnyx_number_id: string | null; telnyx_messaging_profile_id: string | null }> {
   const country = (opts.countryCode ?? "US").toUpperCase();
   if (!process.env.TELNYX_API_KEY) throw new Error("TELNYX_API_KEY is not configured");
 
@@ -37,10 +37,10 @@ export async function wireAssignedTollfreeForTenant(opts: {
     country_code: country,
     sender_kind: "toll_free",
     phone_number: opts.phoneNumber,
-    phone_sid: phoneId,
+    telnyx_number_id: phoneId,
     telnyx_phone_number_id: phoneId,
     telnyx_messaging_profile_id: messagingProfileId,
-    messaging_service_sid: messagingProfileId, // legacy column reused
+    telnyx_messaging_profile_id: messagingProfileId, // legacy column reused
     verification_status: "verified",
     last_synced_at: new Date().toISOString(),
   } as const;
@@ -70,7 +70,7 @@ export async function wireAssignedTollfreeForTenant(opts: {
     onboarding_status: "active",
   }).eq("id", opts.accountId);
 
-  return { phone_sid: phoneId, messaging_service_sid: messagingProfileId };
+  return { telnyx_number_id: phoneId, telnyx_messaging_profile_id: messagingProfileId };
 }
 
 export async function unwireAssignedTollfreeForTenant(opts: { phoneNumber: string }) {

@@ -16,7 +16,7 @@ export type SenderPreviewRow = {
   sender: {
     sender_kind: string;
     phone_number: string | null;
-    messaging_service_sid: string | null;
+    telnyx_messaging_profile_id: string | null;
     verification_status: string;
   } | null;
   eligible: boolean;
@@ -71,7 +71,7 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
 
     const { data: assets } = await supabase
       .from("sender_assets")
-      .select("country_code,sender_kind,phone_number,messaging_service_sid,verification_status");
+      .select("country_code,sender_kind,phone_number,telnyx_messaging_profile_id,verification_status");
 
     const sendersByCountry: Record<string, any> = {};
     for (const a of assets ?? []) {
@@ -90,7 +90,7 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
             ? {
                 sender_kind: sender.sender_kind,
                 phone_number: sender.phone_number,
-                messaging_service_sid: sender.messaging_service_sid,
+                telnyx_messaging_profile_id: sender.telnyx_messaging_profile_id,
                 verification_status: sender.verification_status,
               }
             : null,

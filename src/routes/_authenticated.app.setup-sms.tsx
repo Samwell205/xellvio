@@ -259,7 +259,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           const coveredByUs = code === "CA" && !ownTfAsset && !ownReq && (!!usTfAsset || !!usReq);
           const tfAsset = ownTfAsset ?? (coveredByUs ? usTfAsset : null);
           const req = ownReq ?? (coveredByUs ? usReq : null);
-          const vStatus: string | undefined = tfAsset?.verification_sid ? (tfAsset?.verification_status ?? undefined) : undefined;
+          const vStatus: string | undefined = tfAsset?.telnyx_verification_id ? (tfAsset?.verification_status ?? undefined) : undefined;
           const isVerified = vStatus === "verified";
           const isInReview =
             vStatus === "in_review" || vStatus === "submitted" || (!!tfAsset && !vStatus) ||
@@ -555,7 +555,7 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
   // Translate the internal request status + our SMS provider verification status into a single
   // carrier-aware label and badge. "approved" from an admin only means the number was
   // provisioned — the carrier may still be reviewing.
-  const verificationStatus: string | undefined = effectiveTfAsset?.verification_sid
+  const verificationStatus: string | undefined = effectiveTfAsset?.telnyx_verification_id
     ? (effectiveTfAsset?.verification_status ?? undefined)
     : undefined;
   let carrierLabel = existing?.status ?? "";
@@ -1370,7 +1370,7 @@ function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetC
   const loadTf = useServerFn(getMyTollfreeVerification);
   const tf = useQuery({ queryKey: ["tollfree-verification"], queryFn: () => loadTf() });
   const asset = (tf.data as any)?.asset ?? null;
-  const status: string | null = asset?.verification_sid ? (asset?.verification_status ?? null) : null;
+  const status: string | null = asset?.telnyx_verification_id ? (asset?.verification_status ?? null) : null;
 
   const needsUsCa =
     (targetCountries ?? []).some((c) => c === "US" || c === "CA") ||
