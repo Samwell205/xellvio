@@ -39,7 +39,7 @@ export const TollfreeVerificationInput = z.object({
     .refine((arr) => arr.every((v) => (TOLLFREE_USE_CASES as readonly string[]).includes(v)), {
       message: "Invalid use-case",
     }),
-  proofOfOptInUrl: z.string().trim().url().optional().or(z.literal("")),
+  proofOfOptInUrl: z.string().trim().url("Proof of opt-in URL is required (upload a screenshot or paste a public link)."),
   proofShowsRequiredConsent: z.literal(true),
   useCaseDescription: z.string().trim().min(40).max(2000),
   sampleMessage: z.string().trim().min(20).max(1600),
