@@ -547,7 +547,7 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
           </div>
         )}
 
-        {existing && !showForm ? (
+        {existing ? (
           <div className="space-y-3 text-sm">
             <div className="rounded-md border p-3">
               <div className="flex items-center justify-between gap-2">
