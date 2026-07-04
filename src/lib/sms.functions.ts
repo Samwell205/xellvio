@@ -112,6 +112,30 @@ export const sendTestSms = createServerFn({ method: "POST" })
       messagingProfileId = await ensureMessagingProfileForAccount(userId);
     }
 
+    // ── Compliance firewall: screen every outbound message BEFORE Telnyx.
+    const { screenMessageContent } = await import("./content-screening.server");
+    const { TOS_CURRENT_VERSION } = await import("./tos");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: acct } = await supabaseAdmin
+      .from("accounts")
+      .select("tos_current_version_accepted, sending_suspended_at")
+      .eq("id", userId)
+      .maybeSingle();
+    if (acct?.sending_suspended_at) {
+      throw new Error("Your sending has been suspended by an admin. Contact support.");
+    }
+    if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
+      throw new Error("Please accept the updated Terms of Service before sending.");
+    }
+    const screen = await screenMessageContent(data.body, userId, {
+      phoneE164: data.to,
+      context: "test_send",
+      skipReviewQueue: true, // test sends can't wait 2h for review
+    });
+    if (!screen.passed) {
+      throw new Error(`Blocked: ${screen.blockedReasons[0] ?? "content policy violation"} (risk ${screen.riskScore}/100)`);
+    }
+
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
     try {
       const result = await safeTelnyxCall(
