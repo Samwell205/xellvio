@@ -12,7 +12,7 @@ import { formatRate } from "@/lib/money";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  syncTwilioPricing,
+  syncProviderPricing,
   setDefaultMarkup,
   getDefaultMarkup,
 } from "@/lib/twilio-pricing.functions";
@@ -47,7 +47,7 @@ function AdminRatesPage() {
 
 
   const qc = useQueryClient();
-  const syncFn = useServerFn(syncTwilioPricing);
+  const syncFn = useServerFn(syncProviderPricing);
   const setMarkupFn = useServerFn(setDefaultMarkup);
   const getMarkupFn = useServerFn(getDefaultMarkup);
 

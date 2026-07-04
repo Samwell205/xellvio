@@ -361,8 +361,8 @@ export const adminListSoldTfns = createServerFn({ method: "GET" })
   });
 
 // List platform-owned Telnyx toll-free numbers currently attached to any
-// tenant Messaging Profile. Replaces the previous Twilio-based enumerator.
-export const adminListTwilioApprovedTfns = createServerFn({ method: "GET" })
+// tenant Messaging Profile.
+export const adminListCarrierApprovedTfns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase);
@@ -405,7 +405,7 @@ export const adminListTwilioApprovedTfns = createServerFn({ method: "GET" })
     }));
   });
 
-export const adminAssignTwilioNumberToAccount = createServerFn({ method: "POST" })
+export const adminAssignCarrierNumberToAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 function round4(n: number) { return Math.round(n * 10000) / 10000; }
 
-export const syncTwilioPricing = createServerFn({ method: "POST" })
+export const syncProviderPricing = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data: isAdmin } = await context.supabase.rpc("has_role", { _role: "admin" });

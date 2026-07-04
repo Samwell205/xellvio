@@ -16,8 +16,8 @@ import {
   adminAdjustVerifierWallet,
   adminDeleteVerifierTfn,
   adminListSoldTfns,
-  adminListTwilioApprovedTfns,
-  adminAssignTwilioNumberToAccount,
+  adminListCarrierApprovedTfns,
+  adminAssignCarrierNumberToAccount,
   adminUnassignSenderAsset,
 } from "@/lib/admin-verifiers.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,7 +48,7 @@ function AdminVerifiersPage() {
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
           <TabsTrigger value="pool">Verified pool</TabsTrigger>
           <TabsTrigger value="sold">Sold / payouts</TabsTrigger>
-          <TabsTrigger value="twilio">Carrier-approved</TabsTrigger>
+          <TabsTrigger value="carrier">Carrier-approved</TabsTrigger>
           <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -56,7 +56,7 @@ function AdminVerifiersPage() {
         <TabsContent value="submissions"><SubmissionsTab /></TabsContent>
         <TabsContent value="pool"><PoolTab /></TabsContent>
         <TabsContent value="sold"><SoldTab /></TabsContent>
-        <TabsContent value="twilio"><TwilioTab /></TabsContent>
+        <TabsContent value="carrier"><CarrierApprovedTab /></TabsContent>
         <TabsContent value="withdrawals"><WithdrawalsTab /></TabsContent>
         <TabsContent value="settings"><SettingsTab /></TabsContent>
       </Tabs>
@@ -242,24 +242,24 @@ function SoldTab() {
   );
 }
 
-function TwilioTab() {
-  const listFn = useServerFn(adminListTwilioApprovedTfns);
-  const assignFn = useServerFn(adminAssignTwilioNumberToAccount);
+function CarrierApprovedTab() {
+  const listFn = useServerFn(adminListCarrierApprovedTfns);
+  const assignFn = useServerFn(adminAssignCarrierNumberToAccount);
   const unassignFn = useServerFn(adminUnassignSenderAsset);
   const accountsFn = useServerFn(adminListAccountsLite);
   const qc = useQueryClient();
-  const { data, isLoading, error } = useQuery({ queryKey: ["admin","twilio-tfns"], queryFn: () => listFn(), retry: false });
+  const { data, isLoading, error } = useQuery({ queryKey: ["admin","carrier-tfns"], queryFn: () => listFn(), retry: false });
   const { data: accounts } = useQuery({ queryKey: ["admin","accounts","lite"], queryFn: () => accountsFn() });
   const [assignMap, setAssignMap] = useState<Record<string,string>>({});
 
   const assign = useMutation({
     mutationFn: (args: { phone: string; account: string }) => assignFn({ data: { phone_number: args.phone, account_id: args.account, country: "US" } }),
-    onSuccess: () => { toast.success("Assigned to tenant"); qc.invalidateQueries({ queryKey: ["admin","twilio-tfns"] }); },
+    onSuccess: () => { toast.success("Assigned to tenant"); qc.invalidateQueries({ queryKey: ["admin","carrier-tfns"] }); },
     onError: (e: any) => toast.error(e.message),
   });
   const unassign = useMutation({
     mutationFn: (phone: string) => unassignFn({ data: { phone_number: phone } }),
-    onSuccess: () => { toast.success("Unassigned"); qc.invalidateQueries({ queryKey: ["admin","twilio-tfns"] }); },
+    onSuccess: () => { toast.success("Unassigned"); qc.invalidateQueries({ queryKey: ["admin","carrier-tfns"] }); },
     onError: (e: any) => toast.error(e.message),
   });
 
