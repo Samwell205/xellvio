@@ -404,10 +404,16 @@ function NewCampaignPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, JSON.stringify(audience), JSON.stringify(s.excludedCountries)]);
 
+  const [complianceAccepted, setComplianceAccepted] = useState(false);
+
   async function saveCampaign(launch: boolean) {
     if (launch && insufficient) { toast.error("Insufficient balance — top up before launching."); return; }
     if (launch && hasMissingSender) {
       toast.error(`No verified sender for: ${missingSenderCountries.join(", ")}. Set up SMS or remove those recipients.`);
+      return;
+    }
+    if (launch && !complianceAccepted) {
+      toast.error("You must confirm the compliance acknowledgement before launching.");
       return;
     }
     setSaving(true);
@@ -424,13 +430,21 @@ function NewCampaignPage() {
         }
       }
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
-      await persistCampaign(status);
+      const savedId = await persistCampaign(status);
+      // Record per-campaign compliance re-confirmation. Dispatcher refuses to send without it.
+      if (launch && savedId) {
+        const { acceptCampaignTos } = await import("@/lib/tos.functions");
+        await acceptCampaignTos({
+          data: { campaignId: savedId, userAgent: navigator.userAgent.slice(0, 500) },
+        });
+      }
       toast.success(launch ? "Campaign launched" : "Saved as draft");
       navigate({ to: "/app/campaigns" });
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
     } finally { setSaving(false); }
   }
+
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -754,6 +768,24 @@ function NewCampaignPage() {
         </Card>
       )}
 
+      {step === 4 && (
+        <Card className="p-4 border-primary/40 bg-primary/5">
+          <label className="flex items-start gap-3 text-sm cursor-pointer">
+            <Checkbox
+              checked={complianceAccepted}
+              onCheckedChange={(v) => setComplianceAccepted(v === true)}
+              className="mt-0.5"
+            />
+            <span className="leading-snug">
+              <strong>Required before launch —</strong> I confirm that every recipient in this campaign has
+              opted in to receive SMS from me, that the message content complies with the Xellvio Acceptable
+              Use Policy and Telnyx SHAFT rules, and that I accept full liability for any carrier penalties,
+              fines, or number suspensions that arise from this send.
+            </span>
+          </label>
+        </Card>
+      )}
+
       <div className="flex justify-between">
         <Button variant="ghost" disabled={step === 0} onClick={() => setStep((step - 1) as StepIdx)}>
           <ChevronLeft className="size-4 mr-1" /> Back
@@ -762,7 +794,7 @@ function NewCampaignPage() {
           {step === 4 ? (
             <>
               <Button variant="outline" onClick={() => saveCampaign(false)} disabled={saving}>Save as draft</Button>
-              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient || hasMissingSender}>
+              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient || hasMissingSender || !complianceAccepted}>
                 {s.sendMode === "now" ? "Launch now" : "Schedule"}
               </Button>
             </>

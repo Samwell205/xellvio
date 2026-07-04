@@ -16,6 +16,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true },
       { title: "Activity log", url: "/admin/activity", icon: Activity },
       { title: "Compliance", url: "/admin/compliance", icon: ShieldOff },
+      { title: "Review queue", url: "/admin/review-queue", icon: ClipboardList },
     ],
   },
   {

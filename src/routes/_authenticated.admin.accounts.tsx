@@ -5,9 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, ShieldOff, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldOff, ShieldCheck, Ban, PlayCircle } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminSetSuspension } from "@/lib/account.functions";
+import { adminSuspendTenantSending, adminResumeTenantSending } from "@/lib/compliance-admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/accounts")({
   head: () => ({ meta: [{ title: "Tenant accounts — Admin" }] }),
@@ -25,7 +26,7 @@ function AdminAccountsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,created_at")
+        .select("id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,sending_suspended_at,sending_suspended_reason,created_at")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -39,6 +40,26 @@ function AdminAccountsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
       toast.success("Tenant updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const killFn = useServerFn(adminSuspendTenantSending);
+  const resumeFn = useServerFn(adminResumeTenantSending);
+  const killSwitch = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      killFn({ data: { accountId: id, reason } }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
+      toast.success(r.telnyxOk ? "Sending paused (Telnyx profile disabled)" : `Sending paused locally — Telnyx: ${r.telnyxError ?? "err"}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const resumeSending = useMutation({
+    mutationFn: (id: string) => resumeFn({ data: { accountId: id } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
+      toast.success("Sending resumed");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -69,26 +90,56 @@ function AdminAccountsPage() {
               <tbody>
                 {(accounts.data ?? []).map((a) => {
                   const suspended = a.onboarding_status === "suspended";
+                  const sendingPaused = !!(a as any).sending_suspended_at;
                   return (
                     <tr key={a.id} className="border-t">
                       <td className="p-3 font-medium">{a.legal_business_name || a.company || "—"}</td>
                       <td className="p-3 text-muted-foreground">{a.email}</td>
                       <td className="p-3">
-                        <Badge variant={suspended ? "destructive" : a.onboarding_status === "active" ? "default" : "secondary"}>
-                          {a.onboarding_status}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={suspended ? "destructive" : a.onboarding_status === "active" ? "default" : "secondary"}>
+                            {a.onboarding_status}
+                          </Badge>
+                          {sendingPaused && (
+                            <Badge variant="destructive" className="w-fit">
+                              <Ban className="size-3 mr-1" />Sending paused
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3 text-right tabular-nums">${Number(a.credit_balance).toFixed(2)}</td>
                       <td className="p-3 text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</td>
                       <td className="p-3 text-right">
-                        <Button
-                          size="sm"
-                          variant={suspended ? "outline" : "destructive"}
-                          onClick={() => setStatus.mutate({ id: a.id, suspend: !suspended })}
-                          disabled={setStatus.isPending}
-                        >
-                          {suspended ? <><ShieldCheck className="size-3.5 mr-1.5" />Reinstate</> : <><ShieldOff className="size-3.5 mr-1.5" />Suspend</>}
-                        </Button>
+                        <div className="flex gap-2 justify-end flex-wrap">
+                          {sendingPaused ? (
+                            <Button size="sm" variant="outline"
+                              onClick={() => resumeSending.mutate(a.id)}
+                              disabled={resumeSending.isPending}
+                            >
+                              <PlayCircle className="size-3.5 mr-1.5" />Resume sending
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="destructive"
+                              onClick={() => {
+                                const reason = window.prompt("Reason for pausing sending? (visible in audit + tenant panel)");
+                                if (!reason || reason.trim().length < 3) return;
+                                killSwitch.mutate({ id: a.id, reason: reason.trim() });
+                              }}
+                              disabled={killSwitch.isPending}
+                              title="Immediately disable this tenant's Telnyx Messaging Profile"
+                            >
+                              <Ban className="size-3.5 mr-1.5" />Kill sending
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant={suspended ? "outline" : "secondary"}
+                            onClick={() => setStatus.mutate({ id: a.id, suspend: !suspended })}
+                            disabled={setStatus.isPending}
+                          >
+                            {suspended ? <><ShieldCheck className="size-3.5 mr-1.5" />Reinstate</> : <><ShieldOff className="size-3.5 mr-1.5" />Suspend account</>}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );

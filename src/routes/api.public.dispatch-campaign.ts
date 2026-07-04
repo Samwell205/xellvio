@@ -135,6 +135,17 @@ async function sendOneMessage(
       return { ok: false, shaft: false, debited: 0 };
     }
 
+    // ── Per-recipient compliance gate (suspension + frequency cap).
+    const { fastPerRecipientGate } = await import("@/lib/content-screening.server");
+    const gate = await fastPerRecipientGate(campaign.account_id, m.phone_e164);
+    if (!gate.ok) {
+      await supabaseAdmin.from("messages")
+        .update({ status: "failed", error_code: gate.reason, failure_reason: `Blocked pre-send: ${gate.reason}` })
+        .eq("id", m.id);
+      return { ok: false, shaft: false, debited: 0 };
+    }
+
+
     const result = await safeTelnyxCall(
       "send_message",
       { userId: campaign.account_id, messagingProfileId },
@@ -211,6 +222,7 @@ async function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) =>
 async function planCampaign(
   supabaseAdmin: any, campaign: any, rates: Rate[],
 ): Promise<{ planned: number; skipped: number; cost: number; reason?: string }> {
+  // ── Legacy fast keyword scan (kept for backwards compat with the badge).
   const preScan = keywordScan(campaign.message_body ?? "");
   if (!preScan.allowed) {
     await supabaseAdmin.from("campaigns")
@@ -219,11 +231,41 @@ async function planCampaign(
     return { planned: 0, skipped: 0, cost: 0, reason: "blocked_content" };
   }
 
+
   const list = await loadEligibleRecipients(supabaseAdmin, campaign.account_id, campaign.audience ?? { include: [], exclude: [] });
   if (list.length === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
     return { planned: 0, skipped: 0, cost: 0 };
   }
+
+  // ── Full compliance screening once per campaign (all body-scoped checks +
+  //    volume anomaly). Per-recipient frequency cap runs later in sendOneMessage.
+  {
+    const { screenMessageContent } = await import("@/lib/content-screening.server");
+    const screen = await screenMessageContent(campaign.message_body ?? "", campaign.account_id, {
+      campaignId: campaign.id,
+      plannedRecipients: list.length,
+      context: "campaign_plan",
+    });
+    if (screen.action === "blocked") {
+      await supabaseAdmin.from("campaigns")
+        .update({
+          status: "blocked_content",
+          paused_reason: `Blocked by screening (risk ${screen.riskScore}/100): ${screen.blockedReasons[0] ?? "policy violation"}`,
+        }).eq("id", campaign.id);
+      return { planned: 0, skipped: 0, cost: 0, reason: "blocked_by_screening" };
+    }
+    if (screen.action === "held_for_review") {
+      await supabaseAdmin.from("campaigns")
+        .update({
+          status: "paused",
+          paused_reason: `Held for review (risk ${screen.riskScore}/100). ${screen.blockedReasons.slice(0, 2).join(" · ")}`,
+          paused_at: new Date().toISOString(),
+        }).eq("id", campaign.id);
+      return { planned: 0, skipped: 0, cost: 0, reason: "held_for_review" };
+    }
+  }
+
 
   const dial = rates.map((r) => ({ country_code: r.country_code, dial_prefix: r.dial_prefix }));
   const rateByCC: Record<string, Rate> = {};
@@ -368,6 +410,25 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         await supabaseAdmin.from("campaigns")
           .update({ status: "queued" }).eq("status", "sending").lt("updated_at", stalledCutoff);
 
+        // ── Auto-approve expired review-queue entries and requeue their campaigns.
+        const nowExpiry = new Date().toISOString();
+        const { data: expiredReviews } = await supabaseAdmin
+          .from("review_queue")
+          .select("id, campaign_id")
+          .eq("status", "pending")
+          .lte("auto_approve_at", nowExpiry);
+        for (const r of expiredReviews ?? []) {
+          await supabaseAdmin.from("review_queue")
+            .update({ status: "auto_approved", resolved_at: nowExpiry })
+            .eq("id", r.id);
+          if (r.campaign_id) {
+            await supabaseAdmin.from("campaigns")
+              .update({ status: "queued", paused_reason: null })
+              .eq("id", r.campaign_id).eq("status", "paused");
+          }
+        }
+
+
         const { data: due, error } = await supabaseAdmin
           .from("campaigns")
           .select("*")
@@ -380,13 +441,38 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           try {
             const { data: acct } = await supabaseAdmin
               .from("accounts")
-              .select("telnyx_messaging_profile_id, subaccount_phone_number, onboarding_status")
+              .select("telnyx_messaging_profile_id, subaccount_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted")
               .eq("id", c.account_id).maybeSingle();
-            if (acct?.onboarding_status === "suspended") {
-              await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
-              results.push({ id: c.id, error: "account_suspended" });
+            if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
+              await supabaseAdmin.from("campaigns")
+                .update({ status: "paused", paused_reason: "Tenant sending suspended", paused_at: new Date().toISOString() })
+                .eq("id", c.id);
+              results.push({ id: c.id, error: "tenant_sending_suspended" });
               continue;
             }
+            // ── ToS gate: tenant must have accepted the current version.
+            const { TOS_CURRENT_VERSION } = await import("@/lib/tos");
+            if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
+              await supabaseAdmin.from("campaigns")
+                .update({ status: "paused", paused_reason: "Tenant must accept updated Terms of Service before sending.", paused_at: new Date().toISOString() })
+                .eq("id", c.id);
+              results.push({ id: c.id, error: "tos_acceptance_required" });
+              continue;
+            }
+            // ── Per-campaign compliance re-confirmation must exist.
+            const { count: campTos } = await supabaseAdmin
+              .from("campaign_tos_acceptances")
+              .select("id", { count: "exact", head: true })
+              .eq("campaign_id", c.id)
+              .eq("tos_version", TOS_CURRENT_VERSION);
+            if ((campTos ?? 0) === 0) {
+              await supabaseAdmin.from("campaigns")
+                .update({ status: "paused", paused_reason: "Missing per-campaign compliance confirmation.", paused_at: new Date().toISOString() })
+                .eq("id", c.id);
+              results.push({ id: c.id, error: "campaign_acceptance_required" });
+              continue;
+            }
+
             const { data: senderAssets } = await supabaseAdmin
               .from("sender_assets")
               .select("verification_status,country_code,sender_kind,phone_number,messaging_service_sid")

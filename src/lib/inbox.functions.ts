@@ -103,6 +103,27 @@ export const sendReply = createServerFn({ method: "POST" })
       : null;
     const asset = matchByLast ?? eligible[0];
 
+    // ── Compliance firewall on inbox replies (1:1 conversation).
+    const { screenMessageContent } = await import("./content-screening.server");
+    const { TOS_CURRENT_VERSION } = await import("./tos");
+    const { data: acct } = await supabaseAdmin
+      .from("accounts")
+      .select("tos_current_version_accepted, sending_suspended_at")
+      .eq("id", userId)
+      .maybeSingle();
+    if (acct?.sending_suspended_at) throw new Error("Sending suspended. Contact support.");
+    if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
+      throw new Error("Please accept the updated Terms of Service before replying.");
+    }
+    const screen = await screenMessageContent(data.body, userId, {
+      phoneE164: data.phone,
+      context: "inbox_reply",
+      skipReviewQueue: true, // interactive reply — block or send, don't hold
+    });
+    if (!screen.passed) {
+      throw new Error(`Blocked: ${screen.blockedReasons[0] ?? "content policy"} (risk ${screen.riskScore}/100)`);
+    }
+
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
     const result = await safeTelnyxCall(
       "send_reply",

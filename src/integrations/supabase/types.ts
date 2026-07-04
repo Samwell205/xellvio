@@ -132,6 +132,8 @@ export type Database = {
           sample_message: string | null
           seller_balance: number
           seller_lifetime_earnings: number
+          sending_suspended_at: string | null
+          sending_suspended_reason: string | null
           sms_consent_disclosures_confirmed_at: string | null
           sms_consent_disclosures_version: string | null
           sms_target_countries: string[] | null
@@ -145,6 +147,7 @@ export type Database = {
           terms_url: string | null
           tollfree_setup_fee_due_cents: number
           tollfree_setup_fee_paid_at: string | null
+          tos_current_version_accepted: string | null
           twilio_subaccount_auth_token_enc: string | null
           twilio_subaccount_sid: string | null
           updated_at: string
@@ -182,6 +185,8 @@ export type Database = {
           sample_message?: string | null
           seller_balance?: number
           seller_lifetime_earnings?: number
+          sending_suspended_at?: string | null
+          sending_suspended_reason?: string | null
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
@@ -195,6 +200,7 @@ export type Database = {
           terms_url?: string | null
           tollfree_setup_fee_due_cents?: number
           tollfree_setup_fee_paid_at?: string | null
+          tos_current_version_accepted?: string | null
           twilio_subaccount_auth_token_enc?: string | null
           twilio_subaccount_sid?: string | null
           updated_at?: string
@@ -232,6 +238,8 @@ export type Database = {
           sample_message?: string | null
           seller_balance?: number
           seller_lifetime_earnings?: number
+          sending_suspended_at?: string | null
+          sending_suspended_reason?: string | null
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
@@ -245,6 +253,7 @@ export type Database = {
           terms_url?: string | null
           tollfree_setup_fee_due_cents?: number
           tollfree_setup_fee_paid_at?: string | null
+          tos_current_version_accepted?: string | null
           twilio_subaccount_auth_token_enc?: string | null
           twilio_subaccount_sid?: string | null
           updated_at?: string
@@ -283,6 +292,33 @@ export type Database = {
         }
         Relationships: []
       }
+      blocked_domains: {
+        Row: {
+          allowed_by_accounts: string[]
+          created_at: string
+          domain: string
+          id: string
+          is_shortener: boolean
+          reason: string | null
+        }
+        Insert: {
+          allowed_by_accounts?: string[]
+          created_at?: string
+          domain: string
+          id?: string
+          is_shortener?: boolean
+          reason?: string | null
+        }
+        Update: {
+          allowed_by_accounts?: string[]
+          created_at?: string
+          domain?: string
+          id?: string
+          is_shortener?: boolean
+          reason?: string | null
+        }
+        Relationships: []
+      }
       campaign_test_sends: {
         Row: {
           created_at: string
@@ -306,6 +342,51 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      campaign_tos_acceptances: {
+        Row: {
+          accepted_at: string
+          campaign_id: string
+          id: string
+          ip_address: string | null
+          tenant_account_id: string
+          tos_version: string
+          user_agent: string | null
+        }
+        Insert: {
+          accepted_at?: string
+          campaign_id: string
+          id?: string
+          ip_address?: string | null
+          tenant_account_id: string
+          tos_version: string
+          user_agent?: string | null
+        }
+        Update: {
+          accepted_at?: string
+          campaign_id?: string
+          id?: string
+          ip_address?: string | null
+          tenant_account_id?: string
+          tos_version?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_tos_acceptances_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_tos_acceptances_tenant_account_id_fkey"
+            columns: ["tenant_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       campaigns: {
         Row: {
@@ -478,6 +559,57 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: []
+      }
+      content_screening_log: {
+        Row: {
+          account_id: string
+          action_taken: string
+          blocked_reasons: Json
+          campaign_id: string | null
+          context: string | null
+          created_at: string
+          id: string
+          message_text: string
+          risk_score: number
+        }
+        Insert: {
+          account_id: string
+          action_taken: string
+          blocked_reasons?: Json
+          campaign_id?: string | null
+          context?: string | null
+          created_at?: string
+          id?: string
+          message_text: string
+          risk_score: number
+        }
+        Update: {
+          account_id?: string
+          action_taken?: string
+          blocked_reasons?: Json
+          campaign_id?: string | null
+          context?: string | null
+          created_at?: string
+          id?: string
+          message_text?: string
+          risk_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_screening_log_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_screening_log_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       country_rates: {
         Row: {
@@ -1239,6 +1371,7 @@ export type Database = {
           last_name: string | null
           phone_e164: string
           timezone: string | null
+          two_way_opt_in: boolean
           updated_at: string
         }
         Insert: {
@@ -1250,6 +1383,7 @@ export type Database = {
           last_name?: string | null
           phone_e164: string
           timezone?: string | null
+          two_way_opt_in?: boolean
           updated_at?: string
         }
         Update: {
@@ -1261,9 +1395,73 @@ export type Database = {
           last_name?: string | null
           phone_e164?: string
           timezone?: string | null
+          two_way_opt_in?: boolean
           updated_at?: string
         }
         Relationships: []
+      }
+      review_queue: {
+        Row: {
+          account_id: string
+          auto_approve_at: string
+          blocked_reasons: Json
+          campaign_id: string | null
+          created_at: string
+          id: string
+          message_text: string
+          resolved_at: string | null
+          reviewer_id: string | null
+          reviewer_note: string | null
+          risk_score: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          auto_approve_at?: string
+          blocked_reasons?: Json
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          message_text: string
+          resolved_at?: string | null
+          reviewer_id?: string | null
+          reviewer_note?: string | null
+          risk_score: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          auto_approve_at?: string
+          blocked_reasons?: Json
+          campaign_id?: string | null
+          created_at?: string
+          id?: string
+          message_text?: string
+          resolved_at?: string | null
+          reviewer_id?: string | null
+          reviewer_note?: string | null
+          risk_score?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_queue_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_queue_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       segments: {
         Row: {
@@ -1613,6 +1811,50 @@ export type Database = {
           },
         ]
       }
+      tenant_sending_suspensions: {
+        Row: {
+          account_id: string
+          id: string
+          lifted_at: string | null
+          lifted_by: string | null
+          reason: string
+          suspended_at: string
+          suspended_by: string | null
+          telnyx_error: string | null
+          telnyx_profile_id: string | null
+        }
+        Insert: {
+          account_id: string
+          id?: string
+          lifted_at?: string | null
+          lifted_by?: string | null
+          reason: string
+          suspended_at?: string
+          suspended_by?: string | null
+          telnyx_error?: string | null
+          telnyx_profile_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          id?: string
+          lifted_at?: string | null
+          lifted_by?: string | null
+          reason?: string
+          suspended_at?: string
+          suspended_by?: string | null
+          telnyx_error?: string | null
+          telnyx_profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_sending_suspensions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tollfree_verification_attempts: {
         Row: {
           account_id: string
@@ -1675,6 +1917,41 @@ export type Database = {
           verification_sid?: string | null
         }
         Relationships: []
+      }
+      tos_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          ip_address: string | null
+          tenant_account_id: string
+          tos_version: string
+          user_agent: string | null
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          tenant_account_id: string
+          tos_version: string
+          user_agent?: string | null
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          tenant_account_id?: string
+          tos_version?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tos_acceptances_tenant_account_id_fkey"
+            columns: ["tenant_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       twilio_balance_snapshots: {
         Row: {

@@ -6,6 +6,7 @@ import { Bell, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { provisionCurrentAccount } from "@/lib/provision-account.functions";
+import { TosReAcceptModal } from "@/components/TosReAcceptModal";
 
 export const Route = createFileRoute("/_authenticated/app")({
   beforeLoad: async () => {
@@ -48,6 +49,7 @@ function AppShell() {
             <Outlet />
           </main>
         </div>
+        <TosReAcceptModal />
       </div>
     </SidebarProvider>
   );
