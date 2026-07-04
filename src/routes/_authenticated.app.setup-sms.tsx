@@ -458,18 +458,7 @@ function RegistrationRequiredDialog({
 function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; assets: any[]; onClose: () => void }) {
   const qc = useQueryClient();
   const name = code === "US" ? "United States" : code === "CA" ? "Canada" : "";
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    number_type: "toll_free" as "toll_free" | "ten_dlc" | "short_code",
-    business_name: "",
-    business_website: "",
-    use_case: "",
-    sample_message: "",
-    expected_monthly_volume: 1000,
-  });
-
   const listFn = useServerFn(listMyNumberRequests);
-  const submitFn = useServerFn(submitNumberRequest);
   const cancelFn = useServerFn(cancelMyNumberRequest);
 
   const reqs = useQuery({
