@@ -405,37 +405,8 @@ function RegistrationRequiredDialog({
   const isRegistered = status === "verified";
   const isSubmitted = status === "submitted" || status === "in_review";
 
-  const account = useQuery({
-    queryKey: ["account"],
-    queryFn: async () =>
-      (await supabase.from("accounts").select(
-        "legal_business_name,website_url,use_case_description,sample_message,opt_in_description,monthly_volume_estimate",
-      ).maybeSingle()).data,
-  });
-  const a = account.data;
-
-  const [form, setForm] = useState({
-    businessName: "",
-    businessWebsite: "",
-    useCase: "",
-    sampleMessage: "",
-    optInDescription: "",
-    monthlyVolume: 1000,
-  });
-  useEffect(() => {
-    if (!code) return;
-    setForm({
-      businessName: a?.legal_business_name ?? "",
-      businessWebsite: a?.website_url ?? "",
-      useCase: a?.use_case_description ?? "",
-      sampleMessage: a?.sample_message ?? "",
-      optInDescription: a?.opt_in_description ?? "",
-      monthlyVolume: a?.monthly_volume_estimate ?? 1000,
-    });
-  }, [code, a]);
-
   const mut = useMutation({
-    mutationFn: () => submitFn({ data: { country: code as string, senderId, ...form } }),
+    mutationFn: () => submitFn({ data: { country: code as string, senderId } }),
     onSuccess: (r) => {
       if (r.status === "requires_registration") {
         toast.warning("Submitted — this destination needs extra carrier docs. Our team will reach out shortly.");
@@ -454,8 +425,7 @@ function RegistrationRequiredDialog({
         <DialogHeader>
           <DialogTitle>Register sender ID — {countryName}</DialogTitle>
           <DialogDescription>
-            Fill in your business details below. We'll submit the registration to the local carrier
-            for you — no need to leave this page.
+            We'll submit this Sender ID through Telnyx for this country. No extra business form is needed here.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 text-sm">
@@ -468,36 +438,15 @@ function RegistrationRequiredDialog({
               {isRegistered ? "Registered" : isSubmitted ? "In review" : "Not started"}
             </Badge>
           </div>
-          <div className="space-y-1.5">
-            <Label>Legal business name</Label>
-            <Input value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} placeholder="Acme Ltd." />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Business website</Label>
-            <Input type="url" value={form.businessWebsite} onChange={(e) => setForm({ ...form, businessWebsite: e.target.value })} placeholder="https://acme.com" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Use case</Label>
-            <Input value={form.useCase} onChange={(e) => setForm({ ...form, useCase: e.target.value })} placeholder="Order updates, 2FA, marketing…" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Sample message</Label>
-            <Textarea rows={3} value={form.sampleMessage} onChange={(e) => setForm({ ...form, sampleMessage: e.target.value })} placeholder="Hi {name}, your order #1234 has shipped. Reply STOP to opt out." />
-          </div>
-          <div className="space-y-1.5">
-            <Label>How recipients opted in</Label>
-            <Textarea rows={3} value={form.optInDescription} onChange={(e) => setForm({ ...form, optInDescription: e.target.value })} placeholder="Customers check a consent box at checkout on acme.com/signup." />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Expected monthly volume</Label>
-            <Input type="number" min={1} value={form.monthlyVolume} onChange={(e) => setForm({ ...form, monthlyVolume: Number(e.target.value) || 0 })} />
+          <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-muted-foreground">
+            Telnyx will register <span className="font-mono text-foreground">{senderId}</span> for {countryName}. If local carriers need manual review, this status will stay in review until they approve it.
           </div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={mut.isPending}>Close</Button>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending || !senderId}>
             {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-            Submit registration
+            Register with Telnyx
           </Button>
         </DialogFooter>
       </DialogContent>
