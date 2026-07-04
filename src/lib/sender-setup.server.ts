@@ -23,7 +23,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   const { data: acct, error } = await supabaseAdmin
     .from("accounts")
-    .select("id,legal_business_name,business_address,website_url,contact_email,full_name,phone,onboarding_status,subaccount_phone_number,subaccount_messaging_service_sid,telnyx_messaging_profile_id")
+    .select("id,legal_business_name,business_address,website_url,contact_email,full_name,phone,onboarding_status,telnyx_phone_number,telnyx_messaging_profile_id,telnyx_messaging_profile_id")
     .eq("id", userId).maybeSingle();
   if (error || !acct) throw new Error("Account not found");
   if (acct.onboarding_status === "suspended") throw new Error("Account suspended");
@@ -44,7 +44,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   const created: string[] = [];
   const errors: Array<{ cc: string; reason: string }> = [];
-  let accountSenderSet = Boolean(acct.subaccount_phone_number || acct.subaccount_messaging_service_sid);
+  let accountSenderSet = Boolean(acct.telnyx_phone_number || acct.telnyx_messaging_profile_id);
 
   async function setPrimarySender(patch: any) {
     if (accountSenderSet) return;
@@ -63,9 +63,9 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       if (existing) {
         if (existing.verification_status === "verified" && existing.phone_number) {
           await setPrimarySender({
-            subaccount_phone_number: existing.phone_number,
-            subaccount_phone_sid: existing.phone_sid ?? null,
-            subaccount_messaging_service_sid: existing.messaging_service_sid ?? messagingProfileId,
+            telnyx_phone_number: existing.phone_number,
+            telnyx_number_id: existing.phone_sid ?? null,
+            telnyx_messaging_profile_id: existing.messaging_service_sid ?? messagingProfileId,
             onboarding_status: "active",
           });
         }
@@ -89,8 +89,8 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         });
         if (!needsReg) {
           await setPrimarySender({
-            subaccount_phone_number: sid,
-            subaccount_messaging_service_sid: messagingProfileId,
+            telnyx_phone_number: sid,
+            telnyx_messaging_profile_id: messagingProfileId,
             onboarding_status: "active",
           });
         }
@@ -140,9 +140,9 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         verification_status: "submitted", // requires TF verification via wizard
       });
       await setPrimarySender({
-        subaccount_phone_number: bought.phone_number,
-        subaccount_phone_sid: bought.id,
-        subaccount_messaging_service_sid: messagingProfileId,
+        telnyx_phone_number: bought.phone_number,
+        telnyx_number_id: bought.id,
+        telnyx_messaging_profile_id: messagingProfileId,
         onboarding_status: "sender_pending",
       });
       created.push(`${cc}:submitted`);

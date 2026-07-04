@@ -333,7 +333,7 @@ export const listMyTfns = createServerFn({ method: "GET" })
     if (!verifier) return [];
     const { data } = await context.supabase
       .from("verifier_tfns")
-      .select("id,phone_number,country,status,rejection_reason,sold_at,payout_ngn,created_at,submitted_at,in_review_at,verified_at,rejected_at,twilio_verification_sid")
+      .select("id,phone_number,country,status,rejection_reason,sold_at,payout_ngn,created_at,submitted_at,in_review_at,verified_at,rejected_at,telnyx_verification_id")
       .eq("verifier_id", verifier.id)
       .order("created_at", { ascending: false });
     return data ?? [];
@@ -430,7 +430,7 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
         phone_number: purchased.phone_number,
         country: "US",
         status: "assigned",
-        twilio_phone_sid: purchased.id,
+        telnyx_number_id: purchased.id,
         notes: "Auto-provisioned from Telnyx pool",
       })
       .select("id,phone_number")
@@ -457,7 +457,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     if (!verifier) throw new Error("Complete your verifier profile first");
     const { data: row, error } = await supabaseAdmin
       .from("verifier_tfns")
-      .select("id,twilio_phone_sid,twilio_verification_sid,phone_number,status")
+      .select("id,telnyx_number_id,telnyx_verification_id,phone_number,status")
       .eq("id", data.id)
       .eq("verifier_id", verifier.id)
       .maybeSingle();
@@ -473,16 +473,16 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
       try { payload = JSON.parse(data.notes); } catch { payload = null; }
     }
 
-    let twilioVerificationSid: string | null = row.twilio_verification_sid ?? null;
+    let twilioVerificationSid: string | null = row.telnyx_verification_id ?? null;
     let carrierStatus: "submitted" | "in_review" | "verified" | "rejected" = "submitted";
     let rejectionReason: string | null = null;
 
-    if (payload && row.twilio_phone_sid) {
+    if (payload && row.telnyx_number_id) {
       const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
       const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
       try {
         const result = await submitTwilioTollfreeVerification({
-          phoneSid: row.twilio_phone_sid,
+          phoneSid: row.telnyx_number_id,
           accountSid: "",
           authToken: "",
           existingVerificationSid: twilioVerificationSid,
@@ -506,7 +506,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     const patch = {
       status: dbStatus,
       notes: data.notes ?? null,
-      twilio_verification_sid: twilioVerificationSid,
+      telnyx_verification_id: twilioVerificationSid,
       rejection_reason: rejectionReason,
       submitted_at: nowIso,
       ...(dbStatus === "verified" ? { verified_at: nowIso } : {}),
@@ -536,14 +536,14 @@ export const refreshMyTfn = createServerFn({ method: "POST" })
     if (!verifier) throw new Error("Complete your verifier profile first");
     const { data: row } = await supabaseAdmin
       .from("verifier_tfns")
-      .select("id,twilio_verification_sid,status")
+      .select("id,telnyx_verification_id,status")
       .eq("id", data.id)
       .eq("verifier_id", verifier.id)
       .maybeSingle();
-    if (!row?.twilio_verification_sid) return { ok: false, reason: "not_submitted" };
+    if (!row?.telnyx_verification_id) return { ok: false, reason: "not_submitted" };
     const { fetchTwilioTollfreeVerification } = await import("./tollfree-submit.server");
     const result = await fetchTwilioTollfreeVerification({
-      verificationSid: row.twilio_verification_sid,
+      verificationSid: row.telnyx_verification_id,
       accountSid: "",
       authToken: "",
     });

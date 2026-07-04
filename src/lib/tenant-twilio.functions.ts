@@ -63,8 +63,8 @@ export const purchaseNumber = createServerFn({ method: "POST" })
     const { ensureMessagingProfileForAccount, orderNumber, safeTelnyxCall } = await import("./telnyx.server");
 
     const { data: acct } = await supabaseAdmin
-      .from("accounts").select("subaccount_phone_sid").eq("id", userId).maybeSingle();
-    if (acct?.subaccount_phone_sid) throw new Error("A number is already provisioned for this account");
+      .from("accounts").select("telnyx_number_id").eq("id", userId).maybeSingle();
+    if (acct?.telnyx_number_id) throw new Error("A number is already provisioned for this account");
 
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
     const order = await safeTelnyxCall(
@@ -84,9 +84,9 @@ export const purchaseNumber = createServerFn({ method: "POST" })
     }, { onConflict: "phone_number" });
 
     await supabaseAdmin.from("accounts").update({
-      subaccount_phone_number: purchased.phone_number,
-      subaccount_phone_sid: purchased.id,
-      subaccount_messaging_service_sid: messagingProfileId,
+      telnyx_phone_number: purchased.phone_number,
+      telnyx_number_id: purchased.id,
+      telnyx_messaging_profile_id: messagingProfileId,
       onboarding_status: "active",
     }).eq("id", userId);
 

@@ -441,7 +441,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           try {
             const { data: acct } = await supabaseAdmin
               .from("accounts")
-              .select("telnyx_messaging_profile_id, subaccount_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted")
+              .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted")
               .eq("id", c.account_id).maybeSingle();
             if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
               await supabaseAdmin.from("campaigns")
@@ -503,7 +503,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
               : null;
             const sender: Sender = {
               messagingProfileId: assetProfileId ?? profileId,
-              fromNumber: verifiedSender?.phone_number ?? acct?.subaccount_phone_number ?? null,
+              fromNumber: verifiedSender?.phone_number ?? acct?.telnyx_phone_number ?? null,
               assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
             };
             const r = await processCampaign(supabaseAdmin, c, rates, sender);

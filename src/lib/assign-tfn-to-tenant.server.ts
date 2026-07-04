@@ -64,9 +64,9 @@ export async function wireAssignedTollfreeForTenant(opts: {
   }, { onConflict: "phone_number" });
 
   await supabaseAdmin.from("accounts").update({
-    subaccount_phone_number: opts.phoneNumber,
-    subaccount_phone_sid: phoneId,
-    subaccount_messaging_service_sid: messagingProfileId,
+    telnyx_phone_number: opts.phoneNumber,
+    telnyx_number_id: phoneId,
+    telnyx_messaging_profile_id: messagingProfileId,
     onboarding_status: "active",
   }).eq("id", opts.accountId);
 
@@ -81,8 +81,8 @@ export async function unwireAssignedTollfreeForTenant(opts: { phoneNumber: strin
   await supabaseAdmin.from("sender_assets").delete().eq("id", asset.id);
   await supabaseAdmin.from("numbers").delete().eq("phone_number", opts.phoneNumber);
   await supabaseAdmin.from("accounts").update({
-    subaccount_phone_number: null,
-    subaccount_phone_sid: null,
-    subaccount_messaging_service_sid: null,
-  }).eq("id", asset.account_id).eq("subaccount_phone_number", opts.phoneNumber);
+    telnyx_phone_number: null,
+    telnyx_number_id: null,
+    telnyx_messaging_profile_id: null,
+  }).eq("id", asset.account_id).eq("telnyx_phone_number", opts.phoneNumber);
 }
