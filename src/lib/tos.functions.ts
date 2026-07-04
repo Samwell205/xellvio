@@ -23,7 +23,7 @@ export const acceptTos = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    await supabaseAdmin.from("tos_acceptances").upsert(
+    const { error: insErr } = await supabaseAdmin.from("tos_acceptances").upsert(
       {
         tenant_account_id: userId,
         tos_version: TOS_CURRENT_VERSION,
@@ -32,10 +32,18 @@ export const acceptTos = createServerFn({ method: "POST" })
       },
       { onConflict: "tenant_account_id,tos_version" },
     );
-    await supabaseAdmin
+    if (insErr) {
+      console.error("[acceptTos] tos_acceptances upsert failed", insErr);
+      throw new Error(`Could not record acceptance: ${insErr.message}`);
+    }
+    const { error: updErr } = await supabaseAdmin
       .from("accounts")
       .update({ tos_current_version_accepted: TOS_CURRENT_VERSION })
       .eq("id", userId);
+    if (updErr) {
+      console.error("[acceptTos] accounts update failed", updErr);
+      throw new Error(`Could not mark account accepted: ${updErr.message}`);
+    }
 
     return { ok: true, version: TOS_CURRENT_VERSION };
   });
