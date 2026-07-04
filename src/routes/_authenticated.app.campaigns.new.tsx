@@ -768,6 +768,24 @@ function NewCampaignPage() {
         </Card>
       )}
 
+      {step === 4 && (
+        <Card className="p-4 border-primary/40 bg-primary/5">
+          <label className="flex items-start gap-3 text-sm cursor-pointer">
+            <Checkbox
+              checked={complianceAccepted}
+              onCheckedChange={(v) => setComplianceAccepted(v === true)}
+              className="mt-0.5"
+            />
+            <span className="leading-snug">
+              <strong>Required before launch —</strong> I confirm that every recipient in this campaign has
+              opted in to receive SMS from me, that the message content complies with the Xellvio Acceptable
+              Use Policy and Telnyx SHAFT rules, and that I accept full liability for any carrier penalties,
+              fines, or number suspensions that arise from this send.
+            </span>
+          </label>
+        </Card>
+      )}
+
       <div className="flex justify-between">
         <Button variant="ghost" disabled={step === 0} onClick={() => setStep((step - 1) as StepIdx)}>
           <ChevronLeft className="size-4 mr-1" /> Back
@@ -776,7 +794,7 @@ function NewCampaignPage() {
           {step === 4 ? (
             <>
               <Button variant="outline" onClick={() => saveCampaign(false)} disabled={saving}>Save as draft</Button>
-              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient || hasMissingSender}>
+              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient || hasMissingSender || !complianceAccepted}>
                 {s.sendMode === "now" ? "Launch now" : "Schedule"}
               </Button>
             </>
