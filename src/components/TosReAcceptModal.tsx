@@ -22,14 +22,15 @@ export function TosReAcceptModal() {
   const acceptFn = useServerFn(acceptTos);
   const accept = useMutation({
     mutationFn: () => acceptFn({ data: { userAgent: navigator.userAgent.slice(0, 500) } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["tos-status"] });
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["tos-status"] });
+      await statusQ.refetch();
       toast.success("Thank you — you can now send campaigns.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const open = !!statusQ.data && !statusQ.data.accepted;
+  const open = !!statusQ.data && !statusQ.data.accepted && !accept.isSuccess;
 
   return (
     <Dialog open={open}>
