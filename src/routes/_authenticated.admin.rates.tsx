@@ -47,7 +47,7 @@ function AdminRatesPage() {
 
 
   const qc = useQueryClient();
-  const syncFn = useServerFn(syncTwilioPricing);
+  const syncFn = useServerFn(syncProviderPricing);
   const setMarkupFn = useServerFn(setDefaultMarkup);
   const getMarkupFn = useServerFn(getDefaultMarkup);
 
