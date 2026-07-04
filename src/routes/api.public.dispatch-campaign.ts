@@ -422,13 +422,38 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           try {
             const { data: acct } = await supabaseAdmin
               .from("accounts")
-              .select("telnyx_messaging_profile_id, subaccount_phone_number, onboarding_status")
+              .select("telnyx_messaging_profile_id, subaccount_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted")
               .eq("id", c.account_id).maybeSingle();
-            if (acct?.onboarding_status === "suspended") {
-              await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
-              results.push({ id: c.id, error: "account_suspended" });
+            if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
+              await supabaseAdmin.from("campaigns")
+                .update({ status: "paused", paused_reason: "Tenant sending suspended", paused_at: new Date().toISOString() })
+                .eq("id", c.id);
+              results.push({ id: c.id, error: "tenant_sending_suspended" });
               continue;
             }
+            // ── ToS gate: tenant must have accepted the current version.
+            const { TOS_CURRENT_VERSION } = await import("@/lib/tos");
+            if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
+              await supabaseAdmin.from("campaigns")
+                .update({ status: "paused", paused_reason: "Tenant must accept updated Terms of Service before sending.", paused_at: new Date().toISOString() })
+                .eq("id", c.id);
+              results.push({ id: c.id, error: "tos_acceptance_required" });
+              continue;
+            }
+            // ── Per-campaign compliance re-confirmation must exist.
+            const { count: campTos } = await supabaseAdmin
+              .from("campaign_tos_acceptances")
+              .select("id", { count: "exact", head: true })
+              .eq("campaign_id", c.id)
+              .eq("tos_version", TOS_CURRENT_VERSION);
+            if ((campTos ?? 0) === 0) {
+              await supabaseAdmin.from("campaigns")
+                .update({ status: "paused", paused_reason: "Missing per-campaign compliance confirmation.", paused_at: new Date().toISOString() })
+                .eq("id", c.id);
+              results.push({ id: c.id, error: "campaign_acceptance_required" });
+              continue;
+            }
+
             const { data: senderAssets } = await supabaseAdmin
               .from("sender_assets")
               .select("verification_status,country_code,sender_kind,phone_number,messaging_service_sid")
