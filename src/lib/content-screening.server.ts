@@ -219,6 +219,75 @@ export async function screenMessageContent(
     }
   }
 
+  // ---- Auto-suspend on serious or repeat abuse --------------------------
+  // Policy:
+  //   • Any hard-category hit (SHAFT / phishing / scam) → suspend on the
+  //     FIRST offense. These categories can never be sent lawfully on our
+  //     platform, so one attempt is enough.
+  //   • Otherwise, 3+ "blocked" decisions in a rolling 7-day window →
+  //     suspend for repeat abuse.
+  // The suspension is logged in tenant_sending_suspensions and the account
+  // appears on Admin → Compliance with a one-click Reinstate button.
+  if (action === "blocked") {
+    try {
+      const hardCategoryHit = reasons.some((r) => {
+        if (!r.code.startsWith("category:")) return false;
+        // keywordScan marks blocks with score >= 80; that's our "hard" bar.
+        return r.score >= 80;
+      });
+
+      let shouldSuspend = hardCategoryHit;
+      let suspendReason = "";
+
+      if (hardCategoryHit) {
+        const cat = reasons.find((r) => r.code.startsWith("category:"))?.code.replace("category:", "");
+        suspendReason = `Auto-suspended: prohibited content category (${cat ?? "SHAFT/phishing"}).`;
+      } else {
+        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const { count: recentBlocks } = await supabaseAdmin
+          .from("content_screening_log")
+          .select("id", { count: "exact", head: true })
+          .eq("account_id", tenantAccountId)
+          .eq("action_taken", "blocked")
+          .gte("created_at", sevenDaysAgo);
+        if ((recentBlocks ?? 0) >= 3) {
+          shouldSuspend = true;
+          suspendReason = `Auto-suspended: ${recentBlocks} blocked messages in 7 days (repeat abuse).`;
+        }
+      }
+
+      if (shouldSuspend) {
+        // Don't double-suspend an already-suspended tenant.
+        const { data: acct } = await supabaseAdmin
+          .from("accounts")
+          .select("sending_suspended_at")
+          .eq("id", tenantAccountId)
+          .maybeSingle();
+        if (!acct?.sending_suspended_at) {
+          const { suspendTenantSending } = await import("./tenant-suspension.server");
+          await suspendTenantSending({
+            tenantAccountId,
+            reason: suspendReason,
+            suspendedBy: null, // system
+          });
+          await supabaseAdmin.from("events").insert({
+            account_id: tenantAccountId,
+            type: "tenant_auto_suspended",
+            payload: {
+              reason: suspendReason,
+              risk_score: riskScore,
+              reasons: reasons.map((r) => ({ code: r.code, message: r.message })),
+              campaign_id: opts.campaignId ?? null,
+              context: opts.context ?? null,
+            } as unknown as any,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[screening] auto-suspend failed", e);
+    }
+  }
+
   return {
     passed: action === "passed",
     action,
