@@ -1342,7 +1342,7 @@ function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetC
   // Auto-show when verified or in review — status is useful info even if skipped.
   const showAnyway = status === "verified" || status === "in_review" || status === "submitted" || status === "rejected";
 
-  if (skipped && !showAnyway && !needsUsCa) return null;
+  if (!showAnyway && !needsUsCa) return null;
 
   let badge = (
     <Badge variant="outline" className="gap-1"><Clock className="size-3" /> Not started</Badge>
