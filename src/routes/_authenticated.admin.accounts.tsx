@@ -5,9 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, ShieldOff, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldOff, ShieldCheck, Ban, PlayCircle } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminSetSuspension } from "@/lib/account.functions";
+import { adminSuspendTenantSending, adminResumeTenantSending } from "@/lib/compliance-admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/accounts")({
   head: () => ({ meta: [{ title: "Tenant accounts — Admin" }] }),
