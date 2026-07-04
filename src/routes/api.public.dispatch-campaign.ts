@@ -211,6 +211,7 @@ async function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) =>
 async function planCampaign(
   supabaseAdmin: any, campaign: any, rates: Rate[],
 ): Promise<{ planned: number; skipped: number; cost: number; reason?: string }> {
+  // ── Legacy fast keyword scan (kept for backwards compat with the badge).
   const preScan = keywordScan(campaign.message_body ?? "");
   if (!preScan.allowed) {
     await supabaseAdmin.from("campaigns")
@@ -218,6 +219,7 @@ async function planCampaign(
     await flagAccountForReview(supabaseAdmin, campaign.account_id, "content_violation_dispatch", preScan.reason ?? "");
     return { planned: 0, skipped: 0, cost: 0, reason: "blocked_content" };
   }
+
 
   const list = await loadEligibleRecipients(supabaseAdmin, campaign.account_id, campaign.audience ?? { include: [], exclude: [] });
   if (list.length === 0) {
