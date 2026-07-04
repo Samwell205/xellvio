@@ -98,16 +98,17 @@ export async function runTwilioPricingSync(): Promise<{
     updated++;
   }
 
-  // Record the sync so admins can audit it.
+  // Record each row for admin audit (best-effort).
   try {
-    await supabaseAdmin.from("pricing_sync_log").insert({
-      provider: "telnyx",
-      total: rows.length,
-      updated,
-      skipped,
-      errors,
-      details: rows as any,
-    } as any);
+    const logRows = rows.map((r) => ({
+      country_code: r.country_code,
+      number_type_used: r.number_type_used ?? null,
+      cost_price: r.cost_price ?? null,
+      sell_price: r.sell_price ?? null,
+      status: r.status,
+      message: r.message ?? null,
+    }));
+    if (logRows.length) await supabaseAdmin.from("pricing_sync_log").insert(logRows);
   } catch { /* log table optional */ }
 
   return { total: rows.length, updated, skipped, errors, rows };
