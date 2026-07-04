@@ -68,6 +68,11 @@ function AuthPage() {
         if (signUpError) throw signUpError;
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Record ToS acceptance server-side so the send gates unblock.
+        try {
+          const { acceptTos } = await import("@/lib/tos.functions");
+          await acceptTos({ data: { userAgent: navigator.userAgent.slice(0, 500) } });
+        } catch { /* modal will re-prompt if it failed */ }
         toast.success("Account created — welcome!");
         navigate({ href: destination });
       } else {
