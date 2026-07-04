@@ -103,7 +103,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
           );
           alphaSenderId = alpha.id ?? null;
         } catch (e: any) {
-          telnyxError = e?.message ?? String(e);
+          telnyxError = String(e?.message ?? e);
           const telnyxErrorText = telnyxError.toLowerCase();
           const alreadyExists = telnyxErrorText.includes("already") || telnyxErrorText.includes("duplicate");
           status = alreadyExists ? (needsReg ? "submitted" : "verified") : "requires_registration";

@@ -64,7 +64,7 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
         });
         alphaSenderId = alpha.id ?? null;
       } catch (e: any) {
-        telnyxError = e?.message ?? String(e);
+        telnyxError = String(e?.message ?? e);
         const telnyxErrorText = telnyxError.toLowerCase();
         const alreadyExists = telnyxErrorText.includes("already") || telnyxErrorText.includes("duplicate");
         status = alreadyExists ? (needsReg ? "submitted" : "verified") : "requires_registration";
@@ -134,7 +134,14 @@ export const submitSenderIdRegistration = createServerFn({ method: "POST" })
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
 
     // Persist optional business context only if the user already provided it.
-    const accountPatch: Record<string, string | number> = {};
+    const accountPatch: {
+      legal_business_name?: string;
+      website_url?: string;
+      use_case_description?: string;
+      sample_message?: string;
+      opt_in_description?: string;
+      monthly_volume_estimate?: number;
+    } = {};
     if (data.businessName) accountPatch.legal_business_name = data.businessName;
     if (data.businessWebsite) accountPatch.website_url = data.businessWebsite;
     if (data.useCase) accountPatch.use_case_description = data.useCase;
