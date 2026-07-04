@@ -23,7 +23,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   const { data: acct, error } = await supabaseAdmin
     .from("accounts")
-    .select("id,legal_business_name,business_address,website_url,contact_email,full_name,phone,onboarding_status,telnyx_phone_number,telnyx_messaging_profile_id,telnyx_messaging_profile_id")
+    .select("id,legal_business_name,business_address,website_url,contact_email,full_name,phone,onboarding_status,telnyx_phone_number,telnyx_messaging_profile_id")
     .eq("id", userId).maybeSingle();
   if (error || !acct) throw new Error("Account not found");
   if (acct.onboarding_status === "suspended") throw new Error("Account suspended");
@@ -58,13 +58,13 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
       const kind = pickSenderKind(cc);
       const { data: existing } = await supabaseAdmin
         .from("sender_assets")
-        .select("id,phone_number,telnyx_number_id,telnyx_messaging_profile_id,sender_kind,verification_status")
+        .select("id,phone_number,telnyx_phone_number_id,telnyx_messaging_profile_id,sender_kind,verification_status")
         .eq("account_id", userId).eq("country_code", cc).limit(1).maybeSingle();
       if (existing) {
         if (existing.verification_status === "verified" && existing.phone_number) {
           await setPrimarySender({
             telnyx_phone_number: existing.phone_number,
-            telnyx_number_id: existing.telnyx_number_id ?? null,
+            telnyx_number_id: existing.telnyx_phone_number_id ?? null,
             telnyx_messaging_profile_id: existing.telnyx_messaging_profile_id ?? messagingProfileId,
             onboarding_status: "active",
           });
@@ -82,8 +82,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
           country_code: cc,
           sender_kind: "sender_id",
           phone_number: sid,
-          telnyx_number_id: null,
-          telnyx_messaging_profile_id: messagingProfileId,
+          telnyx_phone_number_id: null,
           telnyx_messaging_profile_id: messagingProfileId,
           verification_status: needsReg ? "requires_registration" : "verified",
         });
@@ -133,9 +132,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         country_code: cc,
         sender_kind: "toll_free",
         phone_number: bought.phone_number,
-        telnyx_number_id: bought.id,
         telnyx_phone_number_id: bought.id,
-        telnyx_messaging_profile_id: messagingProfileId,
         telnyx_messaging_profile_id: messagingProfileId,
         verification_status: "submitted", // requires TF verification via wizard
       });

@@ -61,7 +61,7 @@ export const getMyTollfreeVerification = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data: asset } = await context.supabase
       .from("sender_assets")
-      .select("id,phone_number,telnyx_number_id,verification_status,telnyx_verification_id,verification_payload,rejection_reason,friendly_rejection_reason,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_phone_number_id,telnyx_messaging_profile_id")
+      .select("id,phone_number,telnyx_phone_number_id,verification_status,telnyx_verification_id,verification_payload,rejection_reason,friendly_rejection_reason,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_messaging_profile_id")
       .eq("account_id", context.userId)
       .eq("sender_kind", "toll_free")
       .order("created_at", { ascending: false })
@@ -156,11 +156,11 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       }
     }
 
-    if (!asset?.telnyx_number_id) throw new Error("No toll-free number id on file for this account.");
+    if (!asset?.telnyx_phone_number_id) throw new Error("No toll-free number id on file for this account.");
 
     const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
     const result = await submitTwilioTollfreeVerification({
-      phoneSid: asset.telnyx_number_id,
+      phoneSid: asset.telnyx_phone_number_id,
       phoneNumberE164: asset.phone_number ?? undefined,
       accountSid: "",
       authToken: "",
