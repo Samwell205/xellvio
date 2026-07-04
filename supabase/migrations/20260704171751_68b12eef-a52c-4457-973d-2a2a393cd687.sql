@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.sync_sender_asset_from_number_request() FROM PUBLIC, anon, authenticated;
