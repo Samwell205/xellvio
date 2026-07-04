@@ -56,13 +56,19 @@ export const acceptTos = createServerFn({ method: "POST" })
 export const getTosStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data } = await supabase
+    const { userId } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("accounts")
       .select("tos_current_version_accepted")
       .eq("id", userId)
       .maybeSingle();
-    const accepted = data?.tos_current_version_accepted === TOS_CURRENT_VERSION;
+    if (error) {
+      console.error("[getTosStatus] read failed", { userId, error });
+    }
+    const stored = data?.tos_current_version_accepted ?? null;
+    const accepted = stored === TOS_CURRENT_VERSION;
+    console.log("[getTosStatus]", { userId, stored, current: TOS_CURRENT_VERSION, accepted });
     return { accepted, currentVersion: TOS_CURRENT_VERSION };
   });
 
