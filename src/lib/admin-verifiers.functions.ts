@@ -405,7 +405,7 @@ export const adminListCarrierApprovedTfns = createServerFn({ method: "GET" })
     }));
   });
 
-export const adminAssignTwilioNumberToAccount = createServerFn({ method: "POST" })
+export const adminAssignCarrierNumberToAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({
