@@ -40,6 +40,7 @@ function HomePage() {
         <EditorialActivity />
         <EditorialAttribution />
         <EditorialReach />
+        <SenderIdExplainer />
         <HowItWorks />
         <FAQ />
         <CTA />
@@ -245,6 +246,72 @@ function EditorialAttribution() {
     </section>
   );
 }
+
+function SenderIdExplainer() {
+  const rows = [
+    {
+      region: "United States & Canada",
+      req: "Toll-free verification",
+      what: "Fill a short business & opt-in form inside your dashboard. We reserve the toll-free number and submit it to the carrier for you. Approval usually takes 1–3 weeks.",
+      tone: "amber",
+    },
+    {
+      region: "Countries that allow open Sender IDs",
+      sub: "UK, Australia, Germany, France, Spain, Netherlands, Ireland, Denmark, Poland, Singapore, and more",
+      req: "No registration",
+      what: "Just pick a Sender ID (3–11 letters/numbers). It's active instantly — no forms, no waiting.",
+      tone: "emerald",
+    },
+    {
+      region: "Countries that require carrier registration",
+      sub: "Nigeria, Ghana, Kenya, South Africa, Mexico, Brazil, India, UAE, and more",
+      req: "Sender ID registration",
+      what: "Submit the Sender ID you want and we register it with the local carriers on your behalf. No provider portal or business form for you — status shows In review until carriers approve.",
+      tone: "blue",
+    },
+  ];
+  const toneMap: Record<string, string> = {
+    amber: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    emerald: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    blue: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  };
+  return (
+    <section className="bg-background py-20 border-t border-border">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <motion.div {...fade} className="max-w-3xl">
+          <p className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">How SMS delivery works</p>
+          <h2 className="mt-4 text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            One dashboard. Every country's rules handled for you.
+          </h2>
+          <p className="mt-5 text-muted-foreground">
+            Each country regulates SMS a little differently. You never leave Xellvio — we handle whichever
+            path applies to where you're sending, and each account does its own verification right inside the app.
+          </p>
+        </motion.div>
+        <div className="mt-12 grid md:grid-cols-3 gap-6">
+          {rows.map((r, i) => (
+            <motion.div key={r.region} {...fade} transition={{ ...fade.transition, delay: i * 0.06 }}>
+              <Card className="p-6 h-full flex flex-col">
+                <div className={`inline-flex self-start items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${toneMap[r.tone]}`}>
+                  <ShieldCheck className="size-3.5" /> {r.req}
+                </div>
+                <h3 className="mt-4 font-bold text-foreground text-lg leading-snug">{r.region}</h3>
+                {r.sub && <p className="mt-1 text-xs text-muted-foreground">{r.sub}</p>}
+                <p className="mt-4 text-sm text-muted-foreground leading-relaxed">{r.what}</p>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+        <motion.p {...fade} className="mt-10 text-sm text-muted-foreground max-w-3xl">
+          <strong className="text-foreground">Bottom line:</strong> for most of the world, you just pick a Sender ID
+          and send. For the US and Canada, we walk you through the toll-free verification wizard.
+          For countries that need local carrier whitelisting, we file the request for you — no external portal, no paperwork.
+        </motion.p>
+      </div>
+    </section>
+  );
+}
+
 
 function HowItWorks() {
   const steps = [
