@@ -227,6 +227,35 @@ async function planCampaign(
     return { planned: 0, skipped: 0, cost: 0 };
   }
 
+  // ── Full compliance screening once per campaign (all body-scoped checks +
+  //    volume anomaly). Per-recipient frequency cap runs later in sendOneMessage.
+  {
+    const { screenMessageContent } = await import("@/lib/content-screening.server");
+    const screen = await screenMessageContent(campaign.message_body ?? "", campaign.account_id, {
+      campaignId: campaign.id,
+      plannedRecipients: list.length,
+      context: "campaign_plan",
+    });
+    if (screen.action === "blocked") {
+      await supabaseAdmin.from("campaigns")
+        .update({
+          status: "blocked_content",
+          paused_reason: `Blocked by screening (risk ${screen.riskScore}/100): ${screen.blockedReasons[0] ?? "policy violation"}`,
+        }).eq("id", campaign.id);
+      return { planned: 0, skipped: 0, cost: 0, reason: "blocked_by_screening" };
+    }
+    if (screen.action === "held_for_review") {
+      await supabaseAdmin.from("campaigns")
+        .update({
+          status: "paused",
+          paused_reason: `Held for review (risk ${screen.riskScore}/100). ${screen.blockedReasons.slice(0, 2).join(" · ")}`,
+          paused_at: new Date().toISOString(),
+        }).eq("id", campaign.id);
+      return { planned: 0, skipped: 0, cost: 0, reason: "held_for_review" };
+    }
+  }
+
+
   const dial = rates.map((r) => ({ country_code: r.country_code, dial_prefix: r.dial_prefix }));
   const rateByCC: Record<string, Rate> = {};
   for (const r of rates) rateByCC[r.country_code] = r;
