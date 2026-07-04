@@ -16,6 +16,7 @@ const items = [
   { title: "Inbox", url: "/app/inbox", icon: Inbox },
   { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText },
   { title: "10DLC (US local)", url: "/app/setup-10dlc", icon: MessageSquareText },
+  { title: "Toll-free verification", url: "/app/toll-free-verification", icon: ShieldCheck },
   { title: "Audience", url: "/app/audience", icon: Users },
   { title: "Segments", url: "/app/segments", icon: Filter },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff },
