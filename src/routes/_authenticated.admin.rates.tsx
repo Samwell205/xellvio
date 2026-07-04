@@ -12,7 +12,7 @@ import { formatRate } from "@/lib/money";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  syncTwilioPricing,
+  syncProviderPricing,
   setDefaultMarkup,
   getDefaultMarkup,
 } from "@/lib/twilio-pricing.functions";
