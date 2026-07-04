@@ -16,8 +16,8 @@ import {
   adminAdjustVerifierWallet,
   adminDeleteVerifierTfn,
   adminListSoldTfns,
-  adminListTwilioApprovedTfns,
-  adminAssignTwilioNumberToAccount,
+  adminListCarrierApprovedTfns,
+  adminAssignCarrierNumberToAccount,
   adminUnassignSenderAsset,
 } from "@/lib/admin-verifiers.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
