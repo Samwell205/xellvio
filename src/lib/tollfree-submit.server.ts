@@ -63,6 +63,37 @@ function normalizeMessageVolume(value: string | undefined): string {
   return value === "5,000,000+" ? "5,000,000" : value || "10";
 }
 
+const US_STATE_NAMES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado", CT: "Connecticut",
+  DE: "Delaware", DC: "District of Columbia", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois",
+  IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana",
+  NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York",
+  NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+  PR: "Puerto Rico", RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas",
+  UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+};
+
+const CA_PROVINCE_NAMES: Record<string, string> = {
+  AB: "Alberta", BC: "British Columbia", MB: "Manitoba", NB: "New Brunswick", NL: "Newfoundland and Labrador",
+  NS: "Nova Scotia", NT: "Northwest Territories", NU: "Nunavut", ON: "Ontario", PE: "Prince Edward Island",
+  QC: "Quebec", SK: "Saskatchewan", YT: "Yukon",
+};
+
+function businessStateName(country: string, state: string): string {
+  const trimmed = state.trim();
+  const code = trimmed.toUpperCase();
+  if (country === "US") return US_STATE_NAMES[code] ?? trimmed;
+  if (country === "CA") return CA_PROVINCE_NAMES[code] ?? trimmed;
+  return trimmed;
+}
+
+function contactPhoneE164(countryCode: string, phone: string): string {
+  const rawPhone = phone.trim();
+  if (rawPhone.startsWith("+")) return `+${rawPhone.replace(/\D/g, "")}`;
+  return `${countryCode}${rawPhone}`.replace(/(?!^)\+/g, "").replace(/[^\d+]/g, "");
+}
+
 function compact<T extends Record<string, unknown>>(obj: T): T {
   return Object.fromEntries(
     Object.entries(obj).filter(([, value]) => value !== undefined && value !== ""),
@@ -166,6 +197,7 @@ export async function submitTwilioTollfreeVerification(opts: {
   if (!/^[A-Z]{2}$/.test(businessRegistrationCountry)) {
     throw new Error("Business registration country must be a 2-letter country code.");
   }
+  const businessCountry = (p.businessCountry || "US").toUpperCase();
 
   const body: Record<string, unknown> = compact({
     additionalInformation,
@@ -175,10 +207,10 @@ export async function submitTwilioTollfreeVerification(opts: {
     businessContactEmail: p.contactEmail,
     businessContactFirstName: p.contactFirstName,
     businessContactLastName: p.contactLastName,
-    businessContactPhone: `${p.contactPhoneCountry}${p.contactPhone}`.replace(/[^\d+]/g, ""),
-    businessCountry: (p.businessCountry || "US").toUpperCase(),
+    businessContactPhone: contactPhoneE164(p.contactPhoneCountry, p.contactPhone),
+    businessCountry,
     businessName: p.legalEntityName,
-    businessState: p.state,
+    businessState: businessStateName(businessCountry, p.state),
     businessZip: p.zip,
     corporateWebsite: p.websiteUrl,
     doingBusinessAs: p.businessDba || undefined,

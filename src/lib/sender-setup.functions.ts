@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { SetupInput, type SetupSmsPayload } from "./sender-setup.schema";
-import { ALPHA_SENDER_REQUIRES_REGISTRATION_SET } from "./countries";
+import { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } from "./countries";
 
 export const setupSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -24,6 +24,7 @@ export const getMySenderAssets = createServerFn({ method: "GET" })
     const readySenderIds = rows.filter(
       (asset) =>
         asset.sender_kind === "sender_id" &&
+        !ALPHA_SENDER_UNSUPPORTED_SET.has(asset.country_code) &&
         !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code) &&
         asset.verification_status !== "verified",
     );
@@ -36,7 +37,9 @@ export const getMySenderAssets = createServerFn({ method: "GET" })
         .in("id", readySenderIds.map((asset) => asset.id));
     }
     return rows.map((asset) =>
-      asset.sender_kind === "sender_id" && !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code)
+      asset.sender_kind === "sender_id" &&
+      !ALPHA_SENDER_UNSUPPORTED_SET.has(asset.country_code) &&
+      !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code)
         ? { ...asset, verification_status: "verified", rejection_reason: null }
         : asset,
     );
@@ -67,11 +70,14 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { ensureMessagingProfileForAccount, createAlphanumericSenderId } = await import("./telnyx.server");
-    const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET } = await import("./countries");
+    const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } = await import("./countries");
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
     const results: Array<{ cc: string; status: string }> = [];
     for (const raw of data.countries) {
       const cc = raw.toUpperCase();
+      if (ALPHA_SENDER_UNSUPPORTED_SET.has(cc)) {
+        throw new Error(`${cc} does not support alphanumeric Sender ID on Telnyx. Use toll-free verification instead.`);
+      }
       const needsReg = ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(cc);
       let status = needsReg ? "submitted" : "verified";
       let alphaSenderId: string | null = null;

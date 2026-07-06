@@ -8,7 +8,7 @@ import type { SetupSmsPayload } from "./sender-setup.schema";
 
 function pickSenderKind(country: string): "toll_free" | "sender_id" {
   const cc = country.toUpperCase();
-  return cc === "US" || cc === "CA" ? "toll_free" : "sender_id";
+  return cc === "US" || cc === "CA" || cc === "PR" ? "toll_free" : "sender_id";
 }
 
 function senderIdFromName(name: string, requested?: string): string {
@@ -93,7 +93,11 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         .eq("account_id", userId).eq("country_code", cc).limit(1).maybeSingle();
       if (existing) {
         const { ALPHA_SENDER_REQUIRES_REGISTRATION } = await import("./telnyx.server");
-        const supportedAlphaReady = existing.sender_kind === "sender_id" && !ALPHA_SENDER_REQUIRES_REGISTRATION.has(cc);
+        const { ALPHA_SENDER_UNSUPPORTED_SET } = await import("./countries");
+        const supportedAlphaReady =
+          existing.sender_kind === "sender_id" &&
+          !ALPHA_SENDER_UNSUPPORTED_SET.has(cc) &&
+          !ALPHA_SENDER_REQUIRES_REGISTRATION.has(cc);
         if (supportedAlphaReady && existing.verification_status !== "verified") {
           await supabaseAdmin.from("sender_assets").update({
             verification_status: "verified",

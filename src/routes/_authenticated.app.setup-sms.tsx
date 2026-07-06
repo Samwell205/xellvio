@@ -47,7 +47,7 @@ export const Route = createFileRoute("/_authenticated/app/setup-sms")({
   component: SetupSmsPage,
 });
 
-import { COUNTRIES as ALL_COUNTRIES, ALPHA_SENDER_REQUIRES_REGISTRATION_SET } from "@/lib/countries";
+import { COUNTRIES as ALL_COUNTRIES, ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } from "@/lib/countries";
 
 const COUNTRIES = ALL_COUNTRIES.map((c) => ({ code: c.iso, name: c.name }));
 
@@ -160,8 +160,6 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
     const rank = (s: string) => (s === "provisioned" ? 3 : s === "approved" ? 2 : s === "pending" ? 1 : 0);
     if (!prev || rank(r.status) > rank(prev.status)) reqByCountry.set(r.country, r);
   }
-  // US & CA do not support alphanumeric Sender IDs (carrier rule) — shown but disabled.
-  const ALPHA_UNSUPPORTED = new Set(["US", "CA"]);
   const senderCountries = COUNTRIES;
   const existingSender =
     assets.find((asset) => asset.sender_kind === "sender_id")?.phone_number ?? "";
@@ -242,7 +240,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
       {(() => {
         const visible = senderCountries.filter((c) => !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code));
         const statusFor = (code: string) => {
-          const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(code);
+          const isAlphaUnsupported = ALPHA_SENDER_UNSUPPORTED_SET.has(code);
           const usTfAsset = assets.find((a) => a.country_code === "US" && a.sender_kind === "toll_free");
           const usReq = reqByCountry.get("US");
           const ownTfAsset = isAlphaUnsupported
@@ -270,7 +268,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
             <Select
               value=""
               onValueChange={(cc) => {
-                if (ALPHA_UNSUPPORTED.has(cc)) setInfoCountry(cc);
+                if (ALPHA_SENDER_UNSUPPORTED_SET.has(cc)) setInfoCountry(cc);
                 else toggleCountry(cc);
               }}
             >
