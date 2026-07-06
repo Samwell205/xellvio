@@ -69,6 +69,13 @@ function compact<T extends Record<string, unknown>>(obj: T): T {
   ) as T;
 }
 
+function requireField(value: string | undefined, label: string, max = 500): string {
+  const normalized = (value ?? "").trim();
+  if (!normalized) throw new Error(`${label} is required.`);
+  if (normalized.length > max) throw new Error(`${label} must be ${max} characters or fewer.`);
+  return normalized;
+}
+
 export type TollfreeSubmitPayload = {
   legalEntityName: string;
   businessDba?: string;
@@ -95,12 +102,12 @@ export type TollfreeSubmitPayload = {
   useCaseDescription: string;
   sampleMessage: string;
   notificationEmail: string;
-  additionalInformation?: string;
+  additionalInformation: string;
   optInConfirmationMessage?: string;
   helpMessageSample?: string;
-  privacyPolicyUrl?: string;
-  termsUrl?: string;
-  optInKeywords?: string;
+  privacyPolicyUrl: string;
+  termsUrl: string;
+  optInKeywords: string;
   containsAgeGatedContent?: boolean;
 };
 
@@ -137,9 +144,22 @@ export async function submitTwilioTollfreeVerification(opts: {
     );
   }
   const optInImages = [{ url: p.proofOfOptInUrl }];
+  const useCaseDescription = requireField(p.useCaseDescription, "Use-case summary", 500);
+  const additionalInformation = requireField(p.additionalInformation, "Additional use-case details", 500);
+  const sampleMessage = requireField(p.sampleMessage, "Sample message", 1000);
+  const privacyPolicyUrl = requireField(p.privacyPolicyUrl, "Privacy Policy URL", 500);
+  const termsUrl = requireField(p.termsUrl, "Terms and Conditions URL", 500);
+  const optInKeywords = requireField(p.optInKeywords, "Opt-in keywords", 500);
+  const businessRegistrationNumber = requireField(p.businessRegistrationNumber, "Business registration number", 500);
+  const businessRegistrationType = requireField(p.businessRegistrationIdentifier, "Business registration authority", 500);
+  const businessRegistrationCountry = requireField(
+    (p.businessRegistrationCountry || p.businessCountry || "").toUpperCase(),
+    "Business registration country",
+    2,
+  );
 
   const body: Record<string, unknown> = compact({
-    additionalInformation: p.additionalInformation || "No additional information provided.",
+    additionalInformation,
     businessAddr1: p.addressLine1,
     businessAddr2: p.addressLine2 || undefined,
     businessCity: p.city,
@@ -155,22 +175,22 @@ export async function submitTwilioTollfreeVerification(opts: {
     doingBusinessAs: p.businessDba || undefined,
     isvReseller: "Xellvio",
     messageVolume: normalizeMessageVolume(p.monthlyVolume),
-    optInWorkflow: p.useCaseDescription,
+    optInWorkflow: useCaseDescription,
     optInWorkflowImageURLs: optInImages,
     phoneNumbers: [{ phoneNumber: opts.phoneNumberE164 }],
-    productionMessageContent: p.sampleMessage,
+    productionMessageContent: sampleMessage,
     useCase: primaryUseCase,
-    useCaseSummary: p.useCaseDescription,
+    useCaseSummary: useCaseDescription,
     webhookUrl: opts.statusCallbackUrl || undefined,
-    businessRegistrationNumber: p.businessRegistrationNumber || null,
-    businessRegistrationType: p.businessRegistrationIdentifier || null,
-    businessRegistrationCountry: (p.businessRegistrationCountry || p.businessCountry || "US").toUpperCase(),
+    businessRegistrationNumber,
+    businessRegistrationType,
+    businessRegistrationCountry,
     entityType: toEntityType(p.businessType),
     optInConfirmationResponse: p.optInConfirmationMessage || undefined,
     helpMessageResponse: p.helpMessageSample || undefined,
-    privacyPolicyURL: p.privacyPolicyUrl || undefined,
-    termsAndConditionURL: p.termsUrl || undefined,
-    optInKeywords: p.optInKeywords || undefined,
+    privacyPolicyURL: privacyPolicyUrl,
+    termsAndConditionURL: termsUrl,
+    optInKeywords,
     ageGatedContent: !!p.containsAgeGatedContent,
   });
 

@@ -215,7 +215,7 @@ export function defaultWizardForm(): WizardForm {
     useCaseCategories: ["General Marketing"],
     proofOfOptInUrl: "", proofShowsRequiredConsent: false,
     useCaseDescription: "", sampleMessage: "", notificationEmail: "",
-    additionalInformation: "", optInConfirmationMessage: "", helpMessageSample: "",
+    additionalInformation: "No additional information provided.", optInConfirmationMessage: "", helpMessageSample: "",
     privacyPolicyUrl: "", termsUrl: "", optInKeywords: "",
     containsAgeGatedContent: false, agreeToTos: false,
   };
@@ -262,11 +262,9 @@ function stepValid(f: WizardForm, key: SubStepKey): string | null {
       if (f.legalEntityName.trim().length < 2) return "Enter the legal business name.";
       if (!isHttp(f.websiteUrl)) return "Enter a valid website URL (https://…).";
       if (!f.businessType) return "Select a company type.";
-      if (f.businessType !== "Sole Proprietor") {
-        if (!f.businessRegistrationNumber.trim()) return "Enter a business registration number.";
-        if (!f.businessRegistrationIdentifier.trim()) return "Select a registration authority.";
-        if (!/^[A-Z]{2}$/.test(f.businessRegistrationCountry)) return "Select a registration country.";
-      }
+      if (!f.businessRegistrationNumber.trim()) return "Enter a business registration number.";
+      if (!f.businessRegistrationIdentifier.trim()) return "Select a registration authority.";
+      if (!/^[A-Z]{2}$/.test(f.businessRegistrationCountry)) return "Select a registration country.";
       return null;
     case "business-address":
       if (!/^[A-Z]{2}$/.test(f.businessCountry)) return "Select a country.";
@@ -288,15 +286,22 @@ function stepValid(f: WizardForm, key: SubStepKey): string | null {
       if (!f.monthlyVolume) return "Select a monthly SMS volume.";
       if (f.useCaseCategories.length === 0) return "Select at least one use case category.";
       if (f.useCaseDescription.trim().length < 40) return "Describe your use case in at least 40 characters.";
+      if (f.useCaseDescription.trim().length > 500) return "Use-case summary must be 500 characters or fewer.";
       if (f.sampleMessage.trim().length < 20) return "Enter a sample message (min 20 characters).";
+      if (f.sampleMessage.trim().length > 1000) return "Sample message must be 1,000 characters or fewer.";
       return null;
     case "opt-in":
       if (!f.optInType) return "Select an opt-in type.";
       if (!isHttps(f.proofOfOptInUrl)) return "Add a public https:// URL (or upload a screenshot) as opt-in policy proof.";
+      if (!isHttps(f.privacyPolicyUrl)) return "Enter a public https:// Privacy Policy URL.";
+      if (!isHttps(f.termsUrl)) return "Enter a public https:// Terms and Conditions URL.";
       if (!f.proofShowsRequiredConsent) return "Confirm your opt-in proof includes the required disclosures.";
       return null;
     case "additional":
       if (!isEmail(f.notificationEmail)) return "Enter a valid notification email.";
+      if (!f.additionalInformation.trim()) return "Enter additional use-case details.";
+      if (f.additionalInformation.trim().length > 500) return "Additional use-case details must be 500 characters or fewer.";
+      if (!f.optInKeywords.trim()) return "Enter opt-in keywords, e.g. START, YES, SUBSCRIBE.";
       return null;
     case "review":
       if (!f.agreeToTos) return "You must accept the carrier Terms of Service.";
@@ -532,7 +537,7 @@ function BusinessInfoStep({ form, update }: StepProps) {
           <Input value={form.websiteUrl} onChange={(e) => update("websiteUrl", e.target.value)} placeholder="https://yourcompany.com" />
         </Field>
       </Two>
-      {form.businessType && form.businessType !== "Sole Proprietor" && (
+      {form.businessType && (
         <Three>
           <Field label="Registration number" required>
             <Input value={form.businessRegistrationNumber} onChange={(e) => update("businessRegistrationNumber", e.target.value)} placeholder="e.g. 12-3456789" />
@@ -811,10 +816,10 @@ function OptInStep({ form, update }: StepProps) {
       </Field>
 
       <Two>
-        <Field label="Terms and conditions URL (optional)">
+        <Field label="Terms and conditions URL" required>
           <Input value={form.termsUrl} onChange={(e) => update("termsUrl", e.target.value)} placeholder="https://yourcompany.com/terms" />
         </Field>
-        <Field label="Privacy policy URL (optional)">
+        <Field label="Privacy policy URL" required>
           <Input value={form.privacyPolicyUrl} onChange={(e) => update("privacyPolicyUrl", e.target.value)} placeholder="https://yourcompany.com/privacy" />
         </Field>
       </Two>
@@ -827,13 +832,13 @@ function AdditionalStep({ form, update }: StepProps) {
     <>
       <StepHeader
         title="Additional details"
-        subtitle="These fields are optional but help carriers understand your messaging program."
+        subtitle="These carrier fields are required before we can submit the verification request."
       />
       <Field label="Notification email" required hint="Where we send updates about the carrier review.">
         <Input type="email" value={form.notificationEmail} onChange={(e) => update("notificationEmail", e.target.value)} />
       </Field>
       <Two>
-        <Field label="Opt-in keywords (optional)">
+        <Field label="Opt-in keywords" required>
           <Input value={form.optInKeywords} onChange={(e) => update("optInKeywords", e.target.value)} placeholder="JOIN START YES" />
         </Field>
         <Field label="Opt-in confirmation message (optional)">
@@ -844,7 +849,7 @@ function AdditionalStep({ form, update }: StepProps) {
         <Field label="HELP message sample (optional)">
           <Textarea rows={3} value={form.helpMessageSample} onChange={(e) => update("helpMessageSample", e.target.value)} />
         </Field>
-        <Field label="Additional information (optional)">
+        <Field label="Additional use-case details" required>
           <Textarea rows={3} value={form.additionalInformation} onChange={(e) => update("additionalInformation", e.target.value)} />
         </Field>
       </Two>

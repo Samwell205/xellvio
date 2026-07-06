@@ -12,8 +12,14 @@ function pickSenderKind(country: string): "toll_free" | "sender_id" {
 }
 
 function senderIdFromName(name: string, requested?: string): string {
-  const cleaned = (requested || name || "Sender").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 11);
-  return cleaned.length >= 3 ? cleaned : (cleaned + "SMS").slice(0, 11);
+  const cleaned = (requested || name || "Sender")
+    .replace(/[^A-Za-z0-9 ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase()
+    .slice(0, 11);
+  if (/[A-Z]/.test(cleaned) && cleaned.length >= 1) return cleaned;
+  return "SENDER";
 }
 
 export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
@@ -23,7 +29,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   let { data: acct, error } = await supabaseAdmin
     .from("accounts")
-    .select("id,legal_business_name,business_address,website_url,contact_email,full_name,phone,onboarding_status,telnyx_phone_number,telnyx_messaging_profile_id")
+    .select("id,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,full_name,phone,onboarding_status,telnyx_phone_number,telnyx_messaging_profile_id")
     .eq("id", userId).maybeSingle();
   if (error) throw error;
   if (!acct) {
@@ -33,7 +39,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
     if (createAccountError) throw createAccountError;
     const { data: createdAcct, error: reloadError } = await supabaseAdmin
       .from("accounts")
-      .select("id,legal_business_name,business_address,website_url,contact_email,full_name,phone,onboarding_status,telnyx_phone_number,telnyx_messaging_profile_id")
+      .select("id,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,full_name,phone,onboarding_status,telnyx_phone_number,telnyx_messaging_profile_id")
       .eq("id", userId).maybeSingle();
     if (reloadError || !createdAcct) throw new Error("Could not create your account record. Please refresh and try again.");
     acct = createdAcct;
@@ -43,8 +49,17 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
     const cc = raw.toUpperCase();
     return cc === "US" || cc === "CA";
   });
-  if (targetsUsOrCanada && (!acct.legal_business_name || !acct.business_address || !acct.website_url || !acct.contact_email)) {
-    throw new Error("Please complete your business profile first (legal name, address, website, contact email).");
+  if (targetsUsOrCanada && (
+    !acct.legal_business_name ||
+    !acct.business_address ||
+    !acct.business_reg_number ||
+    !acct.website_url ||
+    !acct.privacy_policy_url ||
+    !acct.terms_url ||
+    !acct.contact_email ||
+    !acct.phone
+  )) {
+    throw new Error("Please complete your carrier details first (legal name, address, registration number, website, Privacy Policy, Terms, contact email, and business phone).");
   }
 
   await supabaseAdmin.from("accounts").update({
@@ -77,6 +92,20 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         .select("id,phone_number,telnyx_phone_number_id,telnyx_messaging_profile_id,sender_kind,verification_status")
         .eq("account_id", userId).eq("country_code", cc).limit(1).maybeSingle();
       if (existing) {
+        const { ALPHA_SENDER_REQUIRES_REGISTRATION } = await import("./telnyx.server");
+        const supportedAlphaReady = existing.sender_kind === "sender_id" && !ALPHA_SENDER_REQUIRES_REGISTRATION.has(cc);
+        if (supportedAlphaReady && existing.verification_status !== "verified") {
+          await supabaseAdmin.from("sender_assets").update({
+            verification_status: "verified",
+            rejection_reason: null,
+            last_synced_at: new Date().toISOString(),
+          }).eq("id", existing.id);
+          await setPrimarySender({
+            telnyx_phone_number: existing.phone_number,
+            telnyx_messaging_profile_id: existing.telnyx_messaging_profile_id ?? messagingProfileId,
+            onboarding_status: "active",
+          });
+        }
         if (existing.verification_status === "verified" && existing.phone_number) {
           await setPrimarySender({
             telnyx_phone_number: existing.phone_number,

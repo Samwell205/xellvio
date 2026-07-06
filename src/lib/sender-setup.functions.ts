@@ -36,7 +36,7 @@ const CustomSenderInput = z.object({
   countries: z.array(z.string().length(2)).min(1),
   senderId: z.preprocess(
     (value) => (typeof value === "string" ? value.trim().toUpperCase() : value),
-    z.string().regex(/^[A-Z0-9]{3,11}$/, "Sender ID must be 3–11 letters or numbers"),
+    z.string().regex(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/, "Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter"),
   ),
 });
 
@@ -109,7 +109,7 @@ const SenderRegistrationInput = z.object({
   country: z.string().length(2),
   senderId: z.preprocess(
     (v) => (typeof v === "string" ? v.trim().toUpperCase() : v),
-    z.string().regex(/^[A-Z0-9]{3,11}$/, "Sender ID must be 3–11 letters or numbers"),
+    z.string().regex(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/, "Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter"),
   ),
   businessName: z.string().trim().min(2).max(200).optional(),
   businessWebsite: z.string().trim().url().max(300).optional(),
