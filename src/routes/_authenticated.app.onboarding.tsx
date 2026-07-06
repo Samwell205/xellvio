@@ -28,6 +28,7 @@ type Form = {
   privacy_policy_url: string;
   terms_url: string;
   contact_email: string;
+  phone: string;
 };
 
 const empty: Form = {
@@ -38,6 +39,7 @@ const empty: Form = {
   privacy_policy_url: "",
   terms_url: "",
   contact_email: "",
+  phone: "",
 };
 
 function OnboardingPage() {
@@ -75,6 +77,7 @@ function OnboardingPage() {
       privacy_policy_url: account.data.privacy_policy_url ?? "",
       terms_url: account.data.terms_url ?? "",
       contact_email: account.data.contact_email ?? account.data.email ?? "",
+      phone: account.data.phone ?? "",
     });
   }, [account.data]);
 
@@ -115,17 +118,21 @@ function OnboardingPage() {
       {step === 1 && (
         <Card className="p-6 space-y-4">
           <h3 className="font-semibold">Business details</h3>
-          <Field label="Legal business name *" v={form.legal_business_name} on={(v) => setForm({ ...form, legal_business_name: v })} />
+          <Field label="Legal business name" required v={form.legal_business_name} on={(v) => setForm({ ...form, legal_business_name: v })} />
           <div className="space-y-1.5">
-            <Label>Business address *</Label>
+            <Label className="flex items-center justify-between gap-3">
+              <span>Business address</span>
+              <span className="text-xs italic text-muted-foreground">Required</span>
+            </Label>
             <Textarea value={form.business_address} onChange={(e) => setForm({ ...form, business_address: e.target.value })} rows={3} />
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Business registration # (EIN / BRN) *" v={form.business_reg_number} on={(v) => setForm({ ...form, business_reg_number: v })} />
-            <Field label="Website URL *" v={form.website_url} on={(v) => setForm({ ...form, website_url: v })} placeholder="https://" />
-            <Field label="Privacy policy URL" v={form.privacy_policy_url} on={(v) => setForm({ ...form, privacy_policy_url: v })} placeholder="https://" />
-            <Field label="Terms of service URL" v={form.terms_url} on={(v) => setForm({ ...form, terms_url: v })} placeholder="https://" />
-            <Field label="Contact email *" v={form.contact_email} on={(v) => setForm({ ...form, contact_email: v })} type="email" />
+            <Field label="Business registration # (EIN / BRN)" required v={form.business_reg_number} on={(v) => setForm({ ...form, business_reg_number: v })} />
+            <Field label="Website URL" required v={form.website_url} on={(v) => setForm({ ...form, website_url: v })} placeholder="https://" />
+            <Field label="Privacy policy URL" required v={form.privacy_policy_url} on={(v) => setForm({ ...form, privacy_policy_url: v })} placeholder="https://" />
+            <Field label="Terms of service URL" required v={form.terms_url} on={(v) => setForm({ ...form, terms_url: v })} placeholder="https://" />
+            <Field label="Contact email" required v={form.contact_email} on={(v) => setForm({ ...form, contact_email: v })} type="email" />
+            <Field label="Business phone" required v={form.phone} on={(v) => setForm({ ...form, phone: v })} placeholder="+15551234567" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" onClick={() => navigate({ to: "/app" })}>Save for later</Button>
@@ -264,10 +271,13 @@ function StepBadge({ n, active, done, label }: { n: number; active: boolean; don
   );
 }
 
-function Field({ label, v, on, placeholder, type }: { label: string; v: string; on: (v: string) => void; placeholder?: string; type?: string }) {
+function Field({ label, required, v, on, placeholder, type }: { label: string; required?: boolean; v: string; on: (v: string) => void; placeholder?: string; type?: string }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <Label className="flex items-center justify-between gap-3">
+        <span>{label}</span>
+        {required && <span className="text-xs italic text-muted-foreground">Required</span>}
+      </Label>
       <Input value={v} onChange={(e) => on(e.target.value)} placeholder={placeholder} type={type} />
     </div>
   );

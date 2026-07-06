@@ -47,7 +47,7 @@ export const Route = createFileRoute("/_authenticated/app/setup-sms")({
   component: SetupSmsPage,
 });
 
-import { COUNTRIES as ALL_COUNTRIES, ALPHA_SENDER_REQUIRES_REGISTRATION_SET } from "@/lib/countries";
+import { COUNTRIES as ALL_COUNTRIES, ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } from "@/lib/countries";
 
 const COUNTRIES = ALL_COUNTRIES.map((c) => ({ code: c.iso, name: c.name }));
 
@@ -66,7 +66,7 @@ function SetupSmsPage() {
     queryFn: async () =>
       (await supabase
         .from("accounts")
-        .select("id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,contact_email,onboarding_status,telnyx_phone_number,monthly_volume_estimate,use_case_description,sample_message,opt_in_description,opt_in_screenshot_url,sms_target_countries,sms_consent_disclosures_confirmed_at")
+        .select("id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,telnyx_phone_number,monthly_volume_estimate,use_case_description,sample_message,opt_in_description,opt_in_screenshot_url,sms_target_countries,sms_consent_disclosures_confirmed_at")
         .maybeSingle()).data,
   });
   const assetsFn = useServerFn(getMySenderAssets);
@@ -160,8 +160,6 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
     const rank = (s: string) => (s === "provisioned" ? 3 : s === "approved" ? 2 : s === "pending" ? 1 : 0);
     if (!prev || rank(r.status) > rank(prev.status)) reqByCountry.set(r.country, r);
   }
-  // US & CA do not support alphanumeric Sender IDs (carrier rule) — shown but disabled.
-  const ALPHA_UNSUPPORTED = new Set(["US", "CA"]);
   const senderCountries = COUNTRIES;
   const existingSender =
     assets.find((asset) => asset.sender_kind === "sender_id")?.phone_number ?? "";
@@ -184,8 +182,8 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
   }
 
   async function save() {
-    if (!senderId.match(/^[A-Z0-9]{3,11}$/)) {
-      toast.error("Sender ID must be 3–11 letters or numbers");
+    if (!senderId.match(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/)) {
+      toast.error("Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter");
       return;
     }
     if (countries.length === 0) {
@@ -222,7 +220,8 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
             onChange={(e) =>
               setSenderId(
                 e.target.value
-                  .replace(/[^A-Za-z0-9]/g, "")
+                  .replace(/[^A-Za-z0-9 ]/g, "")
+                  .replace(/\s+/g, " ")
                   .toUpperCase()
                   .slice(0, 11),
               )
@@ -241,7 +240,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
       {(() => {
         const visible = senderCountries.filter((c) => !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code));
         const statusFor = (code: string) => {
-          const isAlphaUnsupported = ALPHA_UNSUPPORTED.has(code);
+          const isAlphaUnsupported = ALPHA_SENDER_UNSUPPORTED_SET.has(code);
           const usTfAsset = assets.find((a) => a.country_code === "US" && a.sender_kind === "toll_free");
           const usReq = reqByCountry.get("US");
           const ownTfAsset = isAlphaUnsupported
@@ -269,7 +268,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
             <Select
               value=""
               onValueChange={(cc) => {
-                if (ALPHA_UNSUPPORTED.has(cc)) setInfoCountry(cc);
+                if (ALPHA_SENDER_UNSUPPORTED_SET.has(cc)) setInfoCountry(cc);
                 else toggleCountry(cc);
               }}
             >
@@ -752,6 +751,7 @@ type WizardForm = {
   business_reg_number: string;
   website_url: string;
   privacy_policy_url: string;
+  terms_url: string;
   contact_email: string;
   phone: string;
   targetCountries: string[];
@@ -778,6 +778,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
     business_reg_number: account?.business_reg_number ?? "",
     website_url: account?.website_url ?? "",
     privacy_policy_url: account?.privacy_policy_url ?? "",
+    terms_url: account?.terms_url ?? "",
     contact_email: account?.contact_email ?? account?.email ?? "",
     phone: account?.phone ?? "",
     targetCountries: account?.sms_target_countries?.length ? account.sms_target_countries : [],
@@ -798,6 +799,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
         business_reg_number: account.business_reg_number ?? f.business_reg_number,
         website_url: account.website_url ?? f.website_url,
         privacy_policy_url: account.privacy_policy_url ?? f.privacy_policy_url,
+        terms_url: account.terms_url ?? f.terms_url,
         contact_email: account.contact_email ?? account.email ?? f.contact_email,
         phone: account.phone ?? f.phone,
         targetCountries: account.sms_target_countries?.length
@@ -814,7 +816,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
 
   const needsCarrierDetails = form.targetCountries.some((cc) => cc === "US" || cc === "CA");
   const hasSenderIdCountry = form.targetCountries.some((cc) => cc !== "US" && cc !== "CA");
-  const senderIdReady = !hasSenderIdCountry || /^[A-Z0-9]{3,11}$/.test(form.customSenderId);
+  const senderIdReady = !hasSenderIdCountry || /^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/.test(form.customSenderId);
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -842,7 +844,9 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
       business_reg_number: form.business_reg_number,
       website_url: form.website_url,
       privacy_policy_url: form.privacy_policy_url || undefined,
+      terms_url: form.terms_url || undefined,
       contact_email: form.contact_email,
+      phone: form.phone,
     } }),
     onError: (e: Error) => toast.error(e.message),
   });
@@ -947,7 +951,8 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                   setForm({
                     ...form,
                     customSenderId: e.target.value
-                      .replace(/[^A-Za-z0-9]/g, "")
+                      .replace(/[^A-Za-z0-9 ]/g, "")
+                      .replace(/\s+/g, " ")
                       .toUpperCase()
                       .slice(0, 11),
                   })
@@ -956,7 +961,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 maxLength={11}
               />
               <p className="text-xs text-muted-foreground">
-                Use 3–11 letters or numbers. We'll register this sender for the countries you choose.
+                Use 1–11 letters, numbers, or spaces with at least one letter. Telnyx supports UK alphanumeric sender IDs without registration.
               </p>
             </div>
           )}
@@ -981,11 +986,15 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
 
           <Field
             label="Legal business name"
+              required
             v={form.legal_business_name}
             on={(v) => setForm({ ...form, legal_business_name: v })}
           />
           <div className="space-y-1.5">
-            <Label>Business address</Label>
+            <Label className="flex items-center justify-between gap-3">
+              <span>Business address</span>
+              <span className="text-xs italic text-muted-foreground">Required</span>
+            </Label>
             <Textarea
               value={form.business_address}
               onChange={(e) => setForm({ ...form, business_address: e.target.value })}
@@ -996,29 +1005,41 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
           <div className="grid md:grid-cols-2 gap-4">
             <Field
               label="Business registration #"
+              required
               v={form.business_reg_number}
               on={(v) => setForm({ ...form, business_reg_number: v })}
             />
             <Field
               label="Website"
+              required
               v={form.website_url}
               on={(v) => setForm({ ...form, website_url: v })}
               placeholder="https://"
             />
             <Field
               label="Privacy policy URL"
+              required
               v={form.privacy_policy_url}
               on={(v) => setForm({ ...form, privacy_policy_url: v })}
               placeholder="https://"
             />
             <Field
+              label="Terms and conditions URL"
+              required
+              v={form.terms_url}
+              on={(v) => setForm({ ...form, terms_url: v })}
+              placeholder="https://"
+            />
+            <Field
               label="Contact email"
+              required
               v={form.contact_email}
               on={(v) => setForm({ ...form, contact_email: v })}
               type="email"
             />
             <Field
               label="Business phone"
+              required
               v={form.phone}
               on={(v) => setForm({ ...form, phone: v })}
               placeholder="+15551234567"
@@ -1042,7 +1063,10 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>What will you text people about?</Label>
+            <Label className="flex items-center justify-between gap-3">
+              <span>What will you text people about?</span>
+              <span className="text-xs italic text-muted-foreground">Required</span>
+            </Label>
             <Textarea
               rows={3}
               value={form.useCase}
@@ -1052,7 +1076,10 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Sample message a subscriber would receive</Label>
+            <Label className="flex items-center justify-between gap-3">
+              <span>Sample message a subscriber would receive</span>
+              <span className="text-xs italic text-muted-foreground">Required</span>
+            </Label>
             <Textarea
               rows={2}
               value={form.sampleMessage}
@@ -1062,7 +1089,10 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>How do subscribers opt in?</Label>
+            <Label className="flex items-center justify-between gap-3">
+              <span>How do subscribers opt in?</span>
+              <span className="text-xs italic text-muted-foreground">Required</span>
+            </Label>
             <Textarea
               rows={3}
               value={form.optInDescription}
@@ -1086,7 +1116,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                   ) : (
                     <Upload className="size-4" />
                   )}
-                  Upload sign-up form screenshot (optional)
+                  Upload sign-up form screenshot
                 </span>
               </label>
               {form.optInScreenshotPath && (
@@ -1149,7 +1179,12 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 !form.business_address ||
                 !form.business_reg_number ||
                 !form.website_url ||
+                !/^https?:\/\//.test(form.website_url.trim()) ||
+                !/^https:\/\//.test(form.privacy_policy_url.trim()) ||
+                !/^https:\/\//.test(form.terms_url.trim()) ||
                 !form.contact_email ||
+                !/^\+[1-9][0-9]{6,14}$/.test(form.phone.trim()) ||
+                !form.optInScreenshotPath ||
                 saveProfile.isPending
               }
             >
@@ -1221,12 +1256,14 @@ function StepDot({
 
 function Field({
   label,
+  required,
   v,
   on,
   placeholder,
   type,
 }: {
   label: string;
+  required?: boolean;
   v: string;
   on: (v: string) => void;
   placeholder?: string;
@@ -1234,7 +1271,10 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label>{label}</Label>
+      <Label className="flex items-center justify-between gap-3">
+        <span>{label}</span>
+        {required && <span className="text-xs italic text-muted-foreground">Required</span>}
+      </Label>
       <Input value={v} onChange={(e) => on(e.target.value)} placeholder={placeholder} type={type} />
     </div>
   );

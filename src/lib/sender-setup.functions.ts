@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { SetupInput, type SetupSmsPayload } from "./sender-setup.schema";
+import { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } from "./countries";
 
 export const setupSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -19,7 +20,29 @@ export const getMySenderAssets = createServerFn({ method: "GET" })
       .select("id,country_code,sender_kind,phone_number,telnyx_messaging_profile_id,verification_status,rejection_reason,friendly_rejection_reason,telnyx_verification_id,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_phone_number_id")
       .eq("account_id", context.userId)
       .order("country_code", { ascending: true });
-    return data ?? [];
+    const rows = data ?? [];
+    const readySenderIds = rows.filter(
+      (asset) =>
+        asset.sender_kind === "sender_id" &&
+        !ALPHA_SENDER_UNSUPPORTED_SET.has(asset.country_code) &&
+        !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code) &&
+        asset.verification_status !== "verified",
+    );
+    if (readySenderIds.length > 0) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .from("sender_assets")
+        .update({ verification_status: "verified", rejection_reason: null, last_synced_at: new Date().toISOString() })
+        .eq("account_id", context.userId)
+        .in("id", readySenderIds.map((asset) => asset.id));
+    }
+    return rows.map((asset) =>
+      asset.sender_kind === "sender_id" &&
+      !ALPHA_SENDER_UNSUPPORTED_SET.has(asset.country_code) &&
+      !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code)
+        ? { ...asset, verification_status: "verified", rejection_reason: null }
+        : asset,
+    );
   });
 
 export const refreshMyVerificationStatus = createServerFn({ method: "POST" })
@@ -36,7 +59,7 @@ const CustomSenderInput = z.object({
   countries: z.array(z.string().length(2)).min(1),
   senderId: z.preprocess(
     (value) => (typeof value === "string" ? value.trim().toUpperCase() : value),
-    z.string().regex(/^[A-Z0-9]{3,11}$/, "Sender ID must be 3–11 letters or numbers"),
+    z.string().regex(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/, "Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter"),
   ),
 });
 
@@ -47,11 +70,14 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { ensureMessagingProfileForAccount, createAlphanumericSenderId } = await import("./telnyx.server");
-    const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET } = await import("./countries");
+    const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } = await import("./countries");
     const messagingProfileId = await ensureMessagingProfileForAccount(userId);
     const results: Array<{ cc: string; status: string }> = [];
     for (const raw of data.countries) {
       const cc = raw.toUpperCase();
+      if (ALPHA_SENDER_UNSUPPORTED_SET.has(cc)) {
+        throw new Error(`${cc} does not support alphanumeric Sender ID on Telnyx. Use toll-free verification instead.`);
+      }
       const needsReg = ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(cc);
       let status = needsReg ? "submitted" : "verified";
       let alphaSenderId: string | null = null;
@@ -67,7 +93,7 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
         telnyxError = String(e?.message ?? e);
         const telnyxErrorText = telnyxError.toLowerCase();
         const alreadyExists = telnyxErrorText.includes("already") || telnyxErrorText.includes("duplicate");
-        status = alreadyExists ? (needsReg ? "submitted" : "verified") : "requires_registration";
+        status = needsReg ? (alreadyExists ? "submitted" : "requires_registration") : "verified";
       }
       const { data: existing } = await supabaseAdmin
         .from("sender_assets").select("id").eq("account_id", userId).eq("country_code", cc).maybeSingle();
@@ -109,7 +135,7 @@ const SenderRegistrationInput = z.object({
   country: z.string().length(2),
   senderId: z.preprocess(
     (v) => (typeof v === "string" ? v.trim().toUpperCase() : v),
-    z.string().regex(/^[A-Z0-9]{3,11}$/, "Sender ID must be 3–11 letters or numbers"),
+    z.string().regex(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/, "Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter"),
   ),
   businessName: z.string().trim().min(2).max(200).optional(),
   businessWebsite: z.string().trim().url().max(300).optional(),

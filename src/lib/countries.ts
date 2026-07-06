@@ -16,6 +16,11 @@ export const ALPHA_SENDER_REQUIRES_REGISTRATION: readonly string[] = [
 ];
 export const ALPHA_SENDER_REQUIRES_REGISTRATION_SET = new Set(ALPHA_SENDER_REQUIRES_REGISTRATION);
 
+// Telnyx alphanumeric sender IDs cannot deliver to these destinations. These
+// must use a real number sender instead (US/CA toll-free in our platform).
+export const ALPHA_SENDER_UNSUPPORTED: readonly string[] = ["US", "CA", "PR"];
+export const ALPHA_SENDER_UNSUPPORTED_SET = new Set(ALPHA_SENDER_UNSUPPORTED);
+
 export const COUNTRIES: Country[] = [
   { iso: "US", name: "United States", dial: "+1" },
   { iso: "CA", name: "Canada", dial: "+1" },

@@ -12,15 +12,19 @@ import { TOLLFREE_USE_CASES, TOLLFREE_VOLUMES, normalizeUseCase } from "./tollfr
 
 const VOLUME_VALUES = TOLLFREE_VOLUMES;
 const OPT_IN_VALUES = ["VERBAL","WEB_FORM","PAPER_FORM","VIA_TEXT","MOBILE_QR_CODE"] as const;
+const HttpsUrl = (label: string) =>
+  z.string().trim().url(`${label} is required.`).refine((value) => value.startsWith("https://"), {
+    message: `${label} must start with https://`,
+  });
 
 export const TollfreeVerificationInput = z.object({
   legalEntityName: z.string().trim().min(2).max(255),
   businessDba: z.string().trim().max(255).optional(),
   websiteUrl: z.string().trim().url(),
   businessType: z.string().trim().min(2).max(64),
-  businessRegistrationNumber: z.string().trim().max(64).optional().or(z.literal("")),
-  businessRegistrationIdentifier: z.string().trim().max(64).optional().or(z.literal("")),
-  businessRegistrationCountry: z.string().trim().length(2).optional().or(z.literal("")),
+  businessRegistrationNumber: z.string().trim().min(1, "Business registration number is required.").max(64),
+  businessRegistrationIdentifier: z.string().trim().min(1, "Business registration authority is required.").max(64),
+  businessRegistrationCountry: z.string().trim().length(2, "Business registration country is required."),
   contactFirstName: z.string().trim().min(1).max(64),
   contactLastName: z.string().trim().min(1).max(64),
   contactEmail: z.string().trim().email(),
@@ -39,17 +43,17 @@ export const TollfreeVerificationInput = z.object({
     .refine((arr) => arr.every((v) => (TOLLFREE_USE_CASES as readonly string[]).includes(v)), {
       message: "Invalid use-case",
     }),
-  proofOfOptInUrl: z.string().trim().url("Proof of opt-in URL is required (upload a screenshot or paste a public link)."),
+  proofOfOptInUrl: HttpsUrl("Proof of opt-in URL"),
   proofShowsRequiredConsent: z.literal(true),
-  useCaseDescription: z.string().trim().min(40).max(2000),
-  sampleMessage: z.string().trim().min(20).max(1600),
+  useCaseDescription: z.string().trim().min(40).max(500),
+  sampleMessage: z.string().trim().min(20).max(1000),
   notificationEmail: z.string().trim().email(),
-  additionalInformation: z.string().trim().max(2000).optional(),
-  optInConfirmationMessage: z.string().trim().max(1600).optional(),
-  helpMessageSample: z.string().trim().max(1600).optional(),
-  privacyPolicyUrl: z.string().trim().url().optional().or(z.literal("")),
-  termsUrl: z.string().trim().url().optional().or(z.literal("")),
-  optInKeywords: z.string().trim().max(500).optional(),
+  additionalInformation: z.string().trim().min(1, "Additional use-case details are required.").max(500),
+  optInConfirmationMessage: z.string().trim().max(500).optional(),
+  helpMessageSample: z.string().trim().max(500).optional(),
+  privacyPolicyUrl: HttpsUrl("Privacy Policy URL"),
+  termsUrl: HttpsUrl("Terms and Conditions URL"),
+  optInKeywords: z.string().trim().min(1, "Opt-in keywords are required.").max(500),
   containsAgeGatedContent: z.boolean().default(false),
   agreeToTos: z.literal(true),
 });
