@@ -87,7 +87,7 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
         telnyxError = String(e?.message ?? e);
         const telnyxErrorText = telnyxError.toLowerCase();
         const alreadyExists = telnyxErrorText.includes("already") || telnyxErrorText.includes("duplicate");
-        status = alreadyExists ? (needsReg ? "submitted" : "verified") : "requires_registration";
+        status = needsReg ? (alreadyExists ? "submitted" : "requires_registration") : "verified";
       }
       const { data: existing } = await supabaseAdmin
         .from("sender_assets").select("id").eq("account_id", userId).eq("country_code", cc).maybeSingle();

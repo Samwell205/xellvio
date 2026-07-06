@@ -76,6 +76,12 @@ function requireField(value: string | undefined, label: string, max = 500): stri
   return normalized;
 }
 
+function requireHttpsUrl(value: string | undefined, label: string): string {
+  const normalized = requireField(value, label, 500);
+  if (!normalized.startsWith("https://")) throw new Error(`${label} must start with https://`);
+  return normalized;
+}
+
 export type TollfreeSubmitPayload = {
   legalEntityName: string;
   businessDba?: string;
@@ -147,8 +153,8 @@ export async function submitTwilioTollfreeVerification(opts: {
   const useCaseDescription = requireField(p.useCaseDescription, "Use-case summary", 500);
   const additionalInformation = requireField(p.additionalInformation, "Additional use-case details", 500);
   const sampleMessage = requireField(p.sampleMessage, "Sample message", 1000);
-  const privacyPolicyUrl = requireField(p.privacyPolicyUrl, "Privacy Policy URL", 500);
-  const termsUrl = requireField(p.termsUrl, "Terms and Conditions URL", 500);
+  const privacyPolicyUrl = requireHttpsUrl(p.privacyPolicyUrl, "Privacy Policy URL");
+  const termsUrl = requireHttpsUrl(p.termsUrl, "Terms and Conditions URL");
   const optInKeywords = requireField(p.optInKeywords, "Opt-in keywords", 500);
   const businessRegistrationNumber = requireField(p.businessRegistrationNumber, "Business registration number", 500);
   const businessRegistrationType = requireField(p.businessRegistrationIdentifier, "Business registration authority", 500);
@@ -157,6 +163,9 @@ export async function submitTwilioTollfreeVerification(opts: {
     "Business registration country",
     2,
   );
+  if (!/^[A-Z]{2}$/.test(businessRegistrationCountry)) {
+    throw new Error("Business registration country must be a 2-letter country code.");
+  }
 
   const body: Record<string, unknown> = compact({
     additionalInformation,

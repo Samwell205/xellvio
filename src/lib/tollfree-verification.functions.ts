@@ -12,6 +12,10 @@ import { TOLLFREE_USE_CASES, TOLLFREE_VOLUMES, normalizeUseCase } from "./tollfr
 
 const VOLUME_VALUES = TOLLFREE_VOLUMES;
 const OPT_IN_VALUES = ["VERBAL","WEB_FORM","PAPER_FORM","VIA_TEXT","MOBILE_QR_CODE"] as const;
+const HttpsUrl = (label: string) =>
+  z.string().trim().url(`${label} is required.`).refine((value) => value.startsWith("https://"), {
+    message: `${label} must start with https://`,
+  });
 
 export const TollfreeVerificationInput = z.object({
   legalEntityName: z.string().trim().min(2).max(255),
@@ -39,7 +43,7 @@ export const TollfreeVerificationInput = z.object({
     .refine((arr) => arr.every((v) => (TOLLFREE_USE_CASES as readonly string[]).includes(v)), {
       message: "Invalid use-case",
     }),
-  proofOfOptInUrl: z.string().trim().url("Proof of opt-in URL is required (upload a screenshot or paste a public link)."),
+  proofOfOptInUrl: HttpsUrl("Proof of opt-in URL"),
   proofShowsRequiredConsent: z.literal(true),
   useCaseDescription: z.string().trim().min(40).max(500),
   sampleMessage: z.string().trim().min(20).max(1000),
@@ -47,8 +51,8 @@ export const TollfreeVerificationInput = z.object({
   additionalInformation: z.string().trim().min(1, "Additional use-case details are required.").max(500),
   optInConfirmationMessage: z.string().trim().max(500).optional(),
   helpMessageSample: z.string().trim().max(500).optional(),
-  privacyPolicyUrl: z.string().trim().url("Privacy Policy URL is required."),
-  termsUrl: z.string().trim().url("Terms and Conditions URL is required."),
+  privacyPolicyUrl: HttpsUrl("Privacy Policy URL"),
+  termsUrl: HttpsUrl("Terms and Conditions URL"),
   optInKeywords: z.string().trim().min(1, "Opt-in keywords are required.").max(500),
   containsAgeGatedContent: z.boolean().default(false),
   agreeToTos: z.literal(true),
