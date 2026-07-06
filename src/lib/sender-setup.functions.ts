@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { SetupInput, type SetupSmsPayload } from "./sender-setup.schema";
+import { ALPHA_SENDER_REQUIRES_REGISTRATION_SET } from "./countries";
 
 export const setupSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -19,7 +20,26 @@ export const getMySenderAssets = createServerFn({ method: "GET" })
       .select("id,country_code,sender_kind,phone_number,telnyx_messaging_profile_id,verification_status,rejection_reason,friendly_rejection_reason,telnyx_verification_id,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_phone_number_id")
       .eq("account_id", context.userId)
       .order("country_code", { ascending: true });
-    return data ?? [];
+    const rows = data ?? [];
+    const readySenderIds = rows.filter(
+      (asset) =>
+        asset.sender_kind === "sender_id" &&
+        !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code) &&
+        asset.verification_status !== "verified",
+    );
+    if (readySenderIds.length > 0) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin
+        .from("sender_assets")
+        .update({ verification_status: "verified", rejection_reason: null, last_synced_at: new Date().toISOString() })
+        .eq("account_id", context.userId)
+        .in("id", readySenderIds.map((asset) => asset.id));
+    }
+    return rows.map((asset) =>
+      asset.sender_kind === "sender_id" && !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code)
+        ? { ...asset, verification_status: "verified", rejection_reason: null }
+        : asset,
+    );
   });
 
 export const refreshMyVerificationStatus = createServerFn({ method: "POST" })
