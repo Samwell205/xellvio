@@ -226,6 +226,65 @@ function AdminSendersPage() {
           </table>
         </CardContent>
       </Card>
+
+      <Dialog open={grantOpen} onOpenChange={setGrantOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Grant verified toll-free number</DialogTitle>
+            <DialogDescription>
+              Give a tenant a ready-to-send toll-free number. The number is marked verified and the tenant can start sending SMS to the US immediately — no carrier verification required.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Country</Label>
+              <Select value={grantCountry} onValueChange={setGrantCountry}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="US">United States</SelectItem>
+                  <SelectItem value="CA">Canada</SelectItem>
+                  <SelectItem value="PR">Puerto Rico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Tenant</Label>
+              <Input placeholder="Search by email or name…" value={accountSearch} onChange={(e) => setAccountSearch(e.target.value)} />
+              <div className="max-h-40 overflow-y-auto border rounded-md divide-y mt-1">
+                {filteredAccounts.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => setGrantAccountId(a.id)}
+                    className={`w-full text-left px-2 py-1.5 text-xs hover:bg-muted ${grantAccountId === a.id ? "bg-muted" : ""}`}
+                  >
+                    <div className="font-medium">{a.email ?? "—"}</div>
+                    <div className="text-muted-foreground">{a.full_name ?? ""} · {a.id.slice(0, 8)}</div>
+                  </button>
+                ))}
+                {filteredAccounts.length === 0 && (
+                  <div className="p-2 text-xs text-muted-foreground">No tenants match.</div>
+                )}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Phone number (optional)</Label>
+              <Input placeholder="+18005550123 — leave empty to buy a new one on Telnyx" value={grantPhone} onChange={(e) => setGrantPhone(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Leave blank to search Telnyx and provision a new toll-free number automatically.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setGrantOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => grantMut.mutate()}
+              disabled={!grantAccountId || grantMut.isPending}
+            >
+              {grantMut.isPending && <Loader2 className="size-3 mr-1 animate-spin" />}
+              Grant access
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
