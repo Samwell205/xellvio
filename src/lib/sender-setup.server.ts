@@ -246,11 +246,15 @@ export async function syncToollfreeVerifications(_opts: { onlyAccountId?: string
       });
       const next = res.status === "verified" ? "verified" : res.status;
       if (next !== row.verification_status || res.rejectionReason) {
+        const nowIso = new Date().toISOString();
         await supabaseAdmin.from("sender_assets").update({
           verification_status: next,
           rejection_reason: res.rejectionReason,
           friendly_rejection_reason: res.rejectionReason,
-          last_synced_at: new Date().toISOString(),
+          last_synced_at: nowIso,
+          ...(res.status === "in_review" ? { in_review_at: nowIso } : {}),
+          ...(next === "verified" ? { verified_at: nowIso, rejected_at: null } : {}),
+          ...(next === "rejected" ? { rejected_at: nowIso } : {}),
         }).eq("id", row.id);
         updated++;
       } else {
