@@ -34,6 +34,7 @@ export async function wireAssignedTollfreeForTenant(opts: {
     console.warn("[assign-tfn] Telnyx lookup/reassign failed", e);
   }
 
+  const nowIso = new Date().toISOString();
   const row = {
     account_id: opts.accountId,
     country_code: country,
@@ -42,10 +43,12 @@ export async function wireAssignedTollfreeForTenant(opts: {
     telnyx_phone_number_id: phoneId,
     telnyx_messaging_profile_id: messagingProfileId,
     // Provisioning the number does NOT mean the carrier approved toll-free
-    // verification. The tenant must still submit the TF verification wizard
-    // and wait for carrier approval before this asset becomes "verified".
-    verification_status: "pending",
-    last_synced_at: new Date().toISOString(),
+    // verification unless an admin explicitly grants verified access.
+    verification_status: markVerified ? "verified" : "pending",
+    last_synced_at: nowIso,
+    ...(markVerified
+      ? { verified_at: nowIso, rejected_at: null, rejection_reason: null, friendly_rejection_reason: null }
+      : {}),
   } as const;
 
   const { error: upsertErr } = await supabaseAdmin
