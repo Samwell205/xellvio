@@ -7,6 +7,7 @@ import {
   refreshTollfreeVerification,
   submitTollfreeVerification,
   getTollfreeFeeStatus,
+  payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
 import { getTfnMarketplaceOffer, purchaseTfnFromMarketplace } from "@/lib/tfn-marketplace.functions";
 import { supabase } from "@/integrations/supabase/client";
