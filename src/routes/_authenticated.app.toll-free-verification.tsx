@@ -107,7 +107,8 @@ function accountAutofillToForm(a: any | null | undefined): Partial<WizardForm> {
   };
 }
 
-function StatusBadge({ status }: { status: Status | null | undefined }) {
+function StatusBadge({ status, needsUpdate = false }: { status: Status | null | undefined; needsUpdate?: boolean }) {
+  if (needsUpdate) return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white"><AlertCircle className="size-3" />Action requested</Badge>;
   if (!status) return <Badge variant="outline" className="gap-1"><Clock className="size-3" />Not submitted</Badge>;
   if (status === "verified") return <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" />Approved by carrier</Badge>;
   if (status === "rejected") return <Badge variant="destructive" className="gap-1"><X className="size-3" />Rejected</Badge>;
@@ -245,7 +246,7 @@ function TollfreeVerificationPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={status} />
+            <StatusBadge status={status} needsUpdate={needsCarrierUpdate} />
             {(asset?.telnyx_verification_id || asset?.telnyx_phone_number_id) && (
               <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
                 {refreshMut.isPending ? <Loader2 className="size-4 mr-1 animate-spin" /> : <RefreshCw className="size-4 mr-1" />}
