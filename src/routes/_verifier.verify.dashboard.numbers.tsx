@@ -100,6 +100,7 @@ function NumbersPage() {
 
   const activeCount = (rows ?? []).filter((r: any) => r.status !== "sold").length;
   const atCap = activeCount >= 3;
+  const wizardRow = (rows ?? []).find((r: any) => r.id === wizardTfnId) ?? null;
 
   return (
     <div className="space-y-6">
@@ -162,7 +163,9 @@ function NumbersPage() {
                         r.status === "sold" ? "secondary" :
                         r.status === "rejected" ? "destructive" : "outline"
                       }>
-                        {r.status === "assigned" ? "awaiting your submission" : r.status.replace("_", " ")}
+                        {r.rejection_reason && r.status === "pending_verification"
+                          ? "action requested"
+                          : r.status === "assigned" ? "awaiting your submission" : r.status.replace("_", " ")}
                       </Badge>
                       {r.status === "sold" && (
                         <div className="text-xs text-green-400 mt-1">+₦{Number(r.payout_ngn ?? 0).toLocaleString()}</div>
@@ -183,10 +186,19 @@ function NumbersPage() {
                   )}
                   {r.status === "pending_verification" && (
                     <div className="border-t border-slate-800 pt-3 flex items-center justify-between">
-                      <span className="text-xs text-slate-400">Carrier review in progress — updates automatically.</span>
-                      <Button size="sm" variant="outline" disabled={refreshMut.isPending} onClick={() => refreshMut.mutate(r.id)}>
-                        <RefreshCw className="size-3 mr-1" /> Refresh
-                      </Button>
+                      <span className="text-xs text-slate-400">
+                        {r.rejection_reason ? "Carrier requested changes — fix and resubmit." : "Carrier review in progress — updates automatically."}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {r.rejection_reason && (
+                          <Button size="sm" onClick={() => setWizardTfnId(r.id)}>
+                            Fix &amp; resubmit
+                          </Button>
+                        )}
+                        <Button size="sm" variant="outline" disabled={refreshMut.isPending} onClick={() => refreshMut.mutate(r.id)}>
+                          <RefreshCw className="size-3 mr-1" /> Refresh
+                        </Button>
+                      </div>
                     </div>
                   )}
                   {r.status === "rejected" && (
@@ -211,9 +223,10 @@ function NumbersPage() {
           </DialogHeader>
           {wizardTfnId && (
             <TollfreeWizard
+              initial={parseWizardInitial(wizardRow?.notes)}
               submitting={submitAssignedMut.isPending}
               onClose={() => setWizardTfnId(null)}
-              submitLabel="Submit for verification"
+              submitLabel={wizardRow?.telnyx_verification_id ? "Resubmit requested changes" : "Submit for verification"}
               onSubmit={async (form: WizardForm) => {
                 await submitAssignedMut.mutateAsync({
                   id: wizardTfnId,
@@ -227,6 +240,16 @@ function NumbersPage() {
       </Dialog>
     </div>
   );
+}
+
+function parseWizardInitial(notes: string | null | undefined): Partial<WizardForm> {
+  if (!notes) return {};
+  try {
+    const parsed = JSON.parse(notes);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
 }
 
 function StatusTimeline({ row }: { row: any }) {
