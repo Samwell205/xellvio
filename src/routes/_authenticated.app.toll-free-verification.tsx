@@ -421,3 +421,60 @@ function MarketplaceBuyCard() {
     </Card>
   );
 }
+
+function PayFeeGate({ fee, balance }: { fee: number; balance: number }) {
+  const qc = useQueryClient();
+  const payFn = useServerFn(payTollfreeFee);
+  const pay = useMutation({
+    mutationFn: () => payFn(),
+    onSuccess: () => {
+      toast.success(`$${fee} setup fee paid. You can now start your registration.`);
+      qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
+      qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Payment failed"),
+  });
+  const insufficient = balance < fee;
+
+  return (
+    <Card className="border-primary/40">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldCheck className="size-5 text-primary" />
+          Pay the ${fee} one-time setup fee to start
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Toll-free verification requires a one-time <strong>${fee}</strong> setup fee. It covers the toll-free number rental and carrier verification. Once paid you can submit — and resubmit as many times as needed if the carrier asks for changes — at no extra cost.
+        </p>
+        <div className="flex flex-wrap items-center gap-4 rounded-md border bg-muted/30 p-3 text-sm">
+          <div>
+            <div className="text-xs text-muted-foreground">Setup fee</div>
+            <div className="font-semibold">${fee.toFixed(2)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Your credit balance</div>
+            <div className={`font-semibold ${insufficient ? "text-destructive" : ""}`}>${balance.toFixed(2)}</div>
+          </div>
+          <div className="ml-auto flex gap-2">
+            {insufficient && (
+              <Button asChild variant="outline">
+                <Link to="/app/billing">Top up credits</Link>
+              </Button>
+            )}
+            <Button disabled={insufficient || pay.isPending} onClick={() => pay.mutate()}>
+              {pay.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
+              Pay ${fee} and start registration
+            </Button>
+          </div>
+        </div>
+        {insufficient && (
+          <p className="text-xs text-muted-foreground">
+            Your balance is below ${fee}. Top up your credit balance, then come back to this page to pay and start the wizard.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
