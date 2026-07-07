@@ -260,6 +260,7 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
     await supabaseAdmin.from("sender_assets").update({
       verification_status: result.status === "verified" ? "verified" : result.status,
       rejection_reason: result.rejectionReason,
+      friendly_rejection_reason: result.rejectionReason,
       last_synced_at: new Date().toISOString(),
     }).eq("id", asset.id);
     return { ok: true, status: result.status };
