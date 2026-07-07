@@ -138,7 +138,7 @@ function TollfreeVerificationPage() {
     queryFn: () => load(),
     refetchInterval: (q) => {
       const s = (q.state.data as any)?.asset?.verification_status as Status | null | undefined;
-      if (s === "submitted" || s === "in_review") return 30_000;
+      if (s === "submitted" || s === "in_review") return 15_000;
       return false;
     },
     refetchIntervalInBackground: false,
