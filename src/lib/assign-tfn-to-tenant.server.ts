@@ -74,6 +74,9 @@ export async function wireAssignedTollfreeForTenant(opts: {
     telnyx_number_id: phoneId,
     telnyx_messaging_profile_id: messagingProfileId,
     onboarding_status: "active",
+    ...(markVerified
+      ? { tollfree_setup_fee_due_cents: 0, tollfree_setup_fee_paid_at: nowIso }
+      : {}),
   }).eq("id", opts.accountId);
 
   return { telnyx_phone_number_id: phoneId, telnyx_messaging_profile_id: messagingProfileId };
