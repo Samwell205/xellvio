@@ -269,15 +269,22 @@ function TollfreeVerificationPage() {
                 </div>
               </div>
             </div>
-            {status === "rejected" && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
-                <div className="flex items-center gap-2 font-medium text-destructive">
+            {(asset.friendly_rejection_reason || asset.rejection_reason) && status !== "verified" && (
+              <div className={`rounded-md border p-3 text-sm ${status === "rejected" ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
+                <div className={`flex items-center gap-2 font-medium ${status === "rejected" ? "text-destructive" : "text-amber-600"}`}>
                   <AlertCircle className="size-4" />
-                  {localSubmissionFailure ? "Submission failed — retry available" : "Why it was rejected"}
+                  {status === "rejected"
+                    ? (localSubmissionFailure ? "Submission failed — retry available" : "Why it was rejected")
+                    : "Carrier is requesting a change"}
                 </div>
                 <div className="mt-1 text-foreground">
-                  {asset.friendly_rejection_reason ?? asset.rejection_reason ?? "No reason provided."}
+                  {asset.friendly_rejection_reason ?? asset.rejection_reason}
                 </div>
+                {status !== "rejected" && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Update the affected fields below and click <strong>Resubmit</strong>. The carrier picks up the change automatically.
+                  </div>
+                )}
               </div>
             )}
             {status === "verified" && (
