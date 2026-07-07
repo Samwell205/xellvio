@@ -35,6 +35,20 @@ function AdminSendersPage() {
   const refreshFn = useServerFn(adminRefreshSender);
   const markFn = useServerFn(adminMarkSenderVerified);
   const deleteFn = useServerFn(adminDeleteSender);
+  const grantFn = useServerFn(adminGrantVerifiedTollfree);
+  const listAccountsFn = useServerFn(adminListAccountsLite);
+
+  const [grantOpen, setGrantOpen] = useState(false);
+  const [grantAccountId, setGrantAccountId] = useState("");
+  const [grantPhone, setGrantPhone] = useState("");
+  const [grantCountry, setGrantCountry] = useState("US");
+  const [accountSearch, setAccountSearch] = useState("");
+
+  const { data: accounts } = useQuery({
+    queryKey: ["admin-accounts-lite"],
+    queryFn: () => listAccountsFn(),
+    enabled: grantOpen,
+  });
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<string>("all");
