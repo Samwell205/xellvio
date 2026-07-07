@@ -249,6 +249,7 @@ export async function syncToollfreeVerifications(_opts: { onlyAccountId?: string
         await supabaseAdmin.from("sender_assets").update({
           verification_status: next,
           rejection_reason: res.rejectionReason,
+          friendly_rejection_reason: res.rejectionReason,
           last_synced_at: new Date().toISOString(),
         }).eq("id", row.id);
         updated++;
