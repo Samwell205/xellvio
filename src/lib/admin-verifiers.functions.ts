@@ -432,6 +432,8 @@ export const adminAssignCarrierNumberToAccount = createServerFn({ method: "POST"
       accountId: data.account_id,
       phoneNumber: data.phone_number,
       countryCode: data.country,
+      // Verifier-sourced TFNs are already carrier-verified, so the tenant can send immediately.
+      markVerified: true,
     });
     return { ok: true };
   });
