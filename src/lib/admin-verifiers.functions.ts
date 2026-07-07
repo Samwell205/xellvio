@@ -165,6 +165,8 @@ export const adminAssignTfnToAccount = createServerFn({ method: "POST" })
       accountId: data.account_id,
       phoneNumber: tfn.phone_number,
       countryCode: tfn.country,
+      // Verifier-verified TFN: ready to send immediately, no carrier review.
+      markVerified: true,
     });
 
 
