@@ -536,12 +536,12 @@ function BusinessInfoStep({ form, update }: StepProps) {
           <Input value={form.websiteUrl} onChange={(e) => update("websiteUrl", e.target.value)} placeholder="https://yourcompany.com" />
         </Field>
       </Two>
-      {form.businessType && (
+      {form.businessType && form.businessType !== "Sole Proprietor" && (
         <Three>
-          <Field label="Registration number" required>
+          <Field label="Registration number (optional)">
             <Input value={form.businessRegistrationNumber} onChange={(e) => update("businessRegistrationNumber", e.target.value)} placeholder="e.g. 12-3456789" />
           </Field>
-          <Field label="Registration authority" required>
+          <Field label="Registration authority (optional)">
             <Select value={form.businessRegistrationIdentifier} onValueChange={(v) => update("businessRegistrationIdentifier", v)}>
               <SelectTrigger><SelectValue placeholder="Select authority" /></SelectTrigger>
               <SelectContent>
@@ -549,7 +549,7 @@ function BusinessInfoStep({ form, update }: StepProps) {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Registration country" required>
+          <Field label="Registration country (optional)">
             <Select value={form.businessRegistrationCountry} onValueChange={(v) => update("businessRegistrationCountry", v)}>
               <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
               <SelectContent>
