@@ -303,32 +303,39 @@ function TollfreeVerificationPage() {
         </div>
       )}
 
-      <TollfreeWizard
-        key={submissionStarted ? "locked" : "editable"}
-        initial={initialForm}
-        disabled={isLocked}
-        submitting={submitMut.isPending}
-        reservedNumber={asset?.phone_number ?? null}
-        verificationStatus={status ?? rawStatus ?? null}
-        feeAmount={feeQuery.data?.fee ?? 5}
-        creditBalance={feeQuery.data?.balance ?? 0}
-        feePaid={feePaid}
-        submitLabel={
-          status === "rejected"
-            ? "Resubmit for verification"
-            : hasReservedNumber
-              ? "Continue verification with reserved number"
-              : "Submit registration"
-        }
-        onSubmit={async (form) => { await submitMut.mutateAsync({ ...form, agreeToTos: true }); }}
-        helperBanner={
-          !isLocked ? (
-            <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              <strong className="text-foreground">${feeQuery.data?.fee ?? 5} one-time setup.</strong> Charged from credits when you submit. It covers the toll-free number and carrier verification; resubmissions are free.
-            </div>
-          ) : null
-        }
-      />
+      {!feePaid && !submissionStarted ? (
+        <PayFeeGate
+          fee={feeQuery.data?.fee ?? 5}
+          balance={feeQuery.data?.balance ?? 0}
+        />
+      ) : (
+        <TollfreeWizard
+          key={submissionStarted ? "locked" : "editable"}
+          initial={initialForm}
+          disabled={isLocked}
+          submitting={submitMut.isPending}
+          reservedNumber={asset?.phone_number ?? null}
+          verificationStatus={status ?? rawStatus ?? null}
+          feeAmount={feeQuery.data?.fee ?? 5}
+          creditBalance={feeQuery.data?.balance ?? 0}
+          feePaid={feePaid}
+          submitLabel={
+            status === "rejected"
+              ? "Resubmit for verification"
+              : hasReservedNumber
+                ? "Continue verification with reserved number"
+                : "Submit registration"
+          }
+          onSubmit={async (form) => { await submitMut.mutateAsync({ ...form, agreeToTos: true }); }}
+          helperBanner={
+            !isLocked ? (
+              <div className="rounded-md border bg-emerald-500/10 border-emerald-500/40 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
+                <strong>${feeQuery.data?.fee ?? 5} setup fee paid.</strong> You can submit and resubmit this verification as many times as needed at no extra cost.
+              </div>
+            ) : null
+          }
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -342,7 +349,7 @@ function TollfreeVerificationPage() {
             Telnyx blocks US toll-free orders on accounts that use a freemail address or have not reached the required account level. That is why the direct portal order failed.
           </p>
           <p>
-            Your tenants should not buy inside Telnyx. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits — if the balance is $0, submission still goes through and the fee is collected automatically from the next top-up.
+            Your tenants should not buy inside Telnyx. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once, before registration starts.
           </p>
         </CardContent>
       </Card>
