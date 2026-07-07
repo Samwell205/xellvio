@@ -123,9 +123,14 @@ function AdminSendersPage() {
           <h1 className="text-xl font-semibold flex items-center gap-2"><Radio className="size-5 text-primary" /> Tenant senders</h1>
           <p className="text-sm text-muted-foreground">Every sender ID, toll-free, and local number across all tenants.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => qc.invalidateQueries({ queryKey: ["admin-senders"] })}>
-          <RefreshCw className="size-4 mr-1" /> Reload
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setGrantOpen(true)}>
+            <Gift className="size-4 mr-1" /> Grant verified toll-free
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => qc.invalidateQueries({ queryKey: ["admin-senders"] })}>
+            <RefreshCw className="size-4 mr-1" /> Reload
+          </Button>
+        </div>
       </div>
 
       <Card>
