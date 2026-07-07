@@ -11,7 +11,10 @@ function apiKey(): string {
 }
 
 export function publicBaseUrl(): string {
-  return (process.env.PUBLIC_BASE_URL ?? "https://xellvio.com").replace(/\/$/, "");
+  // Must be the canonical origin that does NOT redirect. Telnyx does not
+  // follow 3xx responses on webhook POSTs, so pointing at the apex domain
+  // (which 307-redirects to www) silently drops every inbound event.
+  return (process.env.PUBLIC_BASE_URL ?? "https://www.xellvio.com").replace(/\/$/, "");
 }
 
 export function statusWebhookUrl(): string {
