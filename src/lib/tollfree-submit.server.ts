@@ -187,16 +187,10 @@ export async function submitTwilioTollfreeVerification(opts: {
   const privacyPolicyUrl = requireHttpsUrl(p.privacyPolicyUrl, "Privacy Policy URL");
   const termsUrl = requireHttpsUrl(p.termsUrl, "Terms and Conditions URL");
   const optInKeywords = requireField(p.optInKeywords, "Opt-in keywords", 500);
-  const businessRegistrationNumber = requireField(p.businessRegistrationNumber, "Business registration number", 500);
-  const businessRegistrationType = requireField(p.businessRegistrationIdentifier, "Business registration authority", 500);
-  const businessRegistrationCountry = requireField(
-    (p.businessRegistrationCountry || p.businessCountry || "").toUpperCase(),
-    "Business registration country",
-    2,
-  );
-  if (!/^[A-Z]{2}$/.test(businessRegistrationCountry)) {
-    throw new Error("Business registration country must be a 2-letter country code.");
-  }
+  const businessRegistrationNumber = (p.businessRegistrationNumber ?? "").trim() || undefined;
+  const businessRegistrationType = (p.businessRegistrationIdentifier ?? "").trim() || undefined;
+  const rawRegCountry = (p.businessRegistrationCountry || "").toUpperCase().trim();
+  const businessRegistrationCountry = /^[A-Z]{2}$/.test(rawRegCountry) ? rawRegCountry : undefined;
   const businessCountry = (p.businessCountry || "US").toUpperCase();
 
   const body: Record<string, unknown> = compact({
