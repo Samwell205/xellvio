@@ -107,7 +107,8 @@ function accountAutofillToForm(a: any | null | undefined): Partial<WizardForm> {
   };
 }
 
-function StatusBadge({ status }: { status: Status | null | undefined }) {
+function StatusBadge({ status, needsUpdate = false }: { status: Status | null | undefined; needsUpdate?: boolean }) {
+  if (needsUpdate) return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white"><AlertCircle className="size-3" />Action requested</Badge>;
   if (!status) return <Badge variant="outline" className="gap-1"><Clock className="size-3" />Not submitted</Badge>;
   if (status === "verified") return <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" />Approved by carrier</Badge>;
   if (status === "rejected") return <Badge variant="destructive" className="gap-1"><X className="size-3" />Rejected</Badge>;
@@ -154,7 +155,9 @@ function TollfreeVerificationPage() {
   const submissionStarted = !!asset?.telnyx_verification_id;
   const hasReservedNumber = !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
   const localSubmissionFailure = status === "rejected" && !asset?.telnyx_verification_id;
-  const isLocked = status === "submitted" || status === "in_review" || status === "verified";
+  const carrierFeedback = asset?.friendly_rejection_reason || asset?.rejection_reason;
+  const needsCarrierUpdate = !!carrierFeedback && status !== "verified";
+  const isLocked = status === "verified" || ((status === "submitted" || status === "in_review") && !needsCarrierUpdate);
 
   const accountAutofill = useQuery({
     queryKey: ["tollfree-autofill-account"],
@@ -199,7 +202,7 @@ function TollfreeVerificationPage() {
       refresh({ data: undefined as any })
         .then(() => qc.invalidateQueries({ queryKey: ["tollfree-verification"] }))
         .catch(() => {});
-    }, 60_000);
+    }, 15_000);
     return () => clearInterval(id);
   }, [status, asset?.telnyx_verification_id, refresh, qc]);
 
@@ -243,7 +246,7 @@ function TollfreeVerificationPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <StatusBadge status={status} />
+            <StatusBadge status={status} needsUpdate={needsCarrierUpdate} />
             {(asset?.telnyx_verification_id || asset?.telnyx_phone_number_id) && (
               <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
                 {refreshMut.isPending ? <Loader2 className="size-4 mr-1 animate-spin" /> : <RefreshCw className="size-4 mr-1" />}
@@ -270,7 +273,7 @@ function TollfreeVerificationPage() {
                 </div>
               </div>
             </div>
-            {(asset.friendly_rejection_reason || asset.rejection_reason) && status !== "verified" && (
+            {carrierFeedback && status !== "verified" && (
               <div className={`rounded-md border p-3 text-sm ${status === "rejected" ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
                 <div className={`flex items-center gap-2 font-medium ${status === "rejected" ? "text-destructive" : "text-amber-600"}`}>
                   <AlertCircle className="size-4" />
@@ -279,7 +282,7 @@ function TollfreeVerificationPage() {
                     : "Carrier is requesting a change"}
                 </div>
                 <div className="mt-1 text-foreground">
-                  {asset.friendly_rejection_reason ?? asset.rejection_reason}
+                  {carrierFeedback}
                 </div>
                 {status !== "rejected" && (
                   <div className="mt-2 text-xs text-muted-foreground">
@@ -321,7 +324,9 @@ function TollfreeVerificationPage() {
           creditBalance={feeQuery.data?.balance ?? 0}
           feePaid={feePaid}
           submitLabel={
-            status === "rejected"
+            needsCarrierUpdate
+              ? "Resubmit requested changes"
+              : status === "rejected"
               ? "Resubmit for verification"
               : hasReservedNumber
                 ? "Continue verification with reserved number"

@@ -237,7 +237,12 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       telnyx_verification_id: result.verificationSid,
       verification_payload: data as any,
       rejection_reason: result.rejectionReason,
+      friendly_rejection_reason: result.rejectionReason,
       submitted_at: new Date().toISOString(),
+      last_synced_at: new Date().toISOString(),
+      ...(result.status === "in_review" ? { in_review_at: new Date().toISOString() } : {}),
+      ...(result.status === "verified" ? { verified_at: new Date().toISOString(), rejected_at: null } : {}),
+      ...(result.status === "rejected" ? { rejected_at: new Date().toISOString() } : {}),
     }).eq("id", asset.id);
 
     return { ok: true, verificationSid: result.verificationSid, status: result.status, friendlyRejectionReason: result.rejectionReason ?? null };
@@ -262,8 +267,11 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
       rejection_reason: result.rejectionReason,
       friendly_rejection_reason: result.rejectionReason,
       last_synced_at: new Date().toISOString(),
+      ...(result.status === "in_review" ? { in_review_at: new Date().toISOString() } : {}),
+      ...(result.status === "verified" ? { verified_at: new Date().toISOString(), rejected_at: null } : {}),
+      ...(result.status === "rejected" ? { rejected_at: new Date().toISOString() } : {}),
     }).eq("id", asset.id);
-    return { ok: true, status: result.status };
+    return { ok: true, status: result.status, friendlyRejectionReason: result.rejectionReason ?? null };
   });
 
 export const getTollfreeFeeStatus = createServerFn({ method: "GET" })

@@ -333,7 +333,7 @@ export const listMyTfns = createServerFn({ method: "GET" })
     if (!verifier) return [];
     const { data } = await context.supabase
       .from("verifier_tfns")
-      .select("id,phone_number,country,status,rejection_reason,sold_at,payout_ngn,created_at,submitted_at,in_review_at,verified_at,rejected_at,telnyx_verification_id")
+      .select("id,phone_number,country,status,rejection_reason,sold_at,payout_ngn,created_at,submitted_at,in_review_at,verified_at,rejected_at,telnyx_verification_id,notes")
       .eq("verifier_id", verifier.id)
       .order("created_at", { ascending: false });
     return data ?? [];
@@ -457,13 +457,13 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     if (!verifier) throw new Error("Complete your verifier profile first");
     const { data: row, error } = await supabaseAdmin
       .from("verifier_tfns")
-      .select("id,telnyx_number_id,telnyx_verification_id,phone_number,status")
+      .select("id,telnyx_number_id,telnyx_verification_id,phone_number,status,rejection_reason")
       .eq("id", data.id)
       .eq("verifier_id", verifier.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Number not found");
-    if (row.status !== "assigned" && row.status !== "rejected") {
+    if (row.status !== "assigned" && row.status !== "rejected" && row.status !== "pending_verification") {
       throw new Error("This number is no longer awaiting submission");
     }
 
@@ -510,6 +510,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
       telnyx_verification_id: twilioVerificationSid,
       rejection_reason: rejectionReason,
       submitted_at: nowIso,
+      ...(carrierStatus === "in_review" ? { in_review_at: nowIso } : {}),
       ...(dbStatus === "verified" ? { verified_at: nowIso } : {}),
       ...(dbStatus === "rejected" ? { rejected_at: nowIso } : {}),
     };

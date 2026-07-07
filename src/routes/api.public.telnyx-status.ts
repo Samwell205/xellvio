@@ -14,6 +14,23 @@ import { verify as verifyEd25519 } from "crypto";
 const STOP_WORDS = ["STOP", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "STOPALL"];
 const RESUB_WORDS = ["START", "UNSTOP", "YES"];
 
+function mapVerificationStatus(raw: string | null | undefined): "submitted" | "in_review" | "verified" | "rejected" {
+  const value = (raw ?? "").toLowerCase().replace(/[_-]+/g, " ").trim();
+  if (value.includes("verified") || value.includes("approved")) return "verified";
+  if (value.includes("rejected") || value.includes("denied") || value.includes("cancelled") || value.includes("canceled")) return "rejected";
+  if (value.includes("review") || value.includes("progress") || value.includes("pending") || value.includes("waiting")) return "in_review";
+  return "submitted";
+}
+
+function pickText(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const normalized = value.trim();
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
 function verifyTelnyxSignature(rawBody: string, signature: string | null, timestamp: string | null, publicKeyBase64: string): boolean {
   if (!signature || !timestamp) return false;
   try {
@@ -136,6 +153,57 @@ async function handleStatus(payload: any) {
     .insert({ message_id: msg.id, type: `status:${status}`, payload });
 }
 
+async function handleTollfreeVerification(payload: any): Promise<boolean> {
+  const evtType: string = payload?.data?.event_type ?? "";
+  const p = payload?.data?.payload ?? payload?.data ?? {};
+  const isVerificationEvent =
+    evtType.toLowerCase().includes("verification") ||
+    typeof p?.verificationStatus === "string" ||
+    Array.isArray(p?.phoneNumbers);
+  if (!isVerificationEvent) return false;
+
+  const verificationId: string | null = pickText(p?.id, p?.verification_id, p?.verificationSid);
+  if (!verificationId) return true;
+
+  const rawStatus = pickText(p?.verificationStatus, p?.verification_status, p?.status, p?.requestStatus, p?.request_status);
+  const reason = pickText(
+    p?.reason,
+    p?.rejectionReason,
+    p?.rejection_reason,
+    p?.statusReason,
+    p?.status_reason,
+    p?.customerMessage,
+    p?.customer_message,
+  );
+  const status = mapVerificationStatus(rawStatus);
+  const nowIso = new Date().toISOString();
+  const assetPatch: any = {
+    verification_status: status,
+    rejection_reason: reason,
+    friendly_rejection_reason: reason,
+    last_synced_at: nowIso,
+  };
+  if (status === "in_review") assetPatch.in_review_at = nowIso;
+  if (status === "verified") {
+    assetPatch.verified_at = nowIso;
+    assetPatch.rejected_at = null;
+  }
+  if (status === "rejected") assetPatch.rejected_at = nowIso;
+
+  const verifierStatus = status === "verified" ? "verified" : status === "rejected" ? "rejected" : "pending_verification";
+  const verifierPatch: any = { status: verifierStatus, rejection_reason: reason };
+  if (status === "in_review") verifierPatch.in_review_at = nowIso;
+  if (verifierStatus === "verified") verifierPatch.verified_at = nowIso;
+  if (verifierStatus === "rejected") verifierPatch.rejected_at = nowIso;
+
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await Promise.all([
+    supabaseAdmin.from("sender_assets").update(assetPatch).eq("telnyx_verification_id", verificationId),
+    supabaseAdmin.from("verifier_tfns").update(verifierPatch).eq("telnyx_verification_id", verificationId),
+  ]);
+  return true;
+}
+
 export const Route = createFileRoute("/api/public/telnyx-status")({
   server: {
     handlers: {
@@ -164,6 +232,8 @@ export const Route = createFileRoute("/api/public/telnyx-status")({
         try {
           if (evtType === "message.received") {
             await handleInbound(payload);
+          } else if (await handleTollfreeVerification(payload)) {
+            // Toll-free verification status/reason was saved above.
           } else {
             await handleStatus(payload);
           }
