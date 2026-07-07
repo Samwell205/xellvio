@@ -7,8 +7,10 @@ export async function wireAssignedTollfreeForTenant(opts: {
   accountId: string;
   phoneNumber: string;
   countryCode?: string;
+  markVerified?: boolean;
 }): Promise<{ telnyx_phone_number_id: string | null; telnyx_messaging_profile_id: string | null }> {
   const country = (opts.countryCode ?? "US").toUpperCase();
+  const markVerified = opts.markVerified === true;
   if (!process.env.TELNYX_API_KEY) throw new Error("TELNYX_API_KEY is not configured");
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -32,6 +34,7 @@ export async function wireAssignedTollfreeForTenant(opts: {
     console.warn("[assign-tfn] Telnyx lookup/reassign failed", e);
   }
 
+  const nowIso = new Date().toISOString();
   const row = {
     account_id: opts.accountId,
     country_code: country,
@@ -40,10 +43,12 @@ export async function wireAssignedTollfreeForTenant(opts: {
     telnyx_phone_number_id: phoneId,
     telnyx_messaging_profile_id: messagingProfileId,
     // Provisioning the number does NOT mean the carrier approved toll-free
-    // verification. The tenant must still submit the TF verification wizard
-    // and wait for carrier approval before this asset becomes "verified".
-    verification_status: "pending",
-    last_synced_at: new Date().toISOString(),
+    // verification unless an admin explicitly grants verified access.
+    verification_status: markVerified ? "verified" : "pending",
+    last_synced_at: nowIso,
+    ...(markVerified
+      ? { verified_at: nowIso, rejected_at: null, rejection_reason: null, friendly_rejection_reason: null }
+      : {}),
   } as const;
 
   const { error: upsertErr } = await supabaseAdmin
@@ -69,6 +74,9 @@ export async function wireAssignedTollfreeForTenant(opts: {
     telnyx_number_id: phoneId,
     telnyx_messaging_profile_id: messagingProfileId,
     onboarding_status: "active",
+    ...(markVerified
+      ? { tollfree_setup_fee_due_cents: 0, tollfree_setup_fee_paid_at: nowIso }
+      : {}),
   }).eq("id", opts.accountId);
 
   return { telnyx_phone_number_id: phoneId, telnyx_messaging_profile_id: messagingProfileId };

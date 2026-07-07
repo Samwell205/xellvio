@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Check, Trash2, Radio } from "lucide-react";
+import { Loader2, RefreshCw, Check, Trash2, Radio, Gift } from "lucide-react";
 import {
-  listAllSenders, adminRefreshSender, adminMarkSenderVerified, adminDeleteSender,
+  listAllSenders, adminRefreshSender, adminMarkSenderVerified, adminDeleteSender, adminGrantVerifiedTollfree,
 } from "@/lib/admin-senders.functions";
+import { adminListAccountsLite } from "@/lib/admin-verifiers.functions";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/admin/senders")({
   component: AdminSendersPage,
@@ -32,6 +35,20 @@ function AdminSendersPage() {
   const refreshFn = useServerFn(adminRefreshSender);
   const markFn = useServerFn(adminMarkSenderVerified);
   const deleteFn = useServerFn(adminDeleteSender);
+  const grantFn = useServerFn(adminGrantVerifiedTollfree);
+  const listAccountsFn = useServerFn(adminListAccountsLite);
+
+  const [grantOpen, setGrantOpen] = useState(false);
+  const [grantAccountId, setGrantAccountId] = useState("");
+  const [grantPhone, setGrantPhone] = useState("");
+  const [grantCountry, setGrantCountry] = useState("US");
+  const [accountSearch, setAccountSearch] = useState("");
+
+  const { data: accounts } = useQuery({
+    queryKey: ["admin-accounts-lite"],
+    queryFn: () => listAccountsFn(),
+    enabled: grantOpen,
+  });
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<string>("all");
@@ -58,6 +75,29 @@ function AdminSendersPage() {
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-senders"] }); },
     onError: (e: any) => toast.error(e.message),
   });
+  const grantMut = useMutation({
+    mutationFn: () => grantFn({ data: {
+      account_id: grantAccountId,
+      country: grantCountry,
+      phone_number: grantPhone.trim() || undefined,
+    } }),
+    onSuccess: (r: any) => {
+      toast.success(`Granted ${r.phone_number} — tenant can send immediately.`);
+      qc.invalidateQueries({ queryKey: ["admin-senders"] });
+      setGrantOpen(false); setGrantAccountId(""); setGrantPhone(""); setGrantCountry("US");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const filteredAccounts = useMemo(() => {
+    const q = accountSearch.trim().toLowerCase();
+    const list = (accounts ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>;
+    if (!q) return list.slice(0, 50);
+    return list.filter(a =>
+      (a.email ?? "").toLowerCase().includes(q) ||
+      (a.full_name ?? "").toLowerCase().includes(q),
+    ).slice(0, 50);
+  }, [accounts, accountSearch]);
 
   const rows = useMemo(() => {
     const all = (data ?? []) as any[];
@@ -83,9 +123,14 @@ function AdminSendersPage() {
           <h1 className="text-xl font-semibold flex items-center gap-2"><Radio className="size-5 text-primary" /> Tenant senders</h1>
           <p className="text-sm text-muted-foreground">Every sender ID, toll-free, and local number across all tenants.</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => qc.invalidateQueries({ queryKey: ["admin-senders"] })}>
-          <RefreshCw className="size-4 mr-1" /> Reload
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => setGrantOpen(true)}>
+            <Gift className="size-4 mr-1" /> Grant verified toll-free
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => qc.invalidateQueries({ queryKey: ["admin-senders"] })}>
+            <RefreshCw className="size-4 mr-1" /> Reload
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -181,6 +226,65 @@ function AdminSendersPage() {
           </table>
         </CardContent>
       </Card>
+
+      <Dialog open={grantOpen} onOpenChange={setGrantOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Grant verified toll-free number</DialogTitle>
+            <DialogDescription>
+              Give a tenant a ready-to-send toll-free number. The number is marked verified and the tenant can start sending SMS to the US immediately — no carrier verification required.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Country</Label>
+              <Select value={grantCountry} onValueChange={setGrantCountry}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="US">United States</SelectItem>
+                  <SelectItem value="CA">Canada</SelectItem>
+                  <SelectItem value="PR">Puerto Rico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Tenant</Label>
+              <Input placeholder="Search by email or name…" value={accountSearch} onChange={(e) => setAccountSearch(e.target.value)} />
+              <div className="max-h-40 overflow-y-auto border rounded-md divide-y mt-1">
+                {filteredAccounts.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => setGrantAccountId(a.id)}
+                    className={`w-full text-left px-2 py-1.5 text-xs hover:bg-muted ${grantAccountId === a.id ? "bg-muted" : ""}`}
+                  >
+                    <div className="font-medium">{a.email ?? "—"}</div>
+                    <div className="text-muted-foreground">{a.full_name ?? ""} · {a.id.slice(0, 8)}</div>
+                  </button>
+                ))}
+                {filteredAccounts.length === 0 && (
+                  <div className="p-2 text-xs text-muted-foreground">No tenants match.</div>
+                )}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Phone number (optional)</Label>
+              <Input placeholder="+18005550123 — leave empty to buy a new one on Telnyx" value={grantPhone} onChange={(e) => setGrantPhone(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Leave blank to search Telnyx and provision a new toll-free number automatically.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setGrantOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => grantMut.mutate()}
+              disabled={!grantAccountId || grantMut.isPending}
+            >
+              {grantMut.isPending && <Loader2 className="size-3 mr-1 animate-spin" />}
+              Grant access
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
