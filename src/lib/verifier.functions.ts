@@ -333,7 +333,7 @@ export const listMyTfns = createServerFn({ method: "GET" })
     if (!verifier) return [];
     const { data } = await context.supabase
       .from("verifier_tfns")
-      .select("id,phone_number,country,status,rejection_reason,sold_at,payout_ngn,created_at,submitted_at,in_review_at,verified_at,rejected_at,telnyx_verification_id")
+      .select("id,phone_number,country,status,rejection_reason,sold_at,payout_ngn,created_at,submitted_at,in_review_at,verified_at,rejected_at,telnyx_verification_id,notes")
       .eq("verifier_id", verifier.id)
       .order("created_at", { ascending: false });
     return data ?? [];
