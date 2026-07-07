@@ -75,6 +75,29 @@ function AdminSendersPage() {
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-senders"] }); },
     onError: (e: any) => toast.error(e.message),
   });
+  const grantMut = useMutation({
+    mutationFn: () => grantFn({ data: {
+      account_id: grantAccountId,
+      country: grantCountry,
+      phone_number: grantPhone.trim() || undefined,
+    } }),
+    onSuccess: (r: any) => {
+      toast.success(`Granted ${r.phone_number} — tenant can send immediately.`);
+      qc.invalidateQueries({ queryKey: ["admin-senders"] });
+      setGrantOpen(false); setGrantAccountId(""); setGrantPhone(""); setGrantCountry("US");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const filteredAccounts = useMemo(() => {
+    const q = accountSearch.trim().toLowerCase();
+    const list = (accounts ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>;
+    if (!q) return list.slice(0, 50);
+    return list.filter(a =>
+      (a.email ?? "").toLowerCase().includes(q) ||
+      (a.full_name ?? "").toLowerCase().includes(q),
+    ).slice(0, 50);
+  }, [accounts, accountSearch]);
 
   const rows = useMemo(() => {
     const all = (data ?? []) as any[];
