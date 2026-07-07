@@ -510,6 +510,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
       telnyx_verification_id: twilioVerificationSid,
       rejection_reason: rejectionReason,
       submitted_at: nowIso,
+      ...(carrierStatus === "in_review" ? { in_review_at: nowIso } : {}),
       ...(dbStatus === "verified" ? { verified_at: nowIso } : {}),
       ...(dbStatus === "rejected" ? { rejected_at: nowIso } : {}),
     };
