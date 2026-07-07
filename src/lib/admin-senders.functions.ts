@@ -80,3 +80,60 @@ export const adminDeleteSender = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// Admin grant: give a tenant a ready-to-send toll-free number without any
+// carrier verification flow. If a phone_number is supplied, that number is
+// wired to the tenant (must not already be assigned to another tenant). If
+// omitted, we search Telnyx for an available number in the given country and
+// buy it. The resulting sender_asset is marked "verified" so the tenant can
+// send immediately, and the toll-free setup fee is auto-cleared.
+export const adminGrantVerifiedTollfree = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      account_id: z.string().uuid(),
+      country: z.string().default("US"),
+      phone_number: z.string().trim().min(6).optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const country = data.country.toUpperCase();
+    let phoneNumber = data.phone_number?.trim() || "";
+
+    if (phoneNumber) {
+      const { data: existing } = await supabaseAdmin
+        .from("sender_assets").select("id,account_id").eq("phone_number", phoneNumber).maybeSingle();
+      if (existing && existing.account_id !== data.account_id) {
+        throw new Error("This number is already assigned to another tenant.");
+      }
+    } else {
+      const { searchAvailableNumbers, orderNumber, ensureMessagingProfileForAccount, safeTelnyxCall } =
+        await import("./telnyx.server");
+      const messagingProfileId = await ensureMessagingProfileForAccount(data.account_id);
+      const available = await safeTelnyxCall(
+        "admin_grant_search", { userId: data.account_id, messagingProfileId },
+        () => searchAvailableNumbers({ country, numberType: "toll-free", limit: 5 }),
+      );
+      const pick = available[0];
+      if (!pick) throw new Error("No toll-free numbers are available on Telnyx right now.");
+      const order = await safeTelnyxCall(
+        "admin_grant_order", { userId: data.account_id, messagingProfileId },
+        () => orderNumber({ phoneNumber: pick.phone_number, messagingProfileId }),
+      );
+      const bought = order.phone_numbers?.[0];
+      if (!bought) throw new Error("Telnyx accepted the order but did not return a phone number.");
+      phoneNumber = bought.phone_number;
+    }
+
+    const { wireAssignedTollfreeForTenant } = await import("./assign-tfn-to-tenant.server");
+    await wireAssignedTollfreeForTenant({
+      accountId: data.account_id,
+      phoneNumber,
+      countryCode: country,
+      markVerified: true,
+    });
+    return { ok: true, phone_number: phoneNumber };
+  });
+
