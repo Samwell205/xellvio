@@ -267,5 +267,36 @@ export async function syncToollfreeVerifications(_opts: { onlyAccountId?: string
     }
   }
 
-  return { checked: rows?.length ?? 0, updated, errors };
+  const { data: verifierRows, error: verifierError } = await supabaseAdmin
+    .from("verifier_tfns")
+    .select("id, telnyx_verification_id, status")
+    .not("telnyx_verification_id", "is", null)
+    .eq("status", "pending_verification");
+
+  if (verifierError) errors.push({ id: "verifier_tfns", reason: verifierError.message });
+
+  for (const row of verifierRows ?? []) {
+    if (!row.telnyx_verification_id) continue;
+    try {
+      const res = await fetchTwilioTollfreeVerification({
+        verificationSid: row.telnyx_verification_id, accountSid: "", authToken: "",
+      });
+      const dbStatus =
+        res.status === "verified" ? "verified" :
+        res.status === "rejected" ? "rejected" : "pending_verification";
+      const nowIso = new Date().toISOString();
+      await supabaseAdmin.from("verifier_tfns").update({
+        status: dbStatus,
+        rejection_reason: res.rejectionReason,
+        ...(res.status === "in_review" ? { in_review_at: nowIso } : {}),
+        ...(dbStatus === "verified" ? { verified_at: nowIso } : {}),
+        ...(dbStatus === "rejected" ? { rejected_at: nowIso } : {}),
+      }).eq("id", row.id);
+      updated++;
+    } catch (e: any) {
+      errors.push({ id: row.id, reason: e?.message ?? "unknown" });
+    }
+  }
+
+  return { checked: (rows?.length ?? 0) + (verifierRows?.length ?? 0), updated, errors };
 }
