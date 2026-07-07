@@ -7,8 +7,10 @@ export async function wireAssignedTollfreeForTenant(opts: {
   accountId: string;
   phoneNumber: string;
   countryCode?: string;
+  markVerified?: boolean;
 }): Promise<{ telnyx_phone_number_id: string | null; telnyx_messaging_profile_id: string | null }> {
   const country = (opts.countryCode ?? "US").toUpperCase();
+  const markVerified = opts.markVerified === true;
   if (!process.env.TELNYX_API_KEY) throw new Error("TELNYX_API_KEY is not configured");
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
