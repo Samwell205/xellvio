@@ -51,12 +51,19 @@ export async function wireAssignedTollfreeForTenant(opts: {
       : {}),
   } as const;
 
-  const { error: upsertErr } = await supabaseAdmin
-    .from("sender_assets")
-    .upsert(row, { onConflict: "account_id,country_code,sender_kind" });
-  if (upsertErr) {
-    console.error("[assign-tfn] upsert sender_assets failed", upsertErr);
-    throw upsertErr;
+  // North American toll-free numbers reach US, Canada, and Puerto Rico from
+  // the same number. Mirror the sender_asset row across all three so
+  // campaigns targeting any of those countries pick the same number.
+  const naSet = new Set(["US", "CA", "PR"]);
+  const countriesToUpsert = naSet.has(country) ? ["US", "CA", "PR"] : [country];
+  for (const cc of countriesToUpsert) {
+    const { error: upsertErr } = await supabaseAdmin
+      .from("sender_assets")
+      .upsert({ ...row, country_code: cc }, { onConflict: "account_id,country_code,sender_kind" });
+    if (upsertErr) {
+      console.error("[assign-tfn] upsert sender_assets failed", upsertErr);
+      throw upsertErr;
+    }
   }
 
   await supabaseAdmin.from("numbers").upsert({
