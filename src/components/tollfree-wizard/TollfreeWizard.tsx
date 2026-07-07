@@ -262,9 +262,8 @@ function stepValid(f: WizardForm, key: SubStepKey): string | null {
       if (f.legalEntityName.trim().length < 2) return "Enter the legal business name.";
       if (!isHttp(f.websiteUrl)) return "Enter a valid website URL (https://…).";
       if (!f.businessType) return "Select a company type.";
-      if (!f.businessRegistrationNumber.trim()) return "Enter a business registration number.";
-      if (!f.businessRegistrationIdentifier.trim()) return "Select a registration authority.";
-      if (!/^[A-Z]{2}$/.test(f.businessRegistrationCountry)) return "Select a registration country.";
+      // Registration number / authority / country are optional — Telnyx only
+      // requires them for a subset of entity types and validates them itself.
       return null;
     case "business-address":
       if (!/^[A-Z]{2}$/.test(f.businessCountry)) return "Select a country.";
@@ -537,12 +536,12 @@ function BusinessInfoStep({ form, update }: StepProps) {
           <Input value={form.websiteUrl} onChange={(e) => update("websiteUrl", e.target.value)} placeholder="https://yourcompany.com" />
         </Field>
       </Two>
-      {form.businessType && (
+      {form.businessType && form.businessType !== "Sole Proprietor" && (
         <Three>
-          <Field label="Registration number" required>
+          <Field label="Registration number (optional)">
             <Input value={form.businessRegistrationNumber} onChange={(e) => update("businessRegistrationNumber", e.target.value)} placeholder="e.g. 12-3456789" />
           </Field>
-          <Field label="Registration authority" required>
+          <Field label="Registration authority (optional)">
             <Select value={form.businessRegistrationIdentifier} onValueChange={(v) => update("businessRegistrationIdentifier", v)}>
               <SelectTrigger><SelectValue placeholder="Select authority" /></SelectTrigger>
               <SelectContent>
@@ -550,7 +549,7 @@ function BusinessInfoStep({ form, update }: StepProps) {
               </SelectContent>
             </Select>
           </Field>
-          <Field label="Registration country" required>
+          <Field label="Registration country (optional)">
             <Select value={form.businessRegistrationCountry} onValueChange={(v) => update("businessRegistrationCountry", v)}>
               <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
               <SelectContent>

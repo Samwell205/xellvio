@@ -7,6 +7,7 @@ import {
   refreshTollfreeVerification,
   submitTollfreeVerification,
   getTollfreeFeeStatus,
+  payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
 import { getTfnMarketplaceOffer, purchaseTfnFromMarketplace } from "@/lib/tfn-marketplace.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -138,7 +139,7 @@ function TollfreeVerificationPage() {
     queryFn: () => load(),
     refetchInterval: (q) => {
       const s = (q.state.data as any)?.asset?.verification_status as Status | null | undefined;
-      if (s === "submitted" || s === "in_review") return 30_000;
+      if (s === "submitted" || s === "in_review") return 15_000;
       return false;
     },
     refetchIntervalInBackground: false,
@@ -269,15 +270,22 @@ function TollfreeVerificationPage() {
                 </div>
               </div>
             </div>
-            {status === "rejected" && (
-              <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
-                <div className="flex items-center gap-2 font-medium text-destructive">
+            {(asset.friendly_rejection_reason || asset.rejection_reason) && status !== "verified" && (
+              <div className={`rounded-md border p-3 text-sm ${status === "rejected" ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
+                <div className={`flex items-center gap-2 font-medium ${status === "rejected" ? "text-destructive" : "text-amber-600"}`}>
                   <AlertCircle className="size-4" />
-                  {localSubmissionFailure ? "Submission failed — retry available" : "Why it was rejected"}
+                  {status === "rejected"
+                    ? (localSubmissionFailure ? "Submission failed — retry available" : "Why it was rejected")
+                    : "Carrier is requesting a change"}
                 </div>
                 <div className="mt-1 text-foreground">
-                  {asset.friendly_rejection_reason ?? asset.rejection_reason ?? "No reason provided."}
+                  {asset.friendly_rejection_reason ?? asset.rejection_reason}
                 </div>
+                {status !== "rejected" && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Update the affected fields below and click <strong>Resubmit</strong>. The carrier picks up the change automatically.
+                  </div>
+                )}
               </div>
             )}
             {status === "verified" && (
@@ -296,32 +304,39 @@ function TollfreeVerificationPage() {
         </div>
       )}
 
-      <TollfreeWizard
-        key={submissionStarted ? "locked" : "editable"}
-        initial={initialForm}
-        disabled={isLocked}
-        submitting={submitMut.isPending}
-        reservedNumber={asset?.phone_number ?? null}
-        verificationStatus={status ?? rawStatus ?? null}
-        feeAmount={feeQuery.data?.fee ?? 5}
-        creditBalance={feeQuery.data?.balance ?? 0}
-        feePaid={feePaid}
-        submitLabel={
-          status === "rejected"
-            ? "Resubmit for verification"
-            : hasReservedNumber
-              ? "Continue verification with reserved number"
-              : "Submit registration"
-        }
-        onSubmit={async (form) => { await submitMut.mutateAsync({ ...form, agreeToTos: true }); }}
-        helperBanner={
-          !isLocked ? (
-            <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              <strong className="text-foreground">${feeQuery.data?.fee ?? 5} one-time setup.</strong> Charged from credits when you submit. It covers the toll-free number and carrier verification; resubmissions are free.
-            </div>
-          ) : null
-        }
-      />
+      {!feePaid && !submissionStarted ? (
+        <PayFeeGate
+          fee={feeQuery.data?.fee ?? 5}
+          balance={feeQuery.data?.balance ?? 0}
+        />
+      ) : (
+        <TollfreeWizard
+          key={submissionStarted ? "locked" : "editable"}
+          initial={initialForm}
+          disabled={isLocked}
+          submitting={submitMut.isPending}
+          reservedNumber={asset?.phone_number ?? null}
+          verificationStatus={status ?? rawStatus ?? null}
+          feeAmount={feeQuery.data?.fee ?? 5}
+          creditBalance={feeQuery.data?.balance ?? 0}
+          feePaid={feePaid}
+          submitLabel={
+            status === "rejected"
+              ? "Resubmit for verification"
+              : hasReservedNumber
+                ? "Continue verification with reserved number"
+                : "Submit registration"
+          }
+          onSubmit={async (form) => { await submitMut.mutateAsync({ ...form, agreeToTos: true }); }}
+          helperBanner={
+            !isLocked ? (
+              <div className="rounded-md border bg-emerald-500/10 border-emerald-500/40 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
+                <strong>${feeQuery.data?.fee ?? 5} setup fee paid.</strong> You can submit and resubmit this verification as many times as needed at no extra cost.
+              </div>
+            ) : null
+          }
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -335,7 +350,7 @@ function TollfreeVerificationPage() {
             Telnyx blocks US toll-free orders on accounts that use a freemail address or have not reached the required account level. That is why the direct portal order failed.
           </p>
           <p>
-            Your tenants should not buy inside Telnyx. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits — if the balance is $0, submission still goes through and the fee is collected automatically from the next top-up.
+            Your tenants should not buy inside Telnyx. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once, before registration starts.
           </p>
         </CardContent>
       </Card>
@@ -402,6 +417,63 @@ function MarketplaceBuyCard() {
             {available ? "Buy pre-verified number" : "Sold out"}
           </Button>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PayFeeGate({ fee, balance }: { fee: number; balance: number }) {
+  const qc = useQueryClient();
+  const payFn = useServerFn(payTollfreeFee);
+  const pay = useMutation({
+    mutationFn: () => payFn(),
+    onSuccess: () => {
+      toast.success(`$${fee} setup fee paid. You can now start your registration.`);
+      qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
+      qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Payment failed"),
+  });
+  const insufficient = balance < fee;
+
+  return (
+    <Card className="border-primary/40">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldCheck className="size-5 text-primary" />
+          Pay the ${fee} one-time setup fee to start
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Toll-free verification requires a one-time <strong>${fee}</strong> setup fee. It covers the toll-free number rental and carrier verification. Once paid you can submit — and resubmit as many times as needed if the carrier asks for changes — at no extra cost.
+        </p>
+        <div className="flex flex-wrap items-center gap-4 rounded-md border bg-muted/30 p-3 text-sm">
+          <div>
+            <div className="text-xs text-muted-foreground">Setup fee</div>
+            <div className="font-semibold">${fee.toFixed(2)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Your credit balance</div>
+            <div className={`font-semibold ${insufficient ? "text-destructive" : ""}`}>${balance.toFixed(2)}</div>
+          </div>
+          <div className="ml-auto flex gap-2">
+            {insufficient && (
+              <Button asChild variant="outline">
+                <Link to="/app/billing">Top up credits</Link>
+              </Button>
+            )}
+            <Button disabled={insufficient || pay.isPending} onClick={() => pay.mutate()}>
+              {pay.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
+              Pay ${fee} and start registration
+            </Button>
+          </div>
+        </div>
+        {insufficient && (
+          <p className="text-xs text-muted-foreground">
+            Your balance is below ${fee}. Top up your credit balance, then come back to this page to pay and start the wizard.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
