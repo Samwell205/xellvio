@@ -32,11 +32,80 @@ async function telnyx<T = any>(path: string, opts: { method?: string; body?: any
 }
 
 function mapStatus(raw: string | undefined): "submitted" | "in_review" | "verified" | "rejected" {
-  const t = (raw ?? "").toLowerCase();
-  if (t === "verified" || t === "approved" || t === "approved_verified") return "verified";
-  if (t === "rejected" || t === "denied") return "rejected";
-  if (t === "in_review" || t === "in-review" || t === "pending" || t === "in progress") return "in_review";
+  const t = (raw ?? "").toLowerCase().replace(/[_-]+/g, " ").trim();
+  if (t.includes("verified") || t.includes("approved")) return "verified";
+  if (t.includes("rejected") || t.includes("denied") || t.includes("cancelled") || t.includes("canceled")) return "rejected";
+  if (
+    t.includes("review") ||
+    t.includes("progress") ||
+    t.includes("pending") ||
+    t.includes("waiting for customer") ||
+    t.includes("waiting for telnyx") ||
+    t.includes("customer action")
+  ) return "in_review";
   return "submitted";
+}
+
+function pickString(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const normalized = value.trim();
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
+function extractStatus(data: any): string | undefined {
+  return pickString(
+    data?.verificationStatus,
+    data?.verification_status,
+    data?.status,
+    data?.requestStatus,
+    data?.request_status,
+  ) ?? undefined;
+}
+
+function extractReason(data: any, history?: any): string | null {
+  const records = history?.records ?? history?.data?.records ?? history?.data ?? [];
+  const historyReason = Array.isArray(records)
+    ? records
+        .map((record: any) => pickString(
+          record?.reason,
+          record?.statusReason,
+          record?.status_reason,
+          record?.message,
+          record?.description,
+          record?.comment,
+        ))
+        .find(Boolean)
+    : null;
+  return pickString(
+    data?.reason,
+    data?.rejectionReason,
+    data?.rejection_reason,
+    data?.friendlyRejectionReason,
+    data?.friendly_rejection_reason,
+    data?.statusReason,
+    data?.status_reason,
+    data?.customerMessage,
+    data?.customer_message,
+    data?.latestStatusChange?.reason,
+    historyReason,
+  );
+}
+
+async function fetchVerificationStatusHistory(id: string): Promise<any | null> {
+  const query = "page[number]=1&page[size]=10";
+  try {
+    return await telnyx<any>(`/messaging/tollfree/verification/requests/${id}/status/history?${query}`);
+  } catch (firstError: any) {
+    if (firstError?.telnyxStatus !== 404) return null;
+    try {
+      return await telnyx<any>(`/messaging_tollfree/verification/requests/${id}/status/history?${query}`);
+    } catch {
+      return null;
+    }
+  }
 }
 
 function toEntityType(value: string | undefined): string {
@@ -237,8 +306,8 @@ export async function submitTwilioTollfreeVerification(opts: {
   const data = res?.data ?? res;
   return {
     verificationSid: data?.id ?? opts.existingVerificationSid ?? null,
-    status: mapStatus(data?.status),
-    rejectionReason: data?.reason ?? data?.rejection_reason ?? null,
+    status: mapStatus(extractStatus(data)),
+    rejectionReason: extractReason(data),
     raw: res,
   };
 }
@@ -250,10 +319,11 @@ export async function fetchTwilioTollfreeVerification(opts: {
 }): Promise<TollfreeSubmitResult> {
   const res = await telnyx<any>(`/messaging_tollfree/verification/requests/${opts.verificationSid}`);
   const data = res?.data ?? res;
+  const history = await fetchVerificationStatusHistory(opts.verificationSid);
   return {
     verificationSid: data?.id ?? opts.verificationSid,
-    status: mapStatus(data?.status),
-    rejectionReason: data?.reason ?? data?.rejection_reason ?? null,
-    raw: res,
+    status: mapStatus(extractStatus(data)),
+    rejectionReason: extractReason(data, history),
+    raw: { ...res, statusHistory: history },
   };
 }
