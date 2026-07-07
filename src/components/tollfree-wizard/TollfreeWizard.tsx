@@ -262,9 +262,8 @@ function stepValid(f: WizardForm, key: SubStepKey): string | null {
       if (f.legalEntityName.trim().length < 2) return "Enter the legal business name.";
       if (!isHttp(f.websiteUrl)) return "Enter a valid website URL (https://…).";
       if (!f.businessType) return "Select a company type.";
-      if (!f.businessRegistrationNumber.trim()) return "Enter a business registration number.";
-      if (!f.businessRegistrationIdentifier.trim()) return "Select a registration authority.";
-      if (!/^[A-Z]{2}$/.test(f.businessRegistrationCountry)) return "Select a registration country.";
+      // Registration number / authority / country are optional — Telnyx only
+      // requires them for a subset of entity types and validates them itself.
       return null;
     case "business-address":
       if (!/^[A-Z]{2}$/.test(f.businessCountry)) return "Select a country.";
