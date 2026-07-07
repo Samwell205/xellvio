@@ -32,7 +32,7 @@ function NumbersPage() {
     refetchInterval: (q) => {
       const list = (q.state.data as any[]) ?? [];
       const pending = list.some((r) => r.status === "pending_verification");
-      return pending ? 20_000 : false;
+      return pending ? 15_000 : false;
     },
   });
   const [phone, setPhone] = useState("");
@@ -44,19 +44,19 @@ function NumbersPage() {
   useEffect(() => {
     const channel = supabase
       .channel("verifier-tfns-changes")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "verifier_tfns" },
+      .on("postgres_changes", { event: "*", schema: "public", table: "verifier_tfns" },
         () => qc.invalidateQueries({ queryKey: ["verifier", "tfns"] }))
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [qc]);
 
-  // Poll Twilio directly for any pending rows so status reflects carrier state.
+  // Poll Telnyx directly for any pending rows so status reflects carrier state.
   useEffect(() => {
     const pendingIds = (rows ?? []).filter((r: any) => r.status === "pending_verification").map((r: any) => r.id);
     if (pendingIds.length === 0) return;
     const timer = setInterval(() => {
       pendingIds.forEach((id) => refresh({ data: { id } }).catch(() => {}));
-    }, 60_000);
+    }, 15_000);
     return () => clearInterval(timer);
   }, [rows, refresh]);
 
