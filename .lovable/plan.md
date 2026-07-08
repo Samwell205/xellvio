@@ -1,96 +1,41 @@
 ## Goal
+Make Kuwait — and every other Telnyx-supported destination that currently requires carrier registration (UAE, Saudi Arabia, Qatar, Bahrain, Oman, Egypt, Turkey, Nigeria, India, Pakistan, Bangladesh, Sri Lanka, Philippines, Vietnam, Thailand, Indonesia, Malaysia, Morocco, Algeria, Tunisia, China) — reachable from the platform via an in-app registration flow.
 
-Replicate Telnyx's 3-step Toll-Free Verification wizard **exactly** inside Xellvio's Set up SMS page, and on submit auto-provision a US toll-free number on Telnyx and auto-submit the Verification Request via the Telnyx API. Also fix the `debit_account` RPC failure that currently blocks Submit.
+## What actually blocks Kuwait today
+Kuwait is already in the Telnyx destination whitelist and appears in the "Countries that require carrier registration" dropdown on `Setup SMS`. But:
 
-## What the videos show (Telnyx's exact flow)
+1. It's tucked into a secondary amber panel that many users miss, so it feels like KW "isn't supported."
+2. Even after a user submits, the sender_asset lands in `submitted` and the campaign builder only accepts `verified` senders — so KW stays effectively un-sendable until Telnyx approves (days–weeks) with no visibility in the campaign flow itself.
+3. A few countries Telnyx supports (e.g. Jordan `JO`, Lebanon `LB`, Israel `IL`, South Africa `ZA`, Kenya `KE`, Ghana `GH`) are missing from `ALPHA_SENDER_REQUIRES_REGISTRATION` even though they realistically need registration — not the KW issue, but worth aligning while we're in here.
 
-Right-side stepper stays visible across all 3 steps: **1. Business Details → 2. Assign Numbers → 3. Use Case Details**. Purple info banner on step 1: *"Fill in all details according to business details, not personal details."*
+## Changes
 
-### Step 1 — Business Details (two-column grid, Next / Cancel)
-- Business Name * · Corporate Website *
-- What type of legal form is the organisation? (Sole Proprietor, Private company / LLC / Partnership, Public company, Non-profit, Government)
-- DBA or brand name
-- Business Registration Country * (defaults United States of America)
-- First Name * · Last Name *
-- Email * · Phone Number * (country-flag selector + national number)
-- Status update webhook URL (optional)
-- **Search for an address** (single search field) with *"Or enter it manually"* divider
-- Address * · Extended Address
-- City * · State * (dropdown for US = `DE - Delaware` style)
-- ZIP * · Country * (dropdown)
+### 1. Promote the registration flow in Setup SMS (`src/routes/_authenticated.app.setup-sms.tsx`)
+- Merge registration-required countries into the main country picker instead of hiding them behind a separate amber panel. Each entry shows an inline badge: `Registration required`, `In review`, `Registered`, or `Rejected`.
+- Selecting a registration-required country opens the existing `RegistrationRequiredDialog` directly (same handler as `RegistrationCountryDropdown`), no separate UX.
+- Keep the amber panel as a compact "Pending registrations" summary once at least one is submitted.
 
-### Step 2 — Assign Numbers (Next / Back)
-- Tabs: **My Telnyx Numbers** · **Messaging Profiles** · **Hosted Numbers** (we only need the first)
-- Table: Name / Numbers count / Assign button per row
-- Pagination row
+### 2. Let campaigns target countries that are pending registration (`src/routes/_authenticated.app.campaigns.new.tsx`, `src/lib/campaigns.functions.ts`)
+- In the campaign country breakdown, treat `submitted` / `in_review` sender_assets as "available with warning" instead of "no sender." Row shows an amber `Registration pending` chip; recipients are counted; user can still exclude them.
+- On send / dispatch, if a country's sender is not yet `verified`, mark those recipients as `queued_awaiting_sender` in `messages` (new status handled the same way as the existing pending states) rather than failing the whole campaign. When the sender flips to `verified` (webhook or manual admin action), a follow-up dispatch pass picks them up.
+- If the user has no sender at all for a country in the recipient list, keep the existing "Add a sender" block — unchanged.
 
-### Step 3 — Use Case Details (Create / Back)
-- Expected messaging volume per month * (dropdown: 10 / 1,000 / 10,000 / 100,000 / 250,000 / 500,000 / 750,000 / 1,000,000 / 5,000,000 / 10,000,000)
-- Use-case * (General Marketing, Account Notification, Customer Care, Delivery Notification, Fraud Alert, Higher Education, Marketing, Polling & Voting, Public Service Announcement, Security Alert, Two-Factor Authentication)
-- Summarize use-case * (large textarea)
-- Message content * (sample message)
-- Opt-In workflow * · Additional use-case details *
-- Opt-In workflow image URL * · Opt in keywords * (e.g. START, YES, UNSTOP)
-- Opt in message · Help message
-- Privacy policy URL * · Terms and conditions URL *
-- ISV Reseller (blank if N/A) · Age-Gated Content (Yes / No, default No)
+### 3. Broaden supported destinations
+- `src/lib/countries.ts` + `src/lib/telnyx.server.ts`: add `JO, LB, IL, ZA, KE, GH` (and any other Telnyx-supported ISO already in `COUNTRIES` but missing from `DEFAULT_WHITELISTED_DESTINATIONS`) to both `DEFAULT_WHITELISTED_DESTINATIONS` and `ALPHA_SENDER_REQUIRES_REGISTRATION` where the local operator requires it.
+- On next call to `ensureMessagingProfileForAccount`, `updateMessagingProfileWhitelist` will re-push the expanded whitelist to Telnyx — no migration needed.
 
-Final states seen after Create: page shows *"This request cannot be edited in its current status. Failed requests can be updated and resubmitted."* plus tabs **General / Numbers / Use Case Details** and an **Assigned Numbers** table listing the E.164 number.
+### 4. Admin visibility (`src/routes/_authenticated.admin.senders.tsx`)
+- Add a "Country" filter option covering the newly-registrable countries so admins can see and manually flip a sender to `verified` after Telnyx approval (for the cases where the Telnyx webhook doesn't fire).
 
-## Plan
+### 5. UX copy
+- In the registration dialog and on the campaign page, add one line: "Carrier approval typically takes 3–10 business days. Messages queued for this country will start delivering automatically once approved."
 
-### 1. Fix `debit_account` RPC error (unblocks Submit today)
-In `src/lib/tollfree-verification.functions.ts` change both `submitTollfreeVerification` and `payTollfreeFee` to pass `_campaign_id: null` (not `undefined`) so PostgREST binds all 4 named parameters of `public.debit_account(_account_id, _amount, _campaign_id, _description)`.
+## Not in scope
+- Building an admin flow to talk to Telnyx's carrier-registration API beyond what `createAlphanumericSenderId` already does — Telnyx's approval is external and we can't shortcut it.
+- Paddle / Stripe payment integration from the previous turn.
+- Any database schema change (using existing `sender_assets.verification_status` values).
 
-### 2. Rebuild the wizard UI to mirror Telnyx exactly
-Rewrite `src/components/tollfree-wizard/TollfreeWizard.tsx` as 3 steps with the right-side stepper, using existing shadcn `Input / Select / Textarea / Button / RadioGroup`. New field additions vs current form:
-- Legal form dropdown (map to `business_type`)
-- DBA / brand name
-- Business Registration Country
-- Status update webhook URL (optional; default to our `/api/public/telnyx-status` public URL server-side if blank)
-- Address auto-complete search field (uses browser geolocation-style datalist; graceful fallback to manual)
-- Step-2 number list (see below)
-- Opt-in keywords, Opt-in message, Help message, ISV Reseller, Age-Gated Content
-
-### 3. Step 2 — Assign Numbers: pull-from-inventory + one-click auto-purchase
-- New server fn `listAvailableTollfreeSenders` returns rows already in `sender_assets` for the tenant where `sender_kind='toll_free'` (name = friendly business name, phone_number).
-- If none, show a single row **"Provision a new US toll-free number"** with an **Assign** button that calls a new fn `provisionTollfreeForTenant`:
-  1. `POST /v2/available_phone_numbers?filter[features]=sms&filter[phone_number_type]=toll-free&filter[country_code]=US&filter[limit]=1`
-  2. `POST /v2/number_orders` with that number
-  3. Attach it to the tenant's messaging profile (`POST /v2/messaging_profiles` if missing, then `PATCH /v2/phone_numbers/{id}` to set `messaging_profile_id`)
-  4. Insert/upsert into `sender_assets` (`verification_status='pending_verification'`)
-- Charges the existing `$5` phone-number fee via `chargeNumberVerificationFee` (already in `src/lib/number-fee.server.ts`).
-
-### 4. Step 3 — Create: auto-submit Verification Request
-New server fn `submitTollfreeVerificationV2` (auth'd) that:
-1. Validates the full payload with a Zod schema mirroring the fields above.
-2. Debits the one-time $15 toll-free setup fee via `debit_account` (with `_campaign_id: null`) — falls back to `tollfree_setup_fee_due_cents` deferred model already in `topup_account` if balance short.
-3. Calls the existing `submitTwilioTollfreeVerification` in `src/lib/tollfree-submit.server.ts` (already hits Telnyx `POST /messaging_tollfree/verification/requests`) with the assigned toll-free E.164 in `phone_numbers[]`.
-4. Persists to `tollfree_verification_attempts` (verification_sid, status, raw payload).
-5. Updates `sender_assets.telnyx_verification_id` and `verification_status='submitted'`.
-6. Sends admin SMS + tenant email via existing `email-templates/tollfree-submitted.tsx`.
-7. Returns `{ verificationSid, status }` — UI shows the read-only "This request cannot be edited…" screen with tabs **General / Numbers / Use Case Details** and the assigned number.
-
-### 5. Status polling / read-only view
-- Reuse `api.public.poll-verifications.ts` to fetch Telnyx status; on `verified` → set `sender_assets.verification_status='verified'`, on `rejected` → capture reason + email template `tollfree-rejected.tsx`.
-- New route section on `/app/setup-sms` shows the three-tab summary card exactly like Telnyx's post-create screen.
-
-## Technical Details
-
-- **File changes**
-  - `src/lib/tollfree-verification.functions.ts` — fix `_campaign_id: null` in 2 spots; add `submitTollfreeVerificationV2` + `listAvailableTollfreeSenders` + `provisionTollfreeForTenant`.
-  - `src/lib/tollfree-submit.server.ts` — no changes needed; already maps to Telnyx correctly.
-  - `src/lib/telnyx.server.ts` — add helpers: `searchAvailableTollfree`, `orderNumber`, `ensureMessagingProfile`, `attachNumberToProfile`.
-  - `src/components/tollfree-wizard/TollfreeWizard.tsx` — full rewrite to 3-step Telnyx layout.
-  - `src/routes/_authenticated.app.setup-sms.tsx` — render new wizard for `!hasAssets` and read-only summary once submitted.
-
-- **No DB migration required** — `sender_assets`, `tollfree_verification_attempts`, `number_requests`, and `accounts.tollfree_setup_fee_due_cents` already exist.
-
-- **Env / secrets** — `TELNYX_API_KEY` is already set.
-
-- **Webhook** — status callback URL defaults to `https://xellvio.lovable.app/api/public/telnyx-status` (already implemented) so Telnyx's approval / rejection events flow back automatically.
-
-## Out of Scope
-- 10DLC / short-code flows (untouched).
-- Admin-side review UI changes (Assigned Numbers table already exists in admin).
-- Payment provider changes.
+## Technical notes
+- `messages.status` already tolerates non-terminal states (`queued`, `sending`); the new `queued_awaiting_sender` is a virtual bucket surfaced via a filtered query, not a new enum value, so no migration.
+- The registration server fn `submitSenderIdRegistration` already exists and is reused as-is.
+- Kuwait-specific fix is a subset of change #1 — no KW-only code path.
