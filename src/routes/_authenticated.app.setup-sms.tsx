@@ -423,7 +423,7 @@ function RegistrationRequiredDialog({
     mutationFn: () => submitFn({ data: { country: code as string, senderId } }),
     onSuccess: (r) => {
       if (r.status === "requires_registration") {
-        toast.warning("Submitted — this destination needs extra carrier docs. Our team will reach out shortly.");
+        toast.success(`Registration request received for ${countryName}. Carrier approval typically takes 3–10 business days — you'll be notified as soon as it's live.`);
       } else {
         toast.success(`Registration submitted for ${countryName}. Carrier approval typically takes 3–10 business days.`);
       }
