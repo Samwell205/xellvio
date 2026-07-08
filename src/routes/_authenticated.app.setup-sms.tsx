@@ -419,15 +419,62 @@ function RegistrationRequiredDialog({
   const isRegistered = status === "verified";
   const isSubmitted = status === "submitted" || status === "in_review";
 
+  // Prefill from the current account so users don't retype what we already have.
+  const acct = useQuery({
+    queryKey: ["account-registration-prefill"],
+    enabled: !!code && !isRegistered,
+    queryFn: async () =>
+      (await supabase
+        .from("accounts")
+        .select("legal_business_name,website_url,use_case_description,sample_message,opt_in_description,monthly_volume_estimate")
+        .maybeSingle()).data,
+  });
+
+  const [businessName, setBusinessName] = useState("");
+  const [businessWebsite, setBusinessWebsite] = useState("");
+  const [useCase, setUseCase] = useState("");
+  const [sampleMessage, setSampleMessage] = useState("");
+  const [optInDescription, setOptInDescription] = useState("");
+  const [monthlyVolume, setMonthlyVolume] = useState<number | "">("");
+
+  useEffect(() => {
+    const a = acct.data;
+    if (!a) return;
+    setBusinessName((v) => v || a.legal_business_name || "");
+    setBusinessWebsite((v) => v || a.website_url || "");
+    setUseCase((v) => v || a.use_case_description || "");
+    setSampleMessage((v) => v || a.sample_message || "");
+    setOptInDescription((v) => v || a.opt_in_description || "");
+    setMonthlyVolume((v) => (v === "" && a.monthly_volume_estimate ? Number(a.monthly_volume_estimate) : v));
+  }, [acct.data]);
+
+  const canSubmit =
+    !!senderId &&
+    businessName.trim().length >= 2 &&
+    /^https?:\/\//i.test(businessWebsite.trim()) &&
+    useCase.trim().length >= 3 &&
+    sampleMessage.trim().length >= 10 &&
+    optInDescription.trim().length >= 10 &&
+    typeof monthlyVolume === "number" && monthlyVolume > 0;
+
   const mut = useMutation({
-    mutationFn: () => submitFn({ data: { country: code as string, senderId } }),
-    onSuccess: (r) => {
-      if (r.status === "requires_registration") {
-        toast.success(`Registration request received for ${countryName}. Carrier approval typically takes 3–10 business days — you'll be notified as soon as it's live.`);
-      } else {
-        toast.success(`Registration submitted for ${countryName}. Carrier approval typically takes 3–10 business days.`);
-      }
+    mutationFn: () =>
+      submitFn({
+        data: {
+          country: code as string,
+          senderId,
+          businessName: businessName.trim(),
+          businessWebsite: businessWebsite.trim(),
+          useCase: useCase.trim(),
+          sampleMessage: sampleMessage.trim(),
+          optInDescription: optInDescription.trim(),
+          monthlyVolume: typeof monthlyVolume === "number" ? monthlyVolume : undefined,
+        },
+      }),
+    onSuccess: () => {
+      toast.success(`Registration submitted for ${countryName}. Carrier approval typically takes 3–10 business days — you'll be notified when it goes live.`);
       qc.invalidateQueries({ queryKey: ["sender-assets"] });
+      qc.invalidateQueries({ queryKey: ["account"] });
       onClose();
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not submit registration"),
@@ -439,29 +486,75 @@ function RegistrationRequiredDialog({
         <DialogHeader>
           <DialogTitle>Register sender ID — {countryName}</DialogTitle>
           <DialogDescription>
-            We'll submit this Sender ID to the local carriers for this country. No extra business form is needed here.
+            Local carriers in {countryName} require your business details before they'll approve an alphanumeric sender. Fill this once — we'll reuse it for other registration-required countries.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 text-sm">
           <div className="rounded-md border p-3 bg-muted/40 flex items-center justify-between">
             <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">Your sender ID</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Sender ID</div>
               <div className="font-mono font-semibold">{senderId || asset?.phone_number || "—"}</div>
             </div>
             <Badge variant={isRegistered ? "default" : isSubmitted ? "secondary" : "outline"}>
               {isRegistered ? "Registered" : isSubmitted ? "In review" : "Not started"}
             </Badge>
           </div>
-          <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-muted-foreground">
-            We'll register <span className="font-mono text-foreground">{senderId}</span> for {countryName}. If local carriers need manual review, this status will stay in review until they approve it.
-          </div>
+
+          {isRegistered ? (
+            <div className="rounded-md border border-success/30 bg-success/5 p-3 text-sm">
+              Already registered for {countryName}. You can start sending campaigns to this country now.
+            </div>
+          ) : isSubmitted ? (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+              Your registration is already in carrier review for {countryName}. No further action needed — approvals typically take 3–10 business days.
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <Label>Legal business name *</Label>
+                <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Acme Marketing LLC" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Business website *</Label>
+                <Input value={businessWebsite} onChange={(e) => setBusinessWebsite(e.target.value)} placeholder="https://your-company.com" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Use case *</Label>
+                <Input value={useCase} onChange={(e) => setUseCase(e.target.value)} placeholder="Marketing promotions, appointment reminders, OTPs…" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Sample message customers will receive *</Label>
+                <Textarea value={sampleMessage} onChange={(e) => setSampleMessage(e.target.value)} rows={3} placeholder="Hi {{first_name}}, your order #1234 has shipped. Track: https://…  Reply STOP to opt out." />
+              </div>
+              <div className="space-y-1.5">
+                <Label>How customers opted in *</Label>
+                <Textarea value={optInDescription} onChange={(e) => setOptInDescription(e.target.value)} rows={3} placeholder="Customers check a consent box at checkout on our website agreeing to receive SMS updates from {business name}." />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Estimated monthly volume *</Label>
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={monthlyVolume}
+                  onChange={(e) => setMonthlyVolume(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
+                  placeholder="e.g. 10000"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                These details are shared with the local carrier for compliance review. They must match your real business — fake or mismatched info gets rejected.
+              </p>
+            </>
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose} disabled={mut.isPending}>Close</Button>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending || !senderId}>
-            {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-            Submit registration
-          </Button>
+          {!isRegistered && !isSubmitted && (
+            <Button onClick={() => mut.mutate()} disabled={mut.isPending || !canSubmit}>
+              {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+              Submit registration
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
