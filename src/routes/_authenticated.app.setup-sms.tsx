@@ -346,11 +346,6 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         );
       })()}
 
-      <RegistrationCountryDropdown
-        assets={assets}
-        senderId={senderId}
-        onOpen={(cc) => setRegCountry(cc)}
-      />
 
       <UsCanadaInfoDialog code={infoCountry} assets={assets} onClose={() => setInfoCountry(null)} />
       <RegistrationRequiredDialog
