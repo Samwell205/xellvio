@@ -238,7 +238,17 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         </div>
       </div>
       {(() => {
-        const visible = senderCountries.filter((c) => !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code));
+        const visible = senderCountries;
+        const assetByCC = new Map(assets.map((a: any) => [a.country_code, a]));
+        const regStatus = (code: string) => {
+          if (!ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(code)) return null;
+          const a = assetByCC.get(code) as any;
+          const s = a?.verification_status as string | undefined;
+          if (s === "verified") return { label: "Registered", tone: "success" as const };
+          if (s === "submitted" || s === "in_review") return { label: "In review", tone: "amber" as const };
+          if (s === "rejected") return { label: "Rejected", tone: "destructive" as const };
+          return { label: "Registration required", tone: "amber" as const };
+        };
         const statusFor = (code: string) => {
           const isAlphaUnsupported = ALPHA_SENDER_UNSUPPORTED_SET.has(code);
           const usTfAsset = assets.find((a) => a.country_code === "US" && a.sender_kind === "toll_free");
@@ -262,14 +272,26 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           else if (isInReview) label = coveredByUs ? "Covered by US" : "In review";
           return { isAlphaUnsupported, coveredByUs, isVerified, isInReview, isTfRejected, label, phone: tfAsset?.phone_number as string | undefined };
         };
+        const toneClass = (tone: "success" | "amber" | "destructive") =>
+          tone === "success" ? "bg-success/20 text-success"
+          : tone === "destructive" ? "bg-destructive/20 text-destructive"
+          : "bg-amber-500/20 text-amber-700 dark:text-amber-400";
         return (
           <div className="space-y-3">
             <Label>Countries</Label>
             <Select
               value=""
               onValueChange={(cc) => {
-                if (ALPHA_SENDER_UNSUPPORTED_SET.has(cc)) setInfoCountry(cc);
-                else toggleCountry(cc);
+                if (ALPHA_SENDER_UNSUPPORTED_SET.has(cc)) { setInfoCountry(cc); return; }
+                if (ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(cc)) {
+                  if (!senderId.match(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/)) {
+                    toast.error("Enter a Sender ID above first, then pick the country to register it.");
+                    return;
+                  }
+                  setRegCountry(cc);
+                  return;
+                }
+                toggleCountry(cc);
               }}
             >
               <SelectTrigger>
@@ -278,12 +300,15 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
               <SelectContent className="max-h-80">
                 {visible.map((c) => {
                   const s = statusFor(c.code);
+                  const reg = regStatus(c.code);
                   const on = countries.includes(c.code);
                   return (
                     <SelectItem key={c.code} value={c.code}>
                       <span className="flex items-center gap-2">
                         <span>{c.name}</span>
-                        {s.isAlphaUnsupported ? (
+                        {reg ? (
+                          <span className={`text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 ${toneClass(reg.tone)}`}>{reg.label}</span>
+                        ) : s.isAlphaUnsupported ? (
                           <span className={`text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 ${
                             s.isVerified ? "bg-success/20 text-success" :
                             s.isTfRejected ? "bg-destructive/20 text-destructive" :
@@ -298,6 +323,9 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
                 })}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Countries marked <span className="font-semibold text-amber-700 dark:text-amber-400">Registration required</span> (Kuwait, UAE, Saudi Arabia, Nigeria, India, etc.) need a one-time carrier registration. Save your Sender ID above, then pick the country here — we file the registration for you. Approval typically takes 3–10 business days.
+            </p>
             {countries.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {countries.map((cc) => {

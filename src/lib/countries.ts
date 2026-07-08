@@ -13,6 +13,7 @@ export interface Country {
 export const ALPHA_SENDER_REQUIRES_REGISTRATION: readonly string[] = [
   "NG", "IN", "CN", "SA", "AE", "QA", "KW", "BH", "OM", "EG", "TR",
   "PH", "VN", "TH", "ID", "MY", "BD", "PK", "LK", "MA", "DZ", "TN",
+  "JO", "LB", "IL", "ZA", "KE", "GH",
 ];
 export const ALPHA_SENDER_REQUIRES_REGISTRATION_SET = new Set(ALPHA_SENDER_REQUIRES_REGISTRATION);
 

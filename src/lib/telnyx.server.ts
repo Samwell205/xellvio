@@ -91,6 +91,7 @@ export const DEFAULT_WHITELISTED_DESTINATIONS = [
 export const ALPHA_SENDER_REQUIRES_REGISTRATION = new Set([
   "US","CA","NG","IN","CN","SA","AE","QA","KW","BH","OM","EG","TR",
   "PH","VN","TH","ID","MY","BD","PK","LK","MA","DZ","TN",
+  "JO","LB","IL","ZA","KE","GH",
 ]);
 
 export function isValidTelnyxUuid(id: string | null | undefined): id is string {
