@@ -279,19 +279,29 @@ function CampaignReport() {
   const stats = useMemo(() => {
     const rows = messagesQ.data ?? [];
     const events = eventsQ.data ?? [];
+    const progress = progressQ.data;
     // Prefer the accurate progress count (server-side count) over the eligible
     // audience estimate or a possibly-truncated messages page.
     const attempted = Math.max(
-      progressQ.data?.total ?? 0,
+      progress?.total ?? 0,
       rows.length,
       eligibleQ.data ?? 0,
     );
-    const queued = rows.filter((m: any) => ["queued", "pending", "sending"].includes(m.status)).length;
-    const sent = rows.filter((m: any) => ["sent", "delivered", "undelivered", "failed"].includes(m.status)).length;
-    const delivered = rows.filter((m: any) => m.status === "delivered").length;
-    const failed = rows.filter((m: any) => m.status === "failed" || m.status === "undelivered").length;
+    const queued = progress
+      ? progress.queued + progress.sending
+      : rows.filter((m: any) => ["queued", "pending", "sending"].includes(m.status)).length;
+    const awaitingDelivery = progress
+      ? progress.sent
+      : rows.filter((m: any) => m.status === "sent" && !m.error_code).length;
+    const delivered = progress
+      ? progress.delivered
+      : rows.filter((m: any) => m.status === "delivered").length;
+    const failed = progress
+      ? progress.failed
+      : rows.filter((m: any) => m.status === "failed" || m.status === "undelivered" || (m.status === "sent" && m.error_code)).length;
+    const sent = awaitingDelivery + delivered + failed;
     const skippedRows = rows.filter((m: any) => m.status === "skipped" || m.error_code === "insufficient_balance").length;
-    const skipped = Math.max(skippedRows, attempted - rows.length);
+    const skipped = Math.max(skippedRows, attempted - Math.max(progress?.total ?? 0, rows.length));
     const clicked = events.filter((e: any) => e.type === "clicked").length;
     const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
     const totalCost = rows.reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
@@ -313,7 +323,8 @@ function CampaignReport() {
       }
     }
 
-    // Time series — bucket by hour from first sent_at
+    // Time series — cumulative by hour so the chart never appears to "drop"
+    // completed deliveries back to zero after the last webhook hour.
     const points = new Map<number, { t: number; sent: number; delivered: number; clicked: number }>();
     const bucket = (iso: string | null) => {
       if (!iso) return null;
@@ -330,13 +341,24 @@ function CampaignReport() {
       const tc = bucket(e.created_at);
       if (tc) { points.set(tc, points.get(tc) ?? { t: tc, sent: 0, delivered: 0, clicked: 0 }); points.get(tc)!.clicked++; }
     }
-    const series = [...points.values()].sort((a, b) => a.t - b.t).map((p) => ({
-      ...p,
+    let sentRunning = 0;
+    let deliveredRunning = 0;
+    let clickedRunning = 0;
+    const series = [...points.values()].sort((a, b) => a.t - b.t).map((p) => {
+      sentRunning += p.sent;
+      deliveredRunning += p.delivered;
+      clickedRunning += p.clicked;
+      return {
+      t: p.t,
+      sent: sentRunning,
+      delivered: deliveredRunning,
+      clicked: clickedRunning,
       label: new Date(p.t).toLocaleTimeString([], { hour: "numeric", hour12: true }),
-    }));
+    };
+    });
 
     return {
-      attempted, queued, sent, delivered, failed, skipped, clicked, uniqueClickers,
+      attempted, queued, sent, awaitingDelivery, delivered, failed, skipped, clicked, uniqueClickers,
       totalCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
       byCountry, failures, series,
     };
@@ -518,9 +540,11 @@ function CampaignReport() {
             {/* Right column */}
             <div className="space-y-5">
               {/* KPI hero */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <Kpi icon={CheckCircle2} label="Delivery rate" value={`${stats.deliveryRate.toFixed(1)}%`}
-                  sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} sent`} tone="success" />
+                  sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`} tone="success" />
+                <Kpi icon={Clock} label="Awaiting carrier" value={stats.awaitingDelivery.toLocaleString()}
+                  sub="accepted, no final receipt yet" tone="muted" />
                 <Kpi icon={MousePointerClick} label="Click rate" value={`${stats.clickRate.toFixed(1)}%`}
                   sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`} tone="primary" />
                 <Kpi icon={ShieldOff} label="Opt-outs" value={(optOutsQ.data ?? 0).toLocaleString()}
@@ -534,7 +558,7 @@ function CampaignReport() {
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <div className="font-semibold flex items-center gap-2"><Activity className="size-4 text-primary" /> Engagement over time</div>
-                    <div className="text-xs text-muted-foreground">Sent, delivered and clicked, bucketed hourly</div>
+                    <div className="text-xs text-muted-foreground">Sent, delivered and clicked, cumulative by hour</div>
                   </div>
                 </div>
                 {stats.series.length === 0 ? (
@@ -587,8 +611,12 @@ function CampaignReport() {
                   <FunnelRow icon={Users} label="attempted" value={stats.attempted} tone="muted" />
                   <FunnelRow icon={SkipForward} label="skipped" value={stats.skipped}
                     sub={stats.attempted ? `${pct(stats.skipped / stats.attempted * 100)} of attempted` : undefined} tone="muted" />
-                  <FunnelRow icon={Send} label="sent" value={stats.sent}
+                  <FunnelRow icon={Send} label="sent to carrier" value={stats.sent}
                     sub={stats.attempted ? `${pct(stats.sent / stats.attempted * 100)} of attempted` : undefined} tone="primary" />
+                  {stats.awaitingDelivery > 0 && (
+                    <FunnelRow icon={Clock} label="awaiting carrier report" value={stats.awaitingDelivery}
+                      sub={stats.sent ? `${pct(stats.awaitingDelivery / stats.sent * 100)} of sent` : undefined} tone="muted" />
+                  )}
                   <FunnelRow icon={AlertTriangle} label="failed" value={stats.failed}
                     sub={stats.sent ? `${pct(stats.failed / stats.sent * 100)} of sent` : undefined} tone="danger" />
                   <FunnelRow icon={CheckCircle2} label="delivered" value={stats.delivered}
@@ -727,7 +755,7 @@ function RecipientActivity({
   const buckets = useMemo(() => {
     const f = {
       all: rows,
-      sent: rows.filter((m) => ["sent", "delivered"].includes(m.status)),
+      sent: rows.filter((m) => m.status === "sent"),
       delivered: rows.filter((m) => m.status === "delivered"),
       failed: rows.filter((m) => ["failed", "undelivered"].includes(m.status)),
       skipped: rows.filter((m) => m.status === "skipped" || m.error_code === "insufficient_balance"),
@@ -738,7 +766,7 @@ function RecipientActivity({
 
   const items = [
     { key: "all",       label: "All",       count: rows.length },
-    { key: "sent",      label: "Sent",      count: buckets.sent.length },
+    { key: "sent",      label: "Accepted",  count: buckets.sent.length },
     { key: "delivered", label: "Delivered", count: buckets.delivered.length },
     { key: "failed",    label: "Failed",    count: buckets.failed.length },
     { key: "skipped",   label: "Skipped",   count: buckets.skipped.length },
@@ -1110,7 +1138,7 @@ function ProgressPanel({
       {/* Segmented progress bar */}
       <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
         <Seg pct={(delivered / total) * 100} className="bg-emerald-500" />
-        <Seg pct={((sent - delivered) / total) * 100} className="bg-sky-500" />
+        <Seg pct={(sent / total) * 100} className="bg-sky-500" />
         <Seg pct={(sending / total) * 100} className="bg-amber-500 animate-pulse" />
         <Seg pct={(failed / total) * 100} className="bg-destructive" />
         <Seg pct={(queued / total) * 100} className="bg-muted-foreground/30" />
@@ -1119,7 +1147,7 @@ function ProgressPanel({
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
         <ProgTile label="Queued" value={queued} dotClass="bg-muted-foreground/40" />
         <ProgTile label="Sending" value={sending} dotClass="bg-amber-500" pulse={sending > 0} />
-        <ProgTile label="Sent" value={sent} dotClass="bg-sky-500" />
+        <ProgTile label="Accepted" value={sent} dotClass="bg-sky-500" />
         <ProgTile label="Delivered" value={delivered} dotClass="bg-emerald-500" />
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
       </div>
@@ -1182,8 +1210,10 @@ function ProgressPanel({
           ? `Processing up to ~600 messages/minute when provider capacity is available. ${processedPct}% complete — you can leave this page and come back later.`
           : isPausedForCapacity
             ? `Paused after checking provider capacity. ${inFlight.toLocaleString()} message${inFlight === 1 ? "" : "s"} remain queued and will resume automatically after top-up.`
+            : inFlight === 0 && sent > 0
+            ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
             : inFlight === 0
-            ? "All messages have been processed."
+            ? "All messages have a final carrier status."
             : `${processedPct}% complete.`}
       </div>
     </Card>
