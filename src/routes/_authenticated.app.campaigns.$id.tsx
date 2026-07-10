@@ -279,7 +279,13 @@ function CampaignReport() {
   const stats = useMemo(() => {
     const rows = messagesQ.data ?? [];
     const events = eventsQ.data ?? [];
-    const attempted = eligibleQ.data ?? rows.length;
+    // Prefer the accurate progress count (server-side count) over the eligible
+    // audience estimate or a possibly-truncated messages page.
+    const attempted = Math.max(
+      progressQ.data?.total ?? 0,
+      rows.length,
+      eligibleQ.data ?? 0,
+    );
     const queued = rows.filter((m: any) => ["queued", "pending", "sending"].includes(m.status)).length;
     const sent = rows.filter((m: any) => ["sent", "delivered", "undelivered", "failed"].includes(m.status)).length;
     const delivered = rows.filter((m: any) => m.status === "delivered").length;
