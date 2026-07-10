@@ -385,6 +385,71 @@ async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[],
   return await deliverPending(supabaseAdmin, campaign, sender);
 }
 
+async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ checked: number; updated: number; stillAwaiting: number }> {
+  const checkedRecentlyCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+  const sentCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const { data: candidates } = await supabaseAdmin
+    .from("messages")
+    .select("id, provider_message_id, status")
+    .eq("status", "sent")
+    .lt("sent_at", sentCutoff)
+    .not("provider_message_id", "is", null)
+    .order("sent_at", { ascending: true, nullsFirst: false })
+    .limit(250);
+
+  const rows = (candidates ?? []) as Array<{ id: string; provider_message_id: string; status: string }>;
+  if (rows.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0 };
+
+  const ids = rows.map((r) => r.id);
+  const { data: recentChecks } = await supabaseAdmin
+    .from("events")
+    .select("message_id")
+    .in("message_id", ids)
+    .eq("type", "reconcile:checked:sent")
+    .gte("created_at", checkedRecentlyCutoff);
+  const recentlyChecked = new Set((recentChecks ?? []).map((e: any) => e.message_id));
+  const toCheck = rows.filter((r) => !recentlyChecked.has(r.id)).slice(0, 100);
+  if (toCheck.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0 };
+
+  const { getMessage, mapTelnyxStatus } = await import("@/lib/telnyx.server");
+  let updated = 0;
+  let stillAwaiting = 0;
+  await runWithConcurrency(toCheck, 20, async (m) => {
+    try {
+      const j = await getMessage(m.provider_message_id);
+      const first = Array.isArray(j?.to) ? j.to[0] : null;
+      const rawStatus = first?.status ?? j?.status ?? "";
+      const errCode = first?.errors?.[0]?.code ?? j?.errors?.[0]?.code ?? null;
+      const errDetail = first?.errors?.[0]?.detail ?? first?.errors?.[0]?.title ?? j?.errors?.[0]?.detail ?? j?.errors?.[0]?.title ?? null;
+      let newStatus = mapTelnyxStatus(rawStatus);
+      if (newStatus === "sent" && errCode) newStatus = "undelivered";
+      if (newStatus === "sent") {
+        stillAwaiting += 1;
+        await supabaseAdmin.from("events").insert({
+          message_id: m.id,
+          type: "reconcile:checked:sent",
+          payload: { provider_status: rawStatus || null },
+        });
+        return;
+      }
+      const update: any = { status: newStatus };
+      if (newStatus === "delivered") update.delivered_at = new Date().toISOString();
+      if (errCode) update.error_code = String(errCode);
+      if (errDetail) update.failure_reason = String(errDetail).slice(0, 500);
+      await supabaseAdmin.from("messages").update(update).eq("id", m.id);
+      await supabaseAdmin.from("events").insert({ message_id: m.id, type: `reconcile:${newStatus}`, payload: j });
+      updated += 1;
+    } catch (e) {
+      await supabaseAdmin.from("events").insert({
+        message_id: m.id,
+        type: "reconcile:error",
+        payload: { error: String(e) },
+      });
+    }
+  });
+  return { checked: toCheck.length, updated, stillAwaiting };
+}
+
 export const Route = createFileRoute("/api/public/dispatch-campaign")({
   server: {
     handlers: {
@@ -513,7 +578,8 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             results.push({ id: c.id, error: e.message });
           }
         }
-        return Response.json({ processed: results.length, results });
+        const reconciled = await reconcileStaleCarrierReceipts(supabaseAdmin);
+        return Response.json({ processed: results.length, reconciled, results });
       },
     },
   },

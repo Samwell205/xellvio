@@ -136,21 +136,31 @@ async function handleStatus(payload: any) {
   const errCode = first?.errors?.[0]?.code ?? p?.errors?.[0]?.code ?? null;
 
   const status = mapTelnyxStatus(rawStatus);
-  const update: any = { status };
-  if (status === "delivered") update.delivered_at = new Date().toISOString();
+  const finalStatus = status === "sent" && errCode ? "undelivered" : status;
+  const update: any = { status: finalStatus };
+  if (finalStatus === "delivered") update.delivered_at = new Date().toISOString();
   if (errCode) update.error_code = String(errCode);
-  if (status === "sent" && errCode) update.status = "undelivered";
+  const errDetail = first?.errors?.[0]?.detail ?? first?.errors?.[0]?.title ?? p?.errors?.[0]?.detail ?? p?.errors?.[0]?.title ?? null;
+  if (errDetail) update.failure_reason = String(errDetail).slice(0, 500);
 
   const { data: msg } = await supabaseAdmin
     .from("messages")
-    .select("id")
+    .select("id,status")
     .eq("provider_message_id", providerId)
     .maybeSingle();
   if (!msg) return;
+  const terminal = ["delivered", "undelivered", "failed"];
+  const nonTerminal = ["queued", "sending", "sent"];
+  if (terminal.includes(msg.status) && nonTerminal.includes(finalStatus)) {
+    await supabaseAdmin
+      .from("events")
+      .insert({ message_id: msg.id, type: `status:ignored:${finalStatus}`, payload });
+    return;
+  }
   await supabaseAdmin.from("messages").update(update).eq("id", msg.id);
   await supabaseAdmin
     .from("events")
-    .insert({ message_id: msg.id, type: `status:${status}`, payload });
+    .insert({ message_id: msg.id, type: `status:${finalStatus}`, payload });
 }
 
 async function handleTollfreeVerification(payload: any): Promise<boolean> {
