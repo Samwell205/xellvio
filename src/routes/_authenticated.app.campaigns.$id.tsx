@@ -58,6 +58,9 @@ function CampaignReport() {
             : "No pending messages to refresh.",
       );
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-events", id] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to refresh delivery statuses"),
   });
