@@ -13,6 +13,7 @@ export type CampaignReport = {
   totals: {
     total: number;
     sent: number;
+    awaiting_delivery: number;
     delivered: number;
     failed: number;
     queued: number;
@@ -59,19 +60,24 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     if (cErr) throw new Error(cErr.message);
     if (!campaign) throw new Error("Campaign not found");
 
-    // Pull all messages (cap at 10k for the report).
-    const { data: msgs, error: mErr } = await supabase
-      .from("messages")
-      .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at")
-      .eq("campaign_id", data.campaignId)
-      .order("created_at", { ascending: true })
-      .limit(10000);
-    if (mErr) throw new Error(mErr.message);
-    const rows = msgs ?? [];
+    const rows: any[] = [];
+    const pageSize = 1000;
+    for (let from = 0; from < 50_000; from += pageSize) {
+      const { data: batch, error: mErr } = await supabase
+        .from("messages")
+        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at")
+        .eq("campaign_id", data.campaignId)
+        .order("created_at", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (mErr) throw new Error(mErr.message);
+      rows.push(...(batch ?? []));
+      if (!batch || batch.length < pageSize) break;
+    }
 
     const totals = {
       total: rows.length,
       sent: 0,
+      awaiting_delivery: 0,
       delivered: 0,
       failed: 0,
       queued: 0,
@@ -101,7 +107,8 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       }
 
       totals.cost += Number(r.cost ?? 0);
-      if (r.status === "sent" || r.status === "delivered") totals.sent += 1;
+      if (["sent", "delivered", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
+      if (r.status === "sent") totals.awaiting_delivery += 1;
       if (r.status === "delivered") totals.delivered += 1;
       if (r.status === "failed" || r.status === "undelivered") totals.failed += 1;
       if (r.status === "queued" || r.status === "sending" || r.status === "pending") totals.queued += 1;
