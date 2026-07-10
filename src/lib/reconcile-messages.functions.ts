@@ -29,6 +29,7 @@ export const reconcileCampaignMessages = createServerFn({ method: "POST" })
         .eq("campaign_id", data.campaignId)
         .in("status", nonTerminal)
         .not("provider_message_id", "is", null)
+        .filter("provider_message_id", "not.ilike", "SM%")
         .order("sent_at", { ascending: true, nullsFirst: false })
         .range(from, from + pageSize - 1);
       if (batchErr) throw new Error(batchErr.message);

@@ -394,6 +394,7 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
     .eq("status", "sent")
     .lt("sent_at", sentCutoff)
     .not("provider_message_id", "is", null)
+    .filter("provider_message_id", "not.ilike", "SM%")
     .order("sent_at", { ascending: true, nullsFirst: false })
     .limit(250);
 
