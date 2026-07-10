@@ -63,8 +63,9 @@ function ReportPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Stat icon={<Send className="size-4" />} label="Sent" value={r.totals.sent.toLocaleString()} />
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <Stat icon={<Send className="size-4" />} label="Sent to carrier" value={r.totals.sent.toLocaleString()} />
+        <Stat icon={<Clock className="size-4 text-amber-600" />} label="Awaiting carrier" value={r.totals.awaiting_delivery.toLocaleString()} />
         <Stat icon={<CheckCircle2 className="size-4 text-green-600" />} label="Delivered" value={r.totals.delivered.toLocaleString()} sub={`${r.totals.delivery_rate}%`} />
         <Stat icon={<XCircle className="size-4 text-destructive" />} label="Failed" value={r.totals.failed.toLocaleString()} />
         <Stat icon={<Clock className="size-4 text-amber-600" />} label="Queued" value={r.totals.queued.toLocaleString()} />
