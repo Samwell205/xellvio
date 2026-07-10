@@ -388,28 +388,32 @@ async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[],
 async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ checked: number; updated: number; stillAwaiting: number }> {
   const checkedRecentlyCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const sentCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  const { data: candidates } = await supabaseAdmin
-    .from("messages")
-    .select("id, provider_message_id, status")
-    .eq("status", "sent")
-    .lt("sent_at", sentCutoff)
-    .not("provider_message_id", "is", null)
-    .filter("provider_message_id", "not.ilike", "SM%")
-    .order("sent_at", { ascending: true, nullsFirst: false })
-    .limit(250);
+  const toCheck: Array<{ id: string; provider_message_id: string; status: string }> = [];
+  const pageSize = 500;
+  for (let from = 0; from < 5_000 && toCheck.length < 100; from += pageSize) {
+    const { data: candidates } = await supabaseAdmin
+      .from("messages")
+      .select("id, provider_message_id, status")
+      .eq("status", "sent")
+      .lt("sent_at", sentCutoff)
+      .not("provider_message_id", "is", null)
+      .filter("provider_message_id", "not.ilike", "SM%")
+      .order("sent_at", { ascending: true, nullsFirst: false })
+      .range(from, from + pageSize - 1);
 
-  const rows = (candidates ?? []) as Array<{ id: string; provider_message_id: string; status: string }>;
-  if (rows.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0 };
-
-  const ids = rows.map((r) => r.id);
-  const { data: recentChecks } = await supabaseAdmin
-    .from("events")
-    .select("message_id")
-    .in("message_id", ids)
-    .eq("type", "reconcile:checked:sent")
-    .gte("created_at", checkedRecentlyCutoff);
-  const recentlyChecked = new Set((recentChecks ?? []).map((e: any) => e.message_id));
-  const toCheck = rows.filter((r) => !recentlyChecked.has(r.id)).slice(0, 100);
+    const rows = (candidates ?? []) as Array<{ id: string; provider_message_id: string; status: string }>;
+    if (rows.length === 0) break;
+    const ids = rows.map((r) => r.id);
+    const { data: recentChecks } = await supabaseAdmin
+      .from("events")
+      .select("message_id")
+      .in("message_id", ids)
+      .eq("type", "reconcile:checked:sent")
+      .gte("created_at", checkedRecentlyCutoff);
+    const recentlyChecked = new Set((recentChecks ?? []).map((e: any) => e.message_id));
+    toCheck.push(...rows.filter((r) => !recentlyChecked.has(r.id)).slice(0, 100 - toCheck.length));
+    if (rows.length < pageSize) break;
+  }
   if (toCheck.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0 };
 
   const { getMessage, mapTelnyxStatus } = await import("@/lib/telnyx.server");
