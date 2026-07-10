@@ -72,13 +72,25 @@ function CampaignReport() {
     // Realtime keeps this in sync; polling is a safety net in case a WS event is missed.
     refetchInterval: 30_000,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("messages")
-        .select("id, phone_e164, status, error_code, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)")
-        .eq("campaign_id", id)
-        .order("created_at", { ascending: false })
-        .limit(2000);
-      return data ?? [];
+      // Page through all rows so large campaigns don't get truncated stats.
+      const pageSize = 1000;
+      let from = 0;
+      const all: any[] = [];
+      // Safety cap at 50k rows.
+      while (from < 50_000) {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("id, phone_e164, status, error_code, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)")
+          .eq("campaign_id", id)
+          .order("created_at", { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
   });
 
