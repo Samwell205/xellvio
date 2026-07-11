@@ -1229,6 +1229,8 @@ function ProgressPanel({
             ? `Paused after checking provider capacity. ${inFlight.toLocaleString()} message${inFlight === 1 ? "" : "s"} remain queued and will resume automatically after top-up.`
             : inFlight === 0 && sent > 0
             ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
+            : inFlight === 0 && deliveryUnconfirmed > 0
+            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} finalized by the carrier without delivery confirmation.`
             : inFlight === 0
             ? "All messages have a final carrier status."
             : `${processedPct}% complete.`}
