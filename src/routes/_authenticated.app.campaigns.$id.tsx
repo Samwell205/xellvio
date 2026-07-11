@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
-  Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
+  Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone, HelpCircle,
   DollarSign, Wallet, Activity, XCircle, Download, RotateCw, ExternalLink,
 } from "lucide-react";
 
