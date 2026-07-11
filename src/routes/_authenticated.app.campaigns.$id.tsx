@@ -771,6 +771,7 @@ function RecipientActivity({
       all: rows,
       sent: rows.filter((m) => m.status === "sent"),
       delivered: rows.filter((m) => m.status === "delivered"),
+      unconfirmed: rows.filter((m) => m.status === "delivery_unconfirmed"),
       failed: rows.filter((m) => ["failed", "undelivered"].includes(m.status)),
       skipped: rows.filter((m) => m.status === "skipped" || m.error_code === "insufficient_balance"),
       queued: rows.filter((m) => ["queued", "pending", "sending"].includes(m.status)),
@@ -782,6 +783,7 @@ function RecipientActivity({
     { key: "all",       label: "All",       count: rows.length },
     { key: "sent",      label: "Accepted",  count: buckets.sent.length },
     { key: "delivered", label: "Delivered", count: buckets.delivered.length },
+    { key: "unconfirmed", label: "Unconfirmed", count: buckets.unconfirmed.length },
     { key: "failed",    label: "Failed",    count: buckets.failed.length },
     { key: "skipped",   label: "Skipped",   count: buckets.skipped.length },
     { key: "queued",    label: "Queued",    count: buckets.queued.length },
@@ -1266,7 +1268,7 @@ function exportProgressCsv({
   messages,
 }: {
   campaign: any;
-  progress?: { total: number; queued: number; sending: number; sent: number; delivered: number; failed: number };
+  progress?: { total: number; queued: number; sending: number; sent: number; delivered: number; deliveryUnconfirmed?: number; failed: number };
   failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
   messages: any[];
 }) {
@@ -1286,12 +1288,13 @@ function exportProgressCsv({
     lines.push(`sending,${progress.sending}`);
     lines.push(`sent,${progress.sent}`);
     lines.push(`delivered,${progress.delivered}`);
+    lines.push(`delivery_unconfirmed,${progress.deliveryUnconfirmed ?? 0}`);
     lines.push(`failed,${progress.failed}`);
   }
   lines.push("");
   lines.push("Delivery by hour");
-  lines.push("hour_iso,sent,delivered,failed");
-  const buckets = new Map<number, { sent: number; delivered: number; failed: number }>();
+  lines.push("hour_iso,sent,delivered,delivery_unconfirmed,failed");
+  const buckets = new Map<number, { sent: number; delivered: number; deliveryUnconfirmed: number; failed: number }>();
   const bucket = (iso: string | null) => {
     if (!iso) return null;
     const d = new Date(iso);
@@ -1301,20 +1304,28 @@ function exportProgressCsv({
   for (const m of messages) {
     const ts = bucket(m.sent_at);
     if (ts != null) {
-      const b = buckets.get(ts) ?? { sent: 0, delivered: 0, failed: 0 };
+      const b = buckets.get(ts) ?? { sent: 0, delivered: 0, deliveryUnconfirmed: 0, failed: 0 };
       b.sent++;
       buckets.set(ts, b);
     }
     const td = bucket(m.delivered_at);
     if (td != null) {
-      const b = buckets.get(td) ?? { sent: 0, delivered: 0, failed: 0 };
+      const b = buckets.get(td) ?? { sent: 0, delivered: 0, deliveryUnconfirmed: 0, failed: 0 };
       b.delivered++;
       buckets.set(td, b);
+    }
+    if (m.status === "delivery_unconfirmed") {
+      const tu = bucket(m.sent_at ?? m.created_at);
+      if (tu != null) {
+        const b = buckets.get(tu) ?? { sent: 0, delivered: 0, deliveryUnconfirmed: 0, failed: 0 };
+        b.deliveryUnconfirmed++;
+        buckets.set(tu, b);
+      }
     }
     if (["failed", "undelivered"].includes(m.status)) {
       const tf = bucket(m.sent_at ?? m.created_at);
       if (tf != null) {
-        const b = buckets.get(tf) ?? { sent: 0, delivered: 0, failed: 0 };
+        const b = buckets.get(tf) ?? { sent: 0, delivered: 0, deliveryUnconfirmed: 0, failed: 0 };
         b.failed++;
         buckets.set(tf, b);
       }
@@ -1322,7 +1333,7 @@ function exportProgressCsv({
   }
   const sorted = [...buckets.entries()].sort((a, b) => a[0] - b[0]);
   for (const [t, v] of sorted) {
-    lines.push(`${new Date(t).toISOString()},${v.sent},${v.delivered},${v.failed}`);
+    lines.push(`${new Date(t).toISOString()},${v.sent},${v.delivered},${v.deliveryUnconfirmed},${v.failed}`);
   }
   lines.push("");
   lines.push("Failures by reason");
