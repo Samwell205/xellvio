@@ -441,6 +441,9 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
       if (newStatus === "delivered") update.delivered_at = new Date().toISOString();
       if (errCode) update.error_code = String(errCode);
       if (errDetail) update.failure_reason = String(errDetail).slice(0, 500);
+      if (newStatus === "delivery_unconfirmed" && !errDetail) {
+        update.failure_reason = "Carrier finalized the message without a delivery confirmation.";
+      }
       await supabaseAdmin.from("messages").update(update).eq("id", m.id);
       await supabaseAdmin.from("events").insert({ message_id: m.id, type: `reconcile:${newStatus}`, payload: j });
       updated += 1;

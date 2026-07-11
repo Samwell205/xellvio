@@ -293,12 +293,13 @@ export async function getBalance(): Promise<{ balance: number; currency: string;
  * Map a Telnyx delivery status (from webhook payload or Get Message API)
  * to our internal enum. Internal enum is unchanged.
  */
-export function mapTelnyxStatus(raw: string | undefined | null): "queued" | "sending" | "sent" | "delivered" | "undelivered" | "failed" {
+export function mapTelnyxStatus(raw: string | undefined | null): "queued" | "sending" | "sent" | "delivered" | "delivery_unconfirmed" | "undelivered" | "failed" {
   const s = (raw ?? "").toLowerCase();
   if (s === "delivered") return "delivered";
   if (s === "sending_failed" || s === "sending failed") return "failed";
   if (s === "delivery_failed" || s === "delivery failed") return "undelivered";
-  if (s === "delivery_unconfirmed" || s === "sent") return "sent";
+  if (s === "delivery_unconfirmed" || s === "delivery unconfirmed") return "delivery_unconfirmed";
+  if (s === "sent") return "sent";
   if (s === "sending") return "sending";
   if (s === "queued" || s === "pending" || s === "accepted") return "queued";
   return "sent";

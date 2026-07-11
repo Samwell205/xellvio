@@ -15,6 +15,7 @@ export type CampaignReport = {
     sent: number;
     awaiting_delivery: number;
     delivered: number;
+    delivery_unconfirmed: number;
     failed: number;
     queued: number;
     cost: number;
@@ -79,6 +80,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       sent: 0,
       awaiting_delivery: 0,
       delivered: 0,
+      delivery_unconfirmed: 0,
       failed: 0,
       queued: 0,
       cost: 0,
@@ -107,9 +109,10 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       }
 
       totals.cost += Number(r.cost ?? 0);
-      if (["sent", "delivered", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
+      if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
       if (r.status === "sent") totals.awaiting_delivery += 1;
       if (r.status === "delivered") totals.delivered += 1;
+      if (r.status === "delivery_unconfirmed") totals.delivery_unconfirmed += 1;
       if (r.status === "failed" || r.status === "undelivered") totals.failed += 1;
       if (r.status === "queued" || r.status === "sending" || r.status === "pending") totals.queued += 1;
 

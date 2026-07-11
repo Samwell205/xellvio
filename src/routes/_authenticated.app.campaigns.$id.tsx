@@ -122,13 +122,14 @@ function CampaignReport() {
       // status=failed/undelivered PLUS rows that Twilio marked `sent` with an
       // error code (carrier rejection / silent DLR failure) — those are not
       // real deliveries and should not inflate the Sent bucket.
-      const [total, queued, sending, sentClean, sentErr, delivered, failedRaw] = await Promise.all([
+      const [total, queued, sending, sentClean, sentErr, delivered, unconfirmed, failedRaw] = await Promise.all([
         base(),
         base().in("status", ["queued", "pending"]),
         base().eq("status", "sending"),
         base().eq("status", "sent").is("error_code", null),
         base().eq("status", "sent").not("error_code", "is", null),
         base().eq("status", "delivered"),
+        base().eq("status", "delivery_unconfirmed"),
         base().in("status", ["failed", "undelivered"]),
       ]);
       return {
@@ -137,6 +138,7 @@ function CampaignReport() {
         sending: sending.count ?? 0,
         sent: sentClean.count ?? 0,
         delivered: delivered.count ?? 0,
+        deliveryUnconfirmed: unconfirmed.count ?? 0,
         failed: (failedRaw.count ?? 0) + (sentErr.count ?? 0),
       };
     },
@@ -299,10 +301,13 @@ function CampaignReport() {
     const delivered = progress
       ? progress.delivered
       : rows.filter((m: any) => m.status === "delivered").length;
+    const deliveryUnconfirmed = progress
+      ? progress.deliveryUnconfirmed
+      : rows.filter((m: any) => m.status === "delivery_unconfirmed").length;
     const failed = progress
       ? progress.failed
       : rows.filter((m: any) => m.status === "failed" || m.status === "undelivered" || (m.status === "sent" && m.error_code)).length;
-    const sent = awaitingDelivery + delivered + failed;
+    const sent = awaitingDelivery + delivered + deliveryUnconfirmed + failed;
     const skippedRows = rows.filter((m: any) => m.status === "skipped" || m.error_code === "insufficient_balance").length;
     const skipped = Math.max(skippedRows, attempted - Math.max(progress?.total ?? 0, rows.length));
     const clicked = events.filter((e: any) => e.type === "clicked").length;
@@ -361,7 +366,7 @@ function CampaignReport() {
     });
 
     return {
-      attempted, queued, sent, awaitingDelivery, delivered, failed, skipped, clicked, uniqueClickers,
+      attempted, queued, sent, awaitingDelivery, delivered, deliveryUnconfirmed, failed, skipped, clicked, uniqueClickers,
       totalCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
       byCountry, failures, series,
     };
@@ -548,6 +553,8 @@ function CampaignReport() {
                   sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`} tone="success" />
                 <Kpi icon={Clock} label="Awaiting carrier" value={stats.awaitingDelivery.toLocaleString()}
                   sub="accepted, no final receipt yet" tone="muted" />
+                <Kpi icon={HelpCircle} label="Unconfirmed" value={stats.deliveryUnconfirmed.toLocaleString()}
+                  sub="carrier finalized, no delivery proof" tone="muted" />
                 <Kpi icon={MousePointerClick} label="Click rate" value={`${stats.clickRate.toFixed(1)}%`}
                   sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`} tone="primary" />
                 <Kpi icon={ShieldOff} label="Opt-outs" value={(optOutsQ.data ?? 0).toLocaleString()}
@@ -619,6 +626,10 @@ function CampaignReport() {
                   {stats.awaitingDelivery > 0 && (
                     <FunnelRow icon={Clock} label="awaiting carrier report" value={stats.awaitingDelivery}
                       sub={stats.sent ? `${pct(stats.awaitingDelivery / stats.sent * 100)} of sent` : undefined} tone="muted" />
+                  )}
+                  {stats.deliveryUnconfirmed > 0 && (
+                    <FunnelRow icon={HelpCircle} label="delivery unconfirmed" value={stats.deliveryUnconfirmed}
+                      sub={stats.sent ? `${pct(stats.deliveryUnconfirmed / stats.sent * 100)} of sent` : undefined} tone="muted" />
                   )}
                   <FunnelRow icon={AlertTriangle} label="failed" value={stats.failed}
                     sub={stats.sent ? `${pct(stats.failed / stats.sent * 100)} of sent` : undefined} tone="danger" />

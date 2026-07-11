@@ -142,6 +142,9 @@ async function handleStatus(payload: any) {
   if (errCode) update.error_code = String(errCode);
   const errDetail = first?.errors?.[0]?.detail ?? first?.errors?.[0]?.title ?? p?.errors?.[0]?.detail ?? p?.errors?.[0]?.title ?? null;
   if (errDetail) update.failure_reason = String(errDetail).slice(0, 500);
+  if (finalStatus === "delivery_unconfirmed" && !errDetail) {
+    update.failure_reason = "Carrier finalized the message without a delivery confirmation.";
+  }
 
   const { data: msg } = await supabaseAdmin
     .from("messages")
@@ -149,7 +152,7 @@ async function handleStatus(payload: any) {
     .eq("provider_message_id", providerId)
     .maybeSingle();
   if (!msg) return;
-  const terminal = ["delivered", "undelivered", "failed"];
+  const terminal = ["delivered", "delivery_unconfirmed", "undelivered", "failed"];
   const nonTerminal = ["queued", "sending", "sent"];
   if (terminal.includes(msg.status) && nonTerminal.includes(finalStatus)) {
     await supabaseAdmin
