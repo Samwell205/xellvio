@@ -548,7 +548,7 @@ function CampaignReport() {
             {/* Right column */}
             <div className="space-y-5">
               {/* KPI hero */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
                 <Kpi icon={CheckCircle2} label="Delivery rate" value={`${stats.deliveryRate.toFixed(1)}%`}
                   sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`} tone="success" />
                 <Kpi icon={Clock} label="Awaiting carrier" value={stats.awaitingDelivery.toLocaleString()}
@@ -1088,7 +1088,7 @@ function ProgressPanel({
   onRetryAll,
   isRetrying,
 }: {
-  data?: { total: number; queued: number; sending: number; sent: number; delivered: number; failed: number };
+  data?: { total: number; queued: number; sending: number; sent: number; delivered: number; deliveryUnconfirmed?: number; failed: number };
   status?: string;
   isFetching?: boolean;
   failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
@@ -1098,6 +1098,7 @@ function ProgressPanel({
 }) {
   if (!data || data.total === 0) return null;
   const { total, queued, sending, sent, delivered, failed } = data;
+  const deliveryUnconfirmed = data.deliveryUnconfirmed ?? 0;
   const inFlight = queued + sending;
   const processed = total - inFlight;
   const processedPct = total > 0 ? Math.round((processed / total) * 100) : 0;
@@ -1153,16 +1154,18 @@ function ProgressPanel({
       <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
         <Seg pct={(delivered / total) * 100} className="bg-emerald-500" />
         <Seg pct={(sent / total) * 100} className="bg-sky-500" />
+        <Seg pct={(deliveryUnconfirmed / total) * 100} className="bg-cyan-500" />
         <Seg pct={(sending / total) * 100} className="bg-amber-500 animate-pulse" />
         <Seg pct={(failed / total) * 100} className="bg-destructive" />
         <Seg pct={(queued / total) * 100} className="bg-muted-foreground/30" />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mt-4">
         <ProgTile label="Queued" value={queued} dotClass="bg-muted-foreground/40" />
         <ProgTile label="Sending" value={sending} dotClass="bg-amber-500" pulse={sending > 0} />
         <ProgTile label="Accepted" value={sent} dotClass="bg-sky-500" />
         <ProgTile label="Delivered" value={delivered} dotClass="bg-emerald-500" />
+        <ProgTile label="Unconfirmed" value={deliveryUnconfirmed} dotClass="bg-cyan-500" />
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
       </div>
 
