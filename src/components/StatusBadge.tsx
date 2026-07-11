@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, XCircle, AlertTriangle, Loader2, ShieldOff, SkipForward } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, AlertTriangle, Loader2, ShieldOff, SkipForward, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Status =
@@ -14,6 +14,7 @@ type Status =
   | "sending"
   | "sent"
   | "delivered"
+  | "delivery_unconfirmed"
   | "running"
   | "scheduled"
   | "completed"
@@ -33,6 +34,7 @@ const map: Record<Status, { label: string; cls: string; Icon: React.ComponentTyp
   approved: { label: "Approved", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   active: { label: "Active", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   delivered: { label: "Delivered", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
+  delivery_unconfirmed: { label: "Unconfirmed", cls: "bg-primary/10 text-primary border-primary/25", Icon: HelpCircle },
   completed: { label: "Completed", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   sent: { label: "Sent", cls: "bg-primary/15 text-primary border-primary/30", Icon: CheckCircle2 },
   running: { label: "Running", cls: "bg-primary/15 text-primary border-primary/30", Icon: Loader2 },

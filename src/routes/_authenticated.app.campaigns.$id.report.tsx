@@ -9,7 +9,7 @@ import { formatUSD } from "@/lib/money";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
-import { ArrowLeft, Download, CheckCircle2, XCircle, Clock, DollarSign, Send } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle2, XCircle, Clock, DollarSign, Send, HelpCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id/report")({
   head: () => ({ meta: [{ title: "Campaign report — Xellvio" }] }),
@@ -63,10 +63,11 @@ function ReportPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
         <Stat icon={<Send className="size-4" />} label="Sent to carrier" value={r.totals.sent.toLocaleString()} />
         <Stat icon={<Clock className="size-4 text-amber-600" />} label="Awaiting carrier" value={r.totals.awaiting_delivery.toLocaleString()} />
         <Stat icon={<CheckCircle2 className="size-4 text-green-600" />} label="Delivered" value={r.totals.delivered.toLocaleString()} sub={`${r.totals.delivery_rate}%`} />
+        <Stat icon={<HelpCircle className="size-4 text-sky-600" />} label="Unconfirmed" value={r.totals.delivery_unconfirmed.toLocaleString()} />
         <Stat icon={<XCircle className="size-4 text-destructive" />} label="Failed" value={r.totals.failed.toLocaleString()} />
         <Stat icon={<Clock className="size-4 text-amber-600" />} label="Queued" value={r.totals.queued.toLocaleString()} />
         <Stat icon={<DollarSign className="size-4" />} label="Cost" value={formatUSD(r.totals.cost)} />

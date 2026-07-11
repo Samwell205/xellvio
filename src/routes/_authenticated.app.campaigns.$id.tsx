@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
-  Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
+  Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone, HelpCircle,
   DollarSign, Wallet, Activity, XCircle, Download, RotateCw, ExternalLink,
 } from "lucide-react";
 
@@ -122,13 +122,14 @@ function CampaignReport() {
       // status=failed/undelivered PLUS rows that Twilio marked `sent` with an
       // error code (carrier rejection / silent DLR failure) — those are not
       // real deliveries and should not inflate the Sent bucket.
-      const [total, queued, sending, sentClean, sentErr, delivered, failedRaw] = await Promise.all([
+      const [total, queued, sending, sentClean, sentErr, delivered, unconfirmed, failedRaw] = await Promise.all([
         base(),
         base().in("status", ["queued", "pending"]),
         base().eq("status", "sending"),
         base().eq("status", "sent").is("error_code", null),
         base().eq("status", "sent").not("error_code", "is", null),
         base().eq("status", "delivered"),
+        base().eq("status", "delivery_unconfirmed"),
         base().in("status", ["failed", "undelivered"]),
       ]);
       return {
@@ -137,6 +138,7 @@ function CampaignReport() {
         sending: sending.count ?? 0,
         sent: sentClean.count ?? 0,
         delivered: delivered.count ?? 0,
+        deliveryUnconfirmed: unconfirmed.count ?? 0,
         failed: (failedRaw.count ?? 0) + (sentErr.count ?? 0),
       };
     },
@@ -299,10 +301,13 @@ function CampaignReport() {
     const delivered = progress
       ? progress.delivered
       : rows.filter((m: any) => m.status === "delivered").length;
+    const deliveryUnconfirmed = progress
+      ? progress.deliveryUnconfirmed
+      : rows.filter((m: any) => m.status === "delivery_unconfirmed").length;
     const failed = progress
       ? progress.failed
       : rows.filter((m: any) => m.status === "failed" || m.status === "undelivered" || (m.status === "sent" && m.error_code)).length;
-    const sent = awaitingDelivery + delivered + failed;
+    const sent = awaitingDelivery + delivered + deliveryUnconfirmed + failed;
     const skippedRows = rows.filter((m: any) => m.status === "skipped" || m.error_code === "insufficient_balance").length;
     const skipped = Math.max(skippedRows, attempted - Math.max(progress?.total ?? 0, rows.length));
     const clicked = events.filter((e: any) => e.type === "clicked").length;
@@ -361,7 +366,7 @@ function CampaignReport() {
     });
 
     return {
-      attempted, queued, sent, awaitingDelivery, delivered, failed, skipped, clicked, uniqueClickers,
+      attempted, queued, sent, awaitingDelivery, delivered, deliveryUnconfirmed, failed, skipped, clicked, uniqueClickers,
       totalCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
       byCountry, failures, series,
     };
@@ -543,11 +548,13 @@ function CampaignReport() {
             {/* Right column */}
             <div className="space-y-5">
               {/* KPI hero */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
                 <Kpi icon={CheckCircle2} label="Delivery rate" value={`${stats.deliveryRate.toFixed(1)}%`}
                   sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`} tone="success" />
                 <Kpi icon={Clock} label="Awaiting carrier" value={stats.awaitingDelivery.toLocaleString()}
                   sub="accepted, no final receipt yet" tone="muted" />
+                <Kpi icon={HelpCircle} label="Unconfirmed" value={stats.deliveryUnconfirmed.toLocaleString()}
+                  sub="carrier finalized, no delivery proof" tone="muted" />
                 <Kpi icon={MousePointerClick} label="Click rate" value={`${stats.clickRate.toFixed(1)}%`}
                   sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`} tone="primary" />
                 <Kpi icon={ShieldOff} label="Opt-outs" value={(optOutsQ.data ?? 0).toLocaleString()}
@@ -619,6 +626,10 @@ function CampaignReport() {
                   {stats.awaitingDelivery > 0 && (
                     <FunnelRow icon={Clock} label="awaiting carrier report" value={stats.awaitingDelivery}
                       sub={stats.sent ? `${pct(stats.awaitingDelivery / stats.sent * 100)} of sent` : undefined} tone="muted" />
+                  )}
+                  {stats.deliveryUnconfirmed > 0 && (
+                    <FunnelRow icon={HelpCircle} label="delivery unconfirmed" value={stats.deliveryUnconfirmed}
+                      sub={stats.sent ? `${pct(stats.deliveryUnconfirmed / stats.sent * 100)} of sent` : undefined} tone="muted" />
                   )}
                   <FunnelRow icon={AlertTriangle} label="failed" value={stats.failed}
                     sub={stats.sent ? `${pct(stats.failed / stats.sent * 100)} of sent` : undefined} tone="danger" />
@@ -760,6 +771,7 @@ function RecipientActivity({
       all: rows,
       sent: rows.filter((m) => m.status === "sent"),
       delivered: rows.filter((m) => m.status === "delivered"),
+      unconfirmed: rows.filter((m) => m.status === "delivery_unconfirmed"),
       failed: rows.filter((m) => ["failed", "undelivered"].includes(m.status)),
       skipped: rows.filter((m) => m.status === "skipped" || m.error_code === "insufficient_balance"),
       queued: rows.filter((m) => ["queued", "pending", "sending"].includes(m.status)),
@@ -771,6 +783,7 @@ function RecipientActivity({
     { key: "all",       label: "All",       count: rows.length },
     { key: "sent",      label: "Accepted",  count: buckets.sent.length },
     { key: "delivered", label: "Delivered", count: buckets.delivered.length },
+    { key: "unconfirmed", label: "Unconfirmed", count: buckets.unconfirmed.length },
     { key: "failed",    label: "Failed",    count: buckets.failed.length },
     { key: "skipped",   label: "Skipped",   count: buckets.skipped.length },
     { key: "queued",    label: "Queued",    count: buckets.queued.length },
@@ -1077,7 +1090,7 @@ function ProgressPanel({
   onRetryAll,
   isRetrying,
 }: {
-  data?: { total: number; queued: number; sending: number; sent: number; delivered: number; failed: number };
+  data?: { total: number; queued: number; sending: number; sent: number; delivered: number; deliveryUnconfirmed?: number; failed: number };
   status?: string;
   isFetching?: boolean;
   failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
@@ -1087,6 +1100,7 @@ function ProgressPanel({
 }) {
   if (!data || data.total === 0) return null;
   const { total, queued, sending, sent, delivered, failed } = data;
+  const deliveryUnconfirmed = data.deliveryUnconfirmed ?? 0;
   const inFlight = queued + sending;
   const processed = total - inFlight;
   const processedPct = total > 0 ? Math.round((processed / total) * 100) : 0;
@@ -1142,16 +1156,18 @@ function ProgressPanel({
       <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
         <Seg pct={(delivered / total) * 100} className="bg-emerald-500" />
         <Seg pct={(sent / total) * 100} className="bg-sky-500" />
+        <Seg pct={(deliveryUnconfirmed / total) * 100} className="bg-cyan-500" />
         <Seg pct={(sending / total) * 100} className="bg-amber-500 animate-pulse" />
         <Seg pct={(failed / total) * 100} className="bg-destructive" />
         <Seg pct={(queued / total) * 100} className="bg-muted-foreground/30" />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mt-4">
         <ProgTile label="Queued" value={queued} dotClass="bg-muted-foreground/40" />
         <ProgTile label="Sending" value={sending} dotClass="bg-amber-500" pulse={sending > 0} />
         <ProgTile label="Accepted" value={sent} dotClass="bg-sky-500" />
         <ProgTile label="Delivered" value={delivered} dotClass="bg-emerald-500" />
+        <ProgTile label="Unconfirmed" value={deliveryUnconfirmed} dotClass="bg-cyan-500" />
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
       </div>
 
@@ -1215,6 +1231,8 @@ function ProgressPanel({
             ? `Paused after checking provider capacity. ${inFlight.toLocaleString()} message${inFlight === 1 ? "" : "s"} remain queued and will resume automatically after top-up.`
             : inFlight === 0 && sent > 0
             ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
+            : inFlight === 0 && deliveryUnconfirmed > 0
+            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} finalized by the carrier without delivery confirmation.`
             : inFlight === 0
             ? "All messages have a final carrier status."
             : `${processedPct}% complete.`}
@@ -1250,7 +1268,7 @@ function exportProgressCsv({
   messages,
 }: {
   campaign: any;
-  progress?: { total: number; queued: number; sending: number; sent: number; delivered: number; failed: number };
+  progress?: { total: number; queued: number; sending: number; sent: number; delivered: number; deliveryUnconfirmed?: number; failed: number };
   failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
   messages: any[];
 }) {
@@ -1270,12 +1288,13 @@ function exportProgressCsv({
     lines.push(`sending,${progress.sending}`);
     lines.push(`sent,${progress.sent}`);
     lines.push(`delivered,${progress.delivered}`);
+    lines.push(`delivery_unconfirmed,${progress.deliveryUnconfirmed ?? 0}`);
     lines.push(`failed,${progress.failed}`);
   }
   lines.push("");
   lines.push("Delivery by hour");
-  lines.push("hour_iso,sent,delivered,failed");
-  const buckets = new Map<number, { sent: number; delivered: number; failed: number }>();
+  lines.push("hour_iso,sent,delivered,delivery_unconfirmed,failed");
+  const buckets = new Map<number, { sent: number; delivered: number; deliveryUnconfirmed: number; failed: number }>();
   const bucket = (iso: string | null) => {
     if (!iso) return null;
     const d = new Date(iso);
@@ -1285,20 +1304,28 @@ function exportProgressCsv({
   for (const m of messages) {
     const ts = bucket(m.sent_at);
     if (ts != null) {
-      const b = buckets.get(ts) ?? { sent: 0, delivered: 0, failed: 0 };
+      const b = buckets.get(ts) ?? { sent: 0, delivered: 0, deliveryUnconfirmed: 0, failed: 0 };
       b.sent++;
       buckets.set(ts, b);
     }
     const td = bucket(m.delivered_at);
     if (td != null) {
-      const b = buckets.get(td) ?? { sent: 0, delivered: 0, failed: 0 };
+      const b = buckets.get(td) ?? { sent: 0, delivered: 0, deliveryUnconfirmed: 0, failed: 0 };
       b.delivered++;
       buckets.set(td, b);
+    }
+    if (m.status === "delivery_unconfirmed") {
+      const tu = bucket(m.sent_at ?? m.created_at);
+      if (tu != null) {
+        const b = buckets.get(tu) ?? { sent: 0, delivered: 0, deliveryUnconfirmed: 0, failed: 0 };
+        b.deliveryUnconfirmed++;
+        buckets.set(tu, b);
+      }
     }
     if (["failed", "undelivered"].includes(m.status)) {
       const tf = bucket(m.sent_at ?? m.created_at);
       if (tf != null) {
-        const b = buckets.get(tf) ?? { sent: 0, delivered: 0, failed: 0 };
+        const b = buckets.get(tf) ?? { sent: 0, delivered: 0, deliveryUnconfirmed: 0, failed: 0 };
         b.failed++;
         buckets.set(tf, b);
       }
@@ -1306,7 +1333,7 @@ function exportProgressCsv({
   }
   const sorted = [...buckets.entries()].sort((a, b) => a[0] - b[0]);
   for (const [t, v] of sorted) {
-    lines.push(`${new Date(t).toISOString()},${v.sent},${v.delivered},${v.failed}`);
+    lines.push(`${new Date(t).toISOString()},${v.sent},${v.delivered},${v.deliveryUnconfirmed},${v.failed}`);
   }
   lines.push("");
   lines.push("Failures by reason");
