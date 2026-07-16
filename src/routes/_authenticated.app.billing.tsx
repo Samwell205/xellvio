@@ -65,24 +65,61 @@ function BillingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Handle Paystack redirect-back ?ref=
+  // Handle redirect-back ?ref= — Paystack (pmt_/pay_) or NOWPayments (npm_)
   useEffect(() => {
     const url = new URL(window.location.href);
     const ref = url.searchParams.get("ref");
     if (!ref) return;
+    const clearRef = () => {
+      url.searchParams.delete("ref");
+      window.history.replaceState({}, "", url.toString());
+    };
+    const invalidate = () => {
+      qc.invalidateQueries({ queryKey: ["account-billing"] });
+      qc.invalidateQueries({ queryKey: ["credit-transactions"] });
+      qc.invalidateQueries({ queryKey: ["my-payments"] });
+    };
+    if (ref.startsWith("npm_")) {
+      // Poll for a couple of minutes — ETH/BTC confirmations take time
+      let cancelled = false;
+      let attempt = 0;
+      const maxAttempts = 12; // ~2 minutes at 10s
+      const poll = async () => {
+        attempt += 1;
+        try {
+          const r = await reconcileNpFn({ data: { reference: ref } });
+          if (r.status === "credited") {
+            toast.success("Payment confirmed — credits added");
+            invalidate();
+            clearRef();
+            return;
+          }
+          if (r.status === "already_paid") { invalidate(); clearRef(); return; }
+          if (r.status === "failed" || r.status === "expired" || r.status === "refunded" || r.status === "duplicate") {
+            toast.message(`Payment status: ${r.status}`);
+            invalidate();
+            clearRef();
+            return;
+          }
+          if (attempt === 1) toast.message("Waiting for on-chain confirmation…");
+          if (attempt < maxAttempts && !cancelled) setTimeout(poll, 10_000);
+          else clearRef();
+        } catch (e: any) {
+          if (attempt < maxAttempts && !cancelled) setTimeout(poll, 10_000);
+          else { toast.error(e.message); clearRef(); }
+        }
+      };
+      poll();
+      return () => { cancelled = true; };
+    }
     verifyFn({ data: { reference: ref } })
       .then((r) => {
         if (r.status === "success") toast.success("Payment confirmed — credits added");
         else toast.message(`Payment status: ${r.status}`);
-        qc.invalidateQueries({ queryKey: ["account-billing"] });
-        qc.invalidateQueries({ queryKey: ["credit-transactions"] });
-        qc.invalidateQueries({ queryKey: ["my-payments"] });
+        invalidate();
       })
       .catch((e) => toast.error(e.message))
-      .finally(() => {
-        url.searchParams.delete("ref");
-        window.history.replaceState({}, "", url.toString());
-      });
+      .finally(clearRef);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
