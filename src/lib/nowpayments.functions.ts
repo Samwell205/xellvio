@@ -265,7 +265,7 @@ export async function reconcileOneNowPayment(payment: {
 }
 
 /** Send tenant email + admin SMS/email when a crypto payment is credited. */
-async function notifyCryptoPaymentCredited(payment: {
+export async function notifyCryptoPaymentCredited(payment: {
   id: string; account_id: string; credits: number; amount: number; currency: string; metadata: any;
 }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
