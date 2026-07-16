@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Building2, Users, MessageSquareText, AlertTriangle, DollarSign, Wallet,
-  PhoneCall, ArrowRight, Loader2,
+  PhoneCall, ArrowRight, Loader2, TrendingUp, Send, Receipt, PiggyBank,
 } from "lucide-react";
 import { adminGetOverview } from "@/lib/admin-overview.functions";
 import { formatUSD } from "@/lib/money";
