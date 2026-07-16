@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Building2, Users, MessageSquareText, AlertTriangle, DollarSign, Wallet,
-  PhoneCall, ArrowRight, Loader2,
+  PhoneCall, ArrowRight, Loader2, TrendingUp, Send, Receipt, PiggyBank,
 } from "lucide-react";
 import { adminGetOverview } from "@/lib/admin-overview.functions";
 import { formatUSD } from "@/lib/money";
@@ -66,6 +66,53 @@ function AdminOverview() {
       </Card>
 
 
+      {/* ─── Financials ─── */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="font-semibold flex items-center gap-2"><PiggyBank className="size-4 text-primary" /> Financials</h2>
+            <p className="text-xs text-muted-foreground">All-time totals in USD. Profit is estimated: revenue − carrier cost − unused credits still owed to tenants.</p>
+          </div>
+          <Link to="/admin/billing" className="text-xs text-primary inline-flex items-center gap-1">Billing details <ArrowRight className="size-3" /></Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Stat icon={Receipt} label="Total collected" value={formatUSD(d.financials.totalCollected)} sub={`${d.financials.paymentsCount} payments · ${formatUSD(d.financials.collected30d)} in 30d`} />
+          <Stat icon={Send} label="Spent on SMS (tenants)" value={formatUSD(d.financials.tenantSmsSpend)} sub={`${d.financials.messagesSentAllTime.toLocaleString()} messages · ${formatUSD(d.financials.smsSpend30d)} in 30d`} />
+          <Stat icon={DollarSign} label="Carrier cost (Telnyx)" value={formatUSD(d.financials.carrierSmsCost)} accent="text-amber-500" sub={`${formatUSD(d.financials.carrierCost30d)} in 30d`} />
+          <Stat icon={TrendingUp} label="Estimated profit" value={formatUSD(d.financials.estimatedProfit)} accent={d.financials.estimatedProfit >= 0 ? "text-emerald-500" : "text-destructive"} sub={`SMS margin: ${formatUSD(d.financials.smsMargin)}`} />
+        </div>
+        {Object.keys(d.financials.collectedByProvider).length > 0 && (
+          <div className="mt-4 pt-3 border-t">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Collected by payment method</div>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(d.financials.collectedByProvider).map(([prov, amt]) => (
+                <Badge key={prov} variant="secondary" className="text-xs">
+                  {prov}: <span className="ml-1 font-semibold tabular-nums">{formatUSD(Number(amt))}</span>
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="mt-4 pt-3 border-t grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+          <div>
+            <div className="text-muted-foreground">Unused credits (liability)</div>
+            <div className="font-semibold tabular-nums text-base">{formatUSD(d.financials.unusedCredits)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Revenue last 7 days</div>
+            <div className="font-semibold tabular-nums text-base">{formatUSD(d.revenue.last7d)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Gross margin %</div>
+            <div className="font-semibold tabular-nums text-base">
+              {d.financials.tenantSmsSpend > 0
+                ? `${((d.financials.smsMargin / d.financials.tenantSmsSpend) * 100).toFixed(1)}%`
+                : "—"}
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat icon={Building2} label="Tenants" value={d.tenants.total} sub={`${d.tenants.active} active · ${d.tenants.suspended} suspended`} />
         <Stat icon={MessageSquareText} label="Messages 24h" value={d.messaging.sent24h.toLocaleString()} sub={`${d.messaging.sent7d.toLocaleString()} in 7d`} />
@@ -76,6 +123,7 @@ function AdminOverview() {
         <Stat icon={Users} label="New tenants 7d" value={d.recent.signups.length} sub="Most recent signups" />
         <Stat icon={MessageSquareText} label="Success rate 24h" value={`${d.messaging.sent24h ? Math.round(((d.messaging.sent24h - d.messaging.failed24h) / d.messaging.sent24h) * 100) : 100}%`} sub="Delivered / sent" />
       </div>
+
 
       <div className="grid lg:grid-cols-2 gap-4">
         <Card className="p-4">

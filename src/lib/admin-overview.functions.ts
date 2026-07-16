@@ -19,7 +19,8 @@ export const adminGetOverview = createServerFn({ method: "GET" })
     const [
       accountsAll, accountsActive, accountsSuspended,
       pendingReq, msgs24, msgs7d, msgsFailed24,
-      payments7d, creditSum, lastSignups, lastMessagesRes, lastPayments,
+      payments7d, allPayments, creditSum, lastSignups, lastMessagesRes, lastPayments,
+      smsSpendAll, ratesRes,
     ] = await Promise.all([
       supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }),
       supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }).eq("onboarding_status", "active"),
@@ -28,16 +29,60 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h),
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since7d),
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h).in("status", ["failed", "undelivered"]),
-      supabaseAdmin.from("payments").select("amount,status,created_at").gte("created_at", since7d),
+      supabaseAdmin.from("payments").select("amount,status,created_at,provider").gte("created_at", since7d),
+      supabaseAdmin.from("payments").select("amount,status,provider,created_at"),
       supabaseAdmin.from("accounts").select("credit_balance"),
       supabaseAdmin.from("accounts").select("id,email,full_name,company,created_at").order("created_at", { ascending: false }).limit(6),
       supabaseAdmin.from("messages").select("id,phone_e164,status,created_at,campaign_id,cost,country_code").order("created_at", { ascending: false }).limit(8),
       supabaseAdmin.from("payments").select("id,amount,currency,status,provider,created_at,account_id").order("created_at", { ascending: false }).limit(6),
+      supabaseAdmin.from("messages")
+        .select("cost,segments_count,country_code,status,created_at")
+        .in("status", ["sent", "delivered", "delivery_unconfirmed"]),
+      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price"),
     ]);
 
-    const paid7d = (payments7d.data ?? []).filter((p: any) => p.status === "succeeded" || p.status === "approved");
+    const isPaid = (s: string) => s === "succeeded" || s === "approved" || s === "paid" || s === "finished" || s === "confirmed";
+    const paid7d = (payments7d.data ?? []).filter((p: any) => isPaid(p.status));
     const revenue7d = paid7d.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+
+    const allPaid = (allPayments.data ?? []).filter((p: any) => isPaid(p.status));
+    const totalCollected = allPaid.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+    const collectedByProvider: Record<string, number> = {};
+    for (const p of allPaid) {
+      const k = (p.provider ?? "other") as string;
+      collectedByProvider[k] = (collectedByProvider[k] ?? 0) + Number(p.amount ?? 0);
+    }
+    const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const collected30d = allPaid
+      .filter((p: any) => p.created_at >= since30d)
+      .reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+
     const totalCredits = (creditSum.data ?? []).reduce((s: number, r: any) => s + Number(r.credit_balance ?? 0), 0);
+
+    // SMS economics
+    const rates = ratesRes.data ?? [];
+    const costByCc = new Map<string, number>(rates.map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
+    const smsRows = smsSpendAll.data ?? [];
+    const tenantSmsSpend = smsRows.reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
+    const carrierSmsCost = smsRows.reduce((s: number, m: any) => {
+      const c = costByCc.get(m.country_code ?? "") ?? 0;
+      const seg = Number(m.segments_count ?? 1);
+      return s + c * seg;
+    }, 0);
+    const smsMargin = tenantSmsSpend - carrierSmsCost;
+    const messagesSentAllTime = smsRows.length;
+    const smsSpend30d = smsRows
+      .filter((m: any) => m.created_at >= since30d)
+      .reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
+    const carrierCost30d = smsRows
+      .filter((m: any) => m.created_at >= since30d)
+      .reduce((s: number, m: any) => {
+        const c = costByCc.get(m.country_code ?? "") ?? 0;
+        return s + c * Number(m.segments_count ?? 1);
+      }, 0);
+
+    // Estimated profit: revenue collected − carrier cost − unused credits still owed to tenants
+    const estimatedProfit = totalCollected - carrierSmsCost - totalCredits;
 
     return {
       tenants: {
@@ -52,6 +97,20 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       },
       revenue: { last7d: revenue7d, payments7d: paid7d.length },
       credits: { totalBalance: totalCredits },
+      financials: {
+        totalCollected,
+        collected30d,
+        collectedByProvider,
+        tenantSmsSpend,
+        smsSpend30d,
+        carrierSmsCost,
+        carrierCost30d,
+        smsMargin,
+        estimatedProfit,
+        unusedCredits: totalCredits,
+        messagesSentAllTime,
+        paymentsCount: allPaid.length,
+      },
       pendingNumberRequests: pendingReq.count ?? 0,
       recent: {
         signups: lastSignups.data ?? [],
@@ -60,6 +119,7 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       },
     };
   });
+
 
 export const adminListMessages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
