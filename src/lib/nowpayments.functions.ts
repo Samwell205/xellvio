@@ -246,6 +246,8 @@ export async function reconcileOneNowPayment(payment: {
       _amount: payment.credits,
       _description: `NOWPayments ${payment.currency} ${payment.amount} — reconciled`,
     });
+    // Fire-and-forget notifications (tenant email + admin SMS/email)
+    notifyCryptoPaymentCredited(payment).catch((e) => console.error("[np-notify] failed", e));
     return { status: "credited" as const, amount: payment.credits };
   }
 
