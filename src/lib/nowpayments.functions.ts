@@ -332,5 +332,17 @@ export async function notifyCryptoPaymentCredited(payment: {
   } catch (e) {
     console.error("[np-notify] admin notify failed", e);
   }
+
+  try {
+    const { sendAdminPush } = await import("./admin-push.server");
+    await sendAdminPush({
+      title: `Crypto payment: ${amountLabel}`,
+      body: `${acct?.full_name || tenantEmail || "Tenant"} paid ${amountLabel} in ${coin.toUpperCase()}. Balance: ${balance.toFixed(2)}.`,
+      url: "/admin/billing",
+      tag: `np-${payment.id}`,
+    });
+  } catch (e) {
+    console.error("[np-notify] admin push failed", e);
+  }
 }
 
