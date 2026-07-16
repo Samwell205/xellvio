@@ -55,6 +55,17 @@ function AdminOverview() {
         </div>
       </div>
 
+      <Card className="p-4 border-primary/40 bg-primary/5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold text-sm">Real-time push alerts</div>
+            <div className="text-xs text-muted-foreground">Get notified on every signup, payment, and campaign — right on your phone.</div>
+          </div>
+          <EnableNotificationsButton />
+        </div>
+      </Card>
+
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat icon={Building2} label="Tenants" value={d.tenants.total} sub={`${d.tenants.active} active · ${d.tenants.suspended} suspended`} />
         <Stat icon={MessageSquareText} label="Messages 24h" value={d.messaging.sent24h.toLocaleString()} sub={`${d.messaging.sent7d.toLocaleString()} in 7d`} />
