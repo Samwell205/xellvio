@@ -320,6 +320,18 @@ async function planCampaign(
     return { planned: 0, skipped: failedRows.length, cost: totalCost, reason: "insufficient_balance" };
   }
   await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
+  try {
+    const { sendAdminPush } = await import("@/lib/admin-push.server");
+    const { data: acct } = await supabaseAdmin.from("accounts")
+      .select("full_name, email, contact_email").eq("id", campaign.account_id).maybeSingle();
+    const who = acct?.full_name || acct?.contact_email || acct?.email || "A tenant";
+    await sendAdminPush({
+      title: "Campaign started",
+      body: `${who} is sending "${campaign.name ?? "Untitled"}" — ${queuedRows.length} messages queued.`,
+      url: `/admin/messages`,
+      tag: `camp-start-${campaign.id}`,
+    });
+  } catch (e) { console.error("[dispatch] push start failed", e); }
   return { planned: queuedRows.length, skipped: failedRows.length, cost: totalCost };
 }
 
