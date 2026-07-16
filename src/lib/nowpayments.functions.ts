@@ -152,3 +152,112 @@ export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
       throw e;
     }
   });
+
+/**
+ * Reconcile a single NOWPayments payment by our reference (npm_<uuid>).
+ * Safe to call from client on redirect-back — queries NOWPayments API,
+ * credits the account if the on-chain payment finished, and is idempotent.
+ */
+export const reconcileNowPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { reference: string }) => {
+    if (!d?.reference || !d.reference.startsWith("npm_")) throw new Error("Invalid reference");
+    return d;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: payment } = await supabaseAdmin
+      .from("payments")
+      .select("id,account_id,status,credits,amount,currency,metadata,provider")
+      .eq("provider_reference", data.reference)
+      .maybeSingle();
+    if (!payment) return { status: "not_found" as const };
+    // Only the payer can trigger a manual reconcile from the client.
+    if (payment.account_id !== context.userId) return { status: "forbidden" as const };
+    if (payment.status === "paid") return { status: "already_paid" as const };
+    const result = await reconcileOneNowPayment(payment as any);
+    return result;
+  });
+
+/** Shared reconciler used by manual + cron sweep. */
+export async function reconcileOneNowPayment(payment: {
+  id: string; account_id: string; status: string; credits: number; amount: number;
+  currency: string; metadata: any; provider: string;
+}) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  if (payment.status === "paid") return { status: "already_paid" as const };
+
+  const invoiceId = (payment.metadata as any)?.np_invoice_id;
+  const apiKey = process.env.NOWPAYMENTS_API_KEY;
+  if (!apiKey) throw new Error("NOWPayments is not configured");
+
+  // Query NOWPayments for the latest payment(s) tied to this invoice
+  let list: any[] = [];
+  if (invoiceId) {
+    const url = `${NP_API}/payment/?invoiceId=${encodeURIComponent(String(invoiceId))}&limit=25&page=0&sortBy=updated_at&orderBy=desc`;
+    const res = await fetch(url, { headers: { "x-api-key": apiKey } });
+    const json: any = await res.json().catch(() => ({}));
+    list = Array.isArray(json?.data) ? json.data : [];
+  }
+
+  // Pick the "best" record: prefer finished/confirmed, else latest
+  const rank = (s: string) => (s === "finished" || s === "confirmed" ? 3 : s === "sending" || s === "confirming" ? 2 : s === "partially_paid" ? 1 : 0);
+  list.sort((a, b) => rank(String(b.payment_status ?? "")) - rank(String(a.payment_status ?? "")));
+  const best = list[0];
+  const status = String(best?.payment_status ?? "").toLowerCase();
+  const txHash = best?.outcome?.hash ?? best?.payin_hash ?? best?.pay_hash ?? null;
+
+  const meta = { ...(payment.metadata ?? {}), last_poll: best ?? null, last_poll_at: new Date().toISOString(), tx_hash: txHash };
+
+  if (!best) {
+    await supabaseAdmin.from("payments").update({ metadata: meta }).eq("id", payment.id);
+    return { status: "no_payment_yet" as const };
+  }
+
+  if (status === "finished" || status === "confirmed") {
+    if (txHash) {
+      const { data: dupe } = await supabaseAdmin
+        .from("payments")
+        .select("id")
+        .neq("id", payment.id)
+        .eq("status", "paid")
+        .contains("metadata", { tx_hash: txHash })
+        .maybeSingle();
+      if (dupe) {
+        await supabaseAdmin
+          .from("payments")
+          .update({ status: "failed", admin_note: `Duplicate tx hash ${txHash}`, metadata: meta })
+          .eq("id", payment.id);
+        return { status: "duplicate" as const };
+      }
+    }
+    // Atomic claim: only credit if still pending
+    const { data: claimed, error: claimErr } = await supabaseAdmin
+      .from("payments")
+      .update({ status: "paid", paid_at: new Date().toISOString(), metadata: meta })
+      .eq("id", payment.id)
+      .eq("status", "pending")
+      .select("id");
+    if (claimErr) throw new Error(claimErr.message);
+    if (!claimed?.length) return { status: "already_paid" as const };
+
+    await supabaseAdmin.rpc("topup_account", {
+      _account_id: payment.account_id,
+      _amount: payment.credits,
+      _description: `NOWPayments ${payment.currency} ${payment.amount} — reconciled`,
+    });
+    return { status: "credited" as const, amount: payment.credits };
+  }
+
+  if (status === "failed" || status === "expired" || status === "refunded") {
+    await supabaseAdmin
+      .from("payments")
+      .update({ status: status === "refunded" ? "refunded" : "failed", admin_note: `NOWPayments ${status}`, metadata: meta })
+      .eq("id", payment.id);
+    return { status: status as "failed" | "expired" | "refunded" };
+  }
+
+  // waiting / confirming / sending / partially_paid — just snapshot
+  await supabaseAdmin.from("payments").update({ metadata: meta }).eq("id", payment.id);
+  return { status: (status || "pending") as string };
+}
