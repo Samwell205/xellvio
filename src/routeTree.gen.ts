@@ -48,6 +48,7 @@ import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.t
 import { Route as ApiPublicTelnyxInboundRouteImport } from './routes/api.public.telnyx-inbound'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
+import { Route as ApiPublicNowpaymentsPollRouteImport } from './routes/api/public/nowpayments-poll'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedSellersDashboardRouteImport } from './routes/_authenticated.sellers.dashboard'
@@ -290,6 +291,12 @@ const ApiPublicPaystackWebhookRoute =
   ApiPublicPaystackWebhookRouteImport.update({
     id: '/api/public/paystack-webhook',
     path: '/api/public/paystack-webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicNowpaymentsPollRoute =
+  ApiPublicNowpaymentsPollRouteImport.update({
+    id: '/api/public/nowpayments-poll',
+    path: '/api/public/nowpayments-poll',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
@@ -635,6 +642,7 @@ export interface FileRoutesByFullPath {
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
+  '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
@@ -718,6 +726,7 @@ export interface FileRoutesByTo {
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
+  '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
@@ -808,6 +817,7 @@ export interface FileRoutesById {
   '/_authenticated/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
+  '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
@@ -897,6 +907,7 @@ export interface FileRouteTypes {
     | '/sellers/dashboard'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
+    | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/telnyx-inbound'
@@ -980,6 +991,7 @@ export interface FileRouteTypes {
     | '/sellers/dashboard'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
+    | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/telnyx-inbound'
@@ -1069,6 +1081,7 @@ export interface FileRouteTypes {
     | '/_authenticated/sellers/dashboard'
     | '/api/public/dispatch-campaign'
     | '/api/public/nowpayments-ipn'
+    | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
     | '/api/public/poll-verifications'
     | '/api/public/telnyx-inbound'
@@ -1127,6 +1140,7 @@ export interface RootRouteChildren {
   VerifyIndexRoute: typeof VerifyIndexRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
+  ApiPublicNowpaymentsPollRoute: typeof ApiPublicNowpaymentsPollRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
   ApiPublicTelnyxInboundRoute: typeof ApiPublicTelnyxInboundRoute
@@ -1413,6 +1427,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/paystack-webhook'
       fullPath: '/api/public/paystack-webhook'
       preLoaderRoute: typeof ApiPublicPaystackWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/nowpayments-poll': {
+      id: '/api/public/nowpayments-poll'
+      path: '/api/public/nowpayments-poll'
+      fullPath: '/api/public/nowpayments-poll'
+      preLoaderRoute: typeof ApiPublicNowpaymentsPollRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/nowpayments-ipn': {
@@ -1966,6 +1987,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyIndexRoute: VerifyIndexRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
+  ApiPublicNowpaymentsPollRoute: ApiPublicNowpaymentsPollRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
   ApiPublicTelnyxInboundRoute: ApiPublicTelnyxInboundRoute,
