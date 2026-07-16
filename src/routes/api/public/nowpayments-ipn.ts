@@ -73,6 +73,12 @@ export const Route = createFileRoute("/api/public/nowpayments-ipn")({
               .from("payments")
               .update({ status: "paid", paid_at: new Date().toISOString(), metadata: meta })
               .eq("id", payment.id);
+            try {
+              const { notifyCryptoPaymentCredited } = await import("@/lib/nowpayments.functions");
+              await notifyCryptoPaymentCredited({ ...payment, metadata: meta });
+            } catch (e) {
+              console.error("[np-ipn] notify failed", e);
+            }
           }
         } else if (status === "failed" || status === "expired" || status === "refunded") {
           await supabaseAdmin
