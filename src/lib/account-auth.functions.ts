@@ -188,5 +188,20 @@ export const createAccountWithCode = createServerFn({ method: "POST" })
       .update({ consumed_at: new Date().toISOString(), attempts: row.attempts ?? 0 })
       .eq("id", row.id);
 
+    // Notify admins of the new signup (push + SMS)
+    try {
+      const { sendAdminPush } = await import("./admin-push.server");
+      await sendAdminPush({
+        title: "New Xellvio signup",
+        body: `${data.full_name || email} just created an account (${email}).`,
+        url: "/admin/accounts",
+        tag: `signup-${userId}`,
+      });
+    } catch (e) { console.error("[signup] push notify failed", e); }
+    try {
+      const { sendAdminSms } = await import("./admin-notify.server");
+      await sendAdminSms(`New Xellvio signup: ${data.full_name || email} <${email}>`);
+    } catch (e) { console.error("[signup] sms notify failed", e); }
+
     return { ok: true };
   });

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { adminGetOverview } from "@/lib/admin-overview.functions";
 import { formatUSD } from "@/lib/money";
+import { EnableNotificationsButton } from "@/components/EnableNotificationsButton";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({ meta: [{ title: "Admin overview — Xellvio" }] }),
@@ -53,6 +54,17 @@ function AdminOverview() {
           <Link to="/admin/accounts"><Button size="sm"><Building2 className="size-3.5 mr-1.5" />Tenants</Button></Link>
         </div>
       </div>
+
+      <Card className="p-4 border-primary/40 bg-primary/5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold text-sm">Real-time push alerts</div>
+            <div className="text-xs text-muted-foreground">Get notified on every signup, payment, and campaign — right on your phone.</div>
+          </div>
+          <EnableNotificationsButton />
+        </div>
+      </Card>
+
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat icon={Building2} label="Tenants" value={d.tenants.total} sub={`${d.tenants.active} active · ${d.tenants.suspended} suspended`} />
