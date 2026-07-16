@@ -246,6 +246,8 @@ export async function reconcileOneNowPayment(payment: {
       _amount: payment.credits,
       _description: `NOWPayments ${payment.currency} ${payment.amount} — reconciled`,
     });
+    // Fire-and-forget notifications (tenant email + admin SMS/email)
+    notifyCryptoPaymentCredited(payment).catch((e: unknown) => console.error("[np-notify] failed", e));
     return { status: "credited" as const, amount: payment.credits };
   }
 
@@ -261,3 +263,74 @@ export async function reconcileOneNowPayment(payment: {
   await supabaseAdmin.from("payments").update({ metadata: meta }).eq("id", payment.id);
   return { status: (status || "pending") as string };
 }
+
+/** Send tenant email + admin SMS/email when a crypto payment is credited. */
+export async function notifyCryptoPaymentCredited(payment: {
+  id: string; account_id: string; credits: number; amount: number; currency: string; metadata: any;
+}) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: acct } = await supabaseAdmin
+    .from("accounts")
+    .select("email, contact_email, full_name, credit_balance")
+    .eq("id", payment.account_id)
+    .maybeSingle();
+
+  const tenantEmail = (acct?.contact_email || acct?.email || "").trim();
+  const coin = (payment.metadata?.coin ?? payment.metadata?.last_ipn?.pay_currency ?? payment.metadata?.last_poll?.pay_currency ?? "crypto") as string;
+  const balance = Number(acct?.credit_balance ?? 0);
+  const amountLabel = `${payment.currency} ${Number(payment.amount).toFixed(2)}`;
+
+  if (tenantEmail) {
+    try {
+      const { sendBrandedEmail } = await import("./email/send-internal.server");
+      await sendBrandedEmail({
+        templateName: "generic",
+        recipientEmail: tenantEmail,
+        idempotencyKey: `np-credited-${payment.id}`,
+        templateData: {
+          subject: `Payment confirmed — ${amountLabel} added to your balance`,
+          heading: "Crypto payment confirmed",
+          body:
+            `Hi ${acct?.full_name || "there"},\n\n` +
+            `We received your ${coin.toUpperCase()} payment and credited your Xellvio balance.\n\n` +
+            `Amount: ${amountLabel}\n` +
+            `Credits added: ${Number(payment.credits).toFixed(2)}\n` +
+            `New balance: ${balance.toFixed(2)}\n\n` +
+            `You can start sending campaigns right away.`,
+          ctaText: "Open dashboard",
+          ctaUrl: `${process.env.PUBLIC_SITE_URL || "https://xellvio.lovable.app"}/app/billing`,
+        },
+        includeUnsubscribe: false,
+      });
+    } catch (e) {
+      console.error("[np-notify] tenant email failed", e);
+    }
+  }
+
+  try {
+    const { sendAdminSms, ADMIN_NOTIFY_EMAIL } = await import("./admin-notify.server");
+    const line = `Crypto payment credited: ${amountLabel} (${coin}) — ${acct?.full_name || tenantEmail || payment.account_id}`;
+    await sendAdminSms(line);
+    const { sendBrandedEmail } = await import("./email/send-internal.server");
+    await sendBrandedEmail({
+      templateName: "generic",
+      recipientEmail: ADMIN_NOTIFY_EMAIL,
+      idempotencyKey: `np-credited-admin-${payment.id}`,
+      templateData: {
+        subject: `Crypto payment credited — ${amountLabel}`,
+        heading: "Crypto payment credited",
+        body:
+          `Tenant: ${acct?.full_name || "—"} <${tenantEmail || "no email"}>\n` +
+          `Account ID: ${payment.account_id}\n` +
+          `Amount: ${amountLabel}\n` +
+          `Coin: ${coin}\n` +
+          `Credits added: ${Number(payment.credits).toFixed(2)}\n` +
+          `New balance: ${balance.toFixed(2)}`,
+      },
+      includeUnsubscribe: false,
+    });
+  } catch (e) {
+    console.error("[np-notify] admin notify failed", e);
+  }
+}
+
