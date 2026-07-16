@@ -29,8 +29,8 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h),
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since7d),
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h).in("status", ["failed", "undelivered"]),
-      supabaseAdmin.from("payments").select("amount,status,created_at,provider").gte("created_at", since7d),
-      supabaseAdmin.from("payments").select("amount,status,provider,created_at"),
+      supabaseAdmin.from("payments").select("amount,currency,status,created_at,provider").gte("created_at", since7d),
+      supabaseAdmin.from("payments").select("amount,currency,status,provider,created_at"),
       supabaseAdmin.from("accounts").select("credit_balance"),
       supabaseAdmin.from("accounts").select("id,email,full_name,company,created_at").order("created_at", { ascending: false }).limit(6),
       supabaseAdmin.from("messages").select("id,phone_e164,status,created_at,campaign_id,cost,country_code").order("created_at", { ascending: false }).limit(8),
@@ -42,10 +42,13 @@ export const adminGetOverview = createServerFn({ method: "GET" })
     ]);
 
     const isPaid = (s: string) => s === "succeeded" || s === "approved" || s === "paid" || s === "finished" || s === "confirmed";
-    const paid7d = (payments7d.data ?? []).filter((p: any) => isPaid(p.status));
+    // Platform accounting is USD. Non-USD payments (e.g. NGN from Paystack local currency)
+    // are excluded from totals to avoid mixing currencies. Cancelled/failed/pending are also excluded.
+    const isUsd = (c: any) => !c || String(c).toUpperCase() === "USD";
+    const paid7d = (payments7d.data ?? []).filter((p: any) => isPaid(p.status) && isUsd(p.currency));
     const revenue7d = paid7d.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
 
-    const allPaid = (allPayments.data ?? []).filter((p: any) => isPaid(p.status));
+    const allPaid = (allPayments.data ?? []).filter((p: any) => isPaid(p.status) && isUsd(p.currency));
     const totalCollected = allPaid.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
     const collectedByProvider: Record<string, number> = {};
     for (const p of allPaid) {
