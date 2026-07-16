@@ -41,6 +41,7 @@ function BillingPage() {
   const packsFn = useServerFn(listCreditPacks);
   const paymentsFn = useServerFn(listMyPayments);
   const verifyFn = useServerFn(verifyPaystack);
+  const reconcileNpFn = useServerFn(reconcileNowPayment);
 
   const packs = useQuery({ queryKey: ["credit-packs"], queryFn: () => packsFn() });
   const payments = useQuery({ queryKey: ["my-payments"], queryFn: () => paymentsFn(), refetchInterval: 15_000 });
