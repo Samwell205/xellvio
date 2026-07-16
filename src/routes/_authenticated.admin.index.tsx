@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { adminGetOverview } from "@/lib/admin-overview.functions";
 import { formatUSD } from "@/lib/money";
+import { EnableNotificationsButton } from "@/components/EnableNotificationsButton";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({ meta: [{ title: "Admin overview — Xellvio" }] }),
