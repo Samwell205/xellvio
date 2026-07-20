@@ -466,11 +466,13 @@ function ConsentBadge({ status }: { status: ProfileRow["consent_status"] }) {
 /* ============================ Lists management ============================ */
 
 function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: () => void }) {
+  const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
 
   async function save() {
     if (!name.trim()) { toast.error("Name required"); return; }
