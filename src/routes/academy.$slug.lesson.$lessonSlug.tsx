@@ -72,6 +72,10 @@ function LessonPage() {
   const canAccess = enrolled || lesson.is_free_preview;
   const prev = data.lessons[lessonIdx - 1];
   const next = data.lessons[lessonIdx + 1];
+  const prereq = lesson.prerequisite_lesson_id
+    ? data.lessons.find((l) => l.id === lesson.prerequisite_lesson_id)
+    : null;
+  const prereqBlocked = enrolled && prereq && !completedIds.has(prereq.id);
 
   if (!canAccess) {
     return (
@@ -87,6 +91,27 @@ function LessonPage() {
             }}
           >
             Enroll now
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  if (prereqBlocked && prereq) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12">
+        <Card className="p-8 text-center">
+          <h2 className="text-xl font-semibold">Complete the previous lesson first</h2>
+          <p className="mt-2 text-muted-foreground">
+            You need to finish <span className="font-medium text-foreground">{prereq.title}</span> before starting this one.
+          </p>
+          <Button
+            className="mt-4"
+            onClick={() =>
+              navigate({ to: "/academy/$slug/lesson/$lessonSlug", params: { slug, lessonSlug: prereq.slug } })
+            }
+          >
+            Go to {prereq.title}
           </Button>
         </Card>
       </div>
