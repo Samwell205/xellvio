@@ -38,6 +38,7 @@ import { Route as AcademyIndexRouteImport } from './routes/academy.index'
 import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
+import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
@@ -248,6 +249,11 @@ const SolutionsEmailToSmsRoute = SolutionsEmailToSmsRouteImport.update({
   id: '/email-to-sms',
   path: '/email-to-sms',
   getParentRoute: () => SolutionsRoute,
+} as any)
+const RCodeRoute = RCodeRouteImport.update({
+  id: '/r/$code',
+  path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const MMessageIdRoute = MMessageIdRouteImport.update({
   id: '/m/$messageId',
@@ -662,6 +668,7 @@ export interface FileRoutesByFullPath {
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
@@ -755,6 +762,7 @@ export interface FileRoutesByTo {
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
@@ -852,6 +860,7 @@ export interface FileRoutesById {
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
@@ -950,6 +959,7 @@ export interface FileRouteTypes {
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
+    | '/r/$code'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
@@ -1043,6 +1053,7 @@ export interface FileRouteTypes {
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
+    | '/r/$code'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
@@ -1139,6 +1150,7 @@ export interface FileRouteTypes {
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
+    | '/r/$code'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
@@ -1234,6 +1246,7 @@ export interface RootRouteChildren {
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   MMessageIdRoute: typeof MMessageIdRoute
+  RCodeRoute: typeof RCodeRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
@@ -1457,6 +1470,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/solutions/email-to-sms'
       preLoaderRoute: typeof SolutionsEmailToSmsRouteImport
       parentRoute: typeof SolutionsRoute
+    }
+    '/r/$code': {
+      id: '/r/$code'
+      path: '/r/$code'
+      fullPath: '/r/$code'
+      preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/m/$messageId': {
       id: '/m/$messageId'
@@ -2172,6 +2192,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSetupSmsRoute: ApiSetupSmsRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   MMessageIdRoute: MMessageIdRoute,
+  RCodeRoute: RCodeRoute,
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
   VerifyIndexRoute: VerifyIndexRoute,
