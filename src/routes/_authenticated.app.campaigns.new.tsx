@@ -608,6 +608,22 @@ function NewCampaignPage() {
                 Links don't cost extra — they just add characters, which may push the message into a second SMS segment.
               </p>
             </div>
+            <div className="rounded-md border p-3 flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <Label className="cursor-pointer" htmlFor="track-links-toggle">Track link clicks</Label>
+                <p className="text-xs text-muted-foreground max-w-md">
+                  {s.trackLinks
+                    ? "On — any URL in your message is shortened to a xellvio.com/r/… link so we can count who clicked. See per-link stats on the report's Links tab."
+                    : "Off — your original URLs are sent exactly as typed. No shortening, no click tracking, nothing on the Links tab."}
+                </p>
+              </div>
+              <Switch
+                id="track-links-toggle"
+                checked={s.trackLinks}
+                onCheckedChange={(v) => setS({ ...s, trackLinks: !!v })}
+              />
+            </div>
+
             <div>
               <Label>MMS image (optional)</Label>
               <MmsImagePicker
