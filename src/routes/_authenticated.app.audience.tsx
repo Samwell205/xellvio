@@ -733,9 +733,11 @@ function detectField(headers: string[], aliases: string[]): string | undefined {
 }
 
 function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: ContactList[]; onDone: () => void; onDownloadTemplate: () => void }) {
+  const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [defaultCountry, setDefaultCountry] = useState("US");
   const [busy, setBusy] = useState(false);
+
   const [preview, setPreview] = useState<Preview | null>(null);
   const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number; errors: RowError[] } | null>(null);
   const [listMode, setListMode] = useState<"none" | "existing" | "new">("none");
