@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { PERMISSION_KEYS, type PermissionKey, type Permissions } from "@/lib/team-permissions";
+import { buildTeamInviteUrl, sendTeamInviteEmail } from "@/lib/team.server";
 
 const roleEnum = z.enum(["viewer", "editor", "admin"]);
 const ALLOWED_KEYS = new Set<string>(PERMISSION_KEYS);
@@ -109,6 +110,12 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
       memberId = ins.id;
     }
 
+    let emailResult: { success: boolean; reason?: string; acceptUrl: string } = {
+      success: false,
+      reason: "not_sent",
+      acceptUrl: buildTeamInviteUrl(data.email),
+    };
+
     // If the invited email already corresponds to an existing Xellvio user, link immediately.
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -135,24 +142,59 @@ export const inviteTeamMember = createServerFn({ method: "POST" })
         .eq("id", userId)
         .maybeSingle();
 
-      const { sendBrandedEmail } = await import("@/lib/email/send-internal.server");
-      const baseUrl = process.env.PUBLIC_BASE_URL ?? "https://xellvio.lovable.app";
-      await sendBrandedEmail({
-        templateName: "team-invite",
+      emailResult = await sendTeamInviteEmail({
         recipientEmail: data.email,
-        idempotencyKey: `team-invite-${memberId}-${Date.now()}`,
-        templateData: {
-          inviterName: inviter?.full_name || inviter?.company || inviter?.email || "A teammate",
-          workspaceName: inviter?.company || inviter?.full_name || "Xellvio workspace",
-          role: data.role,
-          acceptUrl: `${baseUrl}/auth?invite=${encodeURIComponent(data.email)}`,
-        },
+        memberId,
+        inviter,
+        role: data.role,
       });
     } catch (err) {
       console.warn("[team] invite email failed", err);
     }
 
-    return { id: memberId, ok: true };
+    return {
+      id: memberId,
+      ok: true,
+      emailSent: emailResult.success,
+      emailReason: emailResult.reason,
+      inviteUrl: emailResult.acceptUrl,
+    };
+  });
+
+export const resendTeamInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ memberId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: member, error } = await context.supabase
+      .from("account_members")
+      .select("id,invited_email,role,status")
+      .eq("id", data.memberId)
+      .eq("account_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!member) throw new Error("Invite not found.");
+    if (member.status === "active") throw new Error("This member is already active.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: inviter } = await supabaseAdmin
+      .from("accounts")
+      .select("full_name,company,email")
+      .eq("id", context.userId)
+      .maybeSingle();
+
+    const emailResult = await sendTeamInviteEmail({
+      recipientEmail: member.invited_email,
+      memberId: member.id,
+      inviter,
+      role: member.role,
+    });
+
+    return {
+      ok: true,
+      emailSent: emailResult.success,
+      emailReason: emailResult.reason,
+      inviteUrl: emailResult.acceptUrl,
+    };
   });
 
 export const updateTeamMemberRole = createServerFn({ method: "POST" })

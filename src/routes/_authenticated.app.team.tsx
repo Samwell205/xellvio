@@ -33,6 +33,7 @@ import {
   inviteTeamMember,
   updateTeamMemberRole,
   removeTeamMember,
+  resendTeamInvite,
 } from "@/lib/team.functions";
 import {
   PERMISSION_KEYS,
@@ -61,6 +62,7 @@ function TeamPage() {
   const qc = useQueryClient();
   const listFn = useServerFn(listMyTeam);
   const inviteFn = useServerFn(inviteTeamMember);
+  const resendFn = useServerFn(resendTeamInvite);
   const updateFn = useServerFn(updateTeamMemberRole);
   const removeFn = useServerFn(removeTeamMember);
 
@@ -83,8 +85,16 @@ function TeamPage() {
   const inviteMut = useMutation({
     mutationFn: (input: { email: string; role: Role; permissions: Permissions }) =>
       inviteFn({ data: input }),
-    onSuccess: () => {
-      toast.success("Invitation sent");
+    onSuccess: (result) => {
+      if (result?.emailSent === false) {
+        toast.warning(
+          result.emailReason === "domain_not_verified"
+            ? "Invite saved, but email delivery is blocked until the sender domain DNS is verified. Copy the invite link for now."
+            : "Invite saved, but the email could not be delivered. Copy the invite link or try resending.",
+        );
+      } else {
+        toast.success("Invitation email sent");
+      }
       setEmail("");
       applyPreset("inbox_agent");
       qc.invalidateQueries({ queryKey: ["team"] });
@@ -100,6 +110,22 @@ function TeamPage() {
       qc.invalidateQueries({ queryKey: ["team"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Could not update"),
+  });
+
+  const resendMut = useMutation({
+    mutationFn: (memberId: string) => resendFn({ data: { memberId } }),
+    onSuccess: (result) => {
+      if (result?.emailSent === false) {
+        toast.warning(
+          result.emailReason === "domain_not_verified"
+            ? "Email still cannot send because the sender domain DNS is not verified. Copy the invite link instead."
+            : "Could not resend the email. Copy the invite link or try again.",
+        );
+      } else {
+        toast.success("Invitation email resent");
+      }
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not resend invite"),
   });
 
   const removeMut = useMutation({
@@ -224,7 +250,9 @@ function TeamPage() {
                   })
                 }
                 onRemove={() => removeMut.mutate(m.id)}
+                onResend={() => resendMut.mutate(m.id)}
                 saving={updateMut.isPending}
+                resending={resendMut.isPending}
               />
             ))}
           </ul>
@@ -238,17 +266,27 @@ function MemberRow({
   member,
   onSave,
   onRemove,
+  onResend,
   saving,
+  resending,
 }: {
   member: any;
   onSave: (perms: Permissions) => void;
   onRemove: () => void;
+  onResend: () => void;
   saving: boolean;
+  resending: boolean;
 }) {
   const initial: Permissions = (member.permissions as Permissions) ?? {};
   const [open, setOpen] = useState(false);
   const [perms, setPerms] = useState<Permissions>(initial);
   const granted = PERMISSION_KEYS.filter((k) => initial[k]);
+
+  async function copyInviteLink() {
+    const params = new URLSearchParams({ invite: member.invited_email, redirect: "/app" });
+    await navigator.clipboard.writeText(`${window.location.origin}/auth?${params.toString()}`);
+    toast.success("Invite link copied");
+  }
 
   return (
     <li className="py-3 space-y-2">
@@ -265,6 +303,16 @@ function MemberRow({
         <Button variant="outline" size="sm" onClick={() => setOpen((o) => !o)}>
           {open ? "Close" : "Manage access"}
         </Button>
+        {member.status !== "active" && (
+          <>
+            <Button variant="outline" size="sm" onClick={onResend} disabled={resending}>
+              {resending ? <Loader2 className="size-4 animate-spin" /> : "Resend email"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={copyInviteLink}>
+              Copy link
+            </Button>
+          </>
+        )}
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Remove member">

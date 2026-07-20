@@ -8,6 +8,7 @@
  */
 import * as React from "react";
 import { render } from "@react-email/components";
+import { sendLovableEmail } from "@lovable.dev/email-js";
 import { TEMPLATES, type TemplateEntry } from "@/lib/email-templates/registry";
 
 const SITE_NAME = "xellvio";
@@ -35,6 +36,15 @@ export interface SendInternalArgs {
   idempotencyKey: string;
   templateData?: Record<string, any>;
   includeUnsubscribe?: boolean;
+  sendImmediately?: boolean;
+}
+
+function classifyEmailError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("domain_not_verified")) return "domain_not_verified";
+  if (message.includes("429")) return "rate_limited";
+  if (message.includes("403")) return "forbidden";
+  return "send_failed";
 }
 
 export async function sendBrandedEmail(
@@ -46,6 +56,7 @@ export async function sendBrandedEmail(
     idempotencyKey,
     templateData = {},
     includeUnsubscribe = true,
+    sendImmediately = false,
   } = args;
 
   const template: TemplateEntry | undefined = TEMPLATES[templateName as string];
@@ -116,6 +127,67 @@ export async function sendBrandedEmail(
     recipient_email: recipient,
     status: "pending",
   });
+
+  if (sendImmediately) {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) {
+      await supabaseAdmin.from("email_send_log").insert({
+        message_id: idempotencyKey,
+        template_name: templateName,
+        recipient_email: recipient,
+        status: "failed",
+        error_message: "Email sender is not configured",
+      });
+      return { success: false, reason: "server_not_configured" };
+    }
+
+    try {
+      await sendLovableEmail(
+        {
+          to: recipient,
+          from: FROM_ADDRESS,
+          sender_domain: SENDER_DOMAIN,
+          subject,
+          html,
+          text,
+          purpose: "transactional",
+          label: templateName,
+          idempotency_key: idempotencyKey,
+          message_id: idempotencyKey,
+          ...(unsubscribeToken ? { unsubscribe_token: unsubscribeToken } : {}),
+        },
+        { apiKey, sendUrl: process.env.LOVABLE_SEND_URL },
+      );
+
+      await supabaseAdmin.from("email_send_log").insert({
+        message_id: idempotencyKey,
+        template_name: templateName,
+        recipient_email: recipient,
+        status: "sent",
+      });
+
+      console.log("[send-internal] sent", {
+        templateName,
+        recipient: redact(recipient),
+      });
+      return { success: true };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("[send-internal] immediate send failed", {
+        templateName,
+        recipient: redact(recipient),
+        error: errorMessage,
+      });
+      await supabaseAdmin.from("email_send_log").insert({
+        message_id: idempotencyKey,
+        template_name: templateName,
+        recipient_email: recipient,
+        status: "failed",
+        error_message: errorMessage.slice(0, 1000),
+      });
+      return { success: false, reason: classifyEmailError(error) };
+    }
+  }
 
   const { error: enqueueError } = await supabaseAdmin.rpc("enqueue_email", {
     queue_name: "transactional_emails",

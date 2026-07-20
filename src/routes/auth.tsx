@@ -15,6 +15,7 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (search) => ({
     mode: search.mode === "signup" ? "signup" : "signin",
     redirect: typeof search.redirect === "string" ? search.redirect : "/app",
+    invite: typeof search.invite === "string" ? search.invite : undefined,
   }),
   component: AuthPage,
 });
@@ -36,6 +37,10 @@ function AuthPage() {
     setMode(search.mode);
     setErrorMsg(null);
   }, [search.mode]);
+
+  useEffect(() => {
+    if (search.invite) setEmail(search.invite.trim().toLowerCase());
+  }, [search.invite]);
 
   const destination = search.redirect.startsWith("/") && !search.redirect.startsWith("//") ? search.redirect : "/app";
   const passwordMismatch = mode === "signup" && confirmPassword.length > 0 && password !== confirmPassword;
@@ -128,6 +133,11 @@ function AuthPage() {
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "signin" ? "Sign in to continue." : "Get 50 free credits to start."}
           </p>
+          {search.invite && (
+            <div className="mt-4 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+              You have a workspace invite for <span className="font-medium text-foreground">{search.invite}</span>. Sign in or create an account with this email to accept it.
+            </div>
+          )}
           <Button variant="outline" className="w-full mt-6 gap-2" onClick={handleGoogle} disabled={loading} type="button">
             <GoogleIcon /> Continue with Google
           </Button>
