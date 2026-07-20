@@ -88,19 +88,21 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       cost: 0,
       delivery_rate: 0,
     };
-    const byCC = new Map<string, { recipients: number; delivered: number; failed: number; cost: number }>();
+    const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; cost: number }>();
     const byKind = new Map<string, { used: number; delivered: number; failed: number }>();
     const timelineMap = new Map<string, { sent: number; delivered: number; failed: number }>();
     const failures: CampaignReport["failures"] = [];
 
     for (const r of rows) {
       const cc = r.country_code ?? "??";
-      const cur = byCC.get(cc) ?? { recipients: 0, delivered: 0, failed: 0, cost: 0 };
+      const cur = byCC.get(cc) ?? { recipients: 0, delivered: 0, unconfirmed: 0, failed: 0, cost: 0 };
       cur.recipients += 1;
       cur.cost += Number(r.cost ?? 0);
       if (r.status === "delivered") cur.delivered += 1;
+      if (r.status === "delivery_unconfirmed") cur.unconfirmed += 1;
       if (r.status === "failed" || r.status === "undelivered") cur.failed += 1;
       byCC.set(cc, cur);
+
 
       if (r.sender_kind) {
         const cur2 = byKind.get(r.sender_kind) ?? { used: 0, delivered: 0, failed: 0 };
