@@ -6,7 +6,9 @@ import {
   cancelCampaign,
   retryMessage,
   retryFailedMessages,
+  resendUnconfirmed,
 } from "@/lib/campaign-control.functions";
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
