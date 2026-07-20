@@ -318,18 +318,20 @@ function CampaignReport() {
     const clickRate = delivered > 0 ? (uniqueClickers / delivered) * 100 : 0;
     const costPerDelivered = delivered > 0 ? totalCost / delivered : 0;
 
-    const byCountry: Record<string, { total: number; delivered: number; failed: number }> = {};
+    const byCountry: Record<string, { total: number; delivered: number; unconfirmed: number; failed: number }> = {};
     const failures: Record<string, number> = {};
     for (const m of rows as any[]) {
       const c = m.country_code ?? m.profile?.country_code ?? "—";
-      byCountry[c] ??= { total: 0, delivered: 0, failed: 0 };
+      byCountry[c] ??= { total: 0, delivered: 0, unconfirmed: 0, failed: 0 };
       byCountry[c].total++;
       if (m.status === "delivered") byCountry[c].delivered++;
+      if (m.status === "delivery_unconfirmed") byCountry[c].unconfirmed++;
       if (m.status === "failed" || m.status === "undelivered") byCountry[c].failed++;
       if ((m.status === "failed" || m.status === "undelivered") && m.error_code) {
         failures[m.error_code] = (failures[m.error_code] ?? 0) + 1;
       }
     }
+
 
     // Time series — cumulative by hour so the chart never appears to "drop"
     // completed deliveries back to zero after the last webhook hour.
