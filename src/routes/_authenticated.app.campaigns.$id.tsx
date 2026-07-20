@@ -1311,7 +1311,7 @@ function ProgressPanel({
         <ProgTile label="Sending" value={sending} dotClass="bg-amber-500" pulse={sending > 0} />
         <ProgTile label="Accepted" value={sent} dotClass="bg-sky-500" />
         <ProgTile label="Delivered" value={delivered} dotClass="bg-emerald-500" />
-        <ProgTile label="Unconfirmed" value={deliveryUnconfirmed} dotClass="bg-cyan-500" />
+        <ProgTile label="Not delivered" value={deliveryUnconfirmed} dotClass="bg-cyan-500" />
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
       </div>
 
