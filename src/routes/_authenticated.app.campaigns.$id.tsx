@@ -253,8 +253,9 @@ function CampaignReport() {
     onSuccess: (r: any) => {
       toast.success(
         r.resent > 0
-          ? `Re-queued ${r.resent.toLocaleString()} unconfirmed message${r.resent === 1 ? "" : "s"} (est. ${formatUSD(r.estimatedCost)}).`
-          : "No unconfirmed messages in that window.",
+          ? `Re-queued ${r.resent.toLocaleString()} message${r.resent === 1 ? "" : "s"} without delivery confirmation (est. ${formatUSD(r.estimatedCost)}).`
+          : "No messages without delivery confirmation in that window.",
+
       );
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
