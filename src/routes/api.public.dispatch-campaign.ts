@@ -294,19 +294,52 @@ async function planCampaign(
   let remaining = startingBalance;
   const queuedRows: any[] = [];
   const failedRows: any[] = [];
+  const linkRows: any[] = [];
+  const URL_RE = /(https?:\/\/[^\s<>()\[\]"']+)/gi;
+  const SHORT_ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const shortCode = (len = 8) => {
+    const bytes = new Uint8Array(len);
+    crypto.getRandomValues(bytes);
+    let out = "";
+    for (let i = 0; i < len; i++) out += SHORT_ALPHABET[bytes[i] % SHORT_ALPHABET.length];
+    return out;
+  };
+  const base = publicBaseUrl();
+  const rewriteBody = (body: string, messageId: string): string => {
+    return body.replace(URL_RE, (originalUrl) => {
+      const code = shortCode(8);
+      linkRows.push({
+        short_code: code,
+        message_id: messageId,
+        campaign_id: campaign.id,
+        account_id: campaign.account_id,
+        url: originalUrl,
+      });
+      return `${base}/r/${code}`;
+    });
+  };
   for (const r of enriched) {
-    const base = {
+    const messageId = crypto.randomUUID();
+    const rewritten = rewriteBody(r.body, messageId);
+    // Recompute segments after rewrite in case link length changed the count.
+    const segs = calculateSegments(rewritten).segments;
+    const rate = rateByCC[r.country_code];
+    const unit = rate ? Number(rate.sell_price) : 0;
+    const mult = hasMedia && rate ? Number(rate.mms_multiplier) : 1;
+    const cost = +(segs * unit * mult).toFixed(4);
+    const rowBase = {
+      id: messageId,
       campaign_id: campaign.id,
       profile_id: r.profile_id,
       phone_e164: r.phone_e164,
       country_code: r.country_code,
-      segments_count: r.segments,
-      cost: r.cost,
-      rendered_body: r.body,
+      segments_count: segs,
+      cost,
+      rendered_body: rewritten,
     };
-    if (r.cost === 0) queuedRows.push({ ...base, status: "queued" });
-    else if (r.cost <= remaining) { remaining -= r.cost; queuedRows.push({ ...base, status: "queued" }); }
-    else failedRows.push({ ...base, status: "failed", error_code: "insufficient_balance" });
+    if (cost === 0) queuedRows.push({ ...rowBase, status: "queued" });
+    else if (cost <= remaining) { remaining -= cost; queuedRows.push({ ...rowBase, status: "queued" }); }
+    else failedRows.push({ ...rowBase, status: "failed", error_code: "insufficient_balance" });
   }
 
   const allRows = [...queuedRows, ...failedRows];
@@ -315,6 +348,17 @@ async function planCampaign(
     const { error: insErr } = await supabaseAdmin.from("messages").insert(chunk);
     if (insErr) throw new Error(`Failed to insert message batch: ${insErr.message}`);
   }
+
+  // Insert link_clicks rows only for messages that actually got queued (not
+  // insufficient_balance failures — those never send, so no click can happen).
+  const queuedIds = new Set(queuedRows.map((r) => r.id));
+  const linksToInsert = linkRows.filter((l) => queuedIds.has(l.message_id));
+  for (let i = 0; i < linksToInsert.length; i += PLAN_INSERT_CHUNK) {
+    const chunk = linksToInsert.slice(i, i + PLAN_INSERT_CHUNK);
+    const { error: linkErr } = await supabaseAdmin.from("link_clicks").insert(chunk);
+    if (linkErr) console.error("[dispatch] link_clicks insert failed", linkErr.message);
+  }
+
   if (queuedRows.length === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
     return { planned: 0, skipped: failedRows.length, cost: totalCost, reason: "insufficient_balance" };
