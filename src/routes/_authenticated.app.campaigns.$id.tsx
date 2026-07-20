@@ -89,7 +89,7 @@ function CampaignReport() {
       while (from < 50_000) {
         const { data, error } = await supabase
           .from("messages")
-          .select("id, phone_e164, status, error_code, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)")
+          .select("id, phone_e164, status, error_code, failure_reason, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)")
           .eq("campaign_id", id)
           .order("created_at", { ascending: false })
           .range(from, from + pageSize - 1);
