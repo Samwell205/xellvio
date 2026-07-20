@@ -206,7 +206,7 @@ function AudiencePage() {
     mutationFn: async (row: ProfileRow) => {
       const next = row.consent_status === "subscribed" ? "unsubscribed" : "subscribed";
       const { data: u } = await supabase.auth.getUser();
-      const accountId = acctIdRef.current ?? u.user!.id;
+      const accountId = acctId ?? u.user!.id;
       const { error: ce } = await supabase.from("consents").upsert(
         { profile_id: row.id, channel: "sms", status: next, source: "manual", consented_at: new Date().toISOString() },
         { onConflict: "profile_id,channel" },
@@ -231,7 +231,7 @@ function AudiencePage() {
     const rows = all.filter((r) => ids.includes(r.id));
     if (rows.length === 0) return;
     const { data: u } = await supabase.auth.getUser();
-    const accountId = acctIdRef.current ?? u.user!.id;
+    const accountId = acctId ?? u.user!.id;
 
     // Snapshot profile data, consents, list memberships
     const { data: consentSnap } = await supabase
@@ -483,7 +483,7 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
         if (error) throw error;
         toast.success("List updated");
       } else {
-        const { error } = await sb.from("contact_lists").insert({ account_id: (acctIdRef.current ?? u.user!.id), name: name.trim(), description: desc || null });
+        const { error } = await sb.from("contact_lists").insert({ account_id: (acctId ?? u.user!.id), name: name.trim(), description: desc || null });
         if (error) throw error;
         toast.success("List created");
       }
@@ -596,7 +596,7 @@ function AssignToListBulk({ lists, ids, onDone }: { lists: ContactList[]; ids: s
     setBusy(true);
     try {
       const { data: u } = await supabase.auth.getUser();
-      const rows = ids.map((pid) => ({ profile_id: pid, list_id: listId, account_id: (acctIdRef.current ?? u.user!.id) }));
+      const rows = ids.map((pid) => ({ profile_id: pid, list_id: listId, account_id: (acctId ?? u.user!.id) }));
       const { error } = await sb.from("profile_list_members").upsert(rows, { onConflict: "list_id,profile_id" });
       if (error) throw error;
       toast.success(`Added ${ids.length} to list`);
@@ -649,7 +649,7 @@ function AddContactDialog({ lists, onDone }: { lists: ContactList[]; onDone: () 
       if (!parsed || !parsed.isValid()) { toast.error("Invalid phone number"); return; }
       const e164 = parsed.number;
       const { data: u } = await supabase.auth.getUser();
-      const accountId = acctIdRef.current ?? u.user!.id;
+      const accountId = acctId ?? u.user!.id;
       const { data: prof, error } = await supabase.from("profiles").upsert(
         { account_id: accountId, phone_e164: e164, first_name: first || null, last_name: last || null, country_code: parsed.country ?? country },
         { onConflict: "account_id,phone_e164" },
@@ -790,7 +790,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
     setProgress({ phase: "validating", processed: 0, total: preview.rows.length, label: "Validating phone numbers…" });
     try {
       const { data: u } = await supabase.auth.getUser();
-      const accountId = acctIdRef.current ?? u.user!.id;
+      const accountId = acctId ?? u.user!.id;
 
       // Resolve target list
       let targetListId: string | null = null;
