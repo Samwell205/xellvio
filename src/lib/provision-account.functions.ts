@@ -12,14 +12,20 @@ export const provisionCurrentAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     try {
+      // Only provision the caller's OWN workspace. Invited team members
+      // operate inside the owner's workspace and must not create a Telnyx
+      // messaging profile under their empty personal account.
+      const { resolveActingAccount } = await import("./acting-account.server");
+      const acting = await resolveActingAccount(context.userId);
+      if (!acting.isOwner) return { ok: true as const, skipped: "member" as const };
       const { ensureMessagingProfileForAccount } = await import("./telnyx.server");
       const profileId = await ensureMessagingProfileForAccount(context.userId);
       return { ok: true as const, messagingProfileId: profileId };
     } catch (e: any) {
-      // Non-fatal — user can still browse the app; a later action will retry.
       return { ok: false as const, error: e?.message ?? String(e) };
     }
   });
+
 
 /**
  * Admin-only: backfill Telnyx Messaging Profiles for every dormant tenant

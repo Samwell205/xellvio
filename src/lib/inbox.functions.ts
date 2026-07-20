@@ -1,16 +1,20 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveActingAccount, assertPermission } from "@/lib/acting-account.server";
 
 /** List distinct conversations (one per customer phone) with last message preview. */
 export const listConversations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
+    const acting = await resolveActingAccount(context.userId);
+    assertPermission(acting, "inbox");
+    const { supabase } = context;
+    const accountId = acting.accountId;
     const { data: inbound } = await supabase
       .from("sms_thread_messages")
       .select("phone_e164")
-      .eq("account_id", userId)
+      .eq("account_id", accountId)
       .eq("direction", "inbound")
       .order("created_at", { ascending: false })
       .limit(1000);
@@ -19,12 +23,12 @@ export const listConversations = createServerFn({ method: "GET" })
     const { data: thread } = await supabase
       .from("sms_thread_messages")
       .select("phone_e164,direction,body,created_at")
-      .eq("account_id", userId).in("phone_e164", phones)
+      .eq("account_id", accountId).in("phone_e164", phones)
       .order("created_at", { ascending: false }).limit(2000);
     const { data: campaignMsgs } = await supabase
       .from("messages")
       .select("phone_e164,rendered_body,created_at,campaigns!inner(account_id)")
-      .eq("campaigns.account_id", userId).in("phone_e164", phones)
+      .eq("campaigns.account_id", accountId).in("phone_e164", phones)
       .order("created_at", { ascending: false }).limit(2000);
     const map = new Map<string, { phone: string; lastBody: string; lastAt: string; lastDirection: "inbound" | "outbound" }>();
     for (const r of thread ?? []) {
@@ -49,16 +53,19 @@ export const getConversation = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ phone: z.string().min(3) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const acting = await resolveActingAccount(context.userId);
+    assertPermission(acting, "inbox");
+    const { supabase } = context;
+    const accountId = acting.accountId;
     const { data: thread } = await supabase
       .from("sms_thread_messages")
       .select("id,direction,body,from_number,to_number,created_at")
-      .eq("account_id", userId).eq("phone_e164", data.phone)
+      .eq("account_id", accountId).eq("phone_e164", data.phone)
       .order("created_at", { ascending: true });
     const { data: campaignMsgs } = await supabase
       .from("messages")
       .select("id,rendered_body,created_at,sent_at,status,campaigns!inner(account_id)")
-      .eq("campaigns.account_id", userId).eq("phone_e164", data.phone)
+      .eq("campaigns.account_id", accountId).eq("phone_e164", data.phone)
       .order("created_at", { ascending: true });
     const merged = [
       ...(thread ?? []).map((m) => ({
@@ -83,17 +90,20 @@ export const sendReply = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => ReplySchema.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const acting = await resolveActingAccount(context.userId);
+    assertPermission(acting, "inbox");
+    const { supabase } = context;
+    const accountId = acting.accountId;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: lastInbound } = await supabase
       .from("sms_thread_messages")
-      .select("to_number").eq("account_id", userId).eq("phone_e164", data.phone)
+      .select("to_number").eq("account_id", accountId).eq("phone_e164", data.phone)
       .eq("direction", "inbound").order("created_at", { ascending: false }).limit(1).maybeSingle();
-    const { data: assets } = await supabase
+    const { data: assets } = await supabaseAdmin
       .from("sender_assets")
       .select("telnyx_messaging_profile_id,phone_number,sender_kind,country_code,verification_status")
-      .eq("account_id", userId);
+      .eq("account_id", accountId);
     const eligible = (assets ?? []).filter(
       (a) => a.verification_status === "verified" && (a.telnyx_messaging_profile_id || a.phone_number),
     );
@@ -109,16 +119,16 @@ export const sendReply = createServerFn({ method: "POST" })
     const { data: acct } = await supabaseAdmin
       .from("accounts")
       .select("tos_current_version_accepted, sending_suspended_at")
-      .eq("id", userId)
+      .eq("id", accountId)
       .maybeSingle();
     if (acct?.sending_suspended_at) throw new Error("Sending suspended. Contact support.");
     if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
       throw new Error("Please accept the updated Terms of Service before replying.");
     }
-    const screen = await screenMessageContent(data.body, userId, {
+    const screen = await screenMessageContent(data.body, accountId, {
       phoneE164: data.phone,
       context: "inbox_reply",
-      skipReviewQueue: true, // interactive reply — block or send, don't hold
+      skipReviewQueue: true,
     });
     if (!screen.passed) {
       const top = screen.blockedReasons.slice(0, 2).join(" · ") || "content policy";
@@ -130,7 +140,7 @@ export const sendReply = createServerFn({ method: "POST" })
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
     const result = await safeTelnyxCall(
       "send_reply",
-      { userId, messagingProfileId: asset.telnyx_messaging_profile_id ?? null },
+      { userId: accountId, messagingProfileId: asset.telnyx_messaging_profile_id ?? null },
       () => sendMessage({
         to: data.phone,
         text: data.body,
@@ -140,7 +150,7 @@ export const sendReply = createServerFn({ method: "POST" })
     );
 
     await supabaseAdmin.from("sms_thread_messages").insert({
-      account_id: userId,
+      account_id: accountId,
       phone_e164: data.phone,
       direction: "outbound",
       body: data.body,
@@ -152,7 +162,7 @@ export const sendReply = createServerFn({ method: "POST" })
     try {
       const { forwardSmsToGorgias } = await import("./gorgias.server");
       await forwardSmsToGorgias({
-        accountId: userId, phone: data.phone,
+        accountId, phone: data.phone,
         fromNumber: asset.phone_number ?? null, body: data.body, direction: "outbound",
       });
     } catch { /* ignore */ }

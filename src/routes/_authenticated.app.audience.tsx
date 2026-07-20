@@ -4,6 +4,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Papa from "papaparse";
 import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useAccountId } from "@/hooks/useAccountId";
+
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,9 +62,12 @@ const sb = supabase as any;
 
 function AudiencePage() {
   const qc = useQueryClient();
+  const acctId = useAccountId();
   const [search, setSearch] = useState("");
   const [listFilter, setListFilter] = useState<string | "all">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+
 
   const listsQ = useQuery({
     queryKey: ["contact-lists"],
@@ -199,7 +205,7 @@ function AudiencePage() {
     mutationFn: async (row: ProfileRow) => {
       const next = row.consent_status === "subscribed" ? "unsubscribed" : "subscribed";
       const { data: u } = await supabase.auth.getUser();
-      const accountId = u.user!.id;
+      const accountId = acctId ?? u.user!.id;
       const { error: ce } = await supabase.from("consents").upsert(
         { profile_id: row.id, channel: "sms", status: next, source: "manual", consented_at: new Date().toISOString() },
         { onConflict: "profile_id,channel" },
@@ -224,7 +230,7 @@ function AudiencePage() {
     const rows = all.filter((r) => ids.includes(r.id));
     if (rows.length === 0) return;
     const { data: u } = await supabase.auth.getUser();
-    const accountId = u.user!.id;
+    const accountId = acctId ?? u.user!.id;
 
     // Snapshot profile data, consents, list memberships
     const { data: consentSnap } = await supabase
@@ -460,11 +466,13 @@ function ConsentBadge({ status }: { status: ProfileRow["consent_status"] }) {
 /* ============================ Lists management ============================ */
 
 function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: () => void }) {
+  const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
 
   async function save() {
     if (!name.trim()) { toast.error("Name required"); return; }
@@ -476,7 +484,7 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
         if (error) throw error;
         toast.success("List updated");
       } else {
-        const { error } = await sb.from("contact_lists").insert({ account_id: u.user!.id, name: name.trim(), description: desc || null });
+        const { error } = await sb.from("contact_lists").insert({ account_id: (acctId ?? u.user!.id), name: name.trim(), description: desc || null });
         if (error) throw error;
         toast.success("List created");
       }
@@ -580,16 +588,18 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
 }
 
 function AssignToListBulk({ lists, ids, onDone }: { lists: ContactList[]; ids: string[]; onDone: () => void }) {
+  const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [listId, setListId] = useState<string>("");
   const [busy, setBusy] = useState(false);
+
 
   async function assign() {
     if (!listId) { toast.error("Pick a list"); return; }
     setBusy(true);
     try {
       const { data: u } = await supabase.auth.getUser();
-      const rows = ids.map((pid) => ({ profile_id: pid, list_id: listId, account_id: u.user!.id }));
+      const rows = ids.map((pid) => ({ profile_id: pid, list_id: listId, account_id: (acctId ?? u.user!.id) }));
       const { error } = await sb.from("profile_list_members").upsert(rows, { onConflict: "list_id,profile_id" });
       if (error) throw error;
       toast.success(`Added ${ids.length} to list`);
@@ -627,6 +637,7 @@ function AssignToListBulk({ lists, ids, onDone }: { lists: ContactList[]; ids: s
 /* ============================ Add / Import ============================ */
 
 function AddContactDialog({ lists, onDone }: { lists: ContactList[]; onDone: () => void }) {
+  const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("US");
@@ -635,6 +646,7 @@ function AddContactDialog({ lists, onDone }: { lists: ContactList[]; onDone: () 
   const [listId, setListId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
 
+
   async function submit() {
     setSubmitting(true);
     try {
@@ -642,7 +654,7 @@ function AddContactDialog({ lists, onDone }: { lists: ContactList[]; onDone: () 
       if (!parsed || !parsed.isValid()) { toast.error("Invalid phone number"); return; }
       const e164 = parsed.number;
       const { data: u } = await supabase.auth.getUser();
-      const accountId = u.user!.id;
+      const accountId = acctId ?? u.user!.id;
       const { data: prof, error } = await supabase.from("profiles").upsert(
         { account_id: accountId, phone_e164: e164, first_name: first || null, last_name: last || null, country_code: parsed.country ?? country },
         { onConflict: "account_id,phone_e164" },
@@ -721,9 +733,11 @@ function detectField(headers: string[], aliases: string[]): string | undefined {
 }
 
 function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: ContactList[]; onDone: () => void; onDownloadTemplate: () => void }) {
+  const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [defaultCountry, setDefaultCountry] = useState("US");
   const [busy, setBusy] = useState(false);
+
   const [preview, setPreview] = useState<Preview | null>(null);
   const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number; errors: RowError[] } | null>(null);
   const [listMode, setListMode] = useState<"none" | "existing" | "new">("none");
@@ -783,7 +797,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
     setProgress({ phase: "validating", processed: 0, total: preview.rows.length, label: "Validating phone numbers…" });
     try {
       const { data: u } = await supabase.auth.getUser();
-      const accountId = u.user!.id;
+      const accountId = acctId ?? u.user!.id;
 
       // Resolve target list
       let targetListId: string | null = null;
