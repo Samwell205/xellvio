@@ -239,6 +239,49 @@ export async function listAccountTollfreeNumbers(): Promise<
   return out;
 }
 
+/**
+ * List all toll-free numbers that have a "verified" Toll-Free Verification
+ * request on the Telnyx account. Only these can legally send SMS to US/CA.
+ * Returns a Set of E.164 phone numbers.
+ */
+export async function listVerifiedTollfreeNumbers(): Promise<Set<string>> {
+  const verified = new Set<string>();
+  let page = 1;
+  const pageSize = 250;
+  for (let i = 0; i < 8; i++) {
+    let res: any;
+    try {
+      res = await telnyx<{
+        data: Array<{ phone_numbers?: Array<{ phone_number: string }>; status?: string }>;
+        meta?: { total_pages?: number };
+      }>("/messaging_tollfree/verification/requests", {
+        query: {
+          "filter[status]": "verified",
+          "page[number]": page,
+          "page[size]": pageSize,
+        },
+      });
+    } catch (e: any) {
+      // Fallback older endpoint shape
+      res = await telnyx<any>("/verified_numbers", {
+        query: { "page[number]": page, "page[size]": pageSize },
+      });
+    }
+    for (const r of res.data ?? []) {
+      const status = (r.status ?? "").toLowerCase();
+      if (status && status !== "verified") continue;
+      for (const p of r.phone_numbers ?? []) {
+        if (p?.phone_number) verified.add(p.phone_number);
+      }
+      if (r.phone_number) verified.add(r.phone_number);
+    }
+    const total = res.meta?.total_pages ?? 1;
+    if (page >= total) break;
+    page += 1;
+  }
+  return verified;
+}
+
 /** Reassign an already-owned number to a different Messaging Profile. */
 export async function reassignNumberToProfile(opts: {
   phoneNumberId: string;
