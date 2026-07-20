@@ -202,6 +202,43 @@ export async function getPhoneNumberByE164(phone: string): Promise<{ id: string;
   return res.data?.[0] ?? null;
 }
 
+/**
+ * List every toll-free number on the Telnyx account that is currently
+ * assigned to a Messaging Profile (i.e. carrier-verified and ready to send).
+ * Paginated internally; caps at ~2000 rows to be safe.
+ */
+export async function listAccountTollfreeNumbers(): Promise<
+  Array<{ id: string; phone_number: string; messaging_profile_id: string | null; country_code: string | null }>
+> {
+  const out: Array<{ id: string; phone_number: string; messaging_profile_id: string | null; country_code: string | null }> = [];
+  let page = 1;
+  const pageSize = 250;
+  for (let i = 0; i < 8; i++) {
+    const res = await telnyx<{
+      data: Array<{ id: string; phone_number: string; messaging_profile_id: string | null; country_code?: string | null; phone_number_type?: string }>;
+      meta?: { total_pages?: number; page_number?: number };
+    }>("/phone_numbers", {
+      query: {
+        "filter[phone_number_type]": "toll-free",
+        "page[number]": page,
+        "page[size]": pageSize,
+      },
+    });
+    for (const r of res.data ?? []) {
+      out.push({
+        id: r.id,
+        phone_number: r.phone_number,
+        messaging_profile_id: r.messaging_profile_id ?? null,
+        country_code: r.country_code ?? null,
+      });
+    }
+    const total = res.meta?.total_pages ?? 1;
+    if (page >= total) break;
+    page += 1;
+  }
+  return out;
+}
+
 /** Reassign an already-owned number to a different Messaging Profile. */
 export async function reassignNumberToProfile(opts: {
   phoneNumberId: string;

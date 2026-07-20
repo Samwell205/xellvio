@@ -305,11 +305,13 @@ function SharedTollfreePoolPanel() {
   const deleteFn = useServerFn(adminDeleteSharedTollfree);
   const listAccountsFn = useServerFn(adminListAccountsLite);
 
-  const { data: pool, isLoading } = useQuery({
+  const { data: poolData, isLoading } = useQuery({
     queryKey: ["admin-shared-tfn"],
     queryFn: () => listFn(),
     refetchInterval: 60_000,
   });
+  const pool = (poolData as any)?.items ?? [];
+  const syncInfo = (poolData as any)?.sync as { synced: number; error: string | null } | undefined;
   const { data: accounts } = useQuery({
     queryKey: ["admin-accounts-lite"],
     queryFn: () => listAccountsFn(),
@@ -375,13 +377,17 @@ function SharedTollfreePoolPanel() {
             <Users className="size-4 text-primary" /> Shared toll-free pool
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            One approved toll-free number, reused across multiple tenants. Every attached tenant can send from the same
-            number. Inbound STOP/replies land on the shared Messaging Profile and are fanned out to all attached
-            tenants; per-profile Telnyx reports won't separate tenants (Xellvio's per-campaign reports still do).
+            Auto-synced from Telnyx every minute — every toll-free number on your Telnyx account that is attached to a
+            Messaging Profile shows up here automatically. Attach tenants below and they can send immediately.
+            Inbound STOP/replies land on the shared Messaging Profile and fan out to all attached tenants; per-profile
+            Telnyx reports won't separate tenants (Xellvio's per-campaign reports still do).
           </p>
+          {syncInfo?.error && (
+            <p className="text-xs text-destructive mt-2">Telnyx sync failed: {syncInfo.error}</p>
+          )}
         </div>
-        <Button size="sm" onClick={() => setRegisterOpen(true)}>
-          <Plus className="size-4 mr-1" /> Register shared TFN
+        <Button size="sm" variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ["admin-shared-tfn"] })}>
+          <RefreshCw className="size-4 mr-1" /> Sync now
         </Button>
       </CardHeader>
       <CardContent className="p-0 overflow-x-auto">
