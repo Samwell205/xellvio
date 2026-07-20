@@ -622,7 +622,7 @@ function NewCampaignPage() {
               <Switch
                 id="track-links-toggle"
                 checked={s.trackLinks}
-                onCheckedChange={(v) => setS({ ...s, trackLinks: !!v })}
+                onCheckedChange={(v: boolean) => setS({ ...s, trackLinks: !!v })}
               />
             </div>
 
