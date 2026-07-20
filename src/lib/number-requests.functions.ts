@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveActingAccount, assertPermission } from "@/lib/acting-account.server";
 
 const submitSchema = z.object({
   country: z.enum(["US", "CA"]),
@@ -16,21 +17,23 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => submitSchema.parse(input))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const acting = await resolveActingAccount(context.userId);
+    assertPermission(acting, "setup_sms");
+    const accountId = acting.accountId;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Charge the one-time $5 phone-number fee (idempotent per country).
     const { chargeNumberVerificationFee } = await import("./number-fee.server");
     await chargeNumberVerificationFee({
-      accountId: userId,
+      accountId,
       marker: `number-request:${data.country}:${data.number_type}`,
       description: `Phone number fee — ${data.country} ${data.number_type}`,
     });
 
-    const { error, data: row } = await supabase
+    const { error, data: row } = await supabaseAdmin
       .from("number_requests")
       .insert({
-        account_id: userId,
-        requested_by: userId,
+        account_id: accountId,
+        requested_by: context.userId,
         country: data.country,
         number_type: data.number_type,
         business_name: data.business_name,
@@ -43,13 +46,9 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // Try to auto-review and auto-purchase the number on Twilio.
-    // Failures here never break the submission — the request just stays
-    // pending for manual review.
     let autoResult: { provisioned: boolean; phone_number?: string; note?: string } = { provisioned: false };
     try {
       const { autoReview, autoPurchaseNumber } = await import("./auto-provision-number.server");
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
       const review = autoReview({
         country: data.country,
@@ -71,7 +70,7 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
         const purchased = await autoPurchaseNumber({
           country: data.country,
           number_type: data.number_type as "toll_free" | "ten_dlc",
-          accountId: userId,
+          accountId,
           friendlyName: `${data.business_name} (${data.country})`,
         });
         const requiresTollfreeVerification = data.number_type === "toll_free";
@@ -90,7 +89,7 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
           .from("sender_assets")
           .upsert(
             {
-              account_id: userId,
+              account_id: accountId,
               country_code: data.country,
               sender_kind: data.number_type === "toll_free" ? "toll_free" : "local",
               phone_number: purchased.phone_number,
@@ -110,7 +109,7 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
               telnyx_messaging_profile_id: purchased.messaging_profile_id,
               onboarding_status: "sender_pending",
             })
-            .eq("id", userId);
+            .eq("id", accountId);
         }
         autoResult = { provisioned: true, phone_number: purchased.phone_number };
       }
@@ -118,7 +117,6 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
       console.error("[number-requests] auto-provision failed", e);
       autoResult = { provisioned: false, note: e?.message ?? "Auto-provisioning failed; queued for manual review." };
       try {
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await supabaseAdmin
           .from("number_requests")
           .update({ admin_notes: `Auto-provision error: ${autoResult.note}` })
@@ -126,7 +124,6 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
       } catch {}
     }
 
-    // Admin notification (fire-and-forget).
     try {
       const { sendAdminSms } = await import("./admin-notify.server");
       const status = autoResult.provisioned
@@ -145,11 +142,12 @@ export const submitNumberRequest = createServerFn({ method: "POST" })
 export const listMyNumberRequests = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { supabase, userId } = context;
-    const { data, error } = await supabase
+    const acting = await resolveActingAccount(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("number_requests")
       .select("*")
-      .eq("account_id", userId)
+      .eq("account_id", acting.accountId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -159,10 +157,14 @@ export const cancelMyNumberRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const acting = await resolveActingAccount(context.userId);
+    assertPermission(acting, "setup_sms");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
       .from("number_requests")
       .delete()
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .eq("account_id", acting.accountId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
