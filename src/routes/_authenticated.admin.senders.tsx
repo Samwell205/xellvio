@@ -13,6 +13,7 @@ import {
   listAllSenders, adminRefreshSender, adminMarkSenderVerified, adminDeleteSender, adminGrantVerifiedTollfree,
   adminListSharedTollfree, adminCreateSharedTollfree, adminAttachSharedTollfree,
   adminDetachSharedTollfree, adminDeleteSharedTollfree,
+  adminGetTfnAdvertisedAvailable, adminSetTfnAdvertisedAvailable,
 } from "@/lib/admin-senders.functions";
 
 import { adminListAccountsLite } from "@/lib/admin-verifiers.functions";
@@ -304,6 +305,23 @@ function SharedTollfreePoolPanel() {
   const detachFn = useServerFn(adminDetachSharedTollfree);
   const deleteFn = useServerFn(adminDeleteSharedTollfree);
   const listAccountsFn = useServerFn(adminListAccountsLite);
+  const getAdvFn = useServerFn(adminGetTfnAdvertisedAvailable);
+  const setAdvFn = useServerFn(adminSetTfnAdvertisedAvailable);
+
+  const { data: advData } = useQuery({
+    queryKey: ["admin-tfn-advertised"],
+    queryFn: () => getAdvFn(),
+  });
+  const [advInput, setAdvInput] = useState<string>("");
+  const advertised = (advData as any)?.advertised ?? null;
+  const advSetMut = useMutation({
+    mutationFn: (v: number | null) => setAdvFn({ data: { advertised: v } }),
+    onSuccess: () => {
+      toast.success("Marketplace availability updated.");
+      qc.invalidateQueries({ queryKey: ["admin-tfn-advertised"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: poolData, isLoading } = useQuery({
     queryKey: ["admin-shared-tfn"],
@@ -390,6 +408,45 @@ function SharedTollfreePoolPanel() {
           <RefreshCw className="size-4 mr-1" /> Sync now
         </Button>
       </CardHeader>
+      <div className="px-6 py-3 border-t border-b bg-muted/30 flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[220px]">
+          <div className="text-xs font-medium">Marketplace availability shown to tenants</div>
+          <div className="text-xs text-muted-foreground">
+            Override the "Available" count on the tenant marketplace card.
+            {advertised == null
+              ? " Currently showing the real pool count."
+              : ` Currently forced to ${advertised}.`}
+          </div>
+        </div>
+        <Input
+          type="number"
+          min={0}
+          placeholder={advertised == null ? "e.g. 10" : String(advertised)}
+          value={advInput}
+          onChange={(e) => setAdvInput(e.target.value)}
+          className="w-28"
+        />
+        <Button
+          size="sm"
+          onClick={() => {
+            const n = Number(advInput);
+            if (!Number.isFinite(n) || n < 0) { toast.error("Enter a non-negative number"); return; }
+            advSetMut.mutate(Math.floor(n));
+            setAdvInput("");
+          }}
+          disabled={advSetMut.isPending || advInput.trim() === ""}
+        >
+          Set
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => { advSetMut.mutate(null); setAdvInput(""); }}
+          disabled={advSetMut.isPending || advertised == null}
+        >
+          Use real count
+        </Button>
+      </div>
       <CardContent className="p-0 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">

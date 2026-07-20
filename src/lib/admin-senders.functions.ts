@@ -390,4 +390,39 @@ export const adminDeleteSharedTollfree = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminGetTfnAdvertisedAvailable = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "tfn_advertised_available")
+      .maybeSingle();
+    const raw = (data as any)?.value;
+    const n = raw == null ? null : Number(raw);
+    return { advertised: Number.isFinite(n as number) ? (n as number) : null };
+  });
+
+export const adminSetTfnAdvertisedAvailable = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { advertised: number | null }) =>
+    z.object({ advertised: z.number().int().min(0).max(100000).nullable() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.advertised == null) {
+      await supabaseAdmin.from("platform_settings").delete().eq("key", "tfn_advertised_available");
+    } else {
+      await supabaseAdmin.from("platform_settings").upsert(
+        { key: "tfn_advertised_available", value: String(data.advertised) },
+        { onConflict: "key" },
+      );
+    }
+    return { ok: true };
+  });
+
+
 
