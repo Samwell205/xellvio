@@ -6,18 +6,22 @@ async function readSettings() {
   const { data } = await supabaseAdmin
     .from("platform_settings")
     .select("key,value")
-    .in("key", ["tfn_buyer_price_usd", "tfn_commission_pct", "tfn_ngn_per_usd"]);
+    .in("key", ["tfn_buyer_price_usd", "tfn_commission_pct", "tfn_ngn_per_usd", "tfn_advertised_available"]);
   const map = Object.fromEntries((data ?? []).map((r: any) => [r.key, r.value]));
   const toNum = (v: any, fb: number) => {
     const n = typeof v === "string" ? Number(v) : Number(v);
     return Number.isFinite(n) ? n : fb;
   };
+  const advRaw = map.tfn_advertised_available;
+  const advNum = advRaw == null ? null : Number(advRaw);
   return {
     buyerPriceUsd: toNum(map.tfn_buyer_price_usd, 50),
     commissionPct: toNum(map.tfn_commission_pct, 25),
     ngnPerUsd: toNum(map.tfn_ngn_per_usd, 1500),
+    advertisedAvailable: Number.isFinite(advNum as number) ? (advNum as number) : null,
   };
 }
+
 
 async function listAvailablePoolNumbers(): Promise<
   Array<{ phone_number: string; country_code: string; telnyx_phone_number_id: string | null; telnyx_messaging_profile_id: string }>
