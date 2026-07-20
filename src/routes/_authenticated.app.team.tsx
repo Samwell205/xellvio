@@ -87,11 +87,7 @@ function TeamPage() {
       inviteFn({ data: input }),
     onSuccess: (result) => {
       if (result?.emailSent === false) {
-        toast.warning(
-          result.emailReason === "domain_not_verified"
-            ? "Invite saved, but email delivery is blocked until the sender domain DNS is verified. Copy the invite link for now."
-            : "Invite saved, but the email could not be delivered. Copy the invite link or try resending.",
-        );
+        toast.warning(getInviteEmailWarning(result.emailReason));
       } else {
         toast.success("Invitation email sent");
       }
@@ -116,11 +112,7 @@ function TeamPage() {
     mutationFn: (memberId: string) => resendFn({ data: { memberId } }),
     onSuccess: (result) => {
       if (result?.emailSent === false) {
-        toast.warning(
-          result.emailReason === "domain_not_verified"
-            ? "Email still cannot send because the sender domain DNS is not verified. Copy the invite link instead."
-            : "Could not resend the email. Copy the invite link or try again.",
-        );
+        toast.warning(getInviteResendWarning(result.emailReason));
       } else {
         toast.success("Invitation email resent");
       }
@@ -260,6 +252,32 @@ function TeamPage() {
       </Card>
     </div>
   );
+}
+
+function getInviteEmailWarning(reason?: string) {
+  if (reason === "domain_not_verified") {
+    return "Invite saved, but email delivery is blocked until the sender domain DNS is verified. Copy the invite link for now.";
+  }
+  if (reason === "missing_unsubscribe") {
+    return "Invite saved, but email delivery was blocked by a sender configuration issue. Copy the invite link for now.";
+  }
+  if (reason === "suppressed") {
+    return "Invite saved, but this email address is blocked from receiving messages. Copy the invite link instead.";
+  }
+  return "Invite saved, but the email could not be delivered. Copy the invite link or resend after a moment.";
+}
+
+function getInviteResendWarning(reason?: string) {
+  if (reason === "domain_not_verified") {
+    return "Email still cannot send because the sender domain DNS is not verified. Copy the invite link instead.";
+  }
+  if (reason === "missing_unsubscribe") {
+    return "Email delivery is blocked by a sender configuration issue. Copy the invite link for now.";
+  }
+  if (reason === "suppressed") {
+    return "This email address is blocked from receiving messages. Copy the invite link instead.";
+  }
+  return "Could not resend the email. Copy the invite link or resend after a moment.";
 }
 
 function MemberRow({
