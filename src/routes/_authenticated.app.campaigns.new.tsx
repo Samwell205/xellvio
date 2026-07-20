@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+
 import { toast } from "sonner";
 import { z } from "zod";
 import {
@@ -49,6 +51,8 @@ type State = {
   testTo: string;
   testSent: boolean;
   excludedCountries: string[];
+  trackLinks: boolean;
+
 };
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
@@ -61,8 +65,9 @@ function NewCampaignPage() {
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
-    excludedCountries: [],
+    excludedCountries: [], trackLinks: true,
   });
+
 
   // Load existing draft when editing
   useQuery({
@@ -84,6 +89,8 @@ function NewCampaignPage() {
           scheduleAt: data.schedule_at ? new Date(data.schedule_at).toISOString().slice(0, 16) : "",
           smartSkipHours: data.smart_skip_hours ?? 8,
           excludedCountries: Array.isArray(aud.excluded_countries) ? aud.excluded_countries : [],
+          trackLinks: (data as any).track_links !== false,
+
         }));
       }
       return data;
@@ -362,6 +369,8 @@ function NewCampaignPage() {
       send_mode: s.sendMode,
       schedule_at: s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
       smart_skip_hours: s.smartSkipHours,
+      track_links: s.trackLinks,
+
       sender_map: breakdown.reduce((acc, b) => {
         const sender = sendersByCountry[b.country_code];
         acc[b.country_code] = sender
@@ -601,6 +610,22 @@ function NewCampaignPage() {
                 Links don't cost extra — they just add characters, which may push the message into a second SMS segment.
               </p>
             </div>
+            <div className="rounded-md border p-3 flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <Label className="cursor-pointer" htmlFor="track-links-toggle">Track link clicks</Label>
+                <p className="text-xs text-muted-foreground max-w-md">
+                  {s.trackLinks
+                    ? "On — any URL in your message is shortened to a xellvio.com/r/… link so we can count who clicked. See per-link stats on the report's Links tab."
+                    : "Off — your original URLs are sent exactly as typed. No shortening, no click tracking, nothing on the Links tab."}
+                </p>
+              </div>
+              <Switch
+                id="track-links-toggle"
+                checked={s.trackLinks}
+                onCheckedChange={(v: boolean) => setS({ ...s, trackLinks: !!v })}
+              />
+            </div>
+
             <div>
               <Label>MMS image (optional)</Label>
               <MmsImagePicker

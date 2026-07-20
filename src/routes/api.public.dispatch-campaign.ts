@@ -305,7 +305,9 @@ async function planCampaign(
     return out;
   };
   const base = publicBaseUrl();
+  const trackLinks = campaign.track_links !== false; // default on
   const rewriteBody = (body: string, messageId: string): string => {
+    if (!trackLinks) return body;
     return body.replace(URL_RE, (originalUrl) => {
       const code = shortCode(8);
       linkRows.push({
@@ -318,6 +320,7 @@ async function planCampaign(
       return `${base}/r/${code}`;
     });
   };
+
   for (const r of enriched) {
     const messageId = crypto.randomUUID();
     const rewritten = rewriteBody(r.body, messageId);

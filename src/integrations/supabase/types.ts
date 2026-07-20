@@ -619,6 +619,7 @@ export type Database = {
           sender_map: Json
           smart_skip_hours: number
           status: string
+          track_links: boolean
           updated_at: string
         }
         Insert: {
@@ -636,6 +637,7 @@ export type Database = {
           sender_map?: Json
           smart_skip_hours?: number
           status?: string
+          track_links?: boolean
           updated_at?: string
         }
         Update: {
@@ -653,6 +655,7 @@ export type Database = {
           sender_map?: Json
           smart_skip_hours?: number
           status?: string
+          track_links?: boolean
           updated_at?: string
         }
         Relationships: []
