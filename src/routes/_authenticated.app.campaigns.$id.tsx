@@ -906,10 +906,21 @@ function RecipientActivity({
                         <div className="font-mono text-xs text-muted-foreground">{m.phone_e164}</div>
                       </TableCell>
                       <TableCell>{m.country_code ?? m.profile?.country_code ?? "—"}</TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[260px]">
                         <StatusBadge status={m.status} />
-                        {m.error_code && <div className="text-[10px] text-destructive mt-0.5">{m.error_code}</div>}
+                        {m.error_code && <div className="text-[10px] text-destructive mt-0.5 font-mono">{m.error_code}</div>}
+                        {m.failure_reason && (
+                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug" title={m.failure_reason}>
+                            {m.failure_reason.length > 120 ? m.failure_reason.slice(0, 120) + "…" : m.failure_reason}
+                          </div>
+                        )}
+                        {!m.failure_reason && m.status === "delivery_unconfirmed" && (
+                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                            Carrier accepted the SMS but never returned a delivery receipt. Common for international carriers that don't send DLRs.
+                          </div>
+                        )}
                       </TableCell>
+
                       <TableCell className="tabular-nums">{m.segments_count ?? 1}</TableCell>
                       <TableCell className="tabular-nums">{formatUSD(Number(m.cost ?? 0))}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
