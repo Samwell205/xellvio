@@ -53,16 +53,19 @@ async function countAvailable() {
 export const getTfnMarketplaceStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
-    const [available, settings] = await Promise.all([countAvailable(), readSettings()]);
+    const [actual, settings] = await Promise.all([countAvailable(), readSettings()]);
+    const available = settings.advertisedAvailable != null ? settings.advertisedAvailable : actual;
     return { available, priceUsd: settings.buyerPriceUsd };
   });
 
 export const getTfnMarketplaceOffer = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
-    const [available_count, settings] = await Promise.all([countAvailable(), readSettings()]);
+    const [actual, settings] = await Promise.all([countAvailable(), readSettings()]);
+    const available_count = settings.advertisedAvailable != null ? settings.advertisedAvailable : actual;
     return { available_count, price_usd: settings.buyerPriceUsd };
   });
+
 
 async function claimFromPool(userId: string, priceUsd: number) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
