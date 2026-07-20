@@ -698,12 +698,14 @@ function CampaignReport() {
         {/* ───────────── LINKS ───────────── */}
         <TabsContent value="links" className="mt-5">
           <LinkActivity
+            campaignId={id}
             uniqueClickers={stats.uniqueClickers}
             totalClicks={stats.clicked}
             delivered={stats.delivered}
             clicks={(eventsQ.data ?? []).filter((e: any) => e.type === "clicked")}
           />
         </TabsContent>
+
 
         {/* ───────────── COST & DELIVERABILITY ───────────── */}
         <TabsContent value="cost" className="mt-5">
