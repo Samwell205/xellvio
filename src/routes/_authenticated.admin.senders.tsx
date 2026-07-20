@@ -305,11 +305,13 @@ function SharedTollfreePoolPanel() {
   const deleteFn = useServerFn(adminDeleteSharedTollfree);
   const listAccountsFn = useServerFn(adminListAccountsLite);
 
-  const { data: pool, isLoading } = useQuery({
+  const { data: poolData, isLoading } = useQuery({
     queryKey: ["admin-shared-tfn"],
     queryFn: () => listFn(),
     refetchInterval: 60_000,
   });
+  const pool = (poolData as any)?.items ?? [];
+  const syncInfo = (poolData as any)?.sync as { synced: number; error: string | null } | undefined;
   const { data: accounts } = useQuery({
     queryKey: ["admin-accounts-lite"],
     queryFn: () => listAccountsFn(),
