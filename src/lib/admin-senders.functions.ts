@@ -153,11 +153,44 @@ function fanoutCountries(country: string): string[] {
   return NA.has(cc) ? ["US", "CA", "PR"] : [cc];
 }
 
+async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): Promise<{ synced: number; error: string | null }> {
+  try {
+    const { listAccountTollfreeNumbers } = await import("@/lib/telnyx.server");
+    const numbers = await listAccountTollfreeNumbers();
+    const rows = numbers
+      .filter((n) => !!n.messaging_profile_id)
+      .map((n) => ({
+        phone_number: n.phone_number,
+        country_code: (n.country_code ?? "US").toUpperCase(),
+        telnyx_phone_number_id: n.id,
+        telnyx_messaging_profile_id: n.messaging_profile_id,
+        notes: null as string | null,
+        created_by: createdBy,
+      }));
+    if (rows.length) {
+      // Upsert to keep messaging_profile_id in sync if it changes on Telnyx.
+      await supabaseAdmin.from("shared_tollfree_pool").upsert(rows, { onConflict: "phone_number" });
+    }
+    return { synced: rows.length, error: null };
+  } catch (e: any) {
+    return { synced: 0, error: e?.message ?? "Telnyx sync failed" };
+  }
+}
+
+export const adminSyncSharedTollfree = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return syncSharedPoolFromTelnyx(supabaseAdmin, context.userId);
+  });
+
 export const adminListSharedTollfree = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const sync = await syncSharedPoolFromTelnyx(supabaseAdmin, context.userId);
     const { data: pool } = await supabaseAdmin
       .from("shared_tollfree_pool")
       .select("phone_number,country_code,telnyx_phone_number_id,telnyx_messaging_profile_id,notes,created_at")
