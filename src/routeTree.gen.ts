@@ -88,6 +88,7 @@ import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authen
 import { Route as VerifierVerifyDashboardIndexRouteImport } from './routes/_verifier.verify.dashboard.index'
 import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
+import { Route as AuthenticatedAdminAcademyIndexRouteImport } from './routes/_authenticated.admin.academy.index'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -102,6 +103,7 @@ import { Route as VerifierVerifyDashboardEarningsRouteImport } from './routes/_v
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
+import { Route as AuthenticatedAdminAcademyCourseIdRouteImport } from './routes/_authenticated.admin.academy.$courseId'
 import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -529,6 +531,12 @@ const AuthenticatedAppCampaignsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const AuthenticatedAdminAcademyIndexRoute =
+  AuthenticatedAdminAcademyIndexRouteImport.update({
+    id: '/academy/',
+    path: '/academy/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -610,6 +618,12 @@ const AuthenticatedAppCampaignsIdRoute =
     id: '/$id',
     path: '/$id',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
+  } as any)
+const AuthenticatedAdminAcademyCourseIdRoute =
+  AuthenticatedAdminAcademyCourseIdRouteImport.update({
+    id: '/academy/$courseId',
+    path: '/academy/$courseId',
+    getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAppCampaignsIdReportRoute =
   AuthenticatedAppCampaignsIdReportRouteImport.update({
@@ -693,6 +707,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -707,6 +722,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/admin/academy/': typeof AuthenticatedAdminAcademyIndexRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
@@ -782,6 +798,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -796,6 +813,7 @@ export interface FileRoutesByTo {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/admin/academy': typeof AuthenticatedAdminAcademyIndexRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
@@ -879,6 +897,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/_authenticated/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -893,6 +912,7 @@ export interface FileRoutesById {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/_authenticated/admin/academy/': typeof AuthenticatedAdminAcademyIndexRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
@@ -975,6 +995,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin/'
     | '/app/'
+    | '/admin/academy/$courseId'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -989,6 +1010,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/admin/academy/'
     | '/app/campaigns/'
     | '/app/segments/'
     | '/verify/dashboard/'
@@ -1064,6 +1086,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin'
     | '/app'
+    | '/admin/academy/$courseId'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -1078,6 +1101,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/admin/academy'
     | '/app/campaigns'
     | '/app/segments'
     | '/verify/dashboard'
@@ -1160,6 +1184,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
+    | '/_authenticated/admin/academy/$courseId'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
@@ -1174,6 +1199,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/_authenticated/admin/academy/'
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/segments/'
     | '/_verifier/verify/dashboard/'
@@ -1782,6 +1808,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsIndexRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/_authenticated/admin/academy/': {
+      id: '/_authenticated/admin/academy/'
+      path: '/academy'
+      fullPath: '/admin/academy/'
+      preLoaderRoute: typeof AuthenticatedAdminAcademyIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -1880,6 +1913,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/_authenticated/admin/academy/$courseId': {
+      id: '/_authenticated/admin/academy/$courseId'
+      path: '/academy/$courseId'
+      fullPath: '/admin/academy/$courseId'
+      preLoaderRoute: typeof AuthenticatedAdminAcademyCourseIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/app/campaigns/$id/report': {
       id: '/_authenticated/app/campaigns/$id/report'
       path: '/report'
@@ -1906,6 +1946,8 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminVerifiersRoute: typeof AuthenticatedAdminVerifiersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminAcademyCourseIdRoute: typeof AuthenticatedAdminAcademyCourseIdRoute
+  AuthenticatedAdminAcademyIndexRoute: typeof AuthenticatedAdminAcademyIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -1925,6 +1967,9 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminVerifiersRoute: AuthenticatedAdminVerifiersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAdminAcademyCourseIdRoute:
+    AuthenticatedAdminAcademyCourseIdRoute,
+  AuthenticatedAdminAcademyIndexRoute: AuthenticatedAdminAcademyIndexRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
