@@ -1,10 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { PERMISSION_KEYS } from "@/lib/team-permissions";
+import { PERMISSION_KEYS, type PermissionKey, type Permissions } from "@/lib/team-permissions";
 
 const roleEnum = z.enum(["viewer", "editor", "admin"]);
-const permissionsSchema = z.record(z.enum(PERMISSION_KEYS), z.boolean()).optional();
+const ALLOWED_KEYS = new Set<string>(PERMISSION_KEYS);
+const permissionsSchema = z
+  .record(z.string(), z.boolean().optional())
+  .optional()
+  .transform((raw): Permissions => {
+    if (!raw) return {};
+    const out: Permissions = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (ALLOWED_KEYS.has(k) && v === true) out[k as PermissionKey] = true;
+    }
+    return out;
+  });
 
 export const listMyTeam = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
