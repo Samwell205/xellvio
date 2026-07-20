@@ -662,8 +662,9 @@ function CampaignReport() {
                       sub={stats.sent ? `${pct(stats.awaitingDelivery / stats.sent * 100)} of sent` : undefined} tone="muted" />
                   )}
                   {stats.deliveryUnconfirmed > 0 && (
-                    <FunnelRow icon={HelpCircle} label="delivery unconfirmed" value={stats.deliveryUnconfirmed}
+                    <FunnelRow icon={HelpCircle} label="not delivered (no receipt)" value={stats.deliveryUnconfirmed}
                       sub={stats.sent ? `${pct(stats.deliveryUnconfirmed / stats.sent * 100)} of sent` : undefined} tone="muted" />
+
                   )}
                   <FunnelRow icon={AlertTriangle} label="failed" value={stats.failed}
                     sub={stats.sent ? `${pct(stats.failed / stats.sent * 100)} of sent` : undefined} tone="danger" />
