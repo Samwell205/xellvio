@@ -41,6 +41,7 @@ import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.emai
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
+import { Route as AcademyVerifyRouteImport } from './routes/academy.verify'
 import { Route as AcademySlugRouteImport } from './routes/academy.$slug'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
@@ -64,6 +65,7 @@ import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenticated.app.segments'
 import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated.app.onboarding'
+import { Route as AuthenticatedAppMyAcademyRouteImport } from './routes/_authenticated.app.my-academy'
 import { Route as AuthenticatedAppInboxRouteImport } from './routes/_authenticated.app.inbox'
 import { Route as AuthenticatedAppCheckoutRouteImport } from './routes/_authenticated.app.checkout'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
@@ -260,6 +262,11 @@ const ApiSetupSmsRoute = ApiSetupSmsRouteImport.update({
   path: '/api/setup-sms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AcademyVerifyRoute = AcademyVerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
+  getParentRoute: () => AcademyRoute,
+} as any)
 const AcademySlugRoute = AcademySlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -386,6 +393,12 @@ const AuthenticatedAppOnboardingRoute =
   AuthenticatedAppOnboardingRouteImport.update({
     id: '/onboarding',
     path: '/onboarding',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppMyAcademyRoute =
+  AuthenticatedAppMyAcademyRouteImport.update({
+    id: '/my-academy',
+    path: '/my-academy',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppInboxRoute = AuthenticatedAppInboxRouteImport.update({
@@ -631,6 +644,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/academy/$slug': typeof AcademySlugRouteWithChildren
+  '/academy/verify': typeof AcademyVerifyRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
@@ -658,6 +672,7 @@ export interface FileRoutesByFullPath {
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
+  '/app/my-academy': typeof AuthenticatedAppMyAcademyRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -720,6 +735,7 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
   '/academy/$slug': typeof AcademySlugRouteWithChildren
+  '/academy/verify': typeof AcademyVerifyRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
@@ -746,6 +762,7 @@ export interface FileRoutesByTo {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
+  '/app/my-academy': typeof AuthenticatedAppMyAcademyRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
@@ -813,6 +830,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/academy/$slug': typeof AcademySlugRouteWithChildren
+  '/academy/verify': typeof AcademyVerifyRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
@@ -840,6 +858,7 @@ export interface FileRoutesById {
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/_authenticated/app/checkout': typeof AuthenticatedAppCheckoutRoute
   '/_authenticated/app/inbox': typeof AuthenticatedAppInboxRoute
+  '/_authenticated/app/my-academy': typeof AuthenticatedAppMyAcademyRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/_authenticated/app/segments': typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -907,6 +926,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/academy/$slug'
+    | '/academy/verify'
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
@@ -934,6 +954,7 @@ export interface FileRouteTypes {
     | '/app/campaigns'
     | '/app/checkout'
     | '/app/inbox'
+    | '/app/my-academy'
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/segments'
@@ -996,6 +1017,7 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/verify-email'
     | '/academy/$slug'
+    | '/academy/verify'
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
@@ -1022,6 +1044,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/checkout'
     | '/app/inbox'
+    | '/app/my-academy'
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/settings'
@@ -1088,6 +1111,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/app'
     | '/academy/$slug'
+    | '/academy/verify'
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
@@ -1115,6 +1139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/campaigns'
     | '/_authenticated/app/checkout'
     | '/_authenticated/app/inbox'
+    | '/_authenticated/app/my-academy'
     | '/_authenticated/app/onboarding'
     | '/_authenticated/app/pricing-calculator'
     | '/_authenticated/app/segments'
@@ -1428,6 +1453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSetupSmsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/academy/verify': {
+      id: '/academy/verify'
+      path: '/verify'
+      fullPath: '/academy/verify'
+      preLoaderRoute: typeof AcademyVerifyRouteImport
+      parentRoute: typeof AcademyRoute
+    }
     '/academy/$slug': {
       id: '/academy/$slug'
       path: '/$slug'
@@ -1587,6 +1619,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/app/onboarding'
       preLoaderRoute: typeof AuthenticatedAppOnboardingRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/my-academy': {
+      id: '/_authenticated/app/my-academy'
+      path: '/my-academy'
+      fullPath: '/app/my-academy'
+      preLoaderRoute: typeof AuthenticatedAppMyAcademyRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/inbox': {
@@ -1947,6 +1986,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
   AuthenticatedAppCheckoutRoute: typeof AuthenticatedAppCheckoutRoute
   AuthenticatedAppInboxRoute: typeof AuthenticatedAppInboxRoute
+  AuthenticatedAppMyAcademyRoute: typeof AuthenticatedAppMyAcademyRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
   AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
   AuthenticatedAppSegmentsRoute: typeof AuthenticatedAppSegmentsRouteWithChildren
@@ -1965,6 +2005,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
   AuthenticatedAppCheckoutRoute: AuthenticatedAppCheckoutRoute,
   AuthenticatedAppInboxRoute: AuthenticatedAppInboxRoute,
+  AuthenticatedAppMyAcademyRoute: AuthenticatedAppMyAcademyRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
   AuthenticatedAppPricingCalculatorRoute:
     AuthenticatedAppPricingCalculatorRoute,
@@ -2033,11 +2074,13 @@ const AcademySlugRouteWithChildren = AcademySlugRoute._addFileChildren(
 
 interface AcademyRouteChildren {
   AcademySlugRoute: typeof AcademySlugRouteWithChildren
+  AcademyVerifyRoute: typeof AcademyVerifyRoute
   AcademyIndexRoute: typeof AcademyIndexRoute
 }
 
 const AcademyRouteChildren: AcademyRouteChildren = {
   AcademySlugRoute: AcademySlugRouteWithChildren,
+  AcademyVerifyRoute: AcademyVerifyRoute,
   AcademyIndexRoute: AcademyIndexRoute,
 }
 

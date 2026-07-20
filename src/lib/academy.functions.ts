@@ -262,8 +262,9 @@ const lessonInput = z.object({
   prerequisite_lesson_id: z.string().uuid().nullable().optional(),
 });
 
-async function requireAdmin(ctx: { supabase: ReturnType<typeof import("@supabase/supabase-js").createClient>; userId: string }) {
-  const { data, error } = await ctx.supabase.rpc("has_role", { _role: "admin" });
+async function requireAdmin(ctx: { supabase: unknown }) {
+  const sb = ctx.supabase as { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }> };
+  const { data, error } = await sb.rpc("has_role", { _role: "admin" });
   if (error || data !== true) throw new Error("Forbidden");
 }
 
