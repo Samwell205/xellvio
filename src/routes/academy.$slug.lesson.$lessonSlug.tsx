@@ -49,7 +49,7 @@ function LessonPage() {
     mutationFn: (lessonId: string) =>
       markLessonComplete({
         data: {
-          enrollment_id: (enrollmentData!.enrollment as { id: string }).id,
+          enrollment_id: (enrollmentData!.enrollment as { id: string } | null)!.id,
           lesson_id: lessonId,
           course_id: data!.course.id,
         },
