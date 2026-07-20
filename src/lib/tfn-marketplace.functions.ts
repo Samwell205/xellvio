@@ -75,6 +75,11 @@ async function claimFromPool(userId: string, priceUsd: number) {
     .maybeSingle();
   if (delErr || !deleted) return null;
 
+  // Clear any stale sender_assets rows for this phone (e.g. from the
+  // platform owner's tenant or prior Telnyx syncs) so the new owner's
+  // upsert lands cleanly.
+  await supabaseAdmin.from("sender_assets").delete().eq("phone_number", pick.phone_number);
+
   const nowIso = new Date().toISOString();
   const { error: insErr } = await supabaseAdmin.from("sender_assets").upsert(
     {
