@@ -87,6 +87,8 @@ function NewCampaignPage() {
           scheduleAt: data.schedule_at ? new Date(data.schedule_at).toISOString().slice(0, 16) : "",
           smartSkipHours: data.smart_skip_hours ?? 8,
           excludedCountries: Array.isArray(aud.excluded_countries) ? aud.excluded_countries : [],
+          trackLinks: (data as any).track_links !== false,
+
         }));
       }
       return data;
