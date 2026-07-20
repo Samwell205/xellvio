@@ -239,6 +239,48 @@ export async function listAccountTollfreeNumbers(): Promise<
   return out;
 }
 
+type VerifiedTollfreeRecord = {
+  id?: string;
+  status?: string | null;
+  verificationStatus?: string | null;
+  verification_status?: string | null;
+  phoneNumbers?: Array<{ phoneNumber?: string | null; phone_number?: string | null }>;
+  phone_numbers?: Array<{ phoneNumber?: string | null; phone_number?: string | null }>;
+  phoneNumber?: string | null;
+  phone_number?: string | null;
+};
+
+function normalizeE164(phone: unknown): string | null {
+  if (typeof phone !== "string") return null;
+  const trimmed = phone.trim();
+  if (!trimmed) return null;
+  return trimmed.startsWith("+") ? `+${trimmed.replace(/\D/g, "")}` : `+${trimmed.replace(/\D/g, "")}`;
+}
+
+function verificationRecordStatus(record: VerifiedTollfreeRecord): string {
+  return (record.verificationStatus ?? record.verification_status ?? record.status ?? "").toLowerCase().trim();
+}
+
+function extractVerificationRecords(response: any): VerifiedTollfreeRecord[] {
+  if (Array.isArray(response?.records)) return response.records;
+  if (Array.isArray(response?.data?.records)) return response.data.records;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response)) return response;
+  return [];
+}
+
+function extractVerifiedPhones(record: VerifiedTollfreeRecord): string[] {
+  const phones = new Set<string>();
+  const phoneList = record.phoneNumbers ?? record.phone_numbers ?? [];
+  for (const item of phoneList) {
+    const normalized = normalizeE164(item?.phoneNumber ?? item?.phone_number);
+    if (normalized) phones.add(normalized);
+  }
+  const direct = normalizeE164(record.phoneNumber ?? record.phone_number);
+  if (direct) phones.add(direct);
+  return Array.from(phones);
+}
+
 /**
  * List all toll-free numbers that have a "verified" Toll-Free Verification
  * request on the Telnyx account. Only these can legally send SMS to US/CA.
@@ -249,34 +291,25 @@ export async function listVerifiedTollfreeNumbers(): Promise<Set<string>> {
   let page = 1;
   const pageSize = 250;
   for (let i = 0; i < 8; i++) {
-    let res: any;
-    try {
-      res = await telnyx<{
-        data: Array<{ phone_numbers?: Array<{ phone_number: string }>; status?: string }>;
-        meta?: { total_pages?: number };
-      }>("/messaging_tollfree/verification/requests", {
-        query: {
-          "filter[status]": "verified",
-          "page[number]": page,
-          "page[size]": pageSize,
-        },
-      });
-    } catch (e: any) {
-      // Fallback older endpoint shape
-      res = await telnyx<any>("/verified_numbers", {
-        query: { "page[number]": page, "page[size]": pageSize },
-      });
-    }
-    for (const r of res.data ?? []) {
-      const status = (r.status ?? "").toLowerCase();
+    const res = await telnyx<any>("/messaging_tollfree/verification/requests", {
+      query: {
+        page,
+        page_size: pageSize,
+        status: "Verified",
+      },
+    });
+    const records = extractVerificationRecords(res);
+    for (const r of records) {
+      const status = verificationRecordStatus(r);
       if (status && status !== "verified") continue;
-      for (const p of r.phone_numbers ?? []) {
-        if (p?.phone_number) verified.add(p.phone_number);
-      }
-      if (r.phone_number) verified.add(r.phone_number);
+      for (const phone of extractVerifiedPhones(r)) verified.add(phone);
     }
-    const total = res.meta?.total_pages ?? 1;
-    if (page >= total) break;
+
+    const totalPages = res.meta?.total_pages ?? res.pagination?.total_pages;
+    const totalRecords = typeof res.total_records === "number" ? res.total_records : undefined;
+    const inferredTotalPages = totalRecords ? Math.ceil(totalRecords / pageSize) : undefined;
+    const total = totalPages ?? inferredTotalPages ?? (records.length === pageSize ? page + 1 : page);
+    if (page >= total || records.length === 0) break;
     page += 1;
   }
   return verified;
