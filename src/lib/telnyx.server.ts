@@ -371,16 +371,25 @@ export async function createAlphanumericSenderId(opts: {
   senderId: string;
   isoCountryCode: string;
 }): Promise<AlphaSenderId> {
-  const res = await telnyx<{ data: AlphaSenderId }>(
-    `/messaging_profiles/${opts.messagingProfileId}/alphanumeric_sender_ids`,
-    {
-      method: "POST",
-      body: {
-        alphanumeric_sender_id: opts.senderId,
-        iso_country_code: opts.isoCountryCode.toUpperCase(),
-      },
+  try {
+    const existing = await telnyx<{ data: AlphaSenderId[] }>("/alphanumeric_sender_ids", {
+      query: { "filter[messaging_profile_id]": opts.messagingProfileId, "page[size]": 100 },
+    });
+    const match = (existing.data ?? []).find(
+      (item) => item.alphanumeric_sender_id?.toUpperCase() === opts.senderId.toUpperCase(),
+    );
+    if (match) return match;
+  } catch {
+    // Non-fatal; the create call below will surface the provider error if needed.
+  }
+
+  const res = await telnyx<{ data: AlphaSenderId }>("/alphanumeric_sender_ids", {
+    method: "POST",
+    body: {
+      alphanumeric_sender_id: opts.senderId,
+      messaging_profile_id: opts.messagingProfileId,
     },
-  );
+  });
   return res.data;
 }
 
