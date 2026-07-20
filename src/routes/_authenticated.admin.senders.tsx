@@ -136,6 +136,10 @@ function AdminSendersPage() {
         </div>
       </div>
 
+      <SharedTollfreePoolPanel accounts={accounts ?? []} />
+
+
+
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Filters</CardTitle>
