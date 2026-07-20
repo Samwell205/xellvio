@@ -219,12 +219,13 @@ export const adminListSharedTollfree = createServerFn({ method: "GET" })
       byPhone.set(a.phone_number, list);
     }
     // Deduplicate attachments by account (a NA number appears under US/CA/PR).
-    return (pool ?? []).map((p: any) => {
+    const items = (pool ?? []).map((p: any) => {
       const raw = byPhone.get(p.phone_number) ?? [];
       const seen = new Map<string, any>();
       for (const a of raw) if (!seen.has(a.account_id)) seen.set(a.account_id, a);
       return { ...p, attachments: Array.from(seen.values()) };
     });
+    return { items, sync };
   });
 
 export const adminCreateSharedTollfree = createServerFn({ method: "POST" })
