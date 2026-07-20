@@ -242,6 +242,25 @@ function CampaignReport() {
     onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
   });
 
+  const resendUnconfirmedFn = useServerFn(resendUnconfirmed);
+  const resendUnconfirmedM = useMutation({
+    mutationFn: (hoursBack: number) =>
+      resendUnconfirmedFn({ data: { campaignId: id, hoursBack } }),
+    onSuccess: (r: any) => {
+      toast.success(
+        r.resent > 0
+          ? `Re-queued ${r.resent.toLocaleString()} unconfirmed message${r.resent === 1 ? "" : "s"} (est. ${formatUSD(r.estimatedCost)}).`
+          : "No unconfirmed messages in that window.",
+      );
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Resend failed"),
+  });
+
+
+
 
   const eligibleQ = useQuery({
     queryKey: ["campaign-eligible", id, campaignQ.data?.audience],
