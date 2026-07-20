@@ -1140,6 +1140,57 @@ export type Database = {
           },
         ]
       }
+      link_clicks: {
+        Row: {
+          account_id: string
+          campaign_id: string
+          clicks: number
+          created_at: string
+          first_click_at: string | null
+          last_click_at: string | null
+          message_id: string
+          short_code: string
+          url: string
+        }
+        Insert: {
+          account_id: string
+          campaign_id: string
+          clicks?: number
+          created_at?: string
+          first_click_at?: string | null
+          last_click_at?: string | null
+          message_id: string
+          short_code: string
+          url: string
+        }
+        Update: {
+          account_id?: string
+          campaign_id?: string
+          clicks?: number
+          created_at?: string
+          first_click_at?: string | null
+          last_click_at?: string | null
+          message_id?: string
+          short_code?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_clicks_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "link_clicks_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_listings: {
         Row: {
           buyer_account_id: string | null
