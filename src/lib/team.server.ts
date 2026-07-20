@@ -25,7 +25,6 @@ export async function sendTeamInviteEmail(args: TeamInviteEmailArgs) {
     templateName: "team-invite",
     recipientEmail: args.recipientEmail,
     idempotencyKey: `team-invite-${args.memberId}-${Date.now()}`,
-    includeUnsubscribe: false,
     sendImmediately: true,
     templateData: {
       inviterName:

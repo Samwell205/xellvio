@@ -42,6 +42,7 @@ export interface SendInternalArgs {
 function classifyEmailError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes("domain_not_verified")) return "domain_not_verified";
+  if (message.includes("missing_unsubscribe")) return "missing_unsubscribe";
   if (message.includes("429")) return "rate_limited";
   if (message.includes("403")) return "forbidden";
   return "send_failed";
