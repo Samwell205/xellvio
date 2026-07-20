@@ -23,18 +23,14 @@ async function listAvailablePoolNumbers(): Promise<
   Array<{ phone_number: string; country_code: string; telnyx_phone_number_id: string | null; telnyx_messaging_profile_id: string }>
 > {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  // The shared pool is the source of truth for marketplace availability.
+  // Numbers are removed from the pool atomically on claim, so stale
+  // sender_assets rows (from prior syncs / the platform owner's tenant)
+  // must not hide otherwise available numbers.
   const { data: pool } = await supabaseAdmin
     .from("shared_tollfree_pool")
     .select("phone_number,country_code,telnyx_phone_number_id,telnyx_messaging_profile_id");
-  const rows = pool ?? [];
-  if (rows.length === 0) return [];
-  const phones = rows.map((r: any) => r.phone_number);
-  const { data: attached } = await supabaseAdmin
-    .from("sender_assets")
-    .select("phone_number")
-    .in("phone_number", phones);
-  const taken = new Set((attached ?? []).map((r: any) => r.phone_number));
-  return rows.filter((r: any) => !taken.has(r.phone_number)) as any;
+  return (pool ?? []) as any;
 }
 
 async function countAvailable() {
@@ -78,6 +74,11 @@ async function claimFromPool(userId: string, priceUsd: number) {
     .select("phone_number")
     .maybeSingle();
   if (delErr || !deleted) return null;
+
+  // Clear any stale sender_assets rows for this phone (e.g. from the
+  // platform owner's tenant or prior Telnyx syncs) so the new owner's
+  // upsert lands cleanly.
+  await supabaseAdmin.from("sender_assets").delete().eq("phone_number", pick.phone_number);
 
   const nowIso = new Date().toISOString();
   const { error: insErr } = await supabaseAdmin.from("sender_assets").upsert(
