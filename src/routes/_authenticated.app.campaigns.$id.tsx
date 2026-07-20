@@ -253,8 +253,9 @@ function CampaignReport() {
     onSuccess: (r: any) => {
       toast.success(
         r.resent > 0
-          ? `Re-queued ${r.resent.toLocaleString()} unconfirmed message${r.resent === 1 ? "" : "s"} (est. ${formatUSD(r.estimatedCost)}).`
-          : "No unconfirmed messages in that window.",
+          ? `Re-queued ${r.resent.toLocaleString()} message${r.resent === 1 ? "" : "s"} without delivery confirmation (est. ${formatUSD(r.estimatedCost)}).`
+          : "No messages without delivery confirmation in that window.",
+
       );
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
@@ -661,8 +662,9 @@ function CampaignReport() {
                       sub={stats.sent ? `${pct(stats.awaitingDelivery / stats.sent * 100)} of sent` : undefined} tone="muted" />
                   )}
                   {stats.deliveryUnconfirmed > 0 && (
-                    <FunnelRow icon={HelpCircle} label="delivery unconfirmed" value={stats.deliveryUnconfirmed}
+                    <FunnelRow icon={HelpCircle} label="not delivered (no receipt)" value={stats.deliveryUnconfirmed}
                       sub={stats.sent ? `${pct(stats.deliveryUnconfirmed / stats.sent * 100)} of sent` : undefined} tone="muted" />
+
                   )}
                   <FunnelRow icon={AlertTriangle} label="failed" value={stats.failed}
                     sub={stats.sent ? `${pct(stats.failed / stats.sent * 100)} of sent` : undefined} tone="danger" />
@@ -743,7 +745,7 @@ function CampaignReport() {
                         </div>
                         {v.unconfirmed > 0 && (
                           <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">
-                            {v.unconfirmed.toLocaleString()} unconfirmed · {v.failed.toLocaleString()} failed
+                            {v.unconfirmed.toLocaleString()} not delivered · {v.failed.toLocaleString()} failed
                           </div>
                         )}
                       </li>
@@ -826,7 +828,7 @@ function RecipientActivity({
     { key: "all",       label: "All",       count: rows.length },
     { key: "sent",      label: "Accepted",  count: buckets.sent.length },
     { key: "delivered", label: "Delivered", count: buckets.delivered.length },
-    { key: "unconfirmed", label: "Unconfirmed", count: buckets.unconfirmed.length },
+    { key: "unconfirmed", label: "Not delivered", count: buckets.unconfirmed.length },
     { key: "failed",    label: "Failed",    count: buckets.failed.length },
     { key: "skipped",   label: "Skipped",   count: buckets.skipped.length },
     { key: "queued",    label: "Queued",    count: buckets.queued.length },
@@ -1026,11 +1028,11 @@ function UnconfirmedKpi({
         <span className="size-6 rounded-md grid place-items-center bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
           <HelpCircle className="size-3.5" />
         </span>
-        Unconfirmed
+        Not delivered
       </div>
       <div className="text-2xl font-extrabold mt-2 tabular-nums">{value.toLocaleString()}</div>
       <div className="text-xs text-muted-foreground mt-1">
-        {sent > 0 ? `${pct.toFixed(0)}% of sent` : "no delivery proof"}
+        {sent > 0 ? `${pct.toFixed(0)}% of sent · matches Telnyx` : "no delivery receipt"}
       </div>
       <button
         type="button"
@@ -1044,34 +1046,34 @@ function UnconfirmedKpi({
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <HelpCircle className="size-4 text-cyan-500" /> Delivery unconfirmed — explained
+              <HelpCircle className="size-4 text-cyan-500" /> Not delivered — explained
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm text-muted-foreground">
             <p>
-              For every SMS, the carrier does two things:
+              This is the same "Not Delivered" number Telnyx shows on their dashboard. For every SMS, the carrier does two things:
             </p>
             <ol className="list-decimal pl-5 space-y-1">
               <li><strong className="text-foreground">Accepts the message</strong> — this is "sent".</li>
               <li><strong className="text-foreground">Returns a delivery receipt (DLR)</strong> once the phone received it — this is "delivered".</li>
             </ol>
             <p>
-              <strong className="text-foreground">Unconfirmed = step 1 succeeded, step 2 never came back.</strong> The
+              <strong className="text-foreground">"Not delivered" means step 1 succeeded, but step 2 never came back.</strong> The
               carrier accepted your SMS but never told us whether the phone actually rang.
             </p>
             <p>
-              Most of these were delivered — the carrier just didn't report it. This is very common for
+              Many of these were actually delivered — the carrier just didn't report it. This is very common for
               international carriers (Africa, Middle East, parts of Asia) that don't return receipts.
             </p>
             <p>
               Use <strong className="text-foreground">Performance by country</strong> below to see which countries this is concentrated in.
-              You can also re-send only the unconfirmed messages if recipients report not receiving them —
+              You can also re-send only these messages if recipients report not receiving them —
               note that Telnyx bills per send.
             </p>
             {canResend && (
               <div className="rounded-md border p-3 space-y-2 bg-muted/30">
                 <div className="flex items-center gap-2 text-xs">
-                  <label className="text-foreground font-medium">Resend unconfirmed from last</label>
+                  <label className="text-foreground font-medium">Resend from last</label>
                   <select
                     value={hours}
                     onChange={(e) => setHours(Number(e.target.value))}
@@ -1092,8 +1094,9 @@ function UnconfirmedKpi({
                     setOpen(false);
                   }}
                 >
-                  {isResending ? "Re-queuing…" : `Re-send unconfirmed (${value.toLocaleString()})`}
+                  {isResending ? "Re-queuing…" : `Re-send not delivered (${value.toLocaleString()})`}
                 </Button>
+
                 <div className="text-[11px] text-muted-foreground">
                   This costs money — Telnyx charges per send attempt.
                 </div>
@@ -1308,7 +1311,7 @@ function ProgressPanel({
         <ProgTile label="Sending" value={sending} dotClass="bg-amber-500" pulse={sending > 0} />
         <ProgTile label="Accepted" value={sent} dotClass="bg-sky-500" />
         <ProgTile label="Delivered" value={delivered} dotClass="bg-emerald-500" />
-        <ProgTile label="Unconfirmed" value={deliveryUnconfirmed} dotClass="bg-cyan-500" />
+        <ProgTile label="Not delivered" value={deliveryUnconfirmed} dotClass="bg-cyan-500" />
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
       </div>
 
@@ -1373,7 +1376,7 @@ function ProgressPanel({
             : inFlight === 0 && sent > 0
             ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
             : inFlight === 0 && deliveryUnconfirmed > 0
-            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} finalized by the carrier without delivery confirmation.`
+            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} accepted by the carrier but returned no delivery receipt (shows as "Not Delivered" on Telnyx).`
             : inFlight === 0
             ? "All messages have a final carrier status."
             : `${processedPct}% complete.`}
