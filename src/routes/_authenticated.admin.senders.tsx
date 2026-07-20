@@ -136,7 +136,7 @@ function AdminSendersPage() {
         </div>
       </div>
 
-      <SharedTollfreePoolPanel accounts={accounts ?? []} />
+      <SharedTollfreePoolPanel />
 
 
 
