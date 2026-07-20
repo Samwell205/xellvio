@@ -828,7 +828,7 @@ function RecipientActivity({
     { key: "all",       label: "All",       count: rows.length },
     { key: "sent",      label: "Accepted",  count: buckets.sent.length },
     { key: "delivered", label: "Delivered", count: buckets.delivered.length },
-    { key: "unconfirmed", label: "Unconfirmed", count: buckets.unconfirmed.length },
+    { key: "unconfirmed", label: "Not delivered", count: buckets.unconfirmed.length },
     { key: "failed",    label: "Failed",    count: buckets.failed.length },
     { key: "skipped",   label: "Skipped",   count: buckets.skipped.length },
     { key: "queued",    label: "Queued",    count: buckets.queued.length },
