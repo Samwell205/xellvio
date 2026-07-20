@@ -2707,6 +2707,7 @@ export type Database = {
         Args: { _verifier_id: string }
         Returns: string
       }
+      get_acting_account_id: { Args: { _user_id: string }; Returns: string }
       has_account_access: {
         Args: {
           _account_id: string
@@ -2716,6 +2717,10 @@ export type Database = {
       }
       has_role: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: boolean
+      }
+      has_workspace_permission: {
+        Args: { _key: string; _owner_account_id: string }
         Returns: boolean
       }
       mark_verifier_withdrawal_paid: {
