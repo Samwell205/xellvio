@@ -31,6 +31,10 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+
+import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
   Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone, HelpCircle,
   DollarSign, Wallet, Activity, XCircle, Download, RotateCw, ExternalLink,
