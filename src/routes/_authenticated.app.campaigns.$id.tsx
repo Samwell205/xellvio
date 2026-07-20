@@ -721,22 +721,32 @@ function CampaignReport() {
               {Object.keys(stats.byCountry).length === 0 ? (
                 <div className="text-sm text-muted-foreground">No deliveries yet.</div>
               ) : (
-                <ul className="space-y-2.5">
+                <ul className="space-y-3">
                   {Object.entries(stats.byCountry).sort((a, b) => b[1].total - a[1].total).map(([cc, v]) => {
                     const rate = v.total ? (v.delivered / v.total) * 100 : 0;
+                    const uncRate = v.total ? (v.unconfirmed / v.total) * 100 : 0;
+                    const failRate = v.total ? (v.failed / v.total) * 100 : 0;
                     return (
                       <li key={cc} className="text-sm">
                         <div className="flex justify-between mb-1">
-                          <span className="font-medium">{cc} · {v.total}</span>
+                          <span className="font-medium">{cc} · {v.total.toLocaleString()}</span>
                           <span className="text-muted-foreground tabular-nums">{rate.toFixed(0)}% delivered</span>
                         </div>
-                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
                           <div className="h-full bg-success" style={{ width: `${rate}%` }} />
+                          <div className="h-full bg-cyan-500" style={{ width: `${uncRate}%` }} />
+                          <div className="h-full bg-destructive" style={{ width: `${failRate}%` }} />
                         </div>
+                        {v.unconfirmed > 0 && (
+                          <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">
+                            {v.unconfirmed.toLocaleString()} unconfirmed · {v.failed.toLocaleString()} failed
+                          </div>
+                        )}
                       </li>
                     );
                   })}
                 </ul>
+
               )}
             </Card>
 
