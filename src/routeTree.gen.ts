@@ -28,17 +28,20 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AupRouteImport } from './routes/aup'
 import { Route as AntiSpamRouteImport } from './routes/anti-spam'
+import { Route as AcademyRouteImport } from './routes/academy'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as VerifierRouteImport } from './routes/_verifier'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VerifyIndexRouteImport } from './routes/verify.index'
+import { Route as AcademyIndexRouteImport } from './routes/academy.index'
 import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
+import { Route as AcademySlugRouteImport } from './routes/academy.$slug'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
@@ -89,6 +92,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
+import { Route as AcademySlugLessonLessonSlugRouteImport } from './routes/academy.$slug.lesson.$lessonSlug'
 import { Route as VerifierVerifyDashboardWithdrawalsRouteImport } from './routes/_verifier.verify.dashboard.withdrawals'
 import { Route as VerifierVerifyDashboardSettingsRouteImport } from './routes/_verifier.verify.dashboard.settings'
 import { Route as VerifierVerifyDashboardNumbersRouteImport } from './routes/_verifier.verify.dashboard.numbers'
@@ -193,6 +197,11 @@ const AntiSpamRoute = AntiSpamRouteImport.update({
   path: '/anti-spam',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AcademyRoute = AcademyRouteImport.update({
+  id: '/academy',
+  path: '/academy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -215,6 +224,11 @@ const VerifyIndexRoute = VerifyIndexRouteImport.update({
   id: '/verify/',
   path: '/verify/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AcademyIndexRoute = AcademyIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AcademyRoute,
 } as any)
 const VerifyResetPasswordRoute = VerifyResetPasswordRouteImport.update({
   id: '/verify/reset-password',
@@ -245,6 +259,11 @@ const ApiSetupSmsRoute = ApiSetupSmsRouteImport.update({
   id: '/api/setup-sms',
   path: '/api/setup-sms',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AcademySlugRoute = AcademySlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => AcademyRoute,
 } as any)
 const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
@@ -531,6 +550,12 @@ const ApiPublicOptInProofSplatRoute =
     path: '/api/public/opt-in-proof/$',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AcademySlugLessonLessonSlugRoute =
+  AcademySlugLessonLessonSlugRouteImport.update({
+    id: '/lesson/$lessonSlug',
+    path: '/lesson/$lessonSlug',
+    getParentRoute: () => AcademySlugRoute,
+  } as any)
 const VerifierVerifyDashboardWithdrawalsRoute =
   VerifierVerifyDashboardWithdrawalsRouteImport.update({
     id: '/verify/dashboard/withdrawals',
@@ -583,6 +608,7 @@ const AuthenticatedAppCampaignsIdReportRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/academy': typeof AcademyRouteWithChildren
   '/anti-spam': typeof AntiSpamRoute
   '/aup': typeof AupRoute
   '/auth': typeof AuthRoute
@@ -604,12 +630,14 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/academy/$slug': typeof AcademySlugRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/academy/': typeof AcademyIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
@@ -657,6 +685,7 @@ export interface FileRoutesByFullPath {
   '/verify/dashboard/numbers': typeof VerifierVerifyDashboardNumbersRoute
   '/verify/dashboard/settings': typeof VerifierVerifyDashboardSettingsRoute
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
+  '/academy/$slug/lesson/$lessonSlug': typeof AcademySlugLessonLessonSlugRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -690,12 +719,14 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/academy/$slug': typeof AcademySlugRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/academy': typeof AcademyIndexRoute
   '/verify': typeof VerifyIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
@@ -741,6 +772,7 @@ export interface FileRoutesByTo {
   '/verify/dashboard/numbers': typeof VerifierVerifyDashboardNumbersRoute
   '/verify/dashboard/settings': typeof VerifierVerifyDashboardSettingsRoute
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
+  '/academy/$slug/lesson/$lessonSlug': typeof AcademySlugLessonLessonSlugRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -758,6 +790,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/_verifier': typeof VerifierRouteWithChildren
   '/about': typeof AboutRoute
+  '/academy': typeof AcademyRouteWithChildren
   '/anti-spam': typeof AntiSpamRoute
   '/aup': typeof AupRoute
   '/auth': typeof AuthRoute
@@ -779,12 +812,14 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/academy/$slug': typeof AcademySlugRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/m/$messageId': typeof MMessageIdRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/academy/': typeof AcademyIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
@@ -832,6 +867,7 @@ export interface FileRoutesById {
   '/_verifier/verify/dashboard/numbers': typeof VerifierVerifyDashboardNumbersRoute
   '/_verifier/verify/dashboard/settings': typeof VerifierVerifyDashboardSettingsRoute
   '/_verifier/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
+  '/academy/$slug/lesson/$lessonSlug': typeof AcademySlugLessonLessonSlugRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -848,6 +884,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/academy'
     | '/anti-spam'
     | '/aup'
     | '/auth'
@@ -869,12 +906,14 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin'
     | '/app'
+    | '/academy/$slug'
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/academy/'
     | '/verify/'
     | '/admin/accounts'
     | '/admin/activity'
@@ -922,6 +961,7 @@ export interface FileRouteTypes {
     | '/verify/dashboard/numbers'
     | '/verify/dashboard/settings'
     | '/verify/dashboard/withdrawals'
+    | '/academy/$slug/lesson/$lessonSlug'
     | '/api/public/opt-in-proof/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -955,12 +995,14 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/verify-email'
+    | '/academy/$slug'
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/academy'
     | '/verify'
     | '/admin/accounts'
     | '/admin/activity'
@@ -1006,6 +1048,7 @@ export interface FileRouteTypes {
     | '/verify/dashboard/numbers'
     | '/verify/dashboard/settings'
     | '/verify/dashboard/withdrawals'
+    | '/academy/$slug/lesson/$lessonSlug'
     | '/api/public/opt-in-proof/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1022,6 +1065,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/_verifier'
     | '/about'
+    | '/academy'
     | '/anti-spam'
     | '/aup'
     | '/auth'
@@ -1043,12 +1087,14 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/_authenticated/admin'
     | '/_authenticated/app'
+    | '/academy/$slug'
     | '/api/setup-sms'
     | '/email/unsubscribe'
     | '/m/$messageId'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/academy/'
     | '/verify/'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/activity'
@@ -1096,6 +1142,7 @@ export interface FileRouteTypes {
     | '/_verifier/verify/dashboard/numbers'
     | '/_verifier/verify/dashboard/settings'
     | '/_verifier/verify/dashboard/withdrawals'
+    | '/academy/$slug/lesson/$lessonSlug'
     | '/api/public/opt-in-proof/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1113,6 +1160,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   VerifierRoute: typeof VerifierRouteWithChildren
   AboutRoute: typeof AboutRoute
+  AcademyRoute: typeof AcademyRouteWithChildren
   AntiSpamRoute: typeof AntiSpamRoute
   AupRoute: typeof AupRoute
   AuthRoute: typeof AuthRoute
@@ -1289,6 +1337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AntiSpamRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/academy': {
+      id: '/academy'
+      path: '/academy'
+      fullPath: '/academy'
+      preLoaderRoute: typeof AcademyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -1323,6 +1378,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/verify/'
       preLoaderRoute: typeof VerifyIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/academy/': {
+      id: '/academy/'
+      path: '/'
+      fullPath: '/academy/'
+      preLoaderRoute: typeof AcademyIndexRouteImport
+      parentRoute: typeof AcademyRoute
     }
     '/verify/reset-password': {
       id: '/verify/reset-password'
@@ -1365,6 +1427,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/setup-sms'
       preLoaderRoute: typeof ApiSetupSmsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/academy/$slug': {
+      id: '/academy/$slug'
+      path: '/$slug'
+      fullPath: '/academy/$slug'
+      preLoaderRoute: typeof AcademySlugRouteImport
+      parentRoute: typeof AcademyRoute
     }
     '/_authenticated/app': {
       id: '/_authenticated/app'
@@ -1716,6 +1785,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOptInProofSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/academy/$slug/lesson/$lessonSlug': {
+      id: '/academy/$slug/lesson/$lessonSlug'
+      path: '/lesson/$lessonSlug'
+      fullPath: '/academy/$slug/lesson/$lessonSlug'
+      preLoaderRoute: typeof AcademySlugLessonLessonSlugRouteImport
+      parentRoute: typeof AcademySlugRoute
+    }
     '/_verifier/verify/dashboard/withdrawals': {
       id: '/_verifier/verify/dashboard/withdrawals'
       path: '/verify/dashboard/withdrawals'
@@ -1943,6 +2019,31 @@ const VerifierRouteWithChildren = VerifierRoute._addFileChildren(
   VerifierRouteChildren,
 )
 
+interface AcademySlugRouteChildren {
+  AcademySlugLessonLessonSlugRoute: typeof AcademySlugLessonLessonSlugRoute
+}
+
+const AcademySlugRouteChildren: AcademySlugRouteChildren = {
+  AcademySlugLessonLessonSlugRoute: AcademySlugLessonLessonSlugRoute,
+}
+
+const AcademySlugRouteWithChildren = AcademySlugRoute._addFileChildren(
+  AcademySlugRouteChildren,
+)
+
+interface AcademyRouteChildren {
+  AcademySlugRoute: typeof AcademySlugRouteWithChildren
+  AcademyIndexRoute: typeof AcademyIndexRoute
+}
+
+const AcademyRouteChildren: AcademyRouteChildren = {
+  AcademySlugRoute: AcademySlugRouteWithChildren,
+  AcademyIndexRoute: AcademyIndexRoute,
+}
+
+const AcademyRouteWithChildren =
+  AcademyRoute._addFileChildren(AcademyRouteChildren)
+
 interface SolutionsRouteChildren {
   SolutionsEmailToSmsRoute: typeof SolutionsEmailToSmsRoute
 }
@@ -1960,6 +2061,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   VerifierRoute: VerifierRouteWithChildren,
   AboutRoute: AboutRoute,
+  AcademyRoute: AcademyRouteWithChildren,
   AntiSpamRoute: AntiSpamRoute,
   AupRoute: AupRoute,
   AuthRoute: AuthRoute,
