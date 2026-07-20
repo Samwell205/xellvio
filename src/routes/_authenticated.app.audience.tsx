@@ -63,11 +63,10 @@ const sb = supabase as any;
 function AudiencePage() {
   const qc = useQueryClient();
   const acctId = useAccountId();
-  const acctIdRef = useRef<string | null>(null);
-  useEffect(() => { acctIdRef.current = acctId; }, [acctId]);
   const [search, setSearch] = useState("");
   const [listFilter, setListFilter] = useState<string | "all">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
 
 
   const listsQ = useQuery({
