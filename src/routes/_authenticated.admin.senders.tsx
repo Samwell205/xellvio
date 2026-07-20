@@ -13,6 +13,7 @@ import {
   listAllSenders, adminRefreshSender, adminMarkSenderVerified, adminDeleteSender, adminGrantVerifiedTollfree,
   adminListSharedTollfree, adminCreateSharedTollfree, adminAttachSharedTollfree,
   adminDetachSharedTollfree, adminDeleteSharedTollfree,
+  adminGetTfnAdvertisedAvailable, adminSetTfnAdvertisedAvailable,
 } from "@/lib/admin-senders.functions";
 
 import { adminListAccountsLite } from "@/lib/admin-verifiers.functions";
