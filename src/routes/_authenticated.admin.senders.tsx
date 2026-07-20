@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Check, Trash2, Radio, Gift } from "lucide-react";
+import { Loader2, RefreshCw, Check, Trash2, Radio, Gift, Users, Plus, Unlink } from "lucide-react";
 import {
   listAllSenders, adminRefreshSender, adminMarkSenderVerified, adminDeleteSender, adminGrantVerifiedTollfree,
+  adminListSharedTollfree, adminCreateSharedTollfree, adminAttachSharedTollfree,
+  adminDetachSharedTollfree, adminDeleteSharedTollfree,
 } from "@/lib/admin-senders.functions";
+
 import { adminListAccountsLite } from "@/lib/admin-verifiers.functions";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
