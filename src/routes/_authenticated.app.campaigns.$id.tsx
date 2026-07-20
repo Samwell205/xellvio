@@ -745,7 +745,7 @@ function CampaignReport() {
                         </div>
                         {v.unconfirmed > 0 && (
                           <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">
-                            {v.unconfirmed.toLocaleString()} unconfirmed · {v.failed.toLocaleString()} failed
+                            {v.unconfirmed.toLocaleString()} not delivered · {v.failed.toLocaleString()} failed
                           </div>
                         )}
                       </li>
