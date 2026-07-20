@@ -377,8 +377,8 @@ function SharedTollfreePoolPanel() {
             <Users className="size-4 text-primary" /> Shared toll-free pool
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Auto-synced from Telnyx every minute — every toll-free number on your Telnyx account that is attached to a
-            Messaging Profile shows up here automatically. Attach tenants below and they can send immediately.
+            Auto-synced from Telnyx every minute — only toll-free numbers with an approved Toll-Free Verification
+            show up here automatically. Attach tenants below and they can send immediately.
             Inbound STOP/replies land on the shared Messaging Profile and fan out to all attached tenants; per-profile
             Telnyx reports won't separate tenants (Xellvio's per-campaign reports still do).
           </p>
@@ -405,7 +405,7 @@ function SharedTollfreePoolPanel() {
               <tr><td colSpan={4} className="p-6 text-center text-muted-foreground"><Loader2 className="size-4 mr-2 inline animate-spin" /> Loading…</td></tr>
             )}
             {!isLoading && (pool ?? []).length === 0 && (
-              <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">No shared numbers yet. Register one to start pooling.</td></tr>
+              <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">No approved toll-free verification found yet. Use Sync now after Telnyx shows a request as Verified.</td></tr>
             )}
             {(pool ?? []).map((p: any) => (
               <tr key={p.phone_number} className="border-t align-top">
