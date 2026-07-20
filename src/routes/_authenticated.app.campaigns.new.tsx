@@ -367,6 +367,8 @@ function NewCampaignPage() {
       send_mode: s.sendMode,
       schedule_at: s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
       smart_skip_hours: s.smartSkipHours,
+      track_links: s.trackLinks,
+
       sender_map: breakdown.reduce((acc, b) => {
         const sender = sendersByCountry[b.country_code];
         acc[b.country_code] = sender
