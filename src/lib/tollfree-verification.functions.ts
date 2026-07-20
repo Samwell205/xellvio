@@ -1,12 +1,8 @@
 // Telnyx-backed toll-free verification server functions.
-// This is a Phase-1 shim: it preserves the public API surface (exports) that
-// the UI depends on, but delegates submission/refresh to Telnyx via
-// tollfree-submit.server. The full wizard flow will be rewritten to Telnyx's
-// verification schema in a follow-up phase.
-
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { resolveActingAccount, assertPermission } from "@/lib/acting-account.server";
 
 import { TOLLFREE_USE_CASES, TOLLFREE_VOLUMES, normalizeUseCase } from "./tollfree-use-cases";
 
@@ -71,11 +67,11 @@ const tollfreeAssetSelect = "id,phone_number,telnyx_phone_number_id,telnyx_verif
 
 async function resolveTollfreeNumberId(params: {
   supabaseAdmin: any;
-  userId: string;
+  accountId: string;
   asset: TollfreeAssetRow;
   messagingProfileId: string;
 }): Promise<TollfreeAssetRow> {
-  const { supabaseAdmin, userId, asset, messagingProfileId } = params;
+  const { supabaseAdmin, accountId, asset, messagingProfileId } = params;
   if (asset.telnyx_phone_number_id || !asset.phone_number) return asset;
 
   const { getPhoneNumberByE164, reassignNumberToProfile, safeTelnyxCall } = await import("./telnyx.server");
@@ -90,8 +86,8 @@ async function resolveTollfreeNumberId(params: {
     try {
       await safeTelnyxCall(
         "reassign_number",
-        { userId, messagingProfileId },
-        () => reassignNumberToProfile({ phoneNumberId: found.id, messagingProfileId }),
+        { userId: accountId, messagingProfileId },
+        () => reassignNumberToProfile({ phoneNumberId: found!.id, messagingProfileId }),
       );
     } catch (e) {
       console.warn("[tf-submit] Telnyx reassignment skipped; verification can still be submitted by E.164", e);
@@ -115,10 +111,12 @@ async function resolveTollfreeNumberId(params: {
 export const getMyTollfreeVerification = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: asset } = await context.supabase
+    const acting = await resolveActingAccount(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: asset } = await supabaseAdmin
       .from("sender_assets")
       .select("id,phone_number,telnyx_phone_number_id,verification_status,telnyx_verification_id,verification_payload,rejection_reason,friendly_rejection_reason,submitted_at,in_review_at,verified_at,rejected_at,last_synced_at,telnyx_messaging_profile_id")
-      .eq("account_id", context.userId)
+      .eq("account_id", acting.accountId)
       .eq("sender_kind", "toll_free")
       .order("created_at", { ascending: false })
       .limit(1)
@@ -132,24 +130,22 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: TollfreeVerificationPayload) => TollfreeVerificationInput.parse(input))
   .handler(async ({ data, context }) => {
-    const { userId } = context;
+    const acting = await resolveActingAccount(context.userId);
+    assertPermission(acting, "setup_sms");
+    const accountId = acting.accountId;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { ensureMessagingProfileForAccount, searchAvailableNumbers, orderNumber } = await import("./telnyx.server");
     const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
 
-    // Require the one-time $5 setup fee to be paid BEFORE the tenant can start
-    // a registration. Existing submissions (already in review / verified /
-    // rejected) are grandfathered so we never re-charge someone who paid on
-    // the previous flow — presence of a telnyx_verification_id counts as paid.
     const { data: acct } = await supabaseAdmin
       .from("accounts")
       .select("tollfree_setup_fee_paid_at, credit_balance")
-      .eq("id", userId)
+      .eq("id", accountId)
       .maybeSingle();
     const { data: existingAsset } = await supabaseAdmin
       .from("sender_assets")
       .select("telnyx_verification_id")
-      .eq("account_id", userId).eq("sender_kind", "toll_free")
+      .eq("account_id", accountId).eq("sender_kind", "toll_free")
       .maybeSingle();
     const grandfathered = !!existingAsset?.telnyx_verification_id;
     let chargedSetupFee = false;
@@ -160,7 +156,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
         );
       }
       const { error: debitErr } = await supabaseAdmin.rpc("debit_account", {
-        _account_id: userId,
+        _account_id: accountId,
         _amount: TOLLFREE_SETUP_FEE_USD,
         _campaign_id: null as any,
         _description: "Toll-free verification setup fee",
@@ -169,18 +165,18 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
       await supabaseAdmin
         .from("accounts")
         .update({ tollfree_setup_fee_paid_at: new Date().toISOString(), tollfree_setup_fee_due_cents: 0 })
-        .eq("id", userId);
+        .eq("id", accountId);
       chargedSetupFee = true;
     }
 
-    const messagingProfileId = await ensureMessagingProfileForAccount(userId);
+    const messagingProfileId = await ensureMessagingProfileForAccount(accountId);
     let { data: asset } = await supabaseAdmin
       .from("sender_assets")
       .select(tollfreeAssetSelect)
-      .eq("account_id", userId).eq("sender_kind", "toll_free")
+      .eq("account_id", accountId).eq("sender_kind", "toll_free")
       .maybeSingle();
 
-    if (asset) asset = await resolveTollfreeNumberId({ supabaseAdmin, userId, asset, messagingProfileId });
+    if (asset) asset = await resolveTollfreeNumberId({ supabaseAdmin, accountId, asset, messagingProfileId });
 
     if (!asset) {
       try {
@@ -191,7 +187,7 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
         const bought = order.phone_numbers?.[0];
         if (!bought) throw new Error("Telnyx did not return a purchased number.");
         const { data: inserted, error: insErr } = await supabaseAdmin.from("sender_assets").insert({
-          account_id: userId,
+          account_id: accountId,
           country_code: (data.businessCountry || "US").toUpperCase(),
           sender_kind: "toll_free",
           phone_number: bought.phone_number,
@@ -202,13 +198,12 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
         if (insErr) throw new Error(insErr.message);
         asset = inserted;
       } catch (e: any) {
-        // Refund only if this submit charged the fee and purchase didn't complete.
         if (chargedSetupFee) {
           await supabaseAdmin.rpc("topup_account", {
-            _account_id: userId, _amount: TOLLFREE_SETUP_FEE_USD,
+            _account_id: accountId, _amount: TOLLFREE_SETUP_FEE_USD,
             _description: "Toll-free setup refund (purchase failed)",
           });
-          await supabaseAdmin.from("accounts").update({ tollfree_setup_fee_paid_at: null }).eq("id", userId);
+          await supabaseAdmin.from("accounts").update({ tollfree_setup_fee_paid_at: null }).eq("id", accountId);
         }
         throw e;
       }
@@ -251,11 +246,12 @@ export const submitTollfreeVerification = createServerFn({ method: "POST" })
 export const refreshTollfreeVerification = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const acting = await resolveActingAccount(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: asset } = await supabaseAdmin
       .from("sender_assets")
       .select("id,telnyx_verification_id,verification_status")
-      .eq("account_id", context.userId).eq("sender_kind", "toll_free")
+      .eq("account_id", acting.accountId).eq("sender_kind", "toll_free")
       .maybeSingle();
     if (!asset?.telnyx_verification_id) return { ok: false, status: asset?.verification_status ?? "pending" };
     const { fetchTwilioTollfreeVerification } = await import("./tollfree-submit.server");
@@ -277,10 +273,12 @@ export const refreshTollfreeVerification = createServerFn({ method: "POST" })
 export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: acct } = await context.supabase
+    const acting = await resolveActingAccount(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: acct } = await supabaseAdmin
       .from("accounts")
       .select("credit_balance, tollfree_setup_fee_paid_at")
-      .eq("id", context.userId)
+      .eq("id", acting.accountId)
       .maybeSingle();
     const balance = Number(acct?.credit_balance ?? 0);
     const paid = !!acct?.tollfree_setup_fee_paid_at;
@@ -297,23 +295,26 @@ export const getTollfreeFeeStatus = createServerFn({ method: "GET" })
 export const payTollfreeFee = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const acting = await resolveActingAccount(context.userId);
+    assertPermission(acting, "billing");
+    const accountId = acting.accountId;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: acct } = await supabaseAdmin
       .from("accounts")
       .select("tollfree_setup_fee_paid_at, credit_balance")
-      .eq("id", context.userId)
+      .eq("id", accountId)
       .maybeSingle();
     if (acct?.tollfree_setup_fee_paid_at) return { ok: true, alreadyPaid: true };
     if (Number(acct?.credit_balance ?? 0) < TOLLFREE_SETUP_FEE_USD) {
       throw new Error(`Insufficient credit balance. Top up at least $${TOLLFREE_SETUP_FEE_USD} to continue.`);
     }
     const { error: debitErr } = await supabaseAdmin.rpc("debit_account", {
-      _account_id: context.userId,
+      _account_id: accountId,
       _amount: TOLLFREE_SETUP_FEE_USD,
       _campaign_id: null as any,
       _description: "Toll-free verification setup fee",
     });
     if (debitErr) throw new Error(debitErr.message);
-    await supabaseAdmin.from("accounts").update({ tollfree_setup_fee_paid_at: new Date().toISOString() }).eq("id", context.userId);
+    await supabaseAdmin.from("accounts").update({ tollfree_setup_fee_paid_at: new Date().toISOString() }).eq("id", accountId);
     return { ok: true, alreadyPaid: false };
   });
