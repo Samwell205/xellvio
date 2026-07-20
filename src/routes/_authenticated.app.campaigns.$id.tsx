@@ -89,7 +89,7 @@ function CampaignReport() {
       while (from < 50_000) {
         const { data, error } = await supabase
           .from("messages")
-          .select("id, phone_e164, status, error_code, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)")
+          .select("id, phone_e164, status, error_code, failure_reason, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)")
           .eq("campaign_id", id)
           .order("created_at", { ascending: false })
           .range(from, from + pageSize - 1);
@@ -698,12 +698,14 @@ function CampaignReport() {
         {/* ───────────── LINKS ───────────── */}
         <TabsContent value="links" className="mt-5">
           <LinkActivity
+            campaignId={id}
             uniqueClickers={stats.uniqueClickers}
             totalClicks={stats.clicked}
             delivered={stats.delivered}
             clicks={(eventsQ.data ?? []).filter((e: any) => e.type === "clicked")}
           />
         </TabsContent>
+
 
         {/* ───────────── COST & DELIVERABILITY ───────────── */}
         <TabsContent value="cost" className="mt-5">
@@ -906,10 +908,21 @@ function RecipientActivity({
                         <div className="font-mono text-xs text-muted-foreground">{m.phone_e164}</div>
                       </TableCell>
                       <TableCell>{m.country_code ?? m.profile?.country_code ?? "—"}</TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[260px]">
                         <StatusBadge status={m.status} />
-                        {m.error_code && <div className="text-[10px] text-destructive mt-0.5">{m.error_code}</div>}
+                        {m.error_code && <div className="text-[10px] text-destructive mt-0.5 font-mono">{m.error_code}</div>}
+                        {m.failure_reason && (
+                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug" title={m.failure_reason}>
+                            {m.failure_reason.length > 120 ? m.failure_reason.slice(0, 120) + "…" : m.failure_reason}
+                          </div>
+                        )}
+                        {!m.failure_reason && m.status === "delivery_unconfirmed" && (
+                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                            Carrier accepted the SMS but never returned a delivery receipt. Common for international carriers that don't send DLRs.
+                          </div>
+                        )}
                       </TableCell>
+
                       <TableCell className="tabular-nums">{m.segments_count ?? 1}</TableCell>
                       <TableCell className="tabular-nums">{formatUSD(Number(m.cost ?? 0))}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
@@ -941,13 +954,40 @@ function RecipientActivity({
   );
 }
 
-function LinkActivity({ uniqueClickers, totalClicks, delivered, clicks }: {
-  uniqueClickers: number; totalClicks: number; delivered: number; clicks: any[];
+function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clicks }: {
+  campaignId: string; uniqueClickers: number; totalClicks: number; delivered: number; clicks: any[];
 }) {
   const clickRate = delivered ? (uniqueClickers / delivered) * 100 : 0;
   const cpp = uniqueClickers ? totalClicks / uniqueClickers : 0;
   const didnt = Math.max(0, delivered - uniqueClickers);
   const didntPct = delivered ? (didnt / delivered) * 100 : 0;
+
+  const linksQ = useQuery({
+    queryKey: ["campaign-links", campaignId],
+    refetchInterval: 20_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("link_clicks")
+        .select("short_code, url, clicks, first_click_at, last_click_at, message_id")
+        .eq("campaign_id", campaignId)
+        .limit(5000);
+      return data ?? [];
+    },
+  });
+
+  const perUrl = useMemo(() => {
+    const map = new Map<string, { url: string; total: number; unique: number; sent: number; messagesClicked: Set<string> }>();
+    for (const r of linksQ.data ?? []) {
+      const cur = map.get(r.url) ?? { url: r.url, total: 0, unique: 0, sent: 0, messagesClicked: new Set<string>() };
+      cur.sent += 1;
+      cur.total += Number(r.clicks ?? 0);
+      if ((r.clicks ?? 0) > 0) cur.messagesClicked.add(r.message_id as string);
+      map.set(r.url, cur);
+    }
+    return [...map.values()]
+      .map((r) => ({ ...r, unique: r.messagesClicked.size }))
+      .sort((a, b) => b.total - a.total);
+  }, [linksQ.data]);
 
   return (
     <div className="space-y-5">
@@ -962,12 +1002,51 @@ function LinkActivity({ uniqueClickers, totalClicks, delivered, clicks }: {
 
       <Card className="p-0 overflow-hidden">
         <div className="p-5 border-b">
+          <div className="font-semibold flex items-center gap-2"><MousePointerClick className="size-4 text-primary" /> Links in this campaign</div>
+          <p className="text-xs text-muted-foreground">
+            Every URL in your message is automatically shortened and tracked. Click-through rate = recipients who clicked ÷ recipients the link was sent to.
+          </p>
+        </div>
+        {perUrl.length === 0 ? (
+          <div className="p-10 text-center text-sm text-muted-foreground">
+            No tracked links in this campaign. Include any http(s):// URL in your message body and it will be tracked automatically.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Destination URL</TableHead>
+                <TableHead className="text-right">Sent to</TableHead>
+                <TableHead className="text-right">People clicked</TableHead>
+                <TableHead className="text-right">Total clicks</TableHead>
+                <TableHead className="text-right">CTR</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {perUrl.map((r) => (
+                <TableRow key={r.url}>
+                  <TableCell className="max-w-[420px]">
+                    <a href={r.url} target="_blank" rel="noreferrer noopener" className="text-primary hover:underline break-all text-sm">{r.url}</a>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{r.sent.toLocaleString()}</TableCell>
+                  <TableCell className="text-right tabular-nums">{r.unique.toLocaleString()}</TableCell>
+                  <TableCell className="text-right tabular-nums">{r.total.toLocaleString()}</TableCell>
+                  <TableCell className="text-right tabular-nums">{r.sent ? ((r.unique / r.sent) * 100).toFixed(1) + "%" : "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
+
+      <Card className="p-0 overflow-hidden">
+        <div className="p-5 border-b">
           <div className="font-semibold flex items-center gap-2"><MousePointerClick className="size-4 text-primary" /> Click timeline</div>
           <p className="text-xs text-muted-foreground">Most recent clicks first</p>
         </div>
         {clicks.length === 0 ? (
           <div className="p-10 text-center text-sm text-muted-foreground">
-            No link clicks yet. Add a tracked URL to your message to see activity here.
+            No link clicks yet.
           </div>
         ) : (
           <Table>
@@ -991,6 +1070,7 @@ function LinkActivity({ uniqueClickers, totalClicks, delivered, clicks }: {
     </div>
   );
 }
+
 
 function Kpi({ icon: Icon, label, value, sub, tone }: {
   icon: any; label: string; value: string; sub?: string; tone: "success" | "danger" | "primary" | "muted";
