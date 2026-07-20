@@ -3,6 +3,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { SetupInput, type SetupSmsPayload } from "./sender-setup.schema";
 import { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } from "./countries";
+import { resolveActingAccount, assertPermission } from "@/lib/acting-account.server";
+
 
 export const setupSms = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
