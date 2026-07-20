@@ -13,20 +13,41 @@ async function readSettings() {
     return Number.isFinite(n) ? n : fb;
   };
   return {
-    buyerPriceUsd: toNum(map.tfn_buyer_price_usd, 15),
+    buyerPriceUsd: toNum(map.tfn_buyer_price_usd, 50),
     commissionPct: toNum(map.tfn_commission_pct, 25),
     ngnPerUsd: toNum(map.tfn_ngn_per_usd, 1500),
   };
 }
 
+async function listAvailablePoolNumbers(): Promise<
+  Array<{ phone_number: string; country_code: string; telnyx_phone_number_id: string | null; telnyx_messaging_profile_id: string }>
+> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: pool } = await supabaseAdmin
+    .from("shared_tollfree_pool")
+    .select("phone_number,country_code,telnyx_phone_number_id,telnyx_messaging_profile_id");
+  const rows = pool ?? [];
+  if (rows.length === 0) return [];
+  const phones = rows.map((r: any) => r.phone_number);
+  const { data: attached } = await supabaseAdmin
+    .from("sender_assets")
+    .select("phone_number")
+    .in("phone_number", phones);
+  const taken = new Set((attached ?? []).map((r: any) => r.phone_number));
+  return rows.filter((r: any) => !taken.has(r.phone_number)) as any;
+}
+
 async function countAvailable() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { count } = await supabaseAdmin
-    .from("verifier_tfns")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "verified")
-    .is("sold_to_account_id", null);
-  return count ?? 0;
+  const [{ count: verifierCount }, poolAvailable] = await Promise.all([
+    supabaseAdmin
+      .from("verifier_tfns")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "verified")
+      .is("sold_to_account_id", null),
+    listAvailablePoolNumbers(),
+  ]);
+  return (verifierCount ?? 0) + poolAvailable.length;
 }
 
 export const getTfnMarketplaceStatus = createServerFn({ method: "GET" })
@@ -43,6 +64,68 @@ export const getTfnMarketplaceOffer = createServerFn({ method: "GET" })
     return { available_count, price_usd: settings.buyerPriceUsd };
   });
 
+async function claimFromPool(userId: string, priceUsd: number) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const available = await listAvailablePoolNumbers();
+  if (available.length === 0) return null;
+  const pick = available[0];
+
+  // Atomically remove from pool to prevent double-selling
+  const { data: deleted, error: delErr } = await supabaseAdmin
+    .from("shared_tollfree_pool")
+    .delete()
+    .eq("phone_number", pick.phone_number)
+    .select("phone_number")
+    .maybeSingle();
+  if (delErr || !deleted) return null;
+
+  const nowIso = new Date().toISOString();
+  const { error: insErr } = await supabaseAdmin.from("sender_assets").upsert(
+    {
+      account_id: userId,
+      country_code: (pick.country_code || "US").toUpperCase(),
+      sender_kind: "toll_free" as const,
+      phone_number: pick.phone_number,
+      telnyx_phone_number_id: pick.telnyx_phone_number_id,
+      telnyx_messaging_profile_id: pick.telnyx_messaging_profile_id,
+      verification_status: "verified" as const,
+      verified_at: nowIso,
+      rejected_at: null,
+      rejection_reason: null,
+      friendly_rejection_reason: null,
+      last_synced_at: nowIso,
+      is_shared: false,
+    },
+    { onConflict: "account_id,country_code,sender_kind" },
+  );
+  if (insErr) {
+    // Roll pool row back so the number isn't lost
+    await supabaseAdmin.from("shared_tollfree_pool").insert({
+      phone_number: pick.phone_number,
+      country_code: pick.country_code,
+      telnyx_phone_number_id: pick.telnyx_phone_number_id,
+      telnyx_messaging_profile_id: pick.telnyx_messaging_profile_id,
+    });
+    throw new Error(insErr.message);
+  }
+
+  await supabaseAdmin.rpc("debit_account", {
+    _account_id: userId,
+    _amount: priceUsd,
+    _campaign_id: undefined as any,
+    _description: `Purchased verified toll-free number ${pick.phone_number}`,
+  });
+
+  // Clear tollfree setup fee since they got a pre-verified number
+  await supabaseAdmin.from("accounts").update({
+    tollfree_setup_fee_due_cents: 0,
+    tollfree_setup_fee_paid_at: nowIso,
+    onboarding_status: "active",
+  }).eq("id", userId);
+
+  return { phone_number: pick.phone_number, country: (pick.country_code || "US").toUpperCase() };
+}
+
 async function buyImpl(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { buyerPriceUsd, commissionPct, ngnPerUsd } = await readSettings();
@@ -53,7 +136,11 @@ async function buyImpl(userId: string) {
     throw new Error(`Insufficient balance. This number costs $${buyerPriceUsd.toFixed(2)}`);
   }
 
-  // Atomically claim any verified & unassigned number and mark as sold
+  // Prefer platform-owned verified pool numbers (auto-synced from Telnyx)
+  const pool = await claimFromPool(userId, buyerPriceUsd);
+  if (pool) return { ok: true, ...pool };
+
+  // Fall back to verifier marketplace numbers
   const priceNgn = buyerPriceUsd * ngnPerUsd;
   const { data: sold, error: rpcErr } = await supabaseAdmin.rpc("claim_and_sell_verified_tfn", {
     _account_id: userId,
