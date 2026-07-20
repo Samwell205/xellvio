@@ -49,6 +49,8 @@ type State = {
   testTo: string;
   testSent: boolean;
   excludedCountries: string[];
+  trackLinks: boolean;
+
 };
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
