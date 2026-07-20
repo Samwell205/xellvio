@@ -25,9 +25,11 @@ export type CampaignReport = {
     country_code: string;
     recipients: number;
     delivered: number;
+    unconfirmed: number;
     failed: number;
     cost: number;
   }>;
+
   bySenderKind: Array<{
     sender_kind: string;
     used: number;
