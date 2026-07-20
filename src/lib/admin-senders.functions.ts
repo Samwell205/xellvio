@@ -137,3 +137,199 @@ export const adminGrantVerifiedTollfree = createServerFn({ method: "POST" })
     return { ok: true, phone_number: phoneNumber };
   });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared toll-free pool
+//
+// One approved TFN on ONE Telnyx Messaging Profile, reused across many
+// tenants. Attach = insert a sender_assets row (is_shared=true, verified)
+// pointing at the shared phone + messaging_profile_id. Dispatcher already
+// picks the sender_asset's messaging_profile_id when sending, so no
+// changes there.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const NA = new Set(["US", "CA", "PR"]);
+function fanoutCountries(country: string): string[] {
+  const cc = country.toUpperCase();
+  return NA.has(cc) ? ["US", "CA", "PR"] : [cc];
+}
+
+export const adminListSharedTollfree = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: pool } = await supabaseAdmin
+      .from("shared_tollfree_pool")
+      .select("phone_number,country_code,telnyx_phone_number_id,telnyx_messaging_profile_id,notes,created_at")
+      .order("created_at", { ascending: false });
+    const phones = (pool ?? []).map((p: any) => p.phone_number);
+    const { data: attachments } = phones.length
+      ? await supabaseAdmin
+          .from("sender_assets")
+          .select("id,account_id,phone_number,country_code,verification_status,is_shared")
+          .in("phone_number", phones)
+          .eq("is_shared", true)
+      : { data: [] as any[] };
+    const acctIds = Array.from(new Set((attachments ?? []).map((a: any) => a.account_id)));
+    const { data: accts } = acctIds.length
+      ? await supabaseAdmin.from("accounts").select("id,email,legal_business_name").in("id", acctIds)
+      : { data: [] as any[] };
+    const byAcct = new Map((accts ?? []).map((a: any) => [a.id, a]));
+    const byPhone = new Map<string, any[]>();
+    for (const a of attachments ?? []) {
+      const list = byPhone.get(a.phone_number) ?? [];
+      list.push({
+        ...a,
+        tenant_email: byAcct.get(a.account_id)?.email ?? null,
+        tenant_business: byAcct.get(a.account_id)?.legal_business_name ?? null,
+      });
+      byPhone.set(a.phone_number, list);
+    }
+    // Deduplicate attachments by account (a NA number appears under US/CA/PR).
+    return (pool ?? []).map((p: any) => {
+      const raw = byPhone.get(p.phone_number) ?? [];
+      const seen = new Map<string, any>();
+      for (const a of raw) if (!seen.has(a.account_id)) seen.set(a.account_id, a);
+      return { ...p, attachments: Array.from(seen.values()) };
+    });
+  });
+
+export const adminCreateSharedTollfree = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      phone_number: z.string().trim().regex(/^\+\d{6,15}$/, "E.164 phone required, e.g. +18885550123"),
+      country: z.string().length(2).default("US"),
+      notes: z.string().trim().max(500).optional(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { getPhoneNumberByE164, ensurePlatformSharedMessagingProfile } = await import("@/lib/telnyx.server");
+
+    const found = await getPhoneNumberByE164(data.phone_number);
+    if (!found) throw new Error("This number is not on your Telnyx account.");
+    let profileId = found.messaging_profile_id;
+    if (!profileId) {
+      // Move it onto a platform-owned shared profile so we always have one.
+      profileId = await ensurePlatformSharedMessagingProfile();
+      const { reassignNumberToProfile } = await import("@/lib/telnyx.server");
+      await reassignNumberToProfile({ phoneNumberId: found.id, messagingProfileId: profileId });
+    }
+
+    const { error } = await supabaseAdmin.from("shared_tollfree_pool").upsert({
+      phone_number: data.phone_number,
+      country_code: data.country.toUpperCase(),
+      telnyx_phone_number_id: found.id,
+      telnyx_messaging_profile_id: profileId,
+      notes: data.notes ?? null,
+      created_by: context.userId,
+    }, { onConflict: "phone_number" });
+    if (error) throw new Error(error.message);
+    return { ok: true, phone_number: data.phone_number, telnyx_messaging_profile_id: profileId };
+  });
+
+export const adminAttachSharedTollfree = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      phone_number: z.string().trim().regex(/^\+\d{6,15}$/),
+      account_id: z.string().uuid(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: pool } = await supabaseAdmin
+      .from("shared_tollfree_pool")
+      .select("phone_number,country_code,telnyx_phone_number_id,telnyx_messaging_profile_id")
+      .eq("phone_number", data.phone_number).maybeSingle();
+    if (!pool) throw new Error("That number is not in the shared pool. Register it first.");
+
+    const nowIso = new Date().toISOString();
+    const countries = fanoutCountries(pool.country_code);
+    for (const cc of countries) {
+      const { data: existing } = await supabaseAdmin
+        .from("sender_assets")
+        .select("id,phone_number,account_id")
+        .eq("account_id", data.account_id)
+        .eq("country_code", cc)
+        .eq("sender_kind", "toll_free")
+        .maybeSingle();
+      if (existing && existing.phone_number && existing.phone_number !== pool.phone_number) {
+        throw new Error(`Tenant already has a different toll-free number (${existing.phone_number}) for ${cc}. Detach it first.`);
+      }
+      const row = {
+        account_id: data.account_id,
+        country_code: cc,
+        sender_kind: "toll_free" as const,
+        phone_number: pool.phone_number,
+        telnyx_phone_number_id: pool.telnyx_phone_number_id,
+        telnyx_messaging_profile_id: pool.telnyx_messaging_profile_id,
+        verification_status: "verified" as const,
+        verified_at: nowIso,
+        rejected_at: null,
+        rejection_reason: null,
+        friendly_rejection_reason: null,
+        last_synced_at: nowIso,
+        is_shared: true,
+      };
+      const { error } = await supabaseAdmin
+        .from("sender_assets")
+        .upsert(row, { onConflict: "account_id,country_code,sender_kind" });
+      if (error) throw new Error(error.message);
+    }
+
+    // Clear tollfree setup fee so tenant isn't billed for a shared number.
+    await supabaseAdmin.from("accounts").update({
+      tollfree_setup_fee_due_cents: 0,
+      tollfree_setup_fee_paid_at: nowIso,
+      onboarding_status: "active",
+    }).eq("id", data.account_id);
+
+    return { ok: true };
+  });
+
+export const adminDetachSharedTollfree = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      phone_number: z.string().trim().regex(/^\+\d{6,15}$/),
+      account_id: z.string().uuid(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("sender_assets")
+      .delete()
+      .eq("account_id", data.account_id)
+      .eq("phone_number", data.phone_number)
+      .eq("is_shared", true);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const adminDeleteSharedTollfree = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ phone_number: z.string().trim().regex(/^\+\d{6,15}$/) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { count } = await supabaseAdmin
+      .from("sender_assets")
+      .select("id", { count: "exact", head: true })
+      .eq("phone_number", data.phone_number)
+      .eq("is_shared", true);
+    if ((count ?? 0) > 0) throw new Error("Detach all tenants before removing this pool number.");
+    const { error } = await supabaseAdmin
+      .from("shared_tollfree_pool").delete().eq("phone_number", data.phone_number);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
