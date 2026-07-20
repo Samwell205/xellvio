@@ -158,7 +158,7 @@ async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): 
     const { listAccountTollfreeNumbers, listVerifiedTollfreeNumbers } = await import("@/lib/telnyx.server");
     const [numbers, verified] = await Promise.all([
       listAccountTollfreeNumbers(),
-      listVerifiedTollfreeNumbers().catch(() => new Set<string>()),
+      listVerifiedTollfreeNumbers(),
     ]);
     const rows = numbers
       .filter((n) => !!n.messaging_profile_id && verified.has(n.phone_number))
@@ -171,11 +171,24 @@ async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): 
         created_by: createdBy,
       }));
     const keepPhones = rows.map((r) => r.phone_number);
-    // Remove any pool rows that are no longer verified on Telnyx.
+    const staleReason = "This shared toll-free number is not verified in Telnyx Toll-Free Verification, so it cannot be used for US/CA SMS.";
+    // Remove pool rows and disable tenant attachments that are no longer verified on Telnyx.
     if (keepPhones.length) {
       await supabaseAdmin.from("shared_tollfree_pool").delete().not("phone_number", "in", `(${keepPhones.map((p) => `"${p}"`).join(",")})`);
+      await supabaseAdmin.from("sender_assets").update({
+        verification_status: "requires_registration",
+        rejection_reason: staleReason,
+        friendly_rejection_reason: staleReason,
+        last_synced_at: new Date().toISOString(),
+      }).eq("is_shared", true).not("phone_number", "in", `(${keepPhones.map((p) => `"${p}"`).join(",")})`);
     } else {
       await supabaseAdmin.from("shared_tollfree_pool").delete().neq("phone_number", "");
+      await supabaseAdmin.from("sender_assets").update({
+        verification_status: "requires_registration",
+        rejection_reason: staleReason,
+        friendly_rejection_reason: staleReason,
+        last_synced_at: new Date().toISOString(),
+      }).eq("is_shared", true);
     }
     if (rows.length) {
       await supabaseAdmin.from("shared_tollfree_pool").upsert(rows, { onConflict: "phone_number" });
@@ -249,10 +262,14 @@ export const adminCreateSharedTollfree = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { getPhoneNumberByE164 } = await import("@/lib/telnyx.server");
+    const { getPhoneNumberByE164, listVerifiedTollfreeNumbers } = await import("@/lib/telnyx.server");
 
     const found = await getPhoneNumberByE164(data.phone_number);
     if (!found) throw new Error("This number is not on your Telnyx account.");
+    const verified = await listVerifiedTollfreeNumbers();
+    if (!verified.has(data.phone_number)) {
+      throw new Error("This number is not approved in Telnyx Toll-Free Verification yet, so it cannot be added to the shared pool.");
+    }
     const profileId = found.messaging_profile_id;
     if (!profileId) {
       throw new Error("Assign this number to a Messaging Profile in Telnyx first, then register it here.");
