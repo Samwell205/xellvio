@@ -1,69 +1,43 @@
-## What "Unconfirmed" actually means
+## Goal
 
-Your numbers match Telnyx exactly (10,506 sent → 5,605 delivered, 4,901 not delivered). Nothing is broken — this is how international SMS works.
+Let admin designate one approved toll-free number as a **shared pool number** and attach many tenants to it. When any of those tenants sends a campaign, Xellvio routes the send through the shared number's Telnyx Messaging Profile.
 
-For every message, Telnyx does two things:
+## Carrier reality (important)
 
-1. **Hand the message to the destination carrier** — this is "Sent / Accepted".
-2. **Wait for the carrier to send back a Delivery Receipt (DLR)** — only then it becomes "Delivered".
+On Telnyx a phone number can only live on ONE Messaging Profile at a time. So "sharing" is done at the **Xellvio layer**, not by duplicating the number on Telnyx:
 
-**"Unconfirmed" = step 1 succeeded, step 2 never came back.** The carrier accepted your SMS but never told Telnyx whether the phone actually rang. Most of these were delivered — the carrier just didn't report it.
+- The TFN stays on ONE "shared" Messaging Profile owned by the platform (not any tenant).
+- Multiple tenants get a `sender_assets` row pointing at the same `phone_number` + same `telnyx_messaging_profile_id`, marked `verified`.
+- The dispatcher already picks a tenant's sender_asset by country → it will naturally send through the shared profile.
+- Trade-offs (surfaced in the admin UI): inbound STOP/replies land on the shared profile and are fanned out to every tenant that has that number attached; Telnyx's per-profile reports won't separate tenants (Xellvio's per-campaign report still does).
 
-### Why this happens (in order of how common it is)
+## Changes
 
-- **Destination carrier doesn't return DLRs.** Very common for MTN Nigeria, Airtel India, Etisalat UAE, many African/Asian networks. They accept your SMS, deliver it, and never send a receipt.
-- **Fake DLRs / DLR stripping.** Some route carriers strip receipts to hide performance.
-- **Registration-required countries.** UAE, Saudi, Kuwait, Nigeria etc. require a pre-registered Sender ID. Without one, your traffic is silently dropped or partially delivered with no DLR.
-- **Handset off/out-of-coverage long enough for the DLR to time out.**
-- **Number is a landline / VoIP / invalid** — carrier drops it but doesn't tell us.
+### 1. Schema (migration)
+- Add `is_shared boolean default false` to `sender_assets`.
+- Drop/relax the `unique (account_id, country_code, sender_kind)` behavior only where it blocks a second tenant reusing the same `phone_number`; keep `phone_number` NON-unique across accounts when `is_shared = true` (current upsert key already is `account_id,country_code,sender_kind`, so multiple tenants pointing at the same phone_number is already allowed — just verify and add an index on `phone_number` for fanout lookup).
+- No change to `numbers` table ownership (single owner remains the platform's "pool" account, or we store one `numbers` row per attached tenant — plan uses: one `numbers` row per tenant attached, all with the same `phone_number`; drop uniqueness on `numbers.phone_number` if present, else keep pool as owner-only).
 
-### Why 358 also came back as "Undelivered"
+### 2. Server fns (`src/lib/admin-senders.functions.ts`)
+- `adminCreateSharedTollfree({ phone_number, country })` — registers an already-approved TFN as a shared pool entry (creates/keeps it on a platform-owned Messaging Profile, marks verified, `is_shared=true`, no `account_id` tenant binding beyond a pool owner).
+- `adminAttachSharedTollfree({ phone_number, account_id })` — inserts a `sender_assets` row for that tenant reusing the shared `telnyx_messaging_profile_id` + `phone_number`, `verification_status='verified'`, `is_shared=true`. Clears the tenant's toll-free setup fee.
+- `adminDetachSharedTollfree({ phone_number, account_id })` — removes just that tenant's rows; does not touch Telnyx.
+- `adminListSharedTollfree()` — lists shared numbers + attached tenants.
 
-Those are the ones where the carrier explicitly said "no" — usually invalid number, blocked, or filtered as spam.
+### 3. Inbound webhook (`src/routes/api.public.telnyx-status.ts`)
+Already fans inbound SMS to every `account_id` in `sender_assets` matching the `to` number, so shared inbound already works. No change needed beyond confirming.
 
-## Plan
+### 4. Admin UI (`src/routes/_authenticated.admin.senders.tsx`)
+Add a new **"Shared toll-free pool"** panel with:
+- "Register shared TFN" button (phone + country).
+- Table of shared numbers, each with: phone, country, attached tenants, "Attach tenant" (searchable dropdown), and per-row "Detach" buttons.
+- Inline warning about the trade-offs listed above.
 
-I will NOT change the delivery numbers (they are correct — that's what Telnyx reports). I'll make three practical improvements so this is understandable and actionable:
+## Where admin will click
 
-### 1. Rewrite the "Unconfirmed" explanation in the campaign report
+`Admin → Senders → Shared toll-free pool` panel at the top of the page.
 
-On `_authenticated.app.campaigns.$id.tsx`, replace the current tooltip with a plain-English breakdown:
+## Out of scope
 
-> "The carrier accepted this SMS but never returned a delivery receipt. Most of these were delivered — many international carriers (especially in Africa, the Middle East, and parts of Asia) simply don't confirm. This is normal and you were charged only for accepted messages."
-
-Add a small "Learn more" link that opens a modal explaining DLRs, per-country reliability, and which countries typically don't return receipts.
-
-### 2. Add a country breakdown to the report
-
-Show a table under "Cost & deliverability":
-
-```text
-Country    Sent   Delivered   Unconfirmed   Undelivered   DLR rate
-NG         3,200  1,120       2,050         30            35%
-US         2,100  2,050       0             50            97%
-...
-```
-
-This lets you see instantly that (for example) your low delivery number is concentrated in a couple of countries that never confirm — not a platform bug.
-
-### 3. Add a "Retry unconfirmed after 24h" action
-
-Right now the "Retry all failed" button only retries `failed` / `undelivered`. Add a second, opt-in button: **"Resend to unconfirmed (last 24h)"**. It:
-
-- Filters `messages` for `status = 'delivery_unconfirmed'` on this campaign
-- Skips numbers where the same content was already delivered on a later attempt
-- Re-queues them through `api.public.dispatch-campaign` (uses your existing balance/pricing path)
-- Warns before spending: "This will resend X messages for ~$Y. Recommended only if recipients report not receiving the message."
-
-I will not auto-retry these — that would double-charge you for messages that were probably delivered.
-
-### 4. Where I will NOT change anything
-
-- The Telnyx polling logic is fine — after the 30-min reconciliation window a message that still has no DLR is legitimately "unconfirmed" forever. Polling longer won't turn them into "delivered".
-- Billing stays as-is. Telnyx charges for accepted messages regardless of DLR, so tenants continue paying for `sent + delivered + unconfirmed`.
-
-## Files I'll touch
-
-- `src/routes/_authenticated.app.campaigns.$id.tsx` — tooltip, "Learn more" modal, country breakdown table, "Resend to unconfirmed" button.
-- `src/lib/reports.functions.ts` — new `getCampaignDeliveryByCountry(campaignId)` server fn that groups messages by destination country ISO and returns sent/delivered/unconfirmed/undelivered/DLR%.
-- `src/lib/campaign-control.functions.ts` — new `resendUnconfirmed(campaignId)` server fn that queues a retry batch limited to the current campaign and last 24h.
+- No changes to campaign compose, dispatcher, or per-tenant reporting (they already work per-tenant).
+- No changes to Telnyx approval flow — this is for numbers that are already approved.

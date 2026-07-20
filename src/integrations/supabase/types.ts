@@ -1862,6 +1862,7 @@ export type Database = {
           friendly_rejection_reason: string | null
           id: string
           in_review_at: string | null
+          is_shared: boolean
           last_synced_at: string | null
           phone_number: string | null
           rejected_at: string | null
@@ -1883,6 +1884,7 @@ export type Database = {
           friendly_rejection_reason?: string | null
           id?: string
           in_review_at?: string | null
+          is_shared?: boolean
           last_synced_at?: string | null
           phone_number?: string | null
           rejected_at?: string | null
@@ -1904,6 +1906,7 @@ export type Database = {
           friendly_rejection_reason?: string | null
           id?: string
           in_review_at?: string | null
+          is_shared?: boolean
           last_synced_at?: string | null
           phone_number?: string | null
           rejected_at?: string | null
@@ -1927,6 +1930,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shared_tollfree_pool: {
+        Row: {
+          country_code: string
+          created_at: string
+          created_by: string | null
+          notes: string | null
+          phone_number: string
+          telnyx_messaging_profile_id: string
+          telnyx_phone_number_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          country_code?: string
+          created_at?: string
+          created_by?: string | null
+          notes?: string | null
+          phone_number: string
+          telnyx_messaging_profile_id: string
+          telnyx_phone_number_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          created_by?: string | null
+          notes?: string | null
+          phone_number?: string
+          telnyx_messaging_profile_id?: string
+          telnyx_phone_number_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       sms_thread_messages: {
         Row: {

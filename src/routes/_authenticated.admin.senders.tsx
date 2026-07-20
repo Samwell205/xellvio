@@ -8,10 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Check, Trash2, Radio, Gift } from "lucide-react";
+import { Loader2, RefreshCw, Check, Trash2, Radio, Gift, Users, Plus, Unlink } from "lucide-react";
 import {
   listAllSenders, adminRefreshSender, adminMarkSenderVerified, adminDeleteSender, adminGrantVerifiedTollfree,
+  adminListSharedTollfree, adminCreateSharedTollfree, adminAttachSharedTollfree,
+  adminDetachSharedTollfree, adminDeleteSharedTollfree,
 } from "@/lib/admin-senders.functions";
+
 import { adminListAccountsLite } from "@/lib/admin-verifiers.functions";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -132,6 +135,10 @@ function AdminSendersPage() {
           </Button>
         </div>
       </div>
+
+      <SharedTollfreePoolPanel />
+
+
 
       <Card>
         <CardHeader>
@@ -288,3 +295,227 @@ function AdminSendersPage() {
     </div>
   );
 }
+
+function SharedTollfreePoolPanel() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListSharedTollfree);
+  const createFn = useServerFn(adminCreateSharedTollfree);
+  const attachFn = useServerFn(adminAttachSharedTollfree);
+  const detachFn = useServerFn(adminDetachSharedTollfree);
+  const deleteFn = useServerFn(adminDeleteSharedTollfree);
+  const listAccountsFn = useServerFn(adminListAccountsLite);
+
+  const { data: pool, isLoading } = useQuery({
+    queryKey: ["admin-shared-tfn"],
+    queryFn: () => listFn(),
+    refetchInterval: 60_000,
+  });
+  const { data: accounts } = useQuery({
+    queryKey: ["admin-accounts-lite"],
+    queryFn: () => listAccountsFn(),
+  });
+
+  const [registerOpen, setRegisterOpen] = useState(false);
+  const [regPhone, setRegPhone] = useState("");
+  const [regCountry, setRegCountry] = useState("US");
+  const [regNotes, setRegNotes] = useState("");
+
+  const [attachPhone, setAttachPhone] = useState<string | null>(null);
+  const [attachSearch, setAttachSearch] = useState("");
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["admin-shared-tfn"] });
+    qc.invalidateQueries({ queryKey: ["admin-senders"] });
+  };
+
+  const createMut = useMutation({
+    mutationFn: () => createFn({ data: {
+      phone_number: regPhone.trim(),
+      country: regCountry,
+      notes: regNotes.trim() || undefined,
+    } }),
+    onSuccess: () => {
+      toast.success("Number added to shared pool.");
+      setRegisterOpen(false); setRegPhone(""); setRegNotes(""); setRegCountry("US");
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const attachMut = useMutation({
+    mutationFn: (v: { phone_number: string; account_id: string }) => attachFn({ data: v }),
+    onSuccess: () => { toast.success("Tenant attached — can send immediately."); setAttachPhone(null); setAttachSearch(""); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const detachMut = useMutation({
+    mutationFn: (v: { phone_number: string; account_id: string }) => detachFn({ data: v }),
+    onSuccess: () => { toast.success("Tenant detached."); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const deleteMut = useMutation({
+    mutationFn: (phone_number: string) => deleteFn({ data: { phone_number } }),
+    onSuccess: () => { toast.success("Shared number removed."); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const filteredAccounts = useMemo(() => {
+    const q = attachSearch.trim().toLowerCase();
+    const list = (accounts ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>;
+    if (!q) return list.slice(0, 50);
+    return list.filter(a =>
+      (a.email ?? "").toLowerCase().includes(q) ||
+      (a.full_name ?? "").toLowerCase().includes(q),
+    ).slice(0, 50);
+  }, [accounts, attachSearch]);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-3">
+        <div>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Users className="size-4 text-primary" /> Shared toll-free pool
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            One approved toll-free number, reused across multiple tenants. Every attached tenant can send from the same
+            number. Inbound STOP/replies land on the shared Messaging Profile and are fanned out to all attached
+            tenants; per-profile Telnyx reports won't separate tenants (Xellvio's per-campaign reports still do).
+          </p>
+        </div>
+        <Button size="sm" onClick={() => setRegisterOpen(true)}>
+          <Plus className="size-4 mr-1" /> Register shared TFN
+        </Button>
+      </CardHeader>
+      <CardContent className="p-0 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+            <tr>
+              <th className="text-left p-2">Number</th>
+              <th className="text-left p-2">Country</th>
+              <th className="text-left p-2">Attached tenants</th>
+              <th className="text-right p-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && (
+              <tr><td colSpan={4} className="p-6 text-center text-muted-foreground"><Loader2 className="size-4 mr-2 inline animate-spin" /> Loading…</td></tr>
+            )}
+            {!isLoading && (pool ?? []).length === 0 && (
+              <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">No shared numbers yet. Register one to start pooling.</td></tr>
+            )}
+            {(pool ?? []).map((p: any) => (
+              <tr key={p.phone_number} className="border-t align-top">
+                <td className="p-2 font-mono text-xs">
+                  {p.phone_number}
+                  {p.notes && <div className="text-[10px] text-muted-foreground font-sans">{p.notes}</div>}
+                </td>
+                <td className="p-2 font-mono text-xs">{p.country_code}</td>
+                <td className="p-2">
+                  {p.attachments.length === 0 ? (
+                    <span className="text-xs text-muted-foreground">No tenants attached yet.</span>
+                  ) : (
+                    <div className="space-y-1">
+                      {p.attachments.map((a: any) => (
+                        <div key={a.account_id} className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded px-2 py-1">
+                          <div>
+                            <div className="font-medium">{a.tenant_business || a.tenant_email || a.account_id.slice(0, 8)}</div>
+                            <div className="text-muted-foreground">{a.tenant_email ?? ""}</div>
+                          </div>
+                          <Button size="sm" variant="ghost"
+                            onClick={() => { if (confirm(`Detach ${a.tenant_email ?? "tenant"} from ${p.phone_number}?`)) detachMut.mutate({ phone_number: p.phone_number, account_id: a.account_id }); }}
+                            disabled={detachMut.isPending}>
+                            <Unlink className="size-3 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td className="p-2 text-right whitespace-nowrap">
+                  <Button size="sm" variant="outline" onClick={() => setAttachPhone(p.phone_number)}>
+                    <Plus className="size-3 mr-1" /> Attach tenant
+                  </Button>
+                  <Button size="sm" variant="ghost"
+                    onClick={() => { if (confirm(`Remove ${p.phone_number} from the shared pool?`)) deleteMut.mutate(p.phone_number); }}
+                    disabled={deleteMut.isPending}>
+                    <Trash2 className="size-3 text-destructive" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardContent>
+
+      <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Register shared toll-free number</DialogTitle>
+            <DialogDescription>
+              The number must already exist on your Telnyx account and be assigned to a Messaging Profile.
+              We'll reuse that Messaging Profile for every attached tenant.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Phone number</Label>
+              <Input placeholder="+18885550123" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Country</Label>
+              <Select value={regCountry} onValueChange={setRegCountry}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="US">United States (also covers CA & PR)</SelectItem>
+                  <SelectItem value="CA">Canada</SelectItem>
+                  <SelectItem value="PR">Puerto Rico</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Notes (optional)</Label>
+              <Input placeholder="Internal label, e.g. Main shared pool" value={regNotes} onChange={(e) => setRegNotes(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRegisterOpen(false)}>Cancel</Button>
+            <Button onClick={() => createMut.mutate()} disabled={!regPhone.trim() || createMut.isPending}>
+              {createMut.isPending && <Loader2 className="size-3 mr-1 animate-spin" />}
+              Register
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!attachPhone} onOpenChange={(o) => { if (!o) { setAttachPhone(null); setAttachSearch(""); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Attach tenant to {attachPhone}</DialogTitle>
+            <DialogDescription>
+              The tenant will be able to send SMS immediately using this shared number.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input placeholder="Search by email or name…" value={attachSearch} onChange={(e) => setAttachSearch(e.target.value)} />
+            <div className="max-h-60 overflow-y-auto border rounded-md divide-y">
+              {filteredAccounts.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => attachPhone && attachMut.mutate({ phone_number: attachPhone, account_id: a.id })}
+                  disabled={attachMut.isPending}
+                  className="w-full text-left px-2 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
+                >
+                  <div className="font-medium">{a.email ?? "—"}</div>
+                  <div className="text-muted-foreground">{a.full_name ?? ""} · {a.id.slice(0, 8)}</div>
+                </button>
+              ))}
+              {filteredAccounts.length === 0 && (
+                <div className="p-2 text-xs text-muted-foreground">No tenants match.</div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
