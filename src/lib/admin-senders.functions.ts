@@ -155,10 +155,13 @@ function fanoutCountries(country: string): string[] {
 
 async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): Promise<{ synced: number; error: string | null }> {
   try {
-    const { listAccountTollfreeNumbers } = await import("@/lib/telnyx.server");
-    const numbers = await listAccountTollfreeNumbers();
+    const { listAccountTollfreeNumbers, listVerifiedTollfreeNumbers } = await import("@/lib/telnyx.server");
+    const [numbers, verified] = await Promise.all([
+      listAccountTollfreeNumbers(),
+      listVerifiedTollfreeNumbers().catch(() => new Set<string>()),
+    ]);
     const rows = numbers
-      .filter((n) => !!n.messaging_profile_id)
+      .filter((n) => !!n.messaging_profile_id && verified.has(n.phone_number))
       .map((n) => ({
         phone_number: n.phone_number,
         country_code: (n.country_code ?? "US").toUpperCase(),
@@ -167,8 +170,14 @@ async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): 
         notes: null as string | null,
         created_by: createdBy,
       }));
+    const keepPhones = rows.map((r) => r.phone_number);
+    // Remove any pool rows that are no longer verified on Telnyx.
+    if (keepPhones.length) {
+      await supabaseAdmin.from("shared_tollfree_pool").delete().not("phone_number", "in", `(${keepPhones.map((p) => `"${p}"`).join(",")})`);
+    } else {
+      await supabaseAdmin.from("shared_tollfree_pool").delete().neq("phone_number", "");
+    }
     if (rows.length) {
-      // Upsert to keep messaging_profile_id in sync if it changes on Telnyx.
       await supabaseAdmin.from("shared_tollfree_pool").upsert(rows, { onConflict: "phone_number" });
     }
     return { synced: rows.length, error: null };
