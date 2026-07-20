@@ -637,6 +637,7 @@ function AssignToListBulk({ lists, ids, onDone }: { lists: ContactList[]; ids: s
 /* ============================ Add / Import ============================ */
 
 function AddContactDialog({ lists, onDone }: { lists: ContactList[]; onDone: () => void }) {
+  const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("US");
@@ -644,6 +645,7 @@ function AddContactDialog({ lists, onDone }: { lists: ContactList[]; onDone: () 
   const [last, setLast] = useState("");
   const [listId, setListId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+
 
   async function submit() {
     setSubmitting(true);
