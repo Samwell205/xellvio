@@ -206,17 +206,15 @@ export const adminCreateSharedTollfree = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { getPhoneNumberByE164, ensurePlatformSharedMessagingProfile } = await import("@/lib/telnyx.server");
+    const { getPhoneNumberByE164 } = await import("@/lib/telnyx.server");
 
     const found = await getPhoneNumberByE164(data.phone_number);
     if (!found) throw new Error("This number is not on your Telnyx account.");
-    let profileId = found.messaging_profile_id;
+    const profileId = found.messaging_profile_id;
     if (!profileId) {
-      // Move it onto a platform-owned shared profile so we always have one.
-      profileId = await ensurePlatformSharedMessagingProfile();
-      const { reassignNumberToProfile } = await import("@/lib/telnyx.server");
-      await reassignNumberToProfile({ phoneNumberId: found.id, messagingProfileId: profileId });
+      throw new Error("Assign this number to a Messaging Profile in Telnyx first, then register it here.");
     }
+
 
     const { error } = await supabaseAdmin.from("shared_tollfree_pool").upsert({
       phone_number: data.phone_number,
