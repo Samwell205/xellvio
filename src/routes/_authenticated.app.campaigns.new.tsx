@@ -63,8 +63,9 @@ function NewCampaignPage() {
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
-    excludedCountries: [],
+    excludedCountries: [], trackLinks: true,
   });
+
 
   // Load existing draft when editing
   useQuery({
