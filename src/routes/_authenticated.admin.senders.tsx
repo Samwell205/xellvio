@@ -305,6 +305,23 @@ function SharedTollfreePoolPanel() {
   const detachFn = useServerFn(adminDetachSharedTollfree);
   const deleteFn = useServerFn(adminDeleteSharedTollfree);
   const listAccountsFn = useServerFn(adminListAccountsLite);
+  const getAdvFn = useServerFn(adminGetTfnAdvertisedAvailable);
+  const setAdvFn = useServerFn(adminSetTfnAdvertisedAvailable);
+
+  const { data: advData } = useQuery({
+    queryKey: ["admin-tfn-advertised"],
+    queryFn: () => getAdvFn(),
+  });
+  const [advInput, setAdvInput] = useState<string>("");
+  const advertised = (advData as any)?.advertised ?? null;
+  const advSetMut = useMutation({
+    mutationFn: (v: number | null) => setAdvFn({ data: { advertised: v } }),
+    onSuccess: () => {
+      toast.success("Marketplace availability updated.");
+      qc.invalidateQueries({ queryKey: ["admin-tfn-advertised"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const { data: poolData, isLoading } = useQuery({
     queryKey: ["admin-shared-tfn"],
