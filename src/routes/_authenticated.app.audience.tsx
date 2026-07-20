@@ -588,9 +588,11 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
 }
 
 function AssignToListBulk({ lists, ids, onDone }: { lists: ContactList[]; ids: string[]; onDone: () => void }) {
+  const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [listId, setListId] = useState<string>("");
   const [busy, setBusy] = useState(false);
+
 
   async function assign() {
     if (!listId) { toast.error("Pick a list"); return; }
