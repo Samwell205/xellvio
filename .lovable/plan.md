@@ -1,51 +1,69 @@
-## Problem
+## What "Unconfirmed" actually means
 
-Right now the invite flow only writes a row into `account_members` — nothing else uses it.
+Your numbers match Telnyx exactly (10,506 sent → 5,605 delivered, 4,901 not delivered). Nothing is broken — this is how international SMS works.
 
-- Every server function scopes data by `userId` (the signed-in user's own id), so an invited user who signs up gets a brand-new empty workspace instead of the inviter's data. That's why the invitee sees "0 contacts / 0 campaigns" instead of the inviter's real data — they're on their own account, not the owner's.
-- The sidebar shows every page to every user, and route loaders never check the `permissions` object on `account_members`. So even where sharing did work, an invited "Inbox agent" would still see Billing, Team, Settings, etc.
+For every message, Telnyx does two things:
 
-## What I'll build
+1. **Hand the message to the destination carrier** — this is "Sent / Accepted".
+2. **Wait for the carrier to send back a Delivery Receipt (DLR)** — only then it becomes "Delivered".
 
-### 1. Active workspace concept
+**"Unconfirmed" = step 1 succeeded, step 2 never came back.** The carrier accepted your SMS but never told Telnyx whether the phone actually rang. Most of these were delivered — the carrier just didn't report it.
 
-Introduce a single "acting account id" helper used by every tenant server function:
+### Why this happens (in order of how common it is)
 
-- New `getActingAccount(context)` server helper: returns `{ accountId, role, permissions, isOwner }`.
-  - If the signed-in user has an `active` row in `account_members` pointing at another owner, `accountId` = that owner's id, `role`/`permissions` come from the member row.
-  - Otherwise `accountId` = their own `userId`, full permissions, `isOwner: true`.
-- Replace `.eq("account_id", userId)` with `.eq("account_id", accountId)` in the tenant-facing server functions (campaigns, inbox, audience, segments, suppressions, dashboard, billing reads, sender setup, etc.). Owner-only functions (team management, billing top-up, sender registration submit) additionally assert `isOwner` or the relevant permission.
+- **Destination carrier doesn't return DLRs.** Very common for MTN Nigeria, Airtel India, Etisalat UAE, many African/Asian networks. They accept your SMS, deliver it, and never send a receipt.
+- **Fake DLRs / DLR stripping.** Some route carriers strip receipts to hide performance.
+- **Registration-required countries.** UAE, Saudi, Kuwait, Nigeria etc. require a pre-registered Sender ID. Without one, your traffic is silently dropped or partially delivered with no DLR.
+- **Handset off/out-of-coverage long enough for the DLR to time out.**
+- **Number is a landline / VoIP / invalid** — carrier drops it but doesn't tell us.
 
-### 2. Permission enforcement
+### Why 358 also came back as "Undelivered"
 
-- Add a small `assertPermission(context, key)` helper that throws 403 if the acting member lacks that permission (owners always pass).
-- Apply it inside the server functions grouped by area:
-  - `campaigns.*` → `campaigns`
-  - `inbox.*` → `inbox`
-  - audience / segments / suppressions → matching keys
-  - sender-setup / 10DLC / toll-free → `setup_sms`
-  - billing reads → `billing` (top-up/checkout → owner only)
-  - team.* → `team` (invite/remove/update → owner only)
-  - settings write → `settings` (owner only for destructive ops)
+Those are the ones where the carrier explicitly said "no" — usually invalid number, blocked, or filtered as spam.
 
-### 3. Client-side session context + sidebar/route gating
+## Plan
 
-- New `useSession()` hook backed by a lightweight `getMySession` server fn that returns `{ isOwner, role, permissions, ownerName }`.
-- `AppSidebar`: filter the `items` array by permission; hide Team/Billing/Settings for non-owners without those keys; show a small "Working in {ownerName}'s workspace" label at the top when acting as a member.
-- Each `_authenticated.app.*` route with a loader: `beforeLoad` reads the session from router context and `throw redirect({ to: "/app" })` (with a toast) when the required permission is missing. This keeps the fix as gating rather than rewriting business logic.
+I will NOT change the delivery numbers (they are correct — that's what Telnyx reports). I'll make three practical improvements so this is understandable and actionable:
 
-### 4. Invite acceptance UX
+### 1. Rewrite the "Unconfirmed" explanation in the campaign report
 
-- After sign-in on `/auth?invite=…`, `claimPendingInvites` already links the row. Add a one-time toast "You joined {owner}'s workspace" and land the user on `/app` which will now show that workspace's data.
-- Owners keep working in their own workspace; the acting-account resolver only switches when the signed-in user is NOT themselves an owner with data.
+On `_authenticated.app.campaigns.$id.tsx`, replace the current tooltip with a plain-English breakdown:
 
-### Technical notes
+> "The carrier accepted this SMS but never returned a delivery receipt. Most of these were delivered — many international carriers (especially in Africa, the Middle East, and parts of Asia) simply don't confirm. This is normal and you were charged only for accepted messages."
 
-- No schema changes required — `account_members.permissions jsonb`, `user_id`, `status='active'` already exist.
-- RLS: tenant tables today use `account_id = auth.uid()`. I'll extend the policies to also allow rows where `EXISTS (SELECT 1 FROM account_members WHERE account_id = <row>.account_id AND user_id = auth.uid() AND status = 'active')`, so the acting-account queries actually return data. Writes get the same predicate plus a per-feature permission check via a `has_workspace_permission(_owner uuid, _key text)` SQL helper (SECURITY DEFINER, reads `account_members`).
-- Admin routes are unaffected — they already redirect to `/admin`.
-- Owner-only server fns (invite, remove member, checkout, delete account, sender registration submit) will explicitly reject non-owners even if they somehow reach them.
+Add a small "Learn more" link that opens a modal explaining DLRs, per-country reliability, and which countries typically don't return receipts.
 
-## Out of scope for this change
+### 2. Add a country breakdown to the report
 
-- Multi-workspace switching UI (a user belonging to several workspaces). For now, if a signed-in user is a member of exactly one other workspace and has no data of their own, they act inside that workspace. If they own their own account they always stay in it. I can add an explicit switcher afterwards if you want.
+Show a table under "Cost & deliverability":
+
+```text
+Country    Sent   Delivered   Unconfirmed   Undelivered   DLR rate
+NG         3,200  1,120       2,050         30            35%
+US         2,100  2,050       0             50            97%
+...
+```
+
+This lets you see instantly that (for example) your low delivery number is concentrated in a couple of countries that never confirm — not a platform bug.
+
+### 3. Add a "Retry unconfirmed after 24h" action
+
+Right now the "Retry all failed" button only retries `failed` / `undelivered`. Add a second, opt-in button: **"Resend to unconfirmed (last 24h)"**. It:
+
+- Filters `messages` for `status = 'delivery_unconfirmed'` on this campaign
+- Skips numbers where the same content was already delivered on a later attempt
+- Re-queues them through `api.public.dispatch-campaign` (uses your existing balance/pricing path)
+- Warns before spending: "This will resend X messages for ~$Y. Recommended only if recipients report not receiving the message."
+
+I will not auto-retry these — that would double-charge you for messages that were probably delivered.
+
+### 4. Where I will NOT change anything
+
+- The Telnyx polling logic is fine — after the 30-min reconciliation window a message that still has no DLR is legitimately "unconfirmed" forever. Polling longer won't turn them into "delivered".
+- Billing stays as-is. Telnyx charges for accepted messages regardless of DLR, so tenants continue paying for `sent + delivered + unconfirmed`.
+
+## Files I'll touch
+
+- `src/routes/_authenticated.app.campaigns.$id.tsx` — tooltip, "Learn more" modal, country breakdown table, "Resend to unconfirmed" button.
+- `src/lib/reports.functions.ts` — new `getCampaignDeliveryByCountry(campaignId)` server fn that groups messages by destination country ISO and returns sent/delivered/unconfirmed/undelivered/DLR%.
+- `src/lib/campaign-control.functions.ts` — new `resendUnconfirmed(campaignId)` server fn that queues a retry batch limited to the current campaign and last 24h.

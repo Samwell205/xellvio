@@ -145,3 +145,65 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
     }
     return { ok: true, retried: updated?.length ?? 0 };
   });
+
+// Re-send messages that Telnyx marked `delivery_unconfirmed` in the last
+// `hoursBack` hours (default 24h). These are messages the destination carrier
+// accepted but never returned a delivery receipt for — most were delivered,
+// but the tenant may want to try again if recipients report not receiving.
+// This creates a new send attempt on the SAME message row (Telnyx will assign
+// a new message id) so cost applies again per Telnyx billing.
+export const resendUnconfirmed = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { campaignId: string; hoursBack?: number; dryRun?: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    const hours = Math.max(1, Math.min(72, data.hoursBack ?? 24));
+    const { supabase } = context;
+    const { data: campaign, error: cErr } = await supabase
+      .from("campaigns")
+      .select("id, status")
+      .eq("id", data.campaignId)
+      .maybeSingle();
+    if (cErr) throw new Error(cErr.message);
+    if (!campaign) throw new Error("Campaign not found");
+    if (campaign.status === "cancelled") {
+      throw new Error("Campaign is cancelled — cannot resend");
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const since = new Date(Date.now() - hours * 3600_000).toISOString();
+
+    // Preview / dry-run: return count + estimated cost without touching rows.
+    const { data: candidates, error: qErr } = await supabaseAdmin
+      .from("messages")
+      .select("id, cost")
+      .eq("campaign_id", data.campaignId)
+      .eq("status", "delivery_unconfirmed")
+      .gte("created_at", since);
+    if (qErr) throw new Error(qErr.message);
+
+    const count = candidates?.length ?? 0;
+    const estimatedCost = (candidates ?? []).reduce((s, m: any) => s + Number(m.cost ?? 0), 0);
+
+    if (data.dryRun) {
+      return { ok: true, dryRun: true, count, estimatedCost: +estimatedCost.toFixed(4), hoursBack: hours };
+    }
+
+    if (count === 0) return { ok: true, resent: 0, estimatedCost: 0, hoursBack: hours };
+
+    const ids = (candidates ?? []).map((m: any) => m.id);
+    const { error } = await supabaseAdmin
+      .from("messages")
+      .update({ status: "queued", error_code: null, sent_at: null, delivered_at: null })
+      .in("id", ids);
+    if (error) throw new Error(error.message);
+
+    if (["sent", "failed"].includes(campaign.status)) {
+      await supabaseAdmin
+        .from("campaigns")
+        .update({ status: "sending" })
+        .eq("id", data.campaignId);
+    }
+
+    return { ok: true, resent: count, estimatedCost: +estimatedCost.toFixed(4), hoursBack: hours };
+  });
+

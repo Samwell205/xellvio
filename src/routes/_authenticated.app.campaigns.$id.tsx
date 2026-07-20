@@ -6,7 +6,9 @@ import {
   cancelCampaign,
   retryMessage,
   retryFailedMessages,
+  resendUnconfirmed,
 } from "@/lib/campaign-control.functions";
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -28,6 +30,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+
 import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
   Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone, HelpCircle,
@@ -240,6 +246,25 @@ function CampaignReport() {
     onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
   });
 
+  const resendUnconfirmedFn = useServerFn(resendUnconfirmed);
+  const resendUnconfirmedM = useMutation({
+    mutationFn: (hoursBack: number) =>
+      resendUnconfirmedFn({ data: { campaignId: id, hoursBack } }),
+    onSuccess: (r: any) => {
+      toast.success(
+        r.resent > 0
+          ? `Re-queued ${r.resent.toLocaleString()} unconfirmed message${r.resent === 1 ? "" : "s"} (est. ${formatUSD(r.estimatedCost)}).`
+          : "No unconfirmed messages in that window.",
+      );
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Resend failed"),
+  });
+
+
+
 
   const eligibleQ = useQuery({
     queryKey: ["campaign-eligible", id, campaignQ.data?.audience],
@@ -318,18 +343,20 @@ function CampaignReport() {
     const clickRate = delivered > 0 ? (uniqueClickers / delivered) * 100 : 0;
     const costPerDelivered = delivered > 0 ? totalCost / delivered : 0;
 
-    const byCountry: Record<string, { total: number; delivered: number; failed: number }> = {};
+    const byCountry: Record<string, { total: number; delivered: number; unconfirmed: number; failed: number }> = {};
     const failures: Record<string, number> = {};
     for (const m of rows as any[]) {
       const c = m.country_code ?? m.profile?.country_code ?? "—";
-      byCountry[c] ??= { total: 0, delivered: 0, failed: 0 };
+      byCountry[c] ??= { total: 0, delivered: 0, unconfirmed: 0, failed: 0 };
       byCountry[c].total++;
       if (m.status === "delivered") byCountry[c].delivered++;
+      if (m.status === "delivery_unconfirmed") byCountry[c].unconfirmed++;
       if (m.status === "failed" || m.status === "undelivered") byCountry[c].failed++;
       if ((m.status === "failed" || m.status === "undelivered") && m.error_code) {
         failures[m.error_code] = (failures[m.error_code] ?? 0) + 1;
       }
     }
+
 
     // Time series — cumulative by hour so the chart never appears to "drop"
     // completed deliveries back to zero after the last webhook hour.
@@ -553,8 +580,14 @@ function CampaignReport() {
                   sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`} tone="success" />
                 <Kpi icon={Clock} label="Awaiting carrier" value={stats.awaitingDelivery.toLocaleString()}
                   sub="accepted, no final receipt yet" tone="muted" />
-                <Kpi icon={HelpCircle} label="Unconfirmed" value={stats.deliveryUnconfirmed.toLocaleString()}
-                  sub="carrier finalized, no delivery proof" tone="muted" />
+                <UnconfirmedKpi
+                  value={stats.deliveryUnconfirmed}
+                  sent={stats.sent}
+                  onResend={(h) => resendUnconfirmedM.mutate(h)}
+                  isResending={resendUnconfirmedM.isPending}
+                  canResend={campaignQ.data?.status !== "cancelled" && stats.deliveryUnconfirmed > 0}
+                />
+
                 <Kpi icon={MousePointerClick} label="Click rate" value={`${stats.clickRate.toFixed(1)}%`}
                   sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`} tone="primary" />
                 <Kpi icon={ShieldOff} label="Opt-outs" value={(optOutsQ.data ?? 0).toLocaleString()}
@@ -692,22 +725,32 @@ function CampaignReport() {
               {Object.keys(stats.byCountry).length === 0 ? (
                 <div className="text-sm text-muted-foreground">No deliveries yet.</div>
               ) : (
-                <ul className="space-y-2.5">
+                <ul className="space-y-3">
                   {Object.entries(stats.byCountry).sort((a, b) => b[1].total - a[1].total).map(([cc, v]) => {
                     const rate = v.total ? (v.delivered / v.total) * 100 : 0;
+                    const uncRate = v.total ? (v.unconfirmed / v.total) * 100 : 0;
+                    const failRate = v.total ? (v.failed / v.total) * 100 : 0;
                     return (
                       <li key={cc} className="text-sm">
                         <div className="flex justify-between mb-1">
-                          <span className="font-medium">{cc} · {v.total}</span>
+                          <span className="font-medium">{cc} · {v.total.toLocaleString()}</span>
                           <span className="text-muted-foreground tabular-nums">{rate.toFixed(0)}% delivered</span>
                         </div>
-                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
                           <div className="h-full bg-success" style={{ width: `${rate}%` }} />
+                          <div className="h-full bg-cyan-500" style={{ width: `${uncRate}%` }} />
+                          <div className="h-full bg-destructive" style={{ width: `${failRate}%` }} />
                         </div>
+                        {v.unconfirmed > 0 && (
+                          <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">
+                            {v.unconfirmed.toLocaleString()} unconfirmed · {v.failed.toLocaleString()} failed
+                          </div>
+                        )}
                       </li>
                     );
                   })}
                 </ul>
+
               )}
             </Card>
 
@@ -966,6 +1009,104 @@ function Kpi({ icon: Icon, label, value, sub, tone }: {
     </Card>
   );
 }
+
+function UnconfirmedKpi({
+  value, sent, onResend, isResending, canResend,
+}: {
+  value: number; sent: number;
+  onResend: (hoursBack: number) => void;
+  isResending: boolean; canResend: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [hours, setHours] = useState(24);
+  const pct = sent > 0 ? (value / sent) * 100 : 0;
+  return (
+    <Card className="p-4 relative">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="size-6 rounded-md grid place-items-center bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+          <HelpCircle className="size-3.5" />
+        </span>
+        Unconfirmed
+      </div>
+      <div className="text-2xl font-extrabold mt-2 tabular-nums">{value.toLocaleString()}</div>
+      <div className="text-xs text-muted-foreground mt-1">
+        {sent > 0 ? `${pct.toFixed(0)}% of sent` : "no delivery proof"}
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-[11px] text-primary hover:underline mt-1.5"
+      >
+        What does this mean?
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="size-4 text-cyan-500" /> Delivery unconfirmed — explained
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              For every SMS, the carrier does two things:
+            </p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li><strong className="text-foreground">Accepts the message</strong> — this is "sent".</li>
+              <li><strong className="text-foreground">Returns a delivery receipt (DLR)</strong> once the phone received it — this is "delivered".</li>
+            </ol>
+            <p>
+              <strong className="text-foreground">Unconfirmed = step 1 succeeded, step 2 never came back.</strong> The
+              carrier accepted your SMS but never told us whether the phone actually rang.
+            </p>
+            <p>
+              Most of these were delivered — the carrier just didn't report it. This is very common for
+              international carriers (Africa, Middle East, parts of Asia) that don't return receipts.
+            </p>
+            <p>
+              Use <strong className="text-foreground">Performance by country</strong> below to see which countries this is concentrated in.
+              You can also re-send only the unconfirmed messages if recipients report not receiving them —
+              note that Telnyx bills per send.
+            </p>
+            {canResend && (
+              <div className="rounded-md border p-3 space-y-2 bg-muted/30">
+                <div className="flex items-center gap-2 text-xs">
+                  <label className="text-foreground font-medium">Resend unconfirmed from last</label>
+                  <select
+                    value={hours}
+                    onChange={(e) => setHours(Number(e.target.value))}
+                    className="text-xs bg-background border rounded px-2 py-1"
+                  >
+                    <option value={6}>6 hours</option>
+                    <option value={12}>12 hours</option>
+                    <option value={24}>24 hours</option>
+                    <option value={48}>48 hours</option>
+                    <option value={72}>72 hours</option>
+                  </select>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={isResending}
+                  onClick={() => {
+                    onResend(hours);
+                    setOpen(false);
+                  }}
+                >
+                  {isResending ? "Re-queuing…" : `Re-send unconfirmed (${value.toLocaleString()})`}
+                </Button>
+                <div className="text-[11px] text-muted-foreground">
+                  This costs money — Telnyx charges per send attempt.
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+
 
 function SummaryStat({ label, value, sub, tone }: { label: string; value: number | string; sub?: string; tone?: "success" | "danger" | "primary" | "muted" }) {
   const color =
