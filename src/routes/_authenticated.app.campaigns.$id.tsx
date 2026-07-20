@@ -576,8 +576,14 @@ function CampaignReport() {
                   sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`} tone="success" />
                 <Kpi icon={Clock} label="Awaiting carrier" value={stats.awaitingDelivery.toLocaleString()}
                   sub="accepted, no final receipt yet" tone="muted" />
-                <Kpi icon={HelpCircle} label="Unconfirmed" value={stats.deliveryUnconfirmed.toLocaleString()}
-                  sub="carrier finalized, no delivery proof" tone="muted" />
+                <UnconfirmedKpi
+                  value={stats.deliveryUnconfirmed}
+                  sent={stats.sent}
+                  onResend={(h) => resendUnconfirmedM.mutate(h)}
+                  isResending={resendUnconfirmedM.isPending}
+                  canResend={campaignQ.data?.status !== "cancelled" && stats.deliveryUnconfirmed > 0}
+                />
+
                 <Kpi icon={MousePointerClick} label="Click rate" value={`${stats.clickRate.toFixed(1)}%`}
                   sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`} tone="primary" />
                 <Kpi icon={ShieldOff} label="Opt-outs" value={(optOutsQ.data ?? 0).toLocaleString()}
