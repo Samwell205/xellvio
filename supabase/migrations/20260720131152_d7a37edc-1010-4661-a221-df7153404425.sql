@@ -1,0 +1,1 @@
+ALTER TABLE public.academy_lessons ADD COLUMN IF NOT EXISTS prerequisite_lesson_id UUID REFERENCES public.academy_lessons(id) ON DELETE SET NULL;

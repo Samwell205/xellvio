@@ -154,6 +154,7 @@ export type Database = {
           id: string
           is_free_preview: boolean
           order_index: number
+          prerequisite_lesson_id: string | null
           slug: string
           title: string
           updated_at: string
@@ -167,6 +168,7 @@ export type Database = {
           id?: string
           is_free_preview?: boolean
           order_index?: number
+          prerequisite_lesson_id?: string | null
           slug: string
           title: string
           updated_at?: string
@@ -180,6 +182,7 @@ export type Database = {
           id?: string
           is_free_preview?: boolean
           order_index?: number
+          prerequisite_lesson_id?: string | null
           slug?: string
           title?: string
           updated_at?: string
@@ -191,6 +194,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "academy_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_lessons_prerequisite_lesson_id_fkey"
+            columns: ["prerequisite_lesson_id"]
+            isOneToOne: false
+            referencedRelation: "academy_lessons"
             referencedColumns: ["id"]
           },
         ]
