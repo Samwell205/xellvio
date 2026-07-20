@@ -1006,6 +1006,104 @@ function Kpi({ icon: Icon, label, value, sub, tone }: {
   );
 }
 
+function UnconfirmedKpi({
+  value, sent, onResend, isResending, canResend,
+}: {
+  value: number; sent: number;
+  onResend: (hoursBack: number) => void;
+  isResending: boolean; canResend: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [hours, setHours] = useState(24);
+  const pct = sent > 0 ? (value / sent) * 100 : 0;
+  return (
+    <Card className="p-4 relative">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="size-6 rounded-md grid place-items-center bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+          <HelpCircle className="size-3.5" />
+        </span>
+        Unconfirmed
+      </div>
+      <div className="text-2xl font-extrabold mt-2 tabular-nums">{value.toLocaleString()}</div>
+      <div className="text-xs text-muted-foreground mt-1">
+        {sent > 0 ? `${pct.toFixed(0)}% of sent` : "no delivery proof"}
+      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-[11px] text-primary hover:underline mt-1.5"
+      >
+        What does this mean?
+      </button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="size-4 text-cyan-500" /> Delivery unconfirmed — explained
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              For every SMS, the carrier does two things:
+            </p>
+            <ol className="list-decimal pl-5 space-y-1">
+              <li><strong className="text-foreground">Accepts the message</strong> — this is "sent".</li>
+              <li><strong className="text-foreground">Returns a delivery receipt (DLR)</strong> once the phone received it — this is "delivered".</li>
+            </ol>
+            <p>
+              <strong className="text-foreground">Unconfirmed = step 1 succeeded, step 2 never came back.</strong> The
+              carrier accepted your SMS but never told us whether the phone actually rang.
+            </p>
+            <p>
+              Most of these were delivered — the carrier just didn't report it. This is very common for
+              international carriers (Africa, Middle East, parts of Asia) that don't return receipts.
+            </p>
+            <p>
+              Use <strong className="text-foreground">Performance by country</strong> below to see which countries this is concentrated in.
+              You can also re-send only the unconfirmed messages if recipients report not receiving them —
+              note that Telnyx bills per send.
+            </p>
+            {canResend && (
+              <div className="rounded-md border p-3 space-y-2 bg-muted/30">
+                <div className="flex items-center gap-2 text-xs">
+                  <label className="text-foreground font-medium">Resend unconfirmed from last</label>
+                  <select
+                    value={hours}
+                    onChange={(e) => setHours(Number(e.target.value))}
+                    className="text-xs bg-background border rounded px-2 py-1"
+                  >
+                    <option value={6}>6 hours</option>
+                    <option value={12}>12 hours</option>
+                    <option value={24}>24 hours</option>
+                    <option value={48}>48 hours</option>
+                    <option value={72}>72 hours</option>
+                  </select>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={isResending}
+                  onClick={() => {
+                    onResend(hours);
+                    setOpen(false);
+                  }}
+                >
+                  {isResending ? "Re-queuing…" : `Re-send unconfirmed (${value.toLocaleString()})`}
+                </Button>
+                <div className="text-[11px] text-muted-foreground">
+                  This costs money — Telnyx charges per send attempt.
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+
+
 function SummaryStat({ label, value, sub, tone }: { label: string; value: number | string; sub?: string; tone?: "success" | "danger" | "primary" | "muted" }) {
   const color =
     tone === "success" ? "text-success" :
