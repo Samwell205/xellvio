@@ -77,49 +77,41 @@ async function claimFromPool(
   if (available.length === 0) return null;
   const pick = available[0];
 
-  // Atomically remove from pool to prevent double-selling
-  const { data: deleted, error: delErr } = await supabaseAdmin
-    .from("shared_tollfree_pool")
-    .delete()
-    .eq("phone_number", pick.phone_number)
-    .select("phone_number")
-    .maybeSingle();
-  if (delErr || !deleted) return null;
-
-  // Clear any stale sender_assets rows for this phone (e.g. from the
-  // platform owner's tenant or prior Telnyx syncs) so the new owner's
-  // upsert lands cleanly.
-  await supabaseAdmin.from("sender_assets").delete().eq("phone_number", pick.phone_number);
-
+  // Shared pool: the same verified TFN can be assigned to multiple tenants.
+  // Do NOT delete the pool row and do NOT delete other tenants' sender_assets
+  // rows for this phone. Just attach this tenant to the number.
   const nowIso = new Date().toISOString();
-  const { error: insErr } = await supabaseAdmin.from("sender_assets").upsert(
-    {
-      account_id: userId,
-      country_code: (pick.country_code || "US").toUpperCase(),
-      sender_kind: "toll_free" as const,
-      phone_number: pick.phone_number,
-      telnyx_phone_number_id: pick.telnyx_phone_number_id,
-      telnyx_messaging_profile_id: pick.telnyx_messaging_profile_id,
-      verification_status: "verified" as const,
-      verified_at: nowIso,
-      rejected_at: null,
-      rejection_reason: null,
-      friendly_rejection_reason: null,
-      last_synced_at: nowIso,
-      is_shared: false,
-    },
-    { onConflict: "account_id,country_code,sender_kind" },
-  );
-  if (insErr) {
-    // Roll pool row back so the number isn't lost
-    await supabaseAdmin.from("shared_tollfree_pool").insert({
-      phone_number: pick.phone_number,
-      country_code: pick.country_code,
-      telnyx_phone_number_id: pick.telnyx_phone_number_id,
-      telnyx_messaging_profile_id: pick.telnyx_messaging_profile_id,
-    });
-    throw new Error(insErr.message);
+
+  // If this tenant already owns this exact number, treat as idempotent success.
+  const { data: existing } = await supabaseAdmin
+    .from("sender_assets")
+    .select("id")
+    .eq("account_id", userId)
+    .eq("phone_number", pick.phone_number)
+    .maybeSingle();
+
+  if (!existing) {
+    const { error: insErr } = await supabaseAdmin.from("sender_assets").upsert(
+      {
+        account_id: userId,
+        country_code: (pick.country_code || "US").toUpperCase(),
+        sender_kind: "toll_free" as const,
+        phone_number: pick.phone_number,
+        telnyx_phone_number_id: pick.telnyx_phone_number_id,
+        telnyx_messaging_profile_id: pick.telnyx_messaging_profile_id,
+        verification_status: "verified" as const,
+        verified_at: nowIso,
+        rejected_at: null,
+        rejection_reason: null,
+        friendly_rejection_reason: null,
+        last_synced_at: nowIso,
+        is_shared: true,
+      },
+      { onConflict: "account_id,country_code,sender_kind" },
+    );
+    if (insErr) throw new Error(insErr.message);
   }
+
 
   // Only debit credit balance when the caller is settling via credits.
   // When the tenant paid a straight fee via Paystack/NOWPayments, skipDebit
