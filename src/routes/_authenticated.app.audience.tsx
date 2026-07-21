@@ -1043,21 +1043,46 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                           : mapping.last === h ? "last_name"
                           : mapping.country === h ? "country" : null;
                         return (
-                          <TableHead key={h} className={"text-xs " + (colExcluded ? "opacity-40" : "")}>
-                            <div className="flex items-center gap-1.5">
-                              <Checkbox
-                                checked={!colExcluded}
-                                onCheckedChange={(v) => {
-                                  setExcludedCols((prev) => {
-                                    const next = new Set(prev);
-                                    if (v) next.delete(h); else next.add(h);
+                          <TableHead key={h} className={"text-xs align-top " + (colExcluded ? "opacity-40" : "")}>
+                            <div className="flex flex-col gap-1 min-w-[140px]">
+                              <div className="flex items-center gap-1.5">
+                                <Checkbox
+                                  checked={!colExcluded}
+                                  onCheckedChange={(v) => {
+                                    setExcludedCols((prev) => {
+                                      const next = new Set(prev);
+                                      if (v) next.delete(h); else next.add(h);
+                                      return next;
+                                    });
+                                  }}
+                                  aria-label={`Toggle column ${h}`}
+                                />
+                                <span className="truncate" title={h}>{h}</span>
+                              </div>
+                              <Select
+                                value={mapped ?? "__none"}
+                                onValueChange={(v) => {
+                                  setMapping((m) => {
+                                    const next = { ...m };
+                                    // clear any field currently pointing at this column
+                                    (["phone","first","last","country"] as const).forEach((k) => { if (next[k] === h) delete next[k]; });
+                                    if (v === "phone") next.phone = h;
+                                    else if (v === "first_name") next.first = h;
+                                    else if (v === "last_name") next.last = h;
+                                    else if (v === "country") next.country = h;
                                     return next;
                                   });
                                 }}
-                                aria-label={`Toggle column ${h}`}
-                              />
-                              <span>{h}</span>
-                              {mapped && <Badge variant="outline" className="text-[10px] px-1 py-0">{mapped}</Badge>}
+                              >
+                                <SelectTrigger className="h-7 text-[11px]"><SelectValue placeholder="— skip —" /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none" className="text-xs">— skip —</SelectItem>
+                                  <SelectItem value="phone" className="text-xs">Phone</SelectItem>
+                                  <SelectItem value="first_name" className="text-xs">First name</SelectItem>
+                                  <SelectItem value="last_name" className="text-xs">Last name</SelectItem>
+                                  <SelectItem value="country" className="text-xs">Country (ISO-2)</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           </TableHead>
                         );
