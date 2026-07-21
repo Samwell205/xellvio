@@ -106,16 +106,27 @@ export function AppSidebar() {
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {visibleItems.map((it) => (
-                <SidebarMenuItem key={it.url}>
-                  <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)} className="h-8 text-sm">
-                    <Link to={it.url} className="flex items-center gap-3">
-                      <it.icon className="size-4" />
-                      {!collapsed && <span>{it.title}</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {visibleItems.map((it) => {
+                const showBadge = it.url === "/app/inbox" && unread > 0;
+                return (
+                  <SidebarMenuItem key={it.url}>
+                    <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)} className="h-8 text-sm">
+                      <Link to={it.url} className="flex items-center gap-3">
+                        <it.icon className="size-4" />
+                        {!collapsed && <span>{it.title}</span>}
+                        {showBadge && !collapsed && (
+                          <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
+                        {showBadge && collapsed && (
+                          <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
