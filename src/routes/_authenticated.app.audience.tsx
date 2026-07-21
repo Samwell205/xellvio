@@ -848,11 +848,11 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       preview.rows.forEach((row, idx) => {
         if (excluded.has(idx)) return;
         const rowNum = idx + 2;
-        let raw = pick(row, preview.detected.phone);
+        let raw = pick(row, effDetected.phone);
         if (!raw) { errors.push({ row: rowNum, reason: "Missing phone", raw: JSON.stringify(row) }); return; }
         raw = raw.replace(/[\s\-()\u00A0]/g, "");
         const digitsOnly = raw.replace(/[^\d]/g, "");
-        const rowCountry = pick(row, preview.detected.country).toUpperCase().slice(0, 2) as CountryCode | "";
+        const rowCountry = pick(row, effDetected.country).toUpperCase().slice(0, 2) as CountryCode | "";
 
         const candidates: { value: string; country?: CountryCode }[] = [];
         if (raw.startsWith("+")) candidates.push({ value: raw });
@@ -872,8 +872,8 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
         valid.push({
           account_id: accountId,
           phone_e164: e164,
-          first_name: pick(row, preview.detected.first) || null,
-          last_name: pick(row, preview.detected.last) || null,
+          first_name: pick(row, effDetected.first) || null,
+          last_name: pick(row, effDetected.last) || null,
           country_code: p.country ?? rowCountry ?? defaultCountry,
         });
       });
