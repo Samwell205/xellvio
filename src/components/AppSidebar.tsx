@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getMySession } from "@/lib/session.functions";
+import { getInboxUnreadCount } from "@/lib/inbox.functions";
+import { useServerFn } from "@tanstack/react-start";
 import type { PermissionKey } from "@/lib/team-permissions";
 
 type Item = { title: string; url: string; icon: any; exact?: boolean; perm?: PermissionKey };
