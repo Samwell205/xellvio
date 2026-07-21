@@ -131,6 +131,29 @@ async function claimFromPool(userId: string, priceUsd: number) {
     onboarding_status: "active",
   }).eq("id", userId);
 
+  // Notify admins about the auto-assignment.
+  try {
+    const { data: acct } = await supabaseAdmin
+      .from("accounts").select("email,legal_business_name").eq("id", userId).maybeSingle();
+    const who = acct?.legal_business_name || acct?.email || userId;
+    const [{ sendAdminSms }, { sendAdminPush }] = await Promise.all([
+      import("./admin-notify.server"),
+      import("./admin-push.server"),
+    ]);
+    const msg = `Xellvio: ${pick.phone_number} auto-assigned to ${who} for $${priceUsd.toFixed(2)}.`;
+    await Promise.all([
+      sendAdminSms(msg),
+      sendAdminPush({
+        title: "Toll-free number assigned",
+        body: `${pick.phone_number} → ${who}`,
+        url: "/admin/senders",
+        tag: `tfn-assigned-${pick.phone_number}`,
+      }),
+    ]);
+  } catch (e) {
+    console.error("[tfn-marketplace] admin notify failed", e);
+  }
+
   return { phone_number: pick.phone_number, country: (pick.country_code || "US").toUpperCase() };
 }
 
