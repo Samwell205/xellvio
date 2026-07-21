@@ -542,6 +542,70 @@ We may update this Cookie Policy from time to time by posting a revised version 
 Email: [PRIVACY EMAIL]
 `);
 
+export const PROHIBITED_MD = fill(`# Prohibited Content
+
+**Last updated: [DATE]**
+
+Xellvio delivers messages through regulated mobile carriers. To keep every tenant able to send, the following categories of content are **not allowed** on the platform — regardless of consent, region, or sender type. Messages that match these categories are automatically screened, held, or blocked, and repeat violations lead to account suspension.
+
+If you're unsure whether your campaign is allowed, contact [SUPPORT EMAIL] before sending.
+
+---
+
+## SHAFT & regulated goods
+
+- Sexual, adult, or sexually explicit content
+- Hate speech, harassment, threats, or extremist content
+- Alcohol promotions, sales, or delivery
+- Firearms, ammunition, weapon accessories, or related services
+- Tobacco, vaping, e-cigarettes, hookah, or any nicotine product
+- Cannabis, CBD, THC, delta-8/9/10, HHC, or hemp derivatives
+- Prescription pharmaceuticals sold without a valid prescription, and any illegal drugs
+
+## Financial & high-risk
+
+- Payday loans, high-APR lending, title loans, "fast cash" advances
+- Debt collection, debt relief, debt consolidation, credit repair, tax-relief
+- Gambling, sports betting, lotteries, sweepstakes, casino promotions
+- Cryptocurrency promotions, giveaways, airdrops, presales, OTP-relay services
+- "Get rich quick", guaranteed-income offers, MLM, pyramid schemes
+- Unsolicited real estate or investment outreach
+
+## Fraud & deception
+
+- Phishing, account-verification scams, "urgent action required" messages
+- Fake prize, package delivery, IRS/SSA, or refund notices
+- Impersonation of banks, carriers, government agencies, or brands
+- Misleading sender identities or spoofed links
+
+## Legal catch-all
+
+You may not send anything that violates:
+
+- The Telephone Consumer Protection Act (TCPA) in the United States
+- Canada's Anti-Spam Legislation (CASL)
+- The GDPR / UK GDPR and the ePrivacy Directive in the EEA and UK
+- CTIA guidelines, the Campaign Registry (TCR), or 10DLC / toll-free rules
+- The destination country's telecom regulator
+- Our upstream carrier's Acceptable Use Policy
+- Any recipient's prior opt-out — every STOP request is permanent
+
+You must also have **documented opt-in consent** from every recipient before you send. Sending to purchased, scraped, rented, or non-consented lists is prohibited.
+
+---
+
+## How this is enforced
+
+- Every outbound message is scanned automatically before it leaves the platform.
+- Matches to the categories above are either blocked outright or held for manual review.
+- Elevated opt-out rates, carrier complaints, or 30007 / 30008 delivery errors trigger a Messaging Profile pause and account review.
+- We keep screening decisions, opt-in evidence you supply, and opt-out records for regulatory disclosure.
+
+For the full legal wording, see our [Acceptable Use Policy](/aup), [Anti-Spam & Messaging Policy](/anti-spam), and [Terms of Service](/terms).
+
+Report abuse: [ABUSE EMAIL].
+`);
+
 export const LEGAL_DOCS: Record<string, LegalDoc> = {
   privacy: { slug: "privacy", path: "/privacy", title: "Privacy Policy", short: "Privacy", description: "How Xellvio collects, uses, and protects personal information.", markdown: PRIVACY_MD, toc: true },
   terms: { slug: "terms", path: "/terms", title: "Terms of Service", short: "Terms", description: "The binding terms that govern use of the Xellvio platform.", markdown: TERMS_MD, toc: true },
@@ -550,4 +614,5 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
   "sms-terms": { slug: "sms-terms", path: "/sms-terms", title: "SMS / Messaging Terms & Consent", short: "SMS Terms", description: "How SMS works on Xellvio for end users and senders.", markdown: SMS_TERMS_MD, toc: false },
   dpa: { slug: "dpa", path: "/dpa", title: "Data Processing Addendum", short: "DPA", description: "Data-protection terms between Xellvio (processor) and Customers (controllers).", markdown: DPA_MD, toc: true },
   cookies: { slug: "cookies", path: "/cookies", title: "Cookie Policy", short: "Cookies", description: "How Xellvio uses cookies and similar technologies.", markdown: COOKIES_MD, toc: false },
+  "prohibited-content": { slug: "prohibited-content", path: "/prohibited-content", title: "Prohibited Content", short: "Prohibited Content", description: "The full list of content Xellvio does not allow customers to send over SMS.", markdown: PROHIBITED_MD, toc: true },
 };

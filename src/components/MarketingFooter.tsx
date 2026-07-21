@@ -27,6 +27,7 @@ export function MarketingFooter() {
           { label: "Terms of Service", to: "/terms" },
           { label: "Acceptable Use", to: "/aup" },
           { label: "Anti-Spam Policy", to: "/anti-spam" },
+          { label: "Prohibited Content", to: "/prohibited-content" },
           { label: "SMS Terms & Consent", to: "/sms-terms" },
           { label: "Data Processing Addendum", to: "/dpa" },
           { label: "Cookie Policy", to: "/cookies" },
