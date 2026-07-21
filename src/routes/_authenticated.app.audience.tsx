@@ -797,7 +797,13 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
 
   async function runImport() {
     if (!preview) return;
-    if (!preview.detected.phone) { toast.error("No phone column detected. Rename it to 'phone' and try again."); return; }
+    const effDetected = {
+      phone: preview.detected.phone && !excludedCols.has(preview.detected.phone) ? preview.detected.phone : undefined,
+      first: preview.detected.first && !excludedCols.has(preview.detected.first) ? preview.detected.first : undefined,
+      last: preview.detected.last && !excludedCols.has(preview.detected.last) ? preview.detected.last : undefined,
+      country: preview.detected.country && !excludedCols.has(preview.detected.country) ? preview.detected.country : undefined,
+    };
+    if (!effDetected.phone) { toast.error("Phone column is required. Re-enable the phone column and try again."); return; }
     setBusy(true);
     setResult(null);
     const includedCount = preview.rows.length - excluded.size;
