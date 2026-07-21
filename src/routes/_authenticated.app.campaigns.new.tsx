@@ -568,7 +568,7 @@ function NewCampaignPage() {
               <Textarea value={s.body} onChange={(e) => setS({ ...s, body: e.target.value })} rows={6} placeholder="Hi {{first_name}}, our sale starts now…" />
               <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
                 <span>{seg.encoding} · {seg.charCount} chars · {seg.segments} SMS segment{seg.segments !== 1 ? "s" : ""}</span>
-                <span>Personalization: <code>{"{{first_name}}"}</code> <code>{"{{last_name}}"}</code></span>
+                <span>Personalization: <code>{"{{first_name}}"}</code> <code>{"{{last_name}}"}</code> <code>{"{{country}}"}</code> · any custom CSV field: <code>{"{{your_field}}"}</code></span>
               </div>
               {seg.encoding === "Unicode" && unicodeOffenders.length > 0 && (
                 <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs">

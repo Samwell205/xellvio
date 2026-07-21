@@ -10,10 +10,19 @@ const PLAN_INSERT_CHUNK = 500;
 const DELIVER_PER_WORKER = 500;
 const DELIVER_CONCURRENCY = 100;
 
-function render(body: string, p: { first_name?: string | null; last_name?: string | null }) {
-  return body
-    .replaceAll("{{first_name}}", p.first_name ?? "")
-    .replaceAll("{{last_name}}", p.last_name ?? "");
+function render(body: string, p: { first_name?: string | null; last_name?: string | null; country_code?: string | null; phone_e164?: string | null; custom_fields?: Record<string, any> | null }) {
+  const fields: Record<string, any> = {
+    first_name: p.first_name ?? "",
+    last_name: p.last_name ?? "",
+    country: p.country_code ?? "",
+    country_code: p.country_code ?? "",
+    phone: p.phone_e164 ?? "",
+    ...(p.custom_fields && typeof p.custom_fields === "object" ? p.custom_fields : {}),
+  };
+  return body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_m, key) => {
+    const v = fields[key];
+    return v == null ? "" : String(v);
+  });
 }
 
 function publicBaseUrl() {

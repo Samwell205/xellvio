@@ -1635,6 +1635,7 @@ export type Database = {
           account_id: string
           country_code: string | null
           created_at: string
+          custom_fields: Json
           first_name: string | null
           id: string
           last_name: string | null
@@ -1647,6 +1648,7 @@ export type Database = {
           account_id: string
           country_code?: string | null
           created_at?: string
+          custom_fields?: Json
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -1659,6 +1661,7 @@ export type Database = {
           account_id?: string
           country_code?: string | null
           created_at?: string
+          custom_fields?: Json
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -2766,6 +2769,7 @@ export type Database = {
         Args: { _account_id: string; _audience: Json }
         Returns: {
           country_code: string
+          custom_fields: Json
           first_name: string
           last_name: string
           phone_e164: string
@@ -2781,6 +2785,7 @@ export type Database = {
         }
         Returns: {
           country_code: string
+          custom_fields: Json
           first_name: string
           last_name: string
           phone_e164: string
@@ -2841,6 +2846,7 @@ export type Database = {
         Args: { _audience: Json; _limit?: number; _offset?: number }
         Returns: {
           country_code: string
+          custom_fields: Json
           first_name: string
           last_name: string
           phone_e164: string
