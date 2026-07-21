@@ -846,7 +846,9 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       const fallbackCountries: CountryCode[] = (defaultCountry ? [defaultCountry as CountryCode] : []).concat(["US","GB","NG","CA","AU","ZA","KE","GH","DE","FR","IN"] as CountryCode[]);
 
       const seen = new Set<string>();
-      const valid: { account_id: string; phone_e164: string; first_name: string | null; last_name: string | null; country_code: string }[] = [];
+      const valid: { account_id: string; phone_e164: string; first_name: string | null; last_name: string | null; country_code: string; custom_fields: Record<string, string> }[] = [];
+      // Effective custom map — skip excluded columns
+      const effCustom: Array<[string, string]> = Object.entries(customMap).filter(([col]) => !excludedCols.has(col));
       const errors: RowError[] = [];
       let duplicates = 0;
 
