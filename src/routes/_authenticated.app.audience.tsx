@@ -980,10 +980,10 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {([
                     { key: "phone", label: "Phone *", required: true },
-                    { key: "first", label: "First name" },
-                    { key: "last", label: "Last name" },
-                    { key: "country", label: "Country (ISO-2)" },
-                  ] as const).map(({ key, label, required }) => (
+                    { key: "first", label: "First name", required: false },
+                    { key: "last", label: "Last name", required: false },
+                    { key: "country", label: "Country (ISO-2)", required: false },
+                  ] as { key: "phone" | "first" | "last" | "country"; label: string; required: boolean }[]).map(({ key, label, required }) => (
                     <div key={key} className="space-y-1">
                       <Label className="text-[11px] text-muted-foreground">{label}</Label>
                       <Select
