@@ -109,10 +109,14 @@ function InboxPage() {
     }
   }, [convos.data, selected]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages, mark selected as read
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [thread.data?.messages.length]);
+    if (selected && convos.data) {
+      const c = convos.data.find((x) => x.phone === selected);
+      if (c) markRead(selected, c.lastAt);
+    }
+  }, [thread.data?.messages.length, selected, convos.data]);
 
   // Realtime: refresh on new inbound messages for this account
   useEffect(() => {
