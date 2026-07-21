@@ -298,7 +298,6 @@ export const adminListSharedTollfree = createServerFn({ method: "GET" })
           .from("sender_assets")
           .select("id,account_id,phone_number,country_code,verification_status,is_shared")
           .in("phone_number", phones)
-          .eq("is_shared", true)
       : { data: [] as any[] };
     const acctIds = Array.from(new Set((attachments ?? []).map((a: any) => a.account_id)));
     const { data: accts } = acctIds.length
