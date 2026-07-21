@@ -1138,7 +1138,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
         <DialogFooter>
           <Button variant="ghost" onClick={() => { setOpen(false); reset(); }}>Close</Button>
           {preview && !result && (
-            <Button onClick={runImport} disabled={busy || !preview.detected.phone || (preview.detected.phone && excludedCols.has(preview.detected.phone)) || preview.rows.length - excluded.size === 0}>
+            <Button onClick={runImport} disabled={busy || !mapping.phone || (mapping.phone && excludedCols.has(mapping.phone)) || preview.rows.length - excluded.size === 0}>
               {busy ? "Importing…" : `Import ${preview.rows.length - excluded.size} row${preview.rows.length - excluded.size === 1 ? "" : "s"}`}
             </Button>
           )}
