@@ -882,12 +882,18 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
         const e164 = p.number;
         if (seen.has(e164)) { duplicates++; return; }
         seen.add(e164);
+        const cf: Record<string, string> = {};
+        for (const [col, key] of effCustom) {
+          const v = pick(row, col);
+          if (v) cf[key] = v;
+        }
         valid.push({
           account_id: accountId,
           phone_e164: e164,
           first_name: pick(row, effDetected.first) || null,
           last_name: pick(row, effDetected.last) || null,
           country_code: p.country ?? rowCountry ?? defaultCountry,
+          custom_fields: cf,
         });
       });
 
