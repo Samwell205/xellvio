@@ -836,6 +836,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       }
 
       preview.rows.forEach((row, idx) => {
+        if (excluded.has(idx)) return;
         const rowNum = idx + 2;
         let raw = pick(row, preview.detected.phone);
         if (!raw) { errors.push({ row: rowNum, reason: "Missing phone", raw: JSON.stringify(row) }); return; }
