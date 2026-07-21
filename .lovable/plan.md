@@ -1,58 +1,50 @@
-# Prohibited Content — Public Page
 
-Xellvio already defines the prohibited list in code (`src/lib/tos.ts` → `TOS_PROHIBITED_CATEGORIES`, plus the SHAFT + fraud/lender categories in `src/lib/content-scanner.ts`). Right now it's only surfaced inside the Terms of Service. This plan exposes it as a first-class public page that tenants and prospects can read directly, and makes it easy for you to share the link.
+## Problem
 
-## What people can't send (the list I'll publish)
+When a tenant buys a pre-verified toll-free number, the current flow is:
+1. Tenant pays $50 via Paystack → $50 is topped up into their SMS credit balance.
+2. Marketplace "Buy" click debits $50 from credit balance to assign the number.
 
-Grouped for readability on the page:
+If step 2 never runs (tenant closes the page, `debit_account` errors, or the number is instead auto-assigned elsewhere), the $50 stays as spendable SMS credit. That's what happened for at least two tenants — `emmanuelolushola824@gmail.com` and `alexandershorinolu1@gmail.com` each show a `+$50 Paystack topup` in `credit_transactions` with no matching `debit_account` for the toll-free number, and each has a verified TFN on their account.
 
-**SHAFT & regulated goods**
-- Sexual, adult, or explicit content
-- Hate speech, harassment, threats, extremist content
-- Alcohol promotions/sales
-- Firearms, ammunition, weapon accessories
-- Tobacco, vaping, e-cigarettes, nicotine products
-- Cannabis, CBD, THC, delta-8/9/10, hemp derivatives
-- Prescription pharmaceuticals or illegal drugs
+The $50 should behave as a one-time fee, never as SMS credit.
 
-**Financial / high-risk**
-- Payday, high-APR, tax-relief, or predatory lending
-- Debt collection, debt relief, credit repair
-- Gambling, sports betting, lotteries, casino promotions
-- Cryptocurrency promotions, airdrops, giveaways, OTP-relay
-- "Get rich quick", MLM, pyramid schemes, guaranteed-income offers
+## Fix
 
-**Fraud & deception**
-- Phishing, account-verification scams, "urgent action required"
-- Fake prize / package / IRS / refund notices
-- Impersonation of banks, carriers, government, or brands
-- Unsolicited real estate outreach
+### 1. Separate the TFN purchase from credit topup
 
-**Legal catch-all**
-- Anything violating TCPA (US), CASL (Canada), GDPR/ePrivacy (EU/UK), CTIA/TCR, or the destination country's telecom regulator
-- Anything violating the upstream carrier's Acceptable Use Policy
-- Messages sent without documented opt-in consent
+Add a dedicated Paystack (and NowPayments) checkout intent for "toll-free number purchase":
 
-## Changes
+- New `payments.purpose` value: `tfn_purchase` (or reuse existing `pack_id = null` + metadata flag). We'll add a `purpose` text column via migration if one doesn't exist, and store `tfn_purchase` for these payments.
+- New server fn `initPaystackTfnCheckout` in `src/lib/billing-packs.functions.ts` mirroring `initPaystackCheckoutCustom`, but:
+  - Fixed `amount = tfn_buyer_price_usd` (read from `platform_settings`).
+  - `payments.credits = 0` and `payments.purpose = 'tfn_purchase'`.
+- Extend `creditFromPayment` (same file): when `payment.purpose === 'tfn_purchase'`, do NOT call `topup_account`. Instead, call the existing `claimFromPool`/`buyImpl` logic to assign a number to the account (moved into an exported helper `assignTfnAfterPayment(userId, priceUsd)` in `src/lib/tfn-marketplace.functions.ts`). Mark payment `paid` afterwards. Refund path: if no number is available at assignment time, mark payment `refund_pending` and admin-notify — never silently keep the money as credit.
+- Same treatment in the NowPayments IPN (`src/routes/api/public/nowpayments-ipn.ts`) — branch on `payment.purpose`.
 
-1. **New route** `src/routes/prohibited-content.tsx`
-   - Uses existing `LegalPage` component style so it matches `/terms`, `/aup`, etc.
-   - Renders the grouped list above with short explanations, plus a note that violations trigger automatic screening, holds, or suspension (matches `content-scanner.ts` behavior).
-   - Head metadata: title "Prohibited Content — Xellvio", description under 160 chars, og:title/og:description.
+### 2. Update the "Buy pre-verified number" UI
 
-2. **Content source** `src/content/legal.ts`
-   - Add a `prohibited-content` entry so the page reuses the shared legal renderer and stays consistent with TOS wording.
+In `src/routes/_authenticated.app.toll-free-verification.tsx` (`MarketplaceBuyCard`):
 
-3. **Navigation surfaces**
-   - Add "Prohibited content" link to the marketing footer (`src/components/MarketingFooter.tsx`) under the Legal column, next to AUP / Anti-Spam.
-   - Add it to `public/llms.txt` under Optional so it's discoverable.
-   - Link to it from the Setup SMS page and the Campaign compose page ("See what you can't send") so tenants see it before sending.
+- Replace the current `buyFn` (which requires prefunded credit) with a "Pay $50" button that calls `initPaystackTfnCheckout` and redirects to Paystack. On return, the callback page (`/app/billing`) already re-verifies via `verifyPaystack`; extend that to route to the toll-free page and toast the assigned number.
+- Keep a fallback "Use my credit balance" only if `credit_balance >= $50`, which uses today's `purchaseTfnFromMarketplace` (unchanged — that path already debits correctly).
+- Remove the language implying they must top up first.
 
-4. **Sitemap** `src/routes/sitemap[.]xml.ts`
-   - Add `/prohibited-content` so search engines index it.
+### 3. Reverse the wrongly-kept $50 for affected tenants
 
-No backend, schema, or business-logic changes — this is presentation only. The prohibited list already drives screening; this just makes it publicly visible at `https://xellvio.com/prohibited-content` so you can share one link.
+One-time SQL run via the insert tool:
 
-## Deliverable link
+- Find every `credit_transactions` row where `type = 'topup'`, `amount = 50` and `description LIKE 'Paystack USD 50%'` whose account also has a `sender_assets` row with `sender_kind = 'toll_free'` created within 24h and no matching `debit_account` of $50 with description containing "toll-free" / "TFN" / "Purchased verified".
+- For each match: subtract $50 from `accounts.credit_balance` (allow negative — the SMS sender already checks `< 0` on new debits, so future top-ups clear the debt naturally) and insert a `credit_transactions` row `type = 'debit'`, `amount = 50`, `description = 'Toll-free number fee (reconciliation)'`, `balance_after = accounts.credit_balance`.
+- Confirmed affected today: `73d366b2-d9e0-4fb3-8635-a3707505ced0` and `68ff2e59-19b6-458e-9e5d-95b4a6cf2c78`. Query will catch any others.
 
-After build: `https://xellvio.com/prohibited-content` (also reachable from the footer of every marketing page).
+### 4. Guard rails
+
+- Add unique constraint `payments_provider_reference_key` if not already present (it is), and make `assignTfnAfterPayment` idempotent by keying off `payments.id` (skip if payment already `paid`).
+- Log every failed pool claim so a stuck payment surfaces in admin.
+
+## Technical Notes
+
+- The current `purchaseTfnFromMarketplace` handler passes `_campaign_id: undefined` to the `debit_account` RPC — likely fine but we'll pass `null` explicitly to eliminate that as a failure mode.
+- `platform_settings.tfn_buyer_price_usd` is already the source of truth for the $50, so no hardcoding.
+- No changes to `shared_tollfree_pool` schema; `claimFromPool` already atomically removes and reassigns numbers.
