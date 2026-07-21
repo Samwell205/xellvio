@@ -1038,10 +1038,10 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                       </TableHead>
                       {preview.headers.map((h) => {
                         const colExcluded = excludedCols.has(h);
-                        const mapped = preview.detected.phone === h ? "phone"
-                          : preview.detected.first === h ? "first_name"
-                          : preview.detected.last === h ? "last_name"
-                          : preview.detected.country === h ? "country" : null;
+                        const mapped = mapping.phone === h ? "phone"
+                          : mapping.first === h ? "first_name"
+                          : mapping.last === h ? "last_name"
+                          : mapping.country === h ? "country" : null;
                         return (
                           <TableHead key={h} className={"text-xs " + (colExcluded ? "opacity-40" : "")}>
                             <div className="flex items-center gap-1.5">
