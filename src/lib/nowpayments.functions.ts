@@ -153,6 +153,73 @@ export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
     }
   });
 
+/** Create a NOWPayments invoice to buy a pre-verified toll-free number.
+ *  Straight fee — never added to the credit balance. */
+export const initNowPaymentsTfnCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { coin?: string }) => {
+    if (d?.coin && !ALLOWED_COINS.includes(d.coin as any)) throw new Error("Unsupported coin");
+    return { coin: d?.coin };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: setting } = await supabaseAdmin
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "tfn_buyer_price_usd")
+      .maybeSingle();
+    const priceUsd = Number((setting as any)?.value ?? 50) || 50;
+
+    const [{ count: verifierCount }, { count: poolCount }] = await Promise.all([
+      supabaseAdmin.from("verifier_tfns").select("id", { count: "exact", head: true })
+        .eq("status", "verified").is("sold_to_account_id", null),
+      supabaseAdmin.from("shared_tollfree_pool").select("phone_number", { count: "exact", head: true }),
+    ]);
+    if ((verifierCount ?? 0) + (poolCount ?? 0) <= 0) {
+      throw new Error("No verified toll-free numbers are available right now");
+    }
+
+    const { data: payment, error: payErr } = await supabaseAdmin
+      .from("payments")
+      .insert({
+        account_id: context.userId,
+        pack_id: null,
+        provider: "nowpayments",
+        currency: "USD",
+        amount: priceUsd,
+        credits: 0,
+        status: "pending",
+        metadata: { purpose: "tfn_purchase", coin: data.coin ?? null, price_usd: priceUsd },
+      })
+      .select("id")
+      .single();
+    if (payErr) throw new Error(payErr.message);
+
+    const reference = `npm_${payment.id.replace(/-/g, "")}`;
+    try {
+      const inv = await createInvoice({
+        priceUsd,
+        orderId: reference,
+        orderDescription: `Toll-free number purchase (${priceUsd} USD)`,
+        payCurrency: data.coin,
+      });
+      // Use TFN callback so the tenant lands back on the verification page.
+      await supabaseAdmin
+        .from("payments")
+        .update({
+          provider_reference: reference,
+          metadata: { purpose: "tfn_purchase", coin: data.coin ?? null, price_usd: priceUsd, np_invoice_id: inv.id },
+        })
+        .eq("id", payment.id);
+      return { invoice_url: inv.invoice_url, reference };
+    } catch (e: any) {
+      await supabaseAdmin.from("payments").update({ status: "failed", admin_note: e?.message ?? "init failed" }).eq("id", payment.id);
+      throw e;
+    }
+  });
+
+
 /**
  * Reconcile a single NOWPayments payment by our reference (npm_<uuid>).
  * Safe to call from client on redirect-back — queries NOWPayments API,
