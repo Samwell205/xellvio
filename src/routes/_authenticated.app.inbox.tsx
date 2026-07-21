@@ -36,6 +36,20 @@ function InboxPage() {
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [manualPhone, setManualPhone] = useState("");
+  const [readMap, setReadMap] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("inbox_read_map") ?? "{}"); } catch { return {}; }
+  });
+  const markRead = (phone: string, at: string) => {
+    setReadMap((prev) => {
+      if (prev[phone] && prev[phone] >= at) return prev;
+      const next = { ...prev, [phone]: at };
+      try { localStorage.setItem("inbox_read_map", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  const isUnread = (phone: string, lastAt: string, lastDir: "inbound" | "outbound") =>
+    lastDir === "inbound" && (!readMap[phone] || readMap[phone] < lastAt);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const convos = useQuery({
