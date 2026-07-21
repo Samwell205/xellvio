@@ -797,7 +797,8 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
     if (!preview.detected.phone) { toast.error("No phone column detected. Rename it to 'phone' and try again."); return; }
     setBusy(true);
     setResult(null);
-    setProgress({ phase: "validating", processed: 0, total: preview.rows.length, label: "Validating phone numbers…" });
+    const includedCount = preview.rows.length - excluded.size;
+    setProgress({ phase: "validating", processed: 0, total: includedCount, label: "Validating phone numbers…" });
     try {
       const { data: u } = await supabase.auth.getUser();
       const accountId = acctId ?? u.user!.id;
