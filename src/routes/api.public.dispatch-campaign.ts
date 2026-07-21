@@ -110,7 +110,17 @@ async function sendOneMessage(
       return k === "sender_id" ? 0 : k === "local" ? 1 : k === "toll_free" ? 2 : 3;
     };
     const candidates = sender.assets
-      .filter((a) => a.country_code === m.country_code && (a.telnyx_messaging_profile_id || a.phone_number))
+      .filter((a) => {
+        if (!(a.telnyx_messaging_profile_id || a.phone_number)) return false;
+        if (a.country_code === m.country_code) return true;
+        // Toll-free numbers approved in US or CA work for both (NANP TFV).
+        if (
+          isNanp &&
+          a.sender_kind === "toll_free" &&
+          (a.country_code === "US" || a.country_code === "CA")
+        ) return true;
+        return false;
+      })
       .sort((a, b) => rank(a.sender_kind) - rank(b.sender_kind));
     const matched = candidates[0];
 
