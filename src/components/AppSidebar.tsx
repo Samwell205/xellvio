@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getMySession } from "@/lib/session.functions";
+import { getInboxUnreadCount } from "@/lib/inbox.functions";
+import { useServerFn } from "@tanstack/react-start";
 import type { PermissionKey } from "@/lib/team-permissions";
 
 type Item = { title: string; url: string; icon: any; exact?: boolean; perm?: PermissionKey };
@@ -55,6 +57,21 @@ export function AppSidebar() {
   };
 
   const visibleItems = items.filter((it) => canSee(it.perm));
+  const canInbox = canSee("inbox");
+  const acctKey = (session as any)?.accountId ?? (session as any)?.workspaceOwnerId ?? "self";
+  const unreadFn = useServerFn(getInboxUnreadCount);
+  const inboxQ = useQuery({
+    queryKey: ["inbox-unread", acctKey],
+    queryFn: () => {
+      const sinceIso = typeof window !== "undefined"
+        ? localStorage.getItem(`inbox_last_seen_${acctKey}`) ?? undefined
+        : undefined;
+      return unreadFn({ data: { sinceIso } });
+    },
+    enabled: canInbox,
+    refetchInterval: 20_000,
+  });
+  const unread = pathname.startsWith("/app/inbox") ? 0 : (inboxQ.data?.count ?? 0);
   const visibleSettings = settingsChildren.filter((it) => canSee(it.perm));
   const settingsActive = visibleSettings.some((c) => isActive(c.url, c.exact));
   const [settingsOpen, setSettingsOpen] = useState(settingsActive);
@@ -89,16 +106,27 @@ export function AppSidebar() {
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {visibleItems.map((it) => (
-                <SidebarMenuItem key={it.url}>
-                  <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)} className="h-8 text-sm">
-                    <Link to={it.url} className="flex items-center gap-3">
-                      <it.icon className="size-4" />
-                      {!collapsed && <span>{it.title}</span>}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {visibleItems.map((it) => {
+                const showBadge = it.url === "/app/inbox" && unread > 0;
+                return (
+                  <SidebarMenuItem key={it.url}>
+                    <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)} className="h-8 text-sm">
+                      <Link to={it.url} className="flex items-center gap-3">
+                        <it.icon className="size-4" />
+                        {!collapsed && <span>{it.title}</span>}
+                        {showBadge && !collapsed && (
+                          <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+                            {unread > 99 ? "99+" : unread}
+                          </span>
+                        )}
+                        {showBadge && collapsed && (
+                          <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

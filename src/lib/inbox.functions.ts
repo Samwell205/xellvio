@@ -3,6 +3,32 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActingAccount, assertPermission } from "@/lib/acting-account.server";
 
+/** Count inbound messages received after a given ISO timestamp (for unread badge). */
+export const getInboxUnreadCount = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ sinceIso: z.string().optional() }).parse(d ?? {}))
+  .handler(async ({ data, context }) => {
+    const acting = await resolveActingAccount(context.userId);
+    if (!acting.permissions.inbox && !acting.isOwner) return { count: 0, lastAt: null as string | null };
+    const { supabase } = context;
+    const since = data.sinceIso ?? new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const { count } = await supabase
+      .from("sms_thread_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("account_id", acting.accountId)
+      .eq("direction", "inbound")
+      .gt("created_at", since);
+    const { data: latest } = await supabase
+      .from("sms_thread_messages")
+      .select("created_at")
+      .eq("account_id", acting.accountId)
+      .eq("direction", "inbound")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return { count: count ?? 0, lastAt: latest?.created_at ?? null };
+  });
+
 /** List distinct conversations (one per customer phone) with last message preview. */
 export const listConversations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

@@ -44,6 +44,33 @@ function InboxPage() {
     refetchInterval: 15000,
   });
 
+  // Track last-seen timestamp per account so the sidebar badge clears on visit.
+  const lastSeenKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    // Use the newest inbound timestamp we can see, otherwise now.
+    const newestInbound = (convos.data ?? [])
+      .filter((c) => c.lastDirection === "inbound")
+      .map((c) => c.lastAt)
+      .sort()
+      .pop();
+    const stamp = newestInbound ?? new Date().toISOString();
+    try {
+      // Save under both possible account keys so the sidebar query picks it up.
+      const keys = Object.keys(localStorage).filter((k) => k.startsWith("inbox_last_seen_"));
+      for (const k of keys) localStorage.setItem(k, stamp);
+      // Also write a generic self key.
+      localStorage.setItem("inbox_last_seen_self", stamp);
+      lastSeenKeyRef.current = stamp;
+      qc.invalidateQueries({ queryKey: ["inbox-unread"] });
+    } catch { /* ignore */ }
+  }, [convos.data, qc]);
+
+  // Count new inbound replies since page opened.
+  const openedAtRef = useRef<string>(new Date(Date.now() - 60_000).toISOString());
+  const newRepliesSinceOpen = (convos.data ?? []).filter(
+    (c) => c.lastDirection === "inbound" && c.lastAt > openedAtRef.current,
+  ).length;
+
   const thread = useQuery({
     queryKey: ["inbox", "thread", selected],
     queryFn: () => getFn({ data: { phone: selected! } }),
@@ -109,6 +136,11 @@ function InboxPage() {
       <div>
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <Inbox className="size-6" /> Inbox
+          {newRepliesSinceOpen > 0 && (
+            <Badge className="ml-1 animate-pulse">
+              {newRepliesSinceOpen} new {newRepliesSinceOpen === 1 ? "reply" : "replies"}
+            </Badge>
+          )}
         </h1>
         <p className="text-sm text-muted-foreground">
           Two-way SMS conversations. Replies from contacts land here in real time.
