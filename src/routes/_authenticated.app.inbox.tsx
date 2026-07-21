@@ -36,6 +36,20 @@ function InboxPage() {
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [manualPhone, setManualPhone] = useState("");
+  const [readMap, setReadMap] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    try { return JSON.parse(localStorage.getItem("inbox_read_map") ?? "{}"); } catch { return {}; }
+  });
+  const markRead = (phone: string, at: string) => {
+    setReadMap((prev) => {
+      if (prev[phone] && prev[phone] >= at) return prev;
+      const next = { ...prev, [phone]: at };
+      try { localStorage.setItem("inbox_read_map", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  const isUnread = (phone: string, lastAt: string, lastDir: "inbound" | "outbound") =>
+    lastDir === "inbound" && (!readMap[phone] || readMap[phone] < lastAt);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const convos = useQuery({
@@ -95,10 +109,14 @@ function InboxPage() {
     }
   }, [convos.data, selected]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages, mark selected as read
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [thread.data?.messages.length]);
+    if (selected && convos.data) {
+      const c = convos.data.find((x) => x.phone === selected);
+      if (c) markRead(selected, c.lastAt);
+    }
+  }, [thread.data?.messages.length, selected, convos.data]);
 
   // Realtime: refresh on new inbound messages for this account
   useEffect(() => {
@@ -185,30 +203,51 @@ function InboxPage() {
                 No conversations yet. Replies from your SMS campaigns will appear here.
               </div>
             ) : (
-              filtered.map((c) => (
-                <button
-                  key={c.phone}
-                  onClick={() => setSelected(c.phone)}
-                  className={`w-full text-left px-3 py-2.5 border-b hover:bg-muted/50 transition ${
-                    selected === c.phone ? "bg-muted" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-sm">{c.phone}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTime(c.lastAt)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {c.lastDirection === "inbound" && (
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                        reply
-                      </Badge>
+              filtered.map((c) => {
+                const unread = isUnread(c.phone, c.lastAt, c.lastDirection);
+                const isActive = selected === c.phone;
+                return (
+                  <button
+                    key={c.phone}
+                    onClick={() => {
+                      setSelected(c.phone);
+                      markRead(c.phone, c.lastAt);
+                    }}
+                    className={`w-full text-left px-3 py-2.5 border-b transition relative ${
+                      isActive
+                        ? "bg-muted"
+                        : unread
+                          ? "bg-primary/5 hover:bg-primary/10"
+                          : "hover:bg-muted/50"
+                    }`}
+                  >
+                    {unread && !isActive && (
+                      <span className="absolute left-1 top-1/2 -translate-y-1/2 size-2 rounded-full bg-primary" />
                     )}
-                    <p className="text-xs text-muted-foreground truncate">{c.lastBody}</p>
-                  </div>
-                </button>
-              ))
+                    <div className={`flex items-center justify-between gap-2 ${unread ? "pl-3" : ""}`}>
+                      <span className={`text-sm ${unread ? "font-bold text-foreground" : "font-medium"}`}>
+                        {c.phone}
+                      </span>
+                      <span className={`text-xs ${unread ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                        {formatTime(c.lastAt)}
+                      </span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 mt-0.5 ${unread ? "pl-3" : ""}`}>
+                      {c.lastDirection === "inbound" && (
+                        <Badge
+                          variant={unread ? "default" : "secondary"}
+                          className="text-[10px] h-4 px-1"
+                        >
+                          {unread ? "new" : "reply"}
+                        </Badge>
+                      )}
+                      <p className={`text-xs truncate ${unread ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                        {c.lastBody}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
             )}
           </div>
         </Card>
