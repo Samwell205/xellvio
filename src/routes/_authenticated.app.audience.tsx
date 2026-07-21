@@ -742,6 +742,8 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
   const [excludedCols, setExcludedCols] = useState<Set<string>>(new Set());
   const [mapping, setMapping] = useState<{ phone?: string; first?: string; last?: string; country?: string }>({});
+  // csv header -> custom field key (e.g. "company" -> "company")
+  const [customMap, setCustomMap] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number; errors: RowError[] } | null>(null);
   const [listMode, setListMode] = useState<"none" | "existing" | "new">("none");
   const [existingListId, setExistingListId] = useState<string>("");
