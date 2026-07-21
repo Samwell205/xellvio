@@ -975,16 +975,42 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                 <div className="font-medium">{preview.fileName} <span className="text-muted-foreground text-xs">({(preview.size / 1024).toFixed(1)} KB · {preview.rows.length} rows)</span></div>
                 <Button variant="ghost" size="sm" onClick={reset}>Choose different file</Button>
               </div>
-              <div className="text-xs space-y-1">
-                <div>Detected columns:
-                  <Badge variant="outline" className="ml-1">phone → {preview.detected.phone ?? <span className="text-destructive">none</span>}</Badge>{" "}
-                  <Badge variant="outline">first_name → {preview.detected.first ?? "—"}</Badge>{" "}
-                  <Badge variant="outline">last_name → {preview.detected.last ?? "—"}</Badge>{" "}
-                  <Badge variant="outline">country → {preview.detected.country ?? "—"}</Badge>
+              <div className="space-y-2">
+                <div className="text-xs font-medium">Map columns <span className="text-muted-foreground font-normal">(these values feed personalization like {"{first_name}"})</span></div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {([
+                    { key: "phone", label: "Phone *", required: true },
+                    { key: "first", label: "First name" },
+                    { key: "last", label: "Last name" },
+                    { key: "country", label: "Country (ISO-2)" },
+                  ] as const).map(({ key, label, required }) => (
+                    <div key={key} className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">{label}</Label>
+                      <Select
+                        value={mapping[key] ?? "__none"}
+                        onValueChange={(v) => setMapping((m) => ({ ...m, [key]: v === "__none" ? undefined : v }))}
+                      >
+                        <SelectTrigger className={"h-8 text-xs " + (required && !mapping.phone ? "border-destructive" : "")}>
+                          <SelectValue placeholder="— none —" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none">— none —</SelectItem>
+                          {preview.headers.map((h) => <SelectItem key={h} value={h} className="text-xs">{h}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
                 </div>
-                {!preview.detected.phone && (
-                  <div className="flex items-start gap-1 text-destructive"><AlertTriangle className="size-3.5 mt-0.5" />No phone column detected. Aliases accepted: {PHONE_KEYS.join(", ")}.</div>
+                {!mapping.phone && (
+                  <div className="flex items-start gap-1 text-destructive text-xs"><AlertTriangle className="size-3.5 mt-0.5" />Select a phone column to enable import.</div>
                 )}
+                {preview.parseErrors.length > 0 && (
+                  <div className="text-warning text-xs">
+                    <div className="font-medium">Parser warnings:</div>
+                    <ul className="list-disc ml-5">{preview.parseErrors.map((m, i) => <li key={i}>{m}</li>)}</ul>
+                  </div>
+                )}
+              </div>
                 {preview.parseErrors.length > 0 && (
                   <div className="text-warning">
                     <div className="font-medium">Parser warnings:</div>
