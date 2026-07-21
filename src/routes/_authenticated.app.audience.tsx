@@ -756,6 +756,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
   function reset() {
     setPreview(null); setResult(null); setListMode("none"); setExistingListId(""); setNewListName("");
     setExcluded(new Set());
+    setExcludedCols(new Set());
     setProgress(null);
     if (fileRef.current) fileRef.current.value = "";
   }
