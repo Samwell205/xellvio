@@ -781,6 +781,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       };
       const parseErrors = (parsed.errors ?? []).slice(0, 10).map((e) => `Row ${e.row ?? "?"}: ${e.message}`);
       setPreview({ fileName: file.name, size: file.size, headers, detected, rows: parsed.data, rowsPreview: parsed.data.slice(0, 5), parseErrors });
+      setExcluded(new Set());
       // Default to file name as new list name
       if (listMode === "none" && lists.length === 0) {
         setListMode("new");
