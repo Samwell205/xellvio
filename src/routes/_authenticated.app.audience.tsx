@@ -1061,7 +1061,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                               aria-label={`Toggle row ${i + 1}`}
                             />
                           </TableCell>
-                          {preview.headers.map((h) => <TableCell key={h} className="text-xs">{r[h] ?? ""}</TableCell>)}
+                          {preview.headers.map((h) => <TableCell key={h} className={"text-xs " + (excludedCols.has(h) ? "opacity-40 line-through" : "")}>{r[h] ?? ""}</TableCell>)}
                         </TableRow>
                       );
                     })}
