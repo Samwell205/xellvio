@@ -298,6 +298,51 @@ export async function reconcileOneNowPayment(payment: {
         return { status: "duplicate" as const };
       }
     }
+    const purpose = (payment.metadata as any)?.purpose;
+
+    if (purpose === "tfn_purchase") {
+      const { assignTfnAfterPayment } = await import("./tfn-marketplace.functions");
+      const assigned = await assignTfnAfterPayment(payment.account_id);
+      if (!assigned) {
+        await supabaseAdmin
+          .from("payments")
+          .update({
+            status: "refund_pending",
+            paid_at: new Date().toISOString(),
+            admin_note: "Paid but no toll-free number available — refund required",
+            metadata: meta,
+          })
+          .eq("id", payment.id);
+        try {
+          const { sendAdminSms } = await import("./admin-notify.server");
+          const { sendAdminPush } = await import("./admin-push.server");
+          await Promise.all([
+            sendAdminSms(`Xellvio: crypto TFN payment ${payment.id} received but no number available — refund.`),
+            sendAdminPush({
+              title: "TFN payment needs refund",
+              body: `Payment ${payment.id} — no number in pool`,
+              url: "/admin/billing",
+              tag: `tfn-refund-${payment.id}`,
+            }),
+          ]);
+        } catch (e) { console.error("[tfn-refund] notify failed", e); }
+        return { status: "refund_pending" as const };
+      }
+      const { data: claimed } = await supabaseAdmin
+        .from("payments")
+        .update({
+          status: "paid",
+          paid_at: new Date().toISOString(),
+          admin_note: `TFN assigned: ${assigned.phone_number}`,
+          metadata: meta,
+        })
+        .eq("id", payment.id)
+        .eq("status", "pending")
+        .select("id");
+      if (!claimed?.length) return { status: "already_paid" as const };
+      return { status: "credited" as const, amount: 0, tfn_assigned: assigned };
+    }
+
     // Atomic claim: only credit if still pending
     const { data: claimed, error: claimErr } = await supabaseAdmin
       .from("payments")
@@ -317,6 +362,7 @@ export async function reconcileOneNowPayment(payment: {
     notifyCryptoPaymentCredited(payment).catch((e: unknown) => console.error("[np-notify] failed", e));
     return { status: "credited" as const, amount: payment.credits };
   }
+
 
   if (status === "failed" || status === "expired" || status === "refunded") {
     await supabaseAdmin
