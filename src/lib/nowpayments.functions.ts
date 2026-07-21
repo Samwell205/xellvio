@@ -153,6 +153,73 @@ export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
     }
   });
 
+/** Create a NOWPayments invoice to buy a pre-verified toll-free number.
+ *  Straight fee — never added to the credit balance. */
+export const initNowPaymentsTfnCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { coin?: string }) => {
+    if (d?.coin && !ALLOWED_COINS.includes(d.coin as any)) throw new Error("Unsupported coin");
+    return { coin: d?.coin };
+  })
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: setting } = await supabaseAdmin
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "tfn_buyer_price_usd")
+      .maybeSingle();
+    const priceUsd = Number((setting as any)?.value ?? 50) || 50;
+
+    const [{ count: verifierCount }, { count: poolCount }] = await Promise.all([
+      supabaseAdmin.from("verifier_tfns").select("id", { count: "exact", head: true })
+        .eq("status", "verified").is("sold_to_account_id", null),
+      supabaseAdmin.from("shared_tollfree_pool").select("phone_number", { count: "exact", head: true }),
+    ]);
+    if ((verifierCount ?? 0) + (poolCount ?? 0) <= 0) {
+      throw new Error("No verified toll-free numbers are available right now");
+    }
+
+    const { data: payment, error: payErr } = await supabaseAdmin
+      .from("payments")
+      .insert({
+        account_id: context.userId,
+        pack_id: null,
+        provider: "nowpayments",
+        currency: "USD",
+        amount: priceUsd,
+        credits: 0,
+        status: "pending",
+        metadata: { purpose: "tfn_purchase", coin: data.coin ?? null, price_usd: priceUsd },
+      })
+      .select("id")
+      .single();
+    if (payErr) throw new Error(payErr.message);
+
+    const reference = `npm_${payment.id.replace(/-/g, "")}`;
+    try {
+      const inv = await createInvoice({
+        priceUsd,
+        orderId: reference,
+        orderDescription: `Toll-free number purchase (${priceUsd} USD)`,
+        payCurrency: data.coin,
+      });
+      // Use TFN callback so the tenant lands back on the verification page.
+      await supabaseAdmin
+        .from("payments")
+        .update({
+          provider_reference: reference,
+          metadata: { purpose: "tfn_purchase", coin: data.coin ?? null, price_usd: priceUsd, np_invoice_id: inv.id },
+        })
+        .eq("id", payment.id);
+      return { invoice_url: inv.invoice_url, reference };
+    } catch (e: any) {
+      await supabaseAdmin.from("payments").update({ status: "failed", admin_note: e?.message ?? "init failed" }).eq("id", payment.id);
+      throw e;
+    }
+  });
+
+
 /**
  * Reconcile a single NOWPayments payment by our reference (npm_<uuid>).
  * Safe to call from client on redirect-back — queries NOWPayments API,
@@ -231,6 +298,51 @@ export async function reconcileOneNowPayment(payment: {
         return { status: "duplicate" as const };
       }
     }
+    const purpose = (payment.metadata as any)?.purpose;
+
+    if (purpose === "tfn_purchase") {
+      const { assignTfnAfterPayment } = await import("./tfn-marketplace.functions");
+      const assigned = await assignTfnAfterPayment(payment.account_id);
+      if (!assigned) {
+        await supabaseAdmin
+          .from("payments")
+          .update({
+            status: "refund_pending",
+            paid_at: new Date().toISOString(),
+            admin_note: "Paid but no toll-free number available — refund required",
+            metadata: meta,
+          })
+          .eq("id", payment.id);
+        try {
+          const { sendAdminSms } = await import("./admin-notify.server");
+          const { sendAdminPush } = await import("./admin-push.server");
+          await Promise.all([
+            sendAdminSms(`Xellvio: crypto TFN payment ${payment.id} received but no number available — refund.`),
+            sendAdminPush({
+              title: "TFN payment needs refund",
+              body: `Payment ${payment.id} — no number in pool`,
+              url: "/admin/billing",
+              tag: `tfn-refund-${payment.id}`,
+            }),
+          ]);
+        } catch (e) { console.error("[tfn-refund] notify failed", e); }
+        return { status: "refund_pending" as const };
+      }
+      const { data: claimed } = await supabaseAdmin
+        .from("payments")
+        .update({
+          status: "paid",
+          paid_at: new Date().toISOString(),
+          admin_note: `TFN assigned: ${assigned.phone_number}`,
+          metadata: meta,
+        })
+        .eq("id", payment.id)
+        .eq("status", "pending")
+        .select("id");
+      if (!claimed?.length) return { status: "already_paid" as const };
+      return { status: "credited" as const, amount: 0, tfn_assigned: assigned };
+    }
+
     // Atomic claim: only credit if still pending
     const { data: claimed, error: claimErr } = await supabaseAdmin
       .from("payments")
@@ -250,6 +362,7 @@ export async function reconcileOneNowPayment(payment: {
     notifyCryptoPaymentCredited(payment).catch((e: unknown) => console.error("[np-notify] failed", e));
     return { status: "credited" as const, amount: payment.credits };
   }
+
 
   if (status === "failed" || status === "expired" || status === "refunded") {
     await supabaseAdmin

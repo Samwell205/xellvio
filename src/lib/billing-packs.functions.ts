@@ -201,6 +201,93 @@ export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
 
 
 
+/** Start a Paystack checkout to buy a pre-verified toll-free number.
+ *  Charges a straight fee — the amount is NOT added to SMS credit balance.
+ *  On successful payment the tenant is auto-assigned a number from the shared pool. */
+export const initPaystackTfnCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: account } = await context.supabase
+      .from("accounts")
+      .select("contact_email,email")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const email = account?.contact_email || account?.email;
+    if (!email) throw new Error("Add a contact email to your account first");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Read the current toll-free buyer price ($50 by default).
+    const { data: setting } = await supabaseAdmin
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "tfn_buyer_price_usd")
+      .maybeSingle();
+    const priceUsd = Number((setting as any)?.value ?? 50) || 50;
+
+    // Refuse if no numbers are currently available.
+    const [{ count: verifierCount }, { count: poolCount }] = await Promise.all([
+      supabaseAdmin.from("verifier_tfns").select("id", { count: "exact", head: true })
+        .eq("status", "verified").is("sold_to_account_id", null),
+      supabaseAdmin.from("shared_tollfree_pool").select("phone_number", { count: "exact", head: true }),
+    ]);
+    if ((verifierCount ?? 0) + (poolCount ?? 0) <= 0) {
+      throw new Error("No verified toll-free numbers are available right now");
+    }
+
+    const { data: payment, error: payErr } = await supabaseAdmin
+      .from("payments")
+      .insert({
+        account_id: context.userId,
+        pack_id: null,
+        provider: "paystack",
+        currency: "USD",
+        amount: priceUsd,
+        credits: 0,
+        status: "pending",
+        metadata: { purpose: "tfn_purchase", price_usd: priceUsd },
+      })
+      .select("id")
+      .single();
+    if (payErr) throw new Error(payErr.message);
+
+    const { data: settings } = await supabaseAdmin
+      .from("billing_settings")
+      .select("usd_to_ngn_rate")
+      .maybeSingle();
+    const rate = Number((settings as any)?.usd_to_ngn_rate ?? 1600);
+    const chargeAmount = +(priceUsd * rate).toFixed(2);
+    const amountSubunit = Math.round(chargeAmount * 100);
+    const reference = `pmt_${payment.id.replace(/-/g, "")}`;
+    const callback_url = `${siteOrigin()}/app/toll-free-verification?ref=${reference}`;
+
+    const res = await fetch(`${PAYSTACK_API}/transaction/initialize`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${paystackKey()}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        amount: amountSubunit,
+        currency: "NGN",
+        reference,
+        callback_url,
+        metadata: {
+          account_id: context.userId,
+          payment_id: payment.id,
+          purpose: "tfn_purchase",
+          original_currency: "USD",
+          original_amount: priceUsd,
+        },
+      }),
+    });
+    const json: any = await res.json().catch(() => ({}));
+    if (!res.ok || !json?.status) {
+      await supabaseAdmin.from("payments").update({ status: "failed", admin_note: json?.message ?? "init failed" }).eq("id", payment.id);
+      throw new Error(json?.message || `Paystack init failed (${res.status})`);
+    }
+    await supabaseAdmin.from("payments").update({ provider_reference: reference }).eq("id", payment.id);
+    return { authorization_url: json.data.authorization_url as string, reference };
+  });
+
 /** Manually record a Payoneer payment (customer says they paid externally). */
 export const submitPayoneerPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -239,7 +326,7 @@ export const listMyPayments = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("payments")
-      .select("id,provider,currency,amount,credits,status,paid_at,created_at,admin_note,provider_reference,pack_id")
+      .select("id,provider,currency,amount,credits,status,paid_at,created_at,admin_note,provider_reference,pack_id,metadata")
       .eq("account_id", context.userId)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -265,20 +352,72 @@ export const verifyPaystack = createServerFn({ method: "POST" })
     if (meta.account_id !== context.userId) throw new Error("Reference does not belong to this account");
     if (status === "success") {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      await creditFromPayment(supabaseAdmin, data.reference);
+      const result = await creditFromPayment(supabaseAdmin, data.reference);
+      return { status, ...result };
     }
     return { status };
   });
 
-/** Idempotently mark a payment paid and call topup_account. Used by webhook + verify. */
+/**
+ * Idempotently mark a payment paid.
+ *
+ * - Regular top-ups: call `topup_account` to add credits.
+ * - TFN purchases (`metadata.purpose === 'tfn_purchase'`): auto-assign a
+ *   pre-verified toll-free number. NEVER touches the credit balance.
+ */
 export async function creditFromPayment(supabaseAdmin: any, reference: string) {
   const { data: payment } = await supabaseAdmin
     .from("payments")
-    .select("id,account_id,status,credits,currency,amount,pack_id")
+    .select("id,account_id,status,credits,currency,amount,pack_id,metadata")
     .eq("provider_reference", reference)
     .maybeSingle();
   if (!payment) return { ok: false, reason: "not_found" };
   if (payment.status === "paid") return { ok: true, already: true };
+
+  const purpose = (payment.metadata as any)?.purpose;
+
+  if (purpose === "tfn_purchase") {
+    const { assignTfnAfterPayment } = await import("./tfn-marketplace.functions");
+    const assigned = await assignTfnAfterPayment(payment.account_id);
+    if (!assigned) {
+      await supabaseAdmin
+        .from("payments")
+        .update({
+          status: "refund_pending",
+          paid_at: new Date().toISOString(),
+          admin_note: "Paid but no toll-free number available — refund required",
+        })
+        .eq("id", payment.id);
+      try {
+        const [{ sendAdminSms }, { sendAdminPush }] = await Promise.all([
+          import("./admin-notify.server"),
+          import("./admin-push.server"),
+        ]);
+        const line = `Xellvio: TFN payment ${reference} received but no number available — issue refund.`;
+        await Promise.all([
+          sendAdminSms(line),
+          sendAdminPush({
+            title: "TFN payment needs refund",
+            body: `Reference ${reference} — no number in pool`,
+            url: "/admin/billing",
+            tag: `tfn-refund-${reference}`,
+          }),
+        ]);
+      } catch (e) {
+        console.error("[tfn-refund] admin notify failed", e);
+      }
+      return { ok: false, reason: "no_number_available", refund_pending: true };
+    }
+    await supabaseAdmin
+      .from("payments")
+      .update({
+        status: "paid",
+        paid_at: new Date().toISOString(),
+        admin_note: `TFN assigned: ${assigned.phone_number}`,
+      })
+      .eq("id", payment.id);
+    return { ok: true, tfn_assigned: assigned };
+  }
 
   await supabaseAdmin.rpc("topup_account", {
     _account_id: payment.account_id,
@@ -291,3 +430,4 @@ export async function creditFromPayment(supabaseAdmin: any, reference: string) {
     .eq("id", payment.id);
   return { ok: true };
 }
+
