@@ -79,7 +79,16 @@ export const sendTestSms = createServerFn({ method: "POST" })
     const eligible = [...(allAssets ?? [])].filter(
       (a) => a.verification_status === "verified" && (a.telnyx_messaging_profile_id || a.phone_number),
     );
-    const countryEligible = countryCode ? eligible.filter((a) => a.country_code === countryCode) : eligible;
+    const countryEligible = countryCode
+      ? eligible.filter(
+          (a) =>
+            a.country_code === countryCode ||
+            // Toll-free numbers approved in US or CA work for both (NANP TFV).
+            ((countryCode === "US" || countryCode === "CA") &&
+              a.sender_kind === "toll_free" &&
+              (a.country_code === "US" || a.country_code === "CA")),
+        )
+      : eligible;
     const ranked = countryEligible.sort((x, y) => rank(y) - rank(x));
     const asset = ranked[0];
     if (!asset) {

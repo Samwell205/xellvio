@@ -174,6 +174,14 @@ function NewCampaignPage() {
       if (a.verification_status !== "verified") continue;
       if (!m[a.country_code]) m[a.country_code] = a;
     }
+    // Toll-free numbers approved in US or CA work for both (shared NANP TFV).
+    const nanpTollFree = senderList.find(
+      (a) => a.verification_status === "verified" && a.sender_kind === "toll_free" && (a.country_code === "US" || a.country_code === "CA"),
+    );
+    if (nanpTollFree) {
+      if (!m["US"]) m["US"] = nanpTollFree;
+      if (!m["CA"]) m["CA"] = nanpTollFree;
+    }
     return m;
   }, [senderList]);
 
