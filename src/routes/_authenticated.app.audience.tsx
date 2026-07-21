@@ -787,6 +787,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       setPreview({ fileName: file.name, size: file.size, headers, detected, rows: parsed.data, rowsPreview: parsed.data.slice(0, 5), parseErrors });
       setExcluded(new Set());
       setExcludedCols(new Set());
+      setMapping({ phone: detected.phone, first: detected.first, last: detected.last, country: detected.country });
       // Default to file name as new list name
       if (listMode === "none" && lists.length === 0) {
         setListMode("new");
