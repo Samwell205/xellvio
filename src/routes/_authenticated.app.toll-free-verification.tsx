@@ -376,7 +376,9 @@ function TollfreeVerificationPage() {
 
 function MarketplaceBuyCard() {
   const offerFn = useServerFn(getTfnMarketplaceOffer);
-  const buyFn = useServerFn(purchaseTfnFromMarketplace);
+  const initCardFn = useServerFn(initPaystackTfnCheckout);
+  const initCryptoFn = useServerFn(initNowPaymentsTfnCheckout);
+  const verifyFn = useServerFn(verifyPaystack);
   const qc = useQueryClient();
   const { data: offer, isLoading } = useQuery({
     queryKey: ["tfn-marketplace-offer"],
@@ -384,18 +386,49 @@ function MarketplaceBuyCard() {
     refetchInterval: 60_000,
   });
 
-  const buy = useMutation({
-    mutationFn: () => buyFn(),
-    onSuccess: (r: any) => {
-      toast.success(`Number purchased: ${r.phone_number}`);
-      qc.invalidateQueries({ queryKey: ["tfn-marketplace-offer"] });
-      qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
-    },
+  // Handle Paystack redirect-back (?ref=pmt_...)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (!ref || !ref.startsWith("pmt_")) return;
+    (async () => {
+      try {
+        const r: any = await verifyFn({ data: { reference: ref } });
+        if (r?.status === "success" && r?.tfn_assigned) {
+          toast.success(`Number assigned: ${r.tfn_assigned.phone_number}`);
+          qc.invalidateQueries({ queryKey: ["tfn-marketplace-offer"] });
+          qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
+          qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
+        } else if (r?.refund_pending) {
+          toast.error("Payment received but no number was available. Our team will refund you shortly.");
+        }
+      } catch (e: any) {
+        toast.error(e?.message ?? "Could not verify payment");
+      } finally {
+        // Clean the URL so refreshes don't re-run verify
+        const url = new URL(window.location.href);
+        url.searchParams.delete("ref");
+        window.history.replaceState({}, "", url.toString());
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const payCard = useMutation({
+    mutationFn: () => initCardFn(),
+    onSuccess: (r: any) => { window.location.href = r.authorization_url; },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const payCrypto = useMutation({
+    mutationFn: () => initCryptoFn({ data: {} }),
+    onSuccess: (r: any) => { window.location.href = r.invoice_url; },
     onError: (e: any) => toast.error(e.message),
   });
 
   if (isLoading || !offer) return null;
   const available = offer.available_count > 0;
+  const busy = payCard.isPending || payCrypto.isPending;
 
   return (
     <Card className="border-primary/40">
@@ -407,8 +440,8 @@ function MarketplaceBuyCard() {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Get an already-verified toll-free number from our marketplace and start
-          sending immediately. No forms, no carrier review, no waiting.
+          Get an already-verified toll-free number and start sending immediately. No forms,
+          no carrier review, no waiting. This is a one-time fee — it is <strong>not</strong> added to your SMS credit balance.
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <div className="text-sm">
@@ -419,15 +452,22 @@ function MarketplaceBuyCard() {
             <div className="text-muted-foreground text-xs">Available</div>
             <div className="font-semibold">{offer.available_count}</div>
           </div>
-          <Button disabled={!available || buy.isPending} onClick={() => buy.mutate()}>
-            {buy.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
-            {available ? "Buy pre-verified number" : "Sold out"}
-          </Button>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button disabled={!available || busy} onClick={() => payCard.mutate()}>
+              {payCard.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
+              {available ? "Pay with card" : "Sold out"}
+            </Button>
+            <Button variant="outline" disabled={!available || busy} onClick={() => payCrypto.mutate()}>
+              {payCrypto.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
+              Pay with crypto
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
   );
 }
+
 
 function PayFeeGate({ fee, balance }: { fee: number; balance: number }) {
   const qc = useQueryClient();
