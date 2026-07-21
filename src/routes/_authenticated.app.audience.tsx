@@ -739,6 +739,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
   const [busy, setBusy] = useState(false);
 
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [excluded, setExcluded] = useState<Set<number>>(new Set());
   const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number; errors: RowError[] } | null>(null);
   const [listMode, setListMode] = useState<"none" | "existing" | "new">("none");
   const [existingListId, setExistingListId] = useState<string>("");
@@ -753,6 +754,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
 
   function reset() {
     setPreview(null); setResult(null); setListMode("none"); setExistingListId(""); setNewListName("");
+    setExcluded(new Set());
     setProgress(null);
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -779,6 +781,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       };
       const parseErrors = (parsed.errors ?? []).slice(0, 10).map((e) => `Row ${e.row ?? "?"}: ${e.message}`);
       setPreview({ fileName: file.name, size: file.size, headers, detected, rows: parsed.data, rowsPreview: parsed.data.slice(0, 5), parseErrors });
+      setExcluded(new Set());
       // Default to file name as new list name
       if (listMode === "none" && lists.length === 0) {
         setListMode("new");
@@ -794,7 +797,8 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
     if (!preview.detected.phone) { toast.error("No phone column detected. Rename it to 'phone' and try again."); return; }
     setBusy(true);
     setResult(null);
-    setProgress({ phase: "validating", processed: 0, total: preview.rows.length, label: "Validating phone numbers…" });
+    const includedCount = preview.rows.length - excluded.size;
+    setProgress({ phase: "validating", processed: 0, total: includedCount, label: "Validating phone numbers…" });
     try {
       const { data: u } = await supabase.auth.getUser();
       const accountId = acctId ?? u.user!.id;
@@ -833,6 +837,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       }
 
       preview.rows.forEach((row, idx) => {
+        if (excluded.has(idx)) return;
         const rowNum = idx + 2;
         let raw = pick(row, preview.detected.phone);
         if (!raw) { errors.push({ row: rowNum, reason: "Missing phone", raw: JSON.stringify(row) }); return; }
@@ -975,17 +980,60 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                   </div>
                 )}
               </div>
-              <div className="overflow-x-auto border rounded-md">
+              <div className="flex items-center justify-between text-xs">
+                <div className="text-muted-foreground">
+                  <b className="text-foreground">{preview.rows.length - excluded.size}</b> of {preview.rows.length} rows selected for import
+                  {excluded.size > 0 && <> · <b className="text-foreground">{excluded.size}</b> excluded</>}
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" className="underline hover:text-foreground" onClick={() => setExcluded(new Set())}>Select all</button>
+                  <button type="button" className="underline hover:text-foreground"
+                    onClick={() => setExcluded(new Set(preview.rows.map((_, i) => i)))}>Deselect all</button>
+                </div>
+              </div>
+              <div className="overflow-auto border rounded-md max-h-72">
                 <Table>
-                  <TableHeader><TableRow>{preview.headers.map((h) => <TableHead key={h} className="text-xs">{h}</TableHead>)}</TableRow></TableHeader>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs w-10">
+                        <Checkbox
+                          checked={excluded.size === 0}
+                          onCheckedChange={(v) => {
+                            if (v) setExcluded(new Set());
+                            else setExcluded(new Set(preview.rows.map((_, i) => i)));
+                          }}
+                          aria-label="Toggle all rows"
+                        />
+                      </TableHead>
+                      {preview.headers.map((h) => <TableHead key={h} className="text-xs">{h}</TableHead>)}
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
-                    {preview.rowsPreview.map((r, i) => (
-                      <TableRow key={i}>{preview.headers.map((h) => <TableCell key={h} className="text-xs">{r[h] ?? ""}</TableCell>)}</TableRow>
-                    ))}
+                    {preview.rows.map((r, i) => {
+                      const isExcluded = excluded.has(i);
+                      return (
+                        <TableRow key={i} className={isExcluded ? "opacity-40" : ""}>
+                          <TableCell className="text-xs">
+                            <Checkbox
+                              checked={!isExcluded}
+                              onCheckedChange={(v) => {
+                                setExcluded((prev) => {
+                                  const next = new Set(prev);
+                                  if (v) next.delete(i);
+                                  else next.add(i);
+                                  return next;
+                                });
+                              }}
+                              aria-label={`Toggle row ${i + 1}`}
+                            />
+                          </TableCell>
+                          {preview.headers.map((h) => <TableCell key={h} className="text-xs">{r[h] ?? ""}</TableCell>)}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
-              <div className="text-xs text-muted-foreground">Showing first {preview.rowsPreview.length} of {preview.rows.length} rows.</div>
             </Card>
           )}
 
@@ -1034,8 +1082,8 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
         <DialogFooter>
           <Button variant="ghost" onClick={() => { setOpen(false); reset(); }}>Close</Button>
           {preview && !result && (
-            <Button onClick={runImport} disabled={busy || !preview.detected.phone}>
-              {busy ? "Importing…" : `Import ${preview.rows.length} rows`}
+            <Button onClick={runImport} disabled={busy || !preview.detected.phone || preview.rows.length - excluded.size === 0}>
+              {busy ? "Importing…" : `Import ${preview.rows.length - excluded.size} row${preview.rows.length - excluded.size === 1 ? "" : "s"}`}
             </Button>
           )}
           {result && <Button variant="outline" onClick={reset}>Import another file</Button>}
