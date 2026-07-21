@@ -740,6 +740,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
 
   const [preview, setPreview] = useState<Preview | null>(null);
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const [excludedCols, setExcludedCols] = useState<Set<string>>(new Set());
   const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number; errors: RowError[] } | null>(null);
   const [listMode, setListMode] = useState<"none" | "existing" | "new">("none");
   const [existingListId, setExistingListId] = useState<string>("");
@@ -755,6 +756,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
   function reset() {
     setPreview(null); setResult(null); setListMode("none"); setExistingListId(""); setNewListName("");
     setExcluded(new Set());
+    setExcludedCols(new Set());
     setProgress(null);
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -782,6 +784,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       const parseErrors = (parsed.errors ?? []).slice(0, 10).map((e) => `Row ${e.row ?? "?"}: ${e.message}`);
       setPreview({ fileName: file.name, size: file.size, headers, detected, rows: parsed.data, rowsPreview: parsed.data.slice(0, 5), parseErrors });
       setExcluded(new Set());
+      setExcludedCols(new Set());
       // Default to file name as new list name
       if (listMode === "none" && lists.length === 0) {
         setListMode("new");
@@ -794,7 +797,13 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
 
   async function runImport() {
     if (!preview) return;
-    if (!preview.detected.phone) { toast.error("No phone column detected. Rename it to 'phone' and try again."); return; }
+    const effDetected = {
+      phone: preview.detected.phone && !excludedCols.has(preview.detected.phone) ? preview.detected.phone : undefined,
+      first: preview.detected.first && !excludedCols.has(preview.detected.first) ? preview.detected.first : undefined,
+      last: preview.detected.last && !excludedCols.has(preview.detected.last) ? preview.detected.last : undefined,
+      country: preview.detected.country && !excludedCols.has(preview.detected.country) ? preview.detected.country : undefined,
+    };
+    if (!effDetected.phone) { toast.error("Phone column is required. Re-enable the phone column and try again."); return; }
     setBusy(true);
     setResult(null);
     const includedCount = preview.rows.length - excluded.size;
@@ -839,11 +848,11 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       preview.rows.forEach((row, idx) => {
         if (excluded.has(idx)) return;
         const rowNum = idx + 2;
-        let raw = pick(row, preview.detected.phone);
+        let raw = pick(row, effDetected.phone);
         if (!raw) { errors.push({ row: rowNum, reason: "Missing phone", raw: JSON.stringify(row) }); return; }
         raw = raw.replace(/[\s\-()\u00A0]/g, "");
         const digitsOnly = raw.replace(/[^\d]/g, "");
-        const rowCountry = pick(row, preview.detected.country).toUpperCase().slice(0, 2) as CountryCode | "";
+        const rowCountry = pick(row, effDetected.country).toUpperCase().slice(0, 2) as CountryCode | "";
 
         const candidates: { value: string; country?: CountryCode }[] = [];
         if (raw.startsWith("+")) candidates.push({ value: raw });
@@ -863,8 +872,8 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
         valid.push({
           account_id: accountId,
           phone_e164: e164,
-          first_name: pick(row, preview.detected.first) || null,
-          last_name: pick(row, preview.detected.last) || null,
+          first_name: pick(row, effDetected.first) || null,
+          last_name: pick(row, effDetected.last) || null,
           country_code: p.country ?? rowCountry ?? defaultCountry,
         });
       });
@@ -1005,7 +1014,32 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                           aria-label="Toggle all rows"
                         />
                       </TableHead>
-                      {preview.headers.map((h) => <TableHead key={h} className="text-xs">{h}</TableHead>)}
+                      {preview.headers.map((h) => {
+                        const colExcluded = excludedCols.has(h);
+                        const mapped = preview.detected.phone === h ? "phone"
+                          : preview.detected.first === h ? "first_name"
+                          : preview.detected.last === h ? "last_name"
+                          : preview.detected.country === h ? "country" : null;
+                        return (
+                          <TableHead key={h} className={"text-xs " + (colExcluded ? "opacity-40" : "")}>
+                            <div className="flex items-center gap-1.5">
+                              <Checkbox
+                                checked={!colExcluded}
+                                onCheckedChange={(v) => {
+                                  setExcludedCols((prev) => {
+                                    const next = new Set(prev);
+                                    if (v) next.delete(h); else next.add(h);
+                                    return next;
+                                  });
+                                }}
+                                aria-label={`Toggle column ${h}`}
+                              />
+                              <span>{h}</span>
+                              {mapped && <Badge variant="outline" className="text-[10px] px-1 py-0">{mapped}</Badge>}
+                            </div>
+                          </TableHead>
+                        );
+                      })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1027,7 +1061,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                               aria-label={`Toggle row ${i + 1}`}
                             />
                           </TableCell>
-                          {preview.headers.map((h) => <TableCell key={h} className="text-xs">{r[h] ?? ""}</TableCell>)}
+                          {preview.headers.map((h) => <TableCell key={h} className={"text-xs " + (excludedCols.has(h) ? "opacity-40 line-through" : "")}>{r[h] ?? ""}</TableCell>)}
                         </TableRow>
                       );
                     })}
@@ -1082,7 +1116,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
         <DialogFooter>
           <Button variant="ghost" onClick={() => { setOpen(false); reset(); }}>Close</Button>
           {preview && !result && (
-            <Button onClick={runImport} disabled={busy || !preview.detected.phone || preview.rows.length - excluded.size === 0}>
+            <Button onClick={runImport} disabled={busy || !preview.detected.phone || (preview.detected.phone && excludedCols.has(preview.detected.phone)) || preview.rows.length - excluded.size === 0}>
               {busy ? "Importing…" : `Import ${preview.rows.length - excluded.size} row${preview.rows.length - excluded.size === 1 ? "" : "s"}`}
             </Button>
           )}
