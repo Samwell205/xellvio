@@ -791,6 +791,11 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
       setExcluded(new Set());
       setExcludedCols(new Set());
       setMapping({ phone: detected.phone, first: detected.first, last: detected.last, country: detected.country });
+      // Auto-suggest custom_fields for any unmapped header: use header as the key
+      const auto: Record<string, string> = {};
+      const usedByBuiltin = new Set([detected.phone, detected.first, detected.last, detected.country].filter(Boolean) as string[]);
+      for (const h of headers) if (!usedByBuiltin.has(h)) auto[h] = h;
+      setCustomMap(auto);
       // Default to file name as new list name
       if (listMode === "none" && lists.length === 0) {
         setListMode("new");
