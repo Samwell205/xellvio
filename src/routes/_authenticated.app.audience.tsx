@@ -980,17 +980,60 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                   </div>
                 )}
               </div>
-              <div className="overflow-x-auto border rounded-md">
+              <div className="flex items-center justify-between text-xs">
+                <div className="text-muted-foreground">
+                  <b className="text-foreground">{preview.rows.length - excluded.size}</b> of {preview.rows.length} rows selected for import
+                  {excluded.size > 0 && <> · <b className="text-foreground">{excluded.size}</b> excluded</>}
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" className="underline hover:text-foreground" onClick={() => setExcluded(new Set())}>Select all</button>
+                  <button type="button" className="underline hover:text-foreground"
+                    onClick={() => setExcluded(new Set(preview.rows.map((_, i) => i)))}>Deselect all</button>
+                </div>
+              </div>
+              <div className="overflow-auto border rounded-md max-h-72">
                 <Table>
-                  <TableHeader><TableRow>{preview.headers.map((h) => <TableHead key={h} className="text-xs">{h}</TableHead>)}</TableRow></TableHeader>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs w-10">
+                        <Checkbox
+                          checked={excluded.size === 0}
+                          onCheckedChange={(v) => {
+                            if (v) setExcluded(new Set());
+                            else setExcluded(new Set(preview.rows.map((_, i) => i)));
+                          }}
+                          aria-label="Toggle all rows"
+                        />
+                      </TableHead>
+                      {preview.headers.map((h) => <TableHead key={h} className="text-xs">{h}</TableHead>)}
+                    </TableRow>
+                  </TableHeader>
                   <TableBody>
-                    {preview.rowsPreview.map((r, i) => (
-                      <TableRow key={i}>{preview.headers.map((h) => <TableCell key={h} className="text-xs">{r[h] ?? ""}</TableCell>)}</TableRow>
-                    ))}
+                    {preview.rows.map((r, i) => {
+                      const isExcluded = excluded.has(i);
+                      return (
+                        <TableRow key={i} className={isExcluded ? "opacity-40" : ""}>
+                          <TableCell className="text-xs">
+                            <Checkbox
+                              checked={!isExcluded}
+                              onCheckedChange={(v) => {
+                                setExcluded((prev) => {
+                                  const next = new Set(prev);
+                                  if (v) next.delete(i);
+                                  else next.add(i);
+                                  return next;
+                                });
+                              }}
+                              aria-label={`Toggle row ${i + 1}`}
+                            />
+                          </TableCell>
+                          {preview.headers.map((h) => <TableCell key={h} className="text-xs">{r[h] ?? ""}</TableCell>)}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
-              <div className="text-xs text-muted-foreground">Showing first {preview.rowsPreview.length} of {preview.rows.length} rows.</div>
             </Card>
           )}
 
