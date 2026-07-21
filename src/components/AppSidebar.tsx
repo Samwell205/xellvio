@@ -57,6 +57,21 @@ export function AppSidebar() {
   };
 
   const visibleItems = items.filter((it) => canSee(it.perm));
+  const canInbox = canSee("inbox");
+  const acctKey = session?.acting?.accountId ?? session?.actingAccountId ?? "self";
+  const unreadFn = useServerFn(getInboxUnreadCount);
+  const inboxQ = useQuery({
+    queryKey: ["inbox-unread", acctKey],
+    queryFn: () => {
+      const sinceIso = typeof window !== "undefined"
+        ? localStorage.getItem(`inbox_last_seen_${acctKey}`) ?? undefined
+        : undefined;
+      return unreadFn({ data: { sinceIso } });
+    },
+    enabled: canInbox,
+    refetchInterval: 20_000,
+  });
+  const unread = pathname.startsWith("/app/inbox") ? 0 : (inboxQ.data?.count ?? 0);
   const visibleSettings = settingsChildren.filter((it) => canSee(it.perm));
   const settingsActive = visibleSettings.some((c) => isActive(c.url, c.exact));
   const [settingsOpen, setSettingsOpen] = useState(settingsActive);
