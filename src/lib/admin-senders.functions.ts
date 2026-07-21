@@ -153,7 +153,7 @@ function fanoutCountries(country: string): string[] {
   return NA.has(cc) ? ["US", "CA", "PR"] : [cc];
 }
 
-async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): Promise<{ synced: number; error: string | null }> {
+async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): Promise<{ synced: number; error: string | null; added: string[] }> {
   try {
     const { listAccountTollfreeNumbers, listVerifiedTollfreeNumbers } = await import("@/lib/telnyx.server");
     const [numbers, verified] = await Promise.all([
@@ -171,6 +171,14 @@ async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): 
         created_by: createdBy,
       }));
     const keepPhones = rows.map((r) => r.phone_number);
+
+    // Snapshot existing pool so we can detect newly-added verified TFNs.
+    const { data: existingPool } = await supabaseAdmin
+      .from("shared_tollfree_pool")
+      .select("phone_number");
+    const existingSet = new Set<string>((existingPool ?? []).map((r: any) => r.phone_number));
+    const added = keepPhones.filter((p) => !existingSet.has(p));
+
     const staleReason = "This shared toll-free number is not verified in Telnyx Toll-Free Verification, so it cannot be used for US/CA SMS.";
     // Remove pool rows and disable tenant attachments that are no longer verified on Telnyx.
     if (keepPhones.length) {
@@ -193,9 +201,33 @@ async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): 
     if (rows.length) {
       await supabaseAdmin.from("shared_tollfree_pool").upsert(rows, { onConflict: "phone_number" });
     }
-    return { synced: rows.length, error: null };
+
+    // Notify admins when a newly-verified toll-free number lands in the pool.
+    if (added.length) {
+      try {
+        const [{ sendAdminSms }, { sendAdminPush }] = await Promise.all([
+          import("./admin-notify.server"),
+          import("./admin-push.server"),
+        ]);
+        const list = added.join(", ");
+        const msg = `Xellvio: ${added.length} new verified toll-free number${added.length > 1 ? "s" : ""} in the shared pool — ${list}`;
+        await Promise.all([
+          sendAdminSms(msg),
+          sendAdminPush({
+            title: "New verified toll-free number",
+            body: `${added.length} number${added.length > 1 ? "s" : ""} added to the shared pool: ${list}`,
+            url: "/admin/senders",
+            tag: "tfn-pool-new",
+          }),
+        ]);
+      } catch (e) {
+        console.error("[shared-pool sync] admin notify failed", e);
+      }
+    }
+
+    return { synced: rows.length, error: null, added };
   } catch (e: any) {
-    return { synced: 0, error: e?.message ?? "Telnyx sync failed" };
+    return { synced: 0, error: e?.message ?? "Telnyx sync failed", added: [] };
   }
 }
 
