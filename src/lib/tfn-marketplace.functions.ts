@@ -67,7 +67,11 @@ export const getTfnMarketplaceOffer = createServerFn({ method: "GET" })
   });
 
 
-async function claimFromPool(userId: string, priceUsd: number) {
+async function claimFromPool(
+  userId: string,
+  priceUsd: number,
+  opts: { skipDebit?: boolean } = {},
+) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const available = await listAvailablePoolNumbers();
   if (available.length === 0) return null;
@@ -117,12 +121,17 @@ async function claimFromPool(userId: string, priceUsd: number) {
     throw new Error(insErr.message);
   }
 
-  await supabaseAdmin.rpc("debit_account", {
-    _account_id: userId,
-    _amount: priceUsd,
-    _campaign_id: undefined as any,
-    _description: `Purchased verified toll-free number ${pick.phone_number}`,
-  });
+  // Only debit credit balance when the caller is settling via credits.
+  // When the tenant paid a straight fee via Paystack/NOWPayments, skipDebit
+  // is set — the fee never enters the credit ledger.
+  if (!opts.skipDebit) {
+    await supabaseAdmin.rpc("debit_account", {
+      _account_id: userId,
+      _amount: priceUsd,
+      _campaign_id: null as any,
+      _description: `Purchased verified toll-free number ${pick.phone_number}`,
+    });
+  }
 
   // Clear tollfree setup fee since they got a pre-verified number
   await supabaseAdmin.from("accounts").update({
@@ -140,7 +149,8 @@ async function claimFromPool(userId: string, priceUsd: number) {
       import("./admin-notify.server"),
       import("./admin-push.server"),
     ]);
-    const msg = `Xellvio: ${pick.phone_number} auto-assigned to ${who} for $${priceUsd.toFixed(2)}.`;
+    const paidVia = opts.skipDebit ? "direct fee" : "credit balance";
+    const msg = `Xellvio: ${pick.phone_number} auto-assigned to ${who} for $${priceUsd.toFixed(2)} (${paidVia}).`;
     await Promise.all([
       sendAdminSms(msg),
       sendAdminPush({
@@ -156,6 +166,18 @@ async function claimFromPool(userId: string, priceUsd: number) {
 
   return { phone_number: pick.phone_number, country: (pick.country_code || "US").toUpperCase() };
 }
+
+/**
+ * Assign a pre-verified toll-free number to a user after they've paid a
+ * straight fee (Paystack card / NOWPayments crypto). Does NOT touch the
+ * credit balance. Returns null when no number is available so the caller
+ * can flag the payment for refund.
+ */
+export async function assignTfnAfterPayment(userId: string): Promise<{ phone_number: string; country: string } | null> {
+  const { buyerPriceUsd } = await readSettings();
+  return claimFromPool(userId, buyerPriceUsd, { skipDebit: true });
+}
+
 
 async function buyImpl(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
