@@ -1014,7 +1014,32 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                           aria-label="Toggle all rows"
                         />
                       </TableHead>
-                      {preview.headers.map((h) => <TableHead key={h} className="text-xs">{h}</TableHead>)}
+                      {preview.headers.map((h) => {
+                        const colExcluded = excludedCols.has(h);
+                        const mapped = preview.detected.phone === h ? "phone"
+                          : preview.detected.first === h ? "first_name"
+                          : preview.detected.last === h ? "last_name"
+                          : preview.detected.country === h ? "country" : null;
+                        return (
+                          <TableHead key={h} className={"text-xs " + (colExcluded ? "opacity-40" : "")}>
+                            <div className="flex items-center gap-1.5">
+                              <Checkbox
+                                checked={!colExcluded}
+                                onCheckedChange={(v) => {
+                                  setExcludedCols((prev) => {
+                                    const next = new Set(prev);
+                                    if (v) next.delete(h); else next.add(h);
+                                    return next;
+                                  });
+                                }}
+                                aria-label={`Toggle column ${h}`}
+                              />
+                              <span>{h}</span>
+                              {mapped && <Badge variant="outline" className="text-[10px] px-1 py-0">{mapped}</Badge>}
+                            </div>
+                          </TableHead>
+                        );
+                      })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
