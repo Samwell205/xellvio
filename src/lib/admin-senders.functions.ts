@@ -153,16 +153,59 @@ function fanoutCountries(country: string): string[] {
   return NA.has(cc) ? ["US", "CA", "PR"] : [cc];
 }
 
+async function ensureSharedPoolProfileId(supabaseAdmin: any): Promise<string | null> {
+  // Reuse a messaging profile already used by an existing pool row when possible.
+  const { data: existing } = await supabaseAdmin
+    .from("shared_tollfree_pool")
+    .select("telnyx_messaging_profile_id")
+    .not("telnyx_messaging_profile_id", "is", null)
+    .limit(1)
+    .maybeSingle();
+  if (existing?.telnyx_messaging_profile_id) return existing.telnyx_messaging_profile_id;
+  try {
+    const { createMessagingProfile } = await import("@/lib/telnyx.server");
+    const profile = await createMessagingProfile("Xellvio · Shared Toll-Free Pool");
+    return profile?.id ?? null;
+  } catch (e) {
+    console.error("[shared-pool sync] could not create shared messaging profile", e);
+    return null;
+  }
+}
+
 async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): Promise<{ synced: number; error: string | null; added: string[] }> {
   try {
-    const { listAccountTollfreeNumbers, listVerifiedTollfreeNumbers } = await import("@/lib/telnyx.server");
+    const { listAccountTollfreeNumbers, listVerifiedTollfreeNumbers, reassignNumberToProfile, safeTelnyxCall } = await import("@/lib/telnyx.server");
     const [numbers, verified] = await Promise.all([
       listAccountTollfreeNumbers(),
       listVerifiedTollfreeNumbers(),
     ]);
-    const rows = numbers
-      .filter((n) => !!n.messaging_profile_id && verified.has(n.phone_number))
+
+    // Auto-attach a shared messaging profile to verified numbers that don't have one,
+    // so newly-verified TFNs immediately show up in the pool.
+    const verifiedOwned = numbers.filter((n) => verified.has(n.phone_number));
+    const missingProfile = verifiedOwned.filter((n) => !n.messaging_profile_id);
+    if (missingProfile.length) {
+      const sharedProfileId = await ensureSharedPoolProfileId(supabaseAdmin);
+      if (sharedProfileId) {
+        for (const n of missingProfile) {
+          try {
+            await safeTelnyxCall(
+              "reassign_to_shared_pool",
+              { messagingProfileId: sharedProfileId },
+              () => reassignNumberToProfile({ phoneNumberId: n.id, messagingProfileId: sharedProfileId }),
+            );
+            n.messaging_profile_id = sharedProfileId;
+          } catch (e) {
+            console.error("[shared-pool sync] auto-reassign failed", n.phone_number, e);
+          }
+        }
+      }
+    }
+
+    const rows = verifiedOwned
+      .filter((n) => !!n.messaging_profile_id)
       .map((n) => ({
+
         phone_number: n.phone_number,
         country_code: (n.country_code ?? "US").toUpperCase(),
         telnyx_phone_number_id: n.id,
