@@ -203,30 +203,51 @@ function InboxPage() {
                 No conversations yet. Replies from your SMS campaigns will appear here.
               </div>
             ) : (
-              filtered.map((c) => (
-                <button
-                  key={c.phone}
-                  onClick={() => setSelected(c.phone)}
-                  className={`w-full text-left px-3 py-2.5 border-b hover:bg-muted/50 transition ${
-                    selected === c.phone ? "bg-muted" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-sm">{c.phone}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTime(c.lastAt)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    {c.lastDirection === "inbound" && (
-                      <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                        reply
-                      </Badge>
+              filtered.map((c) => {
+                const unread = isUnread(c.phone, c.lastAt, c.lastDirection);
+                const isActive = selected === c.phone;
+                return (
+                  <button
+                    key={c.phone}
+                    onClick={() => {
+                      setSelected(c.phone);
+                      markRead(c.phone, c.lastAt);
+                    }}
+                    className={`w-full text-left px-3 py-2.5 border-b transition relative ${
+                      isActive
+                        ? "bg-muted"
+                        : unread
+                          ? "bg-primary/5 hover:bg-primary/10"
+                          : "hover:bg-muted/50"
+                    }`}
+                  >
+                    {unread && !isActive && (
+                      <span className="absolute left-1 top-1/2 -translate-y-1/2 size-2 rounded-full bg-primary" />
                     )}
-                    <p className="text-xs text-muted-foreground truncate">{c.lastBody}</p>
-                  </div>
-                </button>
-              ))
+                    <div className={`flex items-center justify-between gap-2 ${unread ? "pl-3" : ""}`}>
+                      <span className={`text-sm ${unread ? "font-bold text-foreground" : "font-medium"}`}>
+                        {c.phone}
+                      </span>
+                      <span className={`text-xs ${unread ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                        {formatTime(c.lastAt)}
+                      </span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 mt-0.5 ${unread ? "pl-3" : ""}`}>
+                      {c.lastDirection === "inbound" && (
+                        <Badge
+                          variant={unread ? "default" : "secondary"}
+                          className="text-[10px] h-4 px-1"
+                        >
+                          {unread ? "new" : "reply"}
+                        </Badge>
+                      )}
+                      <p className={`text-xs truncate ${unread ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                        {c.lastBody}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
             )}
           </div>
         </Card>
