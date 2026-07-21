@@ -58,7 +58,7 @@ export function AppSidebar() {
 
   const visibleItems = items.filter((it) => canSee(it.perm));
   const canInbox = canSee("inbox");
-  const acctKey = session?.acting?.accountId ?? session?.actingAccountId ?? "self";
+  const acctKey = (session as any)?.accountId ?? (session as any)?.workspaceOwnerId ?? "self";
   const unreadFn = useServerFn(getInboxUnreadCount);
   const inboxQ = useQuery({
     queryKey: ["inbox-unread", acctKey],
