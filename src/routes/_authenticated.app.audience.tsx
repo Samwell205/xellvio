@@ -739,6 +739,7 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
   const [busy, setBusy] = useState(false);
 
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [excluded, setExcluded] = useState<Set<number>>(new Set());
   const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number; errors: RowError[] } | null>(null);
   const [listMode, setListMode] = useState<"none" | "existing" | "new">("none");
   const [existingListId, setExistingListId] = useState<string>("");
