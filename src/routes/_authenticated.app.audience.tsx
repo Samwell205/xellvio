@@ -1046,13 +1046,30 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                       </TableHead>
                       {preview.headers.map((h) => {
                         const colExcluded = excludedCols.has(h);
-                        const mapped = mapping.phone === h ? "phone"
+                        const builtin = mapping.phone === h ? "phone"
                           : mapping.first === h ? "first_name"
                           : mapping.last === h ? "last_name"
                           : mapping.country === h ? "country" : null;
+                        const customKey = customMap[h];
+                        const currentValue = builtin ?? (customKey ? "__custom" : "__none");
+                        function slugify(s: string) {
+                          return s.trim().toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "field";
+                        }
+                        function applyBuiltin(v: string) {
+                          setMapping((m) => {
+                            const next = { ...m };
+                            (["phone","first","last","country"] as const).forEach((k) => { if (next[k] === h) delete next[k]; });
+                            if (v === "phone") next.phone = h;
+                            else if (v === "first_name") next.first = h;
+                            else if (v === "last_name") next.last = h;
+                            else if (v === "country") next.country = h;
+                            return next;
+                          });
+                          setCustomMap((cm) => { const n = { ...cm }; delete n[h]; return n; });
+                        }
                         return (
                           <TableHead key={h} className={"text-xs align-top " + (colExcluded ? "opacity-40" : "")}>
-                            <div className="flex flex-col gap-1 min-w-[140px]">
+                            <div className="flex flex-col gap-1 min-w-[160px]">
                               <div className="flex items-center gap-1.5">
                                 <Checkbox
                                   checked={!colExcluded}
@@ -1068,18 +1085,20 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                                 <span className="truncate" title={h}>{h}</span>
                               </div>
                               <Select
-                                value={mapped ?? "__none"}
+                                value={currentValue}
                                 onValueChange={(v) => {
-                                  setMapping((m) => {
-                                    const next = { ...m };
-                                    // clear any field currently pointing at this column
-                                    (["phone","first","last","country"] as const).forEach((k) => { if (next[k] === h) delete next[k]; });
-                                    if (v === "phone") next.phone = h;
-                                    else if (v === "first_name") next.first = h;
-                                    else if (v === "last_name") next.last = h;
-                                    else if (v === "country") next.country = h;
-                                    return next;
-                                  });
+                                  if (v === "__none") {
+                                    applyBuiltin("__none");
+                                    setCustomMap((cm) => { const n = { ...cm }; delete n[h]; return n; });
+                                  } else if (v === "__custom") {
+                                    const name = window.prompt(`Custom field name for column "${h}"\n(use in messages as {{name}})`, customKey ?? slugify(h));
+                                    if (!name) return;
+                                    const key = slugify(name);
+                                    applyBuiltin("__none");
+                                    setCustomMap((cm) => ({ ...cm, [h]: key }));
+                                  } else {
+                                    applyBuiltin(v);
+                                  }
                                 }}
                               >
                                 <SelectTrigger className="h-7 text-[11px]"><SelectValue placeholder="— skip —" /></SelectTrigger>
@@ -1089,8 +1108,14 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                                   <SelectItem value="first_name" className="text-xs">First name</SelectItem>
                                   <SelectItem value="last_name" className="text-xs">Last name</SelectItem>
                                   <SelectItem value="country" className="text-xs">Country (ISO-2)</SelectItem>
+                                  <SelectItem value="__custom" className="text-xs">Custom field…</SelectItem>
                                 </SelectContent>
                               </Select>
+                              {customKey && !builtin && (
+                                <div className="text-[10px] text-muted-foreground truncate" title={`{{${customKey}}}`}>
+                                  → <code>{`{{${customKey}}}`}</code>
+                                </div>
+                              )}
                             </div>
                           </TableHead>
                         );
