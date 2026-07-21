@@ -17,6 +17,7 @@ import { Route as SmsTermsRouteImport } from './routes/sms-terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SellersRouteImport } from './routes/sellers'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ProhibitedContentRouteImport } from './routes/prohibited-content'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
@@ -145,6 +146,11 @@ const SellersRoute = SellersRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProhibitedContentRoute = ProhibitedContentRouteImport.update({
+  id: '/prohibited-content',
+  path: '/prohibited-content',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -653,6 +659,7 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/prohibited-content': typeof ProhibitedContentRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -749,6 +756,7 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/prohibited-content': typeof ProhibitedContentRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -845,6 +853,7 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/prohibited-content': typeof ProhibitedContentRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -944,6 +953,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/pricing'
     | '/privacy'
+    | '/prohibited-content'
     | '/reset-password'
     | '/sellers'
     | '/sitemap.xml'
@@ -1040,6 +1050,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/pricing'
     | '/privacy'
+    | '/prohibited-content'
     | '/reset-password'
     | '/sellers'
     | '/sitemap.xml'
@@ -1135,6 +1146,7 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/pricing'
     | '/privacy'
+    | '/prohibited-content'
     | '/reset-password'
     | '/sellers'
     | '/sitemap.xml'
@@ -1235,6 +1247,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  ProhibitedContentRoute: typeof ProhibitedContentRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SellersRoute: typeof SellersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -1322,6 +1335,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prohibited-content': {
+      id: '/prohibited-content'
+      path: '/prohibited-content'
+      fullPath: '/prohibited-content'
+      preLoaderRoute: typeof ProhibitedContentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -2181,6 +2201,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  ProhibitedContentRoute: ProhibitedContentRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SellersRoute: SellersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
@@ -2214,13 +2235,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

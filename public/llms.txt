@@ -18,6 +18,7 @@
 - [Privacy Policy](/privacy)
 - [Acceptable Use Policy](/aup)
 - [Anti-Spam Policy](/anti-spam)
+- [Prohibited Content](/prohibited-content)
 - [SMS Terms](/sms-terms)
 - [Cookies](/cookies)
 - [DPA](/dpa)
