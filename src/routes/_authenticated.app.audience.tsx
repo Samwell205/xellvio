@@ -1011,13 +1011,6 @@ function ImportCsvDialog({ lists, onDone, onDownloadTemplate }: { lists: Contact
                   </div>
                 )}
               </div>
-                {preview.parseErrors.length > 0 && (
-                  <div className="text-warning">
-                    <div className="font-medium">Parser warnings:</div>
-                    <ul className="list-disc ml-5">{preview.parseErrors.map((m, i) => <li key={i}>{m}</li>)}</ul>
-                  </div>
-                )}
-              </div>
               <div className="flex items-center justify-between text-xs">
                 <div className="text-muted-foreground">
                   <b className="text-foreground">{preview.rows.length - excluded.size}</b> of {preview.rows.length} rows selected for import
