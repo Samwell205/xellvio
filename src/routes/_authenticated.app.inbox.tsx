@@ -136,6 +136,11 @@ function InboxPage() {
       <div>
         <h1 className="text-2xl font-semibold flex items-center gap-2">
           <Inbox className="size-6" /> Inbox
+          {newRepliesSinceOpen > 0 && (
+            <Badge className="ml-1 animate-pulse">
+              {newRepliesSinceOpen} new {newRepliesSinceOpen === 1 ? "reply" : "replies"}
+            </Badge>
+          )}
         </h1>
         <p className="text-sm text-muted-foreground">
           Two-way SMS conversations. Replies from contacts land here in real time.
