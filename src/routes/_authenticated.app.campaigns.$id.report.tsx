@@ -120,10 +120,14 @@ function ReportPage() {
       <div className="flex items-center gap-3">
         <Link to="/app/campaigns"><Button variant="ghost" size="sm"><ArrowLeft className="size-4 mr-1" />Back</Button></Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{r.campaign?.name ?? "Campaign"}</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            {r.totals.is_mms && <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200 text-xs">MMS</Badge>}
+            {r.campaign?.name ?? "Campaign"}
+          </h1>
           <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
             <Badge variant="outline">{r.campaign?.status}</Badge>
             <span>Sent {r.campaign ? new Date(r.campaign.created_at).toLocaleString() : ""}</span>
+            {r.totals.is_mms && <span className="text-fuchsia-700">· MMS pricing (image attached, ~3× SMS rate)</span>}
           </div>
         </div>
         <div className="flex gap-2">
