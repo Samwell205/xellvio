@@ -2710,10 +2710,12 @@ export type Database = {
         Args: never
         Returns: {
           campaign_id: string
+          carrier_cost: number
           cost: number
           delivered: number
           failed: number
           queued: number
+          segments: number
           sent: number
           total: number
           unconfirmed: number
