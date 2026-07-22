@@ -144,3 +144,121 @@ export const signedProofUrl = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { url: signed.signedUrl };
   });
+
+export const adminListTenantBilling = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: accounts, error: aErr } = await supabaseAdmin
+      .from("accounts")
+      .select("id,legal_business_name,contact_email,email,credit_balance,created_at")
+      .order("created_at", { ascending: false });
+    if (aErr) throw new Error(aErr.message);
+
+    const ids = (accounts ?? []).map((a) => a.id);
+    if (ids.length === 0) return [];
+
+    // Aggregate payments (paid only, USD)
+    const paidByAcct = new Map<string, { paid_usd: number; payments_count: number }>();
+    // pull in pages to avoid 1k limit
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data: pays, error } = await supabaseAdmin
+        .from("payments")
+        .select("account_id,credits,status")
+        .eq("status", "paid")
+        .range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      if (!pays || pays.length === 0) break;
+      for (const p of pays) {
+        const cur = paidByAcct.get(p.account_id) ?? { paid_usd: 0, payments_count: 0 };
+        cur.paid_usd += Number(p.credits ?? 0);
+        cur.payments_count += 1;
+        paidByAcct.set(p.account_id, cur);
+      }
+      if (pays.length < pageSize) break;
+      from += pageSize;
+    }
+
+    // Aggregate spend from credit_transactions
+    const spendByAcct = new Map<string, { spent: number; refunded: number }>();
+    from = 0;
+    while (true) {
+      const { data: txs, error } = await supabaseAdmin
+        .from("credit_transactions")
+        .select("account_id,type,amount")
+        .in("type", ["debit", "refund"])
+        .range(from, from + pageSize - 1);
+      if (error) throw new Error(error.message);
+      if (!txs || txs.length === 0) break;
+      for (const t of txs) {
+        const cur = spendByAcct.get(t.account_id) ?? { spent: 0, refunded: 0 };
+        if (t.type === "debit") cur.spent += Number(t.amount ?? 0);
+        else if (t.type === "refund") cur.refunded += Number(t.amount ?? 0);
+        spendByAcct.set(t.account_id, cur);
+      }
+      if (txs.length < pageSize) break;
+      from += pageSize;
+    }
+
+    return (accounts ?? []).map((a) => {
+      const p = paidByAcct.get(a.id) ?? { paid_usd: 0, payments_count: 0 };
+      const s = spendByAcct.get(a.id) ?? { spent: 0, refunded: 0 };
+      return {
+        id: a.id,
+        name: a.legal_business_name ?? a.contact_email ?? a.email ?? "—",
+        email: a.contact_email ?? a.email ?? "",
+        balance: Number(a.credit_balance ?? 0),
+        paid_usd: p.paid_usd,
+        payments_count: p.payments_count,
+        spent: s.spent,
+        refunded: s.refunded,
+        created_at: a.created_at,
+      };
+    });
+  });
+
+export const adminGetTenantBilling = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { account_id: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data: account, error: aErr } = await supabaseAdmin
+      .from("accounts")
+      .select("id,legal_business_name,contact_email,email,credit_balance,created_at")
+      .eq("id", data.account_id)
+      .maybeSingle();
+    if (aErr) throw new Error(aErr.message);
+    if (!account) throw new Error("Tenant not found");
+
+    const { data: payments, error: pErr } = await supabaseAdmin
+      .from("payments")
+      .select("id,provider,currency,amount,credits,status,provider_reference,customer_note,admin_note,created_at,paid_at")
+      .eq("account_id", data.account_id)
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (pErr) throw new Error(pErr.message);
+
+    const { data: txs, error: tErr } = await supabaseAdmin
+      .from("credit_transactions")
+      .select("id,type,amount,balance_after,description,campaign_id,created_at")
+      .eq("account_id", data.account_id)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (tErr) throw new Error(tErr.message);
+
+    const totals = { paid_usd: 0, spent: 0, refunded: 0, topups: 0 };
+    for (const p of payments ?? []) if (p.status === "paid") totals.paid_usd += Number(p.credits ?? 0);
+    for (const t of txs ?? []) {
+      if (t.type === "debit") totals.spent += Number(t.amount ?? 0);
+      else if (t.type === "refund") totals.refunded += Number(t.amount ?? 0);
+      else if (t.type === "topup") totals.topups += Number(t.amount ?? 0);
+    }
+
+    return { account, payments: payments ?? [], transactions: txs ?? [], totals };
+  });
