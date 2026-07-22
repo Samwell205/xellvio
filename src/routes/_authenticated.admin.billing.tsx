@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Wallet, Plus, Trash2, ExternalLink } from "lucide-react";
 import { formatMoney, formatUSD } from "@/lib/money";
-import { adminListPacks, upsertCreditPack, deleteCreditPack, updateBillingSettings, adminListPayments, approvePayment, rejectPayment, signedProofUrl } from "@/lib/billing-admin.functions";
+import { adminListPacks, upsertCreditPack, deleteCreditPack, updateBillingSettings, adminListPayments, approvePayment, rejectPayment, signedProofUrl, adminListTenantBilling, adminGetTenantBilling } from "@/lib/billing-admin.functions";
 import { getBillingSettings } from "@/lib/billing-packs.functions";
 import { simulateNowPaymentsIpn } from "@/lib/nowpayments-admin.functions";
 import { BalanceCard } from "@/components/BalanceCard";
