@@ -44,21 +44,56 @@ function AdminCampaignReportPage() {
   const c = r.campaign!;
   const t = r.totals;
 
+  function exportCsv() {
+    downloadCsv(
+      `admin-${c.name.replace(/[^a-z0-9]+/gi, "_")}-breakdown.csv`,
+      ["country", "recipients", "segments", "delivered", "not_delivered", "failed", "tenant_spend_usd", "telnyx_cost_usd", "margin_usd"],
+      r.byCountry.map((row) => [row.country_code, row.recipients, row.segments, row.delivered, row.unconfirmed, row.failed, row.cost, row.carrier_cost, row.margin]),
+    );
+  }
+  function exportPdf() {
+    downloadPdf({
+      filename: `admin-${c.name.replace(/[^a-z0-9]+/gi, "_")}-report.pdf`,
+      title: c.name,
+      subtitle: `Tenant: ${r.account.label} • ${new Date(c.created_at).toLocaleString()}`,
+      sections: [
+        { type: "kv", title: "Financial breakdown", items: [
+          ["Recipients", t.total.toLocaleString()],
+          ["Segments", t.segments.toLocaleString()],
+          ["Delivered", `${t.delivered.toLocaleString()} (${t.delivery_rate}%)`],
+          ["Not delivered", t.delivery_unconfirmed.toLocaleString()],
+          ["Failed", t.failed.toLocaleString()],
+          ["Tenant spend", formatUSD(t.cost)],
+          ["Telnyx (MDR) cost", formatUSD(t.carrier_cost)],
+          ["Profit / margin", formatUSD(t.margin)],
+        ] },
+        { type: "table", title: "By country", head: ["Country", "Recipients", "Segments", "Delivered", "Failed", "Tenant $", "Telnyx $", "Margin"],
+          rows: r.byCountry.map((row) => [row.country_code, row.recipients, row.segments, row.delivered, row.failed, formatUSD(row.cost), formatUSD(row.carrier_cost), formatUSD(row.margin)]) },
+      ],
+    });
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <Link to="/admin/campaigns" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:underline">
-          <ArrowLeft className="size-3" /> All campaigns
-        </Link>
-        <h1 className="text-2xl font-extrabold mt-2">{c.name}</h1>
-        <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center mt-1">
-          <span>Tenant: <span className="font-medium text-foreground">{r.account.label}</span></span>
-          <span>•</span>
-          <span>{r.account.email}</span>
-          <span>•</span>
-          <Badge variant="outline">{c.status}</Badge>
-          <span>•</span>
-          <span>{new Date(c.created_at).toLocaleString()}</span>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <Link to="/admin/campaigns" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:underline">
+            <ArrowLeft className="size-3" /> All campaigns
+          </Link>
+          <h1 className="text-2xl font-extrabold mt-2">{c.name}</h1>
+          <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center mt-1">
+            <span>Tenant: <span className="font-medium text-foreground">{r.account.label}</span></span>
+            <span>•</span>
+            <span>{r.account.email}</span>
+            <span>•</span>
+            <Badge variant="outline">{c.status}</Badge>
+            <span>•</span>
+            <span>{new Date(c.created_at).toLocaleString()}</span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={exportCsv}><FileDown className="size-4 mr-1" />CSV</Button>
+          <Button variant="outline" size="sm" onClick={exportPdf}><Download className="size-4 mr-1" />PDF</Button>
         </div>
       </div>
 
