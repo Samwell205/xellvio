@@ -85,7 +85,10 @@ function AdminCampaignsPage() {
                       <div className="text-xs text-muted-foreground">{c.account_email}</div>
                     </td>
                     <td className="p-3 max-w-[280px]">
-                      <div className="font-medium truncate">{c.name}</div>
+                      <div className="font-medium truncate flex items-center gap-1.5">
+                        {c.is_mms && <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200 text-[10px] py-0 px-1.5">MMS</Badge>}
+                        <span className="truncate">{c.name}</span>
+                      </div>
                       <div className="text-xs text-muted-foreground truncate">{c.message_body}</div>
                       <div className="text-xs mt-1 flex gap-2 flex-wrap">
                         <span>Spend: <span className="font-semibold">{formatUSD(Number(c.cost ?? 0))}</span></span>

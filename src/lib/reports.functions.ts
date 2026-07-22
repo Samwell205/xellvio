@@ -20,6 +20,8 @@ export type CampaignReport = {
     queued: number;
     cost: number;
     delivery_rate: number; // 0..100
+    mms_count: number;
+    is_mms: boolean;
   };
   byCountry: Array<{
     country_code: string;
@@ -68,7 +70,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     for (let from = 0; from < 50_000; from += pageSize) {
       const { data: batch, error: mErr } = await supabase
         .from("messages")
-        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at")
+        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,is_mms")
         .eq("campaign_id", data.campaignId)
         .order("created_at", { ascending: true })
         .range(from, from + pageSize - 1);
@@ -87,6 +89,8 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       queued: 0,
       cost: 0,
       delivery_rate: 0,
+      mms_count: 0,
+      is_mms: false,
     };
     const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; cost: number }>();
     const byKind = new Map<string, { used: number; delivered: number; failed: number }>();
@@ -113,6 +117,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       }
 
       totals.cost += Number(r.cost ?? 0);
+      if (r.is_mms) totals.mms_count += 1;
       if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
       if (r.status === "sent") totals.awaiting_delivery += 1;
       if (r.status === "delivered") totals.delivered += 1;
@@ -143,6 +148,8 @@ export const getCampaignReport = createServerFn({ method: "POST" })
 
     totals.cost = +totals.cost.toFixed(4);
     totals.delivery_rate = totals.sent > 0 ? +((totals.delivered / totals.sent) * 100).toFixed(1) : 0;
+    totals.is_mms = totals.mms_count > 0;
+
 
     return {
       campaign: {

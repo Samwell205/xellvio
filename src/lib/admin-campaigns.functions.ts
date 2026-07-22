@@ -44,8 +44,8 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
     if (campaignIds.length === 0) return [];
 
     // Aggregate stats per campaign in a single SQL query.
-    const stats = new Map<string, { total: number; delivered: number; failed: number; sent: number; unconfirmed: number; queued: number; cost: number; carrier_cost: number; segments: number }>();
-    for (const id of campaignIds) stats.set(id, { total: 0, delivered: 0, failed: 0, sent: 0, unconfirmed: 0, queued: 0, cost: 0, carrier_cost: 0, segments: 0 });
+    const stats = new Map<string, { total: number; delivered: number; failed: number; sent: number; unconfirmed: number; queued: number; cost: number; carrier_cost: number; segments: number; mms_count: number }>();
+    for (const id of campaignIds) stats.set(id, { total: 0, delivered: 0, failed: 0, sent: 0, unconfirmed: 0, queued: 0, cost: 0, carrier_cost: 0, segments: 0, mms_count: 0 });
 
     const { data: statRows, error: statErr } = await supabaseAdmin.rpc("admin_campaign_stats");
     if (statErr) throw new Error(statErr.message);
@@ -61,6 +61,7 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
         cost: Number(r.cost ?? 0),
         carrier_cost: Number(r.carrier_cost ?? 0),
         segments: Number(r.segments ?? 0),
+        mms_count: Number(r.mms_count ?? 0),
       });
     }
 
@@ -85,6 +86,8 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
         sent_awaiting: s.sent,
         queued: s.queued,
         segments: s.segments,
+        mms_count: s.mms_count,
+        is_mms: s.mms_count > 0,
         cost: +s.cost.toFixed(4),
         carrier_cost: +s.carrier_cost.toFixed(4),
         margin: +(s.cost - s.carrier_cost).toFixed(4),
@@ -106,7 +109,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         .select("id,account_id,name,status,message_body,created_at")
         .eq("id", data.campaignId)
         .maybeSingle(),
-      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price"),
+      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,mms_multiplier"),
     ]);
     if (cErr) throw new Error(cErr.message);
     if (!campaign) throw new Error("Campaign not found");
@@ -120,12 +123,13 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     const rows = await fetchAllRows<any>(() =>
       supabaseAdmin
         .from("messages")
-        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id")
+        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id,is_mms")
         .eq("campaign_id", data.campaignId)
         .order("created_at", { ascending: true }),
     );
 
     const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
+    const mmsMultByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.mms_multiplier ?? 3)]));
 
     const totals = {
       total: rows.length,
@@ -140,24 +144,28 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       segments: 0,
       delivery_rate: 0,
     };
-    const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; segments: number; cost: number; carrier_cost: number }>();
+    const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; segments: number; cost: number; carrier_cost: number; mms_count: number }>();
     const byKind = new Map<string, { used: number; delivered: number; failed: number }>();
     const timelineMap = new Map<string, { sent: number; delivered: number; failed: number }>();
     const failures: any[] = [];
+    let mmsCount = 0;
 
     for (const r of rows) {
       const cc = r.country_code ?? "??";
       const seg = Number(r.segments_count ?? 1);
-      const carrier = (costByCc.get(cc) ?? 0) * seg;
-      const cur = byCC.get(cc) ?? { recipients: 0, delivered: 0, unconfirmed: 0, failed: 0, segments: 0, cost: 0, carrier_cost: 0 };
+      const mmsMult = r.is_mms ? (mmsMultByCc.get(cc) ?? 3) : 1;
+      const carrier = (costByCc.get(cc) ?? 0) * seg * mmsMult;
+      const cur = byCC.get(cc) ?? { recipients: 0, delivered: 0, unconfirmed: 0, failed: 0, segments: 0, cost: 0, carrier_cost: 0, mms_count: 0 };
       cur.recipients += 1;
       cur.segments += seg;
       cur.cost += Number(r.cost ?? 0);
       cur.carrier_cost += carrier;
+      if (r.is_mms) { cur.mms_count += 1; mmsCount += 1; }
       if (r.status === "delivered") cur.delivered += 1;
       if (r.status === "delivery_unconfirmed") cur.unconfirmed += 1;
       if (r.status === "failed" || r.status === "undelivered") cur.failed += 1;
       byCC.set(cc, cur);
+
 
       if (r.sender_kind) {
         const k = byKind.get(r.sender_kind) ?? { used: 0, delivered: 0, failed: 0 };
@@ -219,6 +227,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       },
       totals: {
         ...totals,
+        mms_count: mmsCount,
+        is_mms: mmsCount > 0,
         margin: +(totals.cost - totals.carrier_cost).toFixed(4),
       },
       byCountry: Array.from(byCC.entries())

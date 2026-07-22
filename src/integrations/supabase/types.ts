@@ -1279,6 +1279,7 @@ export type Database = {
           error_code: string | null
           failure_reason: string | null
           id: string
+          is_mms: boolean
           phone_e164: string
           profile_id: string | null
           provider_message_id: string | null
@@ -1299,6 +1300,7 @@ export type Database = {
           error_code?: string | null
           failure_reason?: string | null
           id?: string
+          is_mms?: boolean
           phone_e164: string
           profile_id?: string | null
           provider_message_id?: string | null
@@ -1319,6 +1321,7 @@ export type Database = {
           error_code?: string | null
           failure_reason?: string | null
           id?: string
+          is_mms?: boolean
           phone_e164?: string
           profile_id?: string | null
           provider_message_id?: string | null
@@ -2756,6 +2759,7 @@ export type Database = {
           cost: number
           delivered: number
           failed: number
+          mms_count: number
           queued: number
           segments: number
           sent: number

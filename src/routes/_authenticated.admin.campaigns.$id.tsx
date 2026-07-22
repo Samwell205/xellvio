@@ -80,7 +80,10 @@ function AdminCampaignReportPage() {
           <Link to="/admin/campaigns" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:underline">
             <ArrowLeft className="size-3" /> All campaigns
           </Link>
-          <h1 className="text-2xl font-extrabold mt-2">{c.name}</h1>
+          <h1 className="text-2xl font-extrabold mt-2 flex items-center gap-2">
+            {t.is_mms && <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200 text-xs">MMS · {t.mms_count?.toLocaleString?.() ?? ""}</Badge>}
+            {c.name}
+          </h1>
           <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center mt-1">
             <span>Tenant: <span className="font-medium text-foreground">{r.account.label}</span></span>
             <span>•</span>
