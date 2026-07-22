@@ -107,6 +107,8 @@ import { Route as VerifierVerifyDashboardEarningsRouteImport } from './routes/_v
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
+import { Route as AuthenticatedAdminTelnyxTfnRouteImport } from './routes/_authenticated.admin.telnyx.tfn'
+import { Route as AuthenticatedAdminTelnyxAuditRouteImport } from './routes/_authenticated.admin.telnyx.audit'
 import { Route as AuthenticatedAdminCampaignsIdRouteImport } from './routes/_authenticated.admin.campaigns.$id'
 import { Route as AuthenticatedAdminAcademyCourseIdRouteImport } from './routes/_authenticated.admin.academy.$courseId'
 import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
@@ -646,6 +648,18 @@ const AuthenticatedAppCampaignsIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const AuthenticatedAdminTelnyxTfnRoute =
+  AuthenticatedAdminTelnyxTfnRouteImport.update({
+    id: '/tfn',
+    path: '/tfn',
+    getParentRoute: () => AuthenticatedAdminTelnyxRoute,
+  } as any)
+const AuthenticatedAdminTelnyxAuditRoute =
+  AuthenticatedAdminTelnyxAuditRouteImport.update({
+    id: '/audit',
+    path: '/audit',
+    getParentRoute: () => AuthenticatedAdminTelnyxRoute,
+  } as any)
 const AuthenticatedAdminCampaignsIdRoute =
   AuthenticatedAdminCampaignsIdRouteImport.update({
     id: '/campaigns/$id',
@@ -713,7 +727,7 @@ export interface FileRoutesByFullPath {
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
   '/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/admin/senders': typeof AuthenticatedAdminSendersRoute
-  '/admin/telnyx': typeof AuthenticatedAdminTelnyxRoute
+  '/admin/telnyx': typeof AuthenticatedAdminTelnyxRouteWithChildren
   '/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verifiers': typeof AuthenticatedAdminVerifiersRoute
@@ -745,6 +759,8 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
+  '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
+  '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -811,7 +827,7 @@ export interface FileRoutesByTo {
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
   '/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/admin/senders': typeof AuthenticatedAdminSendersRoute
-  '/admin/telnyx': typeof AuthenticatedAdminTelnyxRoute
+  '/admin/telnyx': typeof AuthenticatedAdminTelnyxRouteWithChildren
   '/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verifiers': typeof AuthenticatedAdminVerifiersRoute
@@ -841,6 +857,8 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
+  '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
+  '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -913,7 +931,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/rates': typeof AuthenticatedAdminRatesRoute
   '/_authenticated/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/_authenticated/admin/senders': typeof AuthenticatedAdminSendersRoute
-  '/_authenticated/admin/telnyx': typeof AuthenticatedAdminTelnyxRoute
+  '/_authenticated/admin/telnyx': typeof AuthenticatedAdminTelnyxRouteWithChildren
   '/_authenticated/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/verifiers': typeof AuthenticatedAdminVerifiersRoute
@@ -945,6 +963,8 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/_authenticated/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/_authenticated/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
+  '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
+  '/_authenticated/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
@@ -1048,6 +1068,8 @@ export interface FileRouteTypes {
     | '/app/'
     | '/admin/academy/$courseId'
     | '/admin/campaigns/$id'
+    | '/admin/telnyx/audit'
+    | '/admin/telnyx/tfn'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -1144,6 +1166,8 @@ export interface FileRouteTypes {
     | '/app'
     | '/admin/academy/$courseId'
     | '/admin/campaigns/$id'
+    | '/admin/telnyx/audit'
+    | '/admin/telnyx/tfn'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
@@ -1247,6 +1271,8 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/_authenticated/admin/academy/$courseId'
     | '/_authenticated/admin/campaigns/$id'
+    | '/_authenticated/admin/telnyx/audit'
+    | '/_authenticated/admin/telnyx/tfn'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
@@ -2006,6 +2032,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/_authenticated/admin/telnyx/tfn': {
+      id: '/_authenticated/admin/telnyx/tfn'
+      path: '/tfn'
+      fullPath: '/admin/telnyx/tfn'
+      preLoaderRoute: typeof AuthenticatedAdminTelnyxTfnRouteImport
+      parentRoute: typeof AuthenticatedAdminTelnyxRoute
+    }
+    '/_authenticated/admin/telnyx/audit': {
+      id: '/_authenticated/admin/telnyx/audit'
+      path: '/audit'
+      fullPath: '/admin/telnyx/audit'
+      preLoaderRoute: typeof AuthenticatedAdminTelnyxAuditRouteImport
+      parentRoute: typeof AuthenticatedAdminTelnyxRoute
+    }
     '/_authenticated/admin/campaigns/$id': {
       id: '/_authenticated/admin/campaigns/$id'
       path: '/campaigns/$id'
@@ -2030,6 +2070,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminTelnyxRouteChildren {
+  AuthenticatedAdminTelnyxAuditRoute: typeof AuthenticatedAdminTelnyxAuditRoute
+  AuthenticatedAdminTelnyxTfnRoute: typeof AuthenticatedAdminTelnyxTfnRoute
+}
+
+const AuthenticatedAdminTelnyxRouteChildren: AuthenticatedAdminTelnyxRouteChildren =
+  {
+    AuthenticatedAdminTelnyxAuditRoute: AuthenticatedAdminTelnyxAuditRoute,
+    AuthenticatedAdminTelnyxTfnRoute: AuthenticatedAdminTelnyxTfnRoute,
+  }
+
+const AuthenticatedAdminTelnyxRouteWithChildren =
+  AuthenticatedAdminTelnyxRoute._addFileChildren(
+    AuthenticatedAdminTelnyxRouteChildren,
+  )
+
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAccountsRoute: typeof AuthenticatedAdminAccountsRoute
   AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
@@ -2042,7 +2098,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminRatesRoute: typeof AuthenticatedAdminRatesRoute
   AuthenticatedAdminReviewQueueRoute: typeof AuthenticatedAdminReviewQueueRoute
   AuthenticatedAdminSendersRoute: typeof AuthenticatedAdminSendersRoute
-  AuthenticatedAdminTelnyxRoute: typeof AuthenticatedAdminTelnyxRoute
+  AuthenticatedAdminTelnyxRoute: typeof AuthenticatedAdminTelnyxRouteWithChildren
   AuthenticatedAdminTollfreeAttemptsRoute: typeof AuthenticatedAdminTollfreeAttemptsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminVerifiersRoute: typeof AuthenticatedAdminVerifiersRoute
@@ -2065,7 +2121,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminRatesRoute: AuthenticatedAdminRatesRoute,
   AuthenticatedAdminReviewQueueRoute: AuthenticatedAdminReviewQueueRoute,
   AuthenticatedAdminSendersRoute: AuthenticatedAdminSendersRoute,
-  AuthenticatedAdminTelnyxRoute: AuthenticatedAdminTelnyxRoute,
+  AuthenticatedAdminTelnyxRoute: AuthenticatedAdminTelnyxRouteWithChildren,
   AuthenticatedAdminTollfreeAttemptsRoute:
     AuthenticatedAdminTollfreeAttemptsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
