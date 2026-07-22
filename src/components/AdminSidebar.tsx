@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2,
-  Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, GraduationCap,
+  Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, GraduationCap, Megaphone,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -31,6 +31,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
   {
     label: "Messaging",
     items: [
+      { title: "Campaigns", url: "/admin/campaigns", icon: Megaphone },
       { title: "Message monitor", url: "/admin/messaging", icon: MessageSquareText },
       { title: "Contact inbox", url: "/admin/messages", icon: Mail },
     ],
