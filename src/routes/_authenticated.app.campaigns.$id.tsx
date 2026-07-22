@@ -98,9 +98,9 @@ function CampaignReport() {
         }
       });
       if (!filtered.length) { toast.info(`No ${label} to export.`); return; }
-      const csv = ["phone_number", ...filtered.map((r: any) => r.phone_number)].join("\n");
       const safe = (campaign?.name ?? "campaign").replace(/[^a-z0-9-_]+/gi, "_");
-      downloadCsv(`${safe}_${label}_phone_numbers.csv`, csv);
+      downloadCsv(`${safe}_${label}_phone_numbers.csv`, ["phone_number"], filtered.map((r: any) => [r.phone_number]));
+
       toast.success(`Exported ${filtered.length.toLocaleString()} phone numbers (${label})`);
     } catch (e: any) {
       toast.error(e?.message ?? "Export failed");
