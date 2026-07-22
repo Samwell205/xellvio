@@ -20,6 +20,8 @@ export type CampaignReport = {
     queued: number;
     cost: number;
     delivery_rate: number; // 0..100
+    mms_count: number;
+    is_mms: boolean;
   };
   byCountry: Array<{
     country_code: string;
