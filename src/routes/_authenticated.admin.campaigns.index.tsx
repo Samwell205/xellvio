@@ -52,7 +52,9 @@ function AdminCampaignsPage() {
         </div>
       </Card>
 
-      {q.isLoading ? (
+      {q.isError ? (
+        <Card className="p-4 text-sm text-destructive">Failed to load: {(q.error as any)?.message ?? String(q.error)}</Card>
+      ) : q.isLoading ? (
         <div className="flex justify-center h-32 items-center"><Loader2 className="size-6 animate-spin" /></div>
       ) : (
         <Card className="overflow-hidden">

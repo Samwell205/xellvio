@@ -43,27 +43,23 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
     const campaignIds = campaigns.map((c: any) => c.id);
     if (campaignIds.length === 0) return [];
 
-    // Aggregate stats per campaign — paginate messages by campaign chunks to avoid the 1000-row cap.
+    // Aggregate stats per campaign in a single SQL query.
     const stats = new Map<string, { total: number; delivered: number; failed: number; sent: number; unconfirmed: number; queued: number; cost: number }>();
     for (const id of campaignIds) stats.set(id, { total: 0, delivered: 0, failed: 0, sent: 0, unconfirmed: 0, queued: 0, cost: 0 });
 
-    // Chunk into groups of 50 campaigns and paginate messages
-    for (let i = 0; i < campaignIds.length; i += 50) {
-      const chunk = campaignIds.slice(i, i + 50);
-      const rows = await fetchAllRows<any>(() =>
-        supabaseAdmin.from("messages").select("campaign_id,status,cost").in("campaign_id", chunk),
-      );
-      for (const m of rows) {
-        const s = stats.get(m.campaign_id);
-        if (!s) continue;
-        s.total += 1;
-        s.cost += Number(m.cost ?? 0);
-        if (m.status === "delivered") s.delivered += 1;
-        else if (m.status === "failed" || m.status === "undelivered") s.failed += 1;
-        else if (m.status === "delivery_unconfirmed") s.unconfirmed += 1;
-        else if (m.status === "sent") s.sent += 1;
-        else if (m.status === "queued" || m.status === "sending" || m.status === "pending") s.queued += 1;
-      }
+    const { data: statRows, error: statErr } = await supabaseAdmin.rpc("admin_campaign_stats");
+    if (statErr) throw new Error(statErr.message);
+    for (const r of (statRows ?? []) as any[]) {
+      if (!stats.has(r.campaign_id)) continue;
+      stats.set(r.campaign_id, {
+        total: Number(r.total ?? 0),
+        delivered: Number(r.delivered ?? 0),
+        failed: Number(r.failed ?? 0),
+        sent: Number(r.sent ?? 0),
+        unconfirmed: Number(r.unconfirmed ?? 0),
+        queued: Number(r.queued ?? 0),
+        cost: Number(r.cost ?? 0),
+      });
     }
 
     return campaigns.map((c: any) => {

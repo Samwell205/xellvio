@@ -2706,6 +2706,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_campaign_stats: {
+        Args: never
+        Returns: {
+          campaign_id: string
+          cost: number
+          delivered: number
+          failed: number
+          queued: number
+          sent: number
+          total: number
+          unconfirmed: number
+        }[]
+      }
       claim_account_invites: { Args: never; Returns: number }
       claim_and_sell_verified_tfn: {
         Args: {
