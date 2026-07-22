@@ -29,12 +29,10 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
     // Country rates (cost_price = what Telnyx charges us per segment)
     const { data: rates } = await supabaseAdmin
       .from("country_rates")
-      .select("country_code,cost_price,price");
+      .select("country_code,cost_price,sell_price");
     const costByCountry = new Map<string, number>();
-    const priceByCountry = new Map<string, number>();
     for (const r of rates ?? []) {
       costByCountry.set(r.country_code, Number(r.cost_price ?? 0));
-      priceByCountry.set(r.country_code, Number(r.price ?? 0));
     }
 
     // Pull messages that were actually submitted to Telnyx in windows
