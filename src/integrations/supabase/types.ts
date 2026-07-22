@@ -2057,6 +2057,48 @@ export type Database = {
         }
         Relationships: []
       }
+      telnyx_transactions_import: {
+        Row: {
+          amount: number
+          batch_id: string
+          category: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string | null
+          id: string
+          occurred_at: string
+          raw: Json | null
+          reference: string | null
+        }
+        Insert: {
+          amount: number
+          batch_id: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          occurred_at: string
+          raw?: Json | null
+          reference?: string | null
+        }
+        Update: {
+          amount?: number
+          batch_id?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          occurred_at?: string
+          raw?: Json | null
+          reference?: string | null
+        }
+        Relationships: []
+      }
       tenant_10dlc_registrations: {
         Row: {
           account_id: string
