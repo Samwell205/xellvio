@@ -126,6 +126,14 @@ function ReportPage() {
             <span>Sent {r.campaign ? new Date(r.campaign.created_at).toLocaleString() : ""}</span>
           </div>
         </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={exportRecipientsCsv} disabled={exporting !== null}>
+            <FileDown className="size-4 mr-1" />{exporting === "csv" ? "Exporting…" : "Export CSV"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportSummaryPdf} disabled={exporting !== null}>
+            <Download className="size-4 mr-1" />{exporting === "pdf" ? "Building…" : "PDF summary"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
