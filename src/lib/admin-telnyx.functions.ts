@@ -206,3 +206,76 @@ export const getTelnyxLiveBalance = createServerFn({ method: "GET" })
     const bal = await getBalance();
     return { ...bal, checked_at: new Date().toISOString() };
   });
+
+/**
+ * Admin: send the MMS pricing-correction email to a specific tenant explaining
+ * what was debited and why. Idempotent per (accountId + reason key).
+ */
+import { z } from "zod";
+export const sendMmsCorrectionEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { accountId: string }) => z.object({ accountId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { sendBrandedEmail } = await import("./email/send-internal.server");
+
+    const { data: acct } = await supabaseAdmin
+      .from("accounts")
+      .select("id,contact_email,email,legal_business_name,credit_balance")
+      .eq("id", data.accountId)
+      .maybeSingle();
+    if (!acct) throw new Error("Account not found");
+    const to = (acct.contact_email ?? acct.email ?? "").trim();
+    if (!to) throw new Error("No email on account");
+
+    // Compute correction details
+    const { data: rows } = await supabaseAdmin
+      .from("messages")
+      .select("id, campaigns!inner(account_id)", { count: "exact", head: false })
+      .eq("is_mms", true)
+      .in("status", ["delivered", "sent", "delivery_unconfirmed"])
+      .eq("campaigns.account_id", data.accountId);
+    const msgCount = rows?.length ?? 0;
+    const additional = Number((msgCount * 0.024).toFixed(2));
+    const balance = Number(acct.credit_balance ?? 0);
+    const inDebt = balance < 0;
+
+    const body = [
+      `Hi ${acct.legal_business_name ?? "there"},`,
+      "",
+      "We're writing about your recent MMS campaigns on Xellvio.",
+      "",
+      `While reviewing our Telnyx carrier bill, we found that the MMS price we charged you was below the real carrier cost. The actual Telnyx charge for US MMS is $0.024 per message — but you were charged as if it were $0.024 including our margin, which left us paying the carrier out of pocket.`,
+      "",
+      `We've corrected the price going forward to $0.048 per US MMS (Telnyx cost $0.024 + our margin $0.024). This matches industry rates and keeps your account in good standing.`,
+      "",
+      `Retroactive correction on your account:`,
+      `• Successful MMS delivered: ${msgCount.toLocaleString()}`,
+      `• Additional carrier cost owed: $0.024 × ${msgCount.toLocaleString()} = $${additional.toFixed(2)}`,
+      `• Your current balance: $${balance.toFixed(2)}${inDebt ? "  (this is a debt — please top up to resume sending)" : ""}`,
+      "",
+      `Example going forward: sending 1,000 MMS to US costs you $48.00 (Telnyx charges us $24.00, our margin is $24.00).`,
+      "",
+      `We're sorry for the pricing mistake — this only affected MMS, not SMS. If you have any questions, just reply to this email.`,
+      "",
+      "— The Xellvio team",
+    ].join("\n");
+
+    const result = await sendBrandedEmail({
+      templateName: "generic",
+      recipientEmail: to,
+      idempotencyKey: `mms-correction-v1-${data.accountId}`,
+      templateData: {
+        subject: "Important: MMS pricing correction on your Xellvio account",
+        heading: "MMS pricing correction",
+        body,
+        ctaText: "View your billing",
+        ctaUrl: "https://xellvio.com/app/billing",
+      },
+      sendImmediately: true,
+    });
+
+    return { ok: result.success, reason: result.reason, additional_charged: additional, message_count: msgCount, balance };
+  });
+
