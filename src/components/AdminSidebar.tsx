@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2,
-  Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, GraduationCap, Megaphone, Phone,
+  Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, GraduationCap, Megaphone, Phone, Scale, PhoneOutgoing,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -41,6 +41,8 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
     items: [
       { title: "Billing & payments", url: "/admin/billing", icon: CreditCard },
       { title: "Telnyx activity", url: "/admin/telnyx", icon: Phone },
+      { title: "Balance-drop audit", url: "/admin/telnyx/audit", icon: Scale },
+      { title: "Number activity", url: "/admin/telnyx/tfn", icon: PhoneOutgoing },
       { title: "Country rates", url: "/admin/rates", icon: Settings2 },
       { title: "Toll-free logs", url: "/admin/tollfree-attempts", icon: ClipboardList },
       { title: "Marketplace", url: "/admin/marketplace", icon: CreditCard },
