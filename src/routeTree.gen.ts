@@ -76,6 +76,7 @@ import { Route as AuthenticatedAppAudienceRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminVerifiersRouteImport } from './routes/_authenticated.admin.verifiers'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated.admin.users'
 import { Route as AuthenticatedAdminTollfreeAttemptsRouteImport } from './routes/_authenticated.admin.tollfree-attempts'
+import { Route as AuthenticatedAdminTelnyxRouteImport } from './routes/_authenticated.admin.telnyx'
 import { Route as AuthenticatedAdminSendersRouteImport } from './routes/_authenticated.admin.senders'
 import { Route as AuthenticatedAdminReviewQueueRouteImport } from './routes/_authenticated.admin.review-queue'
 import { Route as AuthenticatedAdminRatesRouteImport } from './routes/_authenticated.admin.rates'
@@ -462,6 +463,12 @@ const AuthenticatedAdminTollfreeAttemptsRoute =
     path: '/tollfree-attempts',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminTelnyxRoute =
+  AuthenticatedAdminTelnyxRouteImport.update({
+    id: '/telnyx',
+    path: '/telnyx',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminSendersRoute =
   AuthenticatedAdminSendersRouteImport.update({
     id: '/senders',
@@ -706,6 +713,7 @@ export interface FileRoutesByFullPath {
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
   '/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/admin/senders': typeof AuthenticatedAdminSendersRoute
+  '/admin/telnyx': typeof AuthenticatedAdminTelnyxRoute
   '/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verifiers': typeof AuthenticatedAdminVerifiersRoute
@@ -803,6 +811,7 @@ export interface FileRoutesByTo {
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
   '/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/admin/senders': typeof AuthenticatedAdminSendersRoute
+  '/admin/telnyx': typeof AuthenticatedAdminTelnyxRoute
   '/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/verifiers': typeof AuthenticatedAdminVerifiersRoute
@@ -904,6 +913,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/rates': typeof AuthenticatedAdminRatesRoute
   '/_authenticated/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/_authenticated/admin/senders': typeof AuthenticatedAdminSendersRoute
+  '/_authenticated/admin/telnyx': typeof AuthenticatedAdminTelnyxRoute
   '/_authenticated/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/verifiers': typeof AuthenticatedAdminVerifiersRoute
@@ -1006,6 +1016,7 @@ export interface FileRouteTypes {
     | '/admin/rates'
     | '/admin/review-queue'
     | '/admin/senders'
+    | '/admin/telnyx'
     | '/admin/tollfree-attempts'
     | '/admin/users'
     | '/admin/verifiers'
@@ -1103,6 +1114,7 @@ export interface FileRouteTypes {
     | '/admin/rates'
     | '/admin/review-queue'
     | '/admin/senders'
+    | '/admin/telnyx'
     | '/admin/tollfree-attempts'
     | '/admin/users'
     | '/admin/verifiers'
@@ -1203,6 +1215,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/rates'
     | '/_authenticated/admin/review-queue'
     | '/_authenticated/admin/senders'
+    | '/_authenticated/admin/telnyx'
     | '/_authenticated/admin/tollfree-attempts'
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/verifiers'
@@ -1776,6 +1789,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTollfreeAttemptsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/telnyx': {
+      id: '/_authenticated/admin/telnyx'
+      path: '/telnyx'
+      fullPath: '/admin/telnyx'
+      preLoaderRoute: typeof AuthenticatedAdminTelnyxRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/senders': {
       id: '/_authenticated/admin/senders'
       path: '/senders'
@@ -2022,6 +2042,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminRatesRoute: typeof AuthenticatedAdminRatesRoute
   AuthenticatedAdminReviewQueueRoute: typeof AuthenticatedAdminReviewQueueRoute
   AuthenticatedAdminSendersRoute: typeof AuthenticatedAdminSendersRoute
+  AuthenticatedAdminTelnyxRoute: typeof AuthenticatedAdminTelnyxRoute
   AuthenticatedAdminTollfreeAttemptsRoute: typeof AuthenticatedAdminTollfreeAttemptsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminVerifiersRoute: typeof AuthenticatedAdminVerifiersRoute
@@ -2044,6 +2065,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminRatesRoute: AuthenticatedAdminRatesRoute,
   AuthenticatedAdminReviewQueueRoute: AuthenticatedAdminReviewQueueRoute,
   AuthenticatedAdminSendersRoute: AuthenticatedAdminSendersRoute,
+  AuthenticatedAdminTelnyxRoute: AuthenticatedAdminTelnyxRoute,
   AuthenticatedAdminTollfreeAttemptsRoute:
     AuthenticatedAdminTollfreeAttemptsRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
