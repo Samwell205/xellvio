@@ -70,7 +70,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     for (let from = 0; from < 50_000; from += pageSize) {
       const { data: batch, error: mErr } = await supabase
         .from("messages")
-        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at")
+        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,is_mms")
         .eq("campaign_id", data.campaignId)
         .order("created_at", { ascending: true })
         .range(from, from + pageSize - 1);
@@ -89,6 +89,8 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       queued: 0,
       cost: 0,
       delivery_rate: 0,
+      mms_count: 0,
+      is_mms: false,
     };
     const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; cost: number }>();
     const byKind = new Map<string, { used: number; delivered: number; failed: number }>();
