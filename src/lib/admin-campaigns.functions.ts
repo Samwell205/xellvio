@@ -29,7 +29,7 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
     const [campRes, accRes] = await Promise.all([
       supabaseAdmin
         .from("campaigns")
-        .select("id,account_id,name,status,message_body,created_at,scheduled_at")
+        .select("id,account_id,name,status,message_body,created_at")
         .order("created_at", { ascending: false })
         .limit(500),
       supabaseAdmin.from("accounts").select("id,email,company,legal_business_name,full_name"),
@@ -74,7 +74,7 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
         status: c.status,
         message_body: c.message_body,
         created_at: c.created_at,
-        scheduled_at: c.scheduled_at,
+        
         account_id: c.account_id,
         account_label: a ? (a.legal_business_name || a.company || a.email) : "—",
         account_email: a?.email ?? null,
@@ -103,7 +103,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     const [{ data: campaign, error: cErr }, { data: rates }] = await Promise.all([
       supabaseAdmin
         .from("campaigns")
-        .select("id,account_id,name,status,message_body,created_at,scheduled_at")
+        .select("id,account_id,name,status,message_body,created_at")
         .eq("id", data.campaignId)
         .maybeSingle(),
       supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price"),
@@ -209,7 +209,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         name: (campaign as any).name,
         status: (campaign as any).status,
         created_at: (campaign as any).created_at,
-        scheduled_at: (campaign as any).scheduled_at,
+        
         message_body: (campaign as any).message_body,
       },
       account: {
