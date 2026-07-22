@@ -227,6 +227,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       },
       totals: {
         ...totals,
+        mms_count: mmsCount,
+        is_mms: mmsCount > 0,
         margin: +(totals.cost - totals.carrier_cost).toFixed(4),
       },
       byCountry: Array.from(byCC.entries())
