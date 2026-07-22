@@ -109,7 +109,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         .select("id,account_id,name,status,message_body,created_at")
         .eq("id", data.campaignId)
         .maybeSingle(),
-      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price"),
+      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,mms_multiplier"),
     ]);
     if (cErr) throw new Error(cErr.message);
     if (!campaign) throw new Error("Campaign not found");
@@ -123,12 +123,13 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     const rows = await fetchAllRows<any>(() =>
       supabaseAdmin
         .from("messages")
-        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id")
+        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id,is_mms")
         .eq("campaign_id", data.campaignId)
         .order("created_at", { ascending: true }),
     );
 
     const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
+    const mmsMultByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.mms_multiplier ?? 3)]));
 
     const totals = {
       total: rows.length,
