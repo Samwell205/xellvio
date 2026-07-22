@@ -87,6 +87,11 @@ function AdminCampaignsPage() {
                     <td className="p-3 max-w-[280px]">
                       <div className="font-medium truncate">{c.name}</div>
                       <div className="text-xs text-muted-foreground truncate">{c.message_body}</div>
+                      <div className="text-xs mt-1 flex gap-2 flex-wrap">
+                        <span>Spend: <span className="font-semibold">{formatUSD(Number(c.cost ?? 0))}</span></span>
+                        <span className="text-muted-foreground">Telnyx: {formatUSD(Number(c.carrier_cost ?? 0))}</span>
+                        <span className={Number(c.margin ?? 0) >= 0 ? "text-emerald-600 font-semibold" : "text-destructive font-semibold"}>Profit: {formatUSD(Number(c.margin ?? 0))}</span>
+                      </div>
                     </td>
                     <td className="p-3"><Badge variant="outline">{c.status}</Badge></td>
                     <td className="p-3 text-right tabular-nums">{c.total.toLocaleString()}</td>
