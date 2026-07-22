@@ -86,6 +86,8 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
         sent_awaiting: s.sent,
         queued: s.queued,
         segments: s.segments,
+        mms_count: s.mms_count,
+        is_mms: s.mms_count > 0,
         cost: +s.cost.toFixed(4),
         carrier_cost: +s.carrier_cost.toFixed(4),
         margin: +(s.cost - s.carrier_cost).toFixed(4),
