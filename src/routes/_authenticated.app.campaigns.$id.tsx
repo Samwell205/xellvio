@@ -33,6 +33,12 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { getCampaignRecipientsExport } from "@/lib/tenant-report-export.functions";
+import { downloadCsv } from "@/lib/report-export";
 
 import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
@@ -70,6 +76,39 @@ function CampaignReport() {
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to refresh delivery statuses"),
   });
+
+  const callExport = useServerFn(getCampaignRecipientsExport);
+  const [exportingPhones, setExportingPhones] = useState(false);
+  async function exportPhoneNumbers(
+    key: "delivered" | "failed" | "not_delivered" | "sent_awaiting" | "clicked" | "replied" | "all",
+    label: string,
+  ) {
+    setExportingPhones(true);
+    try {
+      const { rows, campaign } = await callExport({ data: { campaignId: id } });
+      const filtered = rows.filter((r: any) => {
+        switch (key) {
+          case "delivered": return r.status === "delivered";
+          case "failed": return r.status === "failed" || r.status === "undelivered";
+          case "not_delivered": return r.status === "delivery_unconfirmed";
+          case "sent_awaiting": return r.status === "sent";
+          case "clicked": return (r.click_count ?? 0) > 0;
+          case "replied": return (r.reply_count ?? 0) > 0;
+          case "all": default: return true;
+        }
+      });
+      if (!filtered.length) { toast.info(`No ${label} to export.`); return; }
+      const safe = (campaign?.name ?? "campaign").replace(/[^a-z0-9-_]+/gi, "_");
+      downloadCsv(`${safe}_${label}_phone_numbers.csv`, ["phone_number"], filtered.map((r: any) => [r.phone_number]));
+
+      toast.success(`Exported ${filtered.length.toLocaleString()} phone numbers (${label})`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export failed");
+    } finally {
+      setExportingPhones(false);
+    }
+  }
+
 
   const campaignQ = useQuery({
     queryKey: ["campaign", id],
@@ -447,6 +486,27 @@ function CampaignReport() {
               <Download className="size-3 mr-1" />
               Export CSV
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={exportingPhones}>
+                  <Download className="size-3 mr-1" />
+                  {exportingPhones ? "Exporting…" : "Export phone numbers"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Phone numbers only</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("delivered", "delivered")}>Delivered</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("failed", "failed")}>Failed</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("not_delivered", "not-delivered")}>Not delivered</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("sent_awaiting", "awaiting-carrier")}>Awaiting carrier</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Engagement</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("clicked", "link-clickers")}>Clicked the link</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("replied", "responders")}>Replied</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("all", "all")}>All recipients</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {!["sent", "cancelled", "failed"].includes(c.status) && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
