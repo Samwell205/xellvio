@@ -33,18 +33,175 @@ function AdminBillingPage() {
         <p className="text-sm text-muted-foreground">Manage credit packs, Payoneer instructions, and pending payments.</p>
       </div>
       <BalanceCard />
-      <Tabs defaultValue="payments">
+      <Tabs defaultValue="tenants">
         <TabsList>
+          <TabsTrigger value="tenants">Tenants</TabsTrigger>
           <TabsTrigger value="payments">Pending payments</TabsTrigger>
           <TabsTrigger value="packs">Credit packs</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
         </TabsList>
+        <TabsContent value="tenants" className="mt-4"><TenantsBilling /></TabsContent>
         <TabsContent value="payments" className="mt-4"><PendingPayments /></TabsContent>
         <TabsContent value="packs" className="mt-4"><PacksAdmin /></TabsContent>
         <TabsContent value="settings" className="mt-4"><SettingsAdmin /></TabsContent>
         <TabsContent value="diagnostics" className="mt-4"><Diagnostics /></TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function TenantsBilling() {
+  const listFn = useServerFn(adminListTenantBilling);
+  const detailFn = useServerFn(adminGetTenantBilling);
+  const list = useQuery({ queryKey: ["admin-tenant-billing"], queryFn: () => listFn() });
+  const [q, setQ] = useState("");
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const detail = useQuery({
+    queryKey: ["admin-tenant-billing-detail", openId],
+    queryFn: () => detailFn({ data: { account_id: openId! } }),
+    enabled: !!openId,
+  });
+
+  const rows = (list.data ?? []).filter((r: any) => {
+    if (!q.trim()) return true;
+    const s = q.toLowerCase();
+    return (r.name ?? "").toLowerCase().includes(s) || (r.email ?? "").toLowerCase().includes(s);
+  });
+
+  return (
+    <Card className="p-4 space-y-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <Input placeholder="Search tenant by name or email…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
+        <span className="text-xs text-muted-foreground">{rows.length} tenant{rows.length === 1 ? "" : "s"}</span>
+      </div>
+      {list.isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : list.error ? (
+        <p className="text-sm text-destructive">Failed to load: {(list.error as Error).message}</p>
+      ) : (
+        <div className="border rounded-md overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
+              <tr>
+                <th className="text-left p-3">Tenant</th>
+                <th className="text-right p-3">Balance</th>
+                <th className="text-right p-3">Total funded</th>
+                <th className="text-right p-3">Total spent</th>
+                <th className="text-right p-3">Refunded</th>
+                <th className="text-right p-3">Payments</th>
+                <th className="text-right p-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r: any) => (
+                <tr key={r.id} className="border-t">
+                  <td className="p-3">
+                    <div className="font-medium">{r.name}</div>
+                    <div className="text-xs text-muted-foreground">{r.email}</div>
+                  </td>
+                  <td className="p-3 text-right tabular-nums">{formatUSD(r.balance)}</td>
+                  <td className="p-3 text-right tabular-nums text-success">{formatUSD(r.paid_usd)}</td>
+                  <td className="p-3 text-right tabular-nums text-destructive">{formatUSD(r.spent)}</td>
+                  <td className="p-3 text-right tabular-nums">{formatUSD(r.refunded)}</td>
+                  <td className="p-3 text-right tabular-nums">{r.payments_count}</td>
+                  <td className="p-3 text-right"><Button size="sm" variant="outline" onClick={() => setOpenId(r.id)}>View details</Button></td>
+                </tr>
+              ))}
+              {rows.length === 0 && (<tr><td colSpan={7} className="p-6 text-center text-sm text-muted-foreground">No tenants.</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Dialog open={!!openId} onOpenChange={(v) => !v && setOpenId(null)}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{detail.data?.account.legal_business_name ?? detail.data?.account.contact_email ?? "Tenant billing"}</DialogTitle>
+          </DialogHeader>
+          {detail.isLoading || !detail.data ? <p className="text-sm text-muted-foreground">Loading…</p> : (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <StatBox label="Current balance" value={formatUSD(Number(detail.data.account.credit_balance ?? 0))} />
+                <StatBox label="Total funded (paid)" value={formatUSD(detail.data.totals.paid_usd)} tone="success" />
+                <StatBox label="Total spent" value={formatUSD(detail.data.totals.spent)} tone="destructive" />
+                <StatBox label="Refunded" value={formatUSD(detail.data.totals.refunded)} />
+              </div>
+
+              <section>
+                <h4 className="font-semibold mb-2 text-sm">Payments ({detail.data.payments.length})</h4>
+                <div className="border rounded-md overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40 text-muted-foreground uppercase">
+                      <tr>
+                        <th className="text-left p-2">When</th>
+                        <th className="text-left p-2">Provider</th>
+                        <th className="text-left p-2">Amount</th>
+                        <th className="text-left p-2">Credits</th>
+                        <th className="text-left p-2">Status</th>
+                        <th className="text-left p-2">Reference</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.data.payments.map((p: any) => (
+                        <tr key={p.id} className="border-t">
+                          <td className="p-2 text-muted-foreground whitespace-nowrap">{new Date(p.created_at).toLocaleString()}</td>
+                          <td className="p-2 capitalize">{p.provider}</td>
+                          <td className="p-2 tabular-nums">{formatMoney(Number(p.amount), p.currency)}</td>
+                          <td className="p-2 tabular-nums">{formatUSD(Number(p.credits))}</td>
+                          <td className="p-2 capitalize">{p.status}</td>
+                          <td className="p-2 font-mono text-muted-foreground truncate max-w-[180px]">{p.provider_reference ?? "—"}</td>
+                        </tr>
+                      ))}
+                      {detail.data.payments.length === 0 && (<tr><td colSpan={6} className="p-4 text-center text-muted-foreground">No payments.</td></tr>)}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section>
+                <h4 className="font-semibold mb-2 text-sm">Credit ledger ({detail.data.transactions.length})</h4>
+                <div className="border rounded-md overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40 text-muted-foreground uppercase">
+                      <tr>
+                        <th className="text-left p-2">When</th>
+                        <th className="text-left p-2">Type</th>
+                        <th className="text-left p-2">Description</th>
+                        <th className="text-right p-2">Amount</th>
+                        <th className="text-right p-2">Balance after</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.data.transactions.map((t: any) => (
+                        <tr key={t.id} className="border-t">
+                          <td className="p-2 text-muted-foreground whitespace-nowrap">{new Date(t.created_at).toLocaleString()}</td>
+                          <td className="p-2 capitalize">{t.type}</td>
+                          <td className="p-2 max-w-md truncate">{t.description ?? "—"}</td>
+                          <td className={`p-2 text-right tabular-nums ${t.type === "topup" || t.type === "refund" ? "text-success" : "text-destructive"}`}>
+                            {t.type === "topup" || t.type === "refund" ? "+" : "−"}{formatUSD(Number(t.amount))}
+                          </td>
+                          <td className="p-2 text-right tabular-nums">{formatUSD(Number(t.balance_after))}</td>
+                        </tr>
+                      ))}
+                      {detail.data.transactions.length === 0 && (<tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No transactions.</td></tr>)}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
+function StatBox({ label, value, tone }: { label: string; value: string; tone?: "success" | "destructive" }) {
+  const color = tone === "success" ? "text-success" : tone === "destructive" ? "text-destructive" : "";
+  return (
+    <div className="rounded-md border bg-muted/20 p-3">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`text-lg font-bold tabular-nums ${color}`}>{value}</div>
     </div>
   );
 }
