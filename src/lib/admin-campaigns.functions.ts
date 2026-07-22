@@ -129,7 +129,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     );
 
     const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
-    const mmsMultByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.mms_multiplier ?? 3)]));
+    const mmsMultByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.mms_cost_multiplier ?? r.mms_multiplier ?? 3)]));
 
     const totals = {
       total: rows.length,
