@@ -87,19 +87,18 @@ export const getBalanceDropAudit = createServerFn({ method: "POST" })
     const TFN_VERIFY_FEE = 75;
     const { data: tfnAttempts } = await supabaseAdmin
       .from("tollfree_verification_attempts")
-      .select("id,phone_number,status,submitted_at,created_at")
+      .select("id,phone_number,attempt_status,created_at")
+      .in("attempt_status", ["submitted", "already_submitted"])
       .gte("created_at", start)
       .lte("created_at", end);
     let verificationFees = 0;
-    const verificationLines: any[] = [];
-    for (const a of tfnAttempts ?? []) {
-      const submitted = a.submitted_at ?? a.created_at;
-      if (!submitted) continue;
+    const verificationLines: Array<{ occurred_at: string; phone_number: string | null; status: string; fee: number }> = [];
+    for (const a of (tfnAttempts ?? []) as any[]) {
       verificationFees += TFN_VERIFY_FEE;
       verificationLines.push({
-        occurred_at: submitted,
+        occurred_at: a.created_at,
         phone_number: a.phone_number,
-        status: a.status,
+        status: a.attempt_status,
         fee: TFN_VERIFY_FEE,
       });
     }
