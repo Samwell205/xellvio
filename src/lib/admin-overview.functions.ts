@@ -7,11 +7,24 @@ async function ensureAdmin(supabase: any) {
   if (data !== true) throw new Error("Forbidden: admin only");
 }
 
+async function fetchAllRows<T = any>(builder: () => any, pageSize = 1000): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await builder().range(from, from + pageSize - 1);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+  return out;
+}
+
 export const adminGetOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await ensureAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
 
     const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
@@ -35,11 +48,17 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       supabaseAdmin.from("accounts").select("id,email,full_name,company,created_at").order("created_at", { ascending: false }).limit(6),
       supabaseAdmin.from("messages").select("id,phone_e164,status,created_at,campaign_id,cost,country_code").order("created_at", { ascending: false }).limit(8),
       supabaseAdmin.from("payments").select("id,amount,currency,status,provider,created_at,account_id").order("created_at", { ascending: false }).limit(6),
-      supabaseAdmin.from("messages")
-        .select("cost,segments_count,country_code,status,created_at")
-        .in("status", ["sent", "delivered", "delivery_unconfirmed"]),
+      fetchAllRows(() =>
+        supabaseAdmin.from("messages")
+          .select("cost,segments_count,country_code,status,created_at")
+          .in("status", ["sent", "delivered", "delivery_unconfirmed"])
+          .order("created_at", { ascending: false }),
+      ),
       supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price"),
     ]);
+
+    const smsRows: any[] = smsSpendAll as any[];
+
 
     const isPaid = (s: string) => s === "succeeded" || s === "approved" || s === "paid" || s === "finished" || s === "confirmed";
     // Platform accounting is USD. Non-USD payments (e.g. NGN from Paystack local currency)
@@ -65,7 +84,7 @@ export const adminGetOverview = createServerFn({ method: "GET" })
     // SMS economics
     const rates = ratesRes.data ?? [];
     const costByCc = new Map<string, number>(rates.map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
-    const smsRows = smsSpendAll.data ?? [];
+    // smsRows already declared above from paginated fetch
     const tenantSmsSpend = smsRows.reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
     const carrierSmsCost = smsRows.reduce((s: number, m: any) => {
       const c = costByCc.get(m.country_code ?? "") ?? 0;
