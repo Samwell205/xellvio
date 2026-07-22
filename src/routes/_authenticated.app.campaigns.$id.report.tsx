@@ -49,27 +49,67 @@ function ReportPage() {
     );
   }
 
-  async function exportRecipientsCsv() {
+  const filterStatus = (s: string) => {
+    if (s === "delivered") return "delivered";
+    if (s === "failed" || s === "undelivered") return "failed";
+    if (s === "delivery_unconfirmed") return "not_delivered";
+    if (s === "sent") return "sent_awaiting";
+    return s;
+  };
+
+  type FilterKey = "all" | "delivered" | "failed" | "not_delivered" | "sent_awaiting" | "clicked" | "replied";
+
+  function filterRows(rows: RecipientRow[], key: FilterKey): RecipientRow[] {
+    switch (key) {
+      case "all": return rows;
+      case "delivered": return rows.filter((x) => x.status === "delivered");
+      case "failed": return rows.filter((x) => x.status === "failed" || x.status === "undelivered");
+      case "not_delivered": return rows.filter((x) => x.status === "delivery_unconfirmed");
+      case "sent_awaiting": return rows.filter((x) => x.status === "sent");
+      case "clicked": return rows.filter((x) => x.clicks > 0);
+      case "replied": return rows.filter((x) => x.replied);
+    }
+  }
+
+  async function exportRecipientsCsv(key: FilterKey = "all", label = "recipients") {
     setExporting("csv");
     try {
       const { rows, campaign } = await callExport({ data: { campaignId: id } });
-      const filterStatus = (s: string) => {
-        if (s === "delivered") return "delivered";
-        if (s === "failed" || s === "undelivered") return "failed";
-        if (s === "delivery_unconfirmed") return "not_delivered";
-        if (s === "sent") return "sent_awaiting";
-        return s;
-      };
+      const filtered = filterRows(rows, key);
+      if (filtered.length === 0) {
+        toast.info(`No ${label} to export.`);
+        return;
+      }
       downloadCsv(
-        `${campaign.name.replace(/[^a-z0-9]+/gi, "_")}-recipients.csv`,
+        `${campaign.name.replace(/[^a-z0-9]+/gi, "_")}-${label}.csv`,
         ["phone", "country", "status", "error_code", "failure_reason", "sent_at", "delivered_at", "replied", "reply_count", "clicks", "first_click_at", "last_click_at"],
-        rows.map((r) => [
+        filtered.map((r) => [
           r.phone_e164, r.country_code ?? "", filterStatus(r.status), r.error_code ?? "", r.failure_reason ?? "",
           r.sent_at ?? "", r.delivered_at ?? "", r.replied ? "yes" : "no", r.reply_count, r.clicks,
           r.first_click_at ?? "", r.last_click_at ?? "",
         ]),
       );
-      toast.success(`Exported ${rows.length} recipients`);
+      toast.success(`Exported ${filtered.length.toLocaleString()} ${label}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export failed");
+    } finally { setExporting(null); }
+  }
+
+  async function exportPhoneNumbersOnly(key: FilterKey, label: string) {
+    setExporting("csv");
+    try {
+      const { rows, campaign } = await callExport({ data: { campaignId: id } });
+      const filtered = filterRows(rows, key);
+      if (filtered.length === 0) {
+        toast.info(`No ${label} to export.`);
+        return;
+      }
+      downloadCsv(
+        `${campaign.name.replace(/[^a-z0-9]+/gi, "_")}-${label}-phones.csv`,
+        ["phone"],
+        filtered.map((r) => [r.phone_e164]),
+      );
+      toast.success(`Exported ${filtered.length.toLocaleString()} phone numbers (${label})`);
     } catch (e: any) {
       toast.error(e?.message ?? "Export failed");
     } finally { setExporting(null); }
