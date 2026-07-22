@@ -29,21 +29,23 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
     // Country rates (cost_price = what Telnyx charges us per segment)
     const { data: rates } = await supabaseAdmin
       .from("country_rates")
-      .select("country_code,cost_price,sell_price");
+      .select("country_code,cost_price,sell_price,mms_multiplier,mms_cost_multiplier");
     const costByCountry = new Map<string, number>();
+    const mmsMultByCountry = new Map<string, number>();
     for (const r of rates ?? []) {
       costByCountry.set(r.country_code, Number(r.cost_price ?? 0));
+      mmsMultByCountry.set(r.country_code, Number((r as any).mms_cost_multiplier ?? r.mms_multiplier ?? 3));
     }
 
     // Pull messages that were actually submitted to Telnyx in windows
     async function pullSince(iso: string) {
       const pageSize = 1000;
       let from = 0;
-      const rows: Array<{ campaign_id: string; country_code: string | null; segments_count: number | null; cost: number | null; status: string; created_at: string }> = [];
+      const rows: Array<{ campaign_id: string; country_code: string | null; segments_count: number | null; cost: number | null; status: string; created_at: string; is_mms: boolean | null }> = [];
       while (true) {
         const { data, error } = await supabaseAdmin
           .from("messages")
-          .select("campaign_id,country_code,segments_count,cost,status,created_at")
+          .select("campaign_id,country_code,segments_count,cost,status,created_at,is_mms")
           .gte("created_at", iso)
           .in("status", ["sent", "delivered", "delivery_unconfirmed", "undelivered"])
           .range(from, from + pageSize - 1);
@@ -55,6 +57,14 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
         if (rows.length > 200_000) break;
       }
       return rows;
+    }
+
+    // Real Telnyx cost per message = cost_price × segments × (mms_cost_multiplier if MMS)
+    function realCarrierCost(r: { country_code: string | null; segments_count: number | null; is_mms: boolean | null }) {
+      const cc = r.country_code ?? "??";
+      const segs = Number(r.segments_count ?? 1);
+      const mmsMult = r.is_mms ? (mmsMultByCountry.get(cc) ?? 3) : 1;
+      return (costByCountry.get(cc) ?? 0) * segs * mmsMult;
     }
 
     const now = Date.now();
@@ -69,26 +79,28 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       let tenantSpend = 0;
       let segments = 0;
       let messages = 0;
-      const byCountry = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number }>();
+      let mmsCount = 0;
+      const byCountry = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number; mms_count: number }>();
       for (const r of rows) {
         const segs = Number(r.segments_count ?? 1);
         const cc = r.country_code ?? "??";
-        const perSegCost = costByCountry.get(cc) ?? 0;
-        const tCost = perSegCost * segs;
+        const tCost = realCarrierCost(r);
         const spend = Number(r.cost ?? 0);
         telnyxCost += tCost;
         tenantSpend += spend;
         segments += segs;
         messages += 1;
-        const b = byCountry.get(cc) ?? { messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0 };
+        if (r.is_mms) mmsCount += 1;
+        const b = byCountry.get(cc) ?? { messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0, mms_count: 0 };
         b.messages += 1;
         b.segments += segs;
         b.telnyx_cost += tCost;
         b.tenant_spend += spend;
+        if (r.is_mms) b.mms_count += 1;
         byCountry.set(cc, b);
       }
       return {
-        messages, segments,
+        messages, segments, mms_count: mmsCount,
         telnyx_cost: Number(telnyxCost.toFixed(4)),
         tenant_spend: Number(tenantSpend.toFixed(4)),
         margin: Number((tenantSpend - telnyxCost).toFixed(4)),
@@ -115,14 +127,14 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       const segs = Number(r.segments_count ?? 1);
       b.messages += 1;
       b.segments += segs;
-      b.telnyx_cost += (costByCountry.get(r.country_code ?? "??") ?? 0) * segs;
+      b.telnyx_cost += realCarrierCost(r);
     }
 
     // Top campaigns by Telnyx cost (30d)
     const byCamp = new Map<string, { campaign_id: string; messages: number; segments: number; telnyx_cost: number; tenant_spend: number }>();
     for (const r of rows30) {
       const segs = Number(r.segments_count ?? 1);
-      const tCost = (costByCountry.get(r.country_code ?? "??") ?? 0) * segs;
+      const tCost = realCarrierCost(r);
       const b = byCamp.get(r.campaign_id) ?? { campaign_id: r.campaign_id, messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0 };
       b.messages += 1;
       b.segments += segs;
@@ -194,3 +206,76 @@ export const getTelnyxLiveBalance = createServerFn({ method: "GET" })
     const bal = await getBalance();
     return { ...bal, checked_at: new Date().toISOString() };
   });
+
+/**
+ * Admin: send the MMS pricing-correction email to a specific tenant explaining
+ * what was debited and why. Idempotent per (accountId + reason key).
+ */
+import { z } from "zod";
+export const sendMmsCorrectionEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { accountId: string }) => z.object({ accountId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { sendBrandedEmail } = await import("./email/send-internal.server");
+
+    const { data: acct } = await supabaseAdmin
+      .from("accounts")
+      .select("id,contact_email,email,legal_business_name,credit_balance")
+      .eq("id", data.accountId)
+      .maybeSingle();
+    if (!acct) throw new Error("Account not found");
+    const to = (acct.contact_email ?? acct.email ?? "").trim();
+    if (!to) throw new Error("No email on account");
+
+    // Compute correction details
+    const { data: rows } = await supabaseAdmin
+      .from("messages")
+      .select("id, campaigns!inner(account_id)", { count: "exact", head: false })
+      .eq("is_mms", true)
+      .in("status", ["delivered", "sent", "delivery_unconfirmed"])
+      .eq("campaigns.account_id", data.accountId);
+    const msgCount = rows?.length ?? 0;
+    const additional = Number((msgCount * 0.024).toFixed(2));
+    const balance = Number(acct.credit_balance ?? 0);
+    const inDebt = balance < 0;
+
+    const body = [
+      `Hi ${acct.legal_business_name ?? "there"},`,
+      "",
+      "We're writing about your recent MMS campaigns on Xellvio.",
+      "",
+      `While reviewing our Telnyx carrier bill, we found that the MMS price we charged you was below the real carrier cost. The actual Telnyx charge for US MMS is $0.024 per message — but you were charged as if it were $0.024 including our margin, which left us paying the carrier out of pocket.`,
+      "",
+      `We've corrected the price going forward to $0.048 per US MMS (Telnyx cost $0.024 + our margin $0.024). This matches industry rates and keeps your account in good standing.`,
+      "",
+      `Retroactive correction on your account:`,
+      `• Successful MMS delivered: ${msgCount.toLocaleString()}`,
+      `• Additional carrier cost owed: $0.024 × ${msgCount.toLocaleString()} = $${additional.toFixed(2)}`,
+      `• Your current balance: $${balance.toFixed(2)}${inDebt ? "  (this is a debt — please top up to resume sending)" : ""}`,
+      "",
+      `Example going forward: sending 1,000 MMS to US costs you $48.00 (Telnyx charges us $24.00, our margin is $24.00).`,
+      "",
+      `We're sorry for the pricing mistake — this only affected MMS, not SMS. If you have any questions, just reply to this email.`,
+      "",
+      "— The Xellvio team",
+    ].join("\n");
+
+    const result = await sendBrandedEmail({
+      templateName: "generic",
+      recipientEmail: to,
+      idempotencyKey: `mms-correction-v1-${data.accountId}`,
+      templateData: {
+        subject: "Important: MMS pricing correction on your Xellvio account",
+        heading: "MMS pricing correction",
+        body,
+        ctaText: "View your billing",
+        ctaUrl: "https://xellvio.com/app/billing",
+      },
+      sendImmediately: true,
+    });
+
+    return { ok: result.success, reason: result.reason, additional_charged: additional, message_count: msgCount, balance };
+  });
+

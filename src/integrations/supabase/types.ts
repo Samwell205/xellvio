@@ -842,6 +842,7 @@ export type Database = {
           last_synced_at: string | null
           manual_override: boolean
           markup_percent: number
+          mms_cost_multiplier: number
           mms_multiplier: number
           number_type_used: string | null
           sell_price: number
@@ -860,6 +861,7 @@ export type Database = {
           last_synced_at?: string | null
           manual_override?: boolean
           markup_percent?: number
+          mms_cost_multiplier?: number
           mms_multiplier?: number
           number_type_used?: string | null
           sell_price?: number
@@ -878,6 +880,7 @@ export type Database = {
           last_synced_at?: string | null
           manual_override?: boolean
           markup_percent?: number
+          mms_cost_multiplier?: number
           mms_multiplier?: number
           number_type_used?: string | null
           sell_price?: number
@@ -2755,16 +2758,16 @@ export type Database = {
         Args: never
         Returns: {
           campaign_id: string
-          carrier_cost: number
-          cost: number
           delivered: number
+          delivery_unconfirmed: number
           failed: number
           mms_count: number
           queued: number
           segments: number
           sent: number
+          telnyx_cost: number
+          tenant_cost: number
           total: number
-          unconfirmed: number
         }[]
       }
       claim_account_invites: { Args: never; Returns: number }

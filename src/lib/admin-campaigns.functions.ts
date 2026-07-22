@@ -109,7 +109,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         .select("id,account_id,name,status,message_body,created_at")
         .eq("id", data.campaignId)
         .maybeSingle(),
-      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,mms_multiplier"),
+      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,mms_multiplier,mms_cost_multiplier"),
     ]);
     if (cErr) throw new Error(cErr.message);
     if (!campaign) throw new Error("Campaign not found");
@@ -129,7 +129,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     );
 
     const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
-    const mmsMultByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.mms_multiplier ?? 3)]));
+    const mmsMultByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.mms_cost_multiplier ?? r.mms_multiplier ?? 3)]));
 
     const totals = {
       total: rows.length,
