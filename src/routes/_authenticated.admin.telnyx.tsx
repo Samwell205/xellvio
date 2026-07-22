@@ -155,6 +155,29 @@ function AdminTelnyxPage() {
         </ul>
         <p className="text-xs text-muted-foreground">If Telnyx Transactions shows charges you don't see above, it's almost always number rentals or verification fees — not SMS.</p>
       </Card>
+
+      <Card className="p-5 space-y-3">
+        <h3 className="font-semibold">MMS pricing correction</h3>
+        <p className="text-sm text-muted-foreground">
+          US MMS is now priced at <strong>$0.048/message</strong> (Telnyx cost $0.024 + $0.024 margin).
+          A retroactive charge of <strong>$0.024 × successful MMS</strong> has been applied to <strong>PRINCESS POLLY</strong> (emmanuelolushola824@gmail.com).
+          Click below to email the tenant the explanation.
+        </p>
+        <Button
+          size="sm"
+          onClick={async () => {
+            try {
+              const res = await sendMmsCorrectionEmail({ data: { accountId: "73d366b2-d9e0-4fb3-8635-a3707505ced0" } });
+              if (res.ok) toast.success(`Email sent — $${res.additional_charged} debited for ${res.message_count} MMS. Balance $${res.balance.toFixed(2)}`);
+              else toast.error(`Failed: ${res.reason ?? "unknown"}`);
+            } catch (e: any) {
+              toast.error(e.message ?? "Failed to send");
+            }
+          }}
+        >
+          Send MMS correction email to PRINCESS POLLY
+        </Button>
+      </Card>
     </div>
   );
 }
