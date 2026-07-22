@@ -2,6 +2,7 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCampaignReport, type CampaignReport } from "@/lib/reports.functions";
+import { getCampaignRecipientsExport } from "@/lib/tenant-report-export.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,10 @@ import { formatUSD } from "@/lib/money";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
-import { ArrowLeft, Download, CheckCircle2, XCircle, Clock, DollarSign, Send, HelpCircle } from "lucide-react";
+import { ArrowLeft, Download, FileDown, CheckCircle2, XCircle, Clock, DollarSign, Send, HelpCircle } from "lucide-react";
+import { downloadCsv, downloadPdf } from "@/lib/report-export";
+import { toast } from "sonner";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id/report")({
   head: () => ({ meta: [{ title: "Campaign report — Xellvio" }] }),
@@ -23,32 +27,93 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/$id/report")
 function ReportPage() {
   const { id } = useParams({ from: "/_authenticated/app/campaigns/$id/report" });
   const call = useServerFn(getCampaignReport);
+  const callExport = useServerFn(getCampaignRecipientsExport);
   const q = useQuery<CampaignReport>({
     queryKey: ["campaign-report", id],
     queryFn: () => call({ data: { campaignId: id } }),
     refetchInterval: 15000,
   });
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
 
   const r = q.data;
 
   function exportFailuresCsv() {
     if (!r) return;
-    const rows = [["phone_e164", "country_code", "error_code", "failure_reason", "created_at"]];
-    for (const f of r.failures) {
-      rows.push([f.phone_e164, f.country_code ?? "", f.error_code ?? "", (f.failure_reason ?? "").replace(/"/g, "'"), f.created_at]);
-    }
-    const csv = rows.map((row) => row.map((c) => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `campaign-${id}-failures.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(
+      `campaign-${id}-failures.csv`,
+      ["phone_e164", "country_code", "error_code", "failure_reason", "created_at"],
+      r.failures.map((f) => [f.phone_e164, f.country_code ?? "", f.error_code ?? "", f.failure_reason ?? "", f.created_at]),
+    );
+  }
+
+  async function exportRecipientsCsv() {
+    setExporting("csv");
+    try {
+      const { rows, campaign } = await callExport({ data: { campaignId: id } });
+      const filterStatus = (s: string) => {
+        if (s === "delivered") return "delivered";
+        if (s === "failed" || s === "undelivered") return "failed";
+        if (s === "delivery_unconfirmed") return "not_delivered";
+        if (s === "sent") return "sent_awaiting";
+        return s;
+      };
+      downloadCsv(
+        `${campaign.name.replace(/[^a-z0-9]+/gi, "_")}-recipients.csv`,
+        ["phone", "country", "status", "error_code", "failure_reason", "sent_at", "delivered_at", "replied", "reply_count", "clicks", "first_click_at", "last_click_at"],
+        rows.map((r) => [
+          r.phone_e164, r.country_code ?? "", filterStatus(r.status), r.error_code ?? "", r.failure_reason ?? "",
+          r.sent_at ?? "", r.delivered_at ?? "", r.replied ? "yes" : "no", r.reply_count, r.clicks,
+          r.first_click_at ?? "", r.last_click_at ?? "",
+        ]),
+      );
+      toast.success(`Exported ${rows.length} recipients`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export failed");
+    } finally { setExporting(null); }
+  }
+
+  async function exportSummaryPdf() {
+    if (!r) return;
+    setExporting("pdf");
+    try {
+      const { rows: recipients, campaign } = await callExport({ data: { campaignId: id } });
+      const totalClicks = recipients.reduce((s, x) => s + x.clicks, 0);
+      const uniqueClickers = recipients.filter((x) => x.clicks > 0).length;
+      const replies = recipients.filter((x) => x.replied).length;
+      downloadPdf({
+        filename: `${campaign.name.replace(/[^a-z0-9]+/gi, "_")}-summary.pdf`,
+        title: campaign.name,
+        subtitle: `Campaign report • Sent ${new Date(campaign.created_at).toLocaleString()}`,
+        sections: [
+          { type: "kv", title: "Overview", items: [
+            ["Recipients", r.totals.total.toLocaleString()],
+            ["Sent to carrier", r.totals.sent.toLocaleString()],
+            ["Delivered", `${r.totals.delivered.toLocaleString()} (${r.totals.delivery_rate}%)`],
+            ["Not delivered", r.totals.delivery_unconfirmed.toLocaleString()],
+            ["Failed", r.totals.failed.toLocaleString()],
+            ["Awaiting carrier", r.totals.awaiting_delivery.toLocaleString()],
+            ["Replies received", replies.toLocaleString()],
+            ["Link clicks (total)", totalClicks.toLocaleString()],
+            ["Unique clickers", uniqueClickers.toLocaleString()],
+          ] },
+          { type: "table", title: "By country", head: ["Country", "Recipients", "Delivered", "Failed"],
+            rows: r.byCountry.map((c) => [c.country_code, c.recipients, c.delivered, c.failed]) },
+          ...(r.failures.length > 0 ? [{
+            type: "table" as const, title: `Failures (first ${Math.min(r.failures.length, 50)})`,
+            head: ["Phone", "Country", "Code", "Reason"],
+            rows: r.failures.slice(0, 50).map((f) => [f.phone_e164, f.country_code ?? "—", f.error_code ?? "—", (f.failure_reason ?? "").slice(0, 60)]),
+          }] : []),
+        ],
+      });
+      toast.success("PDF downloaded");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export failed");
+    } finally { setExporting(null); }
   }
 
   if (q.isLoading) return <div className="p-8 text-muted-foreground">Loading report…</div>;
   if (!r) return <div className="p-8 text-muted-foreground">No data.</div>;
+
 
   return (
     <div className="p-6 space-y-6 max-w-7xl">
