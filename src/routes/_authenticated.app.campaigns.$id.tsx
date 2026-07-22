@@ -486,6 +486,27 @@ function CampaignReport() {
               <Download className="size-3 mr-1" />
               Export CSV
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={exportingPhones}>
+                  <Download className="size-3 mr-1" />
+                  {exportingPhones ? "Exporting…" : "Export phone numbers"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Phone numbers only</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("delivered", "delivered")}>Delivered</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("failed", "failed")}>Failed</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("not_delivered", "not-delivered")}>Not delivered</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("sent_awaiting", "awaiting-carrier")}>Awaiting carrier</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Engagement</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("clicked", "link-clickers")}>Clicked the link</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("replied", "responders")}>Replied</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("all", "all")}>All recipients</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {!["sent", "cancelled", "failed"].includes(c.status) && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
