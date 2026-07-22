@@ -117,6 +117,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       }
 
       totals.cost += Number(r.cost ?? 0);
+      if (r.is_mms) totals.mms_count += 1;
       if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
       if (r.status === "sent") totals.awaiting_delivery += 1;
       if (r.status === "delivered") totals.delivered += 1;
