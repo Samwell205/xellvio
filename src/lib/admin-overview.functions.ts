@@ -48,11 +48,17 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       supabaseAdmin.from("accounts").select("id,email,full_name,company,created_at").order("created_at", { ascending: false }).limit(6),
       supabaseAdmin.from("messages").select("id,phone_e164,status,created_at,campaign_id,cost,country_code").order("created_at", { ascending: false }).limit(8),
       supabaseAdmin.from("payments").select("id,amount,currency,status,provider,created_at,account_id").order("created_at", { ascending: false }).limit(6),
-      supabaseAdmin.from("messages")
-        .select("cost,segments_count,country_code,status,created_at")
-        .in("status", ["sent", "delivered", "delivery_unconfirmed"]),
+      fetchAllRows(() =>
+        supabaseAdmin.from("messages")
+          .select("cost,segments_count,country_code,status,created_at")
+          .in("status", ["sent", "delivered", "delivery_unconfirmed"])
+          .order("created_at", { ascending: false }),
+      ),
       supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price"),
     ]);
+
+    const smsRows: any[] = smsSpendAll as any[];
+
 
     const isPaid = (s: string) => s === "succeeded" || s === "approved" || s === "paid" || s === "finished" || s === "confirmed";
     // Platform accounting is USD. Non-USD payments (e.g. NGN from Paystack local currency)
