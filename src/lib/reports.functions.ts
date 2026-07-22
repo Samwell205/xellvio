@@ -148,6 +148,8 @@ export const getCampaignReport = createServerFn({ method: "POST" })
 
     totals.cost = +totals.cost.toFixed(4);
     totals.delivery_rate = totals.sent > 0 ? +((totals.delivered / totals.sent) * 100).toFixed(1) : 0;
+    totals.is_mms = totals.mms_count > 0;
+
 
     return {
       campaign: {
