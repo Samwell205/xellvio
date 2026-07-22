@@ -356,6 +356,7 @@ async function planCampaign(
       phone_e164: r.phone_e164,
       country_code: r.country_code,
       segments_count: segs,
+      is_mms: hasMedia && !!rate && supportsMms(r.country_code),
       cost,
       rendered_body: rewritten,
     };
