@@ -70,7 +70,9 @@ function AdminCampaignsPage() {
                   <th className="p-3 text-right">Delivered</th>
                   <th className="p-3 text-right">Failed</th>
                   <th className="p-3 text-right">Rate</th>
-                  <th className="p-3 text-right">Spend</th>
+                  <th className="p-3 text-right">Tenant spend</th>
+                  <th className="p-3 text-right">Telnyx cost</th>
+                  <th className="p-3 text-right">Profit</th>
                   <th className="p-3"></th>
                 </tr>
               </thead>
@@ -92,6 +94,8 @@ function AdminCampaignsPage() {
                     <td className="p-3 text-right tabular-nums text-destructive">{c.failed.toLocaleString()}</td>
                     <td className="p-3 text-right tabular-nums">{c.delivery_rate}%</td>
                     <td className="p-3 text-right tabular-nums">{formatUSD(Number(c.cost ?? 0))}</td>
+                    <td className="p-3 text-right tabular-nums text-muted-foreground">{formatUSD(Number(c.carrier_cost ?? 0))}</td>
+                    <td className={`p-3 text-right tabular-nums ${Number(c.margin ?? 0) >= 0 ? "text-emerald-600" : "text-destructive"}`}>{formatUSD(Number(c.margin ?? 0))}</td>
                     <td className="p-3">
                       <Link to="/admin/campaigns/$id" params={{ id: c.id }} className="text-primary text-xs inline-flex items-center gap-1 hover:underline">
                         Report <ExternalLink className="size-3" />
@@ -99,7 +103,7 @@ function AdminCampaignsPage() {
                     </td>
                   </tr>
                 ))}
-                {rows.length === 0 && <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">No campaigns match.</td></tr>}
+                {rows.length === 0 && <tr><td colSpan={12} className="p-8 text-center text-muted-foreground">No campaigns match.</td></tr>}
               </tbody>
             </table>
           </div>
