@@ -84,7 +84,7 @@ export const adminGetOverview = createServerFn({ method: "GET" })
     // SMS economics
     const rates = ratesRes.data ?? [];
     const costByCc = new Map<string, number>(rates.map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
-    const smsRows = smsSpendAll.data ?? [];
+    // smsRows already declared above from paginated fetch
     const tenantSmsSpend = smsRows.reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
     const carrierSmsCost = smsRows.reduce((s: number, m: any) => {
       const c = costByCc.get(m.country_code ?? "") ?? 0;
