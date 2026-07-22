@@ -2,15 +2,18 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCampaignReport, type CampaignReport } from "@/lib/reports.functions";
-import { getCampaignRecipientsExport } from "@/lib/tenant-report-export.functions";
+import { getCampaignRecipientsExport, type RecipientRow } from "@/lib/tenant-report-export.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { formatUSD } from "@/lib/money";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
-import { ArrowLeft, Download, FileDown, CheckCircle2, XCircle, Clock, DollarSign, Send, HelpCircle } from "lucide-react";
+import { ArrowLeft, Download, FileDown, CheckCircle2, XCircle, Clock, DollarSign, Send, HelpCircle, ChevronDown, MousePointerClick, MessageSquare } from "lucide-react";
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -46,27 +49,67 @@ function ReportPage() {
     );
   }
 
-  async function exportRecipientsCsv() {
+  const filterStatus = (s: string) => {
+    if (s === "delivered") return "delivered";
+    if (s === "failed" || s === "undelivered") return "failed";
+    if (s === "delivery_unconfirmed") return "not_delivered";
+    if (s === "sent") return "sent_awaiting";
+    return s;
+  };
+
+  type FilterKey = "all" | "delivered" | "failed" | "not_delivered" | "sent_awaiting" | "clicked" | "replied";
+
+  function filterRows(rows: RecipientRow[], key: FilterKey): RecipientRow[] {
+    switch (key) {
+      case "all": return rows;
+      case "delivered": return rows.filter((x) => x.status === "delivered");
+      case "failed": return rows.filter((x) => x.status === "failed" || x.status === "undelivered");
+      case "not_delivered": return rows.filter((x) => x.status === "delivery_unconfirmed");
+      case "sent_awaiting": return rows.filter((x) => x.status === "sent");
+      case "clicked": return rows.filter((x) => x.clicks > 0);
+      case "replied": return rows.filter((x) => x.replied);
+    }
+  }
+
+  async function exportRecipientsCsv(key: FilterKey = "all", label = "recipients") {
     setExporting("csv");
     try {
       const { rows, campaign } = await callExport({ data: { campaignId: id } });
-      const filterStatus = (s: string) => {
-        if (s === "delivered") return "delivered";
-        if (s === "failed" || s === "undelivered") return "failed";
-        if (s === "delivery_unconfirmed") return "not_delivered";
-        if (s === "sent") return "sent_awaiting";
-        return s;
-      };
+      const filtered = filterRows(rows, key);
+      if (filtered.length === 0) {
+        toast.info(`No ${label} to export.`);
+        return;
+      }
       downloadCsv(
-        `${campaign.name.replace(/[^a-z0-9]+/gi, "_")}-recipients.csv`,
+        `${campaign.name.replace(/[^a-z0-9]+/gi, "_")}-${label}.csv`,
         ["phone", "country", "status", "error_code", "failure_reason", "sent_at", "delivered_at", "replied", "reply_count", "clicks", "first_click_at", "last_click_at"],
-        rows.map((r) => [
+        filtered.map((r) => [
           r.phone_e164, r.country_code ?? "", filterStatus(r.status), r.error_code ?? "", r.failure_reason ?? "",
           r.sent_at ?? "", r.delivered_at ?? "", r.replied ? "yes" : "no", r.reply_count, r.clicks,
           r.first_click_at ?? "", r.last_click_at ?? "",
         ]),
       );
-      toast.success(`Exported ${rows.length} recipients`);
+      toast.success(`Exported ${filtered.length.toLocaleString()} ${label}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Export failed");
+    } finally { setExporting(null); }
+  }
+
+  async function exportPhoneNumbersOnly(key: FilterKey, label: string) {
+    setExporting("csv");
+    try {
+      const { rows, campaign } = await callExport({ data: { campaignId: id } });
+      const filtered = filterRows(rows, key);
+      if (filtered.length === 0) {
+        toast.info(`No ${label} to export.`);
+        return;
+      }
+      downloadCsv(
+        `${campaign.name.replace(/[^a-z0-9]+/gi, "_")}-${label}-phones.csv`,
+        ["phone"],
+        filtered.map((r) => [r.phone_e164]),
+      );
+      toast.success(`Exported ${filtered.length.toLocaleString()} phone numbers (${label})`);
     } catch (e: any) {
       toast.error(e?.message ?? "Export failed");
     } finally { setExporting(null); }
@@ -130,10 +173,62 @@ function ReportPage() {
             {r.totals.is_mms && <span className="text-fuchsia-700">· MMS pricing (image attached, ~3× SMS rate)</span>}
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportRecipientsCsv} disabled={exporting !== null}>
-            <FileDown className="size-4 mr-1" />{exporting === "csv" ? "Exporting…" : "Export CSV"}
-          </Button>
+        <div className="flex gap-2 flex-wrap">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={exporting !== null}>
+                <FileDown className="size-4 mr-1" />
+                {exporting === "csv" ? "Exporting…" : "Export phone numbers"}
+                <ChevronDown className="size-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel className="text-xs">Phone numbers only</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("delivered", "delivered")}>
+                <CheckCircle2 className="size-4 mr-2 text-green-600" /> Delivered
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.delivered.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("failed", "failed")}>
+                <XCircle className="size-4 mr-2 text-destructive" /> Failed
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.failed.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("not_delivered", "not-delivered")}>
+                <HelpCircle className="size-4 mr-2 text-sky-600" /> Not delivered
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.delivery_unconfirmed.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("sent_awaiting", "awaiting")}>
+                <Clock className="size-4 mr-2 text-amber-600" /> Awaiting carrier
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.awaiting_delivery.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("clicked", "link-clickers")}>
+                <MousePointerClick className="size-4 mr-2 text-primary" /> Clicked a link
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("replied", "responders")}>
+                <MessageSquare className="size-4 mr-2 text-emerald-600" /> Replied
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("all", "all")}>
+                <Send className="size-4 mr-2" /> All recipients
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.total.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs">Full details (all columns)</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("all", "all-recipients")}>
+                <FileDown className="size-4 mr-2" /> All recipients (full CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("delivered", "delivered")}>
+                <FileDown className="size-4 mr-2" /> Delivered (full CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("failed", "failed")}>
+                <FileDown className="size-4 mr-2" /> Failed (full CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("clicked", "link-clickers")}>
+                <FileDown className="size-4 mr-2" /> Clickers (full CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("replied", "responders")}>
+                <FileDown className="size-4 mr-2" /> Responders (full CSV)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" onClick={exportSummaryPdf} disabled={exporting !== null}>
             <Download className="size-4 mr-1" />{exporting === "pdf" ? "Building…" : "PDF summary"}
           </Button>
