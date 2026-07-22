@@ -41,11 +41,11 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
     async function pullSince(iso: string) {
       const pageSize = 1000;
       let from = 0;
-      const rows: Array<{ campaign_id: string; country_code: string | null; segments_count: number | null; cost: number | null; status: string; created_at: string }> = [];
+      const rows: Array<{ campaign_id: string; country_code: string | null; segments_count: number | null; cost: number | null; status: string; created_at: string; is_mms: boolean | null }> = [];
       while (true) {
         const { data, error } = await supabaseAdmin
           .from("messages")
-          .select("campaign_id,country_code,segments_count,cost,status,created_at")
+          .select("campaign_id,country_code,segments_count,cost,status,created_at,is_mms")
           .gte("created_at", iso)
           .in("status", ["sent", "delivered", "delivery_unconfirmed", "undelivered"])
           .range(from, from + pageSize - 1);
@@ -57,6 +57,14 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
         if (rows.length > 200_000) break;
       }
       return rows;
+    }
+
+    // Real Telnyx cost per message = cost_price × segments × (mms_cost_multiplier if MMS)
+    function realCarrierCost(r: { country_code: string | null; segments_count: number | null; is_mms: boolean | null }) {
+      const cc = r.country_code ?? "??";
+      const segs = Number(r.segments_count ?? 1);
+      const mmsMult = r.is_mms ? (mmsMultByCountry.get(cc) ?? 3) : 1;
+      return (costByCountry.get(cc) ?? 0) * segs * mmsMult;
     }
 
     const now = Date.now();
@@ -71,26 +79,28 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       let tenantSpend = 0;
       let segments = 0;
       let messages = 0;
-      const byCountry = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number }>();
+      let mmsCount = 0;
+      const byCountry = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number; mms_count: number }>();
       for (const r of rows) {
         const segs = Number(r.segments_count ?? 1);
         const cc = r.country_code ?? "??";
-        const perSegCost = costByCountry.get(cc) ?? 0;
-        const tCost = perSegCost * segs;
+        const tCost = realCarrierCost(r);
         const spend = Number(r.cost ?? 0);
         telnyxCost += tCost;
         tenantSpend += spend;
         segments += segs;
         messages += 1;
-        const b = byCountry.get(cc) ?? { messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0 };
+        if (r.is_mms) mmsCount += 1;
+        const b = byCountry.get(cc) ?? { messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0, mms_count: 0 };
         b.messages += 1;
         b.segments += segs;
         b.telnyx_cost += tCost;
         b.tenant_spend += spend;
+        if (r.is_mms) b.mms_count += 1;
         byCountry.set(cc, b);
       }
       return {
-        messages, segments,
+        messages, segments, mms_count: mmsCount,
         telnyx_cost: Number(telnyxCost.toFixed(4)),
         tenant_spend: Number(tenantSpend.toFixed(4)),
         margin: Number((tenantSpend - telnyxCost).toFixed(4)),
@@ -117,14 +127,14 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       const segs = Number(r.segments_count ?? 1);
       b.messages += 1;
       b.segments += segs;
-      b.telnyx_cost += (costByCountry.get(r.country_code ?? "??") ?? 0) * segs;
+      b.telnyx_cost += realCarrierCost(r);
     }
 
     // Top campaigns by Telnyx cost (30d)
     const byCamp = new Map<string, { campaign_id: string; messages: number; segments: number; telnyx_cost: number; tenant_spend: number }>();
     for (const r of rows30) {
       const segs = Number(r.segments_count ?? 1);
-      const tCost = (costByCountry.get(r.country_code ?? "??") ?? 0) * segs;
+      const tCost = realCarrierCost(r);
       const b = byCamp.get(r.campaign_id) ?? { campaign_id: r.campaign_id, messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0 };
       b.messages += 1;
       b.segments += segs;
