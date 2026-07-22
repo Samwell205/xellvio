@@ -2,15 +2,18 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCampaignReport, type CampaignReport } from "@/lib/reports.functions";
-import { getCampaignRecipientsExport } from "@/lib/tenant-report-export.functions";
+import { getCampaignRecipientsExport, type RecipientRow } from "@/lib/tenant-report-export.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { formatUSD } from "@/lib/money";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
-import { ArrowLeft, Download, FileDown, CheckCircle2, XCircle, Clock, DollarSign, Send, HelpCircle } from "lucide-react";
+import { ArrowLeft, Download, FileDown, CheckCircle2, XCircle, Clock, DollarSign, Send, HelpCircle, ChevronDown, MousePointerClick, MessageSquare } from "lucide-react";
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
 import { toast } from "sonner";
 import { useState } from "react";
