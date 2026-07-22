@@ -44,8 +44,8 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
     if (campaignIds.length === 0) return [];
 
     // Aggregate stats per campaign in a single SQL query.
-    const stats = new Map<string, { total: number; delivered: number; failed: number; sent: number; unconfirmed: number; queued: number; cost: number }>();
-    for (const id of campaignIds) stats.set(id, { total: 0, delivered: 0, failed: 0, sent: 0, unconfirmed: 0, queued: 0, cost: 0 });
+    const stats = new Map<string, { total: number; delivered: number; failed: number; sent: number; unconfirmed: number; queued: number; cost: number; carrier_cost: number; segments: number }>();
+    for (const id of campaignIds) stats.set(id, { total: 0, delivered: 0, failed: 0, sent: 0, unconfirmed: 0, queued: 0, cost: 0, carrier_cost: 0, segments: 0 });
 
     const { data: statRows, error: statErr } = await supabaseAdmin.rpc("admin_campaign_stats");
     if (statErr) throw new Error(statErr.message);
@@ -59,6 +59,8 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
         unconfirmed: Number(r.unconfirmed ?? 0),
         queued: Number(r.queued ?? 0),
         cost: Number(r.cost ?? 0),
+        carrier_cost: Number(r.carrier_cost ?? 0),
+        segments: Number(r.segments ?? 0),
       });
     }
 
@@ -82,7 +84,10 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
         unconfirmed: s.unconfirmed,
         sent_awaiting: s.sent,
         queued: s.queued,
+        segments: s.segments,
         cost: +s.cost.toFixed(4),
+        carrier_cost: +s.carrier_cost.toFixed(4),
+        margin: +(s.cost - s.carrier_cost).toFixed(4),
         delivery_rate: finalized > 0 ? +((s.delivered / finalized) * 100).toFixed(1) : 0,
       };
     });
