@@ -173,10 +173,62 @@ function ReportPage() {
             {r.totals.is_mms && <span className="text-fuchsia-700">· MMS pricing (image attached, ~3× SMS rate)</span>}
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportRecipientsCsv} disabled={exporting !== null}>
-            <FileDown className="size-4 mr-1" />{exporting === "csv" ? "Exporting…" : "Export CSV"}
-          </Button>
+        <div className="flex gap-2 flex-wrap">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" disabled={exporting !== null}>
+                <FileDown className="size-4 mr-1" />
+                {exporting === "csv" ? "Exporting…" : "Export phone numbers"}
+                <ChevronDown className="size-4 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel className="text-xs">Phone numbers only</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("delivered", "delivered")}>
+                <CheckCircle2 className="size-4 mr-2 text-green-600" /> Delivered
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.delivered.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("failed", "failed")}>
+                <XCircle className="size-4 mr-2 text-destructive" /> Failed
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.failed.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("not_delivered", "not-delivered")}>
+                <HelpCircle className="size-4 mr-2 text-sky-600" /> Not delivered
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.delivery_unconfirmed.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("sent_awaiting", "awaiting")}>
+                <Clock className="size-4 mr-2 text-amber-600" /> Awaiting carrier
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.awaiting_delivery.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("clicked", "link-clickers")}>
+                <MousePointerClick className="size-4 mr-2 text-primary" /> Clicked a link
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("replied", "responders")}>
+                <MessageSquare className="size-4 mr-2 text-emerald-600" /> Replied
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("all", "all")}>
+                <Send className="size-4 mr-2" /> All recipients
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.total.toLocaleString()}</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-xs">Full details (all columns)</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("all", "all-recipients")}>
+                <FileDown className="size-4 mr-2" /> All recipients (full CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("delivered", "delivered")}>
+                <FileDown className="size-4 mr-2" /> Delivered (full CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("failed", "failed")}>
+                <FileDown className="size-4 mr-2" /> Failed (full CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("clicked", "link-clickers")}>
+                <FileDown className="size-4 mr-2" /> Clickers (full CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportRecipientsCsv("replied", "responders")}>
+                <FileDown className="size-4 mr-2" /> Responders (full CSV)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" onClick={exportSummaryPdf} disabled={exporting !== null}>
             <Download className="size-4 mr-1" />{exporting === "pdf" ? "Building…" : "PDF summary"}
           </Button>
