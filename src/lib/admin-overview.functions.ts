@@ -7,11 +7,24 @@ async function ensureAdmin(supabase: any) {
   if (data !== true) throw new Error("Forbidden: admin only");
 }
 
+async function fetchAllRows<T = any>(builder: () => any, pageSize = 1000): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await builder().range(from, from + pageSize - 1);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+  return out;
+}
+
 export const adminGetOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await ensureAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
 
     const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
     const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
