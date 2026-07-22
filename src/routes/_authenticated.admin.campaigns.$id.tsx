@@ -2,10 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Download, FileDown } from "lucide-react";
 import { adminGetCampaignReport } from "@/lib/admin-campaigns.functions";
 import { formatUSD } from "@/lib/money";
+import { downloadCsv, downloadPdf } from "@/lib/report-export";
 
 export const Route = createFileRoute("/_authenticated/admin/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign report — Admin" }] }),
