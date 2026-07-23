@@ -213,7 +213,7 @@ export const sendReply = createServerFn({ method: "POST" })
     // Debit tenant credit for the reply (silent — no user-facing pricing detail here).
     if (cost > 0) {
       try {
-        await supabaseAdmin.rpc("debit_account", {
+        await (supabaseAdmin.rpc as any)("debit_account", {
           _account_id: accountId,
           _amount: cost,
           _campaign_id: null,
