@@ -139,6 +139,30 @@ export const sendReply = createServerFn({ method: "POST" })
       : null;
     const asset = matchByLast ?? eligible[0];
 
+    // ── Price the reply and verify balance before sending.
+    const { calculateSegments } = await import("./sms-segments");
+    const { countryFromPhone } = await import("./country-from-phone");
+    const { data: ratesData } = await supabaseAdmin
+      .from("country_rates")
+      .select("country_code,dial_prefix,sell_price,active")
+      .eq("active", true);
+    const rates = (ratesData ?? []) as Array<{ country_code: string; dial_prefix: string; sell_price: number; active: boolean }>;
+    const dial = rates.map((r) => ({ country_code: r.country_code, dial_prefix: r.dial_prefix }));
+    const cc = countryFromPhone(data.phone, dial) ?? asset.country_code ?? "US";
+    const rate = rates.find((r) => r.country_code === cc);
+    const segs = calculateSegments(data.body).segments || 1;
+    const unit = rate ? Number(rate.sell_price) : 0;
+    const cost = +(segs * unit).toFixed(4);
+
+    const { data: bal } = await supabaseAdmin
+      .from("accounts").select("credit_balance").eq("id", accountId).maybeSingle();
+    const currentBalance = Number(bal?.credit_balance ?? 0);
+    if (cost > 0 && currentBalance < cost) {
+      throw new Error(
+        `Insufficient credit to send reply. Needed $${cost.toFixed(4)}, balance $${currentBalance.toFixed(2)}. Please top up your account.`,
+      );
+    }
+
     // ── Compliance firewall on inbox replies (1:1 conversation).
     const { screenMessageContent } = await import("./content-screening.server");
     const { TOS_CURRENT_VERSION } = await import("./tos");
