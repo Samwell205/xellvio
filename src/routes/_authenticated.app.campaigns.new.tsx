@@ -812,7 +812,7 @@ function NewCampaignPage() {
             <span className="leading-snug">
               <strong>Required before launch —</strong> I confirm that every recipient in this campaign has
               opted in to receive SMS from me, that the message content complies with the Xellvio Acceptable
-              Use Policy and Telnyx SHAFT rules, and that I accept full liability for any carrier penalties,
+              Use Policy and carrier SHAFT rules, and that I accept full liability for any carrier penalties,
               fines, or number suspensions that arise from this send.
             </span>
           </label>
