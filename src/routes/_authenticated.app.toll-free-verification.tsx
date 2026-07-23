@@ -349,15 +349,15 @@ function TollfreeVerificationPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <AlertCircle className="size-5 text-primary" />
-            Why the carrier portal would not let you buy it
+            Why direct carrier orders would not go through
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>
-            Telnyx blocks US toll-free orders on accounts that use a freemail address or have not reached the required account level. That is why the direct portal order failed.
+            US toll-free orders are blocked on accounts that use a freemail address or have not reached the required account level. That is why direct carrier orders failed.
           </p>
           <p>
-            Your tenants should not buy inside Telnyx. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once, before registration starts.
+            Your tenants should not try to buy numbers directly with a carrier. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once, before registration starts.
           </p>
         </CardContent>
       </Card>

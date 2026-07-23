@@ -237,7 +237,10 @@ export const sendMmsCorrectionEmail = createServerFn({ method: "POST" })
       .in("status", ["delivered", "sent", "delivery_unconfirmed"])
       .eq("campaigns.account_id", data.accountId);
     const msgCount = rows?.length ?? 0;
-    const additional = Number((msgCount * 0.024).toFixed(2));
+    // New MMS price is $0.04. Tenants were originally charged $0.024 per MMS,
+    // so the outstanding difference is $0.016 per successful MMS.
+    const perMsg = 0.016;
+    const additional = Number((msgCount * perMsg).toFixed(2));
     const balance = Number(acct.credit_balance ?? 0);
     const inDebt = balance < 0;
 
@@ -246,16 +249,16 @@ export const sendMmsCorrectionEmail = createServerFn({ method: "POST" })
       "",
       "We're writing about your recent MMS campaigns on Xellvio.",
       "",
-      `While reviewing our Telnyx carrier bill, we found that the MMS price we charged you was below the real carrier cost. The actual Telnyx charge for US MMS is $0.024 per message — but you were charged as if it were $0.024 including our margin, which left us paying the carrier out of pocket.`,
+      `While reviewing our records, we found that MMS messages on your account were charged at the standard SMS rate instead of the correct MMS rate. MMS messages are richer and cost more to deliver than SMS, so they must be priced separately.`,
       "",
-      `We've corrected the price going forward to $0.048 per US MMS (Telnyx cost $0.024 + our margin $0.024). This matches industry rates and keeps your account in good standing.`,
+      `We've corrected the price going forward to $0.04 per US MMS. This is the standard MMS rate on Xellvio and keeps your account in good standing.`,
       "",
-      `Retroactive correction on your account:`,
+      `Adjustment on your account:`,
       `• Successful MMS delivered: ${msgCount.toLocaleString()}`,
-      `• Additional carrier cost owed: $0.024 × ${msgCount.toLocaleString()} = $${additional.toFixed(2)}`,
+      `• Price difference owed: $${perMsg.toFixed(3)} × ${msgCount.toLocaleString()} = $${additional.toFixed(2)}`,
       `• Your current balance: $${balance.toFixed(2)}${inDebt ? "  (this is a debt — please top up to resume sending)" : ""}`,
       "",
-      `Example going forward: sending 1,000 MMS to US costs you $48.00 (Telnyx charges us $24.00, our margin is $24.00).`,
+      `Example going forward: sending 1,000 MMS to US costs $40.00 on your account.`,
       "",
       `We're sorry for the pricing mistake — this only affected MMS, not SMS. If you have any questions, just reply to this email.`,
       "",
@@ -265,7 +268,7 @@ export const sendMmsCorrectionEmail = createServerFn({ method: "POST" })
     const result = await sendBrandedEmail({
       templateName: "generic",
       recipientEmail: to,
-      idempotencyKey: `mms-correction-v1-${data.accountId}`,
+      idempotencyKey: `mms-correction-v2-${data.accountId}`,
       templateData: {
         subject: "Important: MMS pricing correction on your Xellvio account",
         heading: "MMS pricing correction",
