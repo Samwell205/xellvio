@@ -209,6 +209,18 @@ export const sendReply = createServerFn({ method: "POST" })
       provider_sid: result.id ?? null,
       status: result.to?.[0]?.status ?? "sent",
     });
+
+    // Debit tenant credit for the reply (silent — no user-facing pricing detail here).
+    if (cost > 0) {
+      try {
+        await supabaseAdmin.rpc("debit_account", {
+          _account_id: accountId,
+          _amount: cost,
+          _campaign_id: null,
+          _description: `SMS reply → ${data.phone} (${cc}) × ${segs}`,
+        });
+      } catch { /* balance re-checked above; ignore transient errors */ }
+    }
     try {
       const { forwardSmsToGorgias } = await import("./gorgias.server");
       await forwardSmsToGorgias({
