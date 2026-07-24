@@ -396,6 +396,17 @@ async function planCampaign(
     if (linkErr) console.error("[dispatch] link_clicks insert failed", linkErr.message);
   }
 
+  // Backfill preview shortlinks (created in the builder before dispatch) with
+  // this campaign so their clicks show up on this campaign's report.
+  if (existingShortsToBind.length > 0) {
+    const codes = Array.from(new Set(existingShortsToBind.map((x) => x.short_code)));
+    await supabaseAdmin
+      .from("link_clicks")
+      .update({ campaign_id: campaign.id })
+      .in("short_code", codes)
+      .is("campaign_id", null);
+  }
+
   if (queuedRows.length === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
     return { planned: 0, skipped: failedRows.length, cost: totalCost, reason: "insufficient_balance" };
