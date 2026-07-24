@@ -697,7 +697,7 @@ function NewCampaignPage() {
                       className="w-full max-h-64 rounded-lg object-cover border"
                     />
                   )}
-                  {bodyWithStop || <span className="text-muted-foreground">Your message will appear here…</span>}
+                  {bodyWithStop ? renderPreviewWithLinks(bodyWithStop) : <span className="text-muted-foreground">Your message will appear here…</span>}
                 </div>
               </div>
             </div>
