@@ -58,9 +58,9 @@ type State = {
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
 
-function renderPreviewWithLinks(text: string): JSX.Element {
+function renderPreviewWithLinks(text: string): ReactNode {
   const URL_RE = /(https?:\/\/[^\s<>()\[\]"']+)/gi;
-  const nodes: JSX.Element[] = [];
+  const nodes: ReactNode[] = [];
   let last = 0;
   let m: RegExpExecArray | null;
   let i = 0;
