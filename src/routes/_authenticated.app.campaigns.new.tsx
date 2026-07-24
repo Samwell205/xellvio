@@ -597,8 +597,7 @@ function NewCampaignPage() {
                       e.preventDefault();
                       const url = (e.target as HTMLInputElement).value.trim();
                       if (!url) return;
-                      setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + url });
-                      (e.target as HTMLInputElement).value = "";
+                      void addShortLink(url, e.target as HTMLInputElement);
                     }
                   }}
                   id="link-input"
@@ -606,19 +605,22 @@ function NewCampaignPage() {
                 <Button
                   type="button"
                   variant="outline"
+                  disabled={shorteningLink}
                   onClick={() => {
                     const el = document.getElementById("link-input") as HTMLInputElement | null;
                     const url = el?.value.trim();
                     if (!url) return;
-                    setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + url });
-                    if (el) el.value = "";
+                    void addShortLink(url, el);
                   }}
-                >Add to message</Button>
+                >{shorteningLink ? "Shortening…" : "Add to message"}</Button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Links don't cost extra — they just add characters, which may push the message into a second SMS segment.
+                {s.trackLinks
+                  ? "Your link is shortened to a xellvio.com/r/… link so we can count who clicked. Tap it in the phone preview below to test."
+                  : "Links are inserted as-is (link tracking is off)."}
               </p>
             </div>
+
             <div className="rounded-md border p-3 flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <Label className="cursor-pointer" htmlFor="track-links-toggle">Track link clicks</Label>
