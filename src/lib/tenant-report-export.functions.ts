@@ -67,6 +67,7 @@ export const getCampaignRecipientsExport = createServerFn({ method: "POST" })
           .select("message_id,clicks,first_click_at,last_click_at")
           .in("message_id", chunk);
         for (const r of rows ?? []) {
+          if (!r.message_id) continue;
           const cur = clicksByMsg.get(r.message_id) ?? { clicks: 0, first: null as string | null, last: null as string | null };
           cur.clicks += Number(r.clicks ?? 0);
           if (r.first_click_at && (!cur.first || r.first_click_at < cur.first)) cur.first = r.first_click_at;

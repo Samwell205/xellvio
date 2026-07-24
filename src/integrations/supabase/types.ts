@@ -1149,34 +1149,34 @@ export type Database = {
       link_clicks: {
         Row: {
           account_id: string
-          campaign_id: string
+          campaign_id: string | null
           clicks: number
           created_at: string
           first_click_at: string | null
           last_click_at: string | null
-          message_id: string
+          message_id: string | null
           short_code: string
           url: string
         }
         Insert: {
           account_id: string
-          campaign_id: string
+          campaign_id?: string | null
           clicks?: number
           created_at?: string
           first_click_at?: string | null
           last_click_at?: string | null
-          message_id: string
+          message_id?: string | null
           short_code: string
           url: string
         }
         Update: {
           account_id?: string
-          campaign_id?: string
+          campaign_id?: string | null
           clicks?: number
           created_at?: string
           first_click_at?: string | null
           last_click_at?: string | null
-          message_id?: string
+          message_id?: string | null
           short_code?: string
           url?: string
         }

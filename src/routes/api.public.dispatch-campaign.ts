@@ -325,9 +325,22 @@ async function planCampaign(
   };
   const base = publicBaseUrl();
   const trackLinks = campaign.track_links !== false; // default on
+  // Match short URLs we already generated (preview shortlinks from the builder).
+  // Escape the base for regex use. Then skip re-shortening those and instead
+  // just backfill message_id/campaign_id so they still count toward this send.
+  const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const SHORT_RE = new RegExp(`^${escapedBase}/r/([a-zA-Z0-9]{4,16})$`);
+  const existingShortsToBind: Array<{ short_code: string; message_id: string }> = [];
   const rewriteBody = (body: string, messageId: string): string => {
     if (!trackLinks) return body;
     return body.replace(URL_RE, (originalUrl) => {
+      const m = originalUrl.match(SHORT_RE);
+      if (m) {
+        // Already a xellvio.com/r/<code> link (preview shortlink). Keep as-is
+        // but attach this message to it so per-recipient sends aggregate cleanly.
+        existingShortsToBind.push({ short_code: m[1], message_id: messageId });
+        return originalUrl;
+      }
       const code = shortCode(8);
       linkRows.push({
         short_code: code,
@@ -339,6 +352,7 @@ async function planCampaign(
       return `${base}/r/${code}`;
     });
   };
+
 
   for (const r of enriched) {
     const messageId = crypto.randomUUID();
@@ -380,6 +394,17 @@ async function planCampaign(
     const chunk = linksToInsert.slice(i, i + PLAN_INSERT_CHUNK);
     const { error: linkErr } = await supabaseAdmin.from("link_clicks").insert(chunk);
     if (linkErr) console.error("[dispatch] link_clicks insert failed", linkErr.message);
+  }
+
+  // Backfill preview shortlinks (created in the builder before dispatch) with
+  // this campaign so their clicks show up on this campaign's report.
+  if (existingShortsToBind.length > 0) {
+    const codes = Array.from(new Set(existingShortsToBind.map((x) => x.short_code)));
+    await supabaseAdmin
+      .from("link_clicks")
+      .update({ campaign_id: campaign.id })
+      .in("short_code", codes)
+      .is("campaign_id", null);
   }
 
   if (queuedRows.length === 0) {

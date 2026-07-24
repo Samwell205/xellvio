@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate, Link, useSearch } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { getActiveCountryRatesRaw } from "@/lib/public-pricing.functions";
+import { createPreviewShortlink } from "@/lib/shortlinks.functions";
 
 import { scanCampaignContent } from "@/lib/content-scanner.functions";
 import { calculateSegments } from "@/lib/sms-segments";
@@ -56,6 +57,26 @@ type State = {
 };
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
+
+function renderPreviewWithLinks(text: string): ReactNode {
+  const URL_RE = /(https?:\/\/[^\s<>()\[\]"']+)/gi;
+  const nodes: ReactNode[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let i = 0;
+  while ((m = URL_RE.exec(text)) !== null) {
+    if (m.index > last) nodes.push(<span key={`t${i}`}>{text.slice(last, m.index)}</span>);
+    nodes.push(
+      <a key={`a${i}`} href={m[0]} target="_blank" rel="noopener noreferrer" className="text-primary underline break-all">
+        {m[0]}
+      </a>,
+    );
+    last = m.index + m[0].length;
+    i++;
+  }
+  if (last < text.length) nodes.push(<span key={`t${i}`}>{text.slice(last)}</span>);
+  return <>{nodes}</>;
+}
 
 function NewCampaignPage() {
   const navigate = useNavigate();
@@ -327,6 +348,33 @@ function NewCampaignPage() {
   const testLimitReached = testUsage.remaining <= 0;
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [shorteningLink, setShorteningLink] = useState(false);
+  const callShortlink = useServerFn(createPreviewShortlink);
+  async function addShortLink(url: string, el?: HTMLInputElement | null) {
+    let candidate = url;
+    if (!/^https?:\/\//i.test(candidate)) candidate = `https://${candidate}`;
+    try { new URL(candidate); } catch {
+      toast.error("That doesn't look like a valid URL");
+      return;
+    }
+    if (!s.trackLinks) {
+      setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + candidate });
+      if (el) el.value = "";
+      return;
+    }
+    setShorteningLink(true);
+    try {
+      const { shortUrl } = await callShortlink({ data: { url: candidate, campaignId: campaignId ?? null } });
+      setS((prev) => ({ ...prev, body: (prev.body ? prev.body.trimEnd() + " " : "") + shortUrl }));
+      if (el) el.value = "";
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not shorten link — added original URL.");
+      setS((prev) => ({ ...prev, body: (prev.body ? prev.body.trimEnd() + " " : "") + candidate }));
+      if (el) el.value = "";
+    } finally {
+      setShorteningLink(false);
+    }
+  }
   const testCountry = useMemo(() => countryFromPhone(s.testTo, rates), [s.testTo, rates]);
   const testSender = testCountry ? sendersByCountry[testCountry] : null;
 
@@ -596,8 +644,7 @@ function NewCampaignPage() {
                       e.preventDefault();
                       const url = (e.target as HTMLInputElement).value.trim();
                       if (!url) return;
-                      setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + url });
-                      (e.target as HTMLInputElement).value = "";
+                      void addShortLink(url, e.target as HTMLInputElement);
                     }
                   }}
                   id="link-input"
@@ -605,19 +652,22 @@ function NewCampaignPage() {
                 <Button
                   type="button"
                   variant="outline"
+                  disabled={shorteningLink}
                   onClick={() => {
                     const el = document.getElementById("link-input") as HTMLInputElement | null;
                     const url = el?.value.trim();
                     if (!url) return;
-                    setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + url });
-                    if (el) el.value = "";
+                    void addShortLink(url, el);
                   }}
-                >Add to message</Button>
+                >{shorteningLink ? "Shortening…" : "Add to message"}</Button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Links don't cost extra — they just add characters, which may push the message into a second SMS segment.
+                {s.trackLinks
+                  ? "Your link is shortened to a xellvio.com/r/… link so we can count who clicked. Tap it in the phone preview below to test."
+                  : "Links are inserted as-is (link tracking is off)."}
               </p>
             </div>
+
             <div className="rounded-md border p-3 flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <Label className="cursor-pointer" htmlFor="track-links-toggle">Track link clicks</Label>
@@ -667,7 +717,7 @@ function NewCampaignPage() {
                       className="w-full max-h-64 rounded-lg object-cover border"
                     />
                   )}
-                  {bodyWithStop || <span className="text-muted-foreground">Your message will appear here…</span>}
+                  {bodyWithStop ? renderPreviewWithLinks(bodyWithStop) : <span className="text-muted-foreground">Your message will appear here…</span>}
                 </div>
               </div>
             </div>
