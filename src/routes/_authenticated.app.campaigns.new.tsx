@@ -328,6 +328,33 @@ function NewCampaignPage() {
   const testLimitReached = testUsage.remaining <= 0;
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [shorteningLink, setShorteningLink] = useState(false);
+  const callShortlink = useServerFn(createPreviewShortlink);
+  async function addShortLink(url: string, el?: HTMLInputElement | null) {
+    let candidate = url;
+    if (!/^https?:\/\//i.test(candidate)) candidate = `https://${candidate}`;
+    try { new URL(candidate); } catch {
+      toast.error("That doesn't look like a valid URL");
+      return;
+    }
+    if (!s.trackLinks) {
+      setS({ ...s, body: (s.body ? s.body.trimEnd() + " " : "") + candidate });
+      if (el) el.value = "";
+      return;
+    }
+    setShorteningLink(true);
+    try {
+      const { shortUrl } = await callShortlink({ data: { url: candidate, campaignId: campaignId ?? null } });
+      setS((prev) => ({ ...prev, body: (prev.body ? prev.body.trimEnd() + " " : "") + shortUrl }));
+      if (el) el.value = "";
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not shorten link — added original URL.");
+      setS((prev) => ({ ...prev, body: (prev.body ? prev.body.trimEnd() + " " : "") + candidate }));
+      if (el) el.value = "";
+    } finally {
+      setShorteningLink(false);
+    }
+  }
   const testCountry = useMemo(() => countryFromPhone(s.testTo, rates), [s.testTo, rates]);
   const testSender = testCountry ? sendersByCountry[testCountry] : null;
 
