@@ -58,6 +58,26 @@ type State = {
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
 
+function renderPreviewWithLinks(text: string): React.ReactNode {
+  const URL_RE = /(https?:\/\/[^\s<>()\[\]"']+)/gi;
+  const parts = text.split(URL_RE);
+  return parts.map((part, i) =>
+    URL_RE.test(part)
+      ? (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline break-all"
+        >
+          {part}
+        </a>
+      )
+      : <span key={i}>{part}</span>,
+  );
+}
+
 function NewCampaignPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/app/campaigns/new" });
