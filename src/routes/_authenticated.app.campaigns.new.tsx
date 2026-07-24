@@ -58,24 +58,24 @@ type State = {
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
 
-function renderPreviewWithLinks(text: string): React.ReactNode {
+function renderPreviewWithLinks(text: string): JSX.Element {
   const URL_RE = /(https?:\/\/[^\s<>()\[\]"']+)/gi;
-  const parts = text.split(URL_RE);
-  return parts.map((part, i) =>
-    URL_RE.test(part)
-      ? (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline break-all"
-        >
-          {part}
-        </a>
-      )
-      : <span key={i}>{part}</span>,
-  );
+  const nodes: JSX.Element[] = [];
+  let last = 0;
+  let m: RegExpExecArray | null;
+  let i = 0;
+  while ((m = URL_RE.exec(text)) !== null) {
+    if (m.index > last) nodes.push(<span key={`t${i}`}>{text.slice(last, m.index)}</span>);
+    nodes.push(
+      <a key={`a${i}`} href={m[0]} target="_blank" rel="noopener noreferrer" className="text-primary underline break-all">
+        {m[0]}
+      </a>,
+    );
+    last = m.index + m[0].length;
+    i++;
+  }
+  if (last < text.length) nodes.push(<span key={`t${i}`}>{text.slice(last)}</span>);
+  return <>{nodes}</>;
 }
 
 function NewCampaignPage() {
