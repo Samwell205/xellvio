@@ -1077,7 +1077,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 maxLength={11}
               />
               <p className="text-xs text-muted-foreground">
-                Use 1–11 letters, numbers, or spaces with at least one letter. Telnyx supports UK alphanumeric sender IDs without registration.
+                Use 1–11 letters, numbers, or spaces with at least one letter. UK alphanumeric sender IDs may be available without registration.
               </p>
             </div>
           )}

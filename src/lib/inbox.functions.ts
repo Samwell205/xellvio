@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActingAccount, assertPermission } from "@/lib/acting-account.server";
+import { SUPPORT_WHATSAPP_DISPLAY, SUPPORT_WHATSAPP_URL } from "@/lib/support";
 
 /** Count inbound messages received after a given ISO timestamp (for unread badge). */
 export const getInboxUnreadCount = createServerFn({ method: "GET" })
@@ -184,7 +185,7 @@ export const sendReply = createServerFn({ method: "POST" })
     const currentBalance = Number(bal?.credit_balance ?? 0);
     if (cost > 0 && currentBalance < cost) {
       throw new Error(
-        `Insufficient credit to send reply. Needed $${cost.toFixed(4)}, balance $${currentBalance.toFixed(2)}. Please top up your account.`,
+        `Insufficient credit to send reply. Needed $${cost.toFixed(4)}, balance $${currentBalance.toFixed(2)}. Please top up your account or contact support on WhatsApp at ${SUPPORT_WHATSAPP_DISPLAY}: ${SUPPORT_WHATSAPP_URL}`,
       );
     }
 

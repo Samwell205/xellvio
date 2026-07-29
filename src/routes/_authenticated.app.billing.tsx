@@ -17,6 +17,7 @@ import { listCreditPacks, listMyPayments, verifyPaystack } from "@/lib/billing-p
 import { reconcileNowPayment } from "@/lib/nowpayments.functions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useServerFn } from "@tanstack/react-start";
+import { SUPPORT_WHATSAPP_DISPLAY, SUPPORT_WHATSAPP_URL } from "@/lib/support";
 
 export const Route = createFileRoute("/_authenticated/app/billing")({
   head: () => ({ meta: [{ title: "Billing — Xellvio" }] }),
@@ -138,7 +139,10 @@ function BillingPage() {
       <Card className="p-6 bg-gradient-to-br from-primary/10 to-transparent">
         <div className="text-xs uppercase text-muted-foreground tracking-wide">Current balance</div>
         <div className="text-4xl font-extrabold mt-1">{formatUSD(balance)}</div>
-        <p className="text-xs text-muted-foreground mt-2">SMS are billed per recipient at the country rate × segments. We never debit more than your available balance — any messages your balance can't cover are skipped, not charged.</p>
+        <p className="text-xs text-muted-foreground mt-2">
+          SMS are billed per recipient at the country rate × segments. We never debit more than your available balance — any messages your balance can't cover are skipped, not charged. If low balance blocks sending, contact support on WhatsApp at{" "}
+          <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noreferrer" className="underline font-medium">{SUPPORT_WHATSAPP_DISPLAY}</a>.
+        </p>
       </Card>
 
       <Card className="p-6 space-y-4">

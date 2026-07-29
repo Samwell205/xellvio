@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getCampaignRecipientsExport } from "@/lib/tenant-report-export.functions";
 import { downloadCsv } from "@/lib/report-export";
+import { SUPPORT_WHATSAPP_DISPLAY, SUPPORT_WHATSAPP_URL } from "@/lib/support";
 
 import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
@@ -563,7 +564,10 @@ function CampaignReport() {
               {c.paused_reason ??
                 "We're temporarily waiting for platform capacity — your messages will start sending automatically within a few minutes."}
             </div>
-            <div className="text-xs mt-1 opacity-80">You haven't been charged for any un-sent messages.</div>
+            <div className="text-xs mt-1 opacity-80">
+              You haven't been charged for any un-sent messages. If this is a low-balance issue, contact WhatsApp support at{" "}
+              <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noreferrer" className="underline font-medium">{SUPPORT_WHATSAPP_DISPLAY}</a>.
+            </div>
           </div>
         </div>
       )}
@@ -850,7 +854,7 @@ function CampaignReport() {
                 <div className="font-semibold mb-1">Deliverability tip</div>
                 <p className="text-muted-foreground">
                   Carriers throttle traffic with low engagement. Keep delivery {">"} 95%, click rate {">"} 3%, and opt-outs {"<"} 1% to stay in the good-sender lane.
-                  Messages skipped for insufficient balance are <strong>never charged</strong> — top up to retry.
+                  Messages skipped for insufficient balance are <strong>never charged</strong> — top up to retry, or contact WhatsApp support.
                 </p>
               </div>
             </div>
@@ -1178,7 +1182,7 @@ function UnconfirmedKpi({
       </div>
       <div className="text-2xl font-extrabold mt-2 tabular-nums">{value.toLocaleString()}</div>
       <div className="text-xs text-muted-foreground mt-1">
-        {sent > 0 ? `${pct.toFixed(0)}% of sent · matches Telnyx` : "no delivery receipt"}
+        {sent > 0 ? `${pct.toFixed(0)}% of sent · matches network report` : "no delivery receipt"}
       </div>
       <button
         type="button"
@@ -1197,7 +1201,7 @@ function UnconfirmedKpi({
           </DialogHeader>
           <div className="space-y-3 text-sm text-muted-foreground">
             <p>
-              This is the same "Not Delivered" number Telnyx shows on their dashboard. For every SMS, the carrier does two things:
+              This is the same "Not Delivered" number shown by the delivery network. For every SMS, the carrier does two things:
             </p>
             <ol className="list-decimal pl-5 space-y-1">
               <li><strong className="text-foreground">Accepts the message</strong> — this is "sent".</li>
@@ -1214,7 +1218,7 @@ function UnconfirmedKpi({
             <p>
               Use <strong className="text-foreground">Performance by country</strong> below to see which countries this is concentrated in.
               You can also re-send only these messages if recipients report not receiving them —
-              note that Telnyx bills per send.
+              note that each new send is billed again.
             </p>
             {canResend && (
               <div className="rounded-md border p-3 space-y-2 bg-muted/30">
@@ -1244,7 +1248,7 @@ function UnconfirmedKpi({
                 </Button>
 
                 <div className="text-[11px] text-muted-foreground">
-                  This costs money — Telnyx charges per send attempt.
+                  This costs money — each re-send is charged as a new send attempt.
                 </div>
               </div>
             )}
@@ -1522,7 +1526,7 @@ function ProgressPanel({
             : inFlight === 0 && sent > 0
             ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
             : inFlight === 0 && deliveryUnconfirmed > 0
-            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} accepted by the carrier but returned no delivery receipt (shows as "Not Delivered" on Telnyx).`
+            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} accepted by the carrier but returned no delivery receipt (shows as "Not Delivered" in the network report).`
             : inFlight === 0
             ? "All messages have a final carrier status."
             : `${processedPct}% complete.`}
@@ -1533,7 +1537,7 @@ function ProgressPanel({
 
 const REASON_LABELS: Record<string, string> = {
   cancelled_by_user: "Stopped by user before dispatch",
-  insufficient_balance: "Account credit ran out before this message was sent",
+  insufficient_balance: `Account credit ran out before this message was sent. Add funds or contact WhatsApp support at ${SUPPORT_WHATSAPP_DISPLAY}`,
   exception: "Provider request failed unexpectedly",
   "30007": "Carrier filtered — likely SHAFT/spam content",
   "30003": "Unreachable handset (off / roaming / disconnected)",

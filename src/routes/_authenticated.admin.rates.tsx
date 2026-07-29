@@ -70,6 +70,11 @@ function AdminRatesPage() {
   const save = useMutation({
     mutationFn: async (row: Row) => {
       const patch = edits[row.id] ?? {};
+      const candidate = { ...row, ...patch } as Row;
+      const trueCost = Number(candidate.cost_price ?? 0) + Number(candidate.passthrough_fee ?? 0);
+      if (Number(candidate.sell_price ?? 0) < trueCost) {
+        throw new Error(`${row.country_name} sell price cannot be below true cost (${formatRate(trueCost)}).`);
+      }
       // Any manual edit to price/markup flips manual_override on
       const flips =
         patch.cost_price !== undefined ||
