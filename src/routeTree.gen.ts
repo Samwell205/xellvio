@@ -88,6 +88,7 @@ import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
 import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated.admin.accounts'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as VerifierVerifyDashboardIndexRouteImport } from './routes/_verifier.verify.dashboard.index'
 import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
@@ -536,6 +537,11 @@ const AuthenticatedAdminAccountsRoute =
     path: '/accounts',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifierVerifyDashboardIndexRoute =
   VerifierVerifyDashboardIndexRouteImport.update({
     id: '/verify/dashboard/',
@@ -716,6 +722,7 @@ export interface FileRoutesByFullPath {
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/academy/': typeof AcademyIndexRoute
   '/verify/': typeof VerifyIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -816,6 +823,7 @@ export interface FileRoutesByTo {
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/academy': typeof AcademyIndexRoute
   '/verify': typeof VerifyIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -920,6 +928,7 @@ export interface FileRoutesById {
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/academy/': typeof AcademyIndexRoute
   '/verify/': typeof VerifyIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -1025,6 +1034,7 @@ export interface FileRouteTypes {
     | '/verify/reset-password'
     | '/academy/'
     | '/verify/'
+    | '/.lovable/oauth/consent'
     | '/admin/accounts'
     | '/admin/activity'
     | '/admin/billing'
@@ -1125,6 +1135,7 @@ export interface FileRouteTypes {
     | '/verify/reset-password'
     | '/academy'
     | '/verify'
+    | '/.lovable/oauth/consent'
     | '/admin/accounts'
     | '/admin/activity'
     | '/admin/billing'
@@ -1228,6 +1239,7 @@ export interface FileRouteTypes {
     | '/verify/reset-password'
     | '/academy/'
     | '/verify/'
+    | '/.lovable/oauth/consent'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/activity'
     | '/_authenticated/admin/billing'
@@ -1328,6 +1340,7 @@ export interface RootRouteChildren {
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicNowpaymentsPollRoute: typeof ApiPublicNowpaymentsPollRoute
@@ -1899,6 +1912,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAccountsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_verifier/verify/dashboard/': {
       id: '/_verifier/verify/dashboard/'
       path: '/verify/dashboard'
@@ -2339,6 +2359,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
   VerifyIndexRoute: VerifyIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicNowpaymentsPollRoute: ApiPublicNowpaymentsPollRoute,
