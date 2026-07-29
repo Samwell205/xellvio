@@ -1,0 +1,3 @@
+export const SUPPORT_WHATSAPP_DISPLAY = "+1 (725) 316-6070";
+export const SUPPORT_WHATSAPP_PHONE = "17253166070";
+export const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP_PHONE}`;
