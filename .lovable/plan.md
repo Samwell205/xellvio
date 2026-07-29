@@ -1,50 +1,72 @@
 
-## Problem
+## What I checked (real data, not assumptions)
 
-When a tenant buys a pre-verified toll-free number, the current flow is:
-1. Tenant pays $50 via Paystack → $50 is topped up into their SMS credit balance.
-2. Marketplace "Buy" click debits $50 from credit balance to assign the number.
+**Maltida George** — account `e75b6c61…`, balance **$117.25**.
 
-If step 2 never runs (tenant closes the page, `debit_account` errors, or the number is instead auto-assigned elsewhere), the $50 stays as spendable SMS credit. That's what happened for at least two tenants — `emmanuelolushola824@gmail.com` and `alexandershorinolu1@gmail.com` each show a `+$50 Paystack topup` in `credit_transactions` with no matching `debit_account` for the toll-free number, and each has a verified TFN on their account.
+Payments: $100 (7/29 11:10) + $100 (7/29 12:15) = **$200 credited**. (There is also a 7/27 Paystack row for $50 marked `paid` but with **credits = 0.00** — it was never added to his wallet. Separate issue, flagged below.)
 
-The $50 should behave as a one-time fee, never as SMS credit.
+Actual wallet activity: **2 topups = $200.00**, **10,344 debits = $82.75**. 200 − 82.75 = **$117.25**. His wallet is correct.
 
-## Fix
+## So why do the campaign reports say $79.98 / $79.94 / $79.98?
 
-### 1. Separate the TFN purchase from credit topup
+Because the admin report sums the `cost` column on **every message row**, including rows that were **never sent**. `cost` is written when the recipient row is created (a price estimate), but the wallet is only debited when a message is actually dispatched.
 
-Add a dedicated Paystack (and NowPayments) checkout intent for "toll-free number purchase":
+| Campaign | Rows | Actually attempted | Report shows | Actually charged |
+|---|---|---|---|---|
+| JEREMY 1 | 9,998 | 9,282 | $79.98 | $66.89 |
+| JEREMY 2 | 9,993 | 583 (8,993 still queued) | $79.94 | $3.95 |
+| JEREMY 3 | 9,998 | 600 (8,498 still queued) | $79.98 | $4.42 |
+| **Total** | | | **$239.94** | **$82.75** ✅ |
 
-- New `payments.purpose` value: `tfn_purchase` (or reuse existing `pack_id = null` + metadata flag). We'll add a `purpose` text column via migration if one doesn't exist, and store `tfn_purchase` for these payments.
-- New server fn `initPaystackTfnCheckout` in `src/lib/billing-packs.functions.ts` mirroring `initPaystackCheckoutCustom`, but:
-  - Fixed `amount = tfn_buyer_price_usd` (read from `platform_settings`).
-  - `payments.credits = 0` and `payments.purpose = 'tfn_purchase'`.
-- Extend `creditFromPayment` (same file): when `payment.purpose === 'tfn_purchase'`, do NOT call `topup_account`. Instead, call the existing `claimFromPool`/`buyImpl` logic to assign a number to the account (moved into an exported helper `assignTfnAfterPayment(userId, priceUsd)` in `src/lib/tfn-marketplace.functions.ts`). Mark payment `paid` afterwards. Refund path: if no number is available at assignment time, mark payment `refund_pending` and admin-notify — never silently keep the money as credit.
-- Same treatment in the NowPayments IPN (`src/routes/api/public/nowpayments-ipn.ts`) — branch on `payment.purpose`.
+The reporting is wrong, not the billing. Nobody was over- or under-charged here.
 
-### 2. Update the "Buy pre-verified number" UI
+## Why campaigns 2 and 3 stalled
 
-In `src/routes/_authenticated.app.toll-free-verification.tsx` (`MarketplaceBuyCard`):
+JEREMY 1 has 716 messages with carrier error **20012: "your account has been deactivated. It may be out of funds."** That is your carrier account running dry mid-send. After that, JEREMY 2 and JEREMY 3 could barely dispatch — 17,491 rows are still sitting in `queued`/`sending` platform-wide. The rest of the failures are normal list quality: 40001 landline/non-routable, 40012 invalid number, 40008 carrier rejected.
 
-- Replace the current `buyFn` (which requires prefunded credit) with a "Pay $50" button that calls `initPaystackTfnCheckout` and redirects to Paystack. On return, the callback page (`/app/billing`) already re-verifies via `verifyPaystack`; extend that to route to the toll-free page and toast the assigned number.
-- Keep a fallback "Use my credit balance" only if `credit_balance >= $50`, which uses today's `purchaseTfnFromMarketplace` (unchanged — that path already debits correctly).
-- Remove the language implying they must top up first.
+## The real problem: you are selling US SMS below cost
 
-### 3. Reverse the wrongly-kept $50 for affected tenants
+Your `country_rates` for **US**: `cost_price = $0.0040`, `sell_price = $0.0080`.
 
-One-time SQL run via the insert tool:
+Your own carrier usage report (7/27–7/30, outbound SMS on toll-free) says:
+- 10,553 sent → **Cost $100.56** = **$0.0095 per message**
+- **Carrier Passthrough Fees $42.52** = **$0.0040 per message** — which the platform does **not** model at all
+- Real cost ≈ **$0.0135 per message**
 
-- Find every `credit_transactions` row where `type = 'topup'`, `amount = 50` and `description LIKE 'Paystack USD 50%'` whose account also has a `sender_assets` row with `sender_kind = 'toll_free'` created within 24h and no matching `debit_account` of $50 with description containing "toll-free" / "TFN" / "Purchased verified".
-- For each match: subtract $50 from `accounts.credit_balance` (allow negative — the SMS sender already checks `< 0` on new debits, so future top-ups clear the debt naturally) and insert a `credit_transactions` row `type = 'debit'`, `amount = 50`, `description = 'Toll-free number fee (reconciliation)'`, `balance_after = accounts.credit_balance`.
-- Confirmed affected today: `73d366b2-d9e0-4fb3-8635-a3707505ced0` and `68ff2e59-19b6-458e-9e5d-95b4a6cf2c78`. Query will catch any others.
+You charge **$0.0080**. You lose **≈ $0.0055 on every single US SMS.** That is the debt — it is not a billing bug, it's a pricing bug. On top of that, **inbound** messages cost you money too (659 inbound = $4.43 + $0.80 fees) and are billed to tenants at $0.
 
-### 4. Guard rails
+Platform-wide this compounds: 43,110 billed messages, $1,897.60 of tenant spend recorded, while the admin "carrier cost" figure was computed at $0.0040/msg — roughly **a third of true cost**, so every "gross profit" number you've been shown is badly overstated.
 
-- Add unique constraint `payments_provider_reference_key` if not already present (it is), and make `assignTfnAfterPayment` idempotent by keying off `payments.id` (skip if payment already `paid`).
-- Log every failed pool claim so a stuck payment surfaces in admin.
+---
 
-## Technical Notes
+## The plan
 
-- The current `purchaseTfnFromMarketplace` handler passes `_campaign_id: undefined` to the `debit_account` RPC — likely fine but we'll pass `null` explicitly to eliminate that as a failure mode.
-- `platform_settings.tfn_buyer_price_usd` is already the source of truth for the $50, so no hardcoding.
-- No changes to `shared_tollfree_pool` schema; `claimFromPool` already atomically removes and reassigns numbers.
+### 1. Fix the reporting so spend means spend
+- Change `admin_campaign_stats` so `tenant_cost` only sums messages that were actually attempted (`sent`, `delivered`, `delivery_unconfirmed`, `undelivered`, `failed`), and return a separate `reserved_cost` for the not-yet-sent remainder.
+- Same fix in the tenant-facing campaign report and in `admin_finance_*`, so every screen agrees with `credit_transactions` (the true source of billing).
+- Show "Charged so far" vs "Estimated remaining" as two distinct numbers, so a half-sent campaign can never look like a full charge again.
+
+### 2. Model carrier passthrough fees
+- Add `passthrough_fee` (per message) and `inbound_cost` columns to `country_rates`, defaulting from real usage data.
+- Include passthrough in every carrier-cost calculation: campaign reports, finance analysis, per-country breakdown, balance-drop audit.
+- Set US to the measured values: `cost_price = 0.0095`, `passthrough_fee = 0.0040`.
+
+### 3. Re-price so margin is real
+- Recompute `sell_price` from `(cost_price + passthrough_fee) × (1 + markup)`. For US at your current 101% markup that lands near **$0.027 per SMS**; I'll present the exact table for US/CA/GB/etc. and let you set the markup before anything goes live.
+- Same treatment for MMS via the multipliers.
+- Optionally bill inbound replies at cost + markup (currently free to tenants, costs you money).
+
+### 4. Reconcile the real loss
+- Produce an admin view: for each tenant, messages actually sent × true cost (incl. passthrough) vs what they were charged — so you can see exactly who was subsidised and by how much, before deciding whether to adjust anyone.
+- Nothing is charged back to any tenant without your explicit go-ahead.
+
+### 5. Loose ends
+- Resolve the 7/27 $50 Paystack payment that shows `paid` with 0 credits — either credit it or mark it void.
+- Decide what to do with the 17,491 stuck `queued`/`sending` rows from JEREMY 2/3: resume dispatch once the carrier balance is funded, or cancel them (they are unbilled either way).
+
+### Technical notes
+Touches: `admin_campaign_stats` RPC, `admin_finance_summary` / `admin_finance_tenants` / `admin_finance_daily`, `src/lib/admin-campaigns.functions.ts`, `src/lib/admin-finance.functions.ts`, `src/lib/admin-telnyx.functions.ts` (`realCarrierCost`), `src/lib/twilio-pricing.server.ts`, and a migration adding the two `country_rates` columns plus the US rate correction.
+
+---
+
+**Before I build:** confirm (a) the markup you want applied to the corrected US cost, and (b) whether inbound replies should start being billed. I'll show you the full new price table for approval before it goes live.
