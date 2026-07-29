@@ -88,6 +88,7 @@ import { Route as AuthenticatedAdminNumberRequestsRouteImport } from './routes/_
 import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authenticated.admin.messaging'
 import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated.admin.messages'
 import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated.admin.marketplace'
+import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated.admin.finance'
 import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_authenticated.admin.compliance'
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
 import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
@@ -540,6 +541,12 @@ const AuthenticatedAdminMarketplaceRoute =
     path: '/marketplace',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminFinanceRoute =
+  AuthenticatedAdminFinanceRouteImport.update({
+    id: '/finance',
+    path: '/finance',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminComplianceRoute =
   AuthenticatedAdminComplianceRouteImport.update({
     id: '/compliance',
@@ -765,6 +772,7 @@ export interface FileRoutesByFullPath {
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
+  '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
@@ -871,6 +879,7 @@ export interface FileRoutesByTo {
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
+  '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
@@ -981,6 +990,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/_authenticated/admin/compliance': typeof AuthenticatedAdminComplianceRoute
+  '/_authenticated/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/_authenticated/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/_authenticated/admin/messaging': typeof AuthenticatedAdminMessagingRoute
@@ -1092,6 +1102,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/billing'
     | '/admin/compliance'
+    | '/admin/finance'
     | '/admin/marketplace'
     | '/admin/messages'
     | '/admin/messaging'
@@ -1198,6 +1209,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/billing'
     | '/admin/compliance'
+    | '/admin/finance'
     | '/admin/marketplace'
     | '/admin/messages'
     | '/admin/messaging'
@@ -1307,6 +1319,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/activity'
     | '/_authenticated/admin/billing'
     | '/_authenticated/admin/compliance'
+    | '/_authenticated/admin/finance'
     | '/_authenticated/admin/marketplace'
     | '/_authenticated/admin/messages'
     | '/_authenticated/admin/messaging'
@@ -1980,6 +1993,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminMarketplaceRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/finance': {
+      id: '/_authenticated/admin/finance'
+      path: '/finance'
+      fullPath: '/admin/finance'
+      preLoaderRoute: typeof AuthenticatedAdminFinanceRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/compliance': {
       id: '/_authenticated/admin/compliance'
       path: '/compliance'
@@ -2214,6 +2234,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
   AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
   AuthenticatedAdminComplianceRoute: typeof AuthenticatedAdminComplianceRoute
+  AuthenticatedAdminFinanceRoute: typeof AuthenticatedAdminFinanceRoute
   AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
   AuthenticatedAdminMessagingRoute: typeof AuthenticatedAdminMessagingRoute
@@ -2237,6 +2258,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminActivityRoute: AuthenticatedAdminActivityRoute,
   AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
   AuthenticatedAdminComplianceRoute: AuthenticatedAdminComplianceRoute,
+  AuthenticatedAdminFinanceRoute: AuthenticatedAdminFinanceRoute,
   AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
   AuthenticatedAdminMessagingRoute: AuthenticatedAdminMessagingRoute,
@@ -2487,13 +2509,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
