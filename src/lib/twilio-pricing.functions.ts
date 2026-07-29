@@ -25,11 +25,11 @@ export const setDefaultMarkup = createServerFn({ method: "POST" })
       .upsert({ key: "default_markup_percent", value: data.percent as any, updated_at: new Date().toISOString() }, { onConflict: "key" });
     if (error) throw new Error(error.message);
     const { data: rows } = await supabaseAdmin
-      .from("country_rates").select("id,cost_price").eq("manual_override", false);
+      .from("country_rates").select("id,cost_price,passthrough_fee").eq("manual_override", false);
     await Promise.all((rows ?? []).map((row) =>
       supabaseAdmin.from("country_rates").update({
         markup_percent: data.percent,
-        sell_price: round4(Number(row.cost_price) * (1 + data.percent / 100)),
+        sell_price: round4((Number(row.cost_price) + Number((row as any).passthrough_fee ?? 0)) * (1 + data.percent / 100)),
         updated_at: new Date().toISOString(),
       }).eq("id", row.id),
     ));
