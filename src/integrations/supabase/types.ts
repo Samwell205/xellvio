@@ -2911,6 +2911,7 @@ export type Database = {
         Args: { _key: string; _owner_account_id: string }
         Returns: boolean
       }
+      is_admin_or_service: { Args: never; Returns: boolean }
       mark_verifier_withdrawal_paid: {
         Args: { _admin_note?: string; _withdrawal_id: string }
         Returns: number
