@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { adminFinanceOverview, adminFinanceTenants } from "@/lib/admin-finance.functions";
+import { adminFinanceOverview, adminFinanceTenants, adminMarginAudit, adminPricingPreview } from "@/lib/admin-finance.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -49,6 +49,14 @@ function FinancePage() {
 
   const { data, isLoading, error } = useQuery({ queryKey: ["admin-finance"], queryFn: () => overviewFn({}) });
   const { data: tenants } = useQuery({ queryKey: ["admin-finance-tenants"], queryFn: () => tenantsFn({}) });
+
+  const marginFn = useServerFn(adminMarginAudit);
+  const pricingFn = useServerFn(adminPricingPreview);
+  const { data: margins } = useQuery({ queryKey: ["admin-margin-audit"], queryFn: () => marginFn({}) });
+  const { data: pricing } = useQuery({
+    queryKey: ["admin-pricing-preview"],
+    queryFn: () => pricingFn({ data: { markupPercent: 100 } }),
+  });
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading finance analysis…</div>;
   if (error) return <div className="p-6 text-destructive">{(error as Error).message}</div>;
@@ -143,6 +151,8 @@ function FinancePage() {
           <TabsTrigger value="funding">Funding history</TabsTrigger>
           <TabsTrigger value="daily">Daily timeline</TabsTrigger>
           <TabsTrigger value="country">By country</TabsTrigger>
+          <TabsTrigger value="margin">Margin audit</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing check</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenants">
@@ -298,6 +308,119 @@ function FinancePage() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="margin">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">True margin per tenant</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <p className="text-xs text-muted-foreground mb-3">
+                Charged = credits actually debited for messages handed to the carrier. True cost includes the base
+                carrier rate plus carrier passthrough fees. A red margin means that tenant's traffic was sent at a loss.
+              </p>
+              <table className="w-full text-sm">
+                <thead className="text-xs uppercase text-muted-foreground">
+                  <tr className="text-left">
+                    <th className="py-2">Tenant</th>
+                    <th className="text-right">Messages</th>
+                    <th className="text-right">Segments</th>
+                    <th className="text-right">MMS</th>
+                    <th className="text-right">Charged</th>
+                    <th className="text-right">True cost</th>
+                    <th className="text-right">Margin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(margins ?? []).map((m: any) => (
+                    <tr key={m.account_id} className="border-t">
+                      <td className="py-2">
+                        <div className="font-medium">{m.label}</div>
+                        <div className="text-xs text-muted-foreground">{m.email}</div>
+                      </td>
+                      <td className="text-right tabular-nums">{num(m.messages)}</td>
+                      <td className="text-right tabular-nums">{num(m.segments)}</td>
+                      <td className="text-right tabular-nums">{num(m.mms_count)}</td>
+                      <td className="text-right tabular-nums">{usd(m.charged)}</td>
+                      <td className="text-right tabular-nums">{usd(m.true_cost)}</td>
+                      <td
+                        className={`text-right tabular-nums font-semibold ${
+                          Number(m.margin) < 0 ? "text-destructive" : "text-emerald-500"
+                        }`}
+                      >
+                        {usd(m.margin)}
+                      </td>
+                    </tr>
+                  ))}
+                  {!margins?.length && (
+                    <tr>
+                      <td colSpan={7} className="py-6 text-center text-muted-foreground">
+                        No billable traffic yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pricing">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Price vs true carrier cost</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <p className="text-xs text-muted-foreground mb-3">
+                Suggested price is the true cost (base + passthrough fee) at a 100% markup. Rows highlighted in red are
+                currently selling below what delivery actually costs.
+              </p>
+              <table className="w-full text-sm">
+                <thead className="text-xs uppercase text-muted-foreground">
+                  <tr className="text-left">
+                    <th className="py-2">Country</th>
+                    <th className="text-right">Base</th>
+                    <th className="text-right">Carrier fee</th>
+                    <th className="text-right">True cost</th>
+                    <th className="text-right">Current price</th>
+                    <th className="text-right">Margin / msg</th>
+                    <th className="text-right">Suggested SMS</th>
+                    <th className="text-right">Suggested MMS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(pricing ?? []).map((r: any) => (
+                    <tr key={r.country_code} className={`border-t ${r.below_cost ? "bg-destructive/10" : ""}`}>
+                      <td className="py-2">
+                        {r.country_name} <span className="text-muted-foreground">({r.country_code})</span>
+                      </td>
+                      <td className="text-right tabular-nums">${Number(r.base_cost).toFixed(5)}</td>
+                      <td className="text-right tabular-nums">${Number(r.passthrough_fee).toFixed(5)}</td>
+                      <td className="text-right tabular-nums">${Number(r.true_cost).toFixed(5)}</td>
+                      <td className="text-right tabular-nums">${Number(r.current_sell).toFixed(4)}</td>
+                      <td
+                        className={`text-right tabular-nums ${
+                          r.below_cost ? "text-destructive font-semibold" : "text-emerald-500"
+                        }`}
+                      >
+                        ${Number(r.current_margin).toFixed(5)}
+                      </td>
+                      <td className="text-right tabular-nums">${Number(r.suggested_sell).toFixed(4)}</td>
+                      <td className="text-right tabular-nums">${Number(r.suggested_mms_sell).toFixed(4)}</td>
+                    </tr>
+                  ))}
+                  {!pricing?.length && (
+                    <tr>
+                      <td colSpan={8} className="py-6 text-center text-muted-foreground">
+                        No active country rates.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </CardContent>

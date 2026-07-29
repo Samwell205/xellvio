@@ -29,11 +29,11 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
     // Country rates (cost_price = what Telnyx charges us per segment)
     const { data: rates } = await supabaseAdmin
       .from("country_rates")
-      .select("country_code,cost_price,sell_price,mms_multiplier,mms_cost_multiplier");
+      .select("country_code,cost_price,sell_price,mms_multiplier,mms_cost_multiplier,passthrough_fee");
     const costByCountry = new Map<string, number>();
     const mmsMultByCountry = new Map<string, number>();
     for (const r of rates ?? []) {
-      costByCountry.set(r.country_code, Number(r.cost_price ?? 0));
+      costByCountry.set(r.country_code, Number(r.cost_price ?? 0) + Number((r as any).passthrough_fee ?? 0));
       mmsMultByCountry.set(r.country_code, Number((r as any).mms_cost_multiplier ?? r.mms_multiplier ?? 3));
     }
 
@@ -59,7 +59,7 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       return rows;
     }
 
-    // Real Telnyx cost per message = cost_price × segments × (mms_cost_multiplier if MMS)
+    // Real carrier cost per message = (cost_price + passthrough_fee) × segments × (mms multiplier if MMS)
     function realCarrierCost(r: { country_code: string | null; segments_count: number | null; is_mms: boolean | null }) {
       const cc = r.country_code ?? "??";
       const segs = Number(r.segments_count ?? 1);

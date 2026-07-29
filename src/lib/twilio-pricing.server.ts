@@ -51,7 +51,7 @@ export async function runTwilioPricingSync(): Promise<{
 
   const { data: countries, error: readErr } = await supabaseAdmin
     .from("country_rates")
-    .select("id,country_code,manual_override,markup_percent");
+    .select("id,country_code,manual_override,markup_percent,passthrough_fee");
   if (readErr) throw new Error(readErr.message);
 
   const rows: SyncRow[] = [];
@@ -76,7 +76,9 @@ export async function runTwilioPricingSync(): Promise<{
     }
 
     const markup = Number(c.markup_percent ?? defaultMarkup);
-    const sell = round4(cost * (1 + markup / 100));
+    // Sell price must cover the base carrier rate plus the per-message carrier passthrough fee.
+    const fee = Number((c as any).passthrough_fee ?? 0);
+    const sell = round4((cost + fee) * (1 + markup / 100));
 
     const { error: upErr } = await supabaseAdmin
       .from("country_rates")

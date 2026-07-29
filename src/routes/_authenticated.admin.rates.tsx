@@ -34,6 +34,7 @@ type Row = {
   country_name: string;
   dial_prefix: string;
   cost_price: number;
+  passthrough_fee: number;
   sell_price: number;
   mms_multiplier: number;
   active: boolean;
@@ -72,6 +73,7 @@ function AdminRatesPage() {
       // Any manual edit to price/markup flips manual_override on
       const flips =
         patch.cost_price !== undefined ||
+        patch.passthrough_fee !== undefined ||
         patch.sell_price !== undefined ||
         patch.markup_percent !== undefined;
       const finalPatch = flips ? { ...patch, manual_override: true } : patch;
@@ -150,8 +152,8 @@ function AdminRatesPage() {
     setEdits((e) => {
       const base = ratesQ.data?.find((row) => row.id === id);
       const next = { ...(e[id] ?? {}), ...p };
-      if ((p.cost_price !== undefined || p.markup_percent !== undefined) && base) {
-        const cost = Number(next.cost_price ?? base.cost_price);
+      if ((p.cost_price !== undefined || p.passthrough_fee !== undefined || p.markup_percent !== undefined) && base) {
+        const cost = Number(next.cost_price ?? base.cost_price) + Number(next.passthrough_fee ?? base.passthrough_fee ?? 0);
         const markup = Number(next.markup_percent ?? base.markup_percent ?? markupQ.data?.percent ?? 40);
         next.sell_price = calculateSell(cost, markup);
       }
@@ -197,7 +199,7 @@ function AdminRatesPage() {
             >Save</Button>
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            sell_price = cost × (1 + {currentMarkup}/100) for non-overridden countries.
+            sell_price = (cost + carrier fee) × (1 + {currentMarkup}/100) for non-overridden countries.
           </div>
         </div>
         <div className="flex-1 min-w-[200px]">
@@ -211,6 +213,8 @@ function AdminRatesPage() {
             <tr>
               <th className="text-left p-3">Country</th>
               <th className="text-right p-3">Cost ($)</th>
+              <th className="text-right p-3">Carrier fee ($)</th>
+              <th className="text-right p-3">True cost ($)</th>
               <th className="text-right p-3">Markup %</th>
               <th className="text-right p-3">Sell ($)</th>
               <th className="text-right p-3">Margin</th>
@@ -225,7 +229,9 @@ function AdminRatesPage() {
           <tbody>
             {rows.map((r) => {
               const c = current(r);
-              const cost = Number(c.cost_price);
+              const baseCost = Number(c.cost_price);
+              const fee = Number(c.passthrough_fee ?? 0);
+              const cost = baseCost + fee;
               const sell = Number(c.sell_price);
               const margin = +(sell - cost).toFixed(5);
               const marginPct = sell > 0 ? Math.round((margin / sell) * 100) : 0;
@@ -242,6 +248,10 @@ function AdminRatesPage() {
                   <td className="p-3 text-right">
                     <Input type="number" step={0.00001} value={c.cost_price} onChange={(e) => patch(r.id, { cost_price: Number(e.target.value) })} className="w-28 text-right tabular-nums ml-auto" />
                   </td>
+                  <td className="p-3 text-right">
+                    <Input type="number" step={0.0001} value={c.passthrough_fee ?? 0} onChange={(e) => patch(r.id, { passthrough_fee: Number(e.target.value) })} className="w-28 text-right tabular-nums ml-auto" />
+                  </td>
+                  <td className="p-3 text-right tabular-nums font-medium">{formatRate(cost)}</td>
                   <td className="p-3 text-right">
                     <Input type="number" step={1} value={c.markup_percent ?? 50} onChange={(e) => patch(r.id, { markup_percent: Number(e.target.value) })} className="w-20 text-right tabular-nums ml-auto" />
                   </td>

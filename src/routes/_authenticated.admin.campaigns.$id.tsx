@@ -14,15 +14,17 @@ export const Route = createFileRoute("/_authenticated/admin/campaigns/$id")({
   component: AdminCampaignReportPage,
 });
 
-function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "ok" | "warn" | "bad" }) {
+function Stat({ label, value, tone, hint }: { label: string; value: string | number; tone?: "ok" | "warn" | "bad"; hint?: string }) {
   const color = tone === "ok" ? "text-emerald-600" : tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600" : "";
   return (
     <Card className="p-4">
       <div className="text-xs uppercase text-muted-foreground">{label}</div>
       <div className={`text-2xl font-extrabold ${color}`}>{value}</div>
+      {hint && <div className="text-xs text-muted-foreground mt-0.5">{hint}</div>}
     </Card>
   );
 }
+
 
 function AdminCampaignReportPage() {
   const { id } = Route.useParams();
@@ -63,7 +65,8 @@ function AdminCampaignReportPage() {
           ["Delivered", `${t.delivered.toLocaleString()} (${t.delivery_rate}%)`],
           ["Not delivered", t.delivery_unconfirmed.toLocaleString()],
           ["Failed", t.failed.toLocaleString()],
-          ["Tenant spend", formatUSD(t.cost)],
+          ["Charged to tenant", formatUSD(t.cost)],
+          ["Not yet sent (estimate)", formatUSD(Number(t.reserved_cost ?? 0))],
           ["Telnyx (MDR) cost", formatUSD(t.carrier_cost)],
           ["Profit / margin", formatUSD(t.margin)],
         ] },
@@ -116,7 +119,7 @@ function AdminCampaignReportPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Delivery rate" value={`${t.delivery_rate}%`} tone={t.delivery_rate >= 80 ? "ok" : t.delivery_rate >= 50 ? "warn" : "bad"} />
-        <Stat label="Tenant spend" value={formatUSD(t.cost)} />
+        <Stat label="Charged to tenant" value={formatUSD(t.cost)} hint={Number(t.reserved_cost ?? 0) > 0 ? `${formatUSD(Number(t.reserved_cost))} not yet sent` : undefined} />
         <Stat label="Carrier cost" value={formatUSD(t.carrier_cost)} />
         <Stat label="Margin" value={formatUSD(t.margin)} tone={t.margin >= 0 ? "ok" : "bad"} />
       </div>

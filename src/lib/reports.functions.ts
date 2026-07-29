@@ -19,6 +19,7 @@ export type CampaignReport = {
     failed: number;
     queued: number;
     cost: number;
+    reserved_cost: number;
     delivery_rate: number; // 0..100
     mms_count: number;
     is_mms: boolean;
@@ -88,6 +89,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       failed: 0,
       queued: 0,
       cost: 0,
+      reserved_cost: 0,
       delivery_rate: 0,
       mms_count: 0,
       is_mms: false,
@@ -97,11 +99,17 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     const timelineMap = new Map<string, { sent: number; delivered: number; failed: number }>();
     const failures: CampaignReport["failures"] = [];
 
+    // Recipients are only charged once the message reaches the carrier.
+    const BILLED = new Set(["sent", "delivered", "delivery_unconfirmed", "undelivered"]);
+    const PENDING = new Set(["queued", "sending", "pending"]);
+
     for (const r of rows) {
       const cc = r.country_code ?? "??";
+      const billed = BILLED.has(r.status);
+      const pending = PENDING.has(r.status);
       const cur = byCC.get(cc) ?? { recipients: 0, delivered: 0, unconfirmed: 0, failed: 0, cost: 0 };
       cur.recipients += 1;
-      cur.cost += Number(r.cost ?? 0);
+      if (billed) cur.cost += Number(r.cost ?? 0);
       if (r.status === "delivered") cur.delivered += 1;
       if (r.status === "delivery_unconfirmed") cur.unconfirmed += 1;
       if (r.status === "failed" || r.status === "undelivered") cur.failed += 1;
@@ -116,7 +124,8 @@ export const getCampaignReport = createServerFn({ method: "POST" })
         byKind.set(r.sender_kind, cur2);
       }
 
-      totals.cost += Number(r.cost ?? 0);
+      if (billed) totals.cost += Number(r.cost ?? 0);
+      if (pending) totals.reserved_cost += Number(r.cost ?? 0);
       if (r.is_mms) totals.mms_count += 1;
       if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
       if (r.status === "sent") totals.awaiting_delivery += 1;
@@ -147,6 +156,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     }
 
     totals.cost = +totals.cost.toFixed(4);
+    totals.reserved_cost = +totals.reserved_cost.toFixed(4);
     totals.delivery_rate = totals.sent > 0 ? +((totals.delivered / totals.sent) * 100).toFixed(1) : 0;
     totals.is_mms = totals.mms_count > 0;
 

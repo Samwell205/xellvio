@@ -839,12 +839,14 @@ export type Database = {
           currency: string
           dial_prefix: string
           id: string
+          inbound_cost: number
           last_synced_at: string | null
           manual_override: boolean
           markup_percent: number
           mms_cost_multiplier: number
           mms_multiplier: number
           number_type_used: string | null
+          passthrough_fee: number
           sell_price: number
           sender_supports_inbound: boolean
           updated_at: string
@@ -858,12 +860,14 @@ export type Database = {
           currency?: string
           dial_prefix: string
           id?: string
+          inbound_cost?: number
           last_synced_at?: string | null
           manual_override?: boolean
           markup_percent?: number
           mms_cost_multiplier?: number
           mms_multiplier?: number
           number_type_used?: string | null
+          passthrough_fee?: number
           sell_price?: number
           sender_supports_inbound?: boolean
           updated_at?: string
@@ -877,12 +881,14 @@ export type Database = {
           currency?: string
           dial_prefix?: string
           id?: string
+          inbound_cost?: number
           last_synced_at?: string | null
           manual_override?: boolean
           markup_percent?: number
           mms_cost_multiplier?: number
           mms_multiplier?: number
           number_type_used?: string | null
+          passthrough_fee?: number
           sell_price?: number
           sender_supports_inbound?: boolean
           updated_at?: string
@@ -2763,6 +2769,7 @@ export type Database = {
           failed: number
           mms_count: number
           queued: number
+          reserved_cost: number
           segments: number
           sent: number
           telnyx_cost: number
@@ -2797,6 +2804,20 @@ export type Database = {
           profit: number
           refunded: number
           spent: number
+        }[]
+      }
+      admin_margin_audit: {
+        Args: never
+        Returns: {
+          account_id: string
+          charged: number
+          email: string
+          label: string
+          margin: number
+          messages: number
+          mms_count: number
+          segments: number
+          true_cost: number
         }[]
       }
       claim_account_invites: { Args: never; Returns: number }

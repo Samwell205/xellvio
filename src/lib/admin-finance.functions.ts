@@ -75,3 +75,65 @@ export const adminFinanceTenants = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+/**
+ * Per-tenant subsidy report: what each tenant was actually charged versus the
+ * true carrier cost of their sends (base rate + carrier passthrough fee).
+ * A negative margin means we sent their traffic at a loss.
+ */
+export const adminMarginAudit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await (supabaseAdmin as any).rpc("admin_margin_audit");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Array<{
+      account_id: string;
+      label: string;
+      email: string;
+      messages: number;
+      segments: number;
+      mms_count: number;
+      charged: number;
+      true_cost: number;
+      margin: number;
+    }>;
+  });
+
+/**
+ * Suggested sell prices derived from the true carrier cost of each country
+ * (base rate + passthrough fee) at the given markup. Read-only preview — it
+ * never writes to country_rates.
+ */
+export const adminPricingPreview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { markupPercent?: number }) => ({ markupPercent: Number(d?.markupPercent ?? 100) }))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await (supabaseAdmin as any)
+      .from("country_rates")
+      .select("country_code,country_name,cost_price,passthrough_fee,sell_price,markup_percent,mms_multiplier,active")
+      .eq("active", true)
+      .order("country_name");
+    if (error) throw new Error(error.message);
+    const markup = data.markupPercent;
+    return (rows ?? []).map((r: any) => {
+      const trueCost = Number(r.cost_price ?? 0) + Number(r.passthrough_fee ?? 0);
+      const suggested = Math.round(trueCost * (1 + markup / 100) * 10000) / 10000;
+      const current = Number(r.sell_price ?? 0);
+      return {
+        country_code: r.country_code,
+        country_name: r.country_name,
+        base_cost: Number(r.cost_price ?? 0),
+        passthrough_fee: Number(r.passthrough_fee ?? 0),
+        true_cost: +trueCost.toFixed(5),
+        current_sell: current,
+        current_margin: +(current - trueCost).toFixed(5),
+        suggested_sell: suggested,
+        suggested_mms_sell: +(suggested * Number(r.mms_multiplier ?? 5)).toFixed(4),
+        below_cost: current < trueCost,
+      };
+    });
+  });

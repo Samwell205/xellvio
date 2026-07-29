@@ -71,7 +71,7 @@ function AdminCampaignsPage() {
                   <th className="p-3 text-right">Failed</th>
                   <th className="p-3 text-right">Rate</th>
                   <th className="p-3 text-right">Tenant spend</th>
-                  <th className="p-3 text-right">Telnyx cost</th>
+                  <th className="p-3 text-right">Carrier cost</th>
                   <th className="p-3 text-right">Profit</th>
                   <th className="p-3"></th>
                 </tr>
@@ -91,7 +91,10 @@ function AdminCampaignsPage() {
                       </div>
                       <div className="text-xs text-muted-foreground truncate">{c.message_body}</div>
                       <div className="text-xs mt-1 flex gap-2 flex-wrap">
-                        <span>Spend: <span className="font-semibold">{formatUSD(Number(c.cost ?? 0))}</span></span>
+                        <span>Charged: <span className="font-semibold">{formatUSD(Number(c.cost ?? 0))}</span></span>
+                        {Number((c as any).reserved_cost ?? 0) > 0 && (
+                          <span className="text-muted-foreground">Not yet sent: {formatUSD(Number((c as any).reserved_cost))}</span>
+                        )}
                         <span className="text-muted-foreground">Telnyx: {formatUSD(Number(c.carrier_cost ?? 0))}</span>
                         <span className={Number(c.margin ?? 0) >= 0 ? "text-emerald-600 font-semibold" : "text-destructive font-semibold"}>Profit: {formatUSD(Number(c.margin ?? 0))}</span>
                       </div>
