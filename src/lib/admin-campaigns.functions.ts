@@ -115,7 +115,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         .select("id,account_id,name,status,message_body,created_at")
         .eq("id", data.campaignId)
         .maybeSingle(),
-      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,mms_multiplier,mms_cost_multiplier"),
+      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,mms_multiplier,mms_cost_multiplier,passthrough_fee"),
     ]);
     if (cErr) throw new Error(cErr.message);
     if (!campaign) throw new Error("Campaign not found");
@@ -134,7 +134,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         .order("created_at", { ascending: true }),
     );
 
-    const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
+    // True carrier cost per segment = base rate + per-message carrier passthrough fee.
+    const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0) + Number(r.passthrough_fee ?? 0)]));
     const mmsMultByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.mms_cost_multiplier ?? r.mms_multiplier ?? 3)]));
 
     const totals = {
@@ -146,11 +147,16 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       failed: 0,
       queued: 0,
       cost: 0,
+      reserved_cost: 0,
       carrier_cost: 0,
       segments: 0,
       delivery_rate: 0,
     };
-    const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; segments: number; cost: number; carrier_cost: number; mms_count: number }>();
+    const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; segments: number; cost: number; reserved_cost: number; carrier_cost: number; mms_count: number }>();
+    // A recipient row only costs the tenant money once it has actually been handed
+    // to the carrier. Rows still queued are an estimate, not a charge.
+    const BILLED = new Set(["sent", "delivered", "delivery_unconfirmed", "undelivered"]);
+    const PENDING = new Set(["queued", "sending", "pending"]);
     const byKind = new Map<string, { used: number; delivered: number; failed: number }>();
     const timelineMap = new Map<string, { sent: number; delivered: number; failed: number }>();
     const failures: any[] = [];
@@ -161,11 +167,14 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       const seg = Number(r.segments_count ?? 1);
       const mmsMult = r.is_mms ? (mmsMultByCc.get(cc) ?? 3) : 1;
       const carrier = (costByCc.get(cc) ?? 0) * seg * mmsMult;
-      const cur = byCC.get(cc) ?? { recipients: 0, delivered: 0, unconfirmed: 0, failed: 0, segments: 0, cost: 0, carrier_cost: 0, mms_count: 0 };
+      const billed = BILLED.has(r.status);
+      const pending = PENDING.has(r.status);
+      const cur = byCC.get(cc) ?? { recipients: 0, delivered: 0, unconfirmed: 0, failed: 0, segments: 0, cost: 0, reserved_cost: 0, carrier_cost: 0, mms_count: 0 };
       cur.recipients += 1;
       cur.segments += seg;
-      cur.cost += Number(r.cost ?? 0);
-      cur.carrier_cost += carrier;
+      if (billed) cur.cost += Number(r.cost ?? 0);
+      if (pending) cur.reserved_cost += Number(r.cost ?? 0);
+      if (billed) cur.carrier_cost += carrier;
       if (r.is_mms) { cur.mms_count += 1; mmsCount += 1; }
       if (r.status === "delivered") cur.delivered += 1;
       if (r.status === "delivery_unconfirmed") cur.unconfirmed += 1;
@@ -181,8 +190,9 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         byKind.set(r.sender_kind, k);
       }
 
-      totals.cost += Number(r.cost ?? 0);
-      totals.carrier_cost += carrier;
+      if (billed) totals.cost += Number(r.cost ?? 0);
+      if (pending) totals.reserved_cost += Number(r.cost ?? 0);
+      if (billed) totals.carrier_cost += carrier;
       totals.segments += seg;
       if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
       if (r.status === "sent") totals.awaiting_delivery += 1;
@@ -213,6 +223,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     }
 
     totals.cost = +totals.cost.toFixed(4);
+    totals.reserved_cost = +totals.reserved_cost.toFixed(4);
     totals.carrier_cost = +totals.carrier_cost.toFixed(4);
     totals.delivery_rate = totals.sent > 0 ? +((totals.delivered / totals.sent) * 100).toFixed(1) : 0;
 
@@ -242,6 +253,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
           country_code,
           ...v,
           cost: +v.cost.toFixed(4),
+          reserved_cost: +v.reserved_cost.toFixed(4),
           carrier_cost: +v.carrier_cost.toFixed(4),
           margin: +(v.cost - v.carrier_cost).toFixed(4),
         }))
