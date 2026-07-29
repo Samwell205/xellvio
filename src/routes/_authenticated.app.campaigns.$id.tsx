@@ -1526,7 +1526,7 @@ function ProgressPanel({
             : inFlight === 0 && sent > 0
             ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
             : inFlight === 0 && deliveryUnconfirmed > 0
-            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} accepted by the carrier but returned no delivery receipt (shows as "Not Delivered" on Telnyx).`
+            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} accepted by the carrier but returned no delivery receipt (shows as "Not Delivered" in the network report).`
             : inFlight === 0
             ? "All messages have a final carrier status."
             : `${processedPct}% complete.`}
