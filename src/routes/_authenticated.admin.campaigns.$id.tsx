@@ -63,7 +63,8 @@ function AdminCampaignReportPage() {
           ["Delivered", `${t.delivered.toLocaleString()} (${t.delivery_rate}%)`],
           ["Not delivered", t.delivery_unconfirmed.toLocaleString()],
           ["Failed", t.failed.toLocaleString()],
-          ["Tenant spend", formatUSD(t.cost)],
+          ["Charged to tenant", formatUSD(t.cost)],
+          ["Not yet sent (estimate)", formatUSD(Number(t.reserved_cost ?? 0))],
           ["Telnyx (MDR) cost", formatUSD(t.carrier_cost)],
           ["Profit / margin", formatUSD(t.margin)],
         ] },
@@ -116,7 +117,7 @@ function AdminCampaignReportPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat label="Delivery rate" value={`${t.delivery_rate}%`} tone={t.delivery_rate >= 80 ? "ok" : t.delivery_rate >= 50 ? "warn" : "bad"} />
-        <Stat label="Tenant spend" value={formatUSD(t.cost)} />
+        <Stat label="Charged to tenant" value={formatUSD(t.cost)} hint={Number(t.reserved_cost ?? 0) > 0 ? `${formatUSD(Number(t.reserved_cost))} not yet sent` : undefined} />
         <Stat label="Carrier cost" value={formatUSD(t.carrier_cost)} />
         <Stat label="Margin" value={formatUSD(t.margin)} tone={t.margin >= 0 ? "ok" : "bad"} />
       </div>
