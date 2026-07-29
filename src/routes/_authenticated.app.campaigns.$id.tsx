@@ -778,7 +778,10 @@ function CampaignReport() {
                 <DollarSign className="size-4" /> Cost summary
               </div>
               <div className="space-y-3">
-                <Stat label="Total spend" value={formatUSD(stats.totalCost)} />
+                <Stat label="Charged so far" value={formatUSD(stats.totalCost)} />
+                {stats.reservedCost > 0 && (
+                  <Stat label="Not yet sent (estimate)" value={formatUSD(stats.reservedCost)} />
+                )}
                 <Stat label="Segments sent" value={stats.totalSegments.toLocaleString()} />
                 <Stat label="Cost / delivered" value={formatUSD(stats.costPerDelivered)} />
                 <Stat label="Cost / message" value={formatUSD(stats.sent > 0 ? stats.totalCost / stats.sent : 0)} />
