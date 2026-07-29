@@ -27,6 +27,7 @@ import { Route as DpaRouteImport } from './routes/dpa'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AupRouteImport } from './routes/aup'
 import { Route as AntiSpamRouteImport } from './routes/anti-spam'
@@ -206,6 +207,11 @@ const CookiesRoute = CookiesRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectRoute = ConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -719,6 +725,7 @@ export interface FileRoutesByFullPath {
   '/anti-spam': typeof AntiSpamRoute
   '/aup': typeof AupRoute
   '/auth': typeof AuthRoute
+  '/connect': typeof ConnectRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/docs': typeof DocsRoute
@@ -826,6 +833,7 @@ export interface FileRoutesByTo {
   '/anti-spam': typeof AntiSpamRoute
   '/aup': typeof AupRoute
   '/auth': typeof AuthRoute
+  '/connect': typeof ConnectRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/docs': typeof DocsRoute
@@ -933,6 +941,7 @@ export interface FileRoutesById {
   '/anti-spam': typeof AntiSpamRoute
   '/aup': typeof AupRoute
   '/auth': typeof AuthRoute
+  '/connect': typeof ConnectRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/docs': typeof DocsRoute
@@ -1043,6 +1052,7 @@ export interface FileRouteTypes {
     | '/anti-spam'
     | '/aup'
     | '/auth'
+    | '/connect'
     | '/contact'
     | '/cookies'
     | '/docs'
@@ -1150,6 +1160,7 @@ export interface FileRouteTypes {
     | '/anti-spam'
     | '/aup'
     | '/auth'
+    | '/connect'
     | '/contact'
     | '/cookies'
     | '/docs'
@@ -1256,6 +1267,7 @@ export interface FileRouteTypes {
     | '/anti-spam'
     | '/aup'
     | '/auth'
+    | '/connect'
     | '/contact'
     | '/cookies'
     | '/docs'
@@ -1367,6 +1379,7 @@ export interface RootRouteChildren {
   AntiSpamRoute: typeof AntiSpamRoute
   AupRoute: typeof AupRoute
   AuthRoute: typeof AuthRoute
+  ConnectRoute: typeof ConnectRoute
   ContactRoute: typeof ContactRoute
   CookiesRoute: typeof CookiesRoute
   DocsRoute: typeof DocsRoute
@@ -1538,6 +1551,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connect': {
+      id: '/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof ConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -2418,6 +2438,7 @@ const rootRouteChildren: RootRouteChildren = {
   AntiSpamRoute: AntiSpamRoute,
   AupRoute: AupRoute,
   AuthRoute: AuthRoute,
+  ConnectRoute: ConnectRoute,
   ContactRoute: ContactRoute,
   CookiesRoute: CookiesRoute,
   DocsRoute: DocsRoute,

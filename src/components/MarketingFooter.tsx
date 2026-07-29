@@ -16,6 +16,7 @@ export function MarketingFooter() {
           { label: "Features", to: "/features" },
           { label: "Pricing", to: "/pricing" },
           { label: "API Docs", to: "/docs" },
+          { label: "AI assistant connection", to: "/connect" },
         ]} />
         <FooterCol title="Company" items={[
           { label: "About", to: "/about" },
