@@ -44,8 +44,8 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
     if (campaignIds.length === 0) return [];
 
     // Aggregate stats per campaign in a single SQL query.
-    const stats = new Map<string, { total: number; delivered: number; failed: number; sent: number; unconfirmed: number; queued: number; cost: number; carrier_cost: number; segments: number; mms_count: number }>();
-    for (const id of campaignIds) stats.set(id, { total: 0, delivered: 0, failed: 0, sent: 0, unconfirmed: 0, queued: 0, cost: 0, carrier_cost: 0, segments: 0, mms_count: 0 });
+    const stats = new Map<string, { total: number; delivered: number; failed: number; sent: number; unconfirmed: number; queued: number; cost: number; reserved: number; carrier_cost: number; segments: number; mms_count: number }>();
+    for (const id of campaignIds) stats.set(id, { total: 0, delivered: 0, failed: 0, sent: 0, unconfirmed: 0, queued: 0, cost: 0, reserved: 0, carrier_cost: 0, segments: 0, mms_count: 0 });
 
     const { data: statRows, error: statErr } = await supabaseAdmin.rpc("admin_campaign_stats");
     if (statErr) throw new Error(statErr.message);
@@ -56,14 +56,18 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
         delivered: Number(r.delivered ?? 0),
         failed: Number(r.failed ?? 0),
         sent: Number(r.sent ?? 0),
-        unconfirmed: Number(r.unconfirmed ?? 0),
+        unconfirmed: Number(r.delivery_unconfirmed ?? 0),
         queued: Number(r.queued ?? 0),
-        cost: Number(r.cost ?? 0),
-        carrier_cost: Number(r.carrier_cost ?? 0),
+        // Only money that was actually debited from the tenant wallet.
+        cost: Number(r.tenant_cost ?? 0),
+        // Estimated cost of recipients that have not been dispatched yet.
+        reserved: Number(r.reserved_cost ?? 0),
+        carrier_cost: Number(r.telnyx_cost ?? 0),
         segments: Number(r.segments ?? 0),
         mms_count: Number(r.mms_count ?? 0),
       });
     }
+
 
     return campaigns.map((c: any) => {
       const a: any = acctMap.get(c.account_id);
