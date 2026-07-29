@@ -55,9 +55,9 @@ export const getBalanceDropAudit = createServerFn({ method: "POST" })
     const snapshotDelta = firstSnap && lastSnap ? Number(lastSnap.balance) - Number(firstSnap.balance) : null;
 
     // 2) Rates
-    const { data: rates } = await supabaseAdmin.from("country_rates").select("country_code,cost_price");
+    const { data: rates } = await supabaseAdmin.from("country_rates").select("country_code,cost_price,passthrough_fee");
     const costByCc = new Map<string, number>();
-    for (const r of rates ?? []) costByCc.set(r.country_code, Number(r.cost_price ?? 0));
+    for (const r of rates ?? []) costByCc.set(r.country_code, Number(r.cost_price ?? 0) + Number((r as any).passthrough_fee ?? 0));
 
     // 3) Messages in window
     const messages = await fetchAll<any>(() =>
@@ -270,8 +270,8 @@ export const getSenderNumberActivity = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: rates } = await supabaseAdmin.from("country_rates").select("country_code,cost_price");
-    const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
+    const { data: rates } = await supabaseAdmin.from("country_rates").select("country_code,cost_price,passthrough_fee");
+    const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0) + Number(r.passthrough_fee ?? 0)]));
 
     const msgs = await fetchAll<any>(() =>
       supabaseAdmin

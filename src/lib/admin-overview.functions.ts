@@ -54,7 +54,7 @@ export const adminGetOverview = createServerFn({ method: "GET" })
           .in("status", ["sent", "delivered", "delivery_unconfirmed"])
           .order("created_at", { ascending: false }),
       ),
-      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price"),
+      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,passthrough_fee"),
     ]);
 
     const smsRows: any[] = smsSpendAll as any[];
@@ -83,7 +83,7 @@ export const adminGetOverview = createServerFn({ method: "GET" })
 
     // SMS economics
     const rates = ratesRes.data ?? [];
-    const costByCc = new Map<string, number>(rates.map((r: any) => [r.country_code, Number(r.cost_price ?? 0)]));
+    const costByCc = new Map<string, number>(rates.map((r: any) => [r.country_code, Number(r.cost_price ?? 0) + Number(r.passthrough_fee ?? 0)]));
     // smsRows already declared above from paginated fetch
     const tenantSmsSpend = smsRows.reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
     const carrierSmsCost = smsRows.reduce((s: number, m: any) => {
