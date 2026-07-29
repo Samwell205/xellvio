@@ -14,15 +14,17 @@ export const Route = createFileRoute("/_authenticated/admin/campaigns/$id")({
   component: AdminCampaignReportPage,
 });
 
-function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "ok" | "warn" | "bad" }) {
+function Stat({ label, value, tone, hint }: { label: string; value: string | number; tone?: "ok" | "warn" | "bad"; hint?: string }) {
   const color = tone === "ok" ? "text-emerald-600" : tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600" : "";
   return (
     <Card className="p-4">
       <div className="text-xs uppercase text-muted-foreground">{label}</div>
       <div className={`text-2xl font-extrabold ${color}`}>{value}</div>
+      {hint && <div className="text-xs text-muted-foreground mt-0.5">{hint}</div>}
     </Card>
   );
 }
+
 
 function AdminCampaignReportPage() {
   const { id } = Route.useParams();
