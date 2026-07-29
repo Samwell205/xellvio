@@ -69,18 +69,39 @@ async function aiScan(messageBody: string): Promise<ScanResult> {
         "Return allowed=true ONLY if the message is clearly safe for bulk SMS. " +
         "Be strict — promotional, recruitment, or 'opportunity' messages for ANY of these categories must be blocked, " +
         "including obfuscated wording (e.g. 'nic salt', 'D8', 'fast $$$', '🚀 100x', 'we buy debt'). " +
-        "Return allowed=false with the specific category and a concise reason if prohibited.",
+        "Return allowed=false with the specific category and a concise reason if prohibited.\n\n" +
+        "IMPORTANT — do NOT block ordinary legitimate commerce. The following are ALLOWED and must return allowed=true:\n" +
+        "- restaurant / takeaway / food or retail promos, discounts (e.g. '£10 OFF selected orders'), new stock or new arrivals announcements\n" +
+        "- menu links, catalogue links, ordering links (including link shorteners or paste/menu hosting links)\n" +
+        "- asking customers to order or enquire via WhatsApp, phone, or SMS, and listing contact phone numbers\n" +
+        "- appointment reminders, delivery updates, loyalty offers, event invites\n" +
+        "Ambiguity is NOT grounds to block: only return allowed=false when the message itself clearly promotes a prohibited category in plain or lightly obfuscated wording. " +
+        "If you are not confident, return allowed=true. Set confidence to 'high' only when the violation is unmistakable.",
       prompt: `Analyze this SMS campaign message for prohibited content:\n\n"""${messageBody}"""`,
     });
 
 
     const result = output as z.infer<typeof AI_SCHEMA>;
+
+    // Only block on unmistakable violations. Medium/low-confidence AI opinions
+    // are advisory only — they must never stop a legitimate campaign.
+    const shouldBlock =
+      result.allowed === false &&
+      result.confidence === "high" &&
+      !!result.category &&
+      result.category !== "none";
+
+    if (!shouldBlock) {
+      return { allowed: true, confidence: "ai" };
+    }
+
     return {
-      allowed: result.allowed,
+      allowed: false,
       category: result.category === "none" ? undefined : result.category,
-      confidence: result.confidence === "high" ? "ai" : "ai",
+      confidence: "ai",
       reason: result.reason,
     };
+
   } catch (e: any) {
     console.error("[content-scanner] AI scan failed:", e?.message ?? e);
     // Fail open: if AI scan errors, allow but log
