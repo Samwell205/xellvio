@@ -8,9 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { MessageSquareText, Send, Search, Inbox } from "lucide-react";
-import { listConversations, getConversation, sendReply } from "@/lib/inbox.functions";
+import { MessageSquareText, Send, Search, Inbox, Trash2 } from "lucide-react";
+import { listConversations, getConversation, sendReply, deleteInboxMessages } from "@/lib/inbox.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/app/inbox")({
@@ -31,8 +32,10 @@ function InboxPage() {
   const listFn = useServerFn(listConversations);
   const getFn = useServerFn(getConversation);
   const replyFn = useServerFn(sendReply);
+  const deleteFn = useServerFn(deleteInboxMessages);
 
   const [selected, setSelected] = useState<string | null>(null);
+  const [checkedPhones, setCheckedPhones] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [manualPhone, setManualPhone] = useState("");
@@ -87,7 +90,10 @@ function InboxPage() {
 
   const thread = useQuery({
     queryKey: ["inbox", "thread", selected],
-    queryFn: () => getFn({ data: { phone: selected! } }),
+    queryFn: () => {
+      if (!selected) return { phone: "", messages: [] };
+      return getFn({ data: { phone: selected } });
+    },
     enabled: !!selected,
     refetchInterval: selected ? 8000 : false,
   });
@@ -100,6 +106,17 @@ function InboxPage() {
       toast.success("Reply sent");
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to send"),
+  });
+
+  const deleteMessages = useMutation({
+    mutationFn: (vars: { ids?: string[]; phones?: string[] }) => deleteFn({ data: vars }),
+    onSuccess: (_data, vars) => {
+      if (vars.phones?.some((phone) => phone === selected)) setSelected(null);
+      setCheckedPhones(new Set());
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      toast.success("Deleted");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to delete"),
   });
 
   // Auto-select first conversation
@@ -138,6 +155,16 @@ function InboxPage() {
   const filtered = (convos.data ?? []).filter((c) =>
     search ? c.phone.includes(search) : true,
   );
+  const allFilteredChecked = filtered.length > 0 && filtered.every((c) => checkedPhones.has(c.phone));
+
+  function togglePhone(phone: string, checked: boolean) {
+    setCheckedPhones((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(phone);
+      else next.delete(phone);
+      return next;
+    });
+  }
 
   function startNewConversation() {
     const phone = manualPhone.trim();
@@ -189,6 +216,38 @@ function InboxPage() {
                 New
               </Button>
             </div>
+            {filtered.length > 0 && (
+              <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Checkbox
+                    checked={allFilteredChecked}
+                    onCheckedChange={(value) => {
+                      setCheckedPhones((prev) => {
+                        const next = new Set(prev);
+                        if (value) filtered.forEach((conversation) => next.add(conversation.phone));
+                        else filtered.forEach((conversation) => next.delete(conversation.phone));
+                        return next;
+                      });
+                    }}
+                  />
+                  Select all
+                </label>
+                {checkedPhones.size > 0 && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={deleteMessages.isPending}
+                    onClick={() => {
+                      if (confirm(`Delete ${checkedPhones.size} conversation${checkedPhones.size === 1 ? "" : "s"}?`)) {
+                        deleteMessages.mutate({ phones: Array.from(checkedPhones) });
+                      }
+                    }}
+                  >
+                    <Trash2 className="size-3.5 mr-1" />Delete
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto">
             {convos.isLoading ? (
@@ -207,12 +266,8 @@ function InboxPage() {
                 const unread = isUnread(c.phone, c.lastAt, c.lastDirection);
                 const isActive = selected === c.phone;
                 return (
-                  <button
+                  <div
                     key={c.phone}
-                    onClick={() => {
-                      setSelected(c.phone);
-                      markRead(c.phone, c.lastAt);
-                    }}
                     className={`w-full text-left px-3 py-2.5 border-b transition relative ${
                       isActive
                         ? "bg-muted"
@@ -224,13 +279,29 @@ function InboxPage() {
                     {unread && !isActive && (
                       <span className="absolute left-1 top-1/2 -translate-y-1/2 size-2 rounded-full bg-primary" />
                     )}
-                    <div className={`flex items-center justify-between gap-2 ${unread ? "pl-3" : ""}`}>
-                      <span className={`text-sm ${unread ? "font-bold text-foreground" : "font-medium"}`}>
-                        {c.phone}
-                      </span>
-                      <span className={`text-xs ${unread ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                        {formatTime(c.lastAt)}
-                      </span>
+                    <div className={`flex items-center gap-2 ${unread ? "pl-3" : ""}`}>
+                      <Checkbox
+                        checked={checkedPhones.has(c.phone)}
+                        onCheckedChange={(value) => togglePhone(c.phone, Boolean(value))}
+                        aria-label={`Select ${c.phone}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelected(c.phone);
+                          markRead(c.phone, c.lastAt);
+                        }}
+                        className="min-w-0 flex-1 text-left"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-sm truncate ${unread ? "font-bold text-foreground" : "font-medium"}`}>
+                            {c.phone}
+                          </span>
+                          <span className={`text-xs shrink-0 ${unread ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                            {formatTime(c.lastAt)}
+                          </span>
+                        </div>
+                      </button>
                     </div>
                     <div className={`flex items-center gap-1.5 mt-0.5 ${unread ? "pl-3" : ""}`}>
                       {c.lastDirection === "inbound" && (
@@ -245,7 +316,7 @@ function InboxPage() {
                         {c.lastBody}
                       </p>
                     </div>
-                  </button>
+                  </div>
                 );
               })
             )}
@@ -260,9 +331,23 @@ function InboxPage() {
             </div>
           ) : (
             <>
-              <div className="px-4 py-3 border-b">
-                <div className="font-semibold">{selected}</div>
-                <div className="text-xs text-muted-foreground">SMS conversation</div>
+              <div className="px-4 py-3 border-b flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-semibold">{selected}</div>
+                  <div className="text-xs text-muted-foreground">SMS conversation</div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={deleteMessages.isPending}
+                  onClick={() => {
+                    if (selected && confirm(`Delete this conversation with ${selected}?`)) {
+                      deleteMessages.mutate({ phones: [selected] });
+                    }
+                  }}
+                >
+                  <Trash2 className="size-4 mr-1" />Delete
+                </Button>
               </div>
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2">
                 {thread.isLoading ? (
@@ -295,6 +380,17 @@ function InboxPage() {
                           {formatTime(m.created_at)}
                           {m.status ? ` · ${m.status}` : ""}
                         </div>
+                        {m.source === "thread" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`mt-1 h-6 px-1.5 ${m.direction === "outbound" ? "text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10" : "text-muted-foreground"}`}
+                            disabled={deleteMessages.isPending}
+                            onClick={() => deleteMessages.mutate({ ids: [m.id] })}
+                          >
+                            <Trash2 className="size-3" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))
