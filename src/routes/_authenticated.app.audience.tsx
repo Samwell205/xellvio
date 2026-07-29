@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import Papa from "papaparse";
 import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountId } from "@/hooks/useAccountId";
+import { getAudienceListCounts, getAudienceStats, listAudienceContactLists, listAudienceProfiles } from "@/lib/audience.functions";
 
 
 import { Card } from "@/components/ui/card";
@@ -63,6 +65,10 @@ const sb = supabase as any;
 function AudiencePage() {
   const qc = useQueryClient();
   const acctId = useAccountId();
+  const listContactListsFn = useServerFn(listAudienceContactLists);
+  const listProfilesFn = useServerFn(listAudienceProfiles);
+  const getStatsFn = useServerFn(getAudienceStats);
+  const getListCountsFn = useServerFn(getAudienceListCounts);
   const [search, setSearch] = useState("");
   const [listFilter, setListFilter] = useState<string | "all">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -70,114 +76,25 @@ function AudiencePage() {
 
 
   const listsQ = useQuery({
-    queryKey: ["contact-lists"],
-    queryFn: async (): Promise<ContactList[]> => {
-      const { data, error } = await sb.from("contact_lists").select("id,name,description").order("name");
-      if (error) throw error;
-      return (data ?? []) as ContactList[];
-    },
+    queryKey: ["contact-lists", acctId],
+    queryFn: async (): Promise<ContactList[]> => listContactListsFn(),
   });
 
   const profilesQ = useQuery({
-    queryKey: ["audience-profiles", listFilter],
-    queryFn: async (): Promise<ProfileRow[]> => {
-      // When filtering by a specific list, load ALL of that list's members
-      // (paged through Supabase's 1000-row cap) so users see their full list.
-      let listProfileIds: string[] | null = null;
-      if (listFilter !== "all") {
-        listProfileIds = [];
-        const PAGE = 1000;
-        for (let offset = 0; ; offset += PAGE) {
-          const { data, error } = await sb
-            .from("profile_list_members")
-            .select("profile_id")
-            .eq("list_id", listFilter)
-            .range(offset, offset + PAGE - 1);
-          if (error) throw error;
-          const ids = (data ?? []).map((m: any) => m.profile_id);
-          listProfileIds.push(...ids);
-          if (ids.length < PAGE) break;
-        }
-        if (listProfileIds.length === 0) return [];
-      }
-
-      // Pull profiles (chunked when filtering by list; capped to most recent when "all")
-      const profiles: any[] = [];
-      if (listProfileIds) {
-        const CHUNK = 500;
-        for (let i = 0; i < listProfileIds.length; i += CHUNK) {
-          const chunk = listProfileIds.slice(i, i + CHUNK);
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("id, phone_e164, first_name, last_name, country_code, created_at, consents(status, channel)")
-            .in("id", chunk);
-          if (error) throw error;
-          profiles.push(...(data ?? []));
-        }
-      } else {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, phone_e164, first_name, last_name, country_code, created_at, consents(status, channel)")
-          .order("created_at", { ascending: false })
-          .limit(1000);
-        if (error) throw error;
-        profiles.push(...(data ?? []));
-      }
-
-      const mapped: ProfileRow[] = profiles.map((p: any) => {
-        const sms = (p.consents ?? []).find((c: any) => c.channel === "sms");
-        return { ...p, consent_status: sms?.status ?? "pending", list_ids: [] as string[] } as ProfileRow;
-      });
-
-      // Hydrate list memberships for the visible profiles
-      if (mapped.length > 0) {
-        const ids = mapped.map((p) => p.id);
-        const byProfile: Record<string, string[]> = {};
-        const CHUNK = 500;
-        for (let i = 0; i < ids.length; i += CHUNK) {
-          const { data: mem } = await sb
-            .from("profile_list_members")
-            .select("profile_id,list_id")
-            .in("profile_id", ids.slice(i, i + CHUNK));
-          for (const m of (mem ?? []) as any[]) {
-            (byProfile[m.profile_id] ||= []).push(m.list_id);
-          }
-        }
-        for (const p of mapped) p.list_ids = byProfile[p.id] ?? [];
-      }
-      mapped.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-      return mapped;
-    },
+    queryKey: ["audience-profiles", acctId, listFilter],
+    queryFn: async (): Promise<ProfileRow[]> => listProfilesFn({ data: { listId: listFilter === "all" ? null : listFilter } }),
   });
 
   // Per-list totals (HEAD count) — independent of the loaded profile rows
   const listCountsQ = useQuery({
-    queryKey: ["audience-list-counts", (listsQ.data ?? []).map((l) => l.id).join(",")],
+    queryKey: ["audience-list-counts", acctId, (listsQ.data ?? []).map((l) => l.id).join(",")],
     enabled: (listsQ.data ?? []).length > 0,
-    queryFn: async (): Promise<Record<string, number>> => {
-      const out: Record<string, number> = {};
-      const all = listsQ.data ?? [];
-      await Promise.all(all.map(async (l) => {
-        const { count } = await sb
-          .from("profile_list_members")
-          .select("profile_id", { count: "exact", head: true })
-          .eq("list_id", l.id);
-        out[l.id] = count ?? 0;
-      }));
-      return out;
-    },
+    queryFn: async (): Promise<Record<string, number>> => getListCountsFn(),
   });
 
   const statsQ = useQuery({
-    queryKey: ["audience-stats"],
-    queryFn: async () => {
-      const [{ count: total }, { count: subs }, { count: supp }] = await Promise.all([
-        supabase.from("profiles").select("*", { count: "exact", head: true }),
-        supabase.from("consents").select("*", { count: "exact", head: true }).eq("status", "subscribed").eq("channel", "sms"),
-        supabase.from("suppressions").select("*", { count: "exact", head: true }),
-      ]);
-      return { total: total ?? 0, subs: subs ?? 0, supp: supp ?? 0 };
-    },
+    queryKey: ["audience-stats", acctId],
+    queryFn: async () => getStatsFn(),
   });
 
 

@@ -97,14 +97,39 @@ export const getConversation = createServerFn({ method: "GET" })
       ...(thread ?? []).map((m) => ({
         id: m.id, direction: m.direction as "inbound" | "outbound",
         body: m.body, created_at: m.created_at, status: null as string | null,
+        source: "thread" as const,
       })),
       ...((campaignMsgs ?? []) as any[]).map((m) => ({
         id: m.id, direction: "outbound" as const,
         body: m.rendered_body, created_at: m.sent_at ?? m.created_at,
         status: m.status as string | null,
+        source: "campaign" as const,
       })),
     ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     return { phone: data.phone, messages: merged };
+  });
+
+const DeleteInboxSchema = z.object({
+  ids: z.array(z.string().uuid()).optional(),
+  phones: z.array(z.string().regex(/^\+[1-9][0-9]{6,14}$/)).optional(),
+}).refine((value) => (value.ids?.length ?? 0) > 0 || (value.phones?.length ?? 0) > 0, "Choose messages to delete");
+
+export const deleteInboxMessages = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => DeleteInboxSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const acting = await resolveActingAccount(context.userId);
+    assertPermission(acting, "inbox");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let query = (supabaseAdmin as any)
+      .from("sms_thread_messages")
+      .delete()
+      .eq("account_id", acting.accountId);
+    if (data.ids?.length) query = query.in("id", data.ids);
+    if (data.phones?.length) query = query.in("phone_e164", data.phones);
+    const { error } = await query;
+    if (error) throw error;
+    return { ok: true };
   });
 
 const ReplySchema = z.object({

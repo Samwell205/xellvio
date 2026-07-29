@@ -46,80 +46,8 @@ function verifyTelnyxSignature(rawBody: string, signature: string | null, timest
 }
 
 async function handleInbound(payload: any) {
-  const p = payload?.data?.payload ?? {};
-  const from: string | undefined = p?.from?.phone_number;
-  const to: string | undefined = Array.isArray(p?.to) ? p.to[0]?.phone_number : undefined;
-  const bodyText: string = (p?.text ?? "").trim();
-  const providerSid: string | null = p?.id ?? null;
-  if (!from) return;
-
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  const accountIds = new Set<string>();
-  if (to) {
-    const { data: assets } = await supabaseAdmin
-      .from("sender_assets").select("account_id").eq("phone_number", to);
-    for (const a of assets ?? []) accountIds.add(a.account_id);
-    const { data: numRows } = await supabaseAdmin
-      .from("numbers").select("account_id").eq("phone_number", to);
-    for (const n of numRows ?? []) accountIds.add(n.account_id);
-  }
-
-  const { data: profiles } = await supabaseAdmin
-    .from("profiles").select("id, account_id").eq("phone_e164", from);
-  for (const pr of profiles ?? []) accountIds.add(pr.account_id);
-
-  const upper = bodyText.toUpperCase();
-  if (STOP_WORDS.includes(upper)) {
-    for (const pr of profiles ?? []) {
-      await supabaseAdmin.from("consents").upsert({
-        profile_id: pr.id, channel: "sms", status: "unsubscribed",
-        source: "inbound_stop", consented_at: new Date().toISOString(),
-      }, { onConflict: "profile_id,channel" });
-      await supabaseAdmin.from("suppressions").upsert({
-        account_id: pr.account_id, phone_e164: from,
-        reason: "inbound_stop", source: "telnyx_inbound",
-      }, { onConflict: "account_id,phone_e164" });
-    }
-  } else if (RESUB_WORDS.includes(upper)) {
-    for (const pr of profiles ?? []) {
-      await supabaseAdmin.from("consents").upsert({
-        profile_id: pr.id, channel: "sms", status: "subscribed",
-        source: "inbound_start", consented_at: new Date().toISOString(),
-      }, { onConflict: "profile_id,channel" });
-      await supabaseAdmin.from("suppressions").delete()
-        .eq("account_id", pr.account_id).eq("phone_e164", from);
-    }
-  }
-
-  if (bodyText && accountIds.size > 0) {
-    await supabaseAdmin.from("sms_thread_messages").insert(
-      Array.from(accountIds).map((account_id) => ({
-        account_id,
-        phone_e164: from,
-        direction: "inbound" as const,
-        body: bodyText,
-        from_number: from,
-        to_number: to ?? null,
-        provider_sid: providerSid,
-        status: "received",
-      })),
-    );
-    try {
-      const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
-      await Promise.all(
-        Array.from(accountIds).map((accountId) =>
-          forwardSmsToGorgias({
-            accountId,
-            phone: from,
-            fromNumber: to ?? null,
-            body: bodyText,
-            direction: "inbound",
-          }),
-        ),
-      );
-    } catch { /* best effort */ }
-  }
+  const { handleTelnyxInboundMessage } = await import("@/lib/telnyx-inbound-routing.server");
+  await handleTelnyxInboundMessage(payload);
 }
 
 async function handleStatus(payload: any) {
