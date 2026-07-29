@@ -377,7 +377,10 @@ function CampaignReport() {
     const skipped = Math.max(skippedRows, attempted - Math.max(progress?.total ?? 0, rows.length));
     const clicked = events.filter((e: any) => e.type === "clicked").length;
     const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
-    const totalCost = rows.reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
+    // Only messages handed to the carrier are charged; queued rows are an estimate.
+    const BILLED_STATUSES = ["sent", "delivered", "delivery_unconfirmed", "undelivered"];
+    const totalCost = rows.reduce((s: number, m: any) => s + (BILLED_STATUSES.includes(m.status) ? Number(m.cost ?? 0) : 0), 0);
+    const reservedCost = rows.reduce((s: number, m: any) => s + (["queued", "sending", "pending"].includes(m.status) ? Number(m.cost ?? 0) : 0), 0);
     const totalSegments = rows.reduce((s: number, m: any) => s + Number(m.segments_count ?? 1), 0);
     const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
     const clickRate = delivered > 0 ? (uniqueClickers / delivered) * 100 : 0;
@@ -434,7 +437,7 @@ function CampaignReport() {
 
     return {
       attempted, queued, sent, awaitingDelivery, delivered, deliveryUnconfirmed, failed, skipped, clicked, uniqueClickers,
-      totalCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
+      totalCost, reservedCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
       byCountry, failures, series,
     };
   }, [messagesQ.data, eventsQ.data, eligibleQ.data, progressQ.data]);

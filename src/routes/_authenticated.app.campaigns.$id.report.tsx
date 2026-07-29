@@ -242,7 +242,7 @@ function ReportPage() {
         <Stat icon={<HelpCircle className="size-4 text-sky-600" />} label="Unconfirmed" value={r.totals.delivery_unconfirmed.toLocaleString()} />
         <Stat icon={<XCircle className="size-4 text-destructive" />} label="Failed" value={r.totals.failed.toLocaleString()} />
         <Stat icon={<Clock className="size-4 text-amber-600" />} label="Queued" value={r.totals.queued.toLocaleString()} />
-        <Stat icon={<DollarSign className="size-4" />} label="Cost" value={formatUSD(r.totals.cost)} />
+        <Stat icon={<DollarSign className="size-4" />} label="Charged" value={formatUSD(r.totals.cost)} />
       </div>
 
       {r.timeline.length > 0 && (
