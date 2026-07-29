@@ -59,6 +59,14 @@ type State = {
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
 
+function senderDisplayName(sender: { sender_kind?: string | null; phone_number?: string | null; telnyx_messaging_profile_id?: string | null } | null | undefined) {
+  if (!sender) return "No verified sender";
+  if (sender.phone_number) return sender.phone_number;
+  if (sender.sender_kind === "sender_id") return "Alphanumeric Sender ID";
+  if (sender.telnyx_messaging_profile_id) return "Messaging Service";
+  return sender.sender_kind ?? "Messaging Service";
+}
+
 function renderPreviewWithLinks(text: string): ReactNode {
   const URL_RE = /(https?:\/\/[^\s<>()\[\]"']+)/gi;
   const nodes: ReactNode[] = [];
@@ -186,7 +194,7 @@ function NewCampaignPage() {
   const hasRejected = senderList.some((x) => x.verification_status === "rejected");
   const verifiedSenderSummary = senderList
     .filter((x) => x.verification_status === "verified")
-    .map((x) => `${x.country_code}: ${x.phone_number || x.telnyx_messaging_profile_id || "Sender ID"}`)
+    .map((x) => `${x.country_code}: ${senderDisplayName(x)}`)
     .join(" · ");
 
   // Map country -> verified sender (auto-routing preview)
@@ -789,7 +797,7 @@ function NewCampaignPage() {
               <div className="mt-1 mb-2 text-xs rounded-md border bg-muted/30 px-3 py-2 flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Test route: {testCountry}</span>
                 {testSender ? (
-                  <span className="font-mono font-semibold">From {testSender.phone_number || testSender.telnyx_messaging_profile_id}</span>
+                  <span className="font-mono font-semibold">From {senderDisplayName(testSender)}</span>
                 ) : (
                   <span className="text-destructive font-medium">No verified sender for {testCountry}</span>
                 )}
@@ -1117,13 +1125,6 @@ function SenderRoutingCard({
   sendersByCountry: Record<string, { sender_kind: string; phone_number: string | null; telnyx_messaging_profile_id: string | null }>;
   onToggleCountry?: (cc: string) => void;
 }) {
-  function label(s: any) {
-    if (!s) return "No verified sender";
-    if (s.phone_number) return s.phone_number;
-    if (s.sender_kind === "sender_id") return "Alphanumeric Sender ID";
-    if (s.telnyx_messaging_profile_id) return "Messaging Service";
-    return s.sender_kind;
-  }
   const excludedCount = breakdown.filter((b) => b.excluded).length;
   return (
     <Card className="p-5 space-y-3">
@@ -1167,7 +1168,7 @@ function SenderRoutingCard({
                     <td className={`p-2 font-medium ${b.excluded ? "line-through" : ""}`}>{b.country_name}</td>
                     <td className="p-2">
                       {sender ? (
-                        <span className="font-mono text-[11px]">{label(sender)}</span>
+                        <span className="font-mono text-[11px]">{senderDisplayName(sender)}</span>
                       ) : (
                         <Badge variant="destructive" className="text-[10px]">No verified sender</Badge>
                       )}
