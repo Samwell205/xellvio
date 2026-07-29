@@ -93,8 +93,10 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
         mms_count: s.mms_count,
         is_mms: s.mms_count > 0,
         cost: +s.cost.toFixed(4),
+        reserved_cost: +s.reserved.toFixed(4),
         carrier_cost: +s.carrier_cost.toFixed(4),
         margin: +(s.cost - s.carrier_cost).toFixed(4),
+
         delivery_rate: finalized > 0 ? +((s.delivered / finalized) * 100).toFixed(1) : 0,
       };
     });
