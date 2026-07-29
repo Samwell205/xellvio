@@ -39,6 +39,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
   {
     label: "Platform",
     items: [
+      { title: "Finance analysis", url: "/admin/finance", icon: Scale },
       { title: "Billing & payments", url: "/admin/billing", icon: CreditCard },
       { title: "Telnyx activity", url: "/admin/telnyx", icon: Phone },
       { title: "Balance-drop audit", url: "/admin/telnyx/audit", icon: Scale },
