@@ -2770,6 +2770,35 @@ export type Database = {
           total: number
         }[]
       }
+      admin_finance_daily: {
+        Args: { _days?: number }
+        Returns: {
+          carrier_cost: number
+          day: string
+          funded: number
+          messages: number
+          spent: number
+        }[]
+      }
+      admin_finance_summary: { Args: never; Returns: Json }
+      admin_finance_tenants: {
+        Args: never
+        Returns: {
+          account_id: string
+          balance: number
+          carrier_cost: number
+          email: string
+          funded: number
+          funded_payments: number
+          label: string
+          last_funded_at: string
+          messages: number
+          pending_funding: number
+          profit: number
+          refunded: number
+          spent: number
+        }[]
+      }
       claim_account_invites: { Args: never; Returns: number }
       claim_and_sell_verified_tfn: {
         Args: {
