@@ -51,7 +51,7 @@ export async function runTwilioPricingSync(): Promise<{
 
   const { data: countries, error: readErr } = await supabaseAdmin
     .from("country_rates")
-    .select("id,country_code,manual_override,markup_percent");
+    .select("id,country_code,manual_override,markup_percent,passthrough_fee");
   if (readErr) throw new Error(readErr.message);
 
   const rows: SyncRow[] = [];
