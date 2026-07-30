@@ -17,7 +17,7 @@ export const Route = createFileRoute("/verify-email")({
 
 function VerifyEmailPage() {
   const search = Route.useSearch();
-  const email = search.email;
+  const email = search.email ?? "";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
