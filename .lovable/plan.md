@@ -1,56 +1,44 @@
-# Confirmed explanation and repair plan
+# Maltida recovery and provider dispute
 
-## What happened
+## Confirmed audit facts
 
-- Maltida George funded the account with **two successful $100 payments = $200 total**. The current tenant balance is **$0.00**.
-- The three campaigns created **29,989 message rows**. The platform charged exactly **$200.00** across 25,000 successful debit entries:
-  - **JEREMY 1:** $77.184
-  - **JEREMY 2:** $56.488
-  - **JEREMY 3:** $66.328
-- Those campaign rows were priced at **$0.008 per SMS**, while the recorded US underlying cost is currently **$0.010 per SMS** before profit. That means these sends were priced about **20% below cost**, matching the losses shown in the screenshots.
-- The failed SMS went out again because the dispatcher contains an automatic retry job. It requeues selected carrier-rejected messages after 10 minutes without tenant or admin approval.
-- Today, that job retried **1,441 SMS** between approximately **12:26 and 13:06 UTC**:
-  - **4 delivered**
-  - **1,437 failed or were rejected again**
-  - Estimated additional underlying retry cost: about **$14.41** at $0.01 each
-- The retry happened automatically; the tenant did not manually start it.
-- The platform also sends first and debits the tenant afterward, with up to 100 sends running concurrently. This ordering permits provider-accepted SMS to leave the platform while the tenant balance is reaching zero. A failed debit is currently swallowed instead of stopping the send. This is the principal control failure that allowed exposure beyond funded credit.
-- Since the last stored provider-balance reading at **$546.92**, estimated underlying send usage across all tenants was about **$560.08**:
-  - Maltida George: **$151.93**
-  - Samuel Durosinmi: **$398.65**
-  - Horizon Greatness: **$9.50**
-  This explains why the provider balance could become negative. Maltida was a major part, but not the only tenant consuming that balance.
+- Maltida funded exactly **$200** and the platform has now removed exactly **$200**, leaving the tenant wallet at **$0.00**.
+- The platform deducted **$117.248 on July 30** after deducting **$82.752 on July 29**.
+- The three campaign ledger totals are **$77.184**, **$56.488**, and **$66.328**.
+- Some failed messages were sent again on July 30. The existing audit identified **1,441 automatic retries**; these were not manually approved by the tenant.
+- The local provider-transaction import contains no rows for this period, so the exact provider withdrawal/refund cannot honestly be claimed from that table. It must be reconciled against the provider message/transaction records.
 
-## Important distinction
+## Implementation
 
-The tenant is not showing a negative balance; Maltida is at **$0.00**. The negative screenshot is the platform’s provider balance. The platform became exposed because it paid more for sends than it collected, retried failed messages automatically, and allowed sending before confirming each debit.
+1. **Freeze unauthorized resend exposure**
+   - Confirm no background path can automatically retry failed or delivery-unconfirmed messages.
+   - Require an explicit tenant/admin confirmation showing message count and charge before any retry.
 
-## Fixes to implement
+2. **Create an exact attempt-level reconciliation**
+   - Match every Maltida provider attempt to its campaign message, timestamp, final provider status, tenant debit, and estimated/actual provider charge.
+   - Separate original sends, previously unsent messages resumed after the provider account recovered, and true duplicate retry attempts.
+   - Identify messages accepted more than once and prevent them from being counted as valid tenant usage twice.
 
-1. **Remove automatic resend behavior**
-   - Disable the automatic retry job completely.
-   - Keep retry as an explicit admin/tenant action with a clear message count and estimated charge shown before confirmation.
-   - Do not resend `delivery_unconfirmed` messages automatically because some may already have reached recipients.
+3. **Recover valid uncovered tenant charges**
+   - Calculate only provider-accepted attempts that were not already included in Maltida’s $200 ledger deductions.
+   - Apply one auditable correction transaction for that verified amount; if the wallet cannot cover it, record the balance as debt and suspend further sending until funded.
+   - Do not charge Maltida for an unauthorized duplicate retry caused by the platform.
 
-2. **Charge atomically before every provider attempt**
-   - Replace the current “send, then debit” flow with one database operation that reserves/debits the exact charge before an SMS leaves the platform.
-   - If the debit cannot complete, do not call the provider.
-   - Preserve charges for provider-accepted sends and confirmed retry attempts, following the existing no-refund policy.
+4. **Prepare and expose the provider dispute**
+   - Produce an admin-visible dispute report listing unauthorized automatic retries, provider message IDs, timestamps, statuses, and the exact amount charged.
+   - Add a downloadable CSV and ready-to-send dispute text requesting reimbursement for those attempts.
+   - Keep the dispute amount separate from tenant debt so the same money is never recovered twice.
 
-3. **Enforce a hard cost floor at dispatch time**
-   - Recalculate each SMS from the current country cost, passthrough fee, segment count, MMS multiplier, and required markup immediately before queueing.
-   - Reject/hold a campaign if its stored price is below the current minimum profitable selling price.
-   - Prevent stale campaign rows from retaining an old $0.008 price when the valid US sell price is higher.
+5. **Correct finance reporting**
+   - Show original attempts, authorized retries, unauthorized retries, tenant charges, provider charges, amount recoverable from the tenant, and amount disputed with the provider as separate lines.
+   - Add a recovery status so you can track pending, credited, rejected, or collected amounts.
 
-4. **Add campaign-level reservation and budget limits**
-   - Reserve the full affordable campaign amount before processing.
-   - Queue only the number of messages covered by that reservation.
-   - Stop workers immediately when the reserved amount is exhausted, including during concurrent dispatch.
+6. **Notify Maltida only after reconciliation**
+   - Send a clear account notice stating the verified correction, resulting balance/debt, campaign references, and support contact.
+   - Do not expose the provider name, provider pricing, or internal infrastructure in tenant-facing text.
 
-5. **Make every retry and attempt auditable**
-   - Store a separate attempt record for the original send and every retry, including reason, provider status, tenant charge, underlying estimated cost, and who authorized it.
-   - Show original sends and retries separately in Admin Finance and campaign reports.
+## Safety rules
 
-6. **Correct reporting without changing historical balances automatically**
-   - Recalculate these three campaigns to show original attempts, automatic retries, tenant charges, estimated underlying cost, and platform loss accurately.
-   - Do not issue refunds, credits, or new tenant debits as part of this repair; any historical adjustment will require a separate explicit decision after the audit is visible.
+- No estimated amount will be charged as if it were final.
+- No duplicate collection from both Maltida and the provider for the same retry.
+- Every adjustment will have an immutable ledger description and admin audit trail.
