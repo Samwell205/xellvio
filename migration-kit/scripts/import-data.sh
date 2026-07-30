@@ -2,7 +2,7 @@
 # ============================================================
 # Xellvio migration — Phase 3, step 2: import data into YOUR Supabase project.
 #
-#   bash migration-kit/scripts/import-data.sh "postgresql://postgres:PASS@db.xxx.supabase.co:5432/postgres"
+#   bash migration-kit/scripts/import-data.sh "postgresql://postgres:PASS@db.xxx.supabase.co:5432/postgres" [DATA_DIR]
 #
 # Assumes 00-prelude.sql and 01-baseline-schema.sql have already been applied.
 # Runs with foreign-key/trigger enforcement disabled so table order does not
@@ -10,9 +10,10 @@
 # ============================================================
 set -euo pipefail
 
-DB_URL="${1:?usage: import-data.sh <NEW_DATABASE_URL>}"
-DATA_DIR="$(cd "$(dirname "$0")/.." && pwd)/data"
+DB_URL="${1:?usage: import-data.sh <NEW_DATABASE_URL> [DATA_DIR]}"
+DATA_DIR="${2:-/tmp/xellvio-migration-data}"
 MANIFEST="$DATA_DIR/_columns.txt"
+
 
 [ -f "$MANIFEST" ] || { echo "Missing $MANIFEST — run export-data.sh first."; exit 1; }
 
