@@ -77,13 +77,6 @@ export const reconcileCampaignMessages = createServerFn({ method: "POST" })
           await supabaseAdmin.from("events").insert({
             message_id: m.id, type: `reconcile:${newStatus}`, payload: j,
           });
-          if (newStatus === "undelivered" || newStatus === "failed") {
-            try {
-              await supabaseAdmin.rpc("refund_message_charge", { _message_id: m.id });
-            } catch (e) {
-              console.error("[reconcile] refund failed", e);
-            }
-          }
           updated += 1;
         } catch {
           /* ignore per-message failure */

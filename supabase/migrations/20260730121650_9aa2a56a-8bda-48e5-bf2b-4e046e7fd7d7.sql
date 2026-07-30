@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.refund_message_charge(uuid);
