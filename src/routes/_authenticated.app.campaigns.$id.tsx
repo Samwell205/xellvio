@@ -585,10 +585,11 @@ function CampaignReport() {
       )}
 
       <ProgressPanel
-        data={progressQ.data}
+        data={progress}
         status={c.status}
-        isFetching={progressQ.isFetching}
-        failures={failuresQ.data}
+        isFetching={summaryQ.isFetching}
+        failures={failures}
+
         onRetryReason={(code) => retryAllM.mutate(code)}
         onRetryAll={() => retryAllM.mutate(null)}
         isRetrying={retryAllM.isPending}
