@@ -1,0 +1,3 @@
+data/*.csv
+data/_columns.txt
+data/_auth_users.json
