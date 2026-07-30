@@ -878,6 +878,13 @@ function CampaignReport() {
 
 function RecipientActivity({
   rows,
+  totalRows,
+  filter,
+  onFilterChange,
+  page,
+  pageSize,
+  onPageChange,
+  isFetching,
   stats,
   optOuts,
   onRetry,
@@ -885,37 +892,33 @@ function RecipientActivity({
   canRetry,
 }: {
   rows: any[];
+  totalRows: number;
+  filter: string;
+  onFilterChange: (f: string) => void;
+  page: number;
+  pageSize: number;
+  onPageChange: (p: number) => void;
+  isFetching?: boolean;
   stats: any;
   optOuts: number;
   onRetry?: (messageId: string) => void;
   retryingId?: string;
   canRetry?: boolean;
 }) {
-  const [filter, setFilter] = useState<string>("all");
-  const buckets = useMemo(() => {
-    const f = {
-      all: rows,
-      sent: rows.filter((m) => m.status === "sent"),
-      delivered: rows.filter((m) => m.status === "delivered"),
-      unconfirmed: rows.filter((m) => m.status === "delivery_unconfirmed"),
-      failed: rows.filter((m) => ["failed", "undelivered"].includes(m.status)),
-      skipped: rows.filter((m) => m.status === "skipped" || m.error_code === "insufficient_balance"),
-      queued: rows.filter((m) => ["queued", "pending", "sending"].includes(m.status)),
-    } as Record<string, any[]>;
-    return f;
-  }, [rows]);
-
+  // Counts come from the aggregate summary, not from the current page.
   const items = [
-    { key: "all",       label: "All",       count: rows.length },
-    { key: "sent",      label: "Accepted",  count: buckets.sent.length },
-    { key: "delivered", label: "Delivered", count: buckets.delivered.length },
-    { key: "unconfirmed", label: "Not delivered", count: buckets.unconfirmed.length },
-    { key: "failed",    label: "Failed",    count: buckets.failed.length },
-    { key: "skipped",   label: "Skipped",   count: buckets.skipped.length },
-    { key: "queued",    label: "Queued",    count: buckets.queued.length },
+    { key: "all",       label: "All",       count: stats.attempted },
+    { key: "sent",      label: "Accepted",  count: stats.awaitingDelivery },
+    { key: "delivered", label: "Delivered", count: stats.delivered },
+    { key: "unconfirmed", label: "Not delivered", count: stats.deliveryUnconfirmed },
+    { key: "failed",    label: "Failed",    count: stats.failed },
+    { key: "skipped",   label: "Skipped",   count: stats.skipped },
+    { key: "queued",    label: "Queued",    count: stats.queued },
   ];
 
-  const shown = buckets[filter] ?? rows;
+  const shown = rows;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
 
   return (
     <div className="space-y-5">
