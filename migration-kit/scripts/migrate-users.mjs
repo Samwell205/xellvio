@@ -36,7 +36,7 @@ if (!NEW_URL || !NEW_KEY) {
 }
 
 function loadUsers() {
-  const path = join(HERE, "..", "data", "_auth_users.json");
+  const path = join(process.env.DATA_DIR ?? "/tmp/xellvio-migration-data", "_auth_users.json");
   const raw = JSON.parse(readFileSync(path, "utf8"));
   const rows = Array.isArray(raw) ? raw : (raw.users ?? []);
   return rows
