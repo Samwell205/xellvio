@@ -47,7 +47,7 @@ export async function runTwilioPricingSync(): Promise<{
     .select("value")
     .eq("key", "default_markup_percent")
     .maybeSingle();
-  const defaultMarkup = Number((settingRow?.value as any) ?? 35);
+  const defaultMarkup = Number((settingRow?.value as any) ?? 55);
 
   const { data: countries, error: readErr } = await supabaseAdmin
     .from("country_rates")
