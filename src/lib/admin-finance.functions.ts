@@ -1,15 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function assertAdmin(context: any) {
-  const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
-  if (!ok) throw new Error("Forbidden");
-}
-
 export const adminFinanceOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context);
+    const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
+    if (!ok) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
 
@@ -90,7 +86,8 @@ export const adminFinanceOverview = createServerFn({ method: "GET" })
 export const adminFinanceTenants = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context);
+    const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
+    if (!ok) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await (supabaseAdmin as any).rpc("admin_finance_tenants");
     if (error) throw new Error(error.message);
@@ -105,7 +102,8 @@ export const adminFinanceTenants = createServerFn({ method: "GET" })
 export const adminMarginAudit = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context);
+    const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
+    if (!ok) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await (supabaseAdmin as any).rpc("admin_margin_audit");
     if (error) throw new Error(error.message);
@@ -131,7 +129,8 @@ export const adminPricingPreview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { markupPercent?: number }) => ({ markupPercent: Number(d?.markupPercent ?? 100) }))
   .handler(async ({ context, data }) => {
-    await assertAdmin(context);
+    const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
+    if (!ok) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: rows, error } = await (supabaseAdmin as any)
       .from("country_rates")
