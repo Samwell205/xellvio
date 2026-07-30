@@ -240,19 +240,26 @@ function CampaignReport() {
 
 
   // Realtime: subscribe to message + campaign changes and invalidate the
-  // relevant queries. This gives sub-second UI updates instead of waiting
-  // for the polling interval.
+  // relevant queries. Invalidations are throttled to once every 10s — a large
+  // campaign emits thousands of row events and refetching per event was the
+  // main source of database load on this page.
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        if (document.hidden) return;
+        queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
+        queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+      }, 10_000);
+    };
     const channel = supabase
       .channel(`campaign-${id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messages", filter: `campaign_id=eq.${id}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
-          queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-          queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
-        },
+        scheduleRefresh,
       )
       .on(
         "postgres_changes",
@@ -261,9 +268,11 @@ function CampaignReport() {
       )
       .subscribe();
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [id, queryClient]);
+
 
   const cancelFn = useServerFn(cancelCampaign);
   const cancelM = useMutation({
