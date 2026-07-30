@@ -8,7 +8,7 @@
  */
 import * as React from "react";
 import { render } from "@react-email/components";
-import { sendLovableEmail } from "@lovable.dev/email-js";
+import { sendMail, mailerProvider } from "./mailer.server";
 import { TEMPLATES, type TemplateEntry } from "@/lib/email-templates/registry";
 
 const SITE_NAME = "xellvio";
@@ -130,8 +130,7 @@ export async function sendBrandedEmail(
   });
 
   if (sendImmediately) {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) {
+    if (mailerProvider() === "none") {
       await supabaseAdmin.from("email_send_log").insert({
         message_id: idempotencyKey,
         template_name: templateName,
@@ -143,7 +142,7 @@ export async function sendBrandedEmail(
     }
 
     try {
-      await sendLovableEmail(
+      await sendMail(
         {
           to: recipient,
           from: FROM_ADDRESS,
@@ -157,7 +156,6 @@ export async function sendBrandedEmail(
           message_id: idempotencyKey,
           ...(unsubscribeToken ? { unsubscribe_token: unsubscribeToken } : {}),
         },
-        { apiKey, sendUrl: process.env.LOVABLE_SEND_URL },
       );
 
       await supabaseAdmin.from("email_send_log").insert({
