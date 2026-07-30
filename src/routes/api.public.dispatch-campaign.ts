@@ -597,9 +597,6 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         const rates = (ratesRows ?? []) as Rate[];
 
         const nowIso = new Date().toISOString();
-        const stalledCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        await supabaseAdmin.from("campaigns")
-          .update({ status: "queued" }).eq("status", "sending").lt("updated_at", stalledCutoff);
 
         // ── Auto-approve expired review-queue entries and requeue their campaigns.
         const nowExpiry = new Date().toISOString();
