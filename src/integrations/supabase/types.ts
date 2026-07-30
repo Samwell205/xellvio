@@ -1292,6 +1292,7 @@ export type Database = {
           phone_e164: string
           profile_id: string | null
           provider_message_id: string | null
+          refunded_at: string | null
           rendered_body: string
           segments_count: number | null
           sender_kind: string | null
@@ -1313,6 +1314,7 @@ export type Database = {
           phone_e164: string
           profile_id?: string | null
           provider_message_id?: string | null
+          refunded_at?: string | null
           rendered_body: string
           segments_count?: number | null
           sender_kind?: string | null
@@ -1334,6 +1336,7 @@ export type Database = {
           phone_e164?: string
           profile_id?: string | null
           provider_message_id?: string | null
+          refunded_at?: string | null
           rendered_body?: string
           segments_count?: number | null
           sender_kind?: string | null
@@ -2980,6 +2983,7 @@ export type Database = {
           read_ct: number
         }[]
       }
+      refund_message_charge: { Args: { _message_id: string }; Returns: number }
       reject_verifier_withdrawal: {
         Args: { _admin_note: string; _withdrawal_id: string }
         Returns: undefined
