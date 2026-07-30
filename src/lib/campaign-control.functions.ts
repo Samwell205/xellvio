@@ -103,6 +103,9 @@ export const retryMessage = createServerFn({ method: "POST" })
         dispatch_started_at: null,
         charged_at: null,
         charged_amount: null,
+        retry_authorization_source: "tenant_manual",
+        retry_authorized_by: context.userId,
+        retry_authorized_at: new Date().toISOString(),
         retry_count: (msg as any).retry_count ? Number((msg as any).retry_count) + 1 : 1,
       })
       .eq("id", data.messageId);
@@ -166,6 +169,9 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
         dispatch_started_at: null,
         charged_at: null,
         charged_amount: null,
+        retry_authorization_source: "tenant_bulk_manual",
+        retry_authorized_by: context.userId,
+        retry_authorized_at: new Date().toISOString(),
       })
       .in("id", ids)
       .select("id");
@@ -238,6 +244,9 @@ export const resendUnconfirmed = createServerFn({ method: "POST" })
         dispatch_started_at: null,
         charged_at: null,
         charged_amount: null,
+        retry_authorization_source: "tenant_unconfirmed_manual",
+        retry_authorized_by: context.userId,
+        retry_authorized_at: new Date().toISOString(),
       })
       .in("id", ids);
     if (error) throw new Error(error.message);

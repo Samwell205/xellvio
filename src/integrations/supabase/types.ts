@@ -1114,6 +1114,83 @@ export type Database = {
           },
         ]
       }
+      financial_recovery_cases: {
+        Row: {
+          account_id: string
+          admin_notes: string | null
+          campaign_ids: string[]
+          created_at: string
+          created_by: string | null
+          currency: string
+          disputed_provider_amount: number
+          disputed_provider_attempts: number
+          evidence: Json
+          evidence_quality: string
+          id: string
+          provider_credit_received: number
+          status: string
+          summary: string
+          tenant_amount_collected: number
+          title: string
+          updated_at: string
+          verified_funding: number
+          verified_tenant_debits: number
+          verified_uncovered_tenant_charge: number
+        }
+        Insert: {
+          account_id: string
+          admin_notes?: string | null
+          campaign_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          disputed_provider_amount?: number
+          disputed_provider_attempts?: number
+          evidence?: Json
+          evidence_quality?: string
+          id?: string
+          provider_credit_received?: number
+          status?: string
+          summary?: string
+          tenant_amount_collected?: number
+          title: string
+          updated_at?: string
+          verified_funding?: number
+          verified_tenant_debits?: number
+          verified_uncovered_tenant_charge?: number
+        }
+        Update: {
+          account_id?: string
+          admin_notes?: string | null
+          campaign_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          disputed_provider_amount?: number
+          disputed_provider_attempts?: number
+          evidence?: Json
+          evidence_quality?: string
+          id?: string
+          provider_credit_received?: number
+          status?: string
+          summary?: string
+          tenant_amount_collected?: number
+          title?: string
+          updated_at?: string
+          verified_funding?: number
+          verified_tenant_debits?: number
+          verified_uncovered_tenant_charge?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_recovery_cases_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gorgias_ticket_map: {
         Row: {
           account_id: string
@@ -1385,6 +1462,9 @@ export type Database = {
           provider_message_id: string | null
           refunded_at: string | null
           rendered_body: string
+          retry_authorization_source: string | null
+          retry_authorized_at: string | null
+          retry_authorized_by: string | null
           retry_count: number
           segments_count: number | null
           sender_kind: string | null
@@ -1411,6 +1491,9 @@ export type Database = {
           provider_message_id?: string | null
           refunded_at?: string | null
           rendered_body: string
+          retry_authorization_source?: string | null
+          retry_authorized_at?: string | null
+          retry_authorized_by?: string | null
           retry_count?: number
           segments_count?: number | null
           sender_kind?: string | null
@@ -1437,6 +1520,9 @@ export type Database = {
           provider_message_id?: string | null
           refunded_at?: string | null
           rendered_body?: string
+          retry_authorization_source?: string | null
+          retry_authorized_at?: string | null
+          retry_authorized_by?: string | null
           retry_count?: number
           segments_count?: number | null
           sender_kind?: string | null

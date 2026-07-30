@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { adminFinanceOverview, adminFinanceTenants, adminMarginAudit, adminPricingPreview } from "@/lib/admin-finance.functions";
+import { adminListRecoveryCases, adminRecoveryCaseCsv, adminSendRecoveryNotice, adminUpdateRecoveryCase } from "@/lib/reconciliation-recovery.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/finance")({
   component: FinancePage,
@@ -44,6 +47,7 @@ function Stat({ label, value, hint, tone }: { label: string; value: string; hint
 }
 
 function FinancePage() {
+  const queryClient = useQueryClient();
   const overviewFn = useServerFn(adminFinanceOverview);
   const tenantsFn = useServerFn(adminFinanceTenants);
 
@@ -57,6 +61,26 @@ function FinancePage() {
     queryKey: ["admin-pricing-preview"],
     queryFn: () => pricingFn({ data: { markupPercent: 100 } }),
   });
+  const recoveryFn = useServerFn(adminListRecoveryCases);
+  const updateRecoveryFn = useServerFn(adminUpdateRecoveryCase);
+  const csvRecoveryFn = useServerFn(adminRecoveryCaseCsv);
+  const noticeRecoveryFn = useServerFn(adminSendRecoveryNotice);
+  const { data: recoveries } = useQuery({ queryKey: ["admin-recovery-cases"], queryFn: () => recoveryFn({}) });
+  const updateRecovery = useMutation({
+    mutationFn: (input: { id: string; status: string }) => updateRecoveryFn({ data: input }),
+    onSuccess: () => { toast.success("Recovery case updated"); queryClient.invalidateQueries({ queryKey: ["admin-recovery-cases"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const downloadRecovery = async (id: string, title: string) => {
+    const csv = await csvRecoveryFn({ data: { id } });
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Loading finance analysis…</div>;
   if (error) return <div className="p-6 text-destructive">{(error as Error).message}</div>;
@@ -155,6 +179,7 @@ function FinancePage() {
           <TabsTrigger value="margin">Margin audit</TabsTrigger>
           <TabsTrigger value="pricing">Pricing check</TabsTrigger>
           <TabsTrigger value="attempts">Send attempts</TabsTrigger>
+          <TabsTrigger value="recovery">Recovery & disputes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenants">
@@ -217,6 +242,52 @@ function FinancePage() {
               hint={`${usd(attempts.retry_carrier_cost)} estimated carrier cost`}
               tone={Number(attempts.retry_charges ?? 0) >= Number(attempts.retry_carrier_cost ?? 0) ? "good" : "bad"}
             />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="recovery">
+          <div className="space-y-4">
+            {(recoveries ?? []).map((recovery: any) => {
+              const tenant = recovery.accounts?.legal_business_name || recovery.accounts?.company || recovery.accounts?.full_name || recovery.accounts?.email || "—";
+              return (
+                <Card key={recovery.id}>
+                  <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
+                    <div>
+                      <CardTitle className="text-base">{recovery.title}</CardTitle>
+                      <p className="mt-1 text-sm text-muted-foreground">{tenant}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Badge variant="outline">{String(recovery.evidence_quality).replaceAll("_", " ")}</Badge>
+                      <Badge>{String(recovery.status).replaceAll("_", " ")}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                      <Stat label="Verified funding" value={usd(recovery.verified_funding)} />
+                      <Stat label="Verified debits" value={usd(recovery.verified_tenant_debits)} />
+                      <Stat label="Tenant recovery" value={usd(recovery.verified_uncovered_tenant_charge)} hint="Only exact uncovered charges" />
+                      <Stat label="Disputed attempts" value={num(recovery.disputed_provider_attempts)} />
+                      <Stat label="Disputed amount" value={usd(recovery.disputed_provider_amount)} hint="Kept separate from tenant debt" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">{recovery.summary}</p>
+                    {recovery.evidence?.limitation && (
+                      <p className="border-l-2 border-border pl-3 text-xs text-muted-foreground">Evidence limitation: {recovery.evidence.limitation}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => downloadRecovery(recovery.id, recovery.title)}>Download CSV</Button>
+                      <Button size="sm" variant="outline" onClick={async () => {
+                        try { await noticeRecoveryFn({ data: { id: recovery.id } }); toast.success("Tenant notice sent"); }
+                        catch (e) { toast.error(e instanceof Error ? e.message : "Notice failed"); }
+                      }}>Send tenant notice</Button>
+                      <Button size="sm" onClick={() => updateRecovery.mutate({ id: recovery.id, status: "provider_credited" })}>Mark provider credited</Button>
+                      <Button size="sm" variant="secondary" onClick={() => updateRecovery.mutate({ id: recovery.id, status: "provider_rejected" })}>Mark provider rejected</Button>
+                      <Button size="sm" variant="outline" onClick={() => updateRecovery.mutate({ id: recovery.id, status: "closed" })}>Close case</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {!recoveries?.length && <p className="text-sm text-muted-foreground">No recovery cases.</p>}
           </div>
         </TabsContent>
 
