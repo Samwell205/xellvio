@@ -1,0 +1,22 @@
+# Cloudflare Workers deployment for the self-hosted build.
+# Build first:  bun run build:selfhost
+# Then deploy:  bunx wrangler deploy
+name = "xellvio"
+main = ".output/server/index.mjs"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".output/public"
+binding = "ASSETS"
+
+[observability]
+enabled = true
+
+# Runtime secrets are NOT stored here. Set each one with:
+#   bunx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# (see .env.example for the full list)
+
+# Non-secret values can live here if you prefer:
+# [vars]
+# PUBLIC_BASE_URL = "https://xellvio.com"
