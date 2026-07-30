@@ -2826,6 +2826,7 @@ export type Database = {
           true_cost: number
         }[]
       }
+      campaign_report_summary: { Args: { _campaign_id: string }; Returns: Json }
       claim_account_invites: { Args: never; Returns: number }
       claim_and_sell_verified_tfn: {
         Args: {

@@ -71,7 +71,7 @@ function CampaignReport() {
             : "No pending messages to refresh.",
       );
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-events", id] });
     },
@@ -116,36 +116,102 @@ function CampaignReport() {
     queryFn: async () => (await supabase.from("campaigns").select("*").eq("id", id).single()).data,
   });
 
-  const messagesQ = useQuery({
-    queryKey: ["campaign-messages", id],
-    // Realtime keeps this in sync; polling is a safety net in case a WS event is missed.
-    refetchInterval: 30_000,
+  // ── Polling policy ───────────────────────────────────────────────
+  // Only poll while the campaign is still moving AND the tab is visible.
+  // Finished campaigns are static, so re-reading them every 15s was burning
+  // a huge amount of database IO for no new information.
+  const [tabVisible, setTabVisible] = useState(true);
+  useEffect(() => {
+    const onVis = () => setTabVisible(!document.hidden);
+    onVis();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+  const campaignStatus = campaignQ.data?.status as string | undefined;
+  const isLive =
+    !campaignStatus ||
+    ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(campaignStatus);
+  const poll = (ms: number) => (isLive && tabVisible ? ms : (false as const));
+
+  // ── Aggregate summary (single indexed server-side pass) ──────────
+  const summaryQ = useQuery({
+    queryKey: ["campaign-summary", id],
+    refetchInterval: poll(20_000),
     queryFn: async () => {
-      // Page through all rows so large campaigns don't get truncated stats.
-      const pageSize = 1000;
-      let from = 0;
-      const all: any[] = [];
-      // Safety cap at 50k rows.
-      while (from < 50_000) {
-        const { data, error } = await supabase
-          .from("messages")
-          .select("id, phone_e164, status, error_code, failure_reason, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)")
-          .eq("campaign_id", id)
-          .order("created_at", { ascending: false })
-          .range(from, from + pageSize - 1);
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        all.push(...data);
-        if (data.length < pageSize) break;
-        from += pageSize;
-      }
-      return all;
+      const { data, error } = await supabase.rpc("campaign_report_summary" as any, { _campaign_id: id });
+      if (error) throw error;
+      return data as any;
+    },
+  });
+
+  const progress = useMemo(() => {
+    const s = summaryQ.data;
+    if (!s) return undefined;
+    return {
+      total: Number(s.total ?? 0),
+      queued: Number(s.queued ?? 0),
+      sending: Number(s.sending ?? 0),
+      sent: Number(s.sent ?? 0),
+      delivered: Number(s.delivered ?? 0),
+      deliveryUnconfirmed: Number(s.delivery_unconfirmed ?? 0),
+      failed: Number(s.failed ?? 0) + Number(s.sent_with_error ?? 0),
+    };
+  }, [summaryQ.data]);
+
+  const failures = useMemo(() => {
+    const s = summaryQ.data;
+    if (!s) return undefined;
+    const byReason: Record<string, number> = {};
+    for (const r of (s.by_failure_reason ?? []) as any[]) {
+      byReason[r.error_code ?? "unknown"] = Number(r.count ?? 0);
+    }
+    const byCountry: Record<string, number> = {};
+    for (const [k, v] of Object.entries((s.failures_by_country ?? {}) as Record<string, any>)) {
+      byCountry[k] = Number(v ?? 0);
+    }
+    return { byReason, byCountry, total: Number(s.failed ?? 0) };
+  }, [summaryQ.data]);
+
+  // ── Recipient table: server-side filtering + paging ──────────────
+  const RECIPIENTS_PAGE_SIZE = 100;
+  const [recipientFilter, setRecipientFilter] = useState<string>("all");
+  const [recipientPage, setRecipientPage] = useState(0);
+  useEffect(() => { setRecipientPage(0); }, [recipientFilter]);
+
+  const messagesQ = useQuery({
+    queryKey: ["campaign-messages", id, recipientFilter, recipientPage],
+    refetchInterval: poll(30_000),
+    placeholderData: (prev: any) => prev,
+    queryFn: async () => {
+      const statusFilter: Record<string, string[] | null> = {
+        all: null,
+        sent: ["sent"],
+        delivered: ["delivered"],
+        unconfirmed: ["delivery_unconfirmed"],
+        failed: ["failed", "undelivered"],
+        skipped: ["skipped"],
+        queued: ["queued", "pending", "sending"],
+      };
+      let q = supabase
+        .from("messages")
+        .select(
+          "id, phone_e164, status, error_code, failure_reason, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)",
+          { count: "exact" },
+        )
+        .eq("campaign_id", id)
+        .order("created_at", { ascending: false })
+        .range(recipientPage * RECIPIENTS_PAGE_SIZE, recipientPage * RECIPIENTS_PAGE_SIZE + RECIPIENTS_PAGE_SIZE - 1);
+      const f = statusFilter[recipientFilter];
+      if (f) q = q.in("status", f);
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { rows: (data ?? []) as any[], count: count ?? 0 };
     },
   });
 
   const eventsQ = useQuery({
     queryKey: ["campaign-events", id],
-    refetchInterval: 15_000,
+    refetchInterval: poll(60_000),
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
@@ -156,80 +222,44 @@ function CampaignReport() {
     },
   });
 
-  // Live progress counts across the full campaign. Realtime pushes updates
-  // whenever a message row changes; the interval below is a fallback.
-  const progressQ = useQuery({
-    queryKey: ["campaign-progress", id],
-    refetchInterval: 15_000,
-    queryFn: async () => {
-      const base = () =>
-        supabase.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", id);
-      // "Sent" = handed to carrier and NO error yet. "Failed" includes
-      // status=failed/undelivered PLUS rows that Twilio marked `sent` with an
-      // error code (carrier rejection / silent DLR failure) — those are not
-      // real deliveries and should not inflate the Sent bucket.
-      const [total, queued, sending, sentClean, sentErr, delivered, unconfirmed, failedRaw] = await Promise.all([
-        base(),
-        base().in("status", ["queued", "pending"]),
-        base().eq("status", "sending"),
-        base().eq("status", "sent").is("error_code", null),
-        base().eq("status", "sent").not("error_code", "is", null),
-        base().eq("status", "delivered"),
-        base().eq("status", "delivery_unconfirmed"),
-        base().in("status", ["failed", "undelivered"]),
-      ]);
-      return {
-        total: total.count ?? 0,
-        queued: queued.count ?? 0,
-        sending: sending.count ?? 0,
-        sent: sentClean.count ?? 0,
-        delivered: delivered.count ?? 0,
-        deliveryUnconfirmed: unconfirmed.count ?? 0,
-        failed: (failedRaw.count ?? 0) + (sentErr.count ?? 0),
-      };
-    },
-  });
-
-
-  // Failure breakdown by error_code (drives the "Failure reasons" panel and
-  // the per-reason retry button). Sender/provider is inferred from
-  // sender_map on the campaign.
-  const failuresQ = useQuery({
-    queryKey: ["campaign-failures", id],
-    refetchInterval: 30_000,
+  // Lightweight two-column pull purely for the engagement chart.
+  const seriesQ = useQuery({
+    queryKey: ["campaign-series", id],
+    refetchInterval: poll(60_000),
     queryFn: async () => {
       const { data } = await supabase
         .from("messages")
-        .select("error_code, country_code")
+        .select("sent_at, delivered_at")
         .eq("campaign_id", id)
-        .in("status", ["failed", "undelivered"])
+        .not("sent_at", "is", null)
+        .order("sent_at", { ascending: false })
         .limit(5000);
-      const byReason: Record<string, number> = {};
-      const byCountry: Record<string, number> = {};
-      for (const r of data ?? []) {
-        const code = (r as any).error_code ?? "unknown";
-        byReason[code] = (byReason[code] ?? 0) + 1;
-        const cc = (r as any).country_code ?? "—";
-        byCountry[cc] = (byCountry[cc] ?? 0) + 1;
-      }
-      return { byReason, byCountry, total: data?.length ?? 0 };
+      return data ?? [];
     },
   });
 
+
   // Realtime: subscribe to message + campaign changes and invalidate the
-  // relevant queries. This gives sub-second UI updates instead of waiting
-  // for the polling interval.
+  // relevant queries. Invalidations are throttled to once every 10s — a large
+  // campaign emits thousands of row events and refetching per event was the
+  // main source of database load on this page.
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (timer) return;
+      timer = setTimeout(() => {
+        timer = null;
+        if (document.hidden) return;
+        queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
+        queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+      }, 10_000);
+    };
     const channel = supabase
       .channel(`campaign-${id}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "messages", filter: `campaign_id=eq.${id}` },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
-          queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-          queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
-        },
+        scheduleRefresh,
       )
       .on(
         "postgres_changes",
@@ -238,9 +268,11 @@ function CampaignReport() {
       )
       .subscribe();
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [id, queryClient]);
+
 
   const cancelFn = useServerFn(cancelCampaign);
   const cancelM = useMutation({
@@ -254,7 +286,7 @@ function CampaignReport() {
             } will not be sent.`,
       );
       queryClient.invalidateQueries({ queryKey: ["campaign", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to cancel campaign"),
@@ -266,7 +298,7 @@ function CampaignReport() {
     onSuccess: () => {
       toast.success("Message re-queued.");
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
@@ -279,7 +311,7 @@ function CampaignReport() {
     onSuccess: (r) => {
       toast.success(`Re-queued ${r.retried.toLocaleString()} failed message${r.retried === 1 ? "" : "s"}.`);
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign", id] });
     },
@@ -298,7 +330,7 @@ function CampaignReport() {
 
       );
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign", id] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Resend failed"),
@@ -310,14 +342,17 @@ function CampaignReport() {
   const eligibleQ = useQuery({
     queryKey: ["campaign-eligible", id, campaignQ.data?.audience],
     enabled: !!campaignQ.data,
+    staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data } = await supabase.rpc("eligible_profile_ids" as any, {
-        _account_id: campaignQ.data!.account_id,
+      // Count-only RPC — the previous call materialised every matching profile
+      // row on the client just to read its length.
+      const { data } = await supabase.rpc("my_eligible_profile_count" as any, {
         _audience: campaignQ.data!.audience ?? { include: [], exclude: [] },
       });
-      return (data as any[])?.length ?? 0;
+      return Number(data ?? 0);
     },
   });
+
 
   const listsQ = useQuery({
     queryKey: ["campaign-lists", id, campaignQ.data?.audience],
@@ -348,59 +383,34 @@ function CampaignReport() {
   });
 
   const stats = useMemo(() => {
-    const rows = messagesQ.data ?? [];
+    const s = summaryQ.data;
     const events = eventsQ.data ?? [];
-    const progress = progressQ.data;
-    // Prefer the accurate progress count (server-side count) over the eligible
-    // audience estimate or a possibly-truncated messages page.
-    const attempted = Math.max(
-      progress?.total ?? 0,
-      rows.length,
-      eligibleQ.data ?? 0,
-    );
-    const queued = progress
-      ? progress.queued + progress.sending
-      : rows.filter((m: any) => ["queued", "pending", "sending"].includes(m.status)).length;
-    const awaitingDelivery = progress
-      ? progress.sent
-      : rows.filter((m: any) => m.status === "sent" && !m.error_code).length;
-    const delivered = progress
-      ? progress.delivered
-      : rows.filter((m: any) => m.status === "delivered").length;
-    const deliveryUnconfirmed = progress
-      ? progress.deliveryUnconfirmed
-      : rows.filter((m: any) => m.status === "delivery_unconfirmed").length;
-    const failed = progress
-      ? progress.failed
-      : rows.filter((m: any) => m.status === "failed" || m.status === "undelivered" || (m.status === "sent" && m.error_code)).length;
+    const attempted = Math.max(progress?.total ?? 0, eligibleQ.data ?? 0);
+    const queued = (progress?.queued ?? 0) + (progress?.sending ?? 0);
+    const awaitingDelivery = progress?.sent ?? 0;
+    const delivered = progress?.delivered ?? 0;
+    const deliveryUnconfirmed = progress?.deliveryUnconfirmed ?? 0;
+    const failed = progress?.failed ?? 0;
     const sent = awaitingDelivery + delivered + deliveryUnconfirmed + failed;
-    const skippedRows = rows.filter((m: any) => m.status === "skipped" || m.error_code === "insufficient_balance").length;
-    const skipped = Math.max(skippedRows, attempted - Math.max(progress?.total ?? 0, rows.length));
+    const skipped = Math.max(0, attempted - (progress?.total ?? 0));
     const clicked = events.filter((e: any) => e.type === "clicked").length;
     const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
-    // Only messages handed to the carrier are charged; queued rows are an estimate.
-    const BILLED_STATUSES = ["sent", "delivered", "delivery_unconfirmed", "undelivered"];
-    const totalCost = rows.reduce((s: number, m: any) => s + (BILLED_STATUSES.includes(m.status) ? Number(m.cost ?? 0) : 0), 0);
-    const reservedCost = rows.reduce((s: number, m: any) => s + (["queued", "sending", "pending"].includes(m.status) ? Number(m.cost ?? 0) : 0), 0);
-    const totalSegments = rows.reduce((s: number, m: any) => s + Number(m.segments_count ?? 1), 0);
+    const totalCost = Number(s?.billed_cost ?? 0);
+    const reservedCost = Number(s?.reserved_cost ?? 0);
+    const totalSegments = Number(s?.segments ?? 0);
     const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
     const clickRate = delivered > 0 ? (uniqueClickers / delivered) * 100 : 0;
     const costPerDelivered = delivered > 0 ? totalCost / delivered : 0;
 
     const byCountry: Record<string, { total: number; delivered: number; unconfirmed: number; failed: number }> = {};
-    const failures: Record<string, number> = {};
-    for (const m of rows as any[]) {
-      const c = m.country_code ?? m.profile?.country_code ?? "—";
-      byCountry[c] ??= { total: 0, delivered: 0, unconfirmed: 0, failed: 0 };
-      byCountry[c].total++;
-      if (m.status === "delivered") byCountry[c].delivered++;
-      if (m.status === "delivery_unconfirmed") byCountry[c].unconfirmed++;
-      if (m.status === "failed" || m.status === "undelivered") byCountry[c].failed++;
-      if ((m.status === "failed" || m.status === "undelivered") && m.error_code) {
-        failures[m.error_code] = (failures[m.error_code] ?? 0) + 1;
-      }
+    for (const r of (s?.by_country ?? []) as any[]) {
+      byCountry[r.country ?? "—"] = {
+        total: Number(r.messages ?? 0),
+        delivered: Number(r.delivered ?? 0),
+        unconfirmed: 0,
+        failed: Number(r.failed ?? 0),
+      };
     }
-
 
     // Time series — cumulative by hour so the chart never appears to "drop"
     // completed deliveries back to zero after the last webhook hour.
@@ -409,7 +419,7 @@ function CampaignReport() {
       if (!iso) return null;
       const d = new Date(iso); d.setMinutes(0, 0, 0); return d.getTime();
     };
-    for (const m of rows as any[]) {
+    for (const m of (seriesQ.data ?? []) as any[]) {
       const ts = bucket(m.sent_at);
       if (ts) { points.set(ts, points.get(ts) ?? { t: ts, sent: 0, delivered: 0, clicked: 0 }); points.get(ts)!.sent++; }
       const td = bucket(m.delivered_at);
@@ -439,13 +449,14 @@ function CampaignReport() {
     return {
       attempted, queued, sent, awaitingDelivery, delivered, deliveryUnconfirmed, failed, skipped, clicked, uniqueClickers,
       totalCost, reservedCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
-      byCountry, failures, series,
+      byCountry, failures: failures?.byReason ?? {}, series,
     };
-  }, [messagesQ.data, eventsQ.data, eligibleQ.data, progressQ.data]);
+  }, [summaryQ.data, progress, failures, seriesQ.data, eventsQ.data, eligibleQ.data]);
 
   if (!campaignQ.data) return <div className="text-muted-foreground">Loading campaign…</div>;
   const c = campaignQ.data;
-  const sentAt = (messagesQ.data ?? []).find((m: any) => m.sent_at)?.sent_at ?? c.updated_at;
+  const sentAt = (summaryQ.data?.first_created_at as string | undefined) ?? c.updated_at;
+
 
   return (
     <div className="space-y-6">
@@ -480,10 +491,11 @@ function CampaignReport() {
               onClick={() =>
                 exportProgressCsv({
                   campaign: c,
-                  progress: progressQ.data,
-                  failures: failuresQ.data,
-                  messages: messagesQ.data ?? [],
+                  progress,
+                  failures,
+                  messages: messagesQ.data?.rows ?? [],
                 })
+
               }
               title="Download queued / sending / delivered / failed metrics as CSV."
             >
@@ -585,10 +597,11 @@ function CampaignReport() {
       )}
 
       <ProgressPanel
-        data={progressQ.data}
+        data={progress}
         status={c.status}
-        isFetching={progressQ.isFetching}
-        failures={failuresQ.data}
+        isFetching={summaryQ.isFetching}
+        failures={failures}
+
         onRetryReason={(code) => retryAllM.mutate(code)}
         onRetryAll={() => retryAllM.mutate(null)}
         isRetrying={retryAllM.isPending}
@@ -752,13 +765,21 @@ function CampaignReport() {
         {/* ───────────── RECIPIENTS ───────────── */}
         <TabsContent value="recipients" className="mt-5">
           <RecipientActivity
-            rows={messagesQ.data ?? []}
+            rows={messagesQ.data?.rows ?? []}
+            totalRows={messagesQ.data?.count ?? 0}
+            filter={recipientFilter}
+            onFilterChange={setRecipientFilter}
+            page={recipientPage}
+            pageSize={RECIPIENTS_PAGE_SIZE}
+            onPageChange={setRecipientPage}
+            isFetching={messagesQ.isFetching}
             stats={stats}
             optOuts={optOutsQ.data ?? 0}
             onRetry={(mid) => retryOneM.mutate(mid)}
             retryingId={retryOneM.isPending ? (retryOneM.variables as string | undefined) : undefined}
             canRetry={c.status !== "cancelled"}
           />
+
 
         </TabsContent>
 
@@ -869,6 +890,13 @@ function CampaignReport() {
 
 function RecipientActivity({
   rows,
+  totalRows,
+  filter,
+  onFilterChange,
+  page,
+  pageSize,
+  onPageChange,
+  isFetching,
   stats,
   optOuts,
   onRetry,
@@ -876,37 +904,33 @@ function RecipientActivity({
   canRetry,
 }: {
   rows: any[];
+  totalRows: number;
+  filter: string;
+  onFilterChange: (f: string) => void;
+  page: number;
+  pageSize: number;
+  onPageChange: (p: number) => void;
+  isFetching?: boolean;
   stats: any;
   optOuts: number;
   onRetry?: (messageId: string) => void;
   retryingId?: string;
   canRetry?: boolean;
 }) {
-  const [filter, setFilter] = useState<string>("all");
-  const buckets = useMemo(() => {
-    const f = {
-      all: rows,
-      sent: rows.filter((m) => m.status === "sent"),
-      delivered: rows.filter((m) => m.status === "delivered"),
-      unconfirmed: rows.filter((m) => m.status === "delivery_unconfirmed"),
-      failed: rows.filter((m) => ["failed", "undelivered"].includes(m.status)),
-      skipped: rows.filter((m) => m.status === "skipped" || m.error_code === "insufficient_balance"),
-      queued: rows.filter((m) => ["queued", "pending", "sending"].includes(m.status)),
-    } as Record<string, any[]>;
-    return f;
-  }, [rows]);
-
+  // Counts come from the aggregate summary, not from the current page.
   const items = [
-    { key: "all",       label: "All",       count: rows.length },
-    { key: "sent",      label: "Accepted",  count: buckets.sent.length },
-    { key: "delivered", label: "Delivered", count: buckets.delivered.length },
-    { key: "unconfirmed", label: "Not delivered", count: buckets.unconfirmed.length },
-    { key: "failed",    label: "Failed",    count: buckets.failed.length },
-    { key: "skipped",   label: "Skipped",   count: buckets.skipped.length },
-    { key: "queued",    label: "Queued",    count: buckets.queued.length },
+    { key: "all",       label: "All",       count: stats.attempted },
+    { key: "sent",      label: "Accepted",  count: stats.awaitingDelivery },
+    { key: "delivered", label: "Delivered", count: stats.delivered },
+    { key: "unconfirmed", label: "Not delivered", count: stats.deliveryUnconfirmed },
+    { key: "failed",    label: "Failed",    count: stats.failed },
+    { key: "skipped",   label: "Skipped",   count: stats.skipped },
+    { key: "queued",    label: "Queued",    count: stats.queued },
   ];
 
-  const shown = buckets[filter] ?? rows;
+  const shown = rows;
+  const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
 
   return (
     <div className="space-y-5">
@@ -934,7 +958,7 @@ function RecipientActivity({
             {items.map((i) => (
               <li key={i.key}>
                 <button
-                  onClick={() => setFilter(i.key)}
+                  onClick={() => onFilterChange(i.key)}
                   className={`w-full flex items-center justify-between rounded-md px-3 py-2 text-sm transition ${
                     filter === i.key ? "bg-muted font-semibold" : "hover:bg-muted/60"
                   }`}
@@ -966,7 +990,7 @@ function RecipientActivity({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {shown.slice(0, 300).map((m: any) => {
+                {shown.map((m: any) => {
                   const name = [m.profile?.first_name, m.profile?.last_name].filter(Boolean).join(" ");
                   const isFailed = ["failed", "undelivered"].includes(m.status);
                   const retryable =
@@ -1018,7 +1042,30 @@ function RecipientActivity({
             </Table>
           )}
 
+          <div className="flex items-center justify-between gap-3 border-t px-4 py-3 text-xs text-muted-foreground">
+            <div>
+              {totalRows === 0
+                ? "No recipients"
+                : `Showing ${(page * pageSize + 1).toLocaleString()}–${Math.min((page + 1) * pageSize, totalRows).toLocaleString()} of ${totalRows.toLocaleString()}`}
+              {isFetching ? " · updating…" : ""}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))}>
+                Previous
+              </Button>
+              <span className="tabular-nums">Page {page + 1} of {totalPages}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page + 1 >= totalPages}
+                onClick={() => onPageChange(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </Card>
+
       </div>
     </div>
   );
