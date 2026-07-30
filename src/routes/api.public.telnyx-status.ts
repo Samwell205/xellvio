@@ -92,6 +92,16 @@ async function handleStatus(payload: any) {
   await supabaseAdmin
     .from("events")
     .insert({ message_id: msg.id, type: `status:${finalStatus}`, payload });
+
+  // The recipient never got this message — return the charge to the tenant's wallet.
+  if (finalStatus === "undelivered" || finalStatus === "failed") {
+    try {
+      await supabaseAdmin.rpc("refund_message_charge", { _message_id: msg.id });
+    } catch (e) {
+      console.error("[telnyx-webhook] refund failed", e);
+    }
+  }
+
 }
 
 async function handleTollfreeVerification(payload: any): Promise<boolean> {
