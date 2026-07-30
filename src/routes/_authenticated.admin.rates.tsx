@@ -159,7 +159,7 @@ function AdminRatesPage() {
       const next = { ...(e[id] ?? {}), ...p };
       if ((p.cost_price !== undefined || p.passthrough_fee !== undefined || p.markup_percent !== undefined) && base) {
         const cost = Number(next.cost_price ?? base.cost_price) + Number(next.passthrough_fee ?? base.passthrough_fee ?? 0);
-        const markup = Number(next.markup_percent ?? base.markup_percent ?? markupQ.data?.percent ?? 40);
+        const markup = Number(next.markup_percent ?? base.markup_percent ?? markupQ.data?.percent ?? 35);
         next.sell_price = calculateSell(cost, markup);
       }
       return { ...e, [id]: next };
@@ -167,7 +167,7 @@ function AdminRatesPage() {
   }
   function current(row: Row): Row { return { ...row, ...(edits[row.id] ?? {}) } as Row; }
 
-  const currentMarkup = markupDraft !== "" ? Number(markupDraft) : (markupQ.data?.percent ?? 50);
+  const currentMarkup = markupDraft !== "" ? Number(markupDraft) : (markupQ.data?.percent ?? 35);
 
   return (
     <div className="space-y-6">
@@ -194,7 +194,7 @@ function AdminRatesPage() {
               step={1}
               min={0}
               className="w-28 tabular-nums"
-              value={markupDraft !== "" ? markupDraft : (markupQ.data?.percent ?? 50)}
+              value={markupDraft !== "" ? markupDraft : (markupQ.data?.percent ?? 35)}
               onChange={(e) => setMarkupDraft(e.target.value)}
             />
             <Button
@@ -258,7 +258,7 @@ function AdminRatesPage() {
                   </td>
                   <td className="p-3 text-right tabular-nums font-medium">{formatRate(cost)}</td>
                   <td className="p-3 text-right">
-                    <Input type="number" step={1} value={c.markup_percent ?? 50} onChange={(e) => patch(r.id, { markup_percent: Number(e.target.value) })} className="w-20 text-right tabular-nums ml-auto" />
+                    <Input type="number" step={1} value={c.markup_percent ?? 35} onChange={(e) => patch(r.id, { markup_percent: Number(e.target.value) })} className="w-20 text-right tabular-nums ml-auto" />
                   </td>
                   <td className="p-3 text-right">
                     <Input type="number" step={0.00001} value={c.sell_price} onChange={(e) => patch(r.id, { sell_price: Number(e.target.value) })} className="w-28 text-right tabular-nums ml-auto" />

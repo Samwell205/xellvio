@@ -43,5 +43,5 @@ export const getDefaultMarkup = createServerFn({ method: "GET" })
     if (!isAdmin) throw new Error("Forbidden");
     const { data } = await context.supabase
       .from("platform_settings").select("value").eq("key", "default_markup_percent").maybeSingle();
-    return { percent: Number((data?.value as any) ?? 50) };
+    return { percent: Number((data?.value as any) ?? 35) };
   });
