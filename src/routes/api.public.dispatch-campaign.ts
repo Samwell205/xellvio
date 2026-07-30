@@ -567,6 +567,13 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
       }
       await supabaseAdmin.from("messages").update(update).eq("id", m.id);
       await supabaseAdmin.from("events").insert({ message_id: m.id, type: `reconcile:${newStatus}`, payload: j });
+      if (newStatus === "undelivered" || newStatus === "failed") {
+        try {
+          await supabaseAdmin.rpc("refund_message_charge", { _message_id: m.id });
+        } catch (e) {
+          console.error("[reconcile] refund failed", e);
+        }
+      }
       updated += 1;
     } catch (e) {
       await supabaseAdmin.from("events").insert({
@@ -576,7 +583,7 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
       });
     }
   });
-  return { checked: toCheck.length, updated, stillAwaiting };
+  return { checked: toCheck.length, updated, stillAwaiting, expired };
 }
 
 export const Route = createFileRoute("/api/public/dispatch-campaign")({
