@@ -34,7 +34,7 @@ function AuthPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setMode(search.mode);
+    setMode(search.mode ?? "signin");
     setErrorMsg(null);
   }, [search.mode]);
 
@@ -42,7 +42,8 @@ function AuthPage() {
     if (search.invite) setEmail(search.invite.trim().toLowerCase());
   }, [search.invite]);
 
-  const destination = search.redirect.startsWith("/") && !search.redirect.startsWith("//") ? search.redirect : "/app";
+  const redirectTarget = search.redirect ?? "/app";
+  const destination = redirectTarget.startsWith("/") && !redirectTarget.startsWith("//") ? redirectTarget : "/app";
   const passwordMismatch = mode === "signup" && confirmPassword.length > 0 && password !== confirmPassword;
 
   async function handleSubmit(e: React.FormEvent) {
