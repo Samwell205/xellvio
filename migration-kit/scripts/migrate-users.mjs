@@ -21,10 +21,9 @@
 // ============================================================
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
-const HERE = dirname(fileURLToPath(import.meta.url));
+
 const NEW_URL = process.env.NEW_SUPABASE_URL;
 const NEW_KEY = process.env.NEW_SERVICE_KEY;
 const SEND_RESET = process.env.SEND_RESET !== "false";
