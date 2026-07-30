@@ -12,7 +12,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in — Xellvio" }, { name: "description", content: "Sign in or create your Xellvio account." }] }),
-  validateSearch: (search) => ({
+  validateSearch: (search: Record<string, unknown>): { mode?: "signin" | "signup"; redirect?: string; invite?: string } => ({
     mode: search.mode === "signup" ? "signup" : "signin",
     redirect: typeof search.redirect === "string" ? search.redirect : "/app",
     invite: typeof search.invite === "string" ? search.invite : undefined,
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [mode, setMode] = useState<"signin" | "signup">(search.mode);
+  const [mode, setMode] = useState<"signin" | "signup">(search.mode ?? "signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -34,7 +34,7 @@ function AuthPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    setMode(search.mode);
+    setMode(search.mode ?? "signin");
     setErrorMsg(null);
   }, [search.mode]);
 
@@ -42,7 +42,8 @@ function AuthPage() {
     if (search.invite) setEmail(search.invite.trim().toLowerCase());
   }, [search.invite]);
 
-  const destination = search.redirect.startsWith("/") && !search.redirect.startsWith("//") ? search.redirect : "/app";
+  const redirectTarget = search.redirect ?? "/app";
+  const destination = redirectTarget.startsWith("/") && !redirectTarget.startsWith("//") ? redirectTarget : "/app";
   const passwordMismatch = mode === "signup" && confirmPassword.length > 0 && password !== confirmPassword;
 
   async function handleSubmit(e: React.FormEvent) {
