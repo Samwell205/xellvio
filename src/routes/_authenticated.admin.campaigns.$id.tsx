@@ -32,8 +32,17 @@ function AdminCampaignReportPage() {
   const q = useQuery({
     queryKey: ["admin", "campaign-report", id],
     queryFn: () => fn({ data: { campaignId: id } }),
-    refetchInterval: 20_000,
+    // Stop polling once the campaign is finished or the tab is hidden.
+    refetchInterval: (query) => {
+      const status = (query.state.data as any)?.campaign?.status as string | undefined;
+      const live =
+        !status ||
+        ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(status);
+      return live && typeof document !== "undefined" && !document.hidden ? 30_000 : false;
+    },
+    refetchIntervalInBackground: false,
   });
+
 
   if (q.isLoading) {
     return <div className="flex h-64 items-center justify-center"><Loader2 className="size-6 animate-spin" /></div>;
