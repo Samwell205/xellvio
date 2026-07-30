@@ -92,45 +92,36 @@ Full list with comments: **`.env.example`**. Grouped:
 ### a. Build config
 Handled by `vite.config.selfhost.ts` (section 1).
 
-### b. AI — content screening + support chat
-Call sites: `src/lib/content-scanner.functions.ts`, `src/lib/chat.functions.ts`.
-Both POST to `https://ai.gateway.lovable.dev/v1/chat/completions` with a
-`Lovable-API-Key` header. To self-host, point them at your own provider:
+### b. AI — content screening + support chat (Claude, done)
+Both call sites (`src/lib/content-scanner.functions.ts`, `src/lib/chat.functions.ts`)
+now go through `src/lib/ai-provider.server.ts`:
 
-```ts
-// OpenAI-compatible drop-in replacement
-const res = await fetch("https://api.openai.com/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-  },
-  body: JSON.stringify({ model: "gpt-4o-mini", messages }),
-});
-```
+- `ANTHROPIC_API_KEY` set → Anthropic Claude directly (`ANTHROPIC_MODEL`,
+  default `claude-sonnet-4-5`) via `@ai-sdk/anthropic`.
+- key absent → falls back to the managed Lovable gateway (so the Lovable
+  preview keeps working unchanged).
 
-Keep the system prompts and the screening thresholds byte-identical, otherwise
-campaign screening starts flagging content differently.
+Nothing else to wire: just set `ANTHROPIC_API_KEY` (and optionally
+`ANTHROPIC_MODEL`) as a Worker secret. The system prompts and screening
+thresholds are unchanged.
 
-### c. Email
-`src/lib/email/send-internal.server.ts` and
-`src/routes/lovable/email/queue/process.ts` call `sendLovableEmail` from
-`@lovable.dev/email-js`. Replace that single function with your provider, e.g.
-Resend:
+### c. Email (Resend, done)
+Both send paths (`src/lib/email/send-internal.server.ts` and the queue worker
+`src/routes/lovable/email/queue/process.ts`) now go through
+`src/lib/email/mailer.server.ts`:
 
-```ts
-await fetch("https://api.resend.com/emails", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-  },
-  body: JSON.stringify({ from: process.env.EMAIL_FROM, to, subject, html }),
-});
-```
+- `RESEND_API_KEY` set → Resend (`resend` SDK), with `List-Unsubscribe` /
+  `List-Unsubscribe-Post` headers, a one-click unsubscribe footer built from
+  `PUBLIC_SITE_URL`, and the idempotency key passed through so retries can't
+  double-send.
+- key absent → managed Lovable sender.
 
-Everything else stays: the React Email templates in `src/lib/email-templates/`,
-the PGMQ queue, the suppression table and `/email/unsubscribe`.
+Setup in Resend: verify `xellvio.com` (add the DKIM/SPF/DMARC records it
+gives you), create an API key, set `RESEND_API_KEY` and `PUBLIC_SITE_URL`
+as Worker secrets. Keep the `From` address on the verified domain
+(`Xellvio <admin@xellvio.com>`).
+
+
 
 Supabase Auth emails (signup code, recovery, invite, email change) are configured
 on your Supabase project: **Authentication → Emails** — set your SMTP provider

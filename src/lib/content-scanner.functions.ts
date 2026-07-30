@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { keywordScan, type ScanResult } from "./content-scanner";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { getChatModel } from "./ai-provider.server";
 import { generateText, Output } from "ai";
 
 const ScanInput = z.object({
@@ -36,14 +36,11 @@ const AI_SCHEMA = z.object({
 });
 
 async function aiScan(messageBody: string): Promise<ScanResult> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) {
-    console.warn("[content-scanner] LOVABLE_API_KEY missing; skipping AI scan");
+  const model = await getChatModel();
+  if (!model) {
+    console.warn("[content-scanner] no AI provider configured; skipping AI scan");
     return { allowed: true, confidence: "none" };
   }
-
-  const gateway = createLovableAiGatewayProvider(key);
-  const model = gateway("google/gemini-3-flash-preview");
 
   try {
     const { output } = await generateText({

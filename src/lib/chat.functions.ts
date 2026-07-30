@@ -19,32 +19,28 @@ Never invent prices, phone numbers, or policies you don't know — say you'll co
 export const chatWithSupportBot = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("AI is not configured");
+    const { getChatModel } = await import("./ai-provider.server");
+    const { generateText } = await import("ai");
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": key,
-        "X-Lovable-AIG-SDK": "raw-fetch",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...data.messages],
-      }),
-    });
+    const model = await getChatModel();
+    if (!model) throw new Error("AI is not configured");
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      if (res.status === 429) throw new Error("Too many requests. Please try again in a moment.");
-      if (res.status === 402) throw new Error("AI service temporarily unavailable. Please contact support.");
-      throw new Error(`AI error (${res.status}): ${text.slice(0, 200)}`);
+    try {
+      const { text } = await generateText({
+        model,
+        system: SYSTEM_PROMPT,
+        messages: data.messages,
+        maxOutputTokens: 700,
+      });
+      return { reply: text.trim() || "Sorry, I couldn't generate a reply." };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/429|rate.?limit/i.test(message)) {
+        throw new Error("Too many requests. Please try again in a moment.");
+      }
+      if (/402|credit|quota|billing/i.test(message)) {
+        throw new Error("AI service temporarily unavailable. Please contact support.");
+      }
+      throw new Error(`AI error: ${message.slice(0, 200)}`);
     }
-
-    const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const reply = json.choices?.[0]?.message?.content?.trim() ?? "Sorry, I couldn't generate a reply.";
-    return { reply };
   });
