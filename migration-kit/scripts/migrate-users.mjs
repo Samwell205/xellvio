@@ -8,7 +8,9 @@
 //
 // Lovable Cloud does NOT expose a service-role key, so OLD_* cannot be
 // filled in from this project. Instead the script falls back to
-// migration-kit/data/_auth_users.json, which you produce from the
+// $DATA_DIR/_auth_users.json (default /tmp/xellvio-migration-data), which you
+// produce from the
+
 // Cloud "Export data" feature (Cloud -> Advanced settings -> Export data)
 // or from accounts.csv (id + email) as a last resort.
 //
