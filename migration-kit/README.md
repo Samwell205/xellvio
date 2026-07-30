@@ -74,7 +74,7 @@ Placeholders to fill:
 ## Phase 3 — Data (~700k rows)
 
 ```bash
-bash migration-kit/scripts/export-data.sh                # writes data/*.csv
+bash migration-kit/scripts/export-data.sh                # writes $DATA_DIR/*.csv
 bash migration-kit/scripts/import-data.sh "$NEW_DB_URL"  # loads them
 ```
 
