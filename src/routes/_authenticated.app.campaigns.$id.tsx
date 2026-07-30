@@ -1030,7 +1030,30 @@ function RecipientActivity({
             </Table>
           )}
 
+          <div className="flex items-center justify-between gap-3 border-t px-4 py-3 text-xs text-muted-foreground">
+            <div>
+              {totalRows === 0
+                ? "No recipients"
+                : `Showing ${(page * pageSize + 1).toLocaleString()}–${Math.min((page + 1) * pageSize, totalRows).toLocaleString()} of ${totalRows.toLocaleString()}`}
+              {isFetching ? " · updating…" : ""}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))}>
+                Previous
+              </Button>
+              <span className="tabular-nums">Page {page + 1} of {totalPages}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page + 1 >= totalPages}
+                onClick={() => onPageChange(page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </Card>
+
       </div>
     </div>
   );
