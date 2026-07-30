@@ -48,7 +48,7 @@ dependencies you no longer use, and simplify the scripts back to `dev`/`build`.
 
 ```bash
 bun run build:selfhost     # -> .output/
-bunx wrangler deploy       # uses wrangler.toml
+bunx wrangler deploy -c .output/server/wrangler.json
 ```
 
 Set every server secret once per environment:
