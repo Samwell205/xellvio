@@ -58,14 +58,17 @@ export const cancelCampaign = createServerFn({ method: "POST" })
 // planner-level preflight decides.
 export const retryMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { messageId: string }) => d)
+  .inputValidator((d: { messageId: string; confirmed: boolean }) => {
+    if (!d.confirmed) throw new Error("Retry confirmation is required");
+    return d;
+  })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
     // RLS ensures the caller can only see their own account's messages.
     const { data: msg, error: mErr } = await supabase
       .from("messages")
-      .select("id, status, campaign_id, cost")
+      .select("id, status, campaign_id, cost, retry_count")
       .eq("id", data.messageId)
       .maybeSingle();
     if (mErr) throw new Error(mErr.message);
@@ -90,7 +93,18 @@ export const retryMessage = createServerFn({ method: "POST" })
 
     await supabaseAdmin
       .from("messages")
-      .update({ status: "queued", error_code: null })
+      .update({
+        status: "queued",
+        error_code: null,
+        failure_reason: null,
+        provider_message_id: null,
+        sent_at: null,
+        delivered_at: null,
+        dispatch_started_at: null,
+        charged_at: null,
+        charged_amount: null,
+        retry_count: (msg as any).retry_count ? Number((msg as any).retry_count) + 1 : 1,
+      })
       .eq("id", data.messageId);
 
     // Nudge the campaign back into "sending" so the dispatcher picks it up
@@ -109,7 +123,7 @@ export const retryMessage = createServerFn({ method: "POST" })
 // (or all reasons when errorCode is null). Bulk version of retryMessage.
 export const retryFailedMessages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { campaignId: string; errorCode?: string | null }) => d)
+  .inputValidator((d: { campaignId: string; errorCode?: string | null; dryRun?: boolean; confirmed?: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
@@ -126,15 +140,35 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    let q = supabaseAdmin
+    let candidateQ = supabaseAdmin
       .from("messages")
-      .update({ status: "queued", error_code: null })
+      .select("id,cost")
       .eq("campaign_id", data.campaignId)
-      .in("status", ["failed", "undelivered"])
-      .select("id");
-    if (data.errorCode) q = q.eq("error_code", data.errorCode);
+      .in("status", ["failed", "undelivered"]);
+    if (data.errorCode) candidateQ = candidateQ.eq("error_code", data.errorCode);
+    const { data: candidates, error: candidateError } = await candidateQ;
+    if (candidateError) throw new Error(candidateError.message);
+    const estimatedCost = (candidates ?? []).reduce((sum: number, row: any) => sum + Number(row.cost ?? 0), 0);
+    if (data.dryRun) return { ok: true, dryRun: true, count: candidates?.length ?? 0, estimatedCost: +estimatedCost.toFixed(4), retried: 0 };
+    if (!data.confirmed) throw new Error("Retry confirmation is required");
 
-    const { data: updated, error } = await q;
+    const ids = (candidates ?? []).map((row: any) => row.id);
+    if (ids.length === 0) return { ok: true, retried: 0, estimatedCost: 0 };
+    const { data: updated, error } = await supabaseAdmin
+      .from("messages")
+      .update({
+        status: "queued",
+        error_code: null,
+        failure_reason: null,
+        provider_message_id: null,
+        sent_at: null,
+        delivered_at: null,
+        dispatch_started_at: null,
+        charged_at: null,
+        charged_amount: null,
+      })
+      .in("id", ids)
+      .select("id");
     if (error) throw new Error(error.message);
 
     if ((updated?.length ?? 0) > 0 && ["sent", "failed"].includes(campaign.status)) {
@@ -143,7 +177,7 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
         .update({ status: "sending" })
         .eq("id", data.campaignId);
     }
-    return { ok: true, retried: updated?.length ?? 0 };
+    return { ok: true, retried: updated?.length ?? 0, estimatedCost: +estimatedCost.toFixed(4) };
   });
 
 // Re-send messages that Telnyx marked `delivery_unconfirmed` in the last
@@ -154,7 +188,7 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
 // a new message id) so cost applies again per Telnyx billing.
 export const resendUnconfirmed = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { campaignId: string; hoursBack?: number; dryRun?: boolean }) => d)
+  .inputValidator((d: { campaignId: string; hoursBack?: number; dryRun?: boolean; confirmed?: boolean }) => d)
   .handler(async ({ data, context }) => {
     const hours = Math.max(1, Math.min(72, data.hoursBack ?? 24));
     const { supabase } = context;
@@ -187,13 +221,24 @@ export const resendUnconfirmed = createServerFn({ method: "POST" })
     if (data.dryRun) {
       return { ok: true, dryRun: true, count, estimatedCost: +estimatedCost.toFixed(4), hoursBack: hours };
     }
+    if (!data.confirmed) throw new Error("Resend confirmation is required");
 
     if (count === 0) return { ok: true, resent: 0, estimatedCost: 0, hoursBack: hours };
 
     const ids = (candidates ?? []).map((m: any) => m.id);
     const { error } = await supabaseAdmin
       .from("messages")
-      .update({ status: "queued", error_code: null, sent_at: null, delivered_at: null })
+      .update({
+        status: "queued",
+        error_code: null,
+        failure_reason: null,
+        provider_message_id: null,
+        sent_at: null,
+        delivered_at: null,
+        dispatch_started_at: null,
+        charged_at: null,
+        charged_amount: null,
+      })
       .in("id", ids);
     if (error) throw new Error(error.message);
 

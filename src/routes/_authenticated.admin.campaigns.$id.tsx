@@ -78,6 +78,9 @@ function AdminCampaignReportPage() {
           ["Not yet sent (estimate)", formatUSD(Number(t.reserved_cost ?? 0))],
           ["Telnyx (MDR) cost", formatUSD(t.carrier_cost)],
           ["Profit / margin", formatUSD(t.margin)],
+           ["Recorded send attempts", Number(r.attemptAudit?.total ?? 0).toLocaleString()],
+           ["Approved retries", Number(r.attemptAudit?.retries ?? 0).toLocaleString()],
+           ["Retry charges", formatUSD(Number(r.attemptAudit?.retry_charged ?? 0))],
         ] },
         { type: "table", title: "By country", head: ["Country", "Recipients", "Segments", "Delivered", "Failed", "Tenant $", "Telnyx $", "Margin"],
           rows: r.byCountry.map((row) => [row.country_code, row.recipients, row.segments, row.delivered, row.failed, formatUSD(row.cost), formatUSD(row.carrier_cost), formatUSD(row.margin)]) },
@@ -132,6 +135,16 @@ function AdminCampaignReportPage() {
         <Stat label="Carrier cost" value={formatUSD(t.carrier_cost)} />
         <Stat label="Margin" value={formatUSD(t.margin)} tone={t.margin >= 0 ? "ok" : "bad"} />
       </div>
+
+      <Card className="p-4">
+        <div className="font-semibold text-sm mb-3">Send attempt audit</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div><div className="text-xs text-muted-foreground">Recorded attempts</div><div className="text-lg font-semibold">{Number(r.attemptAudit?.total ?? 0).toLocaleString()}</div></div>
+          <div><div className="text-xs text-muted-foreground">Approved retries</div><div className="text-lg font-semibold">{Number(r.attemptAudit?.retries ?? 0).toLocaleString()}</div></div>
+          <div><div className="text-xs text-muted-foreground">Retry charges</div><div className="text-lg font-semibold">{formatUSD(Number(r.attemptAudit?.retry_charged ?? 0))}</div></div>
+          <div><div className="text-xs text-muted-foreground">Retry margin</div><div className="text-lg font-semibold">{formatUSD(Number(r.attemptAudit?.retry_charged ?? 0) - Number(r.attemptAudit?.retry_carrier_cost ?? 0))}</div></div>
+        </div>
+      </Card>
 
       <Card className="overflow-hidden">
         <div className="p-3 border-b bg-muted/40 font-semibold text-sm">By country</div>

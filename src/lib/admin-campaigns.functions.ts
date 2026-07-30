@@ -2,28 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function ensureAdmin(supabase: any) {
-  const { data, error } = await supabase.rpc("has_role", { _role: "admin" });
-  if (error) throw new Error(error.message);
-  if (data !== true) throw new Error("Forbidden: admin only");
-}
-
-async function fetchAllRows<T = any>(builder: () => any, pageSize = 1000): Promise<T[]> {
-  const out: T[] = [];
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await builder().range(from, from + pageSize - 1);
-    if (error) throw new Error(error.message);
-    const rows = (data ?? []) as T[];
-    out.push(...rows);
-    if (rows.length < pageSize) break;
-  }
-  return out;
-}
-
 export const adminListCampaigns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await ensureAdmin(context.supabase);
+    const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", { _role: "admin" });
+    if (roleError) throw new Error(roleError.message);
+    if (isAdmin !== true) throw new Error("Forbidden: admin only");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [campRes, accRes] = await Promise.all([
@@ -106,7 +90,9 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ campaignId: z.string().uuid() }).parse(input))
   .handler(async ({ context, data }) => {
-    await ensureAdmin(context.supabase);
+    const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", { _role: "admin" });
+    if (roleError) throw new Error(roleError.message);
+    if (isAdmin !== true) throw new Error("Forbidden: admin only");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const [{ data: campaign, error: cErr }, { data: rates }] = await Promise.all([
@@ -126,13 +112,25 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       .eq("id", (campaign as any).account_id)
       .maybeSingle();
 
-    const rows = await fetchAllRows<any>(() =>
-      supabaseAdmin
-        .from("messages")
-        .select("id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id,is_mms")
-        .eq("campaign_id", data.campaignId)
-        .order("created_at", { ascending: true }),
-    );
+    const fetchRows = async (table: "messages" | "message_send_attempts", select: string) => {
+      const out: any[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data: page, error: pageError } = await supabaseAdmin
+          .from(table)
+          .select(select)
+          .eq("campaign_id", data.campaignId)
+          .order("created_at", { ascending: true })
+          .range(from, from + 999);
+        if (pageError) throw new Error(pageError.message);
+        out.push(...(page ?? []));
+        if (!page || page.length < 1000) break;
+      }
+      return out;
+    };
+    const [rows, attemptRows] = await Promise.all([
+      fetchRows("messages", "id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id,is_mms"),
+      fetchRows("message_send_attempts", "attempt_number,authorization_source,tenant_charge,estimated_carrier_cost,provider_status,reserved_at,sent_at,finalized_at,created_at"),
+    ]);
 
     // True carrier cost per segment = base rate + per-message carrier passthrough fee.
     const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0) + Number(r.passthrough_fee ?? 0)]));
@@ -228,6 +226,21 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     totals.delivery_rate = totals.sent > 0 ? +((totals.delivered / totals.sent) * 100).toFixed(1) : 0;
 
     const acct: any = account;
+    const attemptAudit = attemptRows.reduce(
+      (acc: any, row: any) => {
+        const isRetry = Number(row.attempt_number ?? 1) > 1;
+        acc.total += 1;
+        acc.charged += Number(row.tenant_charge ?? 0);
+        acc.carrier_cost += Number(row.estimated_carrier_cost ?? 0);
+        if (isRetry) {
+          acc.retries += 1;
+          acc.retry_charged += Number(row.tenant_charge ?? 0);
+          acc.retry_carrier_cost += Number(row.estimated_carrier_cost ?? 0);
+        }
+        return acc;
+      },
+      { total: 0, retries: 0, charged: 0, carrier_cost: 0, retry_charged: 0, retry_carrier_cost: 0 },
+    );
     return {
       campaign: {
         id: (campaign as any).id,
@@ -265,5 +278,6 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         .map(([hour, v]) => ({ hour, ...v }))
         .sort((a, b) => a.hour.localeCompare(b.hour)),
       failures,
+      attemptAudit,
     };
   });

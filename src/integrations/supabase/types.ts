@@ -1277,9 +1277,100 @@ export type Database = {
           },
         ]
       }
+      message_send_attempts: {
+        Row: {
+          account_id: string
+          attempt_number: number
+          authorization_source: string
+          authorized_by: string | null
+          campaign_id: string
+          created_at: string
+          error_code: string | null
+          estimated_carrier_cost: number
+          failure_reason: string | null
+          finalized_at: string | null
+          id: string
+          message_id: string
+          provider_message_id: string | null
+          provider_status: string
+          reason: string | null
+          reserved_at: string
+          sent_at: string | null
+          tenant_charge: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          attempt_number: number
+          authorization_source?: string
+          authorized_by?: string | null
+          campaign_id: string
+          created_at?: string
+          error_code?: string | null
+          estimated_carrier_cost?: number
+          failure_reason?: string | null
+          finalized_at?: string | null
+          id?: string
+          message_id: string
+          provider_message_id?: string | null
+          provider_status?: string
+          reason?: string | null
+          reserved_at?: string
+          sent_at?: string | null
+          tenant_charge?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          attempt_number?: number
+          authorization_source?: string
+          authorized_by?: string | null
+          campaign_id?: string
+          created_at?: string
+          error_code?: string | null
+          estimated_carrier_cost?: number
+          failure_reason?: string | null
+          finalized_at?: string | null
+          id?: string
+          message_id?: string
+          provider_message_id?: string | null
+          provider_status?: string
+          reason?: string | null
+          reserved_at?: string
+          sent_at?: string | null
+          tenant_charge?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_send_attempts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_send_attempts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_send_attempts_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
+          attempt_number: number
           campaign_id: string
+          charged_amount: number | null
+          charged_at: string | null
           cost: number | null
           country_code: string | null
           created_at: string
@@ -1302,7 +1393,10 @@ export type Database = {
           status: string
         }
         Insert: {
+          attempt_number?: number
           campaign_id: string
+          charged_amount?: number | null
+          charged_at?: string | null
           cost?: number | null
           country_code?: string | null
           created_at?: string
@@ -1325,7 +1419,10 @@ export type Database = {
           status?: string
         }
         Update: {
+          attempt_number?: number
           campaign_id?: string
+          charged_amount?: number | null
+          charged_at?: string | null
           cost?: number | null
           country_code?: string | null
           created_at?: string
@@ -2846,6 +2943,7 @@ export type Database = {
       claim_campaign_messages: {
         Args: { _campaign_id: string; _limit: number }
         Returns: {
+          attempt_number: number
           cost: number
           country_code: string
           id: string

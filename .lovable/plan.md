@@ -1,48 +1,56 @@
-## What's actually wrong
+# Confirmed explanation and repair plan
 
-Your Cloud instance isn't out of storage (disk 6% used, memory 22%, connections low). It's out of **disk read/write budget** — too many heavy reads per minute. The database health and slow-query data point at one clear source: the **campaign report page**.
+## What happened
 
-Confirmed from the slow-query stats:
+- Maltida George funded the account with **two successful $100 payments = $200 total**. The current tenant balance is **$0.00**.
+- The three campaigns created **29,989 message rows**. The platform charged exactly **$200.00** across 25,000 successful debit entries:
+  - **JEREMY 1:** $77.184
+  - **JEREMY 2:** $56.488
+  - **JEREMY 3:** $66.328
+- Those campaign rows were priced at **$0.008 per SMS**, while the recorded US underlying cost is currently **$0.010 per SMS** before profit. That means these sends were priced about **20% below cost**, matching the losses shown in the screenshots.
+- The failed SMS went out again because the dispatcher contains an automatic retry job. It requeues selected carrier-rejected messages after 10 minutes without tenant or admin approval.
+- Today, that job retried **1,441 SMS** between approximately **12:26 and 13:06 UTC**:
+  - **4 delivered**
+  - **1,437 failed or were rejected again**
+  - Estimated additional underlying retry cost: about **$14.41** at $0.01 each
+- The retry happened automatically; the tenant did not manually start it.
+- The platform also sends first and debits the tenant afterward, with up to 100 sends running concurrently. This ordering permits provider-accepted SMS to leave the platform while the tenant balance is reaching zero. A failed debit is currently swallowed instead of stopping the send. This is the principal control failure that allowed exposure beyond funded credit.
+- Since the last stored provider-balance reading at **$546.92**, estimated underlying send usage across all tenants was about **$560.08**:
+  - Maltida George: **$151.93**
+  - Samuel Durosinmi: **$398.65**
+  - Horizon Greatness: **$9.50**
+  This explains why the provider balance could become negative. Maltida was a major part, but not the only tenant consuming that balance.
 
-| Query | Calls | Avg time | Total time |
-|---|---|---|---|
-| Campaign messages + contact join (full download) | 11,588 | 1,570 ms | 5.0 hours |
-| Same query, second variant | 6,313 | 1,437 ms | 2.5 hours |
-| Per-status count on a campaign | 30,697 | 74 ms | 38 min |
-| Multi-status count on a campaign | 19,925 | 86 ms | 28 min |
+## Important distinction
 
-Together that's ~8 hours of pure database work — nearly all of the IO budget.
+The tenant is not showing a negative balance; Maltida is at **$0.00**. The negative screenshot is the platform’s provider balance. The platform became exposed because it paid more for sends than it collected, retried failed messages automatically, and allowed sending before confirming each debit.
 
-Why: `src/routes/_authenticated.app.campaigns.$id.tsx` downloads **every message row of the campaign** (up to 50,000 rows, 1,000 per request, each joined to the contacts table) and **re-downloads all of it every 30 seconds**, plus 8 separate counting queries every 15 seconds, plus a failures query and an events query. A single open report tab on a 8,000-message campaign is ~10 heavy queries per minute forever. Several tenants with tabs open saturates the disk.
+## Fixes to implement
 
-The indexes are already in place — this is query volume and payload size, not missing indexes.
+1. **Remove automatic resend behavior**
+   - Disable the automatic retry job completely.
+   - Keep retry as an explicit admin/tenant action with a clear message count and estimated charge shown before confirmation.
+   - Do not resend `delivery_unconfirmed` messages automatically because some may already have reached recipients.
 
-## The fix
+2. **Charge atomically before every provider attempt**
+   - Replace the current “send, then debit” flow with one database operation that reserves/debits the exact charge before an SMS leaves the platform.
+   - If the debit cannot complete, do not call the provider.
+   - Preserve charges for provider-accepted sends and confirmed retry attempts, following the existing no-refund policy.
 
-1. **One aggregate function instead of eight count queries**
-   Add a database function `campaign_report_summary(campaign_id)` that returns all status counts, per-country totals, cost/segment sums, and the failure breakdown in a single indexed pass. Replaces the progress query (8 round-trips), the failures query, and all the client-side aggregation currently done over 50k downloaded rows.
+3. **Enforce a hard cost floor at dispatch time**
+   - Recalculate each SMS from the current country cost, passthrough fee, segment count, MMS multiplier, and required markup immediately before queueing.
+   - Reject/hold a campaign if its stored price is below the current minimum profitable selling price.
+   - Prevent stale campaign rows from retaining an old $0.008 price when the valid US sell price is higher.
 
-2. **Stop downloading all messages**
-   The recipient table becomes server-paged: 100 rows per page with real pagination, filtered server-side by status/search. Stats come from the function in step 1, so no page ever needs the full row set. Exports keep working by streaming rows only when the user clicks Export.
+4. **Add campaign-level reservation and budget limits**
+   - Reserve the full affordable campaign amount before processing.
+   - Queue only the number of messages covered by that reservation.
+   - Stop workers immediately when the reserved amount is exhausted, including during concurrent dispatch.
 
-3. **Cut the polling rate and stop polling dead campaigns**
-   - Poll only while the campaign is actively sending (status `sending`/`queued`); completed campaigns poll not at all.
-   - Active polling: summary every 20s, recipient page never auto-polls.
-   - Pause all polling when the browser tab is hidden.
+5. **Make every retry and attempt auditable**
+   - Store a separate attempt record for the original send and every retry, including reason, provider status, tenant charge, underlying estimated cost, and who authorized it.
+   - Show original sends and retries separately in Admin Finance and campaign reports.
 
-4. **Same treatment for the admin campaign page** (`_authenticated.admin.campaigns.$id.tsx`) and the tenant report page, which repeat the pattern at 20s/15s.
-
-5. **Verify** with `EXPLAIN (ANALYZE, BUFFERS)` on the new function and re-check the slow-query ranking after deploy to confirm the messages query has dropped out of the top spots.
-
-Expected effect: per-report database work drops from roughly 50,000 joined rows per 30 s to a few hundred rows plus one aggregate — on the order of a 50–100x reduction in read volume for that page. That should bring IO back well under budget without upgrading the instance.
-
-## Also worth noting
-
-The database shows **423,268 rolled-back transactions** since boot. That's high and usually means a hot code path is repeatedly failing (a constraint conflict or permission error in the dispatcher/webhook). I'd like to check the Postgres logs for the recurring error as part of this work — failed transactions still burn IO.
-
-## Technical detail
-
-- New migration: `public.campaign_report_summary(p_campaign_id uuid)` — `security definer`, `search_path = public`, ownership checked against the caller's account (or `has_role(auth.uid(),'admin')`), `GRANT EXECUTE TO authenticated`.
-- Existing indexes `messages_campaign_status_idx` and `messages_campaign_created_idx` cover both the aggregate scan and the paged reads; no new indexes needed.
-- Client changes are confined to the three route files plus a small shared `useCampaignSummary` hook; realtime subscriptions stay as they are and simply invalidate the summary query.
-- No pricing, billing, or dispatch logic is touched.
+6. **Correct reporting without changing historical balances automatically**
+   - Recalculate these three campaigns to show original attempts, automatic retries, tenant charges, estimated underlying cost, and platform loss accurately.
+   - Do not issue refunds, credits, or new tenant debits as part of this repair; any historical adjustment will require a separate explicit decision after the audit is visible.
