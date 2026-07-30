@@ -479,10 +479,11 @@ function CampaignReport() {
               onClick={() =>
                 exportProgressCsv({
                   campaign: c,
-                  progress: progressQ.data,
-                  failures: failuresQ.data,
-                  messages: messagesQ.data ?? [],
+                  progress,
+                  failures,
+                  messages: messagesQ.data?.rows ?? [],
                 })
+
               }
               title="Download queued / sending / delivered / failed metrics as CSV."
             >
