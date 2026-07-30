@@ -371,59 +371,34 @@ function CampaignReport() {
   });
 
   const stats = useMemo(() => {
-    const rows = messagesQ.data ?? [];
+    const s = summaryQ.data;
     const events = eventsQ.data ?? [];
-    const progress = progressQ.data;
-    // Prefer the accurate progress count (server-side count) over the eligible
-    // audience estimate or a possibly-truncated messages page.
-    const attempted = Math.max(
-      progress?.total ?? 0,
-      rows.length,
-      eligibleQ.data ?? 0,
-    );
-    const queued = progress
-      ? progress.queued + progress.sending
-      : rows.filter((m: any) => ["queued", "pending", "sending"].includes(m.status)).length;
-    const awaitingDelivery = progress
-      ? progress.sent
-      : rows.filter((m: any) => m.status === "sent" && !m.error_code).length;
-    const delivered = progress
-      ? progress.delivered
-      : rows.filter((m: any) => m.status === "delivered").length;
-    const deliveryUnconfirmed = progress
-      ? progress.deliveryUnconfirmed
-      : rows.filter((m: any) => m.status === "delivery_unconfirmed").length;
-    const failed = progress
-      ? progress.failed
-      : rows.filter((m: any) => m.status === "failed" || m.status === "undelivered" || (m.status === "sent" && m.error_code)).length;
+    const attempted = Math.max(progress?.total ?? 0, eligibleQ.data ?? 0);
+    const queued = (progress?.queued ?? 0) + (progress?.sending ?? 0);
+    const awaitingDelivery = progress?.sent ?? 0;
+    const delivered = progress?.delivered ?? 0;
+    const deliveryUnconfirmed = progress?.deliveryUnconfirmed ?? 0;
+    const failed = progress?.failed ?? 0;
     const sent = awaitingDelivery + delivered + deliveryUnconfirmed + failed;
-    const skippedRows = rows.filter((m: any) => m.status === "skipped" || m.error_code === "insufficient_balance").length;
-    const skipped = Math.max(skippedRows, attempted - Math.max(progress?.total ?? 0, rows.length));
+    const skipped = Math.max(0, attempted - (progress?.total ?? 0));
     const clicked = events.filter((e: any) => e.type === "clicked").length;
     const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
-    // Only messages handed to the carrier are charged; queued rows are an estimate.
-    const BILLED_STATUSES = ["sent", "delivered", "delivery_unconfirmed", "undelivered"];
-    const totalCost = rows.reduce((s: number, m: any) => s + (BILLED_STATUSES.includes(m.status) ? Number(m.cost ?? 0) : 0), 0);
-    const reservedCost = rows.reduce((s: number, m: any) => s + (["queued", "sending", "pending"].includes(m.status) ? Number(m.cost ?? 0) : 0), 0);
-    const totalSegments = rows.reduce((s: number, m: any) => s + Number(m.segments_count ?? 1), 0);
+    const totalCost = Number(s?.billed_cost ?? 0);
+    const reservedCost = Number(s?.reserved_cost ?? 0);
+    const totalSegments = Number(s?.segments ?? 0);
     const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
     const clickRate = delivered > 0 ? (uniqueClickers / delivered) * 100 : 0;
     const costPerDelivered = delivered > 0 ? totalCost / delivered : 0;
 
     const byCountry: Record<string, { total: number; delivered: number; unconfirmed: number; failed: number }> = {};
-    const failures: Record<string, number> = {};
-    for (const m of rows as any[]) {
-      const c = m.country_code ?? m.profile?.country_code ?? "—";
-      byCountry[c] ??= { total: 0, delivered: 0, unconfirmed: 0, failed: 0 };
-      byCountry[c].total++;
-      if (m.status === "delivered") byCountry[c].delivered++;
-      if (m.status === "delivery_unconfirmed") byCountry[c].unconfirmed++;
-      if (m.status === "failed" || m.status === "undelivered") byCountry[c].failed++;
-      if ((m.status === "failed" || m.status === "undelivered") && m.error_code) {
-        failures[m.error_code] = (failures[m.error_code] ?? 0) + 1;
-      }
+    for (const r of (s?.by_country ?? []) as any[]) {
+      byCountry[r.country ?? "—"] = {
+        total: Number(r.messages ?? 0),
+        delivered: Number(r.delivered ?? 0),
+        unconfirmed: 0,
+        failed: Number(r.failed ?? 0),
+      };
     }
-
 
     // Time series — cumulative by hour so the chart never appears to "drop"
     // completed deliveries back to zero after the last webhook hour.
@@ -432,7 +407,7 @@ function CampaignReport() {
       if (!iso) return null;
       const d = new Date(iso); d.setMinutes(0, 0, 0); return d.getTime();
     };
-    for (const m of rows as any[]) {
+    for (const m of (seriesQ.data ?? []) as any[]) {
       const ts = bucket(m.sent_at);
       if (ts) { points.set(ts, points.get(ts) ?? { t: ts, sent: 0, delivered: 0, clicked: 0 }); points.get(ts)!.sent++; }
       const td = bucket(m.delivered_at);
@@ -462,13 +437,14 @@ function CampaignReport() {
     return {
       attempted, queued, sent, awaitingDelivery, delivered, deliveryUnconfirmed, failed, skipped, clicked, uniqueClickers,
       totalCost, reservedCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
-      byCountry, failures, series,
+      byCountry, failures: failures?.byReason ?? {}, series,
     };
-  }, [messagesQ.data, eventsQ.data, eligibleQ.data, progressQ.data]);
+  }, [summaryQ.data, progress, failures, seriesQ.data, eventsQ.data, eligibleQ.data]);
 
   if (!campaignQ.data) return <div className="text-muted-foreground">Loading campaign…</div>;
   const c = campaignQ.data;
-  const sentAt = (messagesQ.data ?? []).find((m: any) => m.sent_at)?.sent_at ?? c.updated_at;
+  const sentAt = (summaryQ.data?.first_created_at as string | undefined) ?? c.updated_at;
+
 
   return (
     <div className="space-y-6">
