@@ -753,13 +753,21 @@ function CampaignReport() {
         {/* ───────────── RECIPIENTS ───────────── */}
         <TabsContent value="recipients" className="mt-5">
           <RecipientActivity
-            rows={messagesQ.data ?? []}
+            rows={messagesQ.data?.rows ?? []}
+            totalRows={messagesQ.data?.count ?? 0}
+            filter={recipientFilter}
+            onFilterChange={setRecipientFilter}
+            page={recipientPage}
+            pageSize={RECIPIENTS_PAGE_SIZE}
+            onPageChange={setRecipientPage}
+            isFetching={messagesQ.isFetching}
             stats={stats}
             optOuts={optOutsQ.data ?? 0}
             onRetry={(mid) => retryOneM.mutate(mid)}
             retryingId={retryOneM.isPending ? (retryOneM.variables as string | undefined) : undefined}
             canRetry={c.status !== "cancelled"}
           />
+
 
         </TabsContent>
 
