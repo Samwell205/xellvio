@@ -342,14 +342,17 @@ function CampaignReport() {
   const eligibleQ = useQuery({
     queryKey: ["campaign-eligible", id, campaignQ.data?.audience],
     enabled: !!campaignQ.data,
+    staleTime: 5 * 60_000,
     queryFn: async () => {
-      const { data } = await supabase.rpc("eligible_profile_ids" as any, {
-        _account_id: campaignQ.data!.account_id,
+      // Count-only RPC — the previous call materialised every matching profile
+      // row on the client just to read its length.
+      const { data } = await supabase.rpc("my_eligible_profile_count" as any, {
         _audience: campaignQ.data!.audience ?? { include: [], exclude: [] },
       });
-      return (data as any[])?.length ?? 0;
+      return Number(data ?? 0);
     },
   });
+
 
   const listsQ = useQuery({
     queryKey: ["campaign-lists", id, campaignQ.data?.audience],
