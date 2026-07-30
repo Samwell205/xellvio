@@ -5,14 +5,16 @@
 # Run this inside the Lovable sandbox, where PGHOST/PGUSER/PGPASSWORD etc.
 # already point at the Cloud database. It writes one CSV per public table.
 #
-#   bash migration-kit/scripts/export-data.sh
+#   bash migration-kit/scripts/export-data.sh [OUT_DIR]
 #
-# Output: migration-kit/data/<table>.csv
+# Default OUT_DIR is /tmp/xellvio-migration-data. Never point this inside
+# the project folder: the full export is ~330 MB and must not be committed.
 # ============================================================
 set -euo pipefail
 
-OUT_DIR="$(cd "$(dirname "$0")/.." && pwd)/data"
+OUT_DIR="${1:-/tmp/xellvio-migration-data}"
 mkdir -p "$OUT_DIR"
+
 
 TABLES=$(psql -At -c "
   select c.relname
