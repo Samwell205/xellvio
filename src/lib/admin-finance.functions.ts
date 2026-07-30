@@ -13,7 +13,7 @@ export const adminFinanceOverview = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
 
-    const [summaryRes, dailyRes, fundingRes] = await Promise.all([
+    const [summaryRes, dailyRes, fundingRes, attemptsRes] = await Promise.all([
       admin.rpc("admin_finance_summary"),
       admin.rpc("admin_finance_daily", { _days: 30 }),
       admin
@@ -21,6 +21,9 @@ export const adminFinanceOverview = createServerFn({ method: "GET" })
         .select("id,account_id,provider,currency,amount,credits,status,created_at,paid_at,provider_reference")
         .order("created_at", { ascending: false })
         .limit(100),
+      admin
+        .from("message_send_attempts")
+        .select("attempt_number,tenant_charge,estimated_carrier_cost,provider_status"),
     ]);
     if (summaryRes.error) throw new Error(summaryRes.error.message);
 
@@ -57,12 +60,30 @@ export const adminFinanceOverview = createServerFn({ method: "GET" })
         labels.set(a.id, a.legal_business_name || a.company || a.full_name || a.email || a.id);
     }
 
+    const attempts = (attemptsRes.data ?? []) as Array<any>;
+    const attemptAudit = attempts.reduce(
+      (acc, row) => {
+        const retry = Number(row.attempt_number ?? 1) > 1;
+        acc.total_attempts += 1;
+        acc.tenant_charges += Number(row.tenant_charge ?? 0);
+        acc.carrier_cost += Number(row.estimated_carrier_cost ?? 0);
+        if (retry) {
+          acc.retry_attempts += 1;
+          acc.retry_charges += Number(row.tenant_charge ?? 0);
+          acc.retry_carrier_cost += Number(row.estimated_carrier_cost ?? 0);
+        }
+        return acc;
+      },
+      { total_attempts: 0, retry_attempts: 0, tenant_charges: 0, carrier_cost: 0, retry_charges: 0, retry_carrier_cost: 0 },
+    );
+
     return {
       summary: summaryRes.data,
       daily: dailyRes.data ?? [],
       providerBalance,
       lastSnapshot: lastSnapshot ?? null,
       funding: (fundingRes.data ?? []).map((p: any) => ({ ...p, account_label: labels.get(p.account_id) ?? "—" })),
+      attemptAudit,
     };
   });
 

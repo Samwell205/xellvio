@@ -66,6 +66,7 @@ function FinancePage() {
   const led = s.ledger ?? {};
   const w = s.wallets ?? {};
   const u = s.usage ?? {};
+  const attempts: any = data?.attemptAudit ?? {};
 
   const grossProfit = Number(u.tenant_spend ?? 0) - Number(u.carrier_cost ?? 0);
   const cashHeld = Number(mi.confirmed_credits ?? 0) - Number(u.carrier_cost ?? 0);
@@ -153,6 +154,7 @@ function FinancePage() {
           <TabsTrigger value="country">By country</TabsTrigger>
           <TabsTrigger value="margin">Margin audit</TabsTrigger>
           <TabsTrigger value="pricing">Pricing check</TabsTrigger>
+          <TabsTrigger value="attempts">Send attempts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tenants">
@@ -202,6 +204,20 @@ function FinancePage() {
               </table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="attempts">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat label="Recorded attempts" value={num(attempts.total_attempts)} hint="Original sends and approved retries recorded after the safety update." />
+            <Stat label="Retry attempts" value={num(attempts.retry_attempts)} hint="Retries now require an explicit confirmation before sending." />
+            <Stat label="Retry charges" value={usd(attempts.retry_charges)} hint="Tenant charges reserved before retry attempts leave the platform." />
+            <Stat
+              label="Retry margin"
+              value={usd(Number(attempts.retry_charges ?? 0) - Number(attempts.retry_carrier_cost ?? 0))}
+              hint={`${usd(attempts.retry_carrier_cost)} estimated carrier cost`}
+              tone={Number(attempts.retry_charges ?? 0) >= Number(attempts.retry_carrier_cost ?? 0) ? "good" : "bad"}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="funding">

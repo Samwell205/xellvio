@@ -313,9 +313,10 @@ function CampaignReport() {
   const retryAllM = useMutation({
     mutationFn: async (errorCode?: string | null) => {
       const preview = await retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null, dryRun: true } });
-      if (preview.count === 0) return preview;
+      const count = Number(preview.count ?? 0);
+      if (count === 0) return preview;
       const approved = window.confirm(
-        `Send ${preview.count.toLocaleString()} failed SMS again? Estimated charge: ${formatUSD(preview.estimatedCost)}. Each retry is a new paid send attempt.`,
+        `Send ${count.toLocaleString()} failed SMS again? Estimated charge: ${formatUSD(preview.estimatedCost)}. Each retry is a new paid send attempt.`,
       );
       if (!approved) throw new Error("Retry cancelled");
       return retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null, confirmed: true } });
@@ -334,9 +335,10 @@ function CampaignReport() {
   const resendUnconfirmedM = useMutation({
     mutationFn: async (hoursBack: number) => {
       const preview = await resendUnconfirmedFn({ data: { campaignId: id, hoursBack, dryRun: true } });
-      if (preview.count === 0) return { ...preview, resent: 0 };
+      const count = Number(preview.count ?? 0);
+      if (count === 0) return { ...preview, resent: 0 };
       const approved = window.confirm(
-        `Send ${preview.count.toLocaleString()} unconfirmed SMS again? Estimated charge: ${formatUSD(preview.estimatedCost)}. Some recipients may already have received the first SMS.`,
+        `Send ${count.toLocaleString()} unconfirmed SMS again? Estimated charge: ${formatUSD(preview.estimatedCost)}. Some recipients may already have received the first SMS.`,
       );
       if (!approved) throw new Error("Resend cancelled");
       return resendUnconfirmedFn({ data: { campaignId: id, hoursBack, confirmed: true } });
