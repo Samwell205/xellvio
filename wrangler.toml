@@ -1,0 +1,21 @@
+# Cloudflare Workers config for the self-hosted build.
+#
+#   bun run build:selfhost   # writes .output/ and .output/server/wrangler.json
+#   bun run deploy           # wrangler deploy -c .output/server/wrangler.json
+#
+# nitro merges this file into the generated .output/server/wrangler.json and
+# supplies `main` + `assets` itself, so deploys use the generated config.
+name = "xellvio"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[observability]
+enabled = true
+
+# Runtime secrets are NOT stored here. Set each one with:
+#   bunx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+# (see .env.example for the full list)
+
+# Non-secret values can live here if you prefer:
+# [vars]
+# PUBLIC_BASE_URL = "https://xellvio.com"

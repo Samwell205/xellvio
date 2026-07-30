@@ -1,61 +1,59 @@
 ## Goal
 
-Move the backend from Lovable Cloud (the managed database this app currently uses) onto a Supabase project you own and control directly.
+Get the whole app out of Lovable and into your own VS Code + GitHub + Cloudflare Workers setup, talking to the Supabase project you already migrated (schema, ~700k rows, 62 users, storage are all there per `migration-kit/STATUS.md`).
 
-## Important reality check before we start
+## What already works off-platform
 
-Two constraints shape everything below — please read these first:
+Everything that is "just the app": TanStack Start routes, all `*.functions.ts` server functions, the Supabase clients, RLS, storage, PGMQ queues, cron jobs. These need only new environment variables pointing at your Supabase project.
 
-1. **This project cannot be "switched" from Lovable Cloud to your own Supabase in place.** Once Cloud is enabled on a project, it stays. Disconnecting Cloud permanently deletes the Cloud database and cannot be undone. The realistic route is: stand up your own Supabase project, replicate schema + data into it, then point the app at it (either this project reconfigured, or a fresh Lovable project connected to your Supabase via the Supabase integration).
+## What is Lovable-only and must be replaced
 
-2. **User logins are the hard part.** Lovable Cloud does not expose the database password or the service-role key, and the `auth` schema (where the 62 user accounts and their password hashes live) is not exportable from here. In practice this means existing users will need to reset their passwords on the new project. Their app data survives because it's keyed by user id — as long as we recreate users with the *same* ids, which requires the Supabase Admin API on the new project.
+Four things are provided by Lovable today, not by Supabase:
 
-If either of those is a dealbreaker, tell me now and I'll stop here.
+1. **Build config** — `vite.config.ts` uses `@lovable.dev/vite-tanstack-config`, a wrapper that bundles the TanStack Start plugin, React, Tailwind, path aliases, env injection and the Cloudflare/nitro build target.
+2. **AI** — content screening (`src/lib/content-scanner.functions.ts`) and the support chat (`src/lib/chat.functions.ts`) call `ai.gateway.lovable.dev` with `LOVABLE_API_KEY`.
+3. **Email** — every auth + transactional email goes through `@lovable.dev/email-js` and the `src/routes/lovable/email/*` routes (queue processor, auth webhook, suppression, previews).
+4. **Google sign-in** — `src/integrations/lovable/index.ts` uses `@lovable.dev/cloud-auth-js`, which brokers OAuth through Lovable's Google app.
 
-## What has to move
+Also Lovable-only but optional: the MCP server plugin (`mcpPlugin()` + `@lovable.dev/mcp-js`) behind `/mcp` and `/connect`.
 
-- **Schema**: 175 migration files, ~60 public tables, 11 enum types, ~48 database functions (several `SECURITY DEFINER`), RLS policies and grants on every table, plus triggers.
-- **Data**: roughly 700k rows. The heavy tables are `events` (179k), `consents` (112k), `profiles` (112k), `profile_list_members` (90k), `messages` (72k), `credit_transactions` (67k), `link_clicks` (38k). Financial tables (`accounts`, `payments`, `credit_transactions`, `seller_ledger`, `verifier_*`) must move with zero loss — balances are derived from them.
-- **Auth**: 62 accounts and their role rows.
-- **Storage**: the buckets used by campaign media uploads and academy assets.
-- **Extensions / scheduled work**: `pgmq` email queues, `pg_cron` jobs, `pg_net` calls, `pgcrypto` (used by the Twilio token encryption functions), and the `app.encryption_key` database setting.
-- **Secrets**: Telnyx/Twilio, NOWPayments, VAPID, and the AI gateway key all need to exist in the new environment.
+## Plan
 
-## Proposed steps
+**Phase 1 — Get the code into VS Code**
+- Connect GitHub from the chat's **+ menu → GitHub → Connect project**, create the repo, then `git clone` it locally. (Only you can authorize this; I can't do it from here.)
+- Add a `.env.example` documenting every variable the app reads, and a `README.local.md` with exact steps: `bun install`, `bun dev`, port, and the required env.
+- Keep two-way sync on during the transition so we can keep fixing things here until you're happy.
 
-**Phase 1 — Set up your Supabase project**
-1. You create the project in your own Supabase account and choose a region.
-2. Enable the required extensions (`pgcrypto`, `pgmq`, `pg_cron`, `pg_net`).
-3. You provide the project URL, publishable/anon key, service-role key, and database connection string.
+**Phase 2 — Own the build config**
+- Replace `@lovable.dev/vite-tanstack-config` with a plain `vite.config.ts` that declares the plugins it was hiding: `tanstackStart` (entry `src/server.ts`), `viteReact`, `@tailwindcss/vite`, `vite-tsconfig-paths`, the `entities` aliases, and the nitro Cloudflare preset.
+- Drop the `componentTagger`/error-logger dev plugins and `src/lib/lovable-error-reporting.ts` wiring (keep `error-capture.ts`, it's ours).
+- Add `wrangler.toml` (Workers name, compat date, `nodejs_compat`), plus `bun run deploy` and a GitHub Action that builds and deploys on push to `main`.
+- Verify `bun run build` + `wrangler dev` boot locally.
 
-**Phase 2 — Schema**
-4. Consolidate the 175 migrations into a single ordered baseline script (enums → tables → grants → RLS → policies → functions → triggers → indexes) and apply it to your project.
-5. Re-apply the non-migration settings: the `app.encryption_key` value, cron schedules, and the vault secret used by the email queue.
+**Phase 3 — Point at your Supabase**
+- Swap the six `SUPABASE_*` / `VITE_SUPABASE_*` values in local `.env` and in Cloudflare Worker secrets to your project's URL, publishable key and service-role key.
+- Move all runtime secrets into Cloudflare (Telnyx, Twilio, NOWPayments, Paystack, VAPID push keys, MCP/OAuth secrets, etc.). I'll produce the exact list from the code; you paste the values in the Cloudflare dashboard or via `wrangler secret put`.
+- Re-point external webhooks (Telnyx status + inbound, Paystack, NOWPayments IPN) and the `pg_cron` jobs to your new Workers domain instead of `*.lovable.app`.
+- Run the final delta sync on the fast-moving tables listed in `STATUS.md` immediately before cutover, with sending paused.
 
-**Phase 3 — Data**
-6. Export each table from Cloud (CSV per table, in foreign-key dependency order) and load it into your project with RLS bypassed, preserving all ids and timestamps.
-7. Reconcile: row counts per table, plus a balance check that `accounts.credit_balance` and `seller_balance` match their ledgers on both sides.
+**Phase 4 — Replace the managed services with direct providers**
+- **AI**: swap both call sites to your own provider key (`OPENAI_API_KEY` or `GEMINI_API_KEY`) behind a single `src/lib/ai-provider.server.ts`, keeping prompts and the screening thresholds identical so campaign screening behaves the same.
+- **Email**: replace `sendLovableEmail` with a direct provider (Resend or Postmark) in `src/lib/email/send-internal.server.ts` and in the queue processor route. All React Email templates in `src/lib/email-templates/` stay as-is. Rewire Supabase Auth emails (signup code, recovery, invite, email change) to your own SMTP/provider settings in Supabase, and keep the bounce/suppression handler pointed at the new provider's webhook.
+- **Google sign-in**: create your own Google OAuth client, enable the Google provider on your Supabase project, and replace `lovable.auth.signInWithOAuth` with `supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })` on `/auth`, `/verify/auth` and the seller/verifier entry points.
+- **MCP**: keep or drop, your call — if kept, replace `mcpPlugin()` with plain server routes so `/mcp` still serves the five tools.
 
-**Phase 4 — Users**
-8. Recreate the 62 auth users on your project via the Admin API using their existing ids and emails, with password reset required at first login.
-9. Verify `user_roles`, `account_members`, and `accounts` still resolve for each user.
-
-**Phase 5 — App wiring**
-10. Point the app's Supabase URL/keys at your project, regenerate the database types, and re-add every secret.
-11. Re-point external callbacks that are configured outside the app: Telnyx inbound/status webhooks, NOWPayments IPN, and the cron endpoints that hit `/api/public/*`.
-
-**Phase 6 — Cutover**
-12. Freeze sending, run a final incremental data sync of the tables that change constantly (`messages`, `events`, `credit_transactions`, `sms_thread_messages`, `link_clicks`), switch DNS/keys, then smoke-test: sign in, view balance, send a test SMS, receive an inbound reply, run a campaign report, and confirm an admin finance figure matches the old system.
+**Phase 5 — Verify before cutover**
+- Local smoke test against your Supabase: sign in (password + Google), send a test SMS, dispatch a small campaign, receive an inbound reply, run one payment webhook, send one email of each auth type, load the admin finance + campaign pages.
+- Then repoint DNS for `xellvio.com` / `www.xellvio.com` to the Worker, keep the Lovable deployment up but idle for a day as a rollback.
 
 ## Technical notes
 
-- Storage objects must be copied bucket-by-bucket; object paths are referenced in `campaigns.media_url`, opt-in proof URLs, and academy cover images, so paths must be preserved or rewritten consistently.
-- `SECURITY DEFINER` functions must be owned by the right role on the new project or `has_role`/`is_admin_or_service` checks will misbehave.
-- `debit_account`, `claim_campaign_messages`, and `topup_account` must be verified after migration before any real send — a silent failure there causes billing errors.
-- Sequence/identity state doesn't apply (all ids are UUIDs), which removes one common migration hazard.
+- Nothing in this plan touches the live site until Phase 5's DNS switch; the Lovable deployment keeps running throughout.
+- The published Lovable app's Supabase credentials are generated by Lovable Cloud and cannot be repointed from inside this project — that's why the app has to be running on your own Workers deploy before it uses your Supabase.
+- `src/integrations/supabase/*` files are auto-generated here but become normal editable files once the repo is yours; only the URL/keys change.
+- Types stay generated with `supabase gen types typescript --project-id <yours> > src/integrations/supabase/types.ts` via the Supabase CLI locally.
+- Payment/credit logic, `claim_campaign_messages` fund reservation, MMS pricing and the recovery registry are all in SQL/server functions already on your Supabase — untouched by this move.
 
-## What I need from you to proceed
+## What I need from you at each step
 
-- Confirmation that "users must reset passwords" is acceptable.
-- Whether you want the migrated app to be **this** project reconfigured, or a **new** Lovable project connected to your Supabase.
-- An acceptable downtime window for the cutover (sending must be paused during the final sync).
+Phase 1: authorize GitHub. Phase 3: create Cloudflare account/project + paste secrets. Phase 4: Google OAuth client, and pick Resend vs Postmark for email. Everything else I do in the repo.

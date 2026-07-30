@@ -8,6 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
+    "dev:selfhost": "vite dev --config vite.config.selfhost.ts",
+    "build:selfhost": "vite build --config vite.config.selfhost.ts",
+    "deploy": "bun run build:selfhost && wrangler deploy -c .output/server/wrangler.json",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
