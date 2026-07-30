@@ -1,14 +1,13 @@
-# Cloudflare Workers deployment for the self-hosted build.
-# Build first:  bun run build:selfhost
-# Then deploy:  bunx wrangler deploy
+# Cloudflare Workers config for the self-hosted build.
+#
+#   bun run build:selfhost   # writes .output/ and .output/server/wrangler.json
+#   bun run deploy           # wrangler deploy -c .output/server/wrangler.json
+#
+# nitro merges this file into the generated .output/server/wrangler.json and
+# supplies `main` + `assets` itself, so deploys use the generated config.
 name = "xellvio"
-main = ".output/server/index.mjs"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
-
-[assets]
-directory = ".output/public"
-binding = "ASSETS"
 
 [observability]
 enabled = true
