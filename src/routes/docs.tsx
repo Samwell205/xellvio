@@ -60,7 +60,7 @@ function DocsPage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/auth" search={{ mode: "signup" }}><Button size="lg">Create account <ArrowRight className="size-4" /></Button></Link>
-              <Link to="/app/numbers"><Button size="lg" variant="outline">Manage senders</Button></Link>
+              <Link to="/app/setup-sms"><Button size="lg" variant="outline">Manage senders</Button></Link>
             </div>
           </div>
         </section>
