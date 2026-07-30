@@ -106,7 +106,7 @@ blocker — do not continue.
 
 ## Phase 4 — Users
 
-Produce `migration-kit/data/_auth_users.json` (an array of `{id, email,
+Produce `/tmp/xellvio-migration-data/_auth_users.json` (an array of `{id, email,
 email_confirmed_at, created_at, raw_user_meta_data}`) from the Cloud data
 export, then:
 
