@@ -116,36 +116,102 @@ function CampaignReport() {
     queryFn: async () => (await supabase.from("campaigns").select("*").eq("id", id).single()).data,
   });
 
-  const messagesQ = useQuery({
-    queryKey: ["campaign-messages", id],
-    // Realtime keeps this in sync; polling is a safety net in case a WS event is missed.
-    refetchInterval: 30_000,
+  // ── Polling policy ───────────────────────────────────────────────
+  // Only poll while the campaign is still moving AND the tab is visible.
+  // Finished campaigns are static, so re-reading them every 15s was burning
+  // a huge amount of database IO for no new information.
+  const [tabVisible, setTabVisible] = useState(true);
+  useEffect(() => {
+    const onVis = () => setTabVisible(!document.hidden);
+    onVis();
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+  const campaignStatus = campaignQ.data?.status as string | undefined;
+  const isLive =
+    !campaignStatus ||
+    ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(campaignStatus);
+  const poll = (ms: number) => (isLive && tabVisible ? ms : (false as const));
+
+  // ── Aggregate summary (single indexed server-side pass) ──────────
+  const summaryQ = useQuery({
+    queryKey: ["campaign-summary", id],
+    refetchInterval: poll(20_000),
     queryFn: async () => {
-      // Page through all rows so large campaigns don't get truncated stats.
-      const pageSize = 1000;
-      let from = 0;
-      const all: any[] = [];
-      // Safety cap at 50k rows.
-      while (from < 50_000) {
-        const { data, error } = await supabase
-          .from("messages")
-          .select("id, phone_e164, status, error_code, failure_reason, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)")
-          .eq("campaign_id", id)
-          .order("created_at", { ascending: false })
-          .range(from, from + pageSize - 1);
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        all.push(...data);
-        if (data.length < pageSize) break;
-        from += pageSize;
-      }
-      return all;
+      const { data, error } = await supabase.rpc("campaign_report_summary" as any, { _campaign_id: id });
+      if (error) throw error;
+      return data as any;
+    },
+  });
+
+  const progress = useMemo(() => {
+    const s = summaryQ.data;
+    if (!s) return undefined;
+    return {
+      total: Number(s.total ?? 0),
+      queued: Number(s.queued ?? 0),
+      sending: Number(s.sending ?? 0),
+      sent: Number(s.sent ?? 0),
+      delivered: Number(s.delivered ?? 0),
+      deliveryUnconfirmed: Number(s.delivery_unconfirmed ?? 0),
+      failed: Number(s.failed ?? 0) + Number(s.sent_with_error ?? 0),
+    };
+  }, [summaryQ.data]);
+
+  const failures = useMemo(() => {
+    const s = summaryQ.data;
+    if (!s) return undefined;
+    const byReason: Record<string, number> = {};
+    for (const r of (s.by_failure_reason ?? []) as any[]) {
+      byReason[r.error_code ?? "unknown"] = Number(r.count ?? 0);
+    }
+    const byCountry: Record<string, number> = {};
+    for (const [k, v] of Object.entries((s.failures_by_country ?? {}) as Record<string, any>)) {
+      byCountry[k] = Number(v ?? 0);
+    }
+    return { byReason, byCountry, total: Number(s.failed ?? 0) };
+  }, [summaryQ.data]);
+
+  // ── Recipient table: server-side filtering + paging ──────────────
+  const RECIPIENTS_PAGE_SIZE = 100;
+  const [recipientFilter, setRecipientFilter] = useState<string>("all");
+  const [recipientPage, setRecipientPage] = useState(0);
+  useEffect(() => { setRecipientPage(0); }, [recipientFilter]);
+
+  const messagesQ = useQuery({
+    queryKey: ["campaign-messages", id, recipientFilter, recipientPage],
+    refetchInterval: poll(30_000),
+    placeholderData: (prev: any) => prev,
+    queryFn: async () => {
+      const statusFilter: Record<string, string[] | null> = {
+        all: null,
+        sent: ["sent"],
+        delivered: ["delivered"],
+        unconfirmed: ["delivery_unconfirmed"],
+        failed: ["failed", "undelivered"],
+        skipped: ["skipped"],
+        queued: ["queued", "pending", "sending"],
+      };
+      let q = supabase
+        .from("messages")
+        .select(
+          "id, phone_e164, status, error_code, failure_reason, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)",
+          { count: "exact" },
+        )
+        .eq("campaign_id", id)
+        .order("created_at", { ascending: false })
+        .range(recipientPage * RECIPIENTS_PAGE_SIZE, recipientPage * RECIPIENTS_PAGE_SIZE + RECIPIENTS_PAGE_SIZE - 1);
+      const f = statusFilter[recipientFilter];
+      if (f) q = q.in("status", f);
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { rows: (data ?? []) as any[], count: count ?? 0 };
     },
   });
 
   const eventsQ = useQuery({
     queryKey: ["campaign-events", id],
-    refetchInterval: 15_000,
+    refetchInterval: poll(60_000),
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
@@ -156,65 +222,22 @@ function CampaignReport() {
     },
   });
 
-  // Live progress counts across the full campaign. Realtime pushes updates
-  // whenever a message row changes; the interval below is a fallback.
-  const progressQ = useQuery({
-    queryKey: ["campaign-progress", id],
-    refetchInterval: 15_000,
-    queryFn: async () => {
-      const base = () =>
-        supabase.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", id);
-      // "Sent" = handed to carrier and NO error yet. "Failed" includes
-      // status=failed/undelivered PLUS rows that Twilio marked `sent` with an
-      // error code (carrier rejection / silent DLR failure) — those are not
-      // real deliveries and should not inflate the Sent bucket.
-      const [total, queued, sending, sentClean, sentErr, delivered, unconfirmed, failedRaw] = await Promise.all([
-        base(),
-        base().in("status", ["queued", "pending"]),
-        base().eq("status", "sending"),
-        base().eq("status", "sent").is("error_code", null),
-        base().eq("status", "sent").not("error_code", "is", null),
-        base().eq("status", "delivered"),
-        base().eq("status", "delivery_unconfirmed"),
-        base().in("status", ["failed", "undelivered"]),
-      ]);
-      return {
-        total: total.count ?? 0,
-        queued: queued.count ?? 0,
-        sending: sending.count ?? 0,
-        sent: sentClean.count ?? 0,
-        delivered: delivered.count ?? 0,
-        deliveryUnconfirmed: unconfirmed.count ?? 0,
-        failed: (failedRaw.count ?? 0) + (sentErr.count ?? 0),
-      };
-    },
-  });
-
-
-  // Failure breakdown by error_code (drives the "Failure reasons" panel and
-  // the per-reason retry button). Sender/provider is inferred from
-  // sender_map on the campaign.
-  const failuresQ = useQuery({
-    queryKey: ["campaign-failures", id],
-    refetchInterval: 30_000,
+  // Lightweight two-column pull purely for the engagement chart.
+  const seriesQ = useQuery({
+    queryKey: ["campaign-series", id],
+    refetchInterval: poll(60_000),
     queryFn: async () => {
       const { data } = await supabase
         .from("messages")
-        .select("error_code, country_code")
+        .select("sent_at, delivered_at")
         .eq("campaign_id", id)
-        .in("status", ["failed", "undelivered"])
+        .not("sent_at", "is", null)
+        .order("sent_at", { ascending: false })
         .limit(5000);
-      const byReason: Record<string, number> = {};
-      const byCountry: Record<string, number> = {};
-      for (const r of data ?? []) {
-        const code = (r as any).error_code ?? "unknown";
-        byReason[code] = (byReason[code] ?? 0) + 1;
-        const cc = (r as any).country_code ?? "—";
-        byCountry[cc] = (byCountry[cc] ?? 0) + 1;
-      }
-      return { byReason, byCountry, total: data?.length ?? 0 };
+      return data ?? [];
     },
   });
+
 
   // Realtime: subscribe to message + campaign changes and invalidate the
   // relevant queries. This gives sub-second UI updates instead of waiting
