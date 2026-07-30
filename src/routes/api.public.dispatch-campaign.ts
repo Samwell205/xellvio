@@ -489,12 +489,28 @@ async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[],
   return await deliverPending(supabaseAdmin, campaign, sender);
 }
 
-async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ checked: number; updated: number; stillAwaiting: number }> {
-  const checkedRecentlyCutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
+  // Some carriers (mostly EU/UK) never return a final delivery receipt. After 24h
+  // there is nothing more to wait for — close those out so reports stop showing
+  // them as "awaiting carrier" forever.
+  const giveUpCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: expiredRows } = await supabaseAdmin
+    .from("messages")
+    .update({
+      status: "delivery_unconfirmed",
+      failure_reason: "No delivery receipt returned by the carrier within 24 hours.",
+    })
+    .eq("status", "sent")
+    .lt("sent_at", giveUpCutoff)
+    .select("id");
+  const expired = (expiredRows ?? []).length;
+
+  const checkedRecentlyCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   const sentCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const maxPerRun = 400;
   const toCheck: Array<{ id: string; provider_message_id: string; status: string }> = [];
   const pageSize = 500;
-  for (let from = 0; from < 5_000 && toCheck.length < 100; from += pageSize) {
+  for (let from = 0; from < 5_000 && toCheck.length < maxPerRun; from += pageSize) {
     const { data: candidates } = await supabaseAdmin
       .from("messages")
       .select("id, provider_message_id, status")
@@ -515,10 +531,11 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
       .eq("type", "reconcile:checked:sent")
       .gte("created_at", checkedRecentlyCutoff);
     const recentlyChecked = new Set((recentChecks ?? []).map((e: any) => e.message_id));
-    toCheck.push(...rows.filter((r) => !recentlyChecked.has(r.id)).slice(0, 100 - toCheck.length));
+    toCheck.push(...rows.filter((r) => !recentlyChecked.has(r.id)).slice(0, maxPerRun - toCheck.length));
     if (rows.length < pageSize) break;
   }
-  if (toCheck.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0 };
+  if (toCheck.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0, expired };
+
 
   const { getMessage, mapTelnyxStatus } = await import("@/lib/telnyx.server");
   let updated = 0;
