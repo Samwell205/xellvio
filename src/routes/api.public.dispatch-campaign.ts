@@ -578,8 +578,59 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
   });
   return { checked: toCheck.length, updated, stillAwaiting, expired };
 }
+// Carrier codes that mean "temporarily not accepted" rather than "this number
+// can never receive SMS". Worth exactly one automatic second attempt — most of
+// these land on the handset on the retry.
+const AUTO_RETRY_CODES = ["40008", "40012", "40011", "40010", "40006", "40003"];
+
+async function autoRetryTransientRejections(supabaseAdmin: any): Promise<{ requeued: number }> {
+  // Give the carrier a short cool-down before trying again.
+  const readyCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const windowCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: rows } = await supabaseAdmin
+    .from("messages")
+    .select("id, campaign_id")
+    .eq("status", "undelivered")
+    .eq("retry_count", 0)
+    .in("error_code", AUTO_RETRY_CODES)
+    .lt("sent_at", readyCutoff)
+    .gt("created_at", windowCutoff)
+    .limit(500);
+
+  const candidates = (rows ?? []) as Array<{ id: string; campaign_id: string }>;
+  if (candidates.length === 0) return { requeued: 0 };
+
+  const ids = candidates.map((r) => r.id);
+  const { data: updated } = await supabaseAdmin
+    .from("messages")
+    .update({
+      status: "queued",
+      retry_count: 1,
+      provider_message_id: null,
+      error_code: null,
+      failure_reason: null,
+      sent_at: null,
+      dispatch_started_at: null,
+    })
+    .in("id", ids)
+    .eq("status", "undelivered")
+    .eq("retry_count", 0)
+    .select("id");
+
+  // Wake the parent campaigns so the dispatcher picks the retries up.
+  const campaignIds = Array.from(new Set(candidates.map((r) => r.campaign_id)));
+  await supabaseAdmin
+    .from("campaigns")
+    .update({ status: "sending" })
+    .in("id", campaignIds)
+    .in("status", ["sent", "failed"]);
+
+  return { requeued: (updated ?? []).length };
+}
 
 export const Route = createFileRoute("/api/public/dispatch-campaign")({
+
   server: {
     handlers: {
       POST: async ({ request }) => {
