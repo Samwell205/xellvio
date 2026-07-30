@@ -34,8 +34,18 @@ function ReportPage() {
   const q = useQuery<CampaignReport>({
     queryKey: ["campaign-report", id],
     queryFn: () => call({ data: { campaignId: id } }),
-    refetchInterval: 15000,
+    // Only keep polling while the campaign is still moving. Finished campaigns
+    // are static, so repeatedly re-reading them just burns database IO.
+    refetchInterval: (query) => {
+      const status = (query.state.data as CampaignReport | undefined)?.campaign?.status;
+      const live =
+        !status ||
+        ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(status);
+      return live && typeof document !== "undefined" && !document.hidden ? 30_000 : false;
+    },
+    refetchIntervalInBackground: false,
   });
+
   const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
 
   const r = q.data;
