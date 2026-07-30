@@ -759,7 +759,8 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           }
         }
         const reconciled = await reconcileStaleCarrierReceipts(supabaseAdmin);
-        return Response.json({ processed: results.length, reconciled, results });
+        const retried = await autoRetryTransientRejections(supabaseAdmin);
+        return Response.json({ processed: results.length, reconciled, retried, results });
       },
     },
   },
