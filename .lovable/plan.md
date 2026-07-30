@@ -1,44 +1,61 @@
-# Maltida recovery and provider dispute
+## Goal
 
-## Confirmed audit facts
+Move the backend from Lovable Cloud (the managed database this app currently uses) onto a Supabase project you own and control directly.
 
-- Maltida funded exactly **$200** and the platform has now removed exactly **$200**, leaving the tenant wallet at **$0.00**.
-- The platform deducted **$117.248 on July 30** after deducting **$82.752 on July 29**.
-- The three campaign ledger totals are **$77.184**, **$56.488**, and **$66.328**.
-- Some failed messages were sent again on July 30. The existing audit identified **1,441 automatic retries**; these were not manually approved by the tenant.
-- The local provider-transaction import contains no rows for this period, so the exact provider withdrawal/refund cannot honestly be claimed from that table. It must be reconciled against the provider message/transaction records.
+## Important reality check before we start
 
-## Implementation
+Two constraints shape everything below — please read these first:
 
-1. **Freeze unauthorized resend exposure**
-   - Confirm no background path can automatically retry failed or delivery-unconfirmed messages.
-   - Require an explicit tenant/admin confirmation showing message count and charge before any retry.
+1. **This project cannot be "switched" from Lovable Cloud to your own Supabase in place.** Once Cloud is enabled on a project, it stays. Disconnecting Cloud permanently deletes the Cloud database and cannot be undone. The realistic route is: stand up your own Supabase project, replicate schema + data into it, then point the app at it (either this project reconfigured, or a fresh Lovable project connected to your Supabase via the Supabase integration).
 
-2. **Create an exact attempt-level reconciliation**
-   - Match every Maltida provider attempt to its campaign message, timestamp, final provider status, tenant debit, and estimated/actual provider charge.
-   - Separate original sends, previously unsent messages resumed after the provider account recovered, and true duplicate retry attempts.
-   - Identify messages accepted more than once and prevent them from being counted as valid tenant usage twice.
+2. **User logins are the hard part.** Lovable Cloud does not expose the database password or the service-role key, and the `auth` schema (where the 62 user accounts and their password hashes live) is not exportable from here. In practice this means existing users will need to reset their passwords on the new project. Their app data survives because it's keyed by user id — as long as we recreate users with the *same* ids, which requires the Supabase Admin API on the new project.
 
-3. **Recover valid uncovered tenant charges**
-   - Calculate only provider-accepted attempts that were not already included in Maltida’s $200 ledger deductions.
-   - Apply one auditable correction transaction for that verified amount; if the wallet cannot cover it, record the balance as debt and suspend further sending until funded.
-   - Do not charge Maltida for an unauthorized duplicate retry caused by the platform.
+If either of those is a dealbreaker, tell me now and I'll stop here.
 
-4. **Prepare and expose the provider dispute**
-   - Produce an admin-visible dispute report listing unauthorized automatic retries, provider message IDs, timestamps, statuses, and the exact amount charged.
-   - Add a downloadable CSV and ready-to-send dispute text requesting reimbursement for those attempts.
-   - Keep the dispute amount separate from tenant debt so the same money is never recovered twice.
+## What has to move
 
-5. **Correct finance reporting**
-   - Show original attempts, authorized retries, unauthorized retries, tenant charges, provider charges, amount recoverable from the tenant, and amount disputed with the provider as separate lines.
-   - Add a recovery status so you can track pending, credited, rejected, or collected amounts.
+- **Schema**: 175 migration files, ~60 public tables, 11 enum types, ~48 database functions (several `SECURITY DEFINER`), RLS policies and grants on every table, plus triggers.
+- **Data**: roughly 700k rows. The heavy tables are `events` (179k), `consents` (112k), `profiles` (112k), `profile_list_members` (90k), `messages` (72k), `credit_transactions` (67k), `link_clicks` (38k). Financial tables (`accounts`, `payments`, `credit_transactions`, `seller_ledger`, `verifier_*`) must move with zero loss — balances are derived from them.
+- **Auth**: 62 accounts and their role rows.
+- **Storage**: the buckets used by campaign media uploads and academy assets.
+- **Extensions / scheduled work**: `pgmq` email queues, `pg_cron` jobs, `pg_net` calls, `pgcrypto` (used by the Twilio token encryption functions), and the `app.encryption_key` database setting.
+- **Secrets**: Telnyx/Twilio, NOWPayments, VAPID, and the AI gateway key all need to exist in the new environment.
 
-6. **Notify Maltida only after reconciliation**
-   - Send a clear account notice stating the verified correction, resulting balance/debt, campaign references, and support contact.
-   - Do not expose the provider name, provider pricing, or internal infrastructure in tenant-facing text.
+## Proposed steps
 
-## Safety rules
+**Phase 1 — Set up your Supabase project**
+1. You create the project in your own Supabase account and choose a region.
+2. Enable the required extensions (`pgcrypto`, `pgmq`, `pg_cron`, `pg_net`).
+3. You provide the project URL, publishable/anon key, service-role key, and database connection string.
 
-- No estimated amount will be charged as if it were final.
-- No duplicate collection from both Maltida and the provider for the same retry.
-- Every adjustment will have an immutable ledger description and admin audit trail.
+**Phase 2 — Schema**
+4. Consolidate the 175 migrations into a single ordered baseline script (enums → tables → grants → RLS → policies → functions → triggers → indexes) and apply it to your project.
+5. Re-apply the non-migration settings: the `app.encryption_key` value, cron schedules, and the vault secret used by the email queue.
+
+**Phase 3 — Data**
+6. Export each table from Cloud (CSV per table, in foreign-key dependency order) and load it into your project with RLS bypassed, preserving all ids and timestamps.
+7. Reconcile: row counts per table, plus a balance check that `accounts.credit_balance` and `seller_balance` match their ledgers on both sides.
+
+**Phase 4 — Users**
+8. Recreate the 62 auth users on your project via the Admin API using their existing ids and emails, with password reset required at first login.
+9. Verify `user_roles`, `account_members`, and `accounts` still resolve for each user.
+
+**Phase 5 — App wiring**
+10. Point the app's Supabase URL/keys at your project, regenerate the database types, and re-add every secret.
+11. Re-point external callbacks that are configured outside the app: Telnyx inbound/status webhooks, NOWPayments IPN, and the cron endpoints that hit `/api/public/*`.
+
+**Phase 6 — Cutover**
+12. Freeze sending, run a final incremental data sync of the tables that change constantly (`messages`, `events`, `credit_transactions`, `sms_thread_messages`, `link_clicks`), switch DNS/keys, then smoke-test: sign in, view balance, send a test SMS, receive an inbound reply, run a campaign report, and confirm an admin finance figure matches the old system.
+
+## Technical notes
+
+- Storage objects must be copied bucket-by-bucket; object paths are referenced in `campaigns.media_url`, opt-in proof URLs, and academy cover images, so paths must be preserved or rewritten consistently.
+- `SECURITY DEFINER` functions must be owned by the right role on the new project or `has_role`/`is_admin_or_service` checks will misbehave.
+- `debit_account`, `claim_campaign_messages`, and `topup_account` must be verified after migration before any real send — a silent failure there causes billing errors.
+- Sequence/identity state doesn't apply (all ids are UUIDs), which removes one common migration hazard.
+
+## What I need from you to proceed
+
+- Confirmation that "users must reset passwords" is acceptable.
+- Whether you want the migrated app to be **this** project reconfigured, or a **new** Lovable project connected to your Supabase.
+- An acceptable downtime window for the cutover (sending must be paused during the final sync).
