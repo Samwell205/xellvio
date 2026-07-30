@@ -11,12 +11,15 @@ migration-kit/
     02-post-migration.sql   encryption key, vault secret, buckets, cron
     03-verify.sql           row counts + balance reconciliation
   scripts/
-    export-data.sh          old DB  -> data/*.csv
-    import-data.sh          data/*.csv -> new DB
+    export-data.sh          old DB  -> $DATA_DIR/*.csv
+    import-data.sh          $DATA_DIR/*.csv -> new DB
     migrate-users.mjs       recreate the 62 auth users with the same ids
     copy-storage.mjs        copy all four storage buckets
-  data/                     CSVs land here (git-ignored)
 ```
+
+`DATA_DIR` defaults to `/tmp/xellvio-migration-data` and is deliberately
+outside the project: the full export is ~330 MB and must never be committed.
+
 
 ## Two things to know first
 
