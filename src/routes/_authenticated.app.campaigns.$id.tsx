@@ -978,7 +978,7 @@ function RecipientActivity({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {shown.slice(0, 300).map((m: any) => {
+                {shown.map((m: any) => {
                   const name = [m.profile?.first_name, m.profile?.last_name].filter(Boolean).join(" ");
                   const isFailed = ["failed", "undelivered"].includes(m.status);
                   const retryable =
