@@ -71,7 +71,7 @@ function CampaignReport() {
             : "No pending messages to refresh.",
       );
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-events", id] });
     },
@@ -249,7 +249,7 @@ function CampaignReport() {
         "postgres_changes",
         { event: "*", schema: "public", table: "messages", filter: `campaign_id=eq.${id}` },
         () => {
-          queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+          queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
           queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
           queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
         },
@@ -277,7 +277,7 @@ function CampaignReport() {
             } will not be sent.`,
       );
       queryClient.invalidateQueries({ queryKey: ["campaign", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to cancel campaign"),
@@ -289,7 +289,7 @@ function CampaignReport() {
     onSuccess: () => {
       toast.success("Message re-queued.");
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
@@ -302,7 +302,7 @@ function CampaignReport() {
     onSuccess: (r) => {
       toast.success(`Re-queued ${r.retried.toLocaleString()} failed message${r.retried === 1 ? "" : "s"}.`);
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign", id] });
     },
@@ -321,7 +321,7 @@ function CampaignReport() {
 
       );
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-progress", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign", id] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Resend failed"),
