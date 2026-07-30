@@ -946,7 +946,7 @@ function RecipientActivity({
             {items.map((i) => (
               <li key={i.key}>
                 <button
-                  onClick={() => setFilter(i.key)}
+                  onClick={() => onFilterChange(i.key)}
                   className={`w-full flex items-center justify-between rounded-md px-3 py-2 text-sm transition ${
                     filter === i.key ? "bg-muted font-semibold" : "hover:bg-muted/60"
                   }`}
