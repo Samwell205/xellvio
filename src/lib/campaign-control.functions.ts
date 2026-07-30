@@ -68,7 +68,7 @@ export const retryMessage = createServerFn({ method: "POST" })
     // RLS ensures the caller can only see their own account's messages.
     const { data: msg, error: mErr } = await supabase
       .from("messages")
-      .select("id, status, campaign_id, cost")
+      .select("id, status, campaign_id, cost, retry_count")
       .eq("id", data.messageId)
       .maybeSingle();
     if (mErr) throw new Error(mErr.message);

@@ -294,7 +294,12 @@ function CampaignReport() {
 
   const retryOneFn = useServerFn(retryMessage);
   const retryOneM = useMutation({
-    mutationFn: (messageId: string) => retryOneFn({ data: { messageId } }),
+    mutationFn: async (messageId: string) => {
+      if (!window.confirm("Send this SMS again? A new send attempt will be charged at the current rate.")) {
+        throw new Error("Retry cancelled");
+      }
+      return retryOneFn({ data: { messageId, confirmed: true } });
+    },
     onSuccess: () => {
       toast.success("Message re-queued.");
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
@@ -306,8 +311,15 @@ function CampaignReport() {
 
   const retryAllFn = useServerFn(retryFailedMessages);
   const retryAllM = useMutation({
-    mutationFn: (errorCode?: string | null) =>
-      retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null } }),
+    mutationFn: async (errorCode?: string | null) => {
+      const preview = await retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null, dryRun: true } });
+      if (preview.count === 0) return preview;
+      const approved = window.confirm(
+        `Send ${preview.count.toLocaleString()} failed SMS again? Estimated charge: ${formatUSD(preview.estimatedCost)}. Each retry is a new paid send attempt.`,
+      );
+      if (!approved) throw new Error("Retry cancelled");
+      return retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null, confirmed: true } });
+    },
     onSuccess: (r) => {
       toast.success(`Re-queued ${r.retried.toLocaleString()} failed message${r.retried === 1 ? "" : "s"}.`);
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
@@ -320,8 +332,15 @@ function CampaignReport() {
 
   const resendUnconfirmedFn = useServerFn(resendUnconfirmed);
   const resendUnconfirmedM = useMutation({
-    mutationFn: (hoursBack: number) =>
-      resendUnconfirmedFn({ data: { campaignId: id, hoursBack } }),
+    mutationFn: async (hoursBack: number) => {
+      const preview = await resendUnconfirmedFn({ data: { campaignId: id, hoursBack, dryRun: true } });
+      if (preview.count === 0) return { ...preview, resent: 0 };
+      const approved = window.confirm(
+        `Send ${preview.count.toLocaleString()} unconfirmed SMS again? Estimated charge: ${formatUSD(preview.estimatedCost)}. Some recipients may already have received the first SMS.`,
+      );
+      if (!approved) throw new Error("Resend cancelled");
+      return resendUnconfirmedFn({ data: { campaignId: id, hoursBack, confirmed: true } });
+    },
     onSuccess: (r: any) => {
       toast.success(
         r.resent > 0

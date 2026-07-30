@@ -89,6 +89,12 @@ async function handleStatus(payload: any) {
     return;
   }
   await supabaseAdmin.from("messages").update(update).eq("id", msg.id);
+  await supabaseAdmin.from("message_send_attempts").update({
+    provider_status: finalStatus,
+    error_code: errCode ? String(errCode) : null,
+    failure_reason: errDetail ? String(errDetail).slice(0, 500) : update.failure_reason ?? null,
+    finalized_at: terminal.includes(finalStatus) ? new Date().toISOString() : null,
+  }).eq("message_id", msg.id).eq("provider_message_id", providerId);
   await supabaseAdmin
     .from("events")
     .insert({ message_id: msg.id, type: `status:${finalStatus}`, payload });
