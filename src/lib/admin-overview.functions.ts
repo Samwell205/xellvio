@@ -42,20 +42,21 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h),
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since7d),
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h).in("status", ["failed", "undelivered"]),
-      supabaseAdmin.from("payments").select("amount,currency,status,created_at,provider").gte("created_at", since7d),
-      supabaseAdmin.from("payments").select("amount,currency,status,provider,created_at"),
-      supabaseAdmin.from("accounts").select("credit_balance"),
+      supabaseAdmin.from("payments").select("amount,credits,currency,status,created_at,provider").gte("created_at", since7d),
+      fetchAllRows(() => supabaseAdmin.from("payments").select("amount,credits,currency,status,provider,created_at").order("created_at", { ascending: false })),
+      fetchAllRows(() => supabaseAdmin.from("accounts").select("credit_balance").order("id")),
       supabaseAdmin.from("accounts").select("id,email,full_name,company,created_at").order("created_at", { ascending: false }).limit(6),
       supabaseAdmin.from("messages").select("id,phone_e164,status,created_at,campaign_id,cost,country_code").order("created_at", { ascending: false }).limit(8),
       supabaseAdmin.from("payments").select("id,amount,currency,status,provider,created_at,account_id").order("created_at", { ascending: false }).limit(6),
       fetchAllRows(() =>
         supabaseAdmin.from("messages")
-          .select("cost,segments_count,country_code,status,created_at")
+          .select("cost,segments_count,country_code,status,created_at,is_mms")
           .in("status", ["sent", "delivered", "delivery_unconfirmed"])
           .order("created_at", { ascending: false }),
       ),
-      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,passthrough_fee"),
+      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,passthrough_fee,mms_multiplier,mms_cost_multiplier"),
     ]);
+
 
     const smsRows: any[] = smsSpendAll as any[];
 
