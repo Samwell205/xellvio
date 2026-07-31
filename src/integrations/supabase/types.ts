@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       academy_courses: {
@@ -984,6 +1009,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dispatch_lock: {
+        Row: {
+          id: string
+          locked: boolean
+          locked_at: string | null
+        }
+        Insert: {
+          id: string
+          locked?: boolean
+          locked_at?: string | null
+        }
+        Update: {
+          id?: string
+          locked?: boolean
+          locked_at?: string | null
+        }
+        Relationships: []
       }
       email_send_log: {
         Row: {
@@ -3175,9 +3218,14 @@ export type Database = {
         Args: { _admin_note: string; _withdrawal_id: string }
         Returns: undefined
       }
+      release_dispatch_lock: { Args: never; Returns: undefined }
       topup_account: {
         Args: { _account_id: string; _amount: number; _description: string }
         Returns: number
+      }
+      try_acquire_dispatch_lock: {
+        Args: { _stale_after_seconds?: number }
+        Returns: boolean
       }
     }
     Enums: {
@@ -3326,6 +3374,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       account_member_role: ["viewer", "editor", "admin"],

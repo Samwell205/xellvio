@@ -759,6 +759,28 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+        // Guard against overlapping invocations: if pg_cron fires a new tick
+        // while a previous one is still mid-flight, two concurrent calls to
+        // claim_campaign_messages for the same campaign can each claim (and
+        // charge) different rows, and if one of those invocations doesn't
+        // finish cleanly, its claimed rows are left stranded in `sending`.
+        // Self-heals after 90s if a prior run crashed without releasing.
+        const { data: gotLock } = await supabaseAdmin.rpc("try_acquire_dispatch_lock");
+        if (!gotLock) {
+          return Response.json({ skipped: "dispatch_already_running" });
+        }
+
+        try {
+          return await runDispatchTick(supabaseAdmin);
+        } finally {
+          await supabaseAdmin.rpc("release_dispatch_lock");
+        }
+      },
+    },
+  },
+});
+
+async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         const { data: ratesRows } = await supabaseAdmin
           .from("country_rates")
           .select("country_code,dial_prefix,sell_price,mms_multiplier,active")
@@ -882,8 +904,4 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           ? await reconcileStaleCarrierReceipts(supabaseAdmin)
           : { checked: 0, updated: 0, stillAwaiting: 0, expired: 0, skipped: true };
         return Response.json({ processed: results.length, deferred, reconciled, results });
-
-      },
-    },
-  },
-});
+}
