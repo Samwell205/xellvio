@@ -113,6 +113,26 @@ function FinancePage() {
   const cashBackedCredit = Number(mi.confirmed_credits ?? 0) - Number(led.debits ?? 0) + Number(led.refunds ?? 0);
   const ledgerDrift = Number(rec.drift ?? 0);
 
+  // Live aggregate of the per-tenant rows — used for the table's Totals row so
+  // the detail table and the headline cards are provably the same numbers.
+  const tenantTotals = (tenants ?? []).reduce(
+    (acc: any, t: any) => {
+      acc.count += 1;
+      acc.funded += Number(t.funded ?? 0);
+      acc.granted += Number(t.granted ?? 0);
+      acc.spent += Number(t.spent ?? 0);
+      acc.refunded += Number(t.refunded ?? 0);
+      acc.balance += Number(t.balance ?? 0);
+      acc.drift += Number(t.drift ?? 0);
+      acc.messages += Number(t.messages ?? 0);
+      acc.carrier_cost += Number(t.carrier_cost ?? 0);
+      acc.profit += Number(t.profit ?? 0);
+      return acc;
+    },
+    { count: 0, funded: 0, granted: 0, spent: 0, refunded: 0, balance: 0, drift: 0, messages: 0, carrier_cost: 0, profit: 0 },
+  );
+
+
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px]">
