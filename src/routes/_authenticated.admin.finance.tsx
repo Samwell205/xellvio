@@ -215,7 +215,11 @@ function FinancePage() {
         <TabsContent value="tenants">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Every tenant: funded, spent, balance, profit</CardTitle>
+              <CardTitle className="text-base">Every tenant: funded, granted, spent, balance, profit</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Balance = Funded + Granted − Spent + Refunded. Drift flags any wallet that was changed without a
+                matching transaction row. The Totals row is the live aggregate behind the cards at the top.
+              </p>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -223,10 +227,12 @@ function FinancePage() {
                   <tr className="text-left">
                     <th className="py-2 pr-3">Tenant</th>
                     <th className="py-2 pr-3 text-right">Funded</th>
+                    <th className="py-2 pr-3 text-right">Granted</th>
                     <th className="py-2 pr-3 text-right">Last funded</th>
                     <th className="py-2 pr-3 text-right">Spent</th>
                     <th className="py-2 pr-3 text-right">Refunded</th>
                     <th className="py-2 pr-3 text-right">Balance</th>
+                    <th className="py-2 pr-3 text-right">Drift</th>
                     <th className="py-2 pr-3 text-right">Messages</th>
                     <th className="py-2 pr-3 text-right">Carrier cost</th>
                     <th className="py-2 pr-3 text-right">Your profit</th>
@@ -240,11 +246,17 @@ function FinancePage() {
                         <div className="text-xs text-muted-foreground">{t.email}</div>
                       </td>
                       <td className="py-2 pr-3 text-right">{usd(t.funded)}</td>
+                      <td className="py-2 pr-3 text-right">{usd(t.granted)}</td>
                       <td className="py-2 pr-3 text-right text-xs">{date(t.last_funded_at)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.spent)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.refunded)}</td>
                       <td className={`py-2 pr-3 text-right ${Number(t.balance) < 0 ? "text-destructive" : ""}`}>
                         {usd(t.balance)}
+                      </td>
+                      <td
+                        className={`py-2 pr-3 text-right ${Math.abs(Number(t.drift ?? 0)) > 0.01 ? "text-destructive font-medium" : "text-muted-foreground"}`}
+                      >
+                        {usd(t.drift)}
                       </td>
                       <td className="py-2 pr-3 text-right">{num(t.messages)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.carrier_cost)}</td>
@@ -256,10 +268,26 @@ function FinancePage() {
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="border-t-2 border-border text-sm font-medium">
+                  <tr>
+                    <td className="py-2 pr-3">Totals ({num(tenantTotals.count)} tenants)</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.funded)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.granted)}</td>
+                    <td className="py-2 pr-3" />
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.spent)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.refunded)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.balance)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.drift)}</td>
+                    <td className="py-2 pr-3 text-right">{num(tenantTotals.messages)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.carrier_cost)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.profit)}</td>
+                  </tr>
+                </tfoot>
               </table>
             </CardContent>
           </Card>
         </TabsContent>
+
 
         <TabsContent value="attempts">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
