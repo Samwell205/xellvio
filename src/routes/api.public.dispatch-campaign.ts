@@ -7,8 +7,16 @@ import { countryFromPhone } from "@/lib/country-from-phone";
 import { keywordScan } from "@/lib/content-scanner";
 
 const PLAN_INSERT_CHUNK = 500;
-const DELIVER_PER_WORKER = 500;
-const DELIVER_CONCURRENCY = 100;
+// Keep each dispatcher invocation small enough to always finish inside the
+// caller's HTTP timeout. If the caller (pg_cron/pg_net) hangs up mid-run the
+// serverless worker is cancelled, leaving claimed rows stuck in `sending`
+// which the next run then has to write off as `dispatch_timeout`.
+const DELIVER_PER_WORKER = 120;
+const DELIVER_CONCURRENCY = 30;
+// Soft wall-clock budget for one invocation. Anything left over is picked up by
+// the next scheduled run instead of risking a mid-flight cancellation.
+const RUN_BUDGET_MS = 40_000;
+
 
 function render(body: string, p: { first_name?: string | null; last_name?: string | null; country_code?: string | null; phone_e164?: string | null; custom_fields?: Record<string, any> | null }) {
   const fields: Record<string, any> = {
@@ -503,7 +511,7 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
 
   const checkedRecentlyCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   const sentCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  const maxPerRun = 400;
+  const maxPerRun = 100;
   const toCheck: Array<{ id: string; provider_message_id: string; status: string }> = [];
   const pageSize = 500;
   for (let from = 0; from < 5_000 && toCheck.length < maxPerRun; from += pageSize) {
@@ -624,9 +632,15 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           .limit(10);
         if (error) return Response.json({ error: error.message }, { status: 500 });
 
+        const startedAt = Date.now();
+        const budgetLeft = () => RUN_BUDGET_MS - (Date.now() - startedAt);
+
         const results: any[] = [];
+        let deferred = 0;
         for (const c of due ?? []) {
+          if (budgetLeft() < 5_000) { deferred += 1; continue; }
           try {
+
             const { data: acct } = await supabaseAdmin
               .from("accounts")
               .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted")
@@ -701,8 +715,13 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             results.push({ id: c.id, error: e.message });
           }
         }
-        const reconciled = await reconcileStaleCarrierReceipts(supabaseAdmin);
-        return Response.json({ processed: results.length, reconciled, results });
+        // Reconciliation is best-effort housekeeping — never let it eat the
+        // budget that live sending needs.
+        const reconciled = budgetLeft() > 12_000
+          ? await reconcileStaleCarrierReceipts(supabaseAdmin)
+          : { checked: 0, updated: 0, stillAwaiting: 0, expired: 0, skipped: true };
+        return Response.json({ processed: results.length, deferred, reconciled, results });
+
       },
     },
   },
