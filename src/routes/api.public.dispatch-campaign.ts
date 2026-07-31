@@ -715,8 +715,13 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             results.push({ id: c.id, error: e.message });
           }
         }
-        const reconciled = await reconcileStaleCarrierReceipts(supabaseAdmin);
-        return Response.json({ processed: results.length, reconciled, results });
+        // Reconciliation is best-effort housekeeping — never let it eat the
+        // budget that live sending needs.
+        const reconciled = budgetLeft() > 12_000
+          ? await reconcileStaleCarrierReceipts(supabaseAdmin)
+          : { checked: 0, updated: 0, stillAwaiting: 0, expired: 0, skipped: true };
+        return Response.json({ processed: results.length, deferred, reconciled, results });
+
       },
     },
   },
