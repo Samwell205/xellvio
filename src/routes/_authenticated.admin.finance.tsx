@@ -102,13 +102,17 @@ function FinancePage() {
   const grossProfit = Number(led.debits ?? 0) - totalCarrierCost;
   const cashHeld = Number(mi.confirmed_credits ?? 0) - Number(led.refunds ?? 0) - totalCarrierCost;
 
-  // "Unused tenant credit" must only reflect a real cash liability — money
-  // tenants actually paid you that they haven't spent. SUM(accounts.credit_balance)
-  // also includes non-payment-backed topups (goodwill/adjustment grants with no
-  // matching payment row), which inflates this figure with credit you never
-  // actually received as cash. Derive it from the payment ledger instead.
-  const realUnusedCredit = Number(mi.confirmed_credits ?? 0) - Number(led.debits ?? 0) + Number(led.refunds ?? 0);
-  const nonCashCreditOutstanding = Number(w.unused_credits ?? 0) - realUnusedCredit;
+  // "Unused tenant credit" is the live sum of every tenant wallet balance — the
+  // exact same figure as the sum of the Balance column in the per-tenant table
+  // below, so the headline and the detail can never disagree. The portion of it
+  // actually backed by cash (vs goodwill/adjustment grants with no payment row)
+  // is reported separately instead of silently replacing the total.
+  const rec = s.reconciliation ?? {};
+  const walletTotal = Number(w.unused_credits ?? 0);
+  const grantedCredit = Number(rec.granted_credit ?? 0);
+  const cashBackedCredit = Number(mi.confirmed_credits ?? 0) - Number(led.debits ?? 0) + Number(led.refunds ?? 0);
+  const ledgerDrift = Number(rec.drift ?? 0);
+
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px]">
