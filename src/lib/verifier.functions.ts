@@ -478,7 +478,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     let rejectionReason: string | null = null;
 
     if (payload && row.telnyx_number_id) {
-      const base = process.env.PUBLIC_BASE_URL ?? "https://xellvio.com";
+      const base = process.env.PUBLIC_BASE_URL ?? "https://www.xellvio.com";
       const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
       try {
         const result = await submitTwilioTollfreeVerification({

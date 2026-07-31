@@ -56,7 +56,9 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.telnyx-status'
 import { Route as ApiPublicTelnyxInboundRouteImport } from './routes/api.public.telnyx-inbound'
+import { Route as ApiPublicSnapshotFinanceRouteImport } from './routes/api.public.snapshot-finance'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
+import { Route as ApiPublicPollCarrierBalanceRouteImport } from './routes/api.public.poll-carrier-balance'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicNowpaymentsPollRouteImport } from './routes/api/public/nowpayments-poll'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
@@ -355,10 +357,22 @@ const ApiPublicTelnyxInboundRoute = ApiPublicTelnyxInboundRouteImport.update({
   path: '/api/public/telnyx-inbound',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicSnapshotFinanceRoute =
+  ApiPublicSnapshotFinanceRouteImport.update({
+    id: '/api/public/snapshot-finance',
+    path: '/api/public/snapshot-finance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPollVerificationsRoute =
   ApiPublicPollVerificationsRouteImport.update({
     id: '/api/public/poll-verifications',
     path: '/api/public/poll-verifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPollCarrierBalanceRoute =
+  ApiPublicPollCarrierBalanceRouteImport.update({
+    id: '/api/public/poll-carrier-balance',
+    path: '/api/public/poll-carrier-balance',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicPaystackWebhookRoute =
@@ -804,7 +818,9 @@ export interface FileRoutesByFullPath {
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
+  '/api/public/poll-carrier-balance': typeof ApiPublicPollCarrierBalanceRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
+  '/api/public/snapshot-finance': typeof ApiPublicSnapshotFinanceRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -909,7 +925,9 @@ export interface FileRoutesByTo {
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
+  '/api/public/poll-carrier-balance': typeof ApiPublicPollCarrierBalanceRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
+  '/api/public/snapshot-finance': typeof ApiPublicSnapshotFinanceRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -1022,7 +1040,9 @@ export interface FileRoutesById {
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
+  '/api/public/poll-carrier-balance': typeof ApiPublicPollCarrierBalanceRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
+  '/api/public/snapshot-finance': typeof ApiPublicSnapshotFinanceRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -1134,7 +1154,9 @@ export interface FileRouteTypes {
     | '/api/public/nowpayments-ipn'
     | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
+    | '/api/public/poll-carrier-balance'
     | '/api/public/poll-verifications'
+    | '/api/public/snapshot-finance'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
@@ -1239,7 +1261,9 @@ export interface FileRouteTypes {
     | '/api/public/nowpayments-ipn'
     | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
+    | '/api/public/poll-carrier-balance'
     | '/api/public/poll-verifications'
+    | '/api/public/snapshot-finance'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
@@ -1351,7 +1375,9 @@ export interface FileRouteTypes {
     | '/api/public/nowpayments-ipn'
     | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
+    | '/api/public/poll-carrier-balance'
     | '/api/public/poll-verifications'
+    | '/api/public/snapshot-finance'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
@@ -1426,7 +1452,9 @@ export interface RootRouteChildren {
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicNowpaymentsPollRoute: typeof ApiPublicNowpaymentsPollRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
+  ApiPublicPollCarrierBalanceRoute: typeof ApiPublicPollCarrierBalanceRoute
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
+  ApiPublicSnapshotFinanceRoute: typeof ApiPublicSnapshotFinanceRoute
   ApiPublicTelnyxInboundRoute: typeof ApiPublicTelnyxInboundRoute
   ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
@@ -1769,11 +1797,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelnyxInboundRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/snapshot-finance': {
+      id: '/api/public/snapshot-finance'
+      path: '/api/public/snapshot-finance'
+      fullPath: '/api/public/snapshot-finance'
+      preLoaderRoute: typeof ApiPublicSnapshotFinanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/poll-verifications': {
       id: '/api/public/poll-verifications'
       path: '/api/public/poll-verifications'
       fullPath: '/api/public/poll-verifications'
       preLoaderRoute: typeof ApiPublicPollVerificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/poll-carrier-balance': {
+      id: '/api/public/poll-carrier-balance'
+      path: '/api/public/poll-carrier-balance'
+      fullPath: '/api/public/poll-carrier-balance'
+      preLoaderRoute: typeof ApiPublicPollCarrierBalanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/paystack-webhook': {
@@ -2495,7 +2537,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicNowpaymentsPollRoute: ApiPublicNowpaymentsPollRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
+  ApiPublicPollCarrierBalanceRoute: ApiPublicPollCarrierBalanceRoute,
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
+  ApiPublicSnapshotFinanceRoute: ApiPublicSnapshotFinanceRoute,
   ApiPublicTelnyxInboundRoute: ApiPublicTelnyxInboundRoute,
   ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,

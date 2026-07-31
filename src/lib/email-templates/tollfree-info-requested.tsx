@@ -43,6 +43,6 @@ export const template = {
     firstName: "Alex",
     businessName: "Acme Co",
     message: "Please confirm the URL where customers opt in to receive SMS.",
-    setupUrl: "https://xellvio.lovable.app/app/setup-sms",
+    setupUrl: "https://www.xellvio.com/app/setup-sms",
   },
 } satisfies TemplateEntry;

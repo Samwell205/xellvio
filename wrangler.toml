@@ -17,5 +17,5 @@ enabled = true
 # (see .env.example for the full list)
 
 # Non-secret values can live here if you prefer:
-# [vars]
-# PUBLIC_BASE_URL = "https://xellvio.com"
+[vars]
+PUBLIC_BASE_URL = "https://www.xellvio.com"

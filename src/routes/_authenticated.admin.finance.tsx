@@ -90,10 +90,25 @@ function FinancePage() {
   const led = s.ledger ?? {};
   const w = s.wallets ?? {};
   const u = s.usage ?? {};
+  const inb = s.inbound ?? {};
   const attempts: any = data?.attemptAudit ?? {};
 
-  const grossProfit = Number(u.tenant_spend ?? 0) - Number(u.carrier_cost ?? 0);
-  const cashHeld = Number(mi.confirmed_credits ?? 0) - Number(u.carrier_cost ?? 0);
+  // Use led.debits (the actual ledger total — same figure shown on the
+  // "Credits tenants spent" card) rather than u.tenant_spend, which silently
+  // excludes messages that were charged at reservation time but ended up
+  // status='failed'. Also account for inbound carrier cost, which the RPC
+  // computes but this page previously never subtracted anywhere.
+  const totalCarrierCost = Number(u.carrier_cost ?? 0) + Number(inb.carrier_cost ?? 0);
+  const grossProfit = Number(led.debits ?? 0) - totalCarrierCost;
+  const cashHeld = Number(mi.confirmed_credits ?? 0) - Number(led.refunds ?? 0) - totalCarrierCost;
+
+  // "Unused tenant credit" must only reflect a real cash liability — money
+  // tenants actually paid you that they haven't spent. SUM(accounts.credit_balance)
+  // also includes non-payment-backed topups (goodwill/adjustment grants with no
+  // matching payment row), which inflates this figure with credit you never
+  // actually received as cash. Derive it from the payment ledger instead.
+  const realUnusedCredit = Number(mi.confirmed_credits ?? 0) - Number(led.debits ?? 0) + Number(led.refunds ?? 0);
+  const nonCashCreditOutstanding = Number(w.unused_credits ?? 0) - realUnusedCredit;
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px]">
@@ -125,8 +140,8 @@ function FinancePage() {
           />
           <Stat
             label="Unused tenant credit"
-            value={usd(w.unused_credits)}
-            hint="Money tenants paid but have not spent yet. You owe them this service — not profit."
+            value={usd(realUnusedCredit)}
+            hint="Real cash liability only: confirmed payments minus spend minus refunds. Excludes non-cash-backed credit grants (goodwill/adjustments) — see below."
             tone="bad"
           />
           <Stat
@@ -154,19 +169,21 @@ function FinancePage() {
           <Stat
             label="Gross profit on sending"
             value={usd(grossProfit)}
-            hint="What tenants were charged minus what the carrier charged you."
+            hint="All credits debited from tenant wallets minus outbound + inbound carrier cost."
             tone={grossProfit >= 0 ? "good" : "bad"}
           />
           <Stat
             label="Cash you should still hold"
             value={usd(cashHeld)}
-            hint="All money received minus everything the carrier has cost you so far."
+            hint="Money received minus refunds issued minus everything the carrier has cost you (outbound + inbound) so far."
             tone={cashHeld >= 0 ? "good" : "bad"}
           />
         </div>
         <p className="text-xs text-muted-foreground">
           Refunds issued: {usd(led.refunds)} · Credits added to wallets in total: {usd(led.topups)} · Tenants in debt
-          (negative balance): {usd(w.negative_balances)}
+          (negative balance): {usd(w.negative_balances)} · Inbound carrier cost: {usd(inb.carrier_cost)} (
+          {num(inb.messages)} inbound messages) · Non-cash credit outstanding (goodwill/adjustment grants, not backed
+          by a payment): {usd(nonCashCreditOutstanding)}
         </p>
       </section>
 

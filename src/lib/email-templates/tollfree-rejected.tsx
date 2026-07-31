@@ -51,6 +51,6 @@ export const template = {
     businessName: "Acme Co",
     phoneNumber: "+18885551234",
     reason: "Your website needs a visible Privacy Policy link.",
-    setupUrl: "https://xellvio.lovable.app/app/setup-sms",
+    setupUrl: "https://www.xellvio.com/app/setup-sms",
   },
 } satisfies TemplateEntry;

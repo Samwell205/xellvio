@@ -147,6 +147,17 @@ export async function handleTelnyxInboundMessage(payload: any) {
     })),
   );
 
+  // A genuine reply (not a bare STOP) demonstrates two-way engagement, which
+  // exempts this contact from the per-recipient frequency cap going forward.
+  if (!STOP_WORDS.includes(upper)) {
+    const engagedProfileIds = (profiles ?? [])
+      .filter((pr: any) => targetAccountIds.includes(pr.account_id))
+      .map((pr: any) => pr.id);
+    if (engagedProfileIds.length > 0) {
+      await admin.from("profiles").update({ two_way_opt_in: true }).in("id", engagedProfileIds);
+    }
+  }
+
   try {
     const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
     await Promise.all(

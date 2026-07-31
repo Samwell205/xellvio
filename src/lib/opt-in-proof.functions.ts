@@ -31,7 +31,7 @@ function publicBase() {
   return (
     process.env.PUBLIC_SITE_URL ||
     process.env.SITE_URL ||
-    "https://xellvio.com"
+    "https://www.xellvio.com"
   ).replace(/\/+$/, "");
 }
 

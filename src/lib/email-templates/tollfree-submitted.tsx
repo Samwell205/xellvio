@@ -44,6 +44,6 @@ export const template = {
     firstName: "Alex",
     businessName: "Acme Co",
     phoneNumber: "+18885551234",
-    dashboardUrl: "https://xellvio.lovable.app/app/setup-sms",
+    dashboardUrl: "https://www.xellvio.com/app/setup-sms",
   },
 } satisfies TemplateEntry;

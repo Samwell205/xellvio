@@ -10,7 +10,7 @@ function npKey() {
 }
 
 function siteOrigin(): string {
-  return process.env.PUBLIC_SITE_URL || "https://xellvio.lovable.app";
+  return process.env.PUBLIC_SITE_URL || "https://www.xellvio.com";
 }
 
 function ipnUrl(): string {
@@ -411,7 +411,7 @@ export async function notifyCryptoPaymentCredited(payment: {
             `New balance: ${balance.toFixed(2)}\n\n` +
             `You can start sending campaigns right away.`,
           ctaText: "Open dashboard",
-          ctaUrl: `${process.env.PUBLIC_SITE_URL || "https://xellvio.lovable.app"}/app/billing`,
+          ctaUrl: `${process.env.PUBLIC_SITE_URL || "https://www.xellvio.com"}/app/billing`,
         },
         includeUnsubscribe: false,
       });

@@ -3,7 +3,7 @@
 // compliance firewall enforced across every send path (campaigns, test SMS,
 // inbox replies).
 //
-// Screening runs six independent checks, produces a 0–100 risk score, and
+// Screening runs seven independent checks, produces a 0–100 risk score, and
 // makes a three-way decision:
 //   score < 40 → passed (send normally)
 //   score 40–69 → held for admin review (auto-approves after opts.autoApproveHours)
@@ -81,6 +81,27 @@ export async function screenMessageContent(
       score: isBlock ? 80 : 40,
       detail: scan.details,
     });
+  } else if (body.trim()) {
+    // ---- (a2) AI safety review — only runs when the keyword scan found
+    // nothing (i.e. wording is ambiguous enough to need intent classification).
+    // aiScan() already fails open on errors/low-confidence and only returns
+    // allowed=false on an unmistakable violation, so a hit here is treated
+    // the same as a hard keyword block: same category taxonomy, same
+    // auto-suspend-on-first-offense policy below.
+    try {
+      const { aiScan } = await import("./ai-content-scan.server");
+      const aiResult = await aiScan(body);
+      if (!aiResult.allowed) {
+        reasons.push({
+          code: `category:${aiResult.category ?? "ai_flagged"}`,
+          message: aiResult.reason ?? `AI review flagged prohibited content${aiResult.category ? ` (${aiResult.category})` : ""}.`,
+          score: 80,
+          detail: "ai_confidence=high",
+        });
+      }
+    } catch (e) {
+      console.error("[screening] AI review failed, failing open", e);
+    }
   }
 
   // ---- (b) Excessive link count -----------------------------------------

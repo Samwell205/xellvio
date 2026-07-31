@@ -48,7 +48,7 @@ export const simulateNowPaymentsIpn = createServerFn({ method: "POST" })
     const body = sortedStringify(payload);
     const signature = createHmac("sha512", secret).update(body).digest("hex");
 
-    const origin = process.env.PUBLIC_SITE_URL || "https://project--91d3bf8a-0d22-4b7d-9569-057a8306639a-dev.lovable.app";
+    const origin = process.env.PUBLIC_SITE_URL || "https://www.xellvio.com";
     const res = await fetch(`${origin}/api/public/nowpayments-ipn`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-nowpayments-sig": signature },

@@ -7,7 +7,15 @@ import { countryFromPhone } from "@/lib/country-from-phone";
 import { keywordScan } from "@/lib/content-scanner";
 
 const PLAN_INSERT_CHUNK = 500;
-const DELIVER_PER_WORKER = 500;
+// Recipients enriched + inserted per invocation. Bounds planning CPU cost to
+// a fixed amount regardless of campaign size — previously the entire
+// eligible list was enriched (segment calc, link rewriting, crypto RNG) in
+// one shot, which is what exceeded the Worker's CPU time limit for large
+// campaigns (e.g. 3,019 recipients in one request).
+const PLAN_BATCH_SIZE = 500;
+// Reduced from 500 as a safety margin now that a single invocation can do
+// both a planning batch AND a delivery batch back to back.
+const DELIVER_PER_WORKER = 300;
 const DELIVER_CONCURRENCY = 100;
 
 function render(body: string, p: { first_name?: string | null; last_name?: string | null; country_code?: string | null; phone_e164?: string | null; custom_fields?: Record<string, any> | null }) {
@@ -75,6 +83,55 @@ async function loadEligibleRecipients(supabaseAdmin: any, accountId: string, aud
     if (rows.length < PAGE) break;
   }
   return recipients;
+}
+
+/**
+ * Page through the eligible list, skipping profiles that already have a
+ * message row for this campaign, and return up to `batchSize` NEW ones plus
+ * whether any more remain beyond that. This is what makes planning resumable
+ * across ticks instead of an all-or-nothing single pass: each invocation
+ * only enriches/inserts one bounded batch, and processCampaign() re-derives
+ * "is this campaign fully planned yet" from `hasMore` rather than assuming
+ * "any messages exist" means "fully planned."
+ */
+async function loadNextUnplannedBatch(
+  supabaseAdmin: any,
+  campaignId: string,
+  accountId: string,
+  audience: any,
+  batchSize: number,
+): Promise<{ recipients: any[]; hasMore: boolean }> {
+  const { data: plannedRows, error: plannedErr } = await supabaseAdmin
+    .from("messages")
+    .select("profile_id")
+    .eq("campaign_id", campaignId);
+  if (plannedErr) throw plannedErr;
+  const planned = new Set((plannedRows ?? []).map((r: any) => r.profile_id));
+
+  const PAGE = 1000;
+  const recipients: any[] = [];
+  let hasMore = false;
+  for (let offset = 0; ; offset += PAGE) {
+    const { data, error } = await supabaseAdmin.rpc("eligible_profile_ids_page", {
+      _account_id: accountId,
+      _audience: audience,
+      _limit: PAGE,
+      _offset: offset,
+    });
+    if (error) throw error;
+    const rows = data ?? [];
+    for (const r of rows) {
+      if (planned.has(r.profile_id)) continue;
+      if (recipients.length < batchSize) {
+        recipients.push(r);
+      } else {
+        hasMore = true;
+        break;
+      }
+    }
+    if (hasMore || rows.length < PAGE) break;
+  }
+  return { recipients, hasMore };
 }
 
 function isShaftLikeCode(code: string): boolean {
@@ -192,6 +249,54 @@ async function sendOneMessage(
       sent_at: new Date().toISOString(),
     }).eq("message_id", m.id).eq("attempt_number", m.attempt_number);
 
+    // If Telnyx billed more segments than we reserved from the tenant's
+    // wallet at claim time, the platform absorbed the shortfall — flag it
+    // for admin review instead of silently eating the cost.
+    if (providerSegments > m.segments_count && m.segments_count > 0) {
+      try {
+        const shortfallSegments = providerSegments - m.segments_count;
+        const perSegmentCost = Number(m.cost) / m.segments_count;
+        const shortfallAmount = +(shortfallSegments * perSegmentCost).toFixed(4);
+        if (shortfallAmount > 0) {
+          const { data: existingCase } = await supabaseAdmin
+            .from("financial_recovery_cases")
+            .select("id, verified_uncovered_tenant_charge, evidence")
+            .eq("account_id", campaign.account_id)
+            .contains("campaign_ids", [campaign.id])
+            .in("status", ["draft", "pending_provider"])
+            .maybeSingle();
+          const evidenceEntry = {
+            message_id: m.id,
+            phone_e164: m.phone_e164,
+            reserved_segments: m.segments_count,
+            billed_segments: providerSegments,
+            shortfall_amount: shortfallAmount,
+            detected_at: new Date().toISOString(),
+          };
+          if (existingCase) {
+            const prevShortfalls = Array.isArray((existingCase.evidence as any)?.shortfalls) ? (existingCase.evidence as any).shortfalls : [];
+            await supabaseAdmin.from("financial_recovery_cases").update({
+              verified_uncovered_tenant_charge: Number(existingCase.verified_uncovered_tenant_charge) + shortfallAmount,
+              evidence: { shortfalls: [...prevShortfalls, evidenceEntry] },
+            }).eq("id", existingCase.id);
+          } else {
+            await supabaseAdmin.from("financial_recovery_cases").insert({
+              account_id: campaign.account_id,
+              title: `Segment undercharge — campaign "${campaign.name ?? campaign.id}"`,
+              campaign_ids: [campaign.id],
+              status: "draft",
+              evidence_quality: "exact",
+              verified_uncovered_tenant_charge: shortfallAmount,
+              summary: "Telnyx billed more segments than reserved for one or more messages in this campaign. Auto-flagged by the dispatcher — no tenant collection or provider dispute has been initiated yet.",
+              evidence: { shortfalls: [evidenceEntry] },
+            });
+          }
+        }
+      } catch (e) {
+        console.error("[dispatch] recovery case creation failed", e);
+      }
+    }
+
     try {
       const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
       await forwardSmsToGorgias({
@@ -234,60 +339,81 @@ async function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) =>
   await Promise.all(workers);
 }
 
-async function planCampaign(
-  supabaseAdmin: any, campaign: any, rates: Rate[],
-): Promise<{ planned: number; skipped: number; cost: number; reason?: string }> {
+/**
+ * One-time campaign-level setup: keyword prescan + full compliance
+ * screening (including the AI review, when the keyword scan is clean) and
+ * the "does this campaign have any eligible recipients at all" check. Runs
+ * exactly once per campaign — processCampaign() only calls this when no
+ * message rows exist yet for the campaign, since messages only start
+ * getting inserted after this step passes.
+ */
+async function beginCampaignIfNeeded(
+  supabaseAdmin: any, campaign: any,
+): Promise<{ ok: true } | { ok: false; reason?: string }> {
   // ── Legacy fast keyword scan (kept for backwards compat with the badge).
   const preScan = keywordScan(campaign.message_body ?? "");
   if (!preScan.allowed) {
     await supabaseAdmin.from("campaigns")
       .update({ status: "blocked_content", paused_reason: preScan.reason }).eq("id", campaign.id);
     await flagAccountForReview(supabaseAdmin, campaign.account_id, "content_violation_dispatch", preScan.reason ?? "");
-    return { planned: 0, skipped: 0, cost: 0, reason: "blocked_content" };
+    return { ok: false, reason: "blocked_content" };
   }
-
 
   const list = await loadEligibleRecipients(supabaseAdmin, campaign.account_id, campaign.audience ?? { include: [], exclude: [] });
   if (list.length === 0) {
     await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
-    return { planned: 0, skipped: 0, cost: 0 };
+    return { ok: false };
   }
 
   // ── Full compliance screening once per campaign (all body-scoped checks +
-  //    volume anomaly). Per-recipient frequency cap runs later in sendOneMessage.
-  {
-    const { screenMessageContent } = await import("@/lib/content-screening.server");
-    const screen = await screenMessageContent(campaign.message_body ?? "", campaign.account_id, {
-      campaignId: campaign.id,
-      plannedRecipients: list.length,
-      context: "campaign_plan",
-    });
-    if (screen.action === "blocked") {
-      await supabaseAdmin.from("campaigns")
-        .update({
-          status: "blocked_content",
-          paused_reason: `Blocked by screening (risk ${screen.riskScore}/100): ${screen.blockedReasons[0] ?? "policy violation"}`,
-        }).eq("id", campaign.id);
-      return { planned: 0, skipped: 0, cost: 0, reason: "blocked_by_screening" };
-    }
-    if (screen.action === "held_for_review") {
-      await supabaseAdmin.from("campaigns")
-        .update({
-          status: "paused",
-          paused_reason: `Held for review (risk ${screen.riskScore}/100). ${screen.blockedReasons.slice(0, 2).join(" · ")}`,
-          paused_at: new Date().toISOString(),
-        }).eq("id", campaign.id);
-      return { planned: 0, skipped: 0, cost: 0, reason: "held_for_review" };
-    }
+  //    volume anomaly, sized against the TOTAL eligible count, not a batch).
+  //    Per-recipient frequency cap runs later in sendOneMessage.
+  const { screenMessageContent } = await import("@/lib/content-screening.server");
+  const screen = await screenMessageContent(campaign.message_body ?? "", campaign.account_id, {
+    campaignId: campaign.id,
+    plannedRecipients: list.length,
+    context: "campaign_plan",
+  });
+  if (screen.action === "blocked") {
+    await supabaseAdmin.from("campaigns")
+      .update({
+        status: "blocked_content",
+        paused_reason: `Blocked by screening (risk ${screen.riskScore}/100): ${screen.blockedReasons[0] ?? "policy violation"}`,
+      }).eq("id", campaign.id);
+    return { ok: false, reason: "blocked_by_screening" };
+  }
+  if (screen.action === "held_for_review") {
+    await supabaseAdmin.from("campaigns")
+      .update({
+        status: "paused",
+        paused_reason: `Held for review (risk ${screen.riskScore}/100). ${screen.blockedReasons.slice(0, 2).join(" · ")}`,
+        paused_at: new Date().toISOString(),
+      }).eq("id", campaign.id);
+    return { ok: false, reason: "held_for_review" };
   }
 
+  return { ok: true };
+}
 
+/**
+ * Enrich and insert ONE bounded batch of recipients as queued (or
+ * insufficient-balance-failed) message rows. `recipients` is pre-selected by
+ * the caller via loadNextUnplannedBatch, capped to PLAN_BATCH_SIZE — this
+ * function never processes an entire campaign's recipient list in one call,
+ * so its CPU cost stays bounded regardless of campaign size. `isFirstBatch`
+ * gates the one-time side effects (campaign status transition, admin push,
+ * the insufficient-balance-for-everyone failure path) that previously ran
+ * exactly once per campaign and must still only run once now.
+ */
+async function planCampaign(
+  supabaseAdmin: any, campaign: any, rates: Rate[], recipients: any[], isFirstBatch: boolean,
+): Promise<{ planned: number; skipped: number; cost: number; reason?: string }> {
   const dial = rates.map((r) => ({ country_code: r.country_code, dial_prefix: r.dial_prefix }));
   const rateByCC: Record<string, Rate> = {};
   for (const r of rates) rateByCC[r.country_code] = r;
   const hasMedia = !!campaign.media_url;
 
-  const enriched = list.map((p: any) => {
+  const enriched = recipients.map((p: any) => {
     const body = render(campaign.message_body, p);
     const seg = calculateSegments(body);
     const cc = p.country_code || countryFromPhone(p.phone_e164, dial);
@@ -375,10 +501,17 @@ async function planCampaign(
     else failedRows.push({ ...rowBase, status: "failed", error_code: "insufficient_balance" });
   }
 
+  // Upsert with ignoreDuplicates rather than a plain insert: this is the
+  // hard backstop against ever double-planning (and therefore double-
+  // charging/double-sending) a recipient, regardless of whether the
+  // in-memory `planned` exclusion set above is ever wrong for any reason.
+  // Relies on the messages_campaign_profile_unique constraint.
   const allRows = [...queuedRows, ...failedRows];
   for (let i = 0; i < allRows.length; i += PLAN_INSERT_CHUNK) {
     const chunk = allRows.slice(i, i + PLAN_INSERT_CHUNK);
-    const { error: insErr } = await supabaseAdmin.from("messages").insert(chunk);
+    const { error: insErr } = await supabaseAdmin
+      .from("messages")
+      .upsert(chunk, { onConflict: "campaign_id,profile_id", ignoreDuplicates: true });
     if (insErr) throw new Error(`Failed to insert message batch: ${insErr.message}`);
   }
 
@@ -403,23 +536,31 @@ async function planCampaign(
       .is("campaign_id", null);
   }
 
-  if (queuedRows.length === 0) {
+  // Only the FIRST batch can conclude "nothing could be queued for anyone" —
+  // a later batch returning zero queued rows (e.g. balance ran out mid-
+  // campaign) must not overwrite a campaign that already has earlier
+  // messages queued/sent from previous ticks.
+  if (queuedRows.length === 0 && isFirstBatch) {
     await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
     return { planned: 0, skipped: failedRows.length, cost: totalCost, reason: "insufficient_balance" };
   }
-  await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
-  try {
-    const { sendAdminPush } = await import("@/lib/admin-push.server");
-    const { data: acct } = await supabaseAdmin.from("accounts")
-      .select("full_name, email, contact_email").eq("id", campaign.account_id).maybeSingle();
-    const who = acct?.full_name || acct?.contact_email || acct?.email || "A tenant";
-    await sendAdminPush({
-      title: "Campaign started",
-      body: `${who} is sending "${campaign.name ?? "Untitled"}" — ${queuedRows.length} messages queued.`,
-      url: `/admin/messages`,
-      tag: `camp-start-${campaign.id}`,
-    });
-  } catch (e) { console.error("[dispatch] push start failed", e); }
+  if (isFirstBatch) {
+    await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
+    try {
+      const { sendAdminPush } = await import("@/lib/admin-push.server");
+      const { data: acct } = await supabaseAdmin.from("accounts")
+        .select("full_name, email, contact_email").eq("id", campaign.account_id).maybeSingle();
+      const who = acct?.full_name || acct?.contact_email || acct?.email || "A tenant";
+      await sendAdminPush({
+        title: "Campaign started",
+        body: `${who} is sending "${campaign.name ?? "Untitled"}".`,
+        url: `/admin/messages`,
+        tag: `camp-start-${campaign.id}`,
+      });
+    } catch (e) { console.error("[dispatch] push start failed", e); }
+  } else if (queuedRows.length > 0) {
+    await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
+  }
   return { planned: queuedRows.length, skipped: failedRows.length, cost: totalCost };
 }
 
@@ -474,15 +615,38 @@ async function deliverPending(
 async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[], sender: Sender): Promise<any> {
   const { count: existing } = await supabaseAdmin
     .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
-  if ((existing ?? 0) === 0) {
-    const planned = await planCampaign(supabaseAdmin, campaign, rates);
-    if (planned.planned > 0) {
-      const delivered = await deliverPending(supabaseAdmin, campaign, sender);
-      return { ...planned, delivered_now: delivered.sent, failed_now: delivered.failed, remaining: delivered.remaining };
-    }
+  const isFirstBatch = (existing ?? 0) === 0;
+
+  if (isFirstBatch) {
+    const begin = await beginCampaignIfNeeded(supabaseAdmin, campaign);
+    if (!begin.ok) return { planned: 0, skipped: 0, cost: 0, reason: begin.reason };
+  }
+
+  const { recipients, hasMore } = await loadNextUnplannedBatch(
+    supabaseAdmin, campaign.id, campaign.account_id,
+    campaign.audience ?? { include: [], exclude: [] }, PLAN_BATCH_SIZE,
+  );
+
+  const planned = recipients.length > 0
+    ? await planCampaign(supabaseAdmin, campaign, rates, recipients, isFirstBatch)
+    : { planned: 0, skipped: 0, cost: 0 };
+
+  // If a full batch of still-unplanned recipients remains, defer delivery to
+  // the next tick — this keeps one invocation's total work (a planning
+  // batch, or a planning batch plus delivery) bounded, instead of planning
+  // an entire large campaign's recipient list in a single request.
+  if (hasMore) {
+    return { ...planned, deferred_delivery: true };
+  }
+
+  if (planned.planned === 0 && isFirstBatch && recipients.length > 0) {
+    // Nothing could be queued at all (e.g. insufficient balance for every
+    // recipient) — planCampaign already marked the campaign failed.
     return planned;
   }
-  return await deliverPending(supabaseAdmin, campaign, sender);
+
+  const delivered = await deliverPending(supabaseAdmin, campaign, sender);
+  return { ...planned, delivered_now: delivered.sent, failed_now: delivered.failed, remaining: delivered.remaining };
 }
 
 async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {

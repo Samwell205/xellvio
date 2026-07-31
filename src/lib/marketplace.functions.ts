@@ -227,7 +227,7 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
           heading: "New seller withdrawal request",
           body: `Seller ${acct?.full_name || acct?.email} requested $${data.amount.toFixed(2)}.\n\nBank: ${payout.bank_name}\nAccount name: ${payout.account_name}\nAccount number: ${payout.account_number}\n\nReview in the admin console.`,
           ctaText: "Open admin",
-          ctaUrl: "https://xellvio.lovable.app/admin/marketplace",
+          ctaUrl: "https://www.xellvio.com/admin/marketplace",
         } as any,
       });
     } catch { /* best-effort */ }
@@ -372,7 +372,7 @@ export const buyVerifiedNumber = createServerFn({ method: "POST" })
             heading: "You made a sale!",
             body: `Your verified toll-free number ${claim.phone_number ?? ""} was purchased. $${pricing.sellerPayout.toFixed(2)} has been credited to your seller balance.`,
             ctaText: "Open dashboard",
-            ctaUrl: "https://xellvio.lovable.app/sellers/dashboard",
+            ctaUrl: "https://www.xellvio.com/sellers/dashboard",
           } as any,
         });
       }
@@ -386,7 +386,7 @@ export const buyVerifiedNumber = createServerFn({ method: "POST" })
             heading: "Your number is ready to send",
             body: `You purchased a pre-verified toll-free number: ${claim.phone_number ?? ""}. You can start campaigns right away.`,
             ctaText: "Start a campaign",
-            ctaUrl: "https://xellvio.lovable.app/app/campaigns/new",
+            ctaUrl: "https://www.xellvio.com/app/campaigns/new",
           } as any,
         });
       }
@@ -519,7 +519,7 @@ export const adminMarkWithdrawal = createServerFn({ method: "POST" })
               ? `Your withdrawal of $${Number(wr.amount).toFixed(2)} has been sent to your bank account.`
               : `Your withdrawal of $${Number(wr.amount).toFixed(2)} was rejected and refunded to your seller balance.${data.notes ? `\n\nReason: ${data.notes}` : ""}`,
             ctaText: "Open dashboard",
-            ctaUrl: "https://xellvio.lovable.app/sellers/dashboard",
+            ctaUrl: "https://www.xellvio.com/sellers/dashboard",
           } as any,
         });
       }

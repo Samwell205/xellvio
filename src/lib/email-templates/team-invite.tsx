@@ -45,6 +45,6 @@ export const template = {
     inviterName: "Alex",
     workspaceName: "Acme Co",
     role: "editor",
-    acceptUrl: "https://xellvio.lovable.app/auth",
+    acceptUrl: "https://www.xellvio.com/auth",
   },
 } satisfies TemplateEntry;
