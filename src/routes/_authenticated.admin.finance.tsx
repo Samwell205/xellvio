@@ -187,9 +187,17 @@ function FinancePage() {
         <p className="text-xs text-muted-foreground">
           Refunds issued: {usd(led.refunds)} · Credits added to wallets in total: {usd(led.topups)} · Tenants in debt
           (negative balance): {usd(w.negative_balances)} · Inbound carrier cost: {usd(inb.carrier_cost)} (
-          {num(inb.messages)} inbound messages) · Non-cash credit outstanding (goodwill/adjustment grants, not backed
-          by a payment): {usd(nonCashCreditOutstanding)}
+          {num(inb.messages)} inbound messages) · Goodwill/adjustment credit granted without a payment:{" "}
+          {usd(grantedCredit)}
         </p>
+        <p className={`text-xs ${Math.abs(ledgerDrift) > 0.01 ? "text-destructive" : "text-muted-foreground"}`}>
+          Reconciliation check: wallet balances {usd(rec.wallet_total)} vs transaction ledger {usd(rec.ledger_total)} ·
+          drift {usd(ledgerDrift)}
+          {Math.abs(ledgerDrift) > 0.01
+            ? " — a wallet was changed without a matching transaction row; investigate before trusting the totals."
+            : " — every wallet matches its transaction history exactly."}
+        </p>
+
       </section>
 
       <Tabs defaultValue="tenants">
