@@ -144,10 +144,11 @@ function FinancePage() {
           />
           <Stat
             label="Unused tenant credit"
-            value={usd(realUnusedCredit)}
-            hint="Real cash liability only: confirmed payments minus spend minus refunds. Excludes non-cash-backed credit grants (goodwill/adjustments) — see below."
+            value={usd(walletTotal)}
+            hint={`Live sum of all ${num(w.tenants)} tenant wallet balances (matches the Balance column below). ${usd(cashBackedCredit)} of it is backed by confirmed payments; ${usd(grantedCredit)} is goodwill/adjustment credit.`}
             tone="bad"
           />
+
           <Stat
             label="Pending / unconfirmed payments"
             value={usd(mi.pending_credits)}
