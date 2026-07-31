@@ -7,8 +7,16 @@ import { countryFromPhone } from "@/lib/country-from-phone";
 import { keywordScan } from "@/lib/content-scanner";
 
 const PLAN_INSERT_CHUNK = 500;
-const DELIVER_PER_WORKER = 500;
-const DELIVER_CONCURRENCY = 100;
+// Keep each dispatcher invocation small enough to always finish inside the
+// caller's HTTP timeout. If the caller (pg_cron/pg_net) hangs up mid-run the
+// serverless worker is cancelled, leaving claimed rows stuck in `sending`
+// which the next run then has to write off as `dispatch_timeout`.
+const DELIVER_PER_WORKER = 120;
+const DELIVER_CONCURRENCY = 30;
+// Soft wall-clock budget for one invocation. Anything left over is picked up by
+// the next scheduled run instead of risking a mid-flight cancellation.
+const RUN_BUDGET_MS = 40_000;
+
 
 function render(body: string, p: { first_name?: string | null; last_name?: string | null; country_code?: string | null; phone_e164?: string | null; custom_fields?: Record<string, any> | null }) {
   const fields: Record<string, any> = {
