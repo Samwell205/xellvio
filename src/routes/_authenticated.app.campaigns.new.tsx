@@ -851,7 +851,7 @@ function NewCampaignPage() {
               <div>
                 No verified sender for: <b>{missingSenderCountries.join(", ")}</b>. Launch is blocked until you{" "}
                 <Link to="/app/setup-sms" className="underline font-medium">set up SMS</Link> or{" "}
-                <Link to="/app/number-requests" className="underline font-medium">request a number</Link> for these countries — or remove those recipients.
+                <Link to="/app/setup-sms" className="underline font-medium">request a number</Link> for these countries — or remove those recipients.
               </div>
             </div>
           )}
@@ -1187,7 +1187,7 @@ function SenderRoutingCard({
         </p>
       )}
       <p className="text-[11px] text-muted-foreground">
-        Need a sender for another country? <Link to="/app/setup-sms" className="text-primary underline">Set up SMS</Link> or <Link to="/app/number-requests" className="text-primary underline">request a number</Link>.
+        Need a sender for another country? <Link to="/app/setup-sms" className="text-primary underline">Set up SMS</Link> or <Link to="/app/setup-sms" className="text-primary underline">request a number</Link>.
       </p>
     </Card>
   );
