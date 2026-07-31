@@ -42,55 +42,70 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h),
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since7d),
       supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h).in("status", ["failed", "undelivered"]),
-      supabaseAdmin.from("payments").select("amount,currency,status,created_at,provider").gte("created_at", since7d),
-      supabaseAdmin.from("payments").select("amount,currency,status,provider,created_at"),
-      supabaseAdmin.from("accounts").select("credit_balance"),
+      supabaseAdmin.from("payments").select("amount,credits,currency,status,created_at,provider").gte("created_at", since7d),
+      fetchAllRows(() => supabaseAdmin.from("payments").select("amount,credits,currency,status,provider,created_at").order("created_at", { ascending: false })),
+      fetchAllRows(() => supabaseAdmin.from("accounts").select("credit_balance").order("id")),
       supabaseAdmin.from("accounts").select("id,email,full_name,company,created_at").order("created_at", { ascending: false }).limit(6),
       supabaseAdmin.from("messages").select("id,phone_e164,status,created_at,campaign_id,cost,country_code").order("created_at", { ascending: false }).limit(8),
       supabaseAdmin.from("payments").select("id,amount,currency,status,provider,created_at,account_id").order("created_at", { ascending: false }).limit(6),
       fetchAllRows(() =>
         supabaseAdmin.from("messages")
-          .select("cost,segments_count,country_code,status,created_at")
+          .select("cost,segments_count,country_code,status,created_at,is_mms")
           .in("status", ["sent", "delivered", "delivery_unconfirmed"])
           .order("created_at", { ascending: false }),
       ),
-      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,passthrough_fee"),
+      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,passthrough_fee,mms_multiplier,mms_cost_multiplier"),
     ]);
+
 
     const smsRows: any[] = smsSpendAll as any[];
 
 
     const isPaid = (s: string) => s === "succeeded" || s === "approved" || s === "paid" || s === "finished" || s === "confirmed";
-    // Platform accounting is USD. Non-USD payments (e.g. NGN from Paystack local currency)
-    // are excluded from totals to avoid mixing currencies. Cancelled/failed/pending are also excluded.
-    const isUsd = (c: any) => !c || String(c).toUpperCase() === "USD";
-    const paid7d = (payments7d.data ?? []).filter((p: any) => isPaid(p.status) && isUsd(p.currency));
-    const revenue7d = paid7d.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+    // Platform accounting is in credits (1 credit = 1 USD of sending power), which is
+    // what the wallet ledger stores. `payments.amount` is the amount charged in the
+    // payment's own currency (e.g. NGN via Paystack local checkout), so summing it
+    // mixes currencies and overstates income. Always aggregate `payments.credits`
+    // — the same column the finance page and the wallet ledger use.
+    const creditsOf = (p: any) => Number(p.credits ?? 0);
+    const paid7d = ((payments7d.data ?? []) as any[]).filter((p: any) => isPaid(p.status));
+    const revenue7d = paid7d.reduce((s: number, p: any) => s + creditsOf(p), 0);
 
-    const allPaid = (allPayments.data ?? []).filter((p: any) => isPaid(p.status) && isUsd(p.currency));
-    const totalCollected = allPaid.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+    const allPaid = (allPayments as any[]).filter((p: any) => isPaid(p.status));
+    const totalCollected = allPaid.reduce((s: number, p: any) => s + creditsOf(p), 0);
     const collectedByProvider: Record<string, number> = {};
     for (const p of allPaid) {
       const k = (p.provider ?? "other") as string;
-      collectedByProvider[k] = (collectedByProvider[k] ?? 0) + Number(p.amount ?? 0);
+      collectedByProvider[k] = (collectedByProvider[k] ?? 0) + creditsOf(p);
     }
     const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
     const collected30d = allPaid
       .filter((p: any) => p.created_at >= since30d)
-      .reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+      .reduce((s: number, p: any) => s + creditsOf(p), 0);
 
-    const totalCredits = (creditSum.data ?? []).reduce((s: number, r: any) => s + Number(r.credit_balance ?? 0), 0);
+    // Live sum of every tenant wallet (paginated — a >1000 tenant count previously
+    // silently truncated this total).
+    const totalCredits = (creditSum as any[]).reduce((s: number, r: any) => s + Number(r.credit_balance ?? 0), 0);
 
-    // SMS economics
+    // SMS economics — MMS costs a multiple of SMS at the carrier, so the same
+    // multiplier the dispatcher and finance RPC apply is applied here too.
     const rates = ratesRes.data ?? [];
-    const costByCc = new Map<string, number>(rates.map((r: any) => [r.country_code, Number(r.cost_price ?? 0) + Number(r.passthrough_fee ?? 0)]));
-    // smsRows already declared above from paginated fetch
+    const costByCc = new Map<string, { base: number; mms: number }>(
+      rates.map((r: any) => [
+        r.country_code,
+        {
+          base: Number(r.cost_price ?? 0) + Number(r.passthrough_fee ?? 0),
+          mms: Number(r.mms_cost_multiplier ?? r.mms_multiplier ?? 3),
+        },
+      ]),
+    );
+    const carrierCostOf = (m: any) => {
+      const r = costByCc.get(m.country_code ?? "");
+      if (!r) return 0;
+      return r.base * Number(m.segments_count ?? 1) * (m.is_mms ? r.mms : 1);
+    };
     const tenantSmsSpend = smsRows.reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
-    const carrierSmsCost = smsRows.reduce((s: number, m: any) => {
-      const c = costByCc.get(m.country_code ?? "") ?? 0;
-      const seg = Number(m.segments_count ?? 1);
-      return s + c * seg;
-    }, 0);
+    const carrierSmsCost = smsRows.reduce((s: number, m: any) => s + carrierCostOf(m), 0);
     const smsMargin = tenantSmsSpend - carrierSmsCost;
     const messagesSentAllTime = smsRows.length;
     const smsSpend30d = smsRows
@@ -98,13 +113,12 @@ export const adminGetOverview = createServerFn({ method: "GET" })
       .reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
     const carrierCost30d = smsRows
       .filter((m: any) => m.created_at >= since30d)
-      .reduce((s: number, m: any) => {
-        const c = costByCc.get(m.country_code ?? "") ?? 0;
-        return s + c * Number(m.segments_count ?? 1);
-      }, 0);
+      .reduce((s: number, m: any) => s + carrierCostOf(m), 0);
 
-    // Estimated profit: revenue collected − carrier cost − unused credits still owed to tenants
+    // Cash you should still be holding: credits received, less what the carrier has
+    // cost you, less the credit tenants have not spent yet (a real liability).
     const estimatedProfit = totalCollected - carrierSmsCost - totalCredits;
+
 
     return {
       tenants: {

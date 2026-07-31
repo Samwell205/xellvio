@@ -102,13 +102,37 @@ function FinancePage() {
   const grossProfit = Number(led.debits ?? 0) - totalCarrierCost;
   const cashHeld = Number(mi.confirmed_credits ?? 0) - Number(led.refunds ?? 0) - totalCarrierCost;
 
-  // "Unused tenant credit" must only reflect a real cash liability — money
-  // tenants actually paid you that they haven't spent. SUM(accounts.credit_balance)
-  // also includes non-payment-backed topups (goodwill/adjustment grants with no
-  // matching payment row), which inflates this figure with credit you never
-  // actually received as cash. Derive it from the payment ledger instead.
-  const realUnusedCredit = Number(mi.confirmed_credits ?? 0) - Number(led.debits ?? 0) + Number(led.refunds ?? 0);
-  const nonCashCreditOutstanding = Number(w.unused_credits ?? 0) - realUnusedCredit;
+  // "Unused tenant credit" is the live sum of every tenant wallet balance — the
+  // exact same figure as the sum of the Balance column in the per-tenant table
+  // below, so the headline and the detail can never disagree. The portion of it
+  // actually backed by cash (vs goodwill/adjustment grants with no payment row)
+  // is reported separately instead of silently replacing the total.
+  const rec = s.reconciliation ?? {};
+  const walletTotal = Number(w.unused_credits ?? 0);
+  const grantedCredit = Number(rec.granted_credit ?? 0);
+  const cashBackedCredit = Number(mi.confirmed_credits ?? 0) - Number(led.debits ?? 0) + Number(led.refunds ?? 0);
+  const ledgerDrift = Number(rec.drift ?? 0);
+
+  // Live aggregate of the per-tenant rows — used for the table's Totals row so
+  // the detail table and the headline cards are provably the same numbers.
+  const tenantTotals = (tenants ?? []).reduce(
+    (acc: any, t: any) => {
+      acc.count += 1;
+      acc.funded += Number(t.funded ?? 0);
+      acc.granted += Number(t.granted ?? 0);
+      acc.spent += Number(t.spent ?? 0);
+      acc.refunded += Number(t.refunded ?? 0);
+      acc.balance += Number(t.balance ?? 0);
+      acc.drift += Number(t.drift ?? 0);
+      acc.messages += Number(t.messages ?? 0);
+      acc.carrier_cost += Number(t.carrier_cost ?? 0);
+      acc.profit += Number(t.profit ?? 0);
+      return acc;
+    },
+    { count: 0, funded: 0, granted: 0, spent: 0, refunded: 0, balance: 0, drift: 0, messages: 0, carrier_cost: 0, profit: 0 },
+  );
+
+
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px]">
@@ -140,10 +164,11 @@ function FinancePage() {
           />
           <Stat
             label="Unused tenant credit"
-            value={usd(realUnusedCredit)}
-            hint="Real cash liability only: confirmed payments minus spend minus refunds. Excludes non-cash-backed credit grants (goodwill/adjustments) — see below."
+            value={usd(walletTotal)}
+            hint={`Live sum of all ${num(w.tenants)} tenant wallet balances (matches the Balance column below). ${usd(cashBackedCredit)} of it is backed by confirmed payments; ${usd(grantedCredit)} is goodwill/adjustment credit.`}
             tone="bad"
           />
+
           <Stat
             label="Pending / unconfirmed payments"
             value={usd(mi.pending_credits)}
@@ -182,9 +207,17 @@ function FinancePage() {
         <p className="text-xs text-muted-foreground">
           Refunds issued: {usd(led.refunds)} · Credits added to wallets in total: {usd(led.topups)} · Tenants in debt
           (negative balance): {usd(w.negative_balances)} · Inbound carrier cost: {usd(inb.carrier_cost)} (
-          {num(inb.messages)} inbound messages) · Non-cash credit outstanding (goodwill/adjustment grants, not backed
-          by a payment): {usd(nonCashCreditOutstanding)}
+          {num(inb.messages)} inbound messages) · Goodwill/adjustment credit granted without a payment:{" "}
+          {usd(grantedCredit)}
         </p>
+        <p className={`text-xs ${Math.abs(ledgerDrift) > 0.01 ? "text-destructive" : "text-muted-foreground"}`}>
+          Reconciliation check: wallet balances {usd(rec.wallet_total)} vs transaction ledger {usd(rec.ledger_total)} ·
+          drift {usd(ledgerDrift)}
+          {Math.abs(ledgerDrift) > 0.01
+            ? " — a wallet was changed without a matching transaction row; investigate before trusting the totals."
+            : " — every wallet matches its transaction history exactly."}
+        </p>
+
       </section>
 
       <Tabs defaultValue="tenants">
@@ -202,7 +235,11 @@ function FinancePage() {
         <TabsContent value="tenants">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Every tenant: funded, spent, balance, profit</CardTitle>
+              <CardTitle className="text-base">Every tenant: funded, granted, spent, balance, profit</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Balance = Funded + Granted − Spent + Refunded. Drift flags any wallet that was changed without a
+                matching transaction row. The Totals row is the live aggregate behind the cards at the top.
+              </p>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -210,10 +247,12 @@ function FinancePage() {
                   <tr className="text-left">
                     <th className="py-2 pr-3">Tenant</th>
                     <th className="py-2 pr-3 text-right">Funded</th>
+                    <th className="py-2 pr-3 text-right">Granted</th>
                     <th className="py-2 pr-3 text-right">Last funded</th>
                     <th className="py-2 pr-3 text-right">Spent</th>
                     <th className="py-2 pr-3 text-right">Refunded</th>
                     <th className="py-2 pr-3 text-right">Balance</th>
+                    <th className="py-2 pr-3 text-right">Drift</th>
                     <th className="py-2 pr-3 text-right">Messages</th>
                     <th className="py-2 pr-3 text-right">Carrier cost</th>
                     <th className="py-2 pr-3 text-right">Your profit</th>
@@ -227,11 +266,17 @@ function FinancePage() {
                         <div className="text-xs text-muted-foreground">{t.email}</div>
                       </td>
                       <td className="py-2 pr-3 text-right">{usd(t.funded)}</td>
+                      <td className="py-2 pr-3 text-right">{usd(t.granted)}</td>
                       <td className="py-2 pr-3 text-right text-xs">{date(t.last_funded_at)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.spent)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.refunded)}</td>
                       <td className={`py-2 pr-3 text-right ${Number(t.balance) < 0 ? "text-destructive" : ""}`}>
                         {usd(t.balance)}
+                      </td>
+                      <td
+                        className={`py-2 pr-3 text-right ${Math.abs(Number(t.drift ?? 0)) > 0.01 ? "text-destructive font-medium" : "text-muted-foreground"}`}
+                      >
+                        {usd(t.drift)}
                       </td>
                       <td className="py-2 pr-3 text-right">{num(t.messages)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.carrier_cost)}</td>
@@ -243,10 +288,26 @@ function FinancePage() {
                     </tr>
                   ))}
                 </tbody>
+                <tfoot className="border-t-2 border-border text-sm font-medium">
+                  <tr>
+                    <td className="py-2 pr-3">Totals ({num(tenantTotals.count)} tenants)</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.funded)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.granted)}</td>
+                    <td className="py-2 pr-3" />
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.spent)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.refunded)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.balance)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.drift)}</td>
+                    <td className="py-2 pr-3 text-right">{num(tenantTotals.messages)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.carrier_cost)}</td>
+                    <td className="py-2 pr-3 text-right">{usd(tenantTotals.profit)}</td>
+                  </tr>
+                </tfoot>
               </table>
             </CardContent>
           </Card>
         </TabsContent>
+
 
         <TabsContent value="attempts">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
