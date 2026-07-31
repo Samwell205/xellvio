@@ -18,7 +18,20 @@ const PLAN_BATCH_SIZE = 500;
 // serverless worker is cancelled, leaving claimed rows stuck in `sending`
 // which the next run then has to write off as `dispatch_timeout`.
 const DELIVER_PER_WORKER = 120;
-const DELIVER_CONCURRENCY = 30;
+// Was 30. This project's Postgres tier caps out at 60 total connections, and
+// steady-state background usage (PostgREST, realtime, pg_cron, etc.) already
+// holds ~25 of those. A first-tick invocation stacks 30-way concurrent writes
+// on top of the connection load from planning/screening moments earlier —
+// under that pressure, some of the per-message status UPDATEs in
+// sendOneMessage were failing, and because those calls didn't check the
+// returned error, the code reported success anyway while the row stayed
+// stuck at status='sending' — later swept as dispatch_timeout. Confirmed via
+// direct comparison of a dispatch tick's own reported delivered/failed
+// counts against the messages table's actual state two minutes later: the
+// tick claimed success for all 9 messages in a campaign, but all 9 were
+// still 'sending' at the next tick. Lower concurrency + writeWithRetry below
+// are the two-part fix.
+const DELIVER_CONCURRENCY = 12;
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
@@ -159,6 +172,37 @@ async function flagAccountForReview(supabaseAdmin: any, accountId: string, reaso
   }
 }
 
+/**
+ * A message row stuck at status='sending' is exactly what the dispatch_timeout
+ * sweep in claim_campaign_messages later writes off — so every exit path in
+ * sendOneMessage that's supposed to move a row OFF 'sending' must actually
+ * land, not just be attempted. Plain `.update()` calls here previously never
+ * checked the returned error, so a transient write failure (e.g. Postgres
+ * connection pressure) was silently treated as success while the row stayed
+ * on 'sending'. Retries a few times with backoff before giving up and
+ * throwing, so a real failure is at least visible in logs instead of
+ * manifesting two minutes later as an unexplained dispatch_timeout.
+ */
+async function writeWithRetry(
+  supabaseAdmin: any,
+  table: string,
+  patch: Record<string, any>,
+  match: Record<string, any>,
+  attempts = 4,
+): Promise<void> {
+  let lastError: any = null;
+  for (let i = 0; i < attempts; i++) {
+    let q = supabaseAdmin.from(table).update(patch);
+    for (const [k, v] of Object.entries(match)) q = q.eq(k, v);
+    const { error } = await q;
+    if (!error) return;
+    lastError = error;
+    console.error(`[dispatch] ${table} update failed (attempt ${i + 1}/${attempts})`, JSON.stringify(match), error.message ?? error);
+    if (i < attempts - 1) await new Promise((r) => setTimeout(r, 200 * (i + 1)));
+  }
+  throw new Error(`Failed to update ${table} after ${attempts} attempts: ${lastError?.message ?? lastError}`);
+}
+
 async function sendOneMessage(
   supabaseAdmin: any,
   campaign: any,
@@ -196,12 +240,11 @@ async function sendOneMessage(
     const matched = candidates[0];
 
     if (!matched) {
-      await supabaseAdmin.from("messages")
-        .update({
-          status: "failed",
-          error_code: "sender_not_registered_for_country",
-          failure_reason: `No verified sender configured for ${m.country_code ?? "unknown country"}`,
-        }).eq("id", m.id);
+      await writeWithRetry(supabaseAdmin, "messages", {
+        status: "failed",
+        error_code: "sender_not_registered_for_country",
+        failure_reason: `No verified sender configured for ${m.country_code ?? "unknown country"}`,
+      }, { id: m.id });
       return { ok: false, shaft: false, debited: 0 };
     }
     const messagingProfileId = matched.telnyx_messaging_profile_id ?? sender.messagingProfileId ?? undefined;
@@ -210,9 +253,9 @@ async function sendOneMessage(
     const senderUsed = fromNumber ?? messagingProfileId ?? "unknown";
 
     if (!messagingProfileId && !fromNumber) {
-      await supabaseAdmin.from("messages")
-        .update({ status: "failed", error_code: "no_sender", failure_reason: "No sender available" })
-        .eq("id", m.id);
+      await writeWithRetry(supabaseAdmin, "messages",
+        { status: "failed", error_code: "no_sender", failure_reason: "No sender available" },
+        { id: m.id });
       return { ok: false, shaft: false, debited: 0 };
     }
 
@@ -220,9 +263,9 @@ async function sendOneMessage(
     const { fastPerRecipientGate } = await import("@/lib/content-screening.server");
     const gate = await fastPerRecipientGate(campaign.account_id, m.phone_e164);
     if (!gate.ok) {
-      await supabaseAdmin.from("messages")
-        .update({ status: "failed", error_code: gate.reason, failure_reason: `Blocked pre-send: ${gate.reason}` })
-        .eq("id", m.id);
+      await writeWithRetry(supabaseAdmin, "messages",
+        { status: "failed", error_code: gate.reason, failure_reason: `Blocked pre-send: ${gate.reason}` },
+        { id: m.id });
       return { ok: false, shaft: false, debited: 0 };
     }
 
@@ -240,19 +283,30 @@ async function sendOneMessage(
     );
 
     const providerSegments = Number(result.parts ?? m.segments_count ?? 1);
-    await supabaseAdmin.from("messages").update({
+    // Telnyx has already accepted this message — recording that fact is not
+    // optional, so this write gets real retries rather than being fired and
+    // forgotten. A failure here is what previously left rows stuck on
+    // 'sending' despite a successful send, later misreported as
+    // dispatch_timeout.
+    await writeWithRetry(supabaseAdmin, "messages", {
       status: "sent",
       provider_message_id: result.id,
       sent_at: new Date().toISOString(),
       segments_count: providerSegments,
       sender_used: senderUsed,
       sender_kind: senderKindUsed,
-    }).eq("id", m.id);
-    await supabaseAdmin.from("message_send_attempts").update({
-      provider_message_id: result.id,
-      provider_status: "sent",
-      sent_at: new Date().toISOString(),
-    }).eq("message_id", m.id).eq("attempt_number", m.attempt_number);
+    }, { id: m.id });
+    try {
+      await writeWithRetry(supabaseAdmin, "message_send_attempts", {
+        provider_message_id: result.id,
+        provider_status: "sent",
+        sent_at: new Date().toISOString(),
+      }, { message_id: m.id, attempt_number: m.attempt_number }, 2);
+    } catch (e) {
+      // Audit-only table — the messages row above is the source of truth for
+      // status, so don't fail the send over this.
+      console.error("[dispatch] message_send_attempts update failed", e);
+    }
 
     // If Telnyx billed more segments than we reserved from the tenant's
     // wallet at claim time, the platform absorbed the shortfall — flag it
@@ -319,15 +373,26 @@ async function sendOneMessage(
   } catch (e: any) {
     const code = String(e?.telnyxCode ?? "");
     const reason = e?.telnyxMessage ?? e?.message ?? "Send failed";
-    await supabaseAdmin.from("messages")
-      .update({ status: "failed", error_code: code || "exception", failure_reason: String(reason).slice(0, 500) })
-      .eq("id", m.id);
-    await supabaseAdmin.from("message_send_attempts").update({
-      provider_status: "failed",
-      error_code: code || "exception",
-      failure_reason: String(reason).slice(0, 500),
-      finalized_at: new Date().toISOString(),
-    }).eq("message_id", m.id).eq("attempt_number", m.attempt_number);
+    try {
+      await writeWithRetry(supabaseAdmin, "messages",
+        { status: "failed", error_code: code || "exception", failure_reason: String(reason).slice(0, 500) },
+        { id: m.id });
+    } catch (writeErr) {
+      // Last resort — this is the final handler, nothing left to fall back
+      // to. Log loudly so it's visible instead of silently becoming a
+      // dispatch_timeout two minutes from now with no trace of the real cause.
+      console.error("[dispatch] FAILED to record message failure — row will be swept as dispatch_timeout", m.id, writeErr);
+    }
+    try {
+      await writeWithRetry(supabaseAdmin, "message_send_attempts", {
+        provider_status: "failed",
+        error_code: code || "exception",
+        failure_reason: String(reason).slice(0, 500),
+        finalized_at: new Date().toISOString(),
+      }, { message_id: m.id, attempt_number: m.attempt_number }, 2);
+    } catch (writeErr) {
+      console.error("[dispatch] message_send_attempts failure-update failed", writeErr);
+    }
     return { ok: false, shaft: isShaftLikeCode(code), debited: 0 };
   }
 }
