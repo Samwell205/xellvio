@@ -2983,16 +2983,20 @@ export type Database = {
           account_id: string
           balance: number
           carrier_cost: number
+          drift: number
           email: string
           funded: number
           funded_payments: number
+          granted: number
           label: string
           last_funded_at: string
+          ledger_balance: number
           messages: number
           pending_funding: number
           profit: number
           refunded: number
           spent: number
+          topups: number
         }[]
       }
       admin_margin_audit: {
