@@ -185,13 +185,13 @@ $function$;
 -- ── 3. Re-schedule the dispatcher with a real timeout ───────
 -- pg_net defaults to a 5 second timeout. The dispatcher needs longer, and a
 -- premature hang-up is exactly what produced the dispatch_timeout rows.
--- Replace <NEW_APP_BASE_URL> and <SUPABASE_PUBLISHABLE_KEY> below.
---
--- select cron.unschedule('dispatch-campaigns');
--- select cron.schedule(
---   'dispatch-campaigns', '* * * * *',
---   $$ select net.http_post(
---        url := '<NEW_APP_BASE_URL>/api/public/dispatch-campaign',
---        headers := jsonb_build_object('Content-Type','application/json','apikey','<SUPABASE_PUBLISHABLE_KEY>'),
---        body := '{}'::jsonb,
---        timeout_milliseconds := 60000) $$);
+-- Replace <LIVE_APP_BASE_URL> and <SUPABASE_PUBLISHABLE_KEY> below, then run.
+
+select cron.unschedule('dispatch-campaigns');
+select cron.schedule(
+  'dispatch-campaigns', '* * * * *',
+  $$ select net.http_post(
+       url := '<LIVE_APP_BASE_URL>/api/public/dispatch-campaign',
+       headers := jsonb_build_object('Content-Type','application/json','apikey','<SUPABASE_PUBLISHABLE_KEY>'),
+       body := '{}'::jsonb,
+       timeout_milliseconds := 60000) $$);
