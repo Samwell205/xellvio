@@ -830,7 +830,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         // charge) different rows, and if one of those invocations doesn't
         // finish cleanly, its claimed rows are left stranded in `sending`.
         // Self-heals after 90s if a prior run crashed without releasing.
-        const { data: gotLock } = await supabaseAdmin.rpc("try_acquire_dispatch_lock");
+        const { data: gotLock } = await (supabaseAdmin as any).rpc("try_acquire_dispatch_lock");
         if (!gotLock) {
           return Response.json({ skipped: "dispatch_already_running" });
         }
@@ -838,7 +838,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         try {
           return await runDispatchTick(supabaseAdmin);
         } finally {
-          await supabaseAdmin.rpc("release_dispatch_lock");
+          await (supabaseAdmin as any).rpc("release_dispatch_lock");
         }
       },
     },
