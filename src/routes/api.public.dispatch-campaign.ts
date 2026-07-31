@@ -511,7 +511,7 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
 
   const checkedRecentlyCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   const sentCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  const maxPerRun = 400;
+  const maxPerRun = 100;
   const toCheck: Array<{ id: string; provider_message_id: string; status: string }> = [];
   const pageSize = 500;
   for (let from = 0; from < 5_000 && toCheck.length < maxPerRun; from += pageSize) {
