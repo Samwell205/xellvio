@@ -611,8 +611,20 @@ async function planCampaign(
   // campaign) must not overwrite a campaign that already has earlier
   // messages queued/sent from previous ticks.
   if (queuedRows.length === 0 && isFirstBatch) {
-    await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
-    return { planned: 0, skipped: failedRows.length, cost: totalCost, reason: "insufficient_balance" };
+    // Distinguish "nobody was eligible" from "balance couldn't cover anyone":
+    // reporting the latter for an empty audience is misleading.
+    const reason = failedRows.length > 0 ? "insufficient_balance" : "no_eligible_recipients";
+    await supabaseAdmin
+      .from("campaigns")
+      .update({
+        status: "failed",
+        paused_reason:
+          reason === "insufficient_balance"
+            ? "Not enough credit to send to any recipient"
+            : "No eligible recipients — the selected audience was empty after exclusions",
+      })
+      .eq("id", campaign.id);
+    return { planned: 0, skipped: failedRows.length, cost: totalCost, reason };
   }
   if (isFirstBatch) {
     await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
