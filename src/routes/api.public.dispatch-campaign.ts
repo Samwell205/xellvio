@@ -842,8 +842,15 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         // charge) different rows, and if one of those invocations doesn't
         // finish cleanly, its claimed rows are left stranded in `sending`.
         // Self-heals after 90s if a prior run crashed without releasing.
-        const { data: gotLock } = await (supabaseAdmin as any).rpc("try_acquire_dispatch_lock");
-        if (!gotLock) {
+        const { data: gotLock, error: lockError } = await (supabaseAdmin as any).rpc(
+          "try_acquire_dispatch_lock",
+        );
+        // If the lock helper itself is unavailable (e.g. missing after a DB
+        // move), never skip forever — that silently freezes every campaign in
+        // `queued`. Log it and dispatch without the overlap guard.
+        if (lockError) {
+          console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
+        } else if (!gotLock) {
           return Response.json({ skipped: "dispatch_already_running" });
         }
 
