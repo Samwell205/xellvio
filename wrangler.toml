@@ -19,3 +19,9 @@ enabled = true
 # Non-secret values can live here if you prefer:
 [vars]
 PUBLIC_BASE_URL = "https://www.xellvio.com"
+# Browser-safe / publishable backend values. The anon key is protected by RLS
+# and is meant to be public; keeping it here guarantees SSR and server
+# functions can always reach the database even before secrets are set.
+SUPABASE_URL = "https://dbyqktfecfbukglciihc.supabase.co"
+SUPABASE_PROJECT_ID = "dbyqktfecfbukglciihc"
+SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieXFrdGZlY2ZidWtnbGNpaWhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODY5OTYsImV4cCI6MjA5NzM2Mjk5Nn0.IijlbZkJPlNvjp0_be_JRBYjrNwJmdWpte51rSSFcjw"
