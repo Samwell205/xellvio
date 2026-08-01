@@ -119,12 +119,25 @@ async function loadNextUnplannedBatch(
   audience: any,
   batchSize: number,
 ): Promise<{ recipients: any[]; hasMore: boolean }> {
-  const { data: plannedRows, error: plannedErr } = await supabaseAdmin
-    .from("messages")
-    .select("profile_id")
-    .eq("campaign_id", campaignId);
-  if (plannedErr) throw plannedErr;
-  const planned = new Set((plannedRows ?? []).map((r: any) => r.profile_id));
+  // IMPORTANT: page through the already-planned rows. A plain select is capped
+  // at 1000 rows by the Data API, so a campaign with >1000 planned recipients
+  // would look partly unplanned forever — every tick would "re-plan" rows that
+  // the unique constraint then ignores, `hasMore` would stay true, and delivery
+  // would be deferred forever (campaign stuck in queued/sending).
+  const planned = new Set<string>();
+  const PLANNED_PAGE = 1000;
+  for (let offset = 0; ; offset += PLANNED_PAGE) {
+    const { data: plannedRows, error: plannedErr } = await supabaseAdmin
+      .from("messages")
+      .select("profile_id")
+      .eq("campaign_id", campaignId)
+      .range(offset, offset + PLANNED_PAGE - 1);
+    if (plannedErr) throw plannedErr;
+    const rows = plannedRows ?? [];
+    for (const r of rows) if (r.profile_id) planned.add(r.profile_id);
+    if (rows.length < PLANNED_PAGE) break;
+  }
+
 
   const PAGE = 1000;
   const recipients: any[] = [];
@@ -717,9 +730,13 @@ async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[],
   // the next tick — this keeps one invocation's total work (a planning
   // batch, or a planning batch plus delivery) bounded, instead of planning
   // an entire large campaign's recipient list in a single request.
-  if (hasMore) {
+  // Safety net: only defer when this tick actually planned NEW rows. If it
+  // planned nothing (all "unplanned" rows already existed), deferring forever
+  // would leave the campaign stuck in queued — so fall through to delivery.
+  if (hasMore && planned.planned > 0) {
     return { ...planned, deferred_delivery: true };
   }
+
 
   if (planned.planned === 0 && isFirstBatch && recipients.length > 0) {
     // Nothing could be queued at all (e.g. insufficient balance for every
