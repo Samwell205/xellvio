@@ -17,6 +17,9 @@ const PLAN_BATCH_SIZE = 500;
 // caller's HTTP timeout. If the caller (pg_cron/pg_net) hangs up mid-run the
 // serverless worker is cancelled, leaving claimed rows stuck in `sending`
 // which the next run then has to write off as `dispatch_timeout`.
+// Keep claims small enough that every claimed row can be completed before the
+// caller's timeout. Claiming more rows than the worker can finish leaves the
+// remainder in `sending` until the stale-claim sweep runs.
 const DELIVER_PER_WORKER = 120;
 // Was 30. This project's Postgres tier caps out at 60 total connections, and
 // steady-state background usage (PostgREST, realtime, pg_cron, etc.) already
@@ -726,26 +729,23 @@ async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[],
     ? await planCampaign(supabaseAdmin, campaign, rates, recipients, isFirstBatch)
     : { planned: 0, skipped: 0, cost: 0 };
 
-  // If a full batch of still-unplanned recipients remains, defer delivery to
-  // the next tick — this keeps one invocation's total work (a planning
-  // batch, or a planning batch plus delivery) bounded, instead of planning
-  // an entire large campaign's recipient list in a single request.
-  // Safety net: only defer when this tick actually planned NEW rows. If it
-  // planned nothing (all "unplanned" rows already existed), deferring forever
-  // would leave the campaign stuck in queued — so fall through to delivery.
-  if (hasMore && planned.planned > 0) {
-    return { ...planned, deferred_delivery: true };
-  }
-
-
   if (planned.planned === 0 && isFirstBatch && recipients.length > 0) {
     // Nothing could be queued at all (e.g. insufficient balance for every
     // recipient) — planCampaign already marked the campaign failed.
     return planned;
   }
 
+  // Send from the rows already planned on every tick, even while later
+  // recipient pages are still being planned. Large campaigns therefore begin
+  // immediately instead of showing zero progress for several cron intervals.
   const delivered = await deliverPending(supabaseAdmin, campaign, sender);
-  return { ...planned, delivered_now: delivered.sent, failed_now: delivered.failed, remaining: delivered.remaining };
+  return {
+    ...planned,
+    planning_remaining: hasMore,
+    delivered_now: delivered.sent,
+    failed_now: delivered.failed,
+    remaining: delivered.remaining,
+  };
 }
 
 async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
@@ -913,7 +913,12 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           .from("campaigns")
           .select("*")
           .or(`status.eq.queued,status.eq.sending,and(status.eq.scheduled,schedule_at.lte.${nowIso})`)
-          .limit(10);
+          // Oldest-updated first creates a round-robin queue: processing a
+          // campaign touches updated_at, moving it behind the other tenants on
+          // the next tick instead of letting one large campaign monopolize the
+          // first dispatch slot indefinitely.
+          .order("updated_at", { ascending: true })
+          .limit(20);
         if (error) return Response.json({ error: error.message }, { status: 500 });
 
         const startedAt = Date.now();
