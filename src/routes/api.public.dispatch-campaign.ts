@@ -611,8 +611,20 @@ async function planCampaign(
   // campaign) must not overwrite a campaign that already has earlier
   // messages queued/sent from previous ticks.
   if (queuedRows.length === 0 && isFirstBatch) {
-    await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", campaign.id);
-    return { planned: 0, skipped: failedRows.length, cost: totalCost, reason: "insufficient_balance" };
+    // Distinguish "nobody was eligible" from "balance couldn't cover anyone":
+    // reporting the latter for an empty audience is misleading.
+    const reason = failedRows.length > 0 ? "insufficient_balance" : "no_eligible_recipients";
+    await supabaseAdmin
+      .from("campaigns")
+      .update({
+        status: "failed",
+        paused_reason:
+          reason === "insufficient_balance"
+            ? "Not enough credit to send to any recipient"
+            : "No eligible recipients — the selected audience was empty after exclusions",
+      })
+      .eq("id", campaign.id);
+    return { planned: 0, skipped: failedRows.length, cost: totalCost, reason };
   }
   if (isFirstBatch) {
     await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
@@ -830,8 +842,15 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         // charge) different rows, and if one of those invocations doesn't
         // finish cleanly, its claimed rows are left stranded in `sending`.
         // Self-heals after 90s if a prior run crashed without releasing.
-        const { data: gotLock } = await (supabaseAdmin as any).rpc("try_acquire_dispatch_lock");
-        if (!gotLock) {
+        const { data: gotLock, error: lockError } = await (supabaseAdmin as any).rpc(
+          "try_acquire_dispatch_lock",
+        );
+        // If the lock helper itself is unavailable (e.g. missing after a DB
+        // move), never skip forever — that silently freezes every campaign in
+        // `queued`. Log it and dispatch without the overlap guard.
+        if (lockError) {
+          console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
+        } else if (!gotLock) {
           return Response.json({ skipped: "dispatch_already_running" });
         }
 

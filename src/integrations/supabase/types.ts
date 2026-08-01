@@ -985,6 +985,21 @@ export type Database = {
           },
         ]
       }
+      dispatch_locks: {
+        Row: {
+          acquired_at: string
+          name: string
+        }
+        Insert: {
+          acquired_at?: string
+          name: string
+        }
+        Update: {
+          acquired_at?: string
+          name?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -3179,10 +3194,12 @@ export type Database = {
         Args: { _admin_note: string; _withdrawal_id: string }
         Returns: undefined
       }
+      release_dispatch_lock: { Args: never; Returns: undefined }
       topup_account: {
         Args: { _account_id: string; _amount: number; _description: string }
         Returns: number
       }
+      try_acquire_dispatch_lock: { Args: never; Returns: boolean }
     }
     Enums: {
       account_member_role: "viewer" | "editor" | "admin"
