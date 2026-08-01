@@ -730,9 +730,13 @@ async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[],
   // the next tick — this keeps one invocation's total work (a planning
   // batch, or a planning batch plus delivery) bounded, instead of planning
   // an entire large campaign's recipient list in a single request.
-  if (hasMore) {
+  // Safety net: only defer when this tick actually planned NEW rows. If it
+  // planned nothing (all "unplanned" rows already existed), deferring forever
+  // would leave the campaign stuck in queued — so fall through to delivery.
+  if (hasMore && planned.planned > 0) {
     return { ...planned, deferred_delivery: true };
   }
+
 
   if (planned.planned === 0 && isFirstBatch && recipients.length > 0) {
     // Nothing could be queued at all (e.g. insufficient balance for every
