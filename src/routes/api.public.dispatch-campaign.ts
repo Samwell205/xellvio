@@ -119,12 +119,25 @@ async function loadNextUnplannedBatch(
   audience: any,
   batchSize: number,
 ): Promise<{ recipients: any[]; hasMore: boolean }> {
-  const { data: plannedRows, error: plannedErr } = await supabaseAdmin
-    .from("messages")
-    .select("profile_id")
-    .eq("campaign_id", campaignId);
-  if (plannedErr) throw plannedErr;
-  const planned = new Set((plannedRows ?? []).map((r: any) => r.profile_id));
+  // IMPORTANT: page through the already-planned rows. A plain select is capped
+  // at 1000 rows by the Data API, so a campaign with >1000 planned recipients
+  // would look partly unplanned forever — every tick would "re-plan" rows that
+  // the unique constraint then ignores, `hasMore` would stay true, and delivery
+  // would be deferred forever (campaign stuck in queued/sending).
+  const planned = new Set<string>();
+  const PLANNED_PAGE = 1000;
+  for (let offset = 0; ; offset += PLANNED_PAGE) {
+    const { data: plannedRows, error: plannedErr } = await supabaseAdmin
+      .from("messages")
+      .select("profile_id")
+      .eq("campaign_id", campaignId)
+      .range(offset, offset + PLANNED_PAGE - 1);
+    if (plannedErr) throw plannedErr;
+    const rows = plannedRows ?? [];
+    for (const r of rows) if (r.profile_id) planned.add(r.profile_id);
+    if (rows.length < PLANNED_PAGE) break;
+  }
+
 
   const PAGE = 1000;
   const recipients: any[] = [];
