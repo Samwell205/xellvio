@@ -17,7 +17,11 @@ const PLAN_BATCH_SIZE = 500;
 // caller's HTTP timeout. If the caller (pg_cron/pg_net) hangs up mid-run the
 // serverless worker is cancelled, leaving claimed rows stuck in `sending`
 // which the next run then has to write off as `dispatch_timeout`.
-const DELIVER_PER_WORKER = 120;
+// A 240-row claim still completes comfortably inside the 40s worker budget at
+// the guarded 12-way concurrency, while halving the drain time for large
+// campaigns. The claim RPC reserves each row atomically, so raising the batch
+// does not weaken duplicate-send or balance protection.
+const DELIVER_PER_WORKER = 240;
 // Was 30. This project's Postgres tier caps out at 60 total connections, and
 // steady-state background usage (PostgREST, realtime, pg_cron, etc.) already
 // holds ~25 of those. A first-tick invocation stacks 30-way concurrent writes
@@ -913,7 +917,12 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           .from("campaigns")
           .select("*")
           .or(`status.eq.queued,status.eq.sending,and(status.eq.scheduled,schedule_at.lte.${nowIso})`)
-          .limit(10);
+          // Oldest-updated first creates a round-robin queue: processing a
+          // campaign touches updated_at, moving it behind the other tenants on
+          // the next tick instead of letting one large campaign monopolize the
+          // first dispatch slot indefinitely.
+          .order("updated_at", { ascending: true })
+          .limit(20);
         if (error) return Response.json({ error: error.message }, { status: 500 });
 
         const startedAt = Date.now();
