@@ -921,7 +921,8 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         // Dedicated receipt-reconciliation mode. Runs on its own cron schedule
         // so pulling final delivery receipts never competes with the sending
         // budget (that's what left thousands of messages stuck on "awaiting").
-        if (new URL(request.url).searchParams.get("mode") === "reconcile") {
+        const mode = new URL(request.url).searchParams.get("mode") ?? request.headers.get("x-dispatch-mode");
+        if (mode === "reconcile") {
           const result = await reconcileStaleCarrierReceipts(supabaseAdmin, {
             maxPerRun: 3000,
             concurrency: 40,
