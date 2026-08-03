@@ -91,6 +91,7 @@ import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated.admin.messages'
 import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated.admin.marketplace'
 import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated.admin.finance'
+import { Route as AuthenticatedAdminEmailRouteImport } from './routes/_authenticated.admin.email'
 import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_authenticated.admin.compliance'
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
 import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
@@ -561,6 +562,11 @@ const AuthenticatedAdminFinanceRoute =
     path: '/finance',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminEmailRoute = AuthenticatedAdminEmailRouteImport.update({
+  id: '/email',
+  path: '/email',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminComplianceRoute =
   AuthenticatedAdminComplianceRouteImport.update({
     id: '/compliance',
@@ -786,6 +792,7 @@ export interface FileRoutesByFullPath {
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
+  '/admin/email': typeof AuthenticatedAdminEmailRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
@@ -895,6 +902,7 @@ export interface FileRoutesByTo {
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
+  '/admin/email': typeof AuthenticatedAdminEmailRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
@@ -1008,6 +1016,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/_authenticated/admin/compliance': typeof AuthenticatedAdminComplianceRoute
+  '/_authenticated/admin/email': typeof AuthenticatedAdminEmailRoute
   '/_authenticated/admin/finance': typeof AuthenticatedAdminFinanceRoute
   '/_authenticated/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
@@ -1122,6 +1131,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/billing'
     | '/admin/compliance'
+    | '/admin/email'
     | '/admin/finance'
     | '/admin/marketplace'
     | '/admin/messages'
@@ -1231,6 +1241,7 @@ export interface FileRouteTypes {
     | '/admin/activity'
     | '/admin/billing'
     | '/admin/compliance'
+    | '/admin/email'
     | '/admin/finance'
     | '/admin/marketplace'
     | '/admin/messages'
@@ -1343,6 +1354,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/activity'
     | '/_authenticated/admin/billing'
     | '/_authenticated/admin/compliance'
+    | '/_authenticated/admin/email'
     | '/_authenticated/admin/finance'
     | '/_authenticated/admin/marketplace'
     | '/_authenticated/admin/messages'
@@ -2042,6 +2054,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminFinanceRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/email': {
+      id: '/_authenticated/admin/email'
+      path: '/email'
+      fullPath: '/admin/email'
+      preLoaderRoute: typeof AuthenticatedAdminEmailRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/compliance': {
       id: '/_authenticated/admin/compliance'
       path: '/compliance'
@@ -2276,6 +2295,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
   AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
   AuthenticatedAdminComplianceRoute: typeof AuthenticatedAdminComplianceRoute
+  AuthenticatedAdminEmailRoute: typeof AuthenticatedAdminEmailRoute
   AuthenticatedAdminFinanceRoute: typeof AuthenticatedAdminFinanceRoute
   AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
@@ -2300,6 +2320,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminActivityRoute: AuthenticatedAdminActivityRoute,
   AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
   AuthenticatedAdminComplianceRoute: AuthenticatedAdminComplianceRoute,
+  AuthenticatedAdminEmailRoute: AuthenticatedAdminEmailRoute,
   AuthenticatedAdminFinanceRoute: AuthenticatedAdminFinanceRoute,
   AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
