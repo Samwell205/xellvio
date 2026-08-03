@@ -882,6 +882,19 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 });
 
 async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
+        // Webhooks are the primary inbound path, but provider retries can be
+        // delayed or lost during deployments. Recover recent replies on every
+        // scheduled tick so tenant inboxes self-heal without manual work.
+        let recoveredInbound: { checked: number; processed: number } | { checked: number; processed: number; error: string } = { checked: 0, processed: 0 };
+        try {
+          const { recoverRecentTelnyxInboundMessages } = await import("@/lib/telnyx-inbound-routing.server");
+          recoveredInbound = await recoverRecentTelnyxInboundMessages(100);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error("[dispatch] inbound recovery failed", message);
+          recoveredInbound = { checked: 0, processed: 0, error: message };
+        }
+
         const { data: ratesRows } = await supabaseAdmin
           .from("country_rates")
           .select("country_code,dial_prefix,sell_price,mms_multiplier,active")
@@ -1009,5 +1022,5 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         const reconciled = budgetLeft() > 12_000
           ? await reconcileStaleCarrierReceipts(supabaseAdmin)
           : { checked: 0, updated: 0, stillAwaiting: 0, expired: 0, skipped: true };
-        return Response.json({ processed: results.length, deferred, reconciled, results });
+        return Response.json({ processed: results.length, deferred, recoveredInbound, reconciled, results });
 }
