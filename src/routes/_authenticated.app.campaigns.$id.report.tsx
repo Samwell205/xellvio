@@ -332,8 +332,13 @@ function ReportPage() {
                 </div>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Numbers reported as landline, non-routable or invalid are now remembered automatically and skipped in
+              future campaigns, so you are never charged for them again.
+            </p>
           </div>
         )}
+
         <div className="flex items-center justify-between mb-3">
           <div className="font-semibold">Failed numbers ({r.failures.length})</div>
           {r.failures.length > 0 && (
