@@ -24,7 +24,7 @@ const PLAN_BATCH_SIZE = 500;
 // invocation. Claims are atomic, so concurrent scheduler calls cannot send the
 // same message twice. With the scheduler fan-out this supports large campaigns
 // without increasing per-process database connection pressure.
-const DELIVER_PER_WORKER = 480;
+const DELIVER_PER_WORKER = 720;
 // Was 30. This project's Postgres tier caps out at 60 total connections, and
 // steady-state background usage (PostgREST, realtime, pg_cron, etc.) already
 // holds ~25 of those. A first-tick invocation stacks 30-way concurrent writes
@@ -38,7 +38,7 @@ const DELIVER_PER_WORKER = 480;
 // tick claimed success for all 9 messages in a campaign, but all 9 were
 // still 'sending' at the next tick. Lower concurrency + writeWithRetry below
 // are the two-part fix.
-const DELIVER_CONCURRENCY = 8;
+const DELIVER_CONCURRENCY = 24;
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
@@ -84,6 +84,7 @@ type Rate = {
 type Sender = {
   messagingProfileId?: string | null;
   fromNumber?: string | null;
+  gorgiasEnabled?: boolean;
   assets: Array<{
     country_code: string;
     sender_kind?: string | null;
@@ -282,17 +283,6 @@ async function sendOneMessage(
       return { ok: false, shaft: false, debited: 0 };
     }
 
-    // ── Per-recipient compliance gate (suspension + frequency cap).
-    const { fastPerRecipientGate } = await import("@/lib/content-screening.server");
-    const gate = await fastPerRecipientGate(campaign.account_id, m.phone_e164);
-    if (!gate.ok) {
-      await writeWithRetry(supabaseAdmin, "messages",
-        { status: "failed", error_code: gate.reason, failure_reason: `Blocked pre-send: ${gate.reason}` },
-        { id: m.id });
-      return { ok: false, shaft: false, debited: 0 };
-    }
-
-
     const result = await safeTelnyxCall(
       "send_message",
       { userId: campaign.account_id, messagingProfileId },
@@ -379,17 +369,19 @@ async function sendOneMessage(
       }
     }
 
-    try {
-      const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
-      await forwardSmsToGorgias({
-        accountId: campaign.account_id,
-        phone: m.phone_e164,
-        fromNumber: fromNumber ?? null,
-        body: messageBody,
-        direction: "outbound",
-      });
-    } catch (e) {
-      console.error("[dispatch] gorgias mirror failed", e);
+    if (sender.gorgiasEnabled) {
+      try {
+        const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
+        await forwardSmsToGorgias({
+          accountId: campaign.account_id,
+          phone: m.phone_e164,
+          fromNumber: fromNumber ?? null,
+          body: messageBody,
+          direction: "outbound",
+        });
+      } catch (e) {
+        console.error("[dispatch] gorgias mirror failed", e);
+      }
     }
 
     return { ok: true, shaft: false, debited: Number(m.cost) };
@@ -939,7 +931,7 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
 
             const { data: acct } = await supabaseAdmin
               .from("accounts")
-              .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted")
+              .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted, gorgias_enabled")
               .eq("id", c.account_id).maybeSingle();
             if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
               await supabaseAdmin.from("campaigns")
@@ -1002,6 +994,7 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             const sender: Sender = {
               messagingProfileId: assetProfileId ?? profileId,
               fromNumber: verifiedSender?.phone_number ?? acct?.telnyx_phone_number ?? null,
+              gorgiasEnabled: acct?.gorgias_enabled === true,
               assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
             };
             const r = await processCampaign(supabaseAdmin, c, rates, sender);
