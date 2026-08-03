@@ -2570,6 +2570,33 @@ export type Database = {
         }
         Relationships: []
       }
+      unroutable_numbers: {
+        Row: {
+          error_code: string
+          first_seen_at: string
+          hits: number
+          last_seen_at: string
+          phone_e164: string
+          reason: string | null
+        }
+        Insert: {
+          error_code: string
+          first_seen_at?: string
+          hits?: number
+          last_seen_at?: string
+          phone_e164: string
+          reason?: string | null
+        }
+        Update: {
+          error_code?: string
+          first_seen_at?: string
+          hits?: number
+          last_seen_at?: string
+          phone_e164?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
