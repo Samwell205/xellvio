@@ -975,7 +975,13 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
 
         const results: any[] = [];
         let deferred = 0;
+        // Messages already claimed for each tenant during this tick. Multiple
+        // campaigns from the same tenant share one budget so a tenant can never
+        // occupy more than its fair share of the invocation or of the carrier's
+        // allowed submission rate.
+        const tenantUsed = new Map<string, number>();
         for (const c of due ?? []) {
+
           if (budgetLeft() < 5_000) { deferred += 1; continue; }
           try {
 
