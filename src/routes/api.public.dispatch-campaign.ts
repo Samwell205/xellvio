@@ -337,12 +337,20 @@ async function sendOneMessage(
       segments_count: providerSegments,
       sender_used: senderUsed,
       sender_kind: senderKindUsed,
+      // A successful retry supersedes the previous failed attempt. Leaving the
+      // old error attached made an accepted message look failed while its new
+      // delivery receipt was still pending.
+      error_code: null,
+      failure_reason: null,
     }, { id: m.id });
     try {
       await writeWithRetry(supabaseAdmin, "message_send_attempts", {
         provider_message_id: result.id,
         provider_status: "sent",
         sent_at: new Date().toISOString(),
+        error_code: null,
+        failure_reason: null,
+        finalized_at: null,
       }, { message_id: m.id, attempt_number: m.attempt_number }, 2);
     } catch (e) {
       // Audit-only table — the messages row above is the source of truth for
@@ -809,7 +817,10 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
 
   const checkedRecentlyCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
   const sentCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-  const maxPerRun = 100;
+  // Reconcile enough receipts to keep pace with large campaigns. The previous
+  // 100-row ceiling allowed thousands of accepted messages to remain in the
+  // report long after final receipts were available.
+  const maxPerRun = 500;
   const toCheck: Array<{ id: string; provider_message_id: string; status: string }> = [];
   const pageSize = 500;
   for (let from = 0; from < 5_000 && toCheck.length < maxPerRun; from += pageSize) {
