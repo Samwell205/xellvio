@@ -20,7 +20,7 @@ const PLAN_BATCH_SIZE = 500;
 // Keep claims small enough that every claimed row can be completed before the
 // caller's timeout. Claiming more rows than the worker can finish leaves the
 // remainder in `sending` until the stale-claim sweep runs.
-const DELIVER_PER_WORKER = 120;
+const DELIVER_PER_WORKER = 48;
 // Was 30. This project's Postgres tier caps out at 60 total connections, and
 // steady-state background usage (PostgREST, realtime, pg_cron, etc.) already
 // holds ~25 of those. A first-tick invocation stacks 30-way concurrent writes
@@ -34,7 +34,7 @@ const DELIVER_PER_WORKER = 120;
 // tick claimed success for all 9 messages in a campaign, but all 9 were
 // still 'sending' at the next tick. Lower concurrency + writeWithRetry below
 // are the two-part fix.
-const DELIVER_CONCURRENCY = 12;
+const DELIVER_CONCURRENCY = 8;
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
@@ -882,19 +882,6 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 });
 
 async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
-        // Webhooks are the primary inbound path, but provider retries can be
-        // delayed or lost during deployments. Recover recent replies on every
-        // scheduled tick so tenant inboxes self-heal without manual work.
-        let recoveredInbound: { checked: number; processed: number } | { checked: number; processed: number; error: string } = { checked: 0, processed: 0 };
-        try {
-          const { recoverRecentTelnyxInboundMessages } = await import("@/lib/telnyx-inbound-routing.server");
-          recoveredInbound = await recoverRecentTelnyxInboundMessages(100);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          console.error("[dispatch] inbound recovery failed", message);
-          recoveredInbound = { checked: 0, processed: 0, error: message };
-        }
-
         const { data: ratesRows } = await supabaseAdmin
           .from("country_rates")
           .select("country_code,dial_prefix,sell_price,mms_multiplier,active")
@@ -1017,8 +1004,19 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             results.push({ id: c.id, error: e.message });
           }
         }
-        // Reconciliation is best-effort housekeeping — never let it eat the
-        // budget that live sending needs.
+        // Recovery and reconciliation are best-effort housekeeping. Run them
+        // only after outbound work so they can never consume the send budget.
+        let recoveredInbound: { checked: number; processed: number } | { checked: number; processed: number; error: string } = { checked: 0, processed: 0 };
+        if (budgetLeft() > 18_000) {
+          try {
+            const { recoverRecentTelnyxInboundMessages } = await import("@/lib/telnyx-inbound-routing.server");
+            recoveredInbound = await recoverRecentTelnyxInboundMessages(50);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error("[dispatch] inbound recovery failed", message);
+            recoveredInbound = { checked: 0, processed: 0, error: message };
+          }
+        }
         const reconciled = budgetLeft() > 12_000
           ? await reconcileStaleCarrierReceipts(supabaseAdmin)
           : { checked: 0, updated: 0, stillAwaiting: 0, expired: 0, skipped: true };
