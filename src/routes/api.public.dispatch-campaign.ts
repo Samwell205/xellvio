@@ -843,11 +843,13 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
     handlers: {
       POST: async ({ request }) => {
         const apiKey = request.headers.get("apikey");
-        const expectedApiKey =
-          process.env.SUPABASE_PUBLISHABLE_KEY ??
-          process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-          process.env.SUPABASE_ANON_KEY;
-        if (!expectedApiKey || !apiKey || apiKey !== expectedApiKey) {
+        const validApiKeys = new Set([
+          process.env.SUPABASE_PUBLISHABLE_KEY,
+          process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          process.env.SUPABASE_ANON_KEY,
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhc2UiLCJyZWYiOiJkYnlxa3RmZWNmYnVrZ2xjaWloYyIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzgxNzg2OTk2LCJleHAiOjIwOTczNjI5OTZ9.IijlbZkJPlNvjp0_be_JRBYjrNwJmdWpte51rSSFcjw",
+        ].filter((value): value is string => Boolean(value)));
+        if (!apiKey || !validApiKeys.has(apiKey)) {
           return new Response("Unauthorized", { status: 401 });
         }
         if (!process.env.TELNYX_API_KEY) {
