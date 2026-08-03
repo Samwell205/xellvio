@@ -799,7 +799,10 @@ async function processCampaign(
 }
 
 
-async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
+async function reconcileStaleCarrierReceipts(
+  supabaseAdmin: any,
+  opts: { maxPerRun?: number; concurrency?: number; minAgeMs?: number } = {},
+): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
   // Some carriers (mostly EU/UK) never return a final delivery receipt. After 24h
   // there is nothing more to wait for — close those out so reports stop showing
   // them as "awaiting carrier" forever.
@@ -815,15 +818,15 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
     .select("id");
   const expired = (expiredRows ?? []).length;
 
-  const checkedRecentlyCutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-  const sentCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const checkedRecentlyCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const sentCutoff = new Date(Date.now() - (opts.minAgeMs ?? 3 * 60 * 1000)).toISOString();
   // Reconcile enough receipts to keep pace with large campaigns. The previous
   // 100-row ceiling allowed thousands of accepted messages to remain in the
   // report long after final receipts were available.
-  const maxPerRun = 500;
+  const maxPerRun = opts.maxPerRun ?? 500;
   const toCheck: Array<{ id: string; provider_message_id: string; status: string }> = [];
   const pageSize = 500;
-  for (let from = 0; from < 5_000 && toCheck.length < maxPerRun; from += pageSize) {
+  for (let from = 0; from < 20_000 && toCheck.length < maxPerRun; from += pageSize) {
     const { data: candidates } = await supabaseAdmin
       .from("messages")
       .select("id, provider_message_id, status")
@@ -853,7 +856,7 @@ async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ chec
   const { getMessage, mapTelnyxStatus } = await import("@/lib/telnyx.server");
   let updated = 0;
   let stillAwaiting = 0;
-  await runWithConcurrency(toCheck, 20, async (m) => {
+  await runWithConcurrency(toCheck, opts.concurrency ?? 20, async (m) => {
     try {
       const j = await getMessage(m.provider_message_id);
       const first = Array.isArray(j?.to) ? j.to[0] : null;
@@ -912,6 +915,20 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+        // Dedicated receipt-reconciliation mode. Runs on its own cron schedule
+        // so pulling final delivery receipts never competes with the sending
+        // budget (that's what left thousands of messages stuck on "awaiting").
+        if (new URL(request.url).searchParams.get("mode") === "reconcile") {
+          const result = await reconcileStaleCarrierReceipts(supabaseAdmin, {
+            maxPerRun: 3000,
+            concurrency: 40,
+            minAgeMs: 90_000,
+          });
+          return Response.json({ mode: "reconcile", ...result });
+        }
+
+
 
         // Guard against overlapping invocations: if pg_cron fires a new tick
         // while a previous one is still mid-flight, two concurrent calls to

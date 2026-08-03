@@ -4,35 +4,39 @@ import { createFileRoute } from "@tanstack/react-router";
 
 async function trackAndRedirect(code: string, request: Request): Promise<Response> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: link } = await supabaseAdmin
-    .from("link_clicks")
-    .select("short_code, url, message_id, campaign_id, clicks, first_click_at")
-    .eq("short_code", code)
-    .maybeSingle();
 
-  if (!link) {
-    return new Response("Link not found or expired.", { status: 404 });
+  // Atomic increment + fetch in one round-trip. This MUST be awaited: the
+  // serverless runtime cancels any in-flight work the moment the response is
+  // returned, so the previous fire-and-forget update silently lost clicks.
+  const { data: rows, error } = await (supabaseAdmin as any).rpc("record_link_click", {
+    _code: code,
+  });
+  let link = Array.isArray(rows) ? rows[0] : rows;
+
+  if (error || !link) {
+    // Fall back to a plain read so a counter failure never breaks the redirect.
+    const { data: fallback } = await supabaseAdmin
+      .from("link_clicks")
+      .select("url, message_id, campaign_id")
+      .eq("short_code", code)
+      .maybeSingle();
+    if (!fallback) return new Response("Link not found or expired.", { status: 404 });
+    link = fallback;
   }
-
-  const now = new Date().toISOString();
-  const patch: any = {
-    clicks: (link.clicks ?? 0) + 1,
-    last_click_at: now,
-  };
-  if (!link.first_click_at) patch.first_click_at = now;
-
-  // Fire-and-continue; failures never block the redirect.
-  supabaseAdmin.from("link_clicks").update(patch).eq("short_code", code).then(() => {}, () => {});
 
   const ua = request.headers.get("user-agent") ?? null;
   const ip = request.headers.get("cf-connecting-ip")
     ?? request.headers.get("x-forwarded-for")
     ?? null;
-  supabaseAdmin.from("events").insert({
-    message_id: link.message_id,
-    type: "clicked",
-    payload: { short_code: code, url: link.url, ua, ip, campaign_id: link.campaign_id },
-  }).then(() => {}, () => {});
+  try {
+    await supabaseAdmin.from("events").insert({
+      message_id: link.message_id,
+      type: "clicked",
+      payload: { short_code: code, url: link.url, ua, ip, campaign_id: link.campaign_id },
+    });
+  } catch {
+    /* click audit is best-effort */
+  }
 
   return new Response(null, { status: 302, headers: { Location: link.url, "Cache-Control": "no-store" } });
 }
