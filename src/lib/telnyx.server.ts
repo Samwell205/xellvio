@@ -398,6 +398,22 @@ export async function getMessage(id: string): Promise<any> {
   return res.data;
 }
 
+/**
+ * Fetch recently received messages as a safety net when a webhook is delayed
+ * or missed. The caller de-duplicates using the provider message id.
+ */
+export async function listRecentInboundMessages(limit = 100): Promise<any[]> {
+  const safeLimit = Math.max(1, Math.min(250, Math.floor(limit)));
+  const res = await telnyx<{ data: any[] }>("/messages", {
+    query: {
+      "filter[direction]": "inbound",
+      "page[size]": safeLimit,
+      "sort": "-created_at",
+    },
+  });
+  return Array.isArray(res.data) ? res.data : [];
+}
+
 // ============ Balance ============
 
 export async function getBalance(): Promise<{ balance: number; currency: string; ok: boolean; error?: string }> {

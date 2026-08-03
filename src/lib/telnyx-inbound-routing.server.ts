@@ -17,6 +17,7 @@ export async function handleTelnyxInboundMessage(payload: any) {
   const to: string | undefined = Array.isArray(p?.to) ? p.to[0]?.phone_number : undefined;
   const bodyText: string = (p?.text ?? "").trim();
   const providerSid: string | null = p?.id ?? null;
+  const occurredAt: string = p?.received_at ?? p?.created_at ?? payload?.data?.occurred_at ?? new Date().toISOString();
   if (!from) return;
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -82,6 +83,7 @@ export async function handleTelnyxInboundMessage(payload: any) {
     .select("created_at, sender_used, campaigns!inner(account_id)")
     .eq("phone_e164", from)
     .in("status", ["sent", "delivered", "queued", "delivery_unconfirmed", "undelivered", "failed"])
+    .lte("created_at", occurredAt)
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -96,6 +98,7 @@ export async function handleTelnyxInboundMessage(payload: any) {
     .select("account_id, from_number, created_at")
     .eq("phone_e164", from)
     .eq("direction", "outbound")
+    .lte("created_at", occurredAt)
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -144,6 +147,7 @@ export async function handleTelnyxInboundMessage(payload: any) {
       to_number: to ?? null,
       provider_sid: providerSid,
       status: "received",
+      created_at: occurredAt,
     })),
   );
 
@@ -174,4 +178,28 @@ export async function handleTelnyxInboundMessage(payload: any) {
   } catch {
     // best effort
   }
+}
+
+/**
+ * Recover inbound messages that did not reach the webhook. This is intentionally
+ * idempotent: handleTelnyxInboundMessage ignores provider ids already stored for
+ * the tenant selected by the same sender/recipient routing rules.
+ */
+export async function recoverRecentTelnyxInboundMessages(limit = 100) {
+  const { listRecentInboundMessages } = await import("@/lib/telnyx.server");
+  const messages = await listRecentInboundMessages(limit);
+  let processed = 0;
+  for (const message of messages) {
+    const before = message?.id;
+    if (!before) continue;
+    await handleTelnyxInboundMessage({
+      data: {
+        event_type: "message.received",
+        occurred_at: message.received_at ?? message.created_at ?? new Date().toISOString(),
+        payload: message,
+      },
+    });
+    processed += 1;
+  }
+  return { checked: messages.length, processed };
 }
