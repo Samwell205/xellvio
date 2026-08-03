@@ -691,17 +691,26 @@ async function planCampaign(
 }
 
 async function deliverPending(
-  supabaseAdmin: any, campaign: any, sender: Sender,
-): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean }> {
+  supabaseAdmin: any, campaign: any, sender: Sender, limits?: { perTick: number; concurrency: number },
+): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean; throttled?: boolean }> {
   const { data: fresh } = await supabaseAdmin
     .from("campaigns").select("status").eq("id", campaign.id).maybeSingle();
   if (fresh?.status === "cancelled") {
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
 
+  const throttle = limits ?? throttleForSender(sender);
+  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick));
+  if (claimLimit === 0) {
+    const { count: pending } = await supabaseAdmin
+      .from("messages").select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
+    return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, throttled: true };
+  }
+
   const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
     _campaign_id: campaign.id,
-    _limit: DELIVER_PER_WORKER,
+    _limit: claimLimit,
   });
   if (qErr) throw new Error(qErr.message);
   const rows = batch ?? [];
@@ -716,11 +725,12 @@ async function deliverPending(
   }
 
   let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
-  await runWithConcurrency(rows, DELIVER_CONCURRENCY, async (m: any) => {
+  await runWithConcurrency(rows, Math.max(1, Math.min(DELIVER_CONCURRENCY, throttle.concurrency)), async (m: any) => {
     const r = await sendOneMessage(supabaseAdmin, campaign, sender, m);
     if (r.ok) { sent++; debited += r.debited; }
     else { failed++; if (r.shaft) shaftErrors++; }
   });
+
 
   if (shaftErrors >= 2) {
     await flagAccountForReview(supabaseAdmin, campaign.account_id, "shaft_carrier_errors",
