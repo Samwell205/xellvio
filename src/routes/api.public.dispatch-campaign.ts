@@ -748,7 +748,10 @@ async function deliverPending(
   return { sent, failed, debited: +debited.toFixed(4), remaining: remaining ?? 0 };
 }
 
-async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[], sender: Sender): Promise<any> {
+async function processCampaign(
+  supabaseAdmin: any, campaign: any, rates: Rate[], sender: Sender,
+  limits?: { perTick: number; concurrency: number },
+): Promise<any> {
   const { count: existing } = await supabaseAdmin
     .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
   const isFirstBatch = (existing ?? 0) === 0;
@@ -776,15 +779,17 @@ async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[],
   // Send from the rows already planned on every tick, even while later
   // recipient pages are still being planned. Large campaigns therefore begin
   // immediately instead of showing zero progress for several cron intervals.
-  const delivered = await deliverPending(supabaseAdmin, campaign, sender);
+  const delivered = await deliverPending(supabaseAdmin, campaign, sender, limits);
   return {
     ...planned,
     planning_remaining: hasMore,
     delivered_now: delivered.sent,
     failed_now: delivered.failed,
     remaining: delivered.remaining,
+    throttled: delivered.throttled ?? false,
   };
 }
+
 
 async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
   // Some carriers (mostly EU/UK) never return a final delivery receipt. After 24h
