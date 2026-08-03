@@ -11,10 +11,9 @@ function apiKey(): string {
 }
 
 export function publicBaseUrl(): string {
-  // Must be the canonical origin that does NOT redirect. Telnyx does not
-  // follow 3xx responses on webhook POSTs, so pointing at the apex domain
-  // (which 307-redirects to www) silently drops every inbound event.
-  return (process.env.PUBLIC_BASE_URL ?? "https://www.xellvio.com").replace(/\/$/, "");
+  // Must be the canonical origin that does NOT redirect. Provider webhook
+  // POSTs are not followed across a 3xx response.
+  return (process.env.PUBLIC_BASE_URL ?? "https://xellvio.com").replace(/\/$/, "");
 }
 
 export function statusWebhookUrl(): string {
@@ -398,20 +397,17 @@ export async function getMessage(id: string): Promise<any> {
   return res.data;
 }
 
-/**
- * Fetch recently received messages as a safety net when a webhook is delayed
- * or missed. The caller de-duplicates using the provider message id.
- */
-export async function listRecentInboundMessages(limit = 100): Promise<any[]> {
+/** Fetch recent inbound webhook payloads for replay after a failed delivery. */
+export async function listRecentInboundWebhookPayloads(limit = 100): Promise<any[]> {
   const safeLimit = Math.max(1, Math.min(250, Math.floor(limit)));
-  const res = await telnyx<{ data: any[] }>("/messages", {
+  const res = await telnyx<{ data: any[] }>("/webhook_deliveries", {
     query: {
-      "filter[direction]": "inbound",
       "page[size]": safeLimit,
-      "sort": "-created_at",
     },
   });
-  return Array.isArray(res.data) ? res.data : [];
+  return (Array.isArray(res.data) ? res.data : [])
+    .map((delivery) => delivery?.webhook)
+    .filter((webhook) => webhook?.event_type === "message.received" && webhook?.payload?.id);
 }
 
 // ============ Balance ============

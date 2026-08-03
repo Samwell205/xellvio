@@ -186,17 +186,17 @@ export async function handleTelnyxInboundMessage(payload: any) {
  * the tenant selected by the same sender/recipient routing rules.
  */
 export async function recoverRecentTelnyxInboundMessages(limit = 100) {
-  const { listRecentInboundMessages } = await import("@/lib/telnyx.server");
-  const messages = await listRecentInboundMessages(limit);
+  const { listRecentInboundWebhookPayloads } = await import("@/lib/telnyx.server");
+  const messages = await listRecentInboundWebhookPayloads(limit);
   let processed = 0;
-  for (const message of messages) {
-    const before = message?.id;
+  for (const webhook of messages) {
+    const before = webhook?.payload?.id;
     if (!before) continue;
     await handleTelnyxInboundMessage({
       data: {
         event_type: "message.received",
-        occurred_at: message.received_at ?? message.created_at ?? new Date().toISOString(),
-        payload: message,
+        occurred_at: webhook.occurred_at ?? webhook.payload?.received_at ?? new Date().toISOString(),
+        payload: webhook.payload,
       },
     });
     processed += 1;
