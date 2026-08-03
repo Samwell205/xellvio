@@ -1053,8 +1053,20 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
               gorgiasEnabled: acct?.gorgias_enabled === true,
               assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
             };
-            const r = await processCampaign(supabaseAdmin, c, rates, sender);
+            const throttle = throttleForSender(sender);
+            const used = tenantUsed.get(c.account_id) ?? 0;
+            const perTick = Math.max(0, throttle.perTick - used);
+            if (perTick === 0) {
+              results.push({ id: c.id, skipped: "tenant_throttle_reached" });
+              continue;
+            }
+            const r = await processCampaign(supabaseAdmin, c, rates, sender, {
+              perTick,
+              concurrency: throttle.concurrency,
+            });
+            tenantUsed.set(c.account_id, used + Number(r?.delivered_now ?? 0) + Number(r?.failed_now ?? 0));
             results.push({ id: c.id, ...r });
+
           } catch (e: any) {
             await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
             results.push({ id: c.id, error: e.message });
