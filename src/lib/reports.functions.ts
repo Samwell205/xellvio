@@ -47,6 +47,12 @@ export type CampaignReport = {
     failure_reason: string | null;
     created_at: string;
   }>;
+  failureBreakdown: Array<{
+    code: string;
+    label: string;
+    count: number;
+    retryable: boolean;
+  }>;
 };
 
 export const getCampaignReport = createServerFn({ method: "POST" })
@@ -98,6 +104,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     const byKind = new Map<string, { used: number; delivered: number; failed: number }>();
     const timelineMap = new Map<string, { sent: number; delivered: number; failed: number }>();
     const failures: CampaignReport["failures"] = [];
+    const failureCounts = new Map<string, number>();
 
     // Recipients are only charged once the message reaches the carrier.
     const BILLED = new Set(["sent", "delivered", "delivery_unconfirmed", "undelivered"]);
@@ -153,6 +160,10 @@ export const getCampaignReport = createServerFn({ method: "POST" })
           created_at: r.created_at,
         });
       }
+      if (r.status === "failed" || r.status === "undelivered") {
+        const code = r.error_code ?? "unknown";
+        failureCounts.set(code, (failureCounts.get(code) ?? 0) + 1);
+      }
     }
 
     totals.cost = +totals.cost.toFixed(4);
@@ -180,5 +191,19 @@ export const getCampaignReport = createServerFn({ method: "POST" })
         .map(([hour, v]) => ({ hour, ...v }))
         .sort((a, b) => a.hour.localeCompare(b.hour)),
       failures,
+      failureBreakdown: Array.from(failureCounts.entries())
+        .map(([code, count]) => ({
+          code,
+          count,
+          label:
+            code === "dispatch_timeout" ? "Dispatch interrupted — refunded" :
+            code === "40001" ? "Landline or non-routable number" :
+            code === "40012" ? "Invalid phone number" :
+            code === "40008" ? "Recipient carrier rejected" :
+            code === "insufficient_balance" ? "Not sent — insufficient credit" :
+            "Other send failure",
+          retryable: code === "dispatch_timeout",
+        }))
+        .sort((a, b) => b.count - a.count),
     };
   });

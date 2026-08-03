@@ -316,6 +316,24 @@ function ReportPage() {
       </div>
 
       <Card className="p-4">
+        {r.failureBreakdown.length > 0 && (
+          <div className="mb-5">
+            <div className="font-semibold mb-2">Why messages failed</div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {r.failureBreakdown.map((item) => (
+                <div key={item.code} className="flex items-center justify-between gap-3 border rounded-md px-3 py-2">
+                  <div>
+                    <div className="text-sm font-medium">{item.label}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {item.retryable ? "Not accepted by the provider; credit refunded. Retry requires approval." : `Code ${item.code}`}
+                    </div>
+                  </div>
+                  <Badge variant={item.retryable ? "secondary" : "outline"}>{item.count.toLocaleString()}</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-3">
           <div className="font-semibold">Failed numbers ({r.failures.length})</div>
           {r.failures.length > 0 && (
