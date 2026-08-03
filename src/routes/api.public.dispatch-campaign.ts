@@ -20,7 +20,11 @@ const PLAN_BATCH_SIZE = 500;
 // Keep claims small enough that every claimed row can be completed before the
 // caller's timeout. Claiming more rows than the worker can finish leaves the
 // remainder in `sending` until the stale-claim sweep runs.
-const DELIVER_PER_WORKER = 48;
+// Claim enough work to keep the provider connection busy for most of this
+// invocation. Claims are atomic, so concurrent scheduler calls cannot send the
+// same message twice. With the scheduler fan-out this supports large campaigns
+// without increasing per-process database connection pressure.
+const DELIVER_PER_WORKER = 480;
 // Was 30. This project's Postgres tier caps out at 60 total connections, and
 // steady-state background usage (PostgREST, realtime, pg_cron, etc.) already
 // holds ~25 of those. A first-tick invocation stacks 30-way concurrent writes
@@ -169,7 +173,10 @@ async function loadNextUnplannedBatch(
 }
 
 function isShaftLikeCode(code: string): boolean {
-  return ["40010", "40011", "40001", "40012"].includes(code);
+  // 40001 = landline/non-routable and 40012 = invalid destination. Those are
+  // recipient-data failures, not content violations, and must never suspend a
+  // tenant. Only explicit carrier content-filter codes count here.
+  return ["40010", "40011"].includes(code);
 }
 
 async function flagAccountForReview(supabaseAdmin: any, accountId: string, reason: string, detail: string) {

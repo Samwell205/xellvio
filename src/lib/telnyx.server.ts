@@ -453,8 +453,10 @@ export function mapTelnyxStatus(raw: string | undefined | null): "queued" | "sen
 export function isShaftLikeTelnyxError(code: string | number | null | undefined): boolean {
   if (!code) return false;
   const c = String(code);
-  // 40010 blocked by carrier, 40011 content filter, 40001 destination blocked
-  return ["40010", "40011", "40001", "40012"].includes(c);
+  // 40010/40011 are content-filter signals. 40001 (landline/non-routable) and
+  // 40012 (invalid number) are recipient-data errors and must not be treated as
+  // tenant compliance violations.
+  return ["40010", "40011"].includes(c);
 }
 
 // ============ Provisioning ensure-helper ============
