@@ -13,7 +13,8 @@ function apiKey(): string {
 export function publicBaseUrl(): string {
   // Must be the canonical origin that does NOT redirect. Provider webhook
   // POSTs are not followed across a 3xx response.
-  return (process.env.PUBLIC_BASE_URL ?? "https://xellvio.com").replace(/\/$/, "");
+  const configured = (process.env.PUBLIC_BASE_URL ?? "https://xellvio.com").replace(/\/$/, "");
+  return configured.replace("https://www.xellvio.com", "https://xellvio.com");
 }
 
 export function statusWebhookUrl(): string {
@@ -21,6 +22,9 @@ export function statusWebhookUrl(): string {
 }
 export function inboundWebhookUrl(): string {
   return `${publicBaseUrl()}/api/public/telnyx-inbound`;
+}
+export function statusWebhookFailoverUrl(): string {
+  return "https://project--91d3bf8a-0d22-4b7d-9569-057a8306639a.lovable.app/api/public/telnyx-status";
 }
 
 type TelnyxOpts = { method?: string; body?: any; query?: Record<string, string | number | undefined> };
@@ -105,7 +109,7 @@ export async function createMessagingProfile(name: string): Promise<MessagingPro
       name: name.slice(0, 128),
       enabled: true,
       webhook_url: statusWebhookUrl(),
-      webhook_failover_url: null,
+      webhook_failover_url: statusWebhookFailoverUrl(),
       webhook_api_version: "2",
       whitelisted_destinations: DEFAULT_WHITELISTED_DESTINATIONS,
     },
@@ -116,7 +120,12 @@ export async function createMessagingProfile(name: string): Promise<MessagingPro
 export async function updateMessagingProfileWhitelist(id: string, countries: string[] = DEFAULT_WHITELISTED_DESTINATIONS): Promise<void> {
   await telnyx(`/messaging_profiles/${id}`, {
     method: "PATCH",
-    body: { whitelisted_destinations: countries, webhook_url: statusWebhookUrl(), webhook_api_version: "2" },
+    body: {
+      whitelisted_destinations: countries,
+      webhook_url: statusWebhookUrl(),
+      webhook_failover_url: statusWebhookFailoverUrl(),
+      webhook_api_version: "2",
+    },
   });
 }
 
