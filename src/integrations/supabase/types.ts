@@ -3217,6 +3217,14 @@ export type Database = {
           read_ct: number
         }[]
       }
+      record_link_click: {
+        Args: { _code: string }
+        Returns: {
+          campaign_id: string
+          message_id: string
+          url: string
+        }[]
+      }
       refund_message_charge: { Args: { _message_id: string }; Returns: number }
       reject_verifier_withdrawal: {
         Args: { _admin_note: string; _withdrawal_id: string }

@@ -53,6 +53,12 @@ export type CampaignReport = {
     count: number;
     retryable: boolean;
   }>;
+  clicks: {
+    links: number;
+    total_clicks: number;
+    clicked_links: number;
+    click_rate: number; // clicked links / links tracked, 0..100
+  };
 };
 
 export const getCampaignReport = createServerFn({ method: "POST" })
@@ -170,9 +176,29 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     totals.reserved_cost = +totals.reserved_cost.toFixed(4);
     totals.delivery_rate = totals.sent > 0 ? +((totals.delivered / totals.sent) * 100).toFixed(1) : 0;
     totals.is_mms = totals.mms_count > 0;
-
+    // Link-click tracking (short links created for this campaign).
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const clickRows: Array<{ clicks: number | null }> = [];
+    for (let from = 0; from < 20_000; from += 1000) {
+      const { data: page } = await supabaseAdmin
+        .from("link_clicks")
+        .select("clicks")
+        .eq("campaign_id", data.campaignId)
+        .range(from, from + 999);
+      clickRows.push(...((page ?? []) as any[]));
+      if (!page || page.length < 1000) break;
+    }
+    const totalClicks = clickRows.reduce((s, r) => s + Number(r.clicks ?? 0), 0);
+    const clickedLinks = clickRows.filter((r) => Number(r.clicks ?? 0) > 0).length;
+    const clicks = {
+      links: clickRows.length,
+      total_clicks: totalClicks,
+      clicked_links: clickedLinks,
+      click_rate: clickRows.length > 0 ? +((clickedLinks / clickRows.length) * 100).toFixed(1) : 0,
+    };
 
     return {
+      clicks,
       campaign: {
         id: campaign.id,
         name: campaign.name,

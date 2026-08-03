@@ -136,6 +136,14 @@ function AdminCampaignReportPage() {
         <Stat label="Margin" value={formatUSD(t.margin)} tone={t.margin >= 0 ? "ok" : "bad"} />
       </div>
 
+      {(r as any).clicks?.links > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <Stat label="Links tracked" value={(r as any).clicks.links.toLocaleString()} />
+          <Stat label="Total clicks" value={(r as any).clicks.total_clicks.toLocaleString()} tone="ok" />
+          <Stat label="Click rate" value={`${(r as any).clicks.click_rate}%`} />
+        </div>
+      )}
+
       <Card className="p-4">
         <div className="font-semibold text-sm mb-3">Send attempt audit</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
