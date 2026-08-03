@@ -803,15 +803,17 @@ async function reconcileStaleCarrierReceipts(
   supabaseAdmin: any,
   opts: { maxPerRun?: number; concurrency?: number; minAgeMs?: number } = {},
 ): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
-  // Some carriers (mostly EU/UK) never return a final delivery receipt. After 24h
-  // there is nothing more to wait for — close those out so reports stop showing
-  // them as "awaiting carrier" forever.
-  const giveUpCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Many US/CA MMS and international carriers never return a final delivery
+  // receipt at all — the carrier accepted and finalized the message and simply
+  // stays silent. Waiting 24h left whole campaigns parked on "Awaiting", so
+  // after 3h with no receipt we close the row out as "Not delivered
+  // (unconfirmed)" instead of leaving the report unresolved.
+  const giveUpCutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
   const { data: expiredRows } = await supabaseAdmin
     .from("messages")
     .update({
       status: "delivery_unconfirmed",
-      failure_reason: "No delivery receipt returned by the carrier within 24 hours.",
+      failure_reason: "Carrier accepted the message but never returned a delivery receipt (waited 3 hours).",
     })
     .eq("status", "sent")
     .lt("sent_at", giveUpCutoff)
