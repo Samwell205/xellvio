@@ -34,6 +34,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
       { title: "Campaigns", url: "/admin/campaigns", icon: Megaphone },
       { title: "Message monitor", url: "/admin/messaging", icon: MessageSquareText },
       { title: "Contact inbox", url: "/admin/messages", icon: Mail },
+      { title: "Tenant notices", url: "/admin/email", icon: Send },
     ],
   },
   {
