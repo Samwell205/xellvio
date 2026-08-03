@@ -43,6 +43,35 @@ const DELIVER_CONCURRENCY = 24;
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
 
+// ── Per-tenant throttling ────────────────────────────────────────────────────
+// One tenant with a very large campaign used to be able to soak the whole
+// invocation budget (and the whole provider connection pool), which made every
+// other tenant's send crawl. These caps give each tenant a bounded share of a
+// single tick and keep submission rates inside what each sender type is allowed
+// to push through the carrier, so throughput stays high without tripping
+// carrier-side spam/throughput filters.
+//
+// Caps are per sender kind, per tick (ticks fire every ~15s):
+//   messages claimed per tenant per tick, and concurrent in-flight sends.
+const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> = {
+  toll_free: { perTick: 720, concurrency: 24 },
+  ten_dlc: { perTick: 360, concurrency: 12 },
+  short_code: { perTick: 720, concurrency: 24 },
+  shared_toll_free: { perTick: 240, concurrency: 8 },
+  personal: { perTick: 120, concurrency: 4 },
+};
+const TENANT_THROTTLE_DEFAULT = { perTick: 240, concurrency: 8 };
+
+function throttleForSender(sender: Sender) {
+  const kind = (sender.assets.find((a) => a.sender_kind)?.sender_kind ?? "").toLowerCase();
+  const base = TENANT_THROTTLE[kind] ?? TENANT_THROTTLE_DEFAULT;
+  return {
+    perTick: Math.min(base.perTick, DELIVER_PER_WORKER),
+    concurrency: Math.min(base.concurrency, DELIVER_CONCURRENCY),
+  };
+}
+
+
 function render(body: string, p: { first_name?: string | null; last_name?: string | null; country_code?: string | null; phone_e164?: string | null; custom_fields?: Record<string, any> | null }) {
   const fields: Record<string, any> = {
     first_name: p.first_name ?? "",
