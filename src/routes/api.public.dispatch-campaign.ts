@@ -43,6 +43,35 @@ const DELIVER_CONCURRENCY = 24;
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
 
+// ── Per-tenant throttling ────────────────────────────────────────────────────
+// One tenant with a very large campaign used to be able to soak the whole
+// invocation budget (and the whole provider connection pool), which made every
+// other tenant's send crawl. These caps give each tenant a bounded share of a
+// single tick and keep submission rates inside what each sender type is allowed
+// to push through the carrier, so throughput stays high without tripping
+// carrier-side spam/throughput filters.
+//
+// Caps are per sender kind, per tick (ticks fire every ~15s):
+//   messages claimed per tenant per tick, and concurrent in-flight sends.
+const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> = {
+  toll_free: { perTick: 720, concurrency: 24 },
+  ten_dlc: { perTick: 360, concurrency: 12 },
+  short_code: { perTick: 720, concurrency: 24 },
+  shared_toll_free: { perTick: 240, concurrency: 8 },
+  personal: { perTick: 120, concurrency: 4 },
+};
+const TENANT_THROTTLE_DEFAULT = { perTick: 240, concurrency: 8 };
+
+function throttleForSender(sender: Sender) {
+  const kind = (sender.assets.find((a) => a.sender_kind)?.sender_kind ?? "").toLowerCase();
+  const base = TENANT_THROTTLE[kind] ?? TENANT_THROTTLE_DEFAULT;
+  return {
+    perTick: Math.min(base.perTick, DELIVER_PER_WORKER),
+    concurrency: Math.min(base.concurrency, DELIVER_CONCURRENCY),
+  };
+}
+
+
 function render(body: string, p: { first_name?: string | null; last_name?: string | null; country_code?: string | null; phone_e164?: string | null; custom_fields?: Record<string, any> | null }) {
   const fields: Record<string, any> = {
     first_name: p.first_name ?? "",
@@ -662,17 +691,26 @@ async function planCampaign(
 }
 
 async function deliverPending(
-  supabaseAdmin: any, campaign: any, sender: Sender,
-): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean }> {
+  supabaseAdmin: any, campaign: any, sender: Sender, limits?: { perTick: number; concurrency: number },
+): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean; throttled?: boolean }> {
   const { data: fresh } = await supabaseAdmin
     .from("campaigns").select("status").eq("id", campaign.id).maybeSingle();
   if (fresh?.status === "cancelled") {
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
 
+  const throttle = limits ?? throttleForSender(sender);
+  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick));
+  if (claimLimit === 0) {
+    const { count: pending } = await supabaseAdmin
+      .from("messages").select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
+    return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, throttled: true };
+  }
+
   const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
     _campaign_id: campaign.id,
-    _limit: DELIVER_PER_WORKER,
+    _limit: claimLimit,
   });
   if (qErr) throw new Error(qErr.message);
   const rows = batch ?? [];
@@ -687,11 +725,12 @@ async function deliverPending(
   }
 
   let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
-  await runWithConcurrency(rows, DELIVER_CONCURRENCY, async (m: any) => {
+  await runWithConcurrency(rows, Math.max(1, Math.min(DELIVER_CONCURRENCY, throttle.concurrency)), async (m: any) => {
     const r = await sendOneMessage(supabaseAdmin, campaign, sender, m);
     if (r.ok) { sent++; debited += r.debited; }
     else { failed++; if (r.shaft) shaftErrors++; }
   });
+
 
   if (shaftErrors >= 2) {
     await flagAccountForReview(supabaseAdmin, campaign.account_id, "shaft_carrier_errors",
@@ -709,7 +748,10 @@ async function deliverPending(
   return { sent, failed, debited: +debited.toFixed(4), remaining: remaining ?? 0 };
 }
 
-async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[], sender: Sender): Promise<any> {
+async function processCampaign(
+  supabaseAdmin: any, campaign: any, rates: Rate[], sender: Sender,
+  limits?: { perTick: number; concurrency: number },
+): Promise<any> {
   const { count: existing } = await supabaseAdmin
     .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
   const isFirstBatch = (existing ?? 0) === 0;
@@ -737,15 +779,17 @@ async function processCampaign(supabaseAdmin: any, campaign: any, rates: Rate[],
   // Send from the rows already planned on every tick, even while later
   // recipient pages are still being planned. Large campaigns therefore begin
   // immediately instead of showing zero progress for several cron intervals.
-  const delivered = await deliverPending(supabaseAdmin, campaign, sender);
+  const delivered = await deliverPending(supabaseAdmin, campaign, sender, limits);
   return {
     ...planned,
     planning_remaining: hasMore,
     delivered_now: delivered.sent,
     failed_now: delivered.failed,
     remaining: delivered.remaining,
+    throttled: delivered.throttled ?? false,
   };
 }
+
 
 async function reconcileStaleCarrierReceipts(supabaseAdmin: any): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
   // Some carriers (mostly EU/UK) never return a final delivery receipt. After 24h
@@ -931,7 +975,13 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
 
         const results: any[] = [];
         let deferred = 0;
+        // Messages already claimed for each tenant during this tick. Multiple
+        // campaigns from the same tenant share one budget so a tenant can never
+        // occupy more than its fair share of the invocation or of the carrier's
+        // allowed submission rate.
+        const tenantUsed = new Map<string, number>();
         for (const c of due ?? []) {
+
           if (budgetLeft() < 5_000) { deferred += 1; continue; }
           try {
 
@@ -1003,8 +1053,20 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
               gorgiasEnabled: acct?.gorgias_enabled === true,
               assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
             };
-            const r = await processCampaign(supabaseAdmin, c, rates, sender);
+            const throttle = throttleForSender(sender);
+            const used = tenantUsed.get(c.account_id) ?? 0;
+            const perTick = Math.max(0, throttle.perTick - used);
+            if (perTick === 0) {
+              results.push({ id: c.id, skipped: "tenant_throttle_reached" });
+              continue;
+            }
+            const r = await processCampaign(supabaseAdmin, c, rates, sender, {
+              perTick,
+              concurrency: throttle.concurrency,
+            });
+            tenantUsed.set(c.account_id, used + Number(r?.delivered_now ?? 0) + Number(r?.failed_now ?? 0));
             results.push({ id: c.id, ...r });
+
           } catch (e: any) {
             await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
             results.push({ id: c.id, error: e.message });
