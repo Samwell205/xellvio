@@ -222,6 +222,8 @@ export const getCampaignReport = createServerFn({ method: "POST" })
         status: campaign.status,
         created_at: campaign.created_at,
         message_body: campaign.message_body,
+        media_url: (campaign as any).media_url ?? null,
+
       },
       totals,
       byCountry: Array.from(byCC.entries())
