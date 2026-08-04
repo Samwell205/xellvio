@@ -6,7 +6,6 @@ import {
   cancelCampaign,
   retryMessage,
   retryFailedMessages,
-  resendUnconfirmed,
 } from "@/lib/campaign-control.functions";
 
 import { toast } from "sonner";
@@ -90,7 +89,7 @@ function CampaignReport() {
       const filtered = rows.filter((r: any) => {
         switch (key) {
           case "delivered": return r.status === "delivered";
-          case "failed": return r.status === "failed" || r.status === "undelivered";
+          case "failed": return r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed";
           case "not_delivered": return r.status === "delivery_unconfirmed";
           case "sent_awaiting": return r.status === "sent";
           case "clicked": return (r.click_count ?? 0) > 0;
@@ -154,7 +153,7 @@ function CampaignReport() {
       sent: Number(s.sent ?? 0),
       delivered: Number(s.delivered ?? 0),
       deliveryUnconfirmed: Number(s.delivery_unconfirmed ?? 0),
-      failed: Number(s.failed ?? 0) + Number(s.sent_with_error ?? 0),
+      failed: Number(s.failed ?? 0) + Number(s.delivery_unconfirmed ?? 0) + Number(s.sent_with_error ?? 0),
     };
   }, [summaryQ.data]);
 
@@ -188,7 +187,7 @@ function CampaignReport() {
         sent: ["sent"],
         delivered: ["delivered"],
         unconfirmed: ["delivery_unconfirmed"],
-        failed: ["failed", "undelivered"],
+        failed: ["failed", "undelivered", "delivery_unconfirmed"],
         skipped: ["skipped"],
         queued: ["queued", "pending", "sending"],
       };
@@ -331,33 +330,6 @@ function CampaignReport() {
     onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
   });
 
-  const resendUnconfirmedFn = useServerFn(resendUnconfirmed);
-  const resendUnconfirmedM = useMutation({
-    mutationFn: async (hoursBack: number) => {
-      const preview = await resendUnconfirmedFn({ data: { campaignId: id, hoursBack, dryRun: true } });
-      const count = Number(preview.count ?? 0);
-      if (count === 0) return { ...preview, resent: 0 };
-      const approved = window.confirm(
-        `Send ${count.toLocaleString()} unconfirmed SMS again? Estimated charge: ${formatUSD(preview.estimatedCost)}. Some recipients may already have received the first SMS.`,
-      );
-      if (!approved) throw new Error("Resend cancelled");
-      return resendUnconfirmedFn({ data: { campaignId: id, hoursBack, confirmed: true } });
-    },
-    onSuccess: (r: any) => {
-      toast.success(
-        r.resent > 0
-          ? `Re-queued ${r.resent.toLocaleString()} message${r.resent === 1 ? "" : "s"} without delivery confirmation (est. ${formatUSD(r.estimatedCost)}).`
-          : "No messages without delivery confirmation in that window.",
-
-      );
-      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Resend failed"),
-  });
-
-
 
 
   const eligibleQ = useQuery({
@@ -412,7 +384,7 @@ function CampaignReport() {
     const delivered = progress?.delivered ?? 0;
     const deliveryUnconfirmed = progress?.deliveryUnconfirmed ?? 0;
     const failed = progress?.failed ?? 0;
-    const sent = awaitingDelivery + delivered + deliveryUnconfirmed + failed;
+    const sent = awaitingDelivery + delivered + failed;
     const skipped = Math.max(0, attempted - (progress?.total ?? 0));
     const clicked = events.filter((e: any) => e.type === "clicked").length;
     const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
@@ -429,7 +401,7 @@ function CampaignReport() {
         total: Number(r.messages ?? 0),
         delivered: Number(r.delivered ?? 0),
         unconfirmed: 0,
-        failed: Number(r.failed ?? 0),
+        failed: Number(r.failed ?? 0) + Number(r.delivery_unconfirmed ?? r.unconfirmed ?? 0),
       };
     }
 
@@ -534,7 +506,6 @@ function CampaignReport() {
                 <DropdownMenuLabel>Phone numbers only</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => exportPhoneNumbers("delivered", "delivered")}>Delivered</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => exportPhoneNumbers("failed", "failed")}>Failed</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportPhoneNumbers("not_delivered", "not-delivered")}>Not delivered</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => exportPhoneNumbers("sent_awaiting", "awaiting-carrier")}>Awaiting carrier</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Engagement</DropdownMenuLabel>
@@ -677,19 +648,11 @@ function CampaignReport() {
             {/* Right column */}
             <div className="space-y-5">
               {/* KPI hero */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <Kpi icon={CheckCircle2} label="Delivery rate" value={`${stats.deliveryRate.toFixed(1)}%`}
                   sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`} tone="success" />
                 <Kpi icon={Clock} label="Awaiting carrier" value={stats.awaitingDelivery.toLocaleString()}
                   sub="accepted, no final receipt yet" tone="muted" />
-                <UnconfirmedKpi
-                  value={stats.deliveryUnconfirmed}
-                  sent={stats.sent}
-                  onResend={(h) => resendUnconfirmedM.mutate(h)}
-                  isResending={resendUnconfirmedM.isPending}
-                  canResend={campaignQ.data?.status !== "cancelled" && stats.deliveryUnconfirmed > 0}
-                />
-
                 <Kpi icon={MousePointerClick} label="Click rate" value={`${stats.clickRate.toFixed(1)}%`}
                   sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`} tone="primary" />
                 <Kpi icon={ShieldOff} label="Opt-outs" value={(optOutsQ.data ?? 0).toLocaleString()}
@@ -761,11 +724,6 @@ function CampaignReport() {
                   {stats.awaitingDelivery > 0 && (
                     <FunnelRow icon={Clock} label="awaiting carrier report" value={stats.awaitingDelivery}
                       sub={stats.sent ? `${pct(stats.awaitingDelivery / stats.sent * 100)} of sent` : undefined} tone="muted" />
-                  )}
-                  {stats.deliveryUnconfirmed > 0 && (
-                    <FunnelRow icon={HelpCircle} label="not delivered (no receipt)" value={stats.deliveryUnconfirmed}
-                      sub={stats.sent ? `${pct(stats.deliveryUnconfirmed / stats.sent * 100)} of sent` : undefined} tone="muted" />
-
                   )}
                   <FunnelRow icon={AlertTriangle} label="failed" value={stats.failed}
                     sub={stats.sent ? `${pct(stats.failed / stats.sent * 100)} of sent` : undefined} tone="danger" />
@@ -943,7 +901,6 @@ function RecipientActivity({
     { key: "all",       label: "All",       count: stats.attempted },
     { key: "sent",      label: "Accepted",  count: stats.awaitingDelivery },
     { key: "delivered", label: "Delivered", count: stats.delivered },
-    { key: "unconfirmed", label: "Not delivered", count: stats.deliveryUnconfirmed },
     { key: "failed",    label: "Failed",    count: stats.failed },
     { key: "skipped",   label: "Skipped",   count: stats.skipped },
     { key: "queued",    label: "Queued",    count: stats.queued },
