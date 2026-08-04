@@ -149,6 +149,10 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       if (billed) totals.cost += Number(r.cost ?? 0);
       if (pending) totals.reserved_cost += Number(r.cost ?? 0);
       if (r.is_mms) totals.mms_count += 1;
+      totals.segments += Number(r.segments_count ?? 1);
+      if (r.error_code === "insufficient_balance") totals.not_sent_insufficient += 1;
+      if (r.error_code === "40008") totals.carrier_rejected += 1;
+
       if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
       if (r.status === "sent") totals.awaiting_delivery += 1;
       if (r.status === "delivered") totals.delivered += 1;
