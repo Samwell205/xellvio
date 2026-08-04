@@ -9,6 +9,7 @@ export type CampaignReport = {
     status: string;
     created_at: string;
     message_body: string;
+    media_url: string | null;
   } | null;
   totals: {
     total: number;
@@ -23,7 +24,11 @@ export type CampaignReport = {
     delivery_rate: number; // 0..100
     mms_count: number;
     is_mms: boolean;
+    segments: number;
+    not_sent_insufficient: number;
+    carrier_rejected: number;
   };
+
   byCountry: Array<{
     country_code: string;
     recipients: number;
