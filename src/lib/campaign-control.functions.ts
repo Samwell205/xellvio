@@ -83,13 +83,24 @@ export const retryMessage = createServerFn({ method: "POST" })
     // should not resume dispatch.
     const { data: campaign } = await supabaseAdmin
       .from("campaigns")
-      .select("id, status")
+      .select("id, status, account_id, media_url")
       .eq("id", msg.campaign_id)
       .maybeSingle();
     if (!campaign) throw new Error("Campaign not found");
     if (campaign.status === "cancelled") {
       throw new Error("Campaign is cancelled — resume it first");
     }
+
+    // Re-price from the live rate card before the row goes back out.
+    const { priceRetryRows, applyRetryPricing } = await import("@/lib/campaign-retry-pricing.server");
+    const preflight = await priceRetryRows(supabaseAdmin, campaign as any, [data.messageId]);
+    if (preflight.shortfall > 0) {
+      throw new Error(
+        `Not enough credit to resend: needs $${preflight.estimatedCost.toFixed(2)}, balance is $${preflight.balance.toFixed(2)}.`,
+      );
+    }
+    await applyRetryPricing(supabaseAdmin, preflight);
+
 
     await supabaseAdmin
       .from("messages")
