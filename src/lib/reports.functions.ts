@@ -110,7 +110,11 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       delivery_rate: 0,
       mms_count: 0,
       is_mms: false,
+      segments: 0,
+      not_sent_insufficient: 0,
+      carrier_rejected: 0,
     };
+
     const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; cost: number }>();
     const byKind = new Map<string, { used: number; delivered: number; failed: number }>();
     const timelineMap = new Map<string, { sent: number; delivered: number; failed: number }>();
