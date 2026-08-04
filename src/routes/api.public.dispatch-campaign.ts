@@ -730,7 +730,7 @@ async function deliverPending(
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
 
-  const throttle = limits ?? throttleForSender(sender);
+  const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
   const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick));
   if (claimLimit === 0) {
     const { count: pending } = await supabaseAdmin
@@ -1107,7 +1107,7 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
               gorgiasEnabled: acct?.gorgias_enabled === true,
               assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
             };
-            const throttle = throttleForSender(sender);
+            const throttle = throttleForSender(sender, !!c.media_url);
             const used = tenantUsed.get(c.account_id) ?? 0;
             const perTick = Math.max(0, throttle.perTick - used);
             if (perTick === 0) {
