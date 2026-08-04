@@ -802,7 +802,6 @@ function CampaignReport() {
                 <ul className="space-y-3">
                   {Object.entries(stats.byCountry).sort((a, b) => b[1].total - a[1].total).map(([cc, v]) => {
                     const rate = v.total ? (v.delivered / v.total) * 100 : 0;
-                    const uncRate = v.total ? (v.unconfirmed / v.total) * 100 : 0;
                     const failRate = v.total ? (v.failed / v.total) * 100 : 0;
                     return (
                       <li key={cc} className="text-sm">
@@ -812,14 +811,9 @@ function CampaignReport() {
                         </div>
                         <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
                           <div className="h-full bg-success" style={{ width: `${rate}%` }} />
-                          <div className="h-full bg-cyan-500" style={{ width: `${uncRate}%` }} />
                           <div className="h-full bg-destructive" style={{ width: `${failRate}%` }} />
                         </div>
-                        {v.unconfirmed > 0 && (
-                          <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">
-                            {v.unconfirmed.toLocaleString()} not delivered · {v.failed.toLocaleString()} failed
-                          </div>
-                        )}
+                        {v.failed > 0 && <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">{v.failed.toLocaleString()} failed</div>}
                       </li>
                     );
                   })}
@@ -1475,18 +1469,16 @@ function ProgressPanel({
       <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
         <Seg pct={(delivered / total) * 100} className="bg-emerald-500" />
         <Seg pct={(sent / total) * 100} className="bg-sky-500" />
-        <Seg pct={(deliveryUnconfirmed / total) * 100} className="bg-cyan-500" />
         <Seg pct={(sending / total) * 100} className="bg-amber-500 animate-pulse" />
         <Seg pct={(failed / total) * 100} className="bg-destructive" />
         <Seg pct={(queued / total) * 100} className="bg-muted-foreground/30" />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
         <ProgTile label="Queued" value={queued} dotClass="bg-muted-foreground/40" />
         <ProgTile label="Sending" value={sending} dotClass="bg-amber-500" pulse={sending > 0} />
         <ProgTile label="Accepted" value={sent} dotClass="bg-sky-500" />
         <ProgTile label="Delivered" value={delivered} dotClass="bg-emerald-500" />
-        <ProgTile label="Not delivered" value={deliveryUnconfirmed} dotClass="bg-cyan-500" />
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
       </div>
 
@@ -1550,8 +1542,6 @@ function ProgressPanel({
             ? `Paused after checking provider capacity. ${inFlight.toLocaleString()} message${inFlight === 1 ? "" : "s"} remain queued and will resume automatically after top-up.`
             : inFlight === 0 && sent > 0
             ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
-            : inFlight === 0 && deliveryUnconfirmed > 0
-            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} accepted by the carrier but returned no delivery receipt (shows as "Not Delivered" in the network report).`
             : inFlight === 0
             ? "All messages have a final carrier status."
             : `${processedPct}% complete.`}
