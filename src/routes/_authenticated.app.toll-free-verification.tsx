@@ -112,7 +112,7 @@ function accountAutofillToForm(a: any | null | undefined): Partial<WizardForm> {
 function StatusBadge({ status, needsUpdate = false }: { status: Status | null | undefined; needsUpdate?: boolean }) {
   if (needsUpdate) return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white"><AlertCircle className="size-3" />Action requested</Badge>;
   if (!status) return <Badge variant="outline" className="gap-1"><Clock className="size-3" />Not submitted</Badge>;
-  if (status === "verified") return <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" />Approved by carrier</Badge>;
+  if (status === "verified") return <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" />Verified</Badge>;
   if (status === "rejected") return <Badge variant="destructive" className="gap-1"><X className="size-3" />Rejected</Badge>;
   if (status === "in_review") return <Badge className="gap-1 bg-blue-500 hover:bg-blue-500 text-white"><Hourglass className="size-3" />In review</Badge>;
   return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white"><Clock className="size-3" />Pending review</Badge>;
