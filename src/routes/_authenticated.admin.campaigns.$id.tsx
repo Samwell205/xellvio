@@ -115,13 +115,42 @@ function AdminCampaignReportPage() {
       </div>
 
       <Card className="p-4">
-        <div className="text-xs uppercase text-muted-foreground mb-1">Message body</div>
-        <div className="text-sm whitespace-pre-wrap">{c.message_body}</div>
+        <div className="flex gap-4 items-start">
+          <div className="flex-1">
+            <div className="text-xs uppercase text-muted-foreground mb-1">Message body</div>
+            <div className="text-sm whitespace-pre-wrap">{c.message_body}</div>
+          </div>
+          {(c as any).media_url && (
+            <a href={(c as any).media_url} target="_blank" rel="noreferrer" className="shrink-0">
+              <img
+                src={(c as any).media_url}
+                alt="Attached MMS image"
+                className="w-28 h-28 object-cover rounded-md border"
+              />
+              <div className="text-[11px] text-muted-foreground mt-1 text-center">Attached image</div>
+            </a>
+          )}
+        </div>
       </Card>
+
+      {(t.not_sent_insufficient > 0 || t.carrier_rejected > 0) && (
+        <Card className="p-4 space-y-1 border-amber-200 bg-amber-50">
+          {t.not_sent_insufficient > 0 && (
+            <div className="text-sm text-amber-900">
+              {t.not_sent_insufficient.toLocaleString()} recipients were never sent — the tenant wallet ran out mid-campaign. They were not charged.
+            </div>
+          )}
+          {t.carrier_rejected > 0 && (
+            <div className="text-sm text-amber-900">
+              {t.carrier_rejected.toLocaleString()} were rejected by the recipient carrier (code 40008) — typical for a large first-time {t.is_mms ? "MMS" : "SMS"} burst from a single number.
+            </div>
+          )}
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Stat label="Recipients" value={t.total.toLocaleString()} />
-        <Stat label="Segments" value={t.segments.toLocaleString()} />
+        <Stat label={t.is_mms ? "MMS messages" : "Segments"} value={(t.is_mms ? t.mms_count : t.segments).toLocaleString()} />
         <Stat label="Delivered" value={t.delivered.toLocaleString()} tone="ok" />
         <Stat label="Failed" value={t.failed.toLocaleString()} tone="bad" />
         <Stat label="Awaiting" value={(t.awaiting_delivery + t.queued).toLocaleString()} />
