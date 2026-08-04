@@ -534,17 +534,28 @@ async function planCampaign(
   const rateByCC: Record<string, Rate> = {};
   for (const r of rates) rateByCC[r.country_code] = r;
   const hasMedia = !!campaign.media_url;
+  // An MMS is ONE billable message with an attachment — it has no SMS
+  // segments, so it must never be priced as segments x rate x multiplier.
+  // Recipients in countries without MMS support fall back to plain SMS and
+  // are therefore priced per segment at the normal SMS rate.
+  const priceFor = (rate: Rate | undefined, cc: string | null | undefined, segs: number) => {
+    if (!rate) return { cost: 0, isMms: false, billedSegments: segs };
+    const unit = Number(rate.sell_price);
+    const isMms = hasMedia && supportsMms(cc);
+    if (isMms) return { cost: +(unit * Number(rate.mms_multiplier)).toFixed(4), isMms, billedSegments: 1 };
+    return { cost: +(segs * unit).toFixed(4), isMms, billedSegments: segs };
+  };
 
   const enriched = recipients.map((p: any) => {
     const body = render(campaign.message_body, p);
     const seg = calculateSegments(body);
     const cc = p.country_code || countryFromPhone(p.phone_e164, dial);
     const rate = cc ? rateByCC[cc] : undefined;
-    const unit = rate ? Number(rate.sell_price) : 0;
-    const mult = hasMedia && rate ? Number(rate.mms_multiplier) : 1;
-    const cost = +(seg.segments * unit * mult).toFixed(4);
-    return { ...p, body, segments: seg.segments, country_code: cc, cost };
+    const priced = priceFor(rate, cc, seg.segments);
+    return { ...p, body, segments: seg.segments, country_code: cc, cost: priced.cost };
   });
+
+
 
   const totalCost = +enriched.reduce((s: number, x: any) => s + x.cost, 0).toFixed(4);
 
