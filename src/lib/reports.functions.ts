@@ -77,7 +77,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     // Verify access via RLS by fetching campaign first.
     const { data: campaign, error: cErr } = await supabase
       .from("campaigns")
-      .select("id,name,status,created_at,message_body,account_id")
+      .select("id,name,status,created_at,message_body,media_url,account_id")
       .eq("id", data.campaignId)
       .maybeSingle();
     if (cErr) throw new Error(cErr.message);
