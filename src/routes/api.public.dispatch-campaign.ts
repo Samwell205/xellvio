@@ -806,8 +806,8 @@ async function reconcileStaleCarrierReceipts(
   // Many US/CA MMS and international carriers never return a final delivery
   // receipt at all — the carrier accepted and finalized the message and simply
   // stays silent. Waiting 24h left whole campaigns parked on "Awaiting", so
-  // after 3h with no receipt we close the row out as "Not delivered
-  // (unconfirmed)" instead of leaving the report unresolved.
+  // after 3h with no receipt we preserve the provider's unconfirmed result
+  // internally; user-facing reports classify that terminal outcome as failed.
   const giveUpCutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
   const { data: expiredRows } = await supabaseAdmin
     .from("messages")

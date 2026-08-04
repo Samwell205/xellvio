@@ -975,13 +975,13 @@ function RecipientActivity({
                         <StatusBadge status={m.status} />
                         {m.error_code && <div className="text-[10px] text-destructive mt-0.5 font-mono">{m.error_code}</div>}
                         {m.failure_reason && (
-                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug" title={m.failure_reason}>
-                            {m.failure_reason.length > 120 ? m.failure_reason.slice(0, 120) + "…" : m.failure_reason}
+                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug" title={m.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : m.failure_reason}>
+                            {m.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : (m.failure_reason.length > 120 ? m.failure_reason.slice(0, 120) + "…" : m.failure_reason)}
                           </div>
                         )}
                         {!m.failure_reason && m.status === "delivery_unconfirmed" && (
                           <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
-                            Carrier accepted the SMS but never returned a delivery receipt. Common for international carriers that don't send DLRs.
+                            Delivery could not be confirmed by the recipient carrier.
                           </div>
                         )}
                       </TableCell>
