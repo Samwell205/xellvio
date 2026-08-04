@@ -61,15 +61,24 @@ const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> 
   personal: { perTick: 120, concurrency: 4 },
 };
 const TENANT_THROTTLE_DEFAULT = { perTick: 240, concurrency: 8 };
+// Picture messages (MMS) are far more aggressively filtered than plain SMS.
+// A large first-time burst from one number gets rejected wholesale by the
+// recipient carriers (error 40008), so MMS sends are paced much slower
+// regardless of sender kind.
+const MMS_THROTTLE = { perTick: 120, concurrency: 4 };
 
-function throttleForSender(sender: Sender) {
+function throttleForSender(sender: Sender, isMms = false) {
   const kind = (sender.assets.find((a) => a.sender_kind)?.sender_kind ?? "").toLowerCase();
   const base = TENANT_THROTTLE[kind] ?? TENANT_THROTTLE_DEFAULT;
+  const capped = isMms
+    ? { perTick: Math.min(base.perTick, MMS_THROTTLE.perTick), concurrency: Math.min(base.concurrency, MMS_THROTTLE.concurrency) }
+    : base;
   return {
-    perTick: Math.min(base.perTick, DELIVER_PER_WORKER),
-    concurrency: Math.min(base.concurrency, DELIVER_CONCURRENCY),
+    perTick: Math.min(capped.perTick, DELIVER_PER_WORKER),
+    concurrency: Math.min(capped.concurrency, DELIVER_CONCURRENCY),
   };
 }
+
 
 
 function render(body: string, p: { first_name?: string | null; last_name?: string | null; country_code?: string | null; phone_e164?: string | null; custom_fields?: Record<string, any> | null }) {
