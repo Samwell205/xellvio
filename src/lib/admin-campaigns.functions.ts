@@ -242,7 +242,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       { total: 0, retries: 0, charged: 0, carrier_cost: 0, retry_charged: 0, retry_carrier_cost: 0 },
     );
     const clickRows: any[] = [];
-    for (let from = 0; from < 20_000; from += 1000) {
+    for (let from = 0; from < 60_000; from += 1000) {
       const { data: page } = await supabaseAdmin
         .from("link_clicks")
         .select("clicks")
@@ -253,14 +253,18 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     }
     const totalClicks = clickRows.reduce((s, r) => s + Number(r.clicks ?? 0), 0);
     const clickedLinks = clickRows.filter((r) => Number(r.clicks ?? 0) > 0).length;
+    // Shared shortlink → each click is a distinct recipient; per-recipient
+    // links → each clicked link is one recipient.
+    const engagedClickers = clickRows.length > 1 ? clickedLinks : totalClicks;
 
     return {
       clicks: {
         links: clickRows.length,
         total_clicks: totalClicks,
-        clicked_links: clickedLinks,
-        click_rate: clickRows.length > 0 ? +((clickedLinks / clickRows.length) * 100).toFixed(1) : 0,
+        clicked_links: engagedClickers,
+        click_rate: totals.delivered > 0 ? +Math.min(100, (engagedClickers / totals.delivered) * 100).toFixed(1) : 0,
       },
+
       campaign: {
         id: (campaign as any).id,
         name: (campaign as any).name,
