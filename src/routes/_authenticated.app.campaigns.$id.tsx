@@ -211,12 +211,38 @@ function CampaignReport() {
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
-        .select("id, type, created_at, message_id, messages!inner(campaign_id)")
-        .eq("messages.campaign_id", id)
+        .select("id, type, created_at, message_id, payload")
+        .eq("type", "clicked")
+        .order("created_at", { ascending: false })
         .limit(2000);
-      return data ?? [];
+      return (data ?? []).filter((e: any) => e?.payload?.campaign_id === id);
     },
   });
+
+  // Authoritative click counters live on link_clicks (works for both
+  // per-recipient links and a single shared shortlink with no message_id).
+  const clicksQ = useQuery({
+    queryKey: ["campaign-link-clicks", id],
+    refetchInterval: poll(60_000),
+    queryFn: async () => {
+      const rows: any[] = [];
+      for (let from = 0; from < 60_000; from += 1000) {
+        const { data, error } = await supabase
+          .from("link_clicks")
+          .select("clicks, message_id")
+          .eq("campaign_id", id)
+          .range(from, from + 999);
+        if (error) throw error;
+        rows.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
+      }
+      const links = rows.length;
+      const totalClicks = rows.reduce((s, r) => s + Number(r.clicks ?? 0), 0);
+      const clickedLinks = rows.filter((r) => Number(r.clicks ?? 0) > 0).length;
+      return { links, totalClicks, clickedLinks };
+    },
+  });
+
 
   // Lightweight two-column pull purely for the engagement chart.
   const seriesQ = useQuery({
@@ -383,13 +409,19 @@ function CampaignReport() {
     const failed = progress?.failed ?? 0;
     const sent = awaitingDelivery + delivered + failed;
     const skipped = Math.max(0, attempted - (progress?.total ?? 0));
-    const clicked = events.filter((e: any) => e.type === "clicked").length;
-    const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
+    const linkStats = clicksQ.data ?? { links: 0, totalClicks: 0, clickedLinks: 0 };
+    const clicked = linkStats.totalClicks || events.filter((e: any) => e.type === "clicked").length;
+    // One shared shortlink → every click is a distinct recipient; per-recipient
+    // links → each clicked link is one recipient.
+    const uniqueClickers = linkStats.links > 1
+      ? linkStats.clickedLinks
+      : Math.min(clicked, Math.max(delivered, clicked));
+
     const totalCost = Number(s?.billed_cost ?? 0);
     const reservedCost = Number(s?.reserved_cost ?? 0);
     const totalSegments = Number(s?.segments ?? 0);
     const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
-    const clickRate = delivered > 0 ? (uniqueClickers / delivered) * 100 : 0;
+    const clickRate = delivered > 0 ? Math.min(100, (uniqueClickers / delivered) * 100) : 0;
     const costPerDelivered = delivered > 0 ? totalCost / delivered : 0;
 
     const byCountry: Record<string, { total: number; delivered: number; unconfirmed: number; failed: number }> = {};
@@ -441,7 +473,7 @@ function CampaignReport() {
       totalCost, reservedCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
       byCountry, failures: failures?.byReason ?? {}, series,
     };
-  }, [summaryQ.data, progress, failures, seriesQ.data, eventsQ.data, eligibleQ.data]);
+  }, [summaryQ.data, progress, failures, seriesQ.data, eventsQ.data, clicksQ.data, eligibleQ.data]);
 
   if (!campaignQ.data) return <div className="text-muted-foreground">Loading campaign…</div>;
   const c = campaignQ.data;

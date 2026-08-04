@@ -179,7 +179,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     // Link-click tracking (short links created for this campaign).
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const clickRows: Array<{ clicks: number | null }> = [];
-    for (let from = 0; from < 20_000; from += 1000) {
+    for (let from = 0; from < 60_000; from += 1000) {
       const { data: page } = await supabaseAdmin
         .from("link_clicks")
         .select("clicks")
@@ -190,12 +190,16 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     }
     const totalClicks = clickRows.reduce((s, r) => s + Number(r.clicks ?? 0), 0);
     const clickedLinks = clickRows.filter((r) => Number(r.clicks ?? 0) > 0).length;
+    // With one shared shortlink each click is a distinct recipient; with
+    // per-recipient links each clicked link is one recipient.
+    const engaged = clickRows.length > 1 ? clickedLinks : totalClicks;
     const clicks = {
       links: clickRows.length,
       total_clicks: totalClicks,
-      clicked_links: clickedLinks,
-      click_rate: clickRows.length > 0 ? +((clickedLinks / clickRows.length) * 100).toFixed(1) : 0,
+      clicked_links: engaged,
+      click_rate: totals.delivered > 0 ? +Math.min(100, (engaged / totals.delivered) * 100).toFixed(1) : 0,
     };
+
 
     return {
       clicks,
