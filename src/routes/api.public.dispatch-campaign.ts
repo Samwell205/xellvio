@@ -324,7 +324,9 @@ async function sendOneMessage(
       }),
     );
 
-    const providerSegments = Number(result.parts ?? m.segments_count ?? 1);
+    // MMS is one message with an attachment — it has no SMS segment count.
+    const providerSegments = sendAsMms ? 1 : Number(result.parts ?? m.segments_count ?? 1);
+
     // Telnyx has already accepted this message — recording that fact is not
     // optional, so this write gets real retries rather than being fired and
     // forgotten. A failure here is what previously left rows stuck on
