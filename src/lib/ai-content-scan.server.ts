@@ -36,7 +36,28 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
   }
 
   try {
-    const { output } = await generateText({
+    // Build the JSON schema description inline so the model returns parseable
+    // output even when the provider does not support native structured outputs.
+    const jsonSchemaDescription = JSON.stringify({
+      type: "object",
+      properties: {
+        allowed: { type: "boolean" },
+        category: {
+          type: "string",
+          enum: [
+            "sexual", "hate_speech", "alcohol", "firearms", "tobacco",
+            "cannabis_cbd", "illegal_drugs", "gambling", "payday_loans",
+            "debt_collection", "crypto_scam", "get_rich_quick",
+            "fraud_deceptive", "phishing", "none",
+          ],
+        },
+        confidence: { type: "string", enum: ["high", "medium", "low"] },
+        reason: { type: "string" },
+      },
+      required: ["allowed"],
+    });
+
+    const { text } = await generateText({
       model,
       // Content screening already fails open on any error — retrying buys
       // nothing (a persistent error like an exhausted billing balance fails
@@ -44,7 +65,6 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
       // CPU budget on retry overhead, which is exactly what happened here.
       maxRetries: 0,
       timeout: 8000,
-      output: Output.object({ schema: AI_SCHEMA }),
       system:
         "You are a content safety classifier for an SMS marketing platform that must comply with US/CA carrier (SHAFT) policies and Twilio's Acceptable Use Policy. " +
         "Block messages promoting any of these categories:\n" +
@@ -82,11 +102,16 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
         "- \"Tired of long waits and poor service? We offer quality guarantee and delivery to your door. Honest times and the best service in town. No party without us. Write to see our selection.\" (event/party service)\n\n" +
         "Ambiguity is NOT grounds to block: only return allowed=false when the message itself clearly promotes a prohibited category in plain or lightly obfuscated wording. " +
         "If you are not confident, return allowed=true. Set confidence to 'high' only when the violation is unmistakable.",
-      prompt: `Analyze this SMS campaign message for prohibited content:\n\n"""${messageBody}"""`,
+      prompt:
+        `Analyze this SMS campaign message for prohibited content.\n\n` +
+        `Return ONLY a JSON object matching this schema (no markdown, no explanation):\n${jsonSchemaDescription}\n\n` +
+        `Message:\n"""${messageBody}"""`,
     });
 
-
-    const result = output as z.infer<typeof AI_SCHEMA>;
+    // Extract and parse the JSON object from the model response.
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const raw = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    const result = AI_SCHEMA.parse(raw);
 
     // Only block on unmistakable violations. Medium/low-confidence AI opinions
     // are advisory only — they must never stop a legitimate campaign.
