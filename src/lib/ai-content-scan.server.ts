@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getChatModel } from "./ai-provider.server";
-import { generateText, Output } from "ai";
+import { generateText } from "ai";
 import type { ScanResult } from "./content-scanner";
 
 const AI_SCHEMA = z.object({
