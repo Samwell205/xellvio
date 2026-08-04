@@ -230,11 +230,12 @@ function TollfreeVerificationPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
           <ShieldCheck className="size-6 text-primary" />
-          Toll Free Verification Request
+          {isVerified ? "Toll-Free Verification" : "Toll Free Verification Request"}
         </h1>
         <p className="text-muted-foreground mt-1 max-w-2xl">
-          Complete the carrier-style request below. We reserve the toll-free number during submission,
-          charge the one-time ${feeQuery.data?.fee ?? 5} setup fee from credits, and send it for review.
+          {isVerified
+            ? "Your toll-free number is verified and cleared to send. No further submission is required."
+            : `Complete the carrier-style request below. We reserve the toll-free number during submission, charge the one-time $${feeQuery.data?.fee ?? 5} setup fee from credits, and send it for review.`}
         </p>
       </div>
 
