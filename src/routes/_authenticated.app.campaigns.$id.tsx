@@ -409,8 +409,14 @@ function CampaignReport() {
     const failed = progress?.failed ?? 0;
     const sent = awaitingDelivery + delivered + failed;
     const skipped = Math.max(0, attempted - (progress?.total ?? 0));
-    const clicked = events.filter((e: any) => e.type === "clicked").length;
-    const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
+    const linkStats = clicksQ.data ?? { links: 0, totalClicks: 0, clickedLinks: 0 };
+    const clicked = linkStats.totalClicks || events.filter((e: any) => e.type === "clicked").length;
+    // One shared shortlink → every click is a distinct recipient; per-recipient
+    // links → each clicked link is one recipient.
+    const uniqueClickers = linkStats.links > 1
+      ? linkStats.clickedLinks
+      : Math.min(clicked, Math.max(delivered, clicked));
+
     const totalCost = Number(s?.billed_cost ?? 0);
     const reservedCost = Number(s?.reserved_cost ?? 0);
     const totalSegments = Number(s?.segments ?? 0);
