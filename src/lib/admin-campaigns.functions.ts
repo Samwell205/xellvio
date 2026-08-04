@@ -98,7 +98,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     const [{ data: campaign, error: cErr }, { data: rates }] = await Promise.all([
       supabaseAdmin
         .from("campaigns")
-        .select("id,account_id,name,status,message_body,created_at")
+        .select("id,account_id,name,status,message_body,media_url,created_at")
         .eq("id", data.campaignId)
         .maybeSingle(),
       supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,mms_multiplier,mms_cost_multiplier,passthrough_fee"),
@@ -144,6 +144,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       delivery_unconfirmed: 0,
       failed: 0,
       queued: 0,
+      not_sent_insufficient: 0,
+      carrier_rejected: 0,
       cost: 0,
       reserved_cost: 0,
       carrier_cost: 0,
@@ -198,6 +200,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       if (r.status === "delivery_unconfirmed") totals.delivery_unconfirmed += 1;
       if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") totals.failed += 1;
       if (r.status === "queued" || r.status === "sending" || r.status === "pending") totals.queued += 1;
+      if (r.error_code === "insufficient_balance") totals.not_sent_insufficient += 1;
+      if (r.error_code === "40008") totals.carrier_rejected += 1;
 
       const ts = r.sent_at ?? r.created_at;
       if (ts) {
@@ -272,6 +276,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         created_at: (campaign as any).created_at,
         
         message_body: (campaign as any).message_body,
+        media_url: (campaign as any).media_url ?? null,
       },
       account: {
         id: acct?.id ?? null,
