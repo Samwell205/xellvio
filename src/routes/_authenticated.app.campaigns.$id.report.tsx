@@ -62,7 +62,7 @@ function ReportPage() {
   const filterStatus = (s: string) => {
     if (s === "delivered") return "delivered";
     if (s === "failed" || s === "undelivered") return "failed";
-    if (s === "delivery_unconfirmed") return "not_delivered";
+    if (s === "delivery_unconfirmed") return "failed";
     if (s === "sent") return "sent_awaiting";
     return s;
   };
@@ -73,7 +73,7 @@ function ReportPage() {
     switch (key) {
       case "all": return rows;
       case "delivered": return rows.filter((x) => x.status === "delivered");
-      case "failed": return rows.filter((x) => x.status === "failed" || x.status === "undelivered");
+      case "failed": return rows.filter((x) => x.status === "failed" || x.status === "undelivered" || x.status === "delivery_unconfirmed");
       case "not_delivered": return rows.filter((x) => x.status === "delivery_unconfirmed");
       case "sent_awaiting": return rows.filter((x) => x.status === "sent");
       case "clicked": return rows.filter((x) => x.clicks > 0);
@@ -142,7 +142,6 @@ function ReportPage() {
             ["Recipients", r.totals.total.toLocaleString()],
             ["Sent to carrier", r.totals.sent.toLocaleString()],
             ["Delivered", `${r.totals.delivered.toLocaleString()} (${r.totals.delivery_rate}%)`],
-            ["Not delivered", r.totals.delivery_unconfirmed.toLocaleString()],
             ["Failed", r.totals.failed.toLocaleString()],
             ["Awaiting carrier", r.totals.awaiting_delivery.toLocaleString()],
             ["Replies received", replies.toLocaleString()],
@@ -202,10 +201,6 @@ function ReportPage() {
                 <XCircle className="size-4 mr-2 text-destructive" /> Failed
                 <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.failed.toLocaleString()}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("not_delivered", "not-delivered")}>
-                <HelpCircle className="size-4 mr-2 text-sky-600" /> Not delivered
-                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.delivery_unconfirmed.toLocaleString()}</span>
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("sent_awaiting", "awaiting")}>
                 <Clock className="size-4 mr-2 text-amber-600" /> Awaiting carrier
                 <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.awaiting_delivery.toLocaleString()}</span>
@@ -245,11 +240,10 @@ function ReportPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Stat icon={<Send className="size-4" />} label="Sent to carrier" value={r.totals.sent.toLocaleString()} />
         <Stat icon={<Clock className="size-4 text-amber-600" />} label="Awaiting carrier" value={r.totals.awaiting_delivery.toLocaleString()} />
         <Stat icon={<CheckCircle2 className="size-4 text-green-600" />} label="Delivered" value={r.totals.delivered.toLocaleString()} sub={`${r.totals.delivery_rate}%`} />
-        <Stat icon={<HelpCircle className="size-4 text-sky-600" />} label="Unconfirmed" value={r.totals.delivery_unconfirmed.toLocaleString()} />
         <Stat icon={<XCircle className="size-4 text-destructive" />} label="Failed" value={r.totals.failed.toLocaleString()} />
         <Stat icon={<Clock className="size-4 text-amber-600" />} label="Queued" value={r.totals.queued.toLocaleString()} />
         <Stat icon={<DollarSign className="size-4" />} label="Charged" value={formatUSD(r.totals.cost)} />
