@@ -125,7 +125,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       if (billed) cur.cost += Number(r.cost ?? 0);
       if (r.status === "delivered") cur.delivered += 1;
       if (r.status === "delivery_unconfirmed") cur.unconfirmed += 1;
-      if (r.status === "failed" || r.status === "undelivered") cur.failed += 1;
+      if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") cur.failed += 1;
       byCC.set(cc, cur);
 
 
@@ -133,7 +133,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
         const cur2 = byKind.get(r.sender_kind) ?? { used: 0, delivered: 0, failed: 0 };
         cur2.used += 1;
         if (r.status === "delivered") cur2.delivered += 1;
-        if (r.status === "failed" || r.status === "undelivered") cur2.failed += 1;
+        if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") cur2.failed += 1;
         byKind.set(r.sender_kind, cur2);
       }
 
@@ -144,7 +144,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       if (r.status === "sent") totals.awaiting_delivery += 1;
       if (r.status === "delivered") totals.delivered += 1;
       if (r.status === "delivery_unconfirmed") totals.delivery_unconfirmed += 1;
-      if (r.status === "failed" || r.status === "undelivered") totals.failed += 1;
+      if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") totals.failed += 1;
       if (r.status === "queued" || r.status === "sending" || r.status === "pending") totals.queued += 1;
 
       const ts = r.sent_at ?? r.created_at;
@@ -153,21 +153,21 @@ export const getCampaignReport = createServerFn({ method: "POST" })
         const t = timelineMap.get(hour) ?? { sent: 0, delivered: 0, failed: 0 };
         if (r.status === "sent" || r.status === "delivered") t.sent += 1;
         if (r.status === "delivered") t.delivered += 1;
-        if (r.status === "failed" || r.status === "undelivered") t.failed += 1;
+      if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") t.failed += 1;
         timelineMap.set(hour, t);
       }
 
-      if ((r.status === "failed" || r.status === "undelivered") && failures.length < 500) {
+      if ((r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") && failures.length < 500) {
         failures.push({
           phone_e164: r.phone_e164,
           country_code: r.country_code,
           error_code: r.error_code,
-          failure_reason: r.failure_reason,
+          failure_reason: r.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : r.failure_reason,
           created_at: r.created_at,
         });
       }
-      if (r.status === "failed" || r.status === "undelivered") {
-        const code = r.error_code ?? "unknown";
+      if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") {
+        const code = r.status === "delivery_unconfirmed" ? "delivery_unconfirmed" : (r.error_code ?? "unknown");
         failureCounts.set(code, (failureCounts.get(code) ?? 0) + 1);
       }
     }
@@ -227,6 +227,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
             code === "40012" ? "Invalid phone number" :
             code === "40008" ? "Recipient carrier rejected" :
             code === "insufficient_balance" ? "Not sent — insufficient credit" :
+            code === "delivery_unconfirmed" ? "Delivery not confirmed by recipient carrier" :
             "Other send failure",
           retryable: code === "dispatch_timeout",
         }))

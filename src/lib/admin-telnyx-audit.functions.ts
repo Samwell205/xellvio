@@ -294,9 +294,10 @@ export const getSenderNumberActivity = createServerFn({ method: "POST" })
       totalTenantSpend += Number(m.cost ?? 0);
       if (m.status === "delivered") delivered += 1;
       else if (m.status === "failed" || m.status === "undelivered") failed += 1;
-      else if (m.status === "delivery_unconfirmed") unconfirmed += 1;
+      else if (m.status === "delivery_unconfirmed") { unconfirmed += 1; failed += 1; }
       else if (m.status === "sent") sent += 1;
-      byStatus.set(m.status, (byStatus.get(m.status) ?? 0) + 1);
+      const reportStatus = m.status === "delivery_unconfirmed" ? "failed" : m.status;
+      byStatus.set(reportStatus, (byStatus.get(reportStatus) ?? 0) + 1);
       return { ...m, mdr_cost: +mdr.toFixed(4) };
     });
 
