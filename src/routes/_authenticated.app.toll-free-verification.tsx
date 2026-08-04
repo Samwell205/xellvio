@@ -306,13 +306,32 @@ function TollfreeVerificationPage() {
         )}
       </Card>
 
-      {isLocked && (
+      {isLocked && !isVerified && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
           Your submission is locked while the carrier reviews it. Only the carrier can approve or reject this — we cannot approve it manually. This page updates automatically.
         </div>
       )}
 
-      {!feePaid && !submissionStarted ? (
+      {isVerified ? (
+        <Card className="border-emerald-500/40 bg-emerald-500/5">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BadgeCheck className="size-5 text-emerald-600" />
+              Your toll-free number is verified
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              {asset?.phone_number ? <span className="font-mono text-foreground">{asset.phone_number}</span> : "Your toll-free number"}{" "}
+              is approved for US, Canada and Puerto Rico delivery. There is nothing else to submit —
+              no new verification request is needed.
+            </p>
+            <Button asChild size="sm">
+              <Link to="/app/campaigns/new">Start a campaign</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : !feePaid && !submissionStarted ? (
         <PayFeeGate
           fee={feeQuery.data?.fee ?? 5}
           balance={feeQuery.data?.balance ?? 0}
@@ -348,24 +367,28 @@ function TollfreeVerificationPage() {
         />
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <AlertCircle className="size-5 text-primary" />
-            Why direct carrier orders would not go through
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <p>
-            US toll-free orders are blocked on accounts that use a freemail address or have not reached the required account level. That is why direct carrier orders failed.
-          </p>
-          <p>
-            Your tenants should not try to buy numbers directly with a carrier. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once, before registration starts.
-          </p>
-        </CardContent>
-      </Card>
+      {!isVerified && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertCircle className="size-5 text-primary" />
+                Why direct carrier orders would not go through
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                US toll-free orders are blocked on accounts that use a freemail address or have not reached the required account level. That is why direct carrier orders failed.
+              </p>
+              <p>
+                Your tenants should not try to buy numbers directly with a carrier. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once, before registration starts.
+              </p>
+            </CardContent>
+          </Card>
 
-      <MarketplaceBuyCard />
+          <MarketplaceBuyCard />
+        </>
+      )}
 
       {isLoading && (
         <div className="text-sm text-muted-foreground flex items-center gap-2">
