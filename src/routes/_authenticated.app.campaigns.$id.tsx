@@ -473,7 +473,7 @@ function CampaignReport() {
       totalCost, reservedCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
       byCountry, failures: failures?.byReason ?? {}, series,
     };
-  }, [summaryQ.data, progress, failures, seriesQ.data, eventsQ.data, eligibleQ.data]);
+  }, [summaryQ.data, progress, failures, seriesQ.data, eventsQ.data, clicksQ.data, eligibleQ.data]);
 
   if (!campaignQ.data) return <div className="text-muted-foreground">Loading campaign…</div>;
   const c = campaignQ.data;
