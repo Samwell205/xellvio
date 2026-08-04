@@ -421,7 +421,7 @@ function CampaignReport() {
     const reservedCost = Number(s?.reserved_cost ?? 0);
     const totalSegments = Number(s?.segments ?? 0);
     const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
-    const clickRate = delivered > 0 ? (uniqueClickers / delivered) * 100 : 0;
+    const clickRate = delivered > 0 ? Math.min(100, (uniqueClickers / delivered) * 100) : 0;
     const costPerDelivered = delivered > 0 ? totalCost / delivered : 0;
 
     const byCountry: Record<string, { total: number; delivered: number; unconfirmed: number; failed: number }> = {};
