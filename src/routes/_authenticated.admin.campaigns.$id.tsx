@@ -58,8 +58,8 @@ function AdminCampaignReportPage() {
   function exportCsv() {
     downloadCsv(
       `admin-${c.name.replace(/[^a-z0-9]+/gi, "_")}-breakdown.csv`,
-      ["country", "recipients", "segments", "delivered", "not_delivered", "failed", "tenant_spend_usd", "telnyx_cost_usd", "margin_usd"],
-      r.byCountry.map((row) => [row.country_code, row.recipients, row.segments, row.delivered, row.unconfirmed, row.failed, row.cost, row.carrier_cost, row.margin]),
+      ["country", "recipients", "segments", "delivered", "failed", "tenant_spend_usd", "telnyx_cost_usd", "margin_usd"],
+      r.byCountry.map((row) => [row.country_code, row.recipients, row.segments, row.delivered, row.failed, row.cost, row.carrier_cost, row.margin]),
     );
   }
   function exportPdf() {
@@ -72,7 +72,6 @@ function AdminCampaignReportPage() {
           ["Recipients", t.total.toLocaleString()],
           ["Segments", t.segments.toLocaleString()],
           ["Delivered", `${t.delivered.toLocaleString()} (${t.delivery_rate}%)`],
-          ["Not delivered", t.delivery_unconfirmed.toLocaleString()],
           ["Failed", t.failed.toLocaleString()],
           ["Charged to tenant", formatUSD(t.cost)],
           ["Not yet sent (estimate)", formatUSD(Number(t.reserved_cost ?? 0))],
@@ -120,11 +119,10 @@ function AdminCampaignReportPage() {
         <div className="text-sm whitespace-pre-wrap">{c.message_body}</div>
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Stat label="Recipients" value={t.total.toLocaleString()} />
         <Stat label="Segments" value={t.segments.toLocaleString()} />
         <Stat label="Delivered" value={t.delivered.toLocaleString()} tone="ok" />
-        <Stat label="Not delivered" value={t.delivery_unconfirmed.toLocaleString()} tone="warn" />
         <Stat label="Failed" value={t.failed.toLocaleString()} tone="bad" />
         <Stat label="Awaiting" value={(t.awaiting_delivery + t.queued).toLocaleString()} />
       </div>
@@ -164,7 +162,6 @@ function AdminCampaignReportPage() {
                 <th className="p-3 text-right">Recipients</th>
                 <th className="p-3 text-right">Segments</th>
                 <th className="p-3 text-right">Delivered</th>
-                <th className="p-3 text-right">Not delivered</th>
                 <th className="p-3 text-right">Failed</th>
                 <th className="p-3 text-right">Tenant spend</th>
                 <th className="p-3 text-right">Carrier cost</th>
@@ -178,14 +175,13 @@ function AdminCampaignReportPage() {
                   <td className="p-3 text-right tabular-nums">{row.recipients.toLocaleString()}</td>
                   <td className="p-3 text-right tabular-nums">{row.segments.toLocaleString()}</td>
                   <td className="p-3 text-right tabular-nums text-emerald-600">{row.delivered.toLocaleString()}</td>
-                  <td className="p-3 text-right tabular-nums text-amber-600">{row.unconfirmed.toLocaleString()}</td>
                   <td className="p-3 text-right tabular-nums text-destructive">{row.failed.toLocaleString()}</td>
                   <td className="p-3 text-right tabular-nums">{formatUSD(row.cost)}</td>
                   <td className="p-3 text-right tabular-nums">{formatUSD(row.carrier_cost)}</td>
                   <td className="p-3 text-right tabular-nums">{formatUSD(row.margin)}</td>
                 </tr>
               ))}
-              {r.byCountry.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No data.</td></tr>}
+              {r.byCountry.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No data.</td></tr>}
             </tbody>
           </table>
         </div>

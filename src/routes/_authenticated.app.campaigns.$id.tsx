@@ -6,7 +6,6 @@ import {
   cancelCampaign,
   retryMessage,
   retryFailedMessages,
-  resendUnconfirmed,
 } from "@/lib/campaign-control.functions";
 
 import { toast } from "sonner";
@@ -31,9 +30,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -43,7 +39,7 @@ import { SUPPORT_WHATSAPP_DISPLAY, SUPPORT_WHATSAPP_URL } from "@/lib/support";
 
 import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
-  Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone, HelpCircle,
+  Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
   DollarSign, Wallet, Activity, XCircle, Download, RotateCw, ExternalLink,
 } from "lucide-react";
 
@@ -90,7 +86,7 @@ function CampaignReport() {
       const filtered = rows.filter((r: any) => {
         switch (key) {
           case "delivered": return r.status === "delivered";
-          case "failed": return r.status === "failed" || r.status === "undelivered";
+          case "failed": return r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed";
           case "not_delivered": return r.status === "delivery_unconfirmed";
           case "sent_awaiting": return r.status === "sent";
           case "clicked": return (r.click_count ?? 0) > 0;
@@ -154,7 +150,7 @@ function CampaignReport() {
       sent: Number(s.sent ?? 0),
       delivered: Number(s.delivered ?? 0),
       deliveryUnconfirmed: Number(s.delivery_unconfirmed ?? 0),
-      failed: Number(s.failed ?? 0) + Number(s.sent_with_error ?? 0),
+      failed: Number(s.failed ?? 0) + Number(s.delivery_unconfirmed ?? 0) + Number(s.sent_with_error ?? 0),
     };
   }, [summaryQ.data]);
 
@@ -188,7 +184,7 @@ function CampaignReport() {
         sent: ["sent"],
         delivered: ["delivered"],
         unconfirmed: ["delivery_unconfirmed"],
-        failed: ["failed", "undelivered"],
+        failed: ["failed", "undelivered", "delivery_unconfirmed"],
         skipped: ["skipped"],
         queued: ["queued", "pending", "sending"],
       };
@@ -331,33 +327,6 @@ function CampaignReport() {
     onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
   });
 
-  const resendUnconfirmedFn = useServerFn(resendUnconfirmed);
-  const resendUnconfirmedM = useMutation({
-    mutationFn: async (hoursBack: number) => {
-      const preview = await resendUnconfirmedFn({ data: { campaignId: id, hoursBack, dryRun: true } });
-      const count = Number(preview.count ?? 0);
-      if (count === 0) return { ...preview, resent: 0 };
-      const approved = window.confirm(
-        `Send ${count.toLocaleString()} unconfirmed SMS again? Estimated charge: ${formatUSD(preview.estimatedCost)}. Some recipients may already have received the first SMS.`,
-      );
-      if (!approved) throw new Error("Resend cancelled");
-      return resendUnconfirmedFn({ data: { campaignId: id, hoursBack, confirmed: true } });
-    },
-    onSuccess: (r: any) => {
-      toast.success(
-        r.resent > 0
-          ? `Re-queued ${r.resent.toLocaleString()} message${r.resent === 1 ? "" : "s"} without delivery confirmation (est. ${formatUSD(r.estimatedCost)}).`
-          : "No messages without delivery confirmation in that window.",
-
-      );
-      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
-      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
-    },
-    onError: (e: any) => toast.error(e?.message ?? "Resend failed"),
-  });
-
-
 
 
   const eligibleQ = useQuery({
@@ -412,7 +381,7 @@ function CampaignReport() {
     const delivered = progress?.delivered ?? 0;
     const deliveryUnconfirmed = progress?.deliveryUnconfirmed ?? 0;
     const failed = progress?.failed ?? 0;
-    const sent = awaitingDelivery + delivered + deliveryUnconfirmed + failed;
+    const sent = awaitingDelivery + delivered + failed;
     const skipped = Math.max(0, attempted - (progress?.total ?? 0));
     const clicked = events.filter((e: any) => e.type === "clicked").length;
     const uniqueClickers = new Set(events.filter((e: any) => e.type === "clicked").map((e: any) => e.message_id)).size;
@@ -429,7 +398,7 @@ function CampaignReport() {
         total: Number(r.messages ?? 0),
         delivered: Number(r.delivered ?? 0),
         unconfirmed: 0,
-        failed: Number(r.failed ?? 0),
+        failed: Number(r.failed ?? 0) + Number(r.delivery_unconfirmed ?? r.unconfirmed ?? 0),
       };
     }
 
@@ -534,7 +503,6 @@ function CampaignReport() {
                 <DropdownMenuLabel>Phone numbers only</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => exportPhoneNumbers("delivered", "delivered")}>Delivered</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => exportPhoneNumbers("failed", "failed")}>Failed</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportPhoneNumbers("not_delivered", "not-delivered")}>Not delivered</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => exportPhoneNumbers("sent_awaiting", "awaiting-carrier")}>Awaiting carrier</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Engagement</DropdownMenuLabel>
@@ -677,19 +645,11 @@ function CampaignReport() {
             {/* Right column */}
             <div className="space-y-5">
               {/* KPI hero */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-3">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <Kpi icon={CheckCircle2} label="Delivery rate" value={`${stats.deliveryRate.toFixed(1)}%`}
                   sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`} tone="success" />
                 <Kpi icon={Clock} label="Awaiting carrier" value={stats.awaitingDelivery.toLocaleString()}
                   sub="accepted, no final receipt yet" tone="muted" />
-                <UnconfirmedKpi
-                  value={stats.deliveryUnconfirmed}
-                  sent={stats.sent}
-                  onResend={(h) => resendUnconfirmedM.mutate(h)}
-                  isResending={resendUnconfirmedM.isPending}
-                  canResend={campaignQ.data?.status !== "cancelled" && stats.deliveryUnconfirmed > 0}
-                />
-
                 <Kpi icon={MousePointerClick} label="Click rate" value={`${stats.clickRate.toFixed(1)}%`}
                   sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`} tone="primary" />
                 <Kpi icon={ShieldOff} label="Opt-outs" value={(optOutsQ.data ?? 0).toLocaleString()}
@@ -761,11 +721,6 @@ function CampaignReport() {
                   {stats.awaitingDelivery > 0 && (
                     <FunnelRow icon={Clock} label="awaiting carrier report" value={stats.awaitingDelivery}
                       sub={stats.sent ? `${pct(stats.awaitingDelivery / stats.sent * 100)} of sent` : undefined} tone="muted" />
-                  )}
-                  {stats.deliveryUnconfirmed > 0 && (
-                    <FunnelRow icon={HelpCircle} label="not delivered (no receipt)" value={stats.deliveryUnconfirmed}
-                      sub={stats.sent ? `${pct(stats.deliveryUnconfirmed / stats.sent * 100)} of sent` : undefined} tone="muted" />
-
                   )}
                   <FunnelRow icon={AlertTriangle} label="failed" value={stats.failed}
                     sub={stats.sent ? `${pct(stats.failed / stats.sent * 100)} of sent` : undefined} tone="danger" />
@@ -844,7 +799,6 @@ function CampaignReport() {
                 <ul className="space-y-3">
                   {Object.entries(stats.byCountry).sort((a, b) => b[1].total - a[1].total).map(([cc, v]) => {
                     const rate = v.total ? (v.delivered / v.total) * 100 : 0;
-                    const uncRate = v.total ? (v.unconfirmed / v.total) * 100 : 0;
                     const failRate = v.total ? (v.failed / v.total) * 100 : 0;
                     return (
                       <li key={cc} className="text-sm">
@@ -854,14 +808,9 @@ function CampaignReport() {
                         </div>
                         <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
                           <div className="h-full bg-success" style={{ width: `${rate}%` }} />
-                          <div className="h-full bg-cyan-500" style={{ width: `${uncRate}%` }} />
                           <div className="h-full bg-destructive" style={{ width: `${failRate}%` }} />
                         </div>
-                        {v.unconfirmed > 0 && (
-                          <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">
-                            {v.unconfirmed.toLocaleString()} not delivered · {v.failed.toLocaleString()} failed
-                          </div>
-                        )}
+                        {v.failed > 0 && <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">{v.failed.toLocaleString()} failed</div>}
                       </li>
                     );
                   })}
@@ -943,7 +892,6 @@ function RecipientActivity({
     { key: "all",       label: "All",       count: stats.attempted },
     { key: "sent",      label: "Accepted",  count: stats.awaitingDelivery },
     { key: "delivered", label: "Delivered", count: stats.delivered },
-    { key: "unconfirmed", label: "Not delivered", count: stats.deliveryUnconfirmed },
     { key: "failed",    label: "Failed",    count: stats.failed },
     { key: "skipped",   label: "Skipped",   count: stats.skipped },
     { key: "queued",    label: "Queued",    count: stats.queued },
@@ -1027,13 +975,13 @@ function RecipientActivity({
                         <StatusBadge status={m.status} />
                         {m.error_code && <div className="text-[10px] text-destructive mt-0.5 font-mono">{m.error_code}</div>}
                         {m.failure_reason && (
-                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug" title={m.failure_reason}>
-                            {m.failure_reason.length > 120 ? m.failure_reason.slice(0, 120) + "…" : m.failure_reason}
+                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug" title={m.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : m.failure_reason}>
+                            {m.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : (m.failure_reason.length > 120 ? m.failure_reason.slice(0, 120) + "…" : m.failure_reason)}
                           </div>
                         )}
                         {!m.failure_reason && m.status === "delivery_unconfirmed" && (
                           <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
-                            Carrier accepted the SMS but never returned a delivery receipt. Common for international carriers that don't send DLRs.
+                            Delivery could not be confirmed by the recipient carrier.
                           </div>
                         )}
                       </TableCell>
@@ -1230,105 +1178,6 @@ function Kpi({ icon: Icon, label, value, sub, tone }: {
   );
 }
 
-function UnconfirmedKpi({
-  value, sent, onResend, isResending, canResend,
-}: {
-  value: number; sent: number;
-  onResend: (hoursBack: number) => void;
-  isResending: boolean; canResend: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [hours, setHours] = useState(24);
-  const pct = sent > 0 ? (value / sent) * 100 : 0;
-  return (
-    <Card className="p-4 relative">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="size-6 rounded-md grid place-items-center bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
-          <HelpCircle className="size-3.5" />
-        </span>
-        Not delivered
-      </div>
-      <div className="text-2xl font-extrabold mt-2 tabular-nums">{value.toLocaleString()}</div>
-      <div className="text-xs text-muted-foreground mt-1">
-        {sent > 0 ? `${pct.toFixed(0)}% of sent · matches network report` : "no delivery receipt"}
-      </div>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="text-[11px] text-primary hover:underline mt-1.5"
-      >
-        What does this mean?
-      </button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <HelpCircle className="size-4 text-cyan-500" /> Not delivered — explained
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              This is the same "Not Delivered" number shown by the delivery network. For every SMS, the carrier does two things:
-            </p>
-            <ol className="list-decimal pl-5 space-y-1">
-              <li><strong className="text-foreground">Accepts the message</strong> — this is "sent".</li>
-              <li><strong className="text-foreground">Returns a delivery receipt (DLR)</strong> once the phone received it — this is "delivered".</li>
-            </ol>
-            <p>
-              <strong className="text-foreground">"Not delivered" means step 1 succeeded, but step 2 never came back.</strong> The
-              carrier accepted your SMS but never told us whether the phone actually rang.
-            </p>
-            <p>
-              Many of these were actually delivered — the carrier just didn't report it. This is very common for
-              international carriers (Africa, Middle East, parts of Asia) that don't return receipts.
-            </p>
-            <p>
-              Use <strong className="text-foreground">Performance by country</strong> below to see which countries this is concentrated in.
-              You can also re-send only these messages if recipients report not receiving them —
-              note that each new send is billed again.
-            </p>
-            {canResend && (
-              <div className="rounded-md border p-3 space-y-2 bg-muted/30">
-                <div className="flex items-center gap-2 text-xs">
-                  <label className="text-foreground font-medium">Resend from last</label>
-                  <select
-                    value={hours}
-                    onChange={(e) => setHours(Number(e.target.value))}
-                    className="text-xs bg-background border rounded px-2 py-1"
-                  >
-                    <option value={6}>6 hours</option>
-                    <option value={12}>12 hours</option>
-                    <option value={24}>24 hours</option>
-                    <option value={48}>48 hours</option>
-                    <option value={72}>72 hours</option>
-                  </select>
-                </div>
-                <Button
-                  size="sm"
-                  disabled={isResending}
-                  onClick={() => {
-                    onResend(hours);
-                    setOpen(false);
-                  }}
-                >
-                  {isResending ? "Re-queuing…" : `Re-send not delivered (${value.toLocaleString()})`}
-                </Button>
-
-                <div className="text-[11px] text-muted-foreground">
-                  This costs money — each re-send is charged as a new send attempt.
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </Card>
-  );
-}
-
-
-
 function SummaryStat({ label, value, sub, tone }: { label: string; value: number | string; sub?: string; tone?: "success" | "danger" | "primary" | "muted" }) {
   const color =
     tone === "success" ? "text-success" :
@@ -1518,18 +1367,16 @@ function ProgressPanel({
       <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
         <Seg pct={(delivered / total) * 100} className="bg-emerald-500" />
         <Seg pct={(sent / total) * 100} className="bg-sky-500" />
-        <Seg pct={(deliveryUnconfirmed / total) * 100} className="bg-cyan-500" />
         <Seg pct={(sending / total) * 100} className="bg-amber-500 animate-pulse" />
         <Seg pct={(failed / total) * 100} className="bg-destructive" />
         <Seg pct={(queued / total) * 100} className="bg-muted-foreground/30" />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-4">
         <ProgTile label="Queued" value={queued} dotClass="bg-muted-foreground/40" />
         <ProgTile label="Sending" value={sending} dotClass="bg-amber-500" pulse={sending > 0} />
         <ProgTile label="Accepted" value={sent} dotClass="bg-sky-500" />
         <ProgTile label="Delivered" value={delivered} dotClass="bg-emerald-500" />
-        <ProgTile label="Not delivered" value={deliveryUnconfirmed} dotClass="bg-cyan-500" />
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
       </div>
 
@@ -1593,8 +1440,6 @@ function ProgressPanel({
             ? `Paused after checking provider capacity. ${inFlight.toLocaleString()} message${inFlight === 1 ? "" : "s"} remain queued and will resume automatically after top-up.`
             : inFlight === 0 && sent > 0
             ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
-            : inFlight === 0 && deliveryUnconfirmed > 0
-            ? `${deliveryUnconfirmed.toLocaleString()} message${deliveryUnconfirmed === 1 ? " was" : "s were"} accepted by the carrier but returned no delivery receipt (shows as "Not Delivered" in the network report).`
             : inFlight === 0
             ? "All messages have a final carrier status."
             : `${processedPct}% complete.`}

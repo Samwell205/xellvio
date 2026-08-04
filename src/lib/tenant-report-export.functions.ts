@@ -101,9 +101,9 @@ export const getCampaignRecipientsExport = createServerFn({ method: "POST" })
       return {
         phone_e164: m.phone_e164,
         country_code: m.country_code,
-        status: m.status,
+        status: m.status === "delivery_unconfirmed" ? "failed" : m.status,
         error_code: m.error_code,
-        failure_reason: m.failure_reason,
+        failure_reason: m.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : m.failure_reason,
         sent_at: m.sent_at,
         delivered_at: m.delivered_at,
         created_at: m.created_at,
