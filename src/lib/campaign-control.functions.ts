@@ -83,13 +83,24 @@ export const retryMessage = createServerFn({ method: "POST" })
     // should not resume dispatch.
     const { data: campaign } = await supabaseAdmin
       .from("campaigns")
-      .select("id, status")
+      .select("id, status, account_id, media_url")
       .eq("id", msg.campaign_id)
       .maybeSingle();
     if (!campaign) throw new Error("Campaign not found");
     if (campaign.status === "cancelled") {
       throw new Error("Campaign is cancelled — resume it first");
     }
+
+    // Re-price from the live rate card before the row goes back out.
+    const { priceRetryRows, applyRetryPricing } = await import("@/lib/campaign-retry-pricing.server");
+    const preflight = await priceRetryRows(supabaseAdmin, campaign as any, [data.messageId]);
+    if (preflight.shortfall > 0) {
+      throw new Error(
+        `Not enough credit to resend: needs $${preflight.estimatedCost.toFixed(2)}, balance is $${preflight.balance.toFixed(2)}.`,
+      );
+    }
+    await applyRetryPricing(supabaseAdmin, preflight);
+
 
     await supabaseAdmin
       .from("messages")
@@ -132,7 +143,7 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
 
     const { data: campaign, error: cErr } = await supabase
       .from("campaigns")
-      .select("id, status")
+      .select("id, status, account_id, media_url")
       .eq("id", data.campaignId)
       .maybeSingle();
     if (cErr) throw new Error(cErr.message);
@@ -142,6 +153,7 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { priceRetryRows, applyRetryPricing } = await import("@/lib/campaign-retry-pricing.server");
 
     let candidateQ = supabaseAdmin
       .from("messages")
@@ -151,12 +163,33 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
     if (data.errorCode) candidateQ = candidateQ.eq("error_code", data.errorCode);
     const { data: candidates, error: candidateError } = await candidateQ;
     if (candidateError) throw new Error(candidateError.message);
-    const estimatedCost = (candidates ?? []).reduce((sum: number, row: any) => sum + Number(row.cost ?? 0), 0);
-    if (data.dryRun) return { ok: true, dryRun: true, count: candidates?.length ?? 0, estimatedCost: +estimatedCost.toFixed(4), retried: 0 };
-    if (!data.confirmed) throw new Error("Retry confirmation is required");
 
     const ids = (candidates ?? []).map((row: any) => row.id);
+    // Price from the live rate card, not the historical (possibly wrong) row
+    // cost — MMS used to be charged per SMS segment.
+    const preflight = await priceRetryRows(supabaseAdmin, campaign as any, ids);
+    const estimatedCost = preflight.estimatedCost;
+    if (data.dryRun) {
+      return {
+        ok: true,
+        dryRun: true,
+        count: preflight.count,
+        estimatedCost,
+        retried: 0,
+        balance: preflight.balance,
+        shortfall: preflight.shortfall,
+        isMms: preflight.isMms,
+      };
+    }
+    if (!data.confirmed) throw new Error("Retry confirmation is required");
     if (ids.length === 0) return { ok: true, retried: 0, estimatedCost: 0 };
+    if (preflight.shortfall > 0) {
+      throw new Error(
+        `Not enough credit to resend ${preflight.count} message${preflight.count === 1 ? "" : "s"}: needs $${estimatedCost.toFixed(2)}, balance is $${preflight.balance.toFixed(2)}. Top up $${preflight.shortfall.toFixed(2)} and try again.`,
+      );
+    }
+
+    await applyRetryPricing(supabaseAdmin, preflight);
     const { data: updated, error } = await supabaseAdmin
       .from("messages")
       .update({
@@ -176,6 +209,7 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
       .in("id", ids)
       .select("id");
     if (error) throw new Error(error.message);
+
 
     if ((updated?.length ?? 0) > 0 && ["sent", "failed"].includes(campaign.status)) {
       await supabaseAdmin
