@@ -615,20 +615,21 @@ async function planCampaign(
     // Recompute segments after rewrite in case link length changed the count.
     const segs = calculateSegments(rewritten).segments;
     const rate = rateByCC[r.country_code];
-    const unit = rate ? Number(rate.sell_price) : 0;
-    const mult = hasMedia && rate ? Number(rate.mms_multiplier) : 1;
-    const cost = +(segs * unit * mult).toFixed(4);
+    const priced = priceFor(rate, r.country_code, segs);
+    const cost = priced.cost;
     const rowBase = {
       id: messageId,
       campaign_id: campaign.id,
       profile_id: r.profile_id,
       phone_e164: r.phone_e164,
       country_code: r.country_code,
-      segments_count: segs,
-      is_mms: hasMedia && !!rate && supportsMms(r.country_code),
+      // MMS is a single message, not N SMS segments.
+      segments_count: priced.billedSegments,
+      is_mms: priced.isMms,
       cost,
       rendered_body: rewritten,
     };
+
     if (cost === 0) queuedRows.push({ ...rowBase, status: "queued" });
     else if (cost <= remaining) { remaining -= cost; queuedRows.push({ ...rowBase, status: "queued" }); }
     else failedRows.push({ ...rowBase, status: "failed", error_code: "insufficient_balance" });
