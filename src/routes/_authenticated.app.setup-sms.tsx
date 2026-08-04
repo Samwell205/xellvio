@@ -1400,7 +1400,14 @@ function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetC
   const loadTf = useServerFn(getMyTollfreeVerification);
   const tf = useQuery({ queryKey: ["tollfree-verification"], queryFn: () => loadTf() });
   const asset = (tf.data as any)?.asset ?? null;
-  const status: string | null = asset?.telnyx_verification_id ? (asset?.verification_status ?? null) : null;
+  // An admin-assigned verified number has no carrier verification ID of its own,
+  // but it is still fully approved — trust "verified" on its own.
+  const status: string | null =
+    asset?.verification_status === "verified"
+      ? "verified"
+      : asset?.telnyx_verification_id
+        ? (asset?.verification_status ?? null)
+        : null;
 
   const needsUsCa =
     (targetCountries ?? []).some((c) => c === "US" || c === "CA") ||

@@ -112,7 +112,7 @@ function accountAutofillToForm(a: any | null | undefined): Partial<WizardForm> {
 function StatusBadge({ status, needsUpdate = false }: { status: Status | null | undefined; needsUpdate?: boolean }) {
   if (needsUpdate) return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white"><AlertCircle className="size-3" />Action requested</Badge>;
   if (!status) return <Badge variant="outline" className="gap-1"><Clock className="size-3" />Not submitted</Badge>;
-  if (status === "verified") return <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" />Approved by carrier</Badge>;
+  if (status === "verified") return <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" />Verified</Badge>;
   if (status === "rejected") return <Badge variant="destructive" className="gap-1"><X className="size-3" />Rejected</Badge>;
   if (status === "in_review") return <Badge className="gap-1 bg-blue-500 hover:bg-blue-500 text-white"><Hourglass className="size-3" />In review</Badge>;
   return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white"><Clock className="size-3" />Pending review</Badge>;
@@ -150,12 +150,15 @@ function TollfreeVerificationPage() {
 
   const asset = data?.asset ?? null;
   const rawStatus = (asset?.verification_status as Status | "pending" | null) ?? null;
-  const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review" || rawStatus === "verified";
+  // Admin-assigned numbers from an already-verified toll-free are marked verified
+  // without their own carrier verification ID — treat them as fully approved.
+  const isVerified = rawStatus === "verified";
+  const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review";
   const status: Status | null =
-    rawStatus === "pending" || (trustsCarrier && !asset?.telnyx_verification_id) ? null : rawStatus;
+    isVerified ? "verified" : rawStatus === "pending" || (trustsCarrier && !asset?.telnyx_verification_id) ? null : rawStatus;
   const payload = (asset?.verification_payload as any) ?? null;
-  const submissionStarted = !!asset?.telnyx_verification_id;
-  const hasReservedNumber = !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
+  const submissionStarted = !!asset?.telnyx_verification_id || isVerified;
+  const hasReservedNumber = !isVerified && !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
   const localSubmissionFailure = status === "rejected" && !asset?.telnyx_verification_id;
   const carrierFeedback = asset?.friendly_rejection_reason || asset?.rejection_reason;
   const needsCarrierUpdate = !!carrierFeedback && status !== "verified";
@@ -227,11 +230,12 @@ function TollfreeVerificationPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
           <ShieldCheck className="size-6 text-primary" />
-          Toll Free Verification Request
+          {isVerified ? "Toll-Free Verification" : "Toll Free Verification Request"}
         </h1>
         <p className="text-muted-foreground mt-1 max-w-2xl">
-          Complete the carrier-style request below. We reserve the toll-free number during submission,
-          charge the one-time ${feeQuery.data?.fee ?? 5} setup fee from credits, and send it for review.
+          {isVerified
+            ? "Your toll-free number is verified and cleared to send. No further submission is required."
+            : `Complete the carrier-style request below. We reserve the toll-free number during submission, charge the one-time $${feeQuery.data?.fee ?? 5} setup fee from credits, and send it for review.`}
         </p>
       </div>
 
@@ -303,13 +307,32 @@ function TollfreeVerificationPage() {
         )}
       </Card>
 
-      {isLocked && (
+      {isLocked && !isVerified && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
           Your submission is locked while the carrier reviews it. Only the carrier can approve or reject this — we cannot approve it manually. This page updates automatically.
         </div>
       )}
 
-      {!feePaid && !submissionStarted ? (
+      {isVerified ? (
+        <Card className="border-emerald-500/40 bg-emerald-500/5">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BadgeCheck className="size-5 text-emerald-600" />
+              Your toll-free number is verified
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              {asset?.phone_number ? <span className="font-mono text-foreground">{asset.phone_number}</span> : "Your toll-free number"}{" "}
+              is approved for US, Canada and Puerto Rico delivery. There is nothing else to submit —
+              no new verification request is needed.
+            </p>
+            <Button asChild size="sm">
+              <Link to="/app/campaigns/new">Start a campaign</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : !feePaid && !submissionStarted ? (
         <PayFeeGate
           fee={feeQuery.data?.fee ?? 5}
           balance={feeQuery.data?.balance ?? 0}
@@ -345,24 +368,28 @@ function TollfreeVerificationPage() {
         />
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <AlertCircle className="size-5 text-primary" />
-            Why direct carrier orders would not go through
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <p>
-            US toll-free orders are blocked on accounts that use a freemail address or have not reached the required account level. That is why direct carrier orders failed.
-          </p>
-          <p>
-            Your tenants should not try to buy numbers directly with a carrier. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once, before registration starts.
-          </p>
-        </CardContent>
-      </Card>
+      {!isVerified && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <AlertCircle className="size-5 text-primary" />
+                Why direct carrier orders would not go through
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                US toll-free orders are blocked on accounts that use a freemail address or have not reached the required account level. That is why direct carrier orders failed.
+              </p>
+              <p>
+                Your tenants should not try to buy numbers directly with a carrier. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once, before registration starts.
+              </p>
+            </CardContent>
+          </Card>
 
-      <MarketplaceBuyCard />
+          <MarketplaceBuyCard />
+        </>
+      )}
 
       {isLoading && (
         <div className="text-sm text-muted-foreground flex items-center gap-2">
