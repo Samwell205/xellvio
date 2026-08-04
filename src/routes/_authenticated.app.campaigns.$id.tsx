@@ -334,13 +334,23 @@ function CampaignReport() {
   const retryAllFn = useServerFn(retryFailedMessages);
   const retryAllM = useMutation({
     mutationFn: async (errorCode?: string | null) => {
-      const preview = await retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null, dryRun: true } });
+      const preview: any = await retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null, dryRun: true } });
       const count = Number(preview.count ?? 0);
       if (count === 0) return preview;
+      const shortfall = Number(preview.shortfall ?? 0);
+      if (shortfall > 0) {
+        throw new Error(
+          `Not enough credit: resending ${count.toLocaleString()} message${count === 1 ? "" : "s"} costs ${formatUSD(preview.estimatedCost)} but your balance is ${formatUSD(preview.balance ?? 0)}. Top up ${formatUSD(shortfall)} first.`,
+        );
+      }
+      const mmsNote = preview.isMms
+        ? "\n\nThese are picture messages (MMS). They are paced slower on purpose so the recipient carriers don't reject the batch."
+        : "";
       const approved = window.confirm(
-        `Send ${count.toLocaleString()} failed SMS again? Estimated charge: ${formatUSD(preview.estimatedCost)}. Each retry is a new paid send attempt.`,
+        `Send ${count.toLocaleString()} failed message${count === 1 ? "" : "s"} again? Estimated charge: ${formatUSD(preview.estimatedCost)} (balance ${formatUSD(preview.balance ?? 0)}). Each retry is a new paid send attempt.${mmsNote}`,
       );
       if (!approved) throw new Error("Retry cancelled");
+
       return retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null, confirmed: true } });
     },
     onSuccess: (r) => {
