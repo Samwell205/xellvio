@@ -92,10 +92,14 @@ export async function screenMessageContent(
       const { aiScan } = await import("./ai-content-scan.server");
       const aiResult = await aiScan(body);
       if (!aiResult.allowed) {
+        // AI-only blocks are treated as review-queue candidates, not hard
+        // auto-suspend triggers. The AI classifier can false-positive on
+        // legitimate event/party/rental wording (e.g. "delivery to door"),
+        // so we leave room for admin review instead of immediate suspension.
         reasons.push({
           code: `category:${aiResult.category ?? "ai_flagged"}`,
           message: aiResult.reason ?? `AI review flagged prohibited content${aiResult.category ? ` (${aiResult.category})` : ""}.`,
-          score: 80,
+          score: 60,
           detail: "ai_confidence=high",
         });
       }

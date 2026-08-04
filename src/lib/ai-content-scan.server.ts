@@ -71,6 +71,15 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
         "- menu links, catalogue links, ordering links (including link shorteners or paste/menu hosting links)\n" +
         "- asking customers to order or enquire via WhatsApp, phone, or SMS, and listing contact phone numbers\n" +
         "- appointment reminders, delivery updates, loyalty offers, event invites\n" +
+        "- party, event, entertainment, rental, and catering services (e.g. 'delivery to door', 'no party without us', 'write to see selection', 'book our service')\n" +
+        "- general service businesses advertising quality guarantees, honest times, and customer service\n\n" +
+        "CRITICAL DISTINCTIONS:\n" +
+        "- 'Delivery to door' / 'delivery to your door' is common language for restaurants, caterers, event rentals, and many legal services. Do NOT treat it as drug-trafficking language unless the message also explicitly mentions drugs, narcotics, controlled substances, or unmistakable drug-dealing context.\n" +
+        "- 'Party', 'fest', 'event', 'selection', 'write to see', and similar phrases are normal for event/party services. Only block if the message clearly promotes illegal drugs, alcohol to minors, or unregulated controlled substances.\n" +
+        "- For illegal_drugs, require explicit drug/narcotic terms (e.g. weed, cocaine, pills, MDMA, Xanax, oxycodone, 'no Rx', 'research chemicals') or clear drug-dealing context. Do not infer drug sales from generic delivery/party wording alone.\n\n" +
+        "EXAMPLES OF ALLOWED MESSAGES (return allowed=true):\n" +
+        "- \"Er I trætte af lange ventetider, forsinkelser og dårlig kvalitet? Vi tilbyder kvalitetsgaranti og levering til døren! Ærlige tider og servicen er den bedste i byen. Der ingen fest uden os. Skriv for at se udvalget. Contact us: +45 81 91 17 11\" (Danish event/party service)\n" +
+        "- \"Tired of long waits and poor service? We offer quality guarantee and delivery to your door. Honest times and the best service in town. No party without us. Write to see our selection.\" (event/party service)\n\n" +
         "Ambiguity is NOT grounds to block: only return allowed=false when the message itself clearly promotes a prohibited category in plain or lightly obfuscated wording. " +
         "If you are not confident, return allowed=true. Set confidence to 'high' only when the violation is unmistakable.",
       prompt: `Analyze this SMS campaign message for prohibited content:\n\n"""${messageBody}"""`,

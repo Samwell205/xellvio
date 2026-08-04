@@ -209,7 +209,7 @@ export const sendReply = createServerFn({ method: "POST" })
     if (!screen.passed) {
       const top = screen.blockedReasons.slice(0, 2).join(" · ") || "content policy";
       throw new Error(
-        `Reply blocked. Reason: ${top}. Rephrase and try again (avoid restricted keywords, shortened links, or missing opt-out language). Risk score ${screen.riskScore}/100.`,
+        `Reply blocked. Reason: ${top}. Rephrase and try again (avoid restricted keywords, shortened links, or missing opt-out language), or contact support if you believe this was flagged in error. Risk score ${screen.riskScore}/100.`,
       );
     }
 
