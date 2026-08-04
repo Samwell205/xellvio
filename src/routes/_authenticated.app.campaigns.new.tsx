@@ -302,22 +302,29 @@ function NewCampaignPage() {
     const counts: Record<string, number> = {};
     for (const p of recipientCountries) counts[p.country_code] = (counts[p.country_code] ?? 0) + 1;
     const hasMedia = !!s.mediaUrl;
+    // MMS (US/CA) = one billable message with an attachment, priced at
+    // rate x MMS multiplier — never multiplied by SMS segments. Elsewhere the
+    // image falls back to a link, so it is billed as normal SMS segments.
+    const mmsCountry = (cc: string) => cc === "US" || cc === "CA";
     return Object.entries(counts).map(([cc, n]) => {
       const r = rates.find((x) => x.country_code === cc);
       const unit = r ? Number(r.sell_price) : 0;
-      const mult = hasMedia && r ? Number(r.mms_multiplier) : 1;
-      const subtotal = +(n * seg.segments * unit * mult).toFixed(4);
+      const isMms = hasMedia && !!r && mmsCountry(cc);
+      const mult = isMms ? Number(r!.mms_multiplier) : 1;
+      const segments = isMms ? 1 : seg.segments;
+      const subtotal = +(n * segments * unit * mult).toFixed(4);
       return {
         country_code: cc,
         country_name: r?.country_name ?? cc,
         recipients: n,
         unit, mult,
-        segments: seg.segments,
+        segments,
         subtotal,
         priced: !!r,
         excluded: excludedSet.has(cc),
       };
     }).sort((a, b) => b.subtotal - a.subtotal);
+
   }, [recipientCountries, rates, seg.segments, s.mediaUrl, excludedSet]);
 
   // Active rows = countries actually being sent to
