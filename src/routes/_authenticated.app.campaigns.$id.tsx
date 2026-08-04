@@ -211,12 +211,38 @@ function CampaignReport() {
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
-        .select("id, type, created_at, message_id, messages!inner(campaign_id)")
-        .eq("messages.campaign_id", id)
+        .select("id, type, created_at, message_id, payload")
+        .eq("type", "clicked")
+        .order("created_at", { ascending: false })
         .limit(2000);
-      return data ?? [];
+      return (data ?? []).filter((e: any) => e?.payload?.campaign_id === id);
     },
   });
+
+  // Authoritative click counters live on link_clicks (works for both
+  // per-recipient links and a single shared shortlink with no message_id).
+  const clicksQ = useQuery({
+    queryKey: ["campaign-link-clicks", id],
+    refetchInterval: poll(60_000),
+    queryFn: async () => {
+      const rows: any[] = [];
+      for (let from = 0; from < 60_000; from += 1000) {
+        const { data, error } = await supabase
+          .from("link_clicks")
+          .select("clicks, message_id")
+          .eq("campaign_id", id)
+          .range(from, from + 999);
+        if (error) throw error;
+        rows.push(...(data ?? []));
+        if (!data || data.length < 1000) break;
+      }
+      const links = rows.length;
+      const totalClicks = rows.reduce((s, r) => s + Number(r.clicks ?? 0), 0);
+      const clickedLinks = rows.filter((r) => Number(r.clicks ?? 0) > 0).length;
+      return { links, totalClicks, clickedLinks };
+    },
+  });
+
 
   // Lightweight two-column pull purely for the engagement chart.
   const seriesQ = useQuery({
