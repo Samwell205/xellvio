@@ -150,12 +150,15 @@ function TollfreeVerificationPage() {
 
   const asset = data?.asset ?? null;
   const rawStatus = (asset?.verification_status as Status | "pending" | null) ?? null;
-  const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review" || rawStatus === "verified";
+  // Admin-assigned numbers from an already-verified toll-free are marked verified
+  // without their own carrier verification ID — treat them as fully approved.
+  const isVerified = rawStatus === "verified";
+  const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review";
   const status: Status | null =
-    rawStatus === "pending" || (trustsCarrier && !asset?.telnyx_verification_id) ? null : rawStatus;
+    isVerified ? "verified" : rawStatus === "pending" || (trustsCarrier && !asset?.telnyx_verification_id) ? null : rawStatus;
   const payload = (asset?.verification_payload as any) ?? null;
-  const submissionStarted = !!asset?.telnyx_verification_id;
-  const hasReservedNumber = !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
+  const submissionStarted = !!asset?.telnyx_verification_id || isVerified;
+  const hasReservedNumber = !isVerified && !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
   const localSubmissionFailure = status === "rejected" && !asset?.telnyx_verification_id;
   const carrierFeedback = asset?.friendly_rejection_reason || asset?.rejection_reason;
   const needsCarrierUpdate = !!carrierFeedback && status !== "verified";
