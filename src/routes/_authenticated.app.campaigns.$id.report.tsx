@@ -240,6 +240,41 @@ function ReportPage() {
         </div>
       </div>
 
+      <Card className="p-4">
+        <div className="flex gap-4 items-start">
+          <div className="flex-1">
+            <div className="text-xs uppercase text-muted-foreground mb-1">Message sent</div>
+            <div className="text-sm whitespace-pre-wrap">{r.campaign?.message_body}</div>
+            {r.totals.is_mms && (
+              <div className="text-xs text-muted-foreground mt-2">
+                MMS · {r.totals.mms_count.toLocaleString()} messages with image (billed once per message, not per SMS segment)
+              </div>
+            )}
+          </div>
+          {r.campaign?.media_url && (
+            <a href={r.campaign.media_url} target="_blank" rel="noreferrer" className="shrink-0">
+              <img src={r.campaign.media_url} alt="Image attached to this campaign" className="w-28 h-28 object-cover rounded-md border" />
+              <div className="text-[11px] text-muted-foreground mt-1 text-center">Attached image</div>
+            </a>
+          )}
+        </div>
+      </Card>
+
+      {(r.totals.not_sent_insufficient > 0 || r.totals.carrier_rejected > 0) && (
+        <Card className="p-4 space-y-1 border-amber-200 bg-amber-50">
+          {r.totals.not_sent_insufficient > 0 && (
+            <div className="text-sm text-amber-900">
+              {r.totals.not_sent_insufficient.toLocaleString()} recipients were not sent because your credit ran out during this campaign. You were not charged for them — top up and resend to reach them.
+            </div>
+          )}
+          {r.totals.carrier_rejected > 0 && (
+            <div className="text-sm text-amber-900">
+              {r.totals.carrier_rejected.toLocaleString()} messages were rejected by the recipient carriers. This usually happens with a large {r.totals.is_mms ? "MMS" : "SMS"} burst from a new number — send in smaller warm-up batches over a few days to improve acceptance.
+            </div>
+          )}
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Stat icon={<Send className="size-4" />} label="Sent to carrier" value={r.totals.sent.toLocaleString()} />
         <Stat icon={<Clock className="size-4 text-amber-600" />} label="Awaiting carrier" value={r.totals.awaiting_delivery.toLocaleString()} />

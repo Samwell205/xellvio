@@ -9,6 +9,7 @@ export type CampaignReport = {
     status: string;
     created_at: string;
     message_body: string;
+    media_url: string | null;
   } | null;
   totals: {
     total: number;
@@ -23,7 +24,11 @@ export type CampaignReport = {
     delivery_rate: number; // 0..100
     mms_count: number;
     is_mms: boolean;
+    segments: number;
+    not_sent_insufficient: number;
+    carrier_rejected: number;
   };
+
   byCountry: Array<{
     country_code: string;
     recipients: number;
@@ -72,7 +77,7 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     // Verify access via RLS by fetching campaign first.
     const { data: campaign, error: cErr } = await supabase
       .from("campaigns")
-      .select("id,name,status,created_at,message_body,account_id")
+      .select("id,name,status,created_at,message_body,media_url,account_id")
       .eq("id", data.campaignId)
       .maybeSingle();
     if (cErr) throw new Error(cErr.message);
@@ -105,7 +110,11 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       delivery_rate: 0,
       mms_count: 0,
       is_mms: false,
+      segments: 0,
+      not_sent_insufficient: 0,
+      carrier_rejected: 0,
     };
+
     const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; cost: number }>();
     const byKind = new Map<string, { used: number; delivered: number; failed: number }>();
     const timelineMap = new Map<string, { sent: number; delivered: number; failed: number }>();
@@ -140,6 +149,10 @@ export const getCampaignReport = createServerFn({ method: "POST" })
       if (billed) totals.cost += Number(r.cost ?? 0);
       if (pending) totals.reserved_cost += Number(r.cost ?? 0);
       if (r.is_mms) totals.mms_count += 1;
+      totals.segments += Number(r.segments_count ?? 1);
+      if (r.error_code === "insufficient_balance") totals.not_sent_insufficient += 1;
+      if (r.error_code === "40008") totals.carrier_rejected += 1;
+
       if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
       if (r.status === "sent") totals.awaiting_delivery += 1;
       if (r.status === "delivered") totals.delivered += 1;
@@ -209,6 +222,8 @@ export const getCampaignReport = createServerFn({ method: "POST" })
         status: campaign.status,
         created_at: campaign.created_at,
         message_body: campaign.message_body,
+        media_url: (campaign as any).media_url ?? null,
+
       },
       totals,
       byCountry: Array.from(byCC.entries())

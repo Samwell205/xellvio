@@ -324,7 +324,9 @@ async function sendOneMessage(
       }),
     );
 
-    const providerSegments = Number(result.parts ?? m.segments_count ?? 1);
+    // MMS is one message with an attachment — it has no SMS segment count.
+    const providerSegments = sendAsMms ? 1 : Number(result.parts ?? m.segments_count ?? 1);
+
     // Telnyx has already accepted this message — recording that fact is not
     // optional, so this write gets real retries rather than being fired and
     // forgotten. A failure here is what previously left rows stuck on
@@ -534,17 +536,28 @@ async function planCampaign(
   const rateByCC: Record<string, Rate> = {};
   for (const r of rates) rateByCC[r.country_code] = r;
   const hasMedia = !!campaign.media_url;
+  // An MMS is ONE billable message with an attachment — it has no SMS
+  // segments, so it must never be priced as segments x rate x multiplier.
+  // Recipients in countries without MMS support fall back to plain SMS and
+  // are therefore priced per segment at the normal SMS rate.
+  const priceFor = (rate: Rate | undefined, cc: string | null | undefined, segs: number) => {
+    if (!rate) return { cost: 0, isMms: false, billedSegments: segs };
+    const unit = Number(rate.sell_price);
+    const isMms = hasMedia && supportsMms(cc);
+    if (isMms) return { cost: +(unit * Number(rate.mms_multiplier)).toFixed(4), isMms, billedSegments: 1 };
+    return { cost: +(segs * unit).toFixed(4), isMms, billedSegments: segs };
+  };
 
   const enriched = recipients.map((p: any) => {
     const body = render(campaign.message_body, p);
     const seg = calculateSegments(body);
     const cc = p.country_code || countryFromPhone(p.phone_e164, dial);
     const rate = cc ? rateByCC[cc] : undefined;
-    const unit = rate ? Number(rate.sell_price) : 0;
-    const mult = hasMedia && rate ? Number(rate.mms_multiplier) : 1;
-    const cost = +(seg.segments * unit * mult).toFixed(4);
-    return { ...p, body, segments: seg.segments, country_code: cc, cost };
+    const priced = priceFor(rate, cc, seg.segments);
+    return { ...p, body, segments: seg.segments, country_code: cc, cost: priced.cost };
   });
+
+
 
   const totalCost = +enriched.reduce((s: number, x: any) => s + x.cost, 0).toFixed(4);
 
@@ -604,20 +617,21 @@ async function planCampaign(
     // Recompute segments after rewrite in case link length changed the count.
     const segs = calculateSegments(rewritten).segments;
     const rate = rateByCC[r.country_code];
-    const unit = rate ? Number(rate.sell_price) : 0;
-    const mult = hasMedia && rate ? Number(rate.mms_multiplier) : 1;
-    const cost = +(segs * unit * mult).toFixed(4);
+    const priced = priceFor(rate, r.country_code, segs);
+    const cost = priced.cost;
     const rowBase = {
       id: messageId,
       campaign_id: campaign.id,
       profile_id: r.profile_id,
       phone_e164: r.phone_e164,
       country_code: r.country_code,
-      segments_count: segs,
-      is_mms: hasMedia && !!rate && supportsMms(r.country_code),
+      // MMS is a single message, not N SMS segments.
+      segments_count: priced.billedSegments,
+      is_mms: priced.isMms,
       cost,
       rendered_body: rewritten,
     };
+
     if (cost === 0) queuedRows.push({ ...rowBase, status: "queued" });
     else if (cost <= remaining) { remaining -= cost; queuedRows.push({ ...rowBase, status: "queued" }); }
     else failedRows.push({ ...rowBase, status: "failed", error_code: "insufficient_balance" });
