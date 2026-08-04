@@ -144,7 +144,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
     if (!screen.passed) {
       const top = screen.blockedReasons.slice(0, 2).join(" · ") || "content policy violation";
       throw new Error(
-        `Message blocked before sending. Reason: ${top}. Edit the message (remove risky links, add STOP to opt out, drop restricted keywords) and try again. Risk score ${screen.riskScore}/100.`,
+        `Message blocked before sending. Reason: ${top}. Edit the message (add STOP to opt out, remove risky links, avoid wording that sounds like prohibited goods/services) and try again, or contact support if you believe this was flagged in error. Risk score ${screen.riskScore}/100.`,
       );
     }
 

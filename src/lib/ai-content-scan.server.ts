@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getChatModel } from "./ai-provider.server";
-import { generateText, Output } from "ai";
+import { generateText } from "ai";
 import type { ScanResult } from "./content-scanner";
 
 const AI_SCHEMA = z.object({
@@ -36,7 +36,28 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
   }
 
   try {
-    const { output } = await generateText({
+    // Build the JSON schema description inline so the model returns parseable
+    // output even when the provider does not support native structured outputs.
+    const jsonSchemaDescription = JSON.stringify({
+      type: "object",
+      properties: {
+        allowed: { type: "boolean" },
+        category: {
+          type: "string",
+          enum: [
+            "sexual", "hate_speech", "alcohol", "firearms", "tobacco",
+            "cannabis_cbd", "illegal_drugs", "gambling", "payday_loans",
+            "debt_collection", "crypto_scam", "get_rich_quick",
+            "fraud_deceptive", "phishing", "none",
+          ],
+        },
+        confidence: { type: "string", enum: ["high", "medium", "low"] },
+        reason: { type: "string" },
+      },
+      required: ["allowed"],
+    });
+
+    const { text } = await generateText({
       model,
       // Content screening already fails open on any error — retrying buys
       // nothing (a persistent error like an exhausted billing balance fails
@@ -44,7 +65,6 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
       // CPU budget on retry overhead, which is exactly what happened here.
       maxRetries: 0,
       timeout: 8000,
-      output: Output.object({ schema: AI_SCHEMA }),
       system:
         "You are a content safety classifier for an SMS marketing platform that must comply with US/CA carrier (SHAFT) policies and Twilio's Acceptable Use Policy. " +
         "Block messages promoting any of these categories:\n" +
@@ -71,13 +91,27 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
         "- menu links, catalogue links, ordering links (including link shorteners or paste/menu hosting links)\n" +
         "- asking customers to order or enquire via WhatsApp, phone, or SMS, and listing contact phone numbers\n" +
         "- appointment reminders, delivery updates, loyalty offers, event invites\n" +
+        "- party, event, entertainment, rental, and catering services (e.g. 'delivery to door', 'no party without us', 'write to see selection', 'book our service')\n" +
+        "- general service businesses advertising quality guarantees, honest times, and customer service\n\n" +
+        "CRITICAL DISTINCTIONS:\n" +
+        "- 'Delivery to door' / 'delivery to your door' is common language for restaurants, caterers, event rentals, and many legal services. Do NOT treat it as drug-trafficking language unless the message also explicitly mentions drugs, narcotics, controlled substances, or unmistakable drug-dealing context.\n" +
+        "- 'Party', 'fest', 'event', 'selection', 'write to see', and similar phrases are normal for event/party services. Only block if the message clearly promotes illegal drugs, alcohol to minors, or unregulated controlled substances.\n" +
+        "- For illegal_drugs, require explicit drug/narcotic terms (e.g. weed, cocaine, pills, MDMA, Xanax, oxycodone, 'no Rx', 'research chemicals') or clear drug-dealing context. Do not infer drug sales from generic delivery/party wording alone.\n\n" +
+        "EXAMPLES OF ALLOWED MESSAGES (return allowed=true):\n" +
+        "- \"Er I trætte af lange ventetider, forsinkelser og dårlig kvalitet? Vi tilbyder kvalitetsgaranti og levering til døren! Ærlige tider og servicen er den bedste i byen. Der ingen fest uden os. Skriv for at se udvalget. Contact us: +45 81 91 17 11\" (Danish event/party service)\n" +
+        "- \"Tired of long waits and poor service? We offer quality guarantee and delivery to your door. Honest times and the best service in town. No party without us. Write to see our selection.\" (event/party service)\n\n" +
         "Ambiguity is NOT grounds to block: only return allowed=false when the message itself clearly promotes a prohibited category in plain or lightly obfuscated wording. " +
         "If you are not confident, return allowed=true. Set confidence to 'high' only when the violation is unmistakable.",
-      prompt: `Analyze this SMS campaign message for prohibited content:\n\n"""${messageBody}"""`,
+      prompt:
+        `Analyze this SMS campaign message for prohibited content.\n\n` +
+        `Return ONLY a JSON object matching this schema (no markdown, no explanation):\n${jsonSchemaDescription}\n\n` +
+        `Message:\n"""${messageBody}"""`,
     });
 
-
-    const result = output as z.infer<typeof AI_SCHEMA>;
+    // Extract and parse the JSON object from the model response.
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const raw = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    const result = AI_SCHEMA.parse(raw);
 
     // Only block on unmistakable violations. Medium/low-confidence AI opinions
     // are advisory only — they must never stop a legitimate campaign.
