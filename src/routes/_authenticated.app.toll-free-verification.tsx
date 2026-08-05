@@ -9,7 +9,7 @@ import {
   getTollfreeFeeStatus,
   payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
-import { getTfnMarketplaceOffer, buyVerifiedTfn } from "@/lib/tfn-marketplace.functions";
+import { getTfnMarketplaceOffer } from "@/lib/tfn-marketplace.functions";
 import { initPaystackTfnCheckout, verifyPaystack } from "@/lib/billing-packs.functions";
 import { initNowPaymentsTfnCheckout } from "@/lib/nowpayments.functions";
 import { supabase } from "@/integrations/supabase/client";
