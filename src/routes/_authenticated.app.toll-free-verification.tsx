@@ -536,10 +536,6 @@ function MarketplaceBuyCard() {
     </Card>
   );
 }
-      </CardContent>
-    </Card>
-  );
-}
 
 
 function PayFeeGate({ fee, balance }: { fee: number; balance: number }) {
