@@ -405,12 +405,19 @@ function MarketplaceBuyCard() {
   const offerFn = useServerFn(getTfnMarketplaceOffer);
   const initCardFn = useServerFn(initPaystackTfnCheckout);
   const initCryptoFn = useServerFn(initNowPaymentsTfnCheckout);
+  const buyWithCreditsFn = useServerFn(buyVerifiedTfn);
   const verifyFn = useServerFn(verifyPaystack);
   const qc = useQueryClient();
   const { data: offer, isLoading } = useQuery({
     queryKey: ["tfn-marketplace-offer"],
     queryFn: () => offerFn(),
     refetchInterval: 60_000,
+  });
+  const { data: balanceRow } = useQuery({
+    queryKey: ["tfn-buy-balance"],
+    queryFn: async () =>
+      (await supabase.from("accounts").select("credit_balance").maybeSingle()).data,
+    refetchInterval: 30_000,
   });
 
   // Handle Paystack redirect-back (?ref=pmt_...)
