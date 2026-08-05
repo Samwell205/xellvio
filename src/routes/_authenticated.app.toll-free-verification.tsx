@@ -459,10 +459,24 @@ function MarketplaceBuyCard() {
     onSuccess: (r: any) => { window.location.href = r.invoice_url; },
     onError: (e: any) => toast.error(e.message),
   });
+  const payCredits = useMutation({
+    mutationFn: () => buyWithCreditsFn(),
+    onSuccess: (r: any) => {
+      toast.success(`Number assigned: ${r?.phone_number ?? "your new toll-free number"}`);
+      qc.invalidateQueries({ queryKey: ["tfn-marketplace-offer"] });
+      qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
+      qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
+      qc.invalidateQueries({ queryKey: ["tfn-buy-balance"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Purchase failed"),
+  });
 
   if (isLoading || !offer) return null;
   const available = offer.available_count > 0;
-  const busy = payCard.isPending || payCrypto.isPending;
+  const busy = payCard.isPending || payCrypto.isPending || payCredits.isPending;
+  const price = Number(offer.price_usd ?? 0);
+  const balance = Number(balanceRow?.credit_balance ?? 0);
+  const enoughCredits = balance >= price;
 
   return (
     <Card className="border-primary/40">
@@ -475,21 +489,32 @@ function MarketplaceBuyCard() {
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
           Get an already-verified toll-free number and start sending immediately. No forms,
-          no carrier review, no waiting. This is a one-time fee — it is <strong>not</strong> added to your SMS credit balance.
+          no carrier review, no waiting. Pay by card, crypto, or straight from your credit balance.
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <div className="text-sm">
             <div className="text-muted-foreground text-xs">Price</div>
-            <div className="font-semibold">${Number(offer.price_usd ?? 0).toFixed(2)}</div>
+            <div className="font-semibold">${price.toFixed(2)}</div>
           </div>
           <div className="text-sm">
             <div className="text-muted-foreground text-xs">Available</div>
             <div className="font-semibold">{offer.available_count}</div>
           </div>
+          <div className="text-sm">
+            <div className="text-muted-foreground text-xs">Your credit balance</div>
+            <div className="font-semibold">${balance.toFixed(2)}</div>
+          </div>
           <div className="ml-auto flex flex-wrap gap-2">
-            <Button disabled={!available || busy} onClick={() => payCard.mutate()}>
+            <Button
+              disabled={!available || busy || !enoughCredits}
+              onClick={() => payCredits.mutate()}
+            >
+              {payCredits.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
+              {available ? `Use credit balance ($${price.toFixed(2)})` : "Sold out"}
+            </Button>
+            <Button variant="outline" disabled={!available || busy} onClick={() => payCard.mutate()}>
               {payCard.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
-              {available ? "Pay with card" : "Sold out"}
+              Pay with card
             </Button>
             <Button variant="outline" disabled={!available || busy} onClick={() => payCrypto.mutate()}>
               {payCrypto.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
@@ -497,6 +522,20 @@ function MarketplaceBuyCard() {
             </Button>
           </div>
         </div>
+        {available && !enoughCredits && (
+          <p className="text-xs text-muted-foreground">
+            Your credit balance is ${balance.toFixed(2)} — you need ${price.toFixed(2)}. Top up on the{" "}
+            <Link to="/app/billing" className="underline font-medium">Billing page</Link> or pay by card/crypto instead.
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Paying with credits deducts ${price.toFixed(2)} from your SMS credit balance. Card and crypto payments are a
+          separate one-time fee and are <strong>not</strong> added to your credit balance.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
       </CardContent>
     </Card>
   );
