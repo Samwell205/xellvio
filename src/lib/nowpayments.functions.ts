@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { CRYPTO_COIN_VALUES } from "@/lib/crypto-coins";
 
 const NP_API = "https://api.nowpayments.io/v1";
 
@@ -17,8 +18,6 @@ function ipnUrl(): string {
   // Use stable project URL so IPNs work in preview + production
   return process.env.NOWPAYMENTS_IPN_URL || `${siteOrigin()}/api/public/nowpayments-ipn`;
 }
-
-import { CRYPTO_COIN_VALUES } from "@/lib/crypto-coins";
 
 /** Allowed crypto for hosted invoices. NOWPayments expects lowercase tickers. */
 const ALLOWED_COINS = CRYPTO_COIN_VALUES;
