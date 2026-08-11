@@ -111,7 +111,7 @@ function CheckoutPage() {
             <RadioGroupItem value="crypto" id="m-crypto" className="mt-1" />
             <div className="flex-1">
               <div className="font-medium flex items-center gap-2"><Bitcoin className="size-4" /> Crypto</div>
-              <p className="text-xs text-muted-foreground mt-1">USDT, USDC, BTC or ETH. Credits land automatically after on-chain confirmation.</p>
+              <p className="text-xs text-muted-foreground mt-1">Solana, USDT, USDC, BTC, ETH and 20+ more. Credits land automatically after on-chain confirmation.</p>
             </div>
           </label>
         </RadioGroup>
