@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
+import { withAuthRetry, friendlyAuthError, clearStaleSession } from "@/lib/auth-retry";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in — Xellvio" }, { name: "description", content: "Sign in or create your Xellvio account." }] }),
