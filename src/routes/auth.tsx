@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
+import { withAuthRetry, friendlyAuthError, clearStaleSession } from "@/lib/auth-retry";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in — Xellvio" }, { name: "description", content: "Sign in or create your Xellvio account." }] }),
@@ -64,14 +66,21 @@ function AuthPage() {
     }
     setLoading(true);
     try {
+      // A locally stored session with a dead refresh token makes supabase-js fire
+      // failing refresh calls that surface as "Failed to fetch" during sign-in.
+      await clearStaleSession();
       if (mode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: name } },
-        });
+        const { error: signUpError } = await withAuthRetry(() =>
+          supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: name } },
+          }),
+        );
         if (signUpError) throw signUpError;
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await withAuthRetry(() =>
+          supabase.auth.signInWithPassword({ email, password }),
+        );
         if (error) throw error;
         // Ensure the accounts row exists BEFORE recording ToS acceptance —
         // otherwise the accounts.update in acceptTos matches 0 rows and the
@@ -85,23 +94,22 @@ function AuthPage() {
         toast.success("Account created — welcome!");
         navigate({ href: destination });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await withAuthRetry(() =>
+          supabase.auth.signInWithPassword({ email, password }),
+        );
         if (error) throw error;
         toast.success("Welcome back");
         navigate({ href: destination });
       }
     } catch (err) {
-      const rawMessage = err instanceof Error ? err.message : "Authentication failed";
-      const lower = rawMessage.toLowerCase();
-      const message = lower.includes("weak") || lower.includes("pwned") || lower.includes("breach") || lower.includes("compromis")
-        ? "This password has appeared in a known data breach. Please pick a different, unique password (12+ characters with numbers and symbols)."
-        : rawMessage;
+      const message = friendlyAuthError(err);
       setErrorMsg(message);
       toast.error(message);
     } finally {
       setLoading(false);
     }
   }
+
 
 
   async function handleGoogle() {
