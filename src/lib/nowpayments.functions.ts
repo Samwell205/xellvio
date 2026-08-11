@@ -18,8 +18,10 @@ function ipnUrl(): string {
   return process.env.NOWPAYMENTS_IPN_URL || `${siteOrigin()}/api/public/nowpayments-ipn`;
 }
 
+import { CRYPTO_COIN_VALUES } from "@/lib/crypto-coins";
+
 /** Allowed crypto for hosted invoices. NOWPayments expects lowercase tickers. */
-const ALLOWED_COINS = ["usdttrc20", "usdtbsc", "usdcbsc", "btc", "eth"] as const;
+const ALLOWED_COINS = CRYPTO_COIN_VALUES;
 
 async function createInvoice(opts: {
   priceUsd: number;
@@ -56,7 +58,7 @@ export const initNowPaymentsCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { packId: string; coin?: string }) => {
     if (!d?.packId) throw new Error("packId required");
-    if (d.coin && !ALLOWED_COINS.includes(d.coin as any)) throw new Error("Unsupported coin");
+    if (d.coin && !ALLOWED_COINS.includes(d.coin)) throw new Error("Unsupported coin");
     return d;
   })
   .handler(async ({ data, context }) => {
@@ -113,7 +115,7 @@ export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
     if (!Number.isFinite(a)) throw new Error("amount required");
     if (a < 5) throw new Error("Minimum is $5");
     if (a > 10000) throw new Error("Maximum is $10,000");
-    if (d.coin && !ALLOWED_COINS.includes(d.coin as any)) throw new Error("Unsupported coin");
+    if (d.coin && !ALLOWED_COINS.includes(d.coin)) throw new Error("Unsupported coin");
     return { amount: Math.round(a * 100) / 100, coin: d.coin };
   })
   .handler(async ({ data, context }) => {
@@ -158,7 +160,7 @@ export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
 export const initNowPaymentsTfnCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { coin?: string }) => {
-    if (d?.coin && !ALLOWED_COINS.includes(d.coin as any)) throw new Error("Unsupported coin");
+    if (d?.coin && !ALLOWED_COINS.includes(d.coin)) throw new Error("Unsupported coin");
     return { coin: d?.coin };
   })
   .handler(async ({ data, context }) => {

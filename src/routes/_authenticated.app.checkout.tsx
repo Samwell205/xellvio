@@ -13,6 +13,7 @@ import { Wallet, CreditCard, Bitcoin, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
 import { listCreditPacks, initPaystackCheckout, initPaystackCheckoutCustom } from "@/lib/billing-packs.functions";
+import { CRYPTO_COINS, DEFAULT_CRYPTO_COIN } from "@/lib/crypto-coins";
 import { initNowPaymentsCheckout, initNowPaymentsCheckoutCustom } from "@/lib/nowpayments.functions";
 
 export const Route = createFileRoute("/_authenticated/app/checkout")({
@@ -26,13 +27,7 @@ export const Route = createFileRoute("/_authenticated/app/checkout")({
 });
 
 type Method = "paystack" | "crypto";
-const COINS = [
-  { value: "usdttrc20", label: "USDT (TRC20)" },
-  { value: "usdtbsc", label: "USDT (BSC)" },
-  { value: "usdcbsc", label: "USDC (BSC)" },
-  { value: "btc", label: "Bitcoin (BTC)" },
-  { value: "eth", label: "Ethereum (ETH)" },
-];
+const COINS = CRYPTO_COINS;
 
 function CheckoutPage() {
   const { pack: packParam, amount: amountParam } = Route.useSearch();
@@ -49,7 +44,7 @@ function CheckoutPage() {
   const orderLabel = pack ? pack.name : isCustom ? `Custom — ${formatUSD(amount)} in credits` : "—";
 
   const [method, setMethod] = useState<Method>("paystack");
-  const [coin, setCoin] = useState<string>("usdttrc20");
+  const [coin, setCoin] = useState<string>(DEFAULT_CRYPTO_COIN);
 
   const initPaystack = useServerFn(initPaystackCheckout);
   const initPaystackCustom = useServerFn(initPaystackCheckoutCustom);
@@ -116,7 +111,7 @@ function CheckoutPage() {
             <RadioGroupItem value="crypto" id="m-crypto" className="mt-1" />
             <div className="flex-1">
               <div className="font-medium flex items-center gap-2"><Bitcoin className="size-4" /> Crypto</div>
-              <p className="text-xs text-muted-foreground mt-1">USDT, USDC, BTC or ETH. Credits land automatically after on-chain confirmation.</p>
+              <p className="text-xs text-muted-foreground mt-1">Solana, USDT, USDC, BTC, ETH and 20+ more. Credits land automatically after on-chain confirmation.</p>
             </div>
           </label>
         </RadioGroup>
@@ -126,7 +121,7 @@ function CheckoutPage() {
             <Label>Coin</Label>
             <Select value={coin} onValueChange={setCoin}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-72">
                 {COINS.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
               </SelectContent>
             </Select>
