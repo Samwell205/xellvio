@@ -10,7 +10,6 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Phone, AlertTriangle, CheckCircle2, XCircle, PlayCircle, PauseCircle } from "lucide-react";
 import { getTwilioBalance, refreshTwilioBalance, updateTwilioBalanceSettings, resumePausedCampaignsNow, sendTestCapacityAlert } from "@/lib/twilio-balance.functions";
-import { SUPPORT_WHATSAPP_DISPLAY, SUPPORT_WHATSAPP_URL } from "@/lib/support";
 
 function formatMoney(n: number, currency: string) {
   try {
@@ -264,18 +263,15 @@ export function LowBalanceBanner() {
       <AlertTriangle className="size-4 shrink-0" />
       <div className="flex-1">
         {pausedCount > 0 ? (
-          <><strong>{pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused</strong> — SMS balance {formatMoney(balance, currency)}. Top up now to auto-resume, or contact WhatsApp support at {SUPPORT_WHATSAPP_DISPLAY}.</>
+          <><strong>{pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused</strong> — SMS balance {formatMoney(balance, currency)}. Top up now to auto-resume. Contact support if you need help.</>
         ) : status === "error" ? (
           <>SMS balance check failed. Click Refresh in the balance card to retry.</>
         ) : (
           <>
-            SMS balance is <strong>{isCritical ? "critically " : ""}low</strong>: {formatMoney(balance, currency)}. Top up to avoid SMS interruptions, or contact WhatsApp support at {SUPPORT_WHATSAPP_DISPLAY}.
+            SMS balance is <strong>{isCritical ? "critically " : ""}low</strong>: {formatMoney(balance, currency)}. Top up to avoid SMS interruptions. Contact support if you need help.
           </>
         )}
       </div>
-      <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noreferrer" className="font-semibold underline shrink-0">
-        WhatsApp
-      </a>
       <a
         href="#sms-balance"
         className="font-semibold underline shrink-0"
