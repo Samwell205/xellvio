@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { getActiveCountryRatesRaw } from "@/lib/public-pricing.functions";
 import { createPreviewShortlink } from "@/lib/shortlinks.functions";
-import { SUPPORT_WHATSAPP_DISPLAY, SUPPORT_WHATSAPP_URL } from "@/lib/support";
 
 import { scanCampaignContent } from "@/lib/content-scanner.functions";
 import { calculateSegments } from "@/lib/sms-segments";
@@ -488,7 +487,7 @@ function NewCampaignPage() {
   const [complianceAccepted, setComplianceAccepted] = useState(false);
 
   async function saveCampaign(launch: boolean) {
-    if (launch && insufficient) { toast.error(`Insufficient balance — top up before launching, or contact WhatsApp support at ${SUPPORT_WHATSAPP_DISPLAY}.`); return; }
+    if (launch && insufficient) { toast.error(`Insufficient balance — top up before launching. Contact support if you need help.`); return; }
     if (launch && hasMissingSender) {
       toast.error(`No verified sender for: ${missingSenderCountries.join(", ")}. Set up SMS or remove those recipients.`);
       return;
@@ -848,7 +847,7 @@ function NewCampaignPage() {
               <AlertTriangle className="size-4 mt-0.5" />
               <div>
                 Insufficient balance. <Link to="/app/billing" className="underline font-medium">Add funds</Link> to launch, or contact{" "}
-                <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noreferrer" className="underline font-medium">WhatsApp support</a>.
+                <a href="/contact" className="underline font-medium">support</a>.
               </div>
             </div>
           )}
@@ -931,7 +930,7 @@ function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, 
           <AlertTriangle className="size-4 mt-0.5" />
           <div>
             Estimated cost exceeds your balance. Sending will be blocked. <Link to="/app/billing" className="underline font-medium">Add funds →</Link>{" "}
-            or contact <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noreferrer" className="underline font-medium">WhatsApp support</a>.
+            or contact <a href="/contact" className="underline font-medium">support</a>.
           </div>
         </div>
       )}

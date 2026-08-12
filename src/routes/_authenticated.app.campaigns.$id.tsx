@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getCampaignRecipientsExport } from "@/lib/tenant-report-export.functions";
 import { downloadCsv } from "@/lib/report-export";
-import { SUPPORT_WHATSAPP_DISPLAY, SUPPORT_WHATSAPP_URL } from "@/lib/support";
 
 import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
@@ -608,8 +607,7 @@ function CampaignReport() {
                 "We're temporarily waiting for platform capacity — your messages will start sending automatically within a few minutes."}
             </div>
             <div className="text-xs mt-1 opacity-80">
-              You haven't been charged for any un-sent messages. If this is a low-balance issue, contact WhatsApp support at{" "}
-              <a href={SUPPORT_WHATSAPP_URL} target="_blank" rel="noreferrer" className="underline font-medium">{SUPPORT_WHATSAPP_DISPLAY}</a>.
+              You haven't been charged for any un-sent messages. If this is a low-balance issue, contact our support team.
             </div>
           </div>
         </div>
@@ -887,7 +885,7 @@ function CampaignReport() {
                 <div className="font-semibold mb-1">Deliverability tip</div>
                 <p className="text-muted-foreground">
                   Carriers throttle traffic with low engagement. Keep delivery {">"} 95%, click rate {">"} 3%, and opt-outs {"<"} 1% to stay in the good-sender lane.
-                  Messages skipped for insufficient balance are <strong>never charged</strong> — top up to retry, or contact WhatsApp support.
+                  Messages skipped for insufficient balance are <strong>never charged</strong> — top up to retry, or contact support.
                 </p>
               </div>
             </div>
@@ -1492,7 +1490,7 @@ function ProgressPanel({
 
 const REASON_LABELS: Record<string, string> = {
   cancelled_by_user: "Stopped by user before dispatch",
-  insufficient_balance: `Account credit ran out before this message was sent. Add funds or contact WhatsApp support at ${SUPPORT_WHATSAPP_DISPLAY}`,
+  insufficient_balance: `Account credit ran out before this message was sent. Add funds or contact support`,
   exception: "Provider request failed unexpectedly",
   "30007": "Carrier filtered — likely SHAFT/spam content",
   "30003": "Unreachable handset (off / roaming / disconnected)",
