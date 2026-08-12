@@ -607,8 +607,7 @@ function CampaignReport() {
                 "We're temporarily waiting for platform capacity — your messages will start sending automatically within a few minutes."}
             </div>
             <div className="text-xs mt-1 opacity-80">
-              You haven't been charged for any un-sent messages. If this is a low-balance issue, contact WhatsApp support at{" "}
-              our support team.
+              You haven't been charged for any un-sent messages. If this is a low-balance issue, contact our support team.
             </div>
           </div>
         </div>
@@ -886,7 +885,7 @@ function CampaignReport() {
                 <div className="font-semibold mb-1">Deliverability tip</div>
                 <p className="text-muted-foreground">
                   Carriers throttle traffic with low engagement. Keep delivery {">"} 95%, click rate {">"} 3%, and opt-outs {"<"} 1% to stay in the good-sender lane.
-                  Messages skipped for insufficient balance are <strong>never charged</strong> — top up to retry, or contact WhatsApp support.
+                  Messages skipped for insufficient balance are <strong>never charged</strong> — top up to retry, or contact support.
                 </p>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mail, MessageSquare, Phone, MapPin, Send, Loader2 } from "lucide-react";
+import { Mail, MessageSquare, MapPin, Send, Loader2 } from "lucide-react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { MarketingNav } from "@/components/MarketingNav";
@@ -33,8 +33,6 @@ const schema = z.object({
 });
 
 const SUPPORT_EMAIL = "admin@xellvio.com";
-const SUPPORT_PHONE_DISPLAY = "+1 (725) 316-6070";
-const SUPPORT_PHONE_HREF = "+17253166070";
 
 function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", topic: "General question", message: "" });
@@ -86,7 +84,6 @@ function ContactPage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 grid gap-8 lg:grid-cols-[1fr_1.2fr]">
             <div className="space-y-4">
               <InfoCard icon={Mail} title="Email" value={SUPPORT_EMAIL} href={`mailto:${SUPPORT_EMAIL}`} hint="We reply within one business day." />
-              <InfoCard icon={Phone} title="Phone" value={SUPPORT_PHONE_DISPLAY} href={`tel:${SUPPORT_PHONE_HREF}`} hint="Mon–Fri, 9am–6pm." />
               <InfoCard icon={MapPin} title="Office" value="Global remote team" hint="Serving customers in 180+ countries." />
               <Card className="p-6 bg-secondary text-secondary-foreground">
                 <h3 className="text-base font-semibold">Need an instant answer?</h3>
