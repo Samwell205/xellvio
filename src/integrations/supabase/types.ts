@@ -1470,6 +1470,7 @@ export type Database = {
           dispatch_started_at: string | null
           error_code: string | null
           failure_reason: string | null
+          force_sms: boolean
           id: string
           is_mms: boolean
           phone_e164: string
@@ -1499,6 +1500,7 @@ export type Database = {
           dispatch_started_at?: string | null
           error_code?: string | null
           failure_reason?: string | null
+          force_sms?: boolean
           id?: string
           is_mms?: boolean
           phone_e164: string
@@ -1528,6 +1530,7 @@ export type Database = {
           dispatch_started_at?: string | null
           error_code?: string | null
           failure_reason?: string | null
+          force_sms?: boolean
           id?: string
           is_mms?: boolean
           phone_e164?: string
@@ -3078,6 +3081,7 @@ export type Database = {
           attempt_number: number
           cost: number
           country_code: string
+          force_sms: boolean
           id: string
           phone_e164: string
           rendered_body: string
