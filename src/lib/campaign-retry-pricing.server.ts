@@ -25,13 +25,14 @@ export async function priceRetryRows(
   supabaseAdmin: any,
   campaign: { id: string; account_id: string; media_url?: string | null },
   ids: string[],
+  options?: { forceSms?: boolean },
 ): Promise<RetryPreflight> {
   const hasMedia = !!campaign.media_url;
 
   const [{ data: rates }, { data: rows }, { data: account }] = await Promise.all([
     supabaseAdmin.from("country_rates").select("country_code,sell_price,mms_multiplier"),
     ids.length
-      ? supabaseAdmin.from("messages").select("id,country_code,segments_count").in("id", ids)
+      ? supabaseAdmin.from("messages").select("id,country_code,segments_count,rendered_body").in("id", ids)
       : Promise.resolve({ data: [] as any[] }),
     supabaseAdmin.from("accounts").select("credit_balance").eq("id", campaign.account_id).maybeSingle(),
   ]);
@@ -47,8 +48,12 @@ export async function priceRetryRows(
   for (const r of (rows ?? []) as any[]) {
     const cc = r.country_code ?? "";
     const rate = rateByCc.get(cc);
-    const isMms = hasMedia && MMS_COUNTRIES.has(cc);
-    const segments = isMms ? 1 : Math.max(1, Number(r.segments_count ?? 1));
+    const isMms = hasMedia && MMS_COUNTRIES.has(cc) && !options?.forceSms;
+    const segments = isMms
+      ? 1
+      : options?.forceSms
+        ? Math.max(1, calculateSmsSegments(String(r.rendered_body ?? "")))
+        : Math.max(1, Number(r.segments_count ?? 1));
     const cost = rate
       ? isMms
         ? +(rate.unit * rate.mult).toFixed(4)
@@ -73,6 +78,13 @@ export async function priceRetryRows(
     isMms: anyMms,
     costGroups: Array.from(groups.values()),
   };
+}
+
+function calculateSmsSegments(body: string) {
+  const isGsm = /^[\x00-\x7F€]*$/.test(body);
+  const single = isGsm ? 160 : 70;
+  const multipart = isGsm ? 153 : 67;
+  return body.length <= single ? 1 : Math.ceil(body.length / multipart);
 }
 
 /** Write the corrected price/segment count back onto the rows being re-queued. */
