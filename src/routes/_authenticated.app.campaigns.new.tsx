@@ -9,6 +9,8 @@ import { createPreviewShortlink } from "@/lib/shortlinks.functions";
 
 import { scanCampaignContent } from "@/lib/content-scanner.functions";
 import { calculateSegments } from "@/lib/sms-segments";
+import { prepareMmsImage } from "@/lib/mms-image";
+import { publicCampaignMediaUrl } from "@/lib/campaign-media";
 import { countryFromPhone } from "@/lib/country-from-phone";
 import { formatUSD, formatRate } from "@/lib/money";
 import { Card } from "@/components/ui/card";
@@ -1210,22 +1212,30 @@ function MmsImagePicker({ mediaUrl, onChange }: { mediaUrl: string; onChange: (u
       const { data: u } = await supabase.auth.getUser();
       const uid = u.user?.id;
       if (!uid) throw new Error("Not signed in");
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      // Carriers drop picture attachments that are too large or too wide, which
+      // is why some recipients see only the text. Normalise to a carrier-safe
+      // JPEG (animated GIFs are left alone so they keep animating).
+      const prepared = await prepareMmsImage(file);
+      const ext = prepared.type === "image/gif" ? "gif" : prepared.type === "image/png" ? "png" : "jpg";
       const path = `${uid}/${crypto.randomUUID()}.${ext}`;
-      const up = await supabase.storage.from("campaign-media").upload(path, file, {
-        contentType: file.type, upsert: false,
+      const up = await supabase.storage.from("campaign-media").upload(path, prepared, {
+        contentType: prepared.type, upsert: false,
       });
       if (up.error) throw up.error;
-      // 1-year signed URL so Twilio can fetch it at send time, including scheduled campaigns.
-      const signed = await supabase.storage.from("campaign-media").createSignedUrl(path, 60 * 60 * 24 * 365);
-      if (signed.error || !signed.data?.signedUrl) throw signed.error ?? new Error("Could not sign media URL");
-      onChange(signed.data.signedUrl);
+      // Short, token-free, non-expiring delivery URL served by our own route.
+      // Signed storage links carry a huge query token and an expiry, and both
+      // can make the carrier's media fetch fail (text delivered, image missing).
+      onChange(publicCampaignMediaUrl(
+        `/storage/v1/object/sign/campaign-media/${path}`,
+        window.location.origin,
+      ));
       toast.success("Image uploaded");
     } catch (e: any) {
       toast.error(e.message ?? "Upload failed");
     } finally { setUploading(false); }
   }
   const isImg = !!mediaUrl && /\.(jpe?g|png|gif)(\?|$)/i.test(mediaUrl);
+
   return (
     <div className="mt-1 flex items-start gap-3">
       {isImg && (
