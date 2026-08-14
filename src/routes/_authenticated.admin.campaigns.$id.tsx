@@ -142,7 +142,7 @@ function AdminCampaignReportPage() {
           )}
           {t.carrier_rejected > 0 && (
             <div className="text-sm text-amber-900">
-              {t.carrier_rejected.toLocaleString()} were rejected by the recipient carrier (code 40008) — typical for a large first-time {t.is_mms ? "MMS" : "SMS"} burst from a single number.
+              {t.carrier_rejected.toLocaleString()} reached the recipient carrier but were rejected before delivery (code 40008). The carrier did not provide a more specific reason.{t.is_mms ? " Retrying without the image may improve acceptance, but does not guarantee delivery." : ""}
             </div>
           )}
         </Card>

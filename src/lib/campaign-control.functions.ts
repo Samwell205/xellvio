@@ -58,17 +58,14 @@ export const cancelCampaign = createServerFn({ method: "POST" })
 // planner-level preflight decides.
 export const retryMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { messageId: string; confirmed: boolean }) => {
-    if (!d.confirmed) throw new Error("Retry confirmation is required");
-    return d;
-  })
+  .inputValidator((d: { messageId: string; confirmed?: boolean; dryRun?: boolean; forceSms?: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
     // RLS ensures the caller can only see their own account's messages.
     const { data: msg, error: mErr } = await supabase
       .from("messages")
-      .select("id, status, campaign_id, cost, retry_count")
+      .select("id, status, campaign_id, cost, retry_count, is_mms")
       .eq("id", data.messageId)
       .maybeSingle();
     if (mErr) throw new Error(mErr.message);
@@ -93,7 +90,24 @@ export const retryMessage = createServerFn({ method: "POST" })
 
     // Re-price from the live rate card before the row goes back out.
     const { priceRetryRows, applyRetryPricing } = await import("@/lib/campaign-retry-pricing.server");
-    const preflight = await priceRetryRows(supabaseAdmin, campaign as any, [data.messageId]);
+    if (data.forceSms && !(msg as any).is_mms) {
+      throw new Error("Only a failed picture message can be retried as SMS");
+    }
+    const preflight = await priceRetryRows(supabaseAdmin, campaign as any, [data.messageId], {
+      forceSms: data.forceSms,
+    });
+    if (data.dryRun) {
+      return {
+        ok: true,
+        dryRun: true,
+        count: preflight.count,
+        estimatedCost: preflight.estimatedCost,
+        balance: preflight.balance,
+        shortfall: preflight.shortfall,
+        isMms: preflight.isMms,
+      };
+    }
+    if (!data.confirmed) throw new Error("Retry confirmation is required");
     if (preflight.shortfall > 0) {
       throw new Error(
         `Not enough credit to resend: needs $${preflight.estimatedCost.toFixed(2)}, balance is $${preflight.balance.toFixed(2)}.`,
@@ -114,7 +128,8 @@ export const retryMessage = createServerFn({ method: "POST" })
         dispatch_started_at: null,
         charged_at: null,
         charged_amount: null,
-        retry_authorization_source: "tenant_manual",
+        force_sms: !!data.forceSms,
+        retry_authorization_source: data.forceSms ? "tenant_manual_sms_fallback" : "tenant_manual",
         retry_authorized_by: context.userId,
         retry_authorized_at: new Date().toISOString(),
         retry_count: (msg as any).retry_count ? Number((msg as any).retry_count) + 1 : 1,

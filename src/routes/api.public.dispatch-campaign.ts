@@ -281,9 +281,9 @@ async function sendOneMessage(
 ): Promise<{ ok: boolean; shaft: boolean; debited: number }> {
   const { sendMessage, safeTelnyxCall } = await import("@/lib/telnyx.server");
   try {
-    const sendAsMms = !!campaign.media_url && supportsMms(m.country_code);
+    const sendAsMms = !!campaign.media_url && supportsMms(m.country_code) && !m.force_sms;
     const messageBody =
-      campaign.media_url && !sendAsMms ? fallbackMediaBody(m.rendered_body, m.id) : m.rendered_body;
+      campaign.media_url && !sendAsMms && !m.force_sms ? fallbackMediaBody(m.rendered_body, m.id) : m.rendered_body;
 
     // Sender fallback rules — pick best available sender for this recipient.
     // Priority: US/CA → toll_free > local > sender_id; other countries → sender_id > local > toll_free.

@@ -190,7 +190,7 @@ function CampaignReport() {
       let q = supabase
         .from("messages")
         .select(
-          "id, phone_e164, status, error_code, failure_reason, sent_at, delivered_at, created_at, segments_count, country_code, cost, profile:profile_id(country_code, first_name, last_name)",
+          "id, phone_e164, status, error_code, failure_reason, sent_at, delivered_at, created_at, segments_count, country_code, cost, is_mms, force_sms, profile:profile_id(country_code, first_name, last_name)",
           { count: "exact" },
         )
         .eq("campaign_id", id)
@@ -315,11 +315,18 @@ function CampaignReport() {
 
   const retryOneFn = useServerFn(retryMessage);
   const retryOneM = useMutation({
-    mutationFn: async (messageId: string) => {
-      if (!window.confirm("Send this SMS again? A new send attempt will be charged at the current rate.")) {
+    mutationFn: async ({ messageId, forceSms = false }: { messageId: string; forceSms?: boolean }) => {
+      const preview: any = await retryOneFn({ data: { messageId, forceSms, dryRun: true } });
+      if (Number(preview.shortfall ?? 0) > 0) {
+        throw new Error(`Not enough credit: this retry costs ${formatUSD(preview.estimatedCost)} but your balance is ${formatUSD(preview.balance ?? 0)}.`);
+      }
+      const description = forceSms
+        ? "Retry this failed MMS as a text-only SMS without the image? This may improve acceptance, but delivery is not guaranteed."
+        : "Send this message again in its original format?";
+      if (!window.confirm(`${description}\n\nEstimated charge: ${formatUSD(preview.estimatedCost)}.`)) {
         throw new Error("Retry cancelled");
       }
-      return retryOneFn({ data: { messageId, confirmed: true } });
+      return retryOneFn({ data: { messageId, forceSms, confirmed: true } });
     },
     onSuccess: () => {
       toast.success("Message re-queued.");
@@ -791,8 +798,9 @@ function CampaignReport() {
             isFetching={messagesQ.isFetching}
             stats={stats}
             optOuts={optOutsQ.data ?? 0}
-            onRetry={(mid) => retryOneM.mutate(mid)}
-            retryingId={retryOneM.isPending ? (retryOneM.variables as string | undefined) : undefined}
+            onRetry={(mid) => retryOneM.mutate({ messageId: mid })}
+            onRetryAsSms={(mid) => retryOneM.mutate({ messageId: mid, forceSms: true })}
+            retryingId={retryOneM.isPending ? retryOneM.variables?.messageId : undefined}
             canRetry={c.status !== "cancelled"}
           />
 
@@ -910,6 +918,7 @@ function RecipientActivity({
   stats,
   optOuts,
   onRetry,
+  onRetryAsSms,
   retryingId,
   canRetry,
 }: {
@@ -924,6 +933,7 @@ function RecipientActivity({
   stats: any;
   optOuts: number;
   onRetry?: (messageId: string) => void;
+  onRetryAsSms?: (messageId: string) => void;
   retryingId?: string;
   canRetry?: boolean;
 }) {
@@ -1014,6 +1024,11 @@ function RecipientActivity({
                       <TableCell className="max-w-[260px]">
                         <StatusBadge status={m.status} />
                         {m.error_code && <div className="text-[10px] text-destructive mt-0.5 font-mono">{m.error_code}</div>}
+                        {m.error_code === "40008" && (
+                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
+                            Recipient carrier rejected this message. It reached the carrier, but was not accepted for delivery.
+                          </div>
+                        )}
                         {m.failure_reason && (
                           <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug" title={m.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : m.failure_reason}>
                             {m.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : (m.failure_reason.length > 120 ? m.failure_reason.slice(0, 120) + "…" : m.failure_reason)}
@@ -1032,16 +1047,19 @@ function RecipientActivity({
                         {m.sent_at ? new Date(m.sent_at).toLocaleString() : "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {retryable && onRetry && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onRetry(m.id)}
-                            disabled={retryingId === m.id}
-                            title="Re-queue this message for another attempt."
-                          >
-                            <RotateCw className={`size-3 ${retryingId === m.id ? "animate-spin" : ""}`} />
-                          </Button>
+                        {retryable && (
+                          <div className="flex justify-end gap-1">
+                            {m.is_mms && onRetryAsSms && (
+                              <Button variant="outline" size="sm" onClick={() => onRetryAsSms(m.id)} disabled={retryingId === m.id}>
+                                <Send className="size-3 mr-1" /> Retry as SMS
+                              </Button>
+                            )}
+                            {onRetry && (
+                              <Button variant="ghost" size="sm" onClick={() => onRetry(m.id)} disabled={retryingId === m.id} title="Retry in the original format.">
+                                <RotateCw className={`size-3 ${retryingId === m.id ? "animate-spin" : ""}`} />
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
@@ -1501,6 +1519,7 @@ const REASON_LABELS: Record<string, string> = {
   "30034": "Blocked — 10DLC not registered (US)",
   "21610": "Recipient replied STOP — number opted out",
   "21614": "Not a valid mobile number",
+  "40008": "Recipient carrier rejected this message. It reached the carrier, but was not accepted for delivery.",
 };
 function friendlyReason(code: string): string {
   return REASON_LABELS[code] ?? "See carrier documentation";
