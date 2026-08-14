@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
 import { keywordScan } from "@/lib/content-scanner";
+import { publicCampaignMediaUrl } from "@/lib/campaign-media";
 
 const PLAN_INSERT_CHUNK = 500;
 // Recipients enriched + inserted per invocation. Bounds planning CPU cost to
@@ -110,6 +111,13 @@ function mediaLinkForMessage(messageId: string) {
 function fallbackMediaBody(body: string, messageId: string) {
   return `${body}\n\nImage: ${mediaLinkForMessage(messageId)}`;
 }
+// Carrier MMS gateways fetch the attachment themselves; long signed storage
+// tokens (and their expiry) can make that fetch fail, which delivers the text
+// without the image. Always hand the carrier our short, permanent URL.
+function deliverableMediaUrl(mediaUrl: string) {
+  return publicCampaignMediaUrl(mediaUrl, publicBaseUrl());
+}
+
 
 type Rate = {
   country_code: string;
@@ -329,7 +337,7 @@ async function sendOneMessage(
         text: messageBody,
         from: fromNumber ?? undefined,
         messagingProfileId: messagingProfileId ?? undefined,
-        mediaUrls: sendAsMms ? [campaign.media_url] : undefined,
+        mediaUrls: sendAsMms ? [deliverableMediaUrl(campaign.media_url)] : undefined,
       }),
     );
 
