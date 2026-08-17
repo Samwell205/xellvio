@@ -223,7 +223,14 @@ export default function ImportCsvDialog({
     setResult({ inserted, invalid, duplicates: dupes, errors });
     qc.invalidateQueries({ queryKey: ["audience-profiles"] });
     onDone();
-    if (!cancelRef.current) toast.success(`Imported ${fmtInt(inserted)} contacts`);
+    if (cancelRef.current) return;
+    if (processed === 0) {
+      toast.error("No rows were read from the file — check the CSV has a header row and data.");
+    } else if (inserted === 0) {
+      toast.error(`Nothing saved: ${fmtInt(invalid)} invalid, ${fmtInt(dupes)} duplicate rows. Check the phone column mapping.`);
+    } else {
+      toast.success(`Imported ${fmtInt(inserted)} contacts`);
+    }
   }
 
   const selectableRows = useMemo(() => sample.length - excludedRows.size, [sample, excludedRows]);
