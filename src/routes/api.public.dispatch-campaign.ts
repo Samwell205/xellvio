@@ -6,6 +6,7 @@ import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
 import { keywordScan } from "@/lib/content-scanner";
 import { publicCampaignMediaUrl } from "@/lib/campaign-media";
+import { STOPPED_AS_SENT } from "@/lib/campaign-stop";
 
 const PLAN_INSERT_CHUNK = 500;
 // Recipients enriched + inserted per invocation. Bounds planning CPU cost to
@@ -232,8 +233,16 @@ async function hasUnplannedRecipients(supabaseAdmin: any, campaign: any): Promis
   }
 }
 
+/** True when the user explicitly stopped this campaign and asked it to read as Sent. */
+async function isStoppedByUser(supabaseAdmin: any, campaignId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("campaigns").select("status, paused_reason").eq("id", campaignId).maybeSingle();
+  return data?.status === "sent" && data?.paused_reason === STOPPED_AS_SENT;
+}
+
 /** Finalize as `sent` only when nothing is left to plan or deliver. */
 async function finalizeIfComplete(supabaseAdmin: any, campaign: any): Promise<void> {
+  if (await isStoppedByUser(supabaseAdmin, campaign.id)) return;
   if (await hasUnplannedRecipients(supabaseAdmin, campaign)) {
     await supabaseAdmin.from("campaigns")
       .update({ status: "sending" })
@@ -1009,7 +1018,7 @@ async function processCampaign(
   // recipient pages are still being planned. Large campaigns therefore begin
   // immediately instead of showing zero progress for several cron intervals.
   const delivered = await deliverPending(supabaseAdmin, campaign, sender, limits);
-  if (hasMore) {
+  if (hasMore && !(await isStoppedByUser(supabaseAdmin, campaign.id))) {
     // deliverPending only sees rows that have already been planned. It must not
     // finalize the campaign while later audience pages still need planning.
     await supabaseAdmin.from("campaigns")
@@ -1220,7 +1229,9 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
               .from("campaigns")
               .update({ status: "sending", paused_reason: null })
               .in("id", strandedIds)
-              .in("status", ["failed", "sent"]);
+              .in("status", ["failed", "sent"])
+              // Campaigns the user explicitly stopped must stay stopped.
+              .or(`paused_reason.is.null,paused_reason.neq.${STOPPED_AS_SENT}`);
           }
         } catch (e: any) {
           console.error("[dispatch] stranded-campaign revival failed", e?.message ?? e);
@@ -1234,12 +1245,14 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           const sinceIso = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
           const { data: recentDone } = await supabaseAdmin
             .from("campaigns")
-            .select("id, account_id, audience, updated_at")
+            .select("id, account_id, audience, updated_at, paused_reason")
             .eq("status", "sent")
             .gte("updated_at", sinceIso)
             .order("updated_at", { ascending: false })
             .limit(10);
           for (const c of recentDone ?? []) {
+            // User-stopped campaigns are final — never plan more recipients.
+            if (c.paused_reason === STOPPED_AS_SENT) continue;
             if (await hasUnplannedRecipients(supabaseAdmin, c)) {
               await supabaseAdmin
                 .from("campaigns")

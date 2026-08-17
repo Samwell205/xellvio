@@ -52,6 +52,54 @@ export const cancelCampaign = createServerFn({ method: "POST" })
     return { ok: true, cancelledMessages: ids.length };
   });
 
+// Stop an in-flight campaign but finish it as `sent`: no further recipients are
+// planned or dispatched, and every existing message row (delivered / sent /
+// undelivered / failed), its cost and its report stay exactly as they are.
+export const stopCampaignAsSent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { campaignId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { STOPPED_AS_SENT } = await import("@/lib/campaign-stop");
+
+    // RLS gate: the caller must be able to see (and update) this campaign.
+    const { data: campaign, error: cErr } = await supabase
+      .from("campaigns")
+      .select("id, status")
+      .eq("id", data.campaignId)
+      .maybeSingle();
+    if (cErr) throw new Error(cErr.message);
+    if (!campaign) throw new Error("Campaign not found");
+    if (["cancelled", "failed"].includes(campaign.status)) {
+      throw new Error(`Cannot stop a campaign in state "${campaign.status}"`);
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Stop the queue: rows not yet handed to the carrier must not be sent, but
+    // nothing already sent/delivered/failed is touched.
+    const { data: queuedRows } = await supabaseAdmin
+      .from("messages")
+      .select("id")
+      .eq("campaign_id", data.campaignId)
+      .in("status", ["queued", "pending"])
+      .limit(20000);
+    const ids = (queuedRows ?? []).map((r: any) => r.id);
+    for (let i = 0; i < ids.length; i += 500) {
+      await supabaseAdmin
+        .from("messages")
+        .update({ status: "failed", error_code: "cancelled_by_user" })
+        .in("id", ids.slice(i, i + 500));
+    }
+
+    await supabaseAdmin
+      .from("campaigns")
+      .update({ status: "sent", paused_reason: STOPPED_AS_SENT })
+      .eq("id", data.campaignId);
+
+    return { ok: true, stoppedMessages: ids.length };
+  });
+
 // Retry a single failed / undelivered message by resetting it to `queued` so
 // the next dispatcher tick sends it again. Skips insufficient_balance rows
 // unless the account now has enough credit — those get re-queued too and the

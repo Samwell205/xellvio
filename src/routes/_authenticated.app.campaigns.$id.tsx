@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { reconcileCampaignMessages } from "@/lib/reconcile-messages.functions";
 import {
   cancelCampaign,
+  stopCampaignAsSent,
   retryMessage,
   retryFailedMessages,
 } from "@/lib/campaign-control.functions";
@@ -313,6 +314,18 @@ function CampaignReport() {
     onError: (e: any) => toast.error(e?.message ?? "Failed to cancel campaign"),
   });
 
+  const stopSentFn = useServerFn(stopCampaignAsSent);
+  const stopSentM = useMutation({
+    mutationFn: () => stopSentFn({ data: { campaignId: id } }),
+    onSuccess: () => {
+      toast.success("Campaign stopped and marked as sent. The report is unchanged.");
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to stop campaign"),
+  });
+
   const retryOneFn = useServerFn(retryMessage);
   const retryOneM = useMutation({
     mutationFn: async ({ messageId, forceSms = false }: { messageId: string; forceSms?: boolean }) => {
@@ -594,6 +607,37 @@ function CampaignReport() {
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
                       Yes, cancel
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {!["sent", "cancelled", "failed"].includes(c.status) && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={stopSentM.isPending}
+                    title="Stop sending now and finish the campaign as Sent. The report stays exactly as it is."
+                  >
+                    <CheckCircle2 className="size-3 mr-1" />
+                    {stopSentM.isPending ? "Stopping…" : "Stop & mark as sent"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Stop sending and mark as sent?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      No further recipients will be queued or sent. The report keeps every
+                      current number — delivered, sent, not delivered and failed — along
+                      with the cost already incurred, and the campaign will show as Sent.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep sending</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => stopSentM.mutate()}>
+                      Stop &amp; mark as sent
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
