@@ -1,33 +1,47 @@
-# Stop paying twice per message, and stop paying for dead numbers
+# Show where the Telnyx money went — platform and per tenant
 
-Two changes, both aimed at cutting carrier spend on campaigns like the FLORIDA sends.
+You funded the Telnyx wallet and want to see, on the website, exactly where that money finished — for the whole platform or for any tenant. Right now you can't, because the carrier-cost figure the admin shows excludes `failed` messages (the carrier still bills those once submitted) and is never split by outcome, so it never ties back to the wallet balance drop.
 
-## Why
+## What you'll get
 
-Every recipient in the recent campaigns was billed as 2 SMS segments (body length 296-301 chars, limit is 160 per segment). At the US carrier rate of $0.0055 + $0.0045 pass-through = $0.01 per segment, each recipient cost $0.02 instead of $0.01. On top of that, 36,778 failed and 7,986 undelivered messages in the last 48h still cost carrier fees (~$895) because the numbers were landline/invalid/unroutable.
+A **"Telnyx wallet spend"** breakdown, available at platform level and drill-down per tenant, that answers "where did the money go" in one screen:
 
-## 1. Segment and cost visibility in the campaign composer
+```
+Telnyx wallet
+  Topped up (all time)            $2,000.00
+  Current balance (live)            $445.72
+  ──────────────────────────────────────────
+  Spent so far                    $1,554.28   ← reconciles to top-ups − balance
 
-- Live counter under the message body: character count, segment count (1 / 2 / 3...), and the segment boundary at 160 (70 for unicode/emoji bodies).
-- A clear inline warning the moment the body crosses into a 2nd segment: "This message costs 2x — trim to 160 characters to halve the cost."
-- Cost estimate panel shows the breakdown explicitly: recipients x segments x per-segment price = total, plus "what you'd save at 1 segment".
-- Same segment/cost figures shown on the confirm-send dialog so it can't be missed.
-- Uses the existing segment calculator (`src/lib/sms-segments.ts`) and the existing per-country pricing already used by the cost estimate — no pricing logic changes, no new rates.
+  Where it went (last 30d)
+    Delivered        97,273 msgs · 194,546 seg · $1,945.46
+    Accepted/Sent       5,506 msgs ·  11,012 seg ·   $110.12
+    Failed            36,778 msgs ·  73,556 seg ·   $735.56   ← wasted
+    Undelivered        7,986 msgs ·  15,972 seg ·   $159.72   ← wasted
+    Unconfirmed        1,630 msgs ·   3,260 seg ·    $32.60
+    Toll-free verifications                         $XXX
+  Per-segment rate used: US $0.0055 + $0.0045 pass-through = $0.01/seg
+  (MMS billed at ×3 where applicable)
+```
 
-## 2. Pre-send filtering of numbers that can never deliver
+- **Every message submitted to the carrier is counted**, including `failed` and `sending`/`queued` — because the carrier bills the moment a message is accepted, regardless of final delivery status. This is the fix that makes the total reconcile to the wallet.
+- **Split by outcome** so you can see how much carrier money went to messages that never landed (failed + undelivered) vs. actually delivered — the figure you're missing today.
+- **Segment math is shown explicitly** (segments × per-segment rate), so it's obvious that a 2-segment body doubled the cost. No new rates, no pricing changes — it reuses `country_rates` exactly as the dispatcher charges.
+- **Per-tenant drill-down**: pick a tenant, see the same breakdown for just their campaigns. Answers "how much carrier money did this tenant's sending cost me."
+- **Reconciliation line**: spent = top-ups − current balance. If the sum of the outcome breakdown + verification fees doesn't match the wallet drop, the residual shows as an explicit "unaccounted" gap (same idea as the existing balance-drop audit, but using the corrected inclusive count).
 
-- Before planning a campaign, exclude recipients already recorded in `unroutable_numbers` (landline/invalid/carrier-blocked from previous sends). This cache already exists and is already populated by the dispatcher.
-- Show the excluded count in the audience/cost estimate as its own line ("known undeliverable, excluded: N") so the number that gets charged is the number actually sent.
-- Keep opt-out and suppression exclusions exactly as they are today.
-- Also feed the recurring hard-failure codes (invalid destination / unroutable) into that cache when the carrier reports them, so the list keeps improving instead of re-paying for the same numbers every campaign.
+## What changes
 
-## Technical notes
+1. **Fix the carrier-cost source of truth** (`src/lib/admin-telnyx.functions.ts`): the `pullSince` status filter drops `failed` and `sending`/`queued` — extend it to include every status the carrier accepted, so the breakdown accounts for 100% of wallet spend. No behaviour change to what tenants are charged; this only affects the admin spend view.
 
-- Composer changes: `src/routes/_authenticated.app.campaigns.*` (message editor + cost estimate + send dialog), reusing `countSegments` from `src/lib/sms-segments.ts`.
-- Audience/estimate counts: extend the existing eligibility functions (`eligible_profile_ids*`, `eligible_country_counts`, `unplanned_recipients_page`) with an anti-join against `unroutable_numbers`, keeping the current keyset/index paths so large lists stay fast.
-- No changes to `country_rates`, no changes to how tenants are charged per segment, no refunds or balance adjustments.
+2. **Add a spend-by-outcome aggregation**: group the same message rows by `status` (delivered / sent / failed / undelivered / delivery_unconfirmed / queued+sending) and return `{ messages, segments, carrier_cost }` per status, plus the per-segment rate used. Reuse the existing `realCarrierCost` helper (already handles segments + MMS multiplier + pass-through fee).
+
+3. **New admin view**: a "Telnyx wallet" panel on the existing Admin → Telnyx area (or a new tab on the finance page) showing the platform breakdown above, and a tenant selector that re-runs the same aggregation scoped to one account's campaigns. Live balance comes from the existing `getTelnyxLiveBalance` server function; top-ups from `payments`.
+
+4. **Per-tenant carrier column split**: on the finance page's per-tenant table, the single "Carrier cost" column gains an expandable breakdown by outcome for that tenant (delivered vs wasted), so you don't have to leave the table to see it.
 
 ## Out of scope
 
-- Changing anyone's balance or issuing credits.
-- Changing sell prices or margins.
+- No changes to what tenants are charged, no refunds, no balance adjustments.
+- No changes to `country_rates` or sell prices.
+- No changes to sending/dispatch behaviour — this is read-only visibility.
