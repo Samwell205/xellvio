@@ -96,7 +96,10 @@ function NewCampaignPage() {
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], listIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
-    excludedCountries: [], trackLinks: true,
+    // Link shortening is opt-in: nobody's URLs get rewritten unless the tenant
+    // switches it on for this campaign.
+    excludedCountries: [], trackLinks: false,
+
   });
 
 
