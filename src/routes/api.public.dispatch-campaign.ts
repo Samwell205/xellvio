@@ -206,6 +206,41 @@ async function loadNextUnplannedBatch(
   return { recipients: rows, hasMore: remaining > rows.length };
 }
 
+/**
+ * True when the campaign still has audience members that were never turned into
+ * message rows. A campaign must NEVER be finalized as `sent` while this holds:
+ * once the status leaves queued/sending the scheduler stops selecting it, so the
+ * unplanned remainder would never be sent at all. This is what stranded a 108k
+ * campaign after only 6k messages. On any lookup error we assume there IS more
+ * work (fail-safe) so a transient database hiccup cannot end a campaign early.
+ */
+async function hasUnplannedRecipients(supabaseAdmin: any, campaign: any): Promise<boolean> {
+  try {
+    const { data, error } = await supabaseAdmin.rpc("unplanned_recipients_page", {
+      _campaign_id: campaign.id,
+      _account_id: campaign.account_id,
+      _audience: campaign.audience ?? { include: [], exclude: [] },
+      _limit: 1,
+    });
+    if (error) throw error;
+    return (data ?? []).length > 0;
+  } catch {
+    return true;
+  }
+}
+
+/** Finalize as `sent` only when nothing is left to plan or deliver. */
+async function finalizeIfComplete(supabaseAdmin: any, campaign: any): Promise<void> {
+  if (await hasUnplannedRecipients(supabaseAdmin, campaign)) {
+    await supabaseAdmin.from("campaigns")
+      .update({ status: "sending" })
+      .eq("id", campaign.id)
+      .in("status", ["queued", "sending", "sent"]);
+    return;
+  }
+  await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
+}
+
 function isShaftLikeCode(code: string): boolean {
   // 40001 = landline/non-routable and 40012 = invalid destination. Those are
   // recipient-data failures, not content violations, and must never suspend a
@@ -882,7 +917,7 @@ async function deliverPending(
       .from("messages").select("id", { count: "exact", head: true })
       .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
     if ((stillPending ?? 0) === 0) {
-      await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
+      await finalizeIfComplete(supabaseAdmin, campaign);
     }
     return { sent: 0, failed: 0, debited: 0, remaining: stillPending ?? 0 };
   }
@@ -907,7 +942,7 @@ async function deliverPending(
     .from("messages").select("id", { count: "exact", head: true })
     .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
   if ((remaining ?? 0) === 0) {
-    await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
+    await finalizeIfComplete(supabaseAdmin, campaign);
   } else {
     await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
   }
@@ -1187,6 +1222,34 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         } catch (e: any) {
           console.error("[dispatch] stranded-campaign revival failed", e?.message ?? e);
         }
+
+        // Second revival case: a campaign whose queued rows all drained but whose
+        // audience was never fully planned (large lists are planned page by page).
+        // Those have no queued message to give them away, so check the recently
+        // finished ones directly and put them back to `sending`.
+        try {
+          const sinceIso = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+          const { data: recentDone } = await supabaseAdmin
+            .from("campaigns")
+            .select("id, account_id, audience, updated_at")
+            .eq("status", "sent")
+            .gte("updated_at", sinceIso)
+            .order("updated_at", { ascending: false })
+            .limit(10);
+          for (const c of recentDone ?? []) {
+            if (await hasUnplannedRecipients(supabaseAdmin, c)) {
+              await supabaseAdmin
+                .from("campaigns")
+                .update({ status: "sending", paused_reason: null })
+                .eq("id", c.id)
+                .eq("status", "sent");
+            }
+          }
+        } catch (e: any) {
+          console.error("[dispatch] unplanned-campaign revival failed", e?.message ?? e);
+        }
+
+
 
 
         const { data: due, error } = await supabaseAdmin
