@@ -727,7 +727,8 @@ function NewCampaignPage() {
               totalCost={totalCost}
               breakdown={breakdown}
               audienceCount={activeRecipientCount}
-              loading={countsQ.isFetching || ratesQ.isFetching}
+              loading={hasAudience && countryCounts.length === 0 && (countsQ.isPending || countsQ.isFetching || ratesQ.isPending)}
+              error={countsQ.isError ? ((countsQ.error as any)?.message ?? "Could not calculate cost") : null}
             />
           </div>
         </div>
