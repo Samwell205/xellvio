@@ -29,7 +29,7 @@ const PLAN_BACKLOG_TARGET = 20_000;
 // without increasing per-process database connection pressure.
 // Total messages one campaign may claim per invocation, spread across its
 // lease slots (see LEASE_SHARDS). Each slot claims a fraction of this.
-const DELIVER_PER_WORKER = 6_000;
+const DELIVER_PER_WORKER = 12_000;
 // Total in-flight sends per campaign per invocation, also split across lease
 // slots. Kept moderate on purpose: this project's Postgres tier caps out at 60
 // connections and steady-state background usage already holds ~25, so stacking
@@ -76,9 +76,9 @@ const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> 
   // the run budget. Claiming more than a slot can finish leaves the surplus
   // stuck in `sending` until the stale sweep writes it off as
   // `dispatch_timeout` — which is why big campaigns showed hundreds of them.
-  toll_free: { perTick: 6_000, concurrency: 300 },
+  toll_free: { perTick: 12_000, concurrency: 300 },
   ten_dlc: { perTick: 3_000, concurrency: 120 },
-  short_code: { perTick: 6_000, concurrency: 300 },
+  short_code: { perTick: 12_000, concurrency: 300 },
   shared_toll_free: { perTick: 1_200, concurrency: 48 },
   personal: { perTick: 120, concurrency: 4 },
 };
