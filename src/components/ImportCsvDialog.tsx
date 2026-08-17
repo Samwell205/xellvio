@@ -66,6 +66,10 @@ export default function ImportCsvDialog({
   const [excludedCols, setExcludedCols] = useState<Set<string>>(new Set());
   const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set());
   const [listId, setListId] = useState<string>("none");
+  const [creatingList, setCreatingList] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const [creatingBusy, setCreatingBusy] = useState(false);
+
   const [defaultCountry, setDefaultCountry] = useState("US");
   const [estimatedRows, setEstimatedRows] = useState(0);
   const [busy, setBusy] = useState(false);
