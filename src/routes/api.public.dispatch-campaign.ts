@@ -6,6 +6,7 @@ import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
 import { keywordScan } from "@/lib/content-scanner";
 import { publicCampaignMediaUrl } from "@/lib/campaign-media";
+import { STOPPED_AS_SENT } from "@/lib/campaign-stop";
 
 const PLAN_INSERT_CHUNK = 500;
 // Recipients enriched + inserted per invocation. Bounds planning CPU cost to
