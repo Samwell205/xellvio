@@ -314,6 +314,18 @@ function CampaignReport() {
     onError: (e: any) => toast.error(e?.message ?? "Failed to cancel campaign"),
   });
 
+  const stopSentFn = useServerFn(stopCampaignAsSent);
+  const stopSentM = useMutation({
+    mutationFn: () => stopSentFn({ data: { campaignId: id } }),
+    onSuccess: () => {
+      toast.success("Campaign stopped and marked as sent. The report is unchanged.");
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to stop campaign"),
+  });
+
   const retryOneFn = useServerFn(retryMessage);
   const retryOneM = useMutation({
     mutationFn: async ({ messageId, forceSms = false }: { messageId: string; forceSms?: boolean }) => {
