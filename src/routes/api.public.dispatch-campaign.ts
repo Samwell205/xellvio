@@ -1052,126 +1052,166 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         // occupy more than its fair share of the invocation or of the carrier's
         // allowed submission rate.
         const tenantUsed = new Map<string, number>();
-        for (const c of due ?? []) {
 
-          if (budgetLeft() < 5_000) { deferred += 1; continue; }
-          // One lease per campaign: another in-flight tick may already be
-          // sending this campaign, but other campaigns stay free to run in
-          // parallel. Self-heals after 2 minutes if a worker was cancelled.
-          const lockName = `campaign:${c.id}`;
-          const { data: gotLock, error: lockError } = await (supabaseAdmin as any).rpc(
-            "try_acquire_dispatch_lock",
-            { _name: lockName },
-          );
-          if (lockError) {
-            console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
-          } else if (!gotLock) {
-            results.push({ id: c.id, skipped: "campaign_already_dispatching" });
-            continue;
-          }
-          try {
-
-
-            const { data: acct } = await supabaseAdmin
-              .from("accounts")
-              .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted, gorgias_enabled")
-              .eq("id", c.account_id).maybeSingle();
-            if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
-              await supabaseAdmin.from("campaigns")
-                .update({ status: "paused", paused_reason: "Tenant sending suspended", paused_at: new Date().toISOString() })
-                .eq("id", c.id);
-              results.push({ id: c.id, error: "tenant_sending_suspended" });
-              continue;
-            }
-            // ── ToS gate: tenant must have accepted the current version.
-            const { TOS_CURRENT_VERSION } = await import("@/lib/tos");
-            if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
-              await supabaseAdmin.from("campaigns")
-                .update({ status: "paused", paused_reason: "Tenant must accept updated Terms of Service before sending.", paused_at: new Date().toISOString() })
-                .eq("id", c.id);
-              results.push({ id: c.id, error: "tos_acceptance_required" });
-              continue;
-            }
-            // ── Per-campaign compliance re-confirmation must exist.
-            const { count: campTos } = await supabaseAdmin
-              .from("campaign_tos_acceptances")
-              .select("id", { count: "exact", head: true })
-              .eq("campaign_id", c.id)
-              .eq("tos_version", TOS_CURRENT_VERSION);
-            if ((campTos ?? 0) === 0) {
-              await supabaseAdmin.from("campaigns")
-                .update({ status: "paused", paused_reason: "Missing per-campaign compliance confirmation.", paused_at: new Date().toISOString() })
-                .eq("id", c.id);
-              results.push({ id: c.id, error: "campaign_acceptance_required" });
-              continue;
-            }
-
-            const { data: senderAssets } = await supabaseAdmin
-              .from("sender_assets")
-              .select("verification_status,country_code,sender_kind,phone_number,telnyx_messaging_profile_id")
-              .eq("account_id", c.account_id);
-            const verifiedSender = (senderAssets ?? []).find(
-              (s: any) => s.verification_status === "verified" && (s.telnyx_messaging_profile_id || s.phone_number),
+        // Try each lease slot in turn; the first free slot wins. Returns the
+        // acquired lease name, or null when every slot is busy.
+        async function acquireCampaignLease(campaignId: string): Promise<string | null> {
+          for (let shard = 0; shard < LEASE_SHARDS; shard += 1) {
+            const name = `campaign:${campaignId}:${shard}`;
+            const { data: got, error: lockError } = await (supabaseAdmin as any).rpc(
+              "try_acquire_dispatch_lock",
+              { _name: name },
             );
-            if ((senderAssets ?? []).length > 0 && !verifiedSender) {
-              results.push({ id: c.id, skipped: "sender_pending_verification" });
-              continue;
+            if (lockError) {
+              // Lock helper unavailable (e.g. missing after a DB move): never
+              // freeze sending — run unguarded, claiming is atomic anyway.
+              console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
+              return UNGUARDED_LEASE;
             }
-            const { isValidTelnyxUuid, ensureMessagingProfileForAccount } = await import("@/lib/telnyx.server");
-            // Auto-provision the Telnyx Messaging Profile if none valid on this account.
-            let profileId: string | null = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
-              ? (acct!.telnyx_messaging_profile_id as string)
-              : null;
-            if (!profileId) {
-              try {
-                profileId = await ensureMessagingProfileForAccount(c.account_id);
-              } catch (e: any) {
-                await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
-                results.push({ id: c.id, error: `profile_provision_failed: ${e?.message ?? e}` });
+            if (got) return name;
+          }
+          return null;
+        }
+
+        const runOneCampaign = async (c: any): Promise<any> => {
+          const { data: acct } = await supabaseAdmin
+            .from("accounts")
+            .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted, gorgias_enabled")
+            .eq("id", c.account_id).maybeSingle();
+          if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
+            await supabaseAdmin.from("campaigns")
+              .update({ status: "paused", paused_reason: "Tenant sending suspended", paused_at: new Date().toISOString() })
+              .eq("id", c.id);
+            return { error: "tenant_sending_suspended" };
+          }
+          // ── ToS gate: tenant must have accepted the current version.
+          const { TOS_CURRENT_VERSION } = await import("@/lib/tos");
+          if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
+            await supabaseAdmin.from("campaigns")
+              .update({ status: "paused", paused_reason: "Tenant must accept updated Terms of Service before sending.", paused_at: new Date().toISOString() })
+              .eq("id", c.id);
+            return { error: "tos_acceptance_required" };
+          }
+          // ── Per-campaign compliance re-confirmation must exist.
+          const { count: campTos } = await supabaseAdmin
+            .from("campaign_tos_acceptances")
+            .select("id", { count: "exact", head: true })
+            .eq("campaign_id", c.id)
+            .eq("tos_version", TOS_CURRENT_VERSION);
+          if ((campTos ?? 0) === 0) {
+            await supabaseAdmin.from("campaigns")
+              .update({ status: "paused", paused_reason: "Missing per-campaign compliance confirmation.", paused_at: new Date().toISOString() })
+              .eq("id", c.id);
+            return { error: "campaign_acceptance_required" };
+          }
+
+          const { data: senderAssets } = await supabaseAdmin
+            .from("sender_assets")
+            .select("verification_status,country_code,sender_kind,phone_number,telnyx_messaging_profile_id")
+            .eq("account_id", c.account_id);
+          const verifiedSender = (senderAssets ?? []).find(
+            (s: any) => s.verification_status === "verified" && (s.telnyx_messaging_profile_id || s.phone_number),
+          );
+          if ((senderAssets ?? []).length > 0 && !verifiedSender) {
+            return { skipped: "sender_pending_verification" };
+          }
+          const { isValidTelnyxUuid, ensureMessagingProfileForAccount } = await import("@/lib/telnyx.server");
+          // Auto-provision the Telnyx Messaging Profile if none valid on this account.
+          let profileId: string | null = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
+            ? (acct!.telnyx_messaging_profile_id as string)
+            : null;
+          if (!profileId) {
+            try {
+              profileId = await ensureMessagingProfileForAccount(c.account_id);
+            } catch (e: any) {
+              await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
+              return { error: `profile_provision_failed: ${e?.message ?? e}` };
+            }
+          }
+          const assetProfileId = isValidTelnyxUuid(verifiedSender?.telnyx_messaging_profile_id)
+            ? (verifiedSender!.telnyx_messaging_profile_id as string)
+            : null;
+          const sender: Sender = {
+            messagingProfileId: assetProfileId ?? profileId,
+            fromNumber: verifiedSender?.phone_number ?? acct?.telnyx_phone_number ?? null,
+            gorgiasEnabled: acct?.gorgias_enabled === true,
+            assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
+          };
+          const throttle = throttleForSender(sender, !!c.media_url);
+          // The tenant's allowance covers every lease slot it may occupy in this
+          // invocation, so sharding actually increases throughput instead of
+          // tripping the per-tenant cap on the second slot.
+          const tenantBudget = throttle.perTick * LEASE_SHARDS;
+          const used = tenantUsed.get(c.account_id) ?? 0;
+          const perTick = Math.max(0, Math.min(throttle.perTick, tenantBudget - used));
+          if (perTick === 0) {
+            return { skipped: "tenant_throttle_reached" };
+          }
+          // Reserve optimistically so concurrent slots for the same tenant do
+          // not each claim the full allowance.
+          tenantUsed.set(c.account_id, used + perTick);
+          const r = await processCampaign(supabaseAdmin, c, rates, sender, {
+            perTick,
+            concurrency: throttle.concurrency,
+          });
+          const actual = Number(r?.delivered_now ?? 0) + Number(r?.failed_now ?? 0);
+          tenantUsed.set(c.account_id, used + Math.min(perTick, actual));
+          return r;
+        };
+
+        // Work list: each due campaign appears once per lease slot, interleaved
+        // so every campaign gets its first slot before any campaign gets a
+        // second one. That keeps round-robin fairness across tenants while
+        // letting a single large campaign use several parallel senders.
+        const dueList = due ?? [];
+        const queue: any[] = [];
+        for (let pass = 0; pass < LEASE_SHARDS; pass += 1) {
+          for (const c of dueList) queue.push(c);
+        }
+
+        let cursor = 0;
+        const campaignWorkers = Array.from(
+          { length: Math.min(CAMPAIGN_CONCURRENCY, queue.length) },
+          async () => {
+            while (cursor < queue.length) {
+              if (budgetLeft() < 6_000) {
+                deferred += queue.length - cursor;
+                cursor = queue.length;
+                break;
+              }
+              const c = queue[cursor++];
+              const lease = await acquireCampaignLease(c.id);
+              if (!lease) {
+                // Every slot for this campaign is busy — another worker (here or
+                // in an overlapping invocation) is already sending it.
                 continue;
               }
+              try {
+                results.push({ id: c.id, ...(await runOneCampaign(c)) });
+              } catch (e: any) {
+                // A transient tick error (provider hiccup, DB timeout) must never
+                // abandon a campaign that still has work queued — marking it
+                // `failed` drops it out of the dispatch queue and strands every
+                // remaining recipient forever. Keep it `sending` so the next tick
+                // picks it up; only mark failed when nothing is left to send.
+                const { count: leftover } = await supabaseAdmin
+                  .from("messages").select("id", { count: "exact", head: true })
+                  .eq("campaign_id", c.id).in("status", ["queued", "sending"]);
+                await supabaseAdmin
+                  .from("campaigns")
+                  .update({ status: (leftover ?? 0) > 0 ? "sending" : "failed" })
+                  .eq("id", c.id);
+                results.push({ id: c.id, error: e.message, retryable: (leftover ?? 0) > 0 });
+              } finally {
+                if (lease !== UNGUARDED_LEASE) {
+                  await (supabaseAdmin as any).rpc("release_dispatch_lock", { _name: lease });
+                }
+              }
             }
-            const assetProfileId = isValidTelnyxUuid(verifiedSender?.telnyx_messaging_profile_id)
-              ? (verifiedSender!.telnyx_messaging_profile_id as string)
-              : null;
-            const sender: Sender = {
-              messagingProfileId: assetProfileId ?? profileId,
-              fromNumber: verifiedSender?.phone_number ?? acct?.telnyx_phone_number ?? null,
-              gorgiasEnabled: acct?.gorgias_enabled === true,
-              assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
-            };
-            const throttle = throttleForSender(sender, !!c.media_url);
-            const used = tenantUsed.get(c.account_id) ?? 0;
-            const perTick = Math.max(0, throttle.perTick - used);
-            if (perTick === 0) {
-              results.push({ id: c.id, skipped: "tenant_throttle_reached" });
-              continue;
-            }
-            const r = await processCampaign(supabaseAdmin, c, rates, sender, {
-              perTick,
-              concurrency: throttle.concurrency,
-            });
-            tenantUsed.set(c.account_id, used + Number(r?.delivered_now ?? 0) + Number(r?.failed_now ?? 0));
-            results.push({ id: c.id, ...r });
+          },
+        );
+        await Promise.all(campaignWorkers);
 
-          } catch (e: any) {
-            // A transient tick error (provider hiccup, DB timeout) must never
-            // abandon a campaign that still has work queued — marking it
-            // `failed` drops it out of the dispatch queue and strands every
-            // remaining recipient forever. Keep it `sending` so the next tick
-            // picks it up; only mark failed when nothing is left to send.
-            const { count: leftover } = await supabaseAdmin
-              .from("messages").select("id", { count: "exact", head: true })
-              .eq("campaign_id", c.id).in("status", ["queued", "sending"]);
-            await supabaseAdmin
-              .from("campaigns")
-              .update({ status: (leftover ?? 0) > 0 ? "sending" : "failed" })
-              .eq("id", c.id);
-            results.push({ id: c.id, error: e.message, retryable: (leftover ?? 0) > 0 });
-          } finally {
-            await (supabaseAdmin as any).rpc("release_dispatch_lock", { _name: lockName });
-          }
-        }
 
         // Recovery and reconciliation are best-effort housekeeping. Run them
         // only after outbound work so they can never consume the send budget.
