@@ -43,6 +43,17 @@ const DELIVER_CONCURRENCY = 24;
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
+// How many workers may send for the SAME campaign at once. Message claiming is
+// atomic (SELECT ... FOR UPDATE SKIP LOCKED), so parallel senders can never
+// pick up the same recipient twice. Without this a single campaign was limited
+// to one sender at a time, which is what made 100k sends take hours.
+const LEASE_SHARDS = 3;
+// How many send slots run concurrently inside one invocation (across all
+// campaigns and lease shards).
+const CAMPAIGN_CONCURRENCY = 3;
+// Sentinel used when the lock helper is unavailable and we send unguarded.
+const UNGUARDED_LEASE = "__unguarded__";
+
 
 // ── Per-tenant throttling ────────────────────────────────────────────────────
 // One tenant with a very large campaign used to be able to soak the whole
