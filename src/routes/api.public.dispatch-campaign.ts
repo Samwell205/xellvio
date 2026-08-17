@@ -27,13 +27,17 @@ const PLAN_BATCH_SIZE = 500;
 // without increasing per-process database connection pressure.
 // Total messages one campaign may claim per invocation, spread across its
 // lease slots (see LEASE_SHARDS). Each slot claims a fraction of this.
-const DELIVER_PER_WORKER = 900;
+const DELIVER_PER_WORKER = 1_500;
 // Total in-flight sends per campaign per invocation, also split across lease
 // slots. Kept moderate on purpose: this project's Postgres tier caps out at 60
 // connections and steady-state background usage already holds ~25, so stacking
 // too many concurrent per-message status UPDATEs made some writes fail and left
 // rows stuck at status='sending' (later swept as dispatch_timeout).
-const DELIVER_CONCURRENCY = 36;
+// Keep total concurrent carrier calls below the database connection ceiling.
+// The previous limit of 36 only used a fraction of the verified toll-free
+// throughput and made large queues take hours; 84 still leaves headroom for
+// web traffic and delivery-receipt writes on the current backend tier.
+const DELIVER_CONCURRENCY = 84;
 
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
@@ -46,10 +50,10 @@ const EST_SEND_MS = 4_500;
 // atomic (SELECT ... FOR UPDATE SKIP LOCKED), so parallel senders can never
 // pick up the same recipient twice. Without this a single campaign was limited
 // to one sender at a time, which is what made 100k sends take hours.
-const LEASE_SHARDS = 3;
+const LEASE_SHARDS = 6;
 // How many send slots run concurrently inside one invocation (across all
 // campaigns and lease shards).
-const CAMPAIGN_CONCURRENCY = 3;
+const CAMPAIGN_CONCURRENCY = 6;
 // Sentinel used when the lock helper is unavailable and we send unguarded.
 const UNGUARDED_LEASE = "__unguarded__";
 
@@ -70,10 +74,10 @@ const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> 
   // the run budget. Claiming more than a slot can finish leaves the surplus
   // stuck in `sending` until the stale sweep writes it off as
   // `dispatch_timeout` — which is why big campaigns showed hundreds of them.
-  toll_free: { perTick: 900, concurrency: 36 },
-  ten_dlc: { perTick: 600, concurrency: 18 },
-  short_code: { perTick: 900, concurrency: 36 },
-  shared_toll_free: { perTick: 300, concurrency: 12 },
+  toll_free: { perTick: 1_500, concurrency: 84 },
+  ten_dlc: { perTick: 900, concurrency: 36 },
+  short_code: { perTick: 1_500, concurrency: 84 },
+  shared_toll_free: { perTick: 450, concurrency: 18 },
   personal: { perTick: 120, concurrency: 4 },
 };
 const TENANT_THROTTLE_DEFAULT = { perTick: 300, concurrency: 12 };
