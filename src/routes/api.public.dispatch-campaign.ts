@@ -13,9 +13,12 @@ const PLAN_INSERT_CHUNK = 500;
 // eligible list was enriched (segment calc, link rewriting, crypto RNG) in
 // one shot, which is what exceeded the Worker's CPU time limit for large
 // campaigns (e.g. 3,019 recipients in one request).
-const PLAN_BATCH_SIZE = 2_000;
+// Prepare the largest page supported by unplanned_recipients_page. Planning
+// only 2,000 rows per scheduler wave made a 100k audience appear "skipped"
+// for too long even though those recipients were simply waiting to be queued.
+const PLAN_BATCH_SIZE = 5_000;
 // Keep at least this many queued rows ready; above it, ticks send instead of plan.
-const PLAN_BACKLOG_TARGET = 5_000;
+const PLAN_BACKLOG_TARGET = 12_000;
 // Keep each dispatcher invocation small enough to always finish inside the
 // caller's HTTP timeout. If the caller (pg_cron/pg_net) hangs up mid-run the
 // serverless worker is cancelled, leaving claimed rows stuck in `sending`
