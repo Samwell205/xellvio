@@ -253,10 +253,7 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
  */
 export const getTelnyxTenantSpend = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { accountId: string }) => {
-    const { z } = require("zod");
-    return z.object({ accountId: z.string().uuid() }).parse(d);
-  })
+  .inputValidator((d: { accountId: string }) => z.object({ accountId: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
