@@ -674,18 +674,18 @@ function NewCampaignPage() {
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {s.trackLinks
-                  ? "Your link is shortened to a xellvio.com/r/… link so we can count who clicked. Tap it in the phone preview below to test."
-                  : "Links are inserted as-is (link tracking is off)."}
+                  ? "Link shortening is on, so this URL is added as a xellvio.com/r/… link and clicks are counted. Tap it in the phone preview below to test."
+                  : "Your URL is added exactly as typed. Turn on link shortening below if you want a short link and click tracking."}
               </p>
             </div>
 
             <div className="rounded-md border p-3 flex items-start justify-between gap-4">
               <div className="space-y-1">
-                <Label className="cursor-pointer" htmlFor="track-links-toggle">Track link clicks</Label>
+                <Label className="cursor-pointer" htmlFor="track-links-toggle">Shorten links &amp; track clicks</Label>
                 <p className="text-xs text-muted-foreground max-w-md">
                   {s.trackLinks
-                    ? "On — any URL in your message is shortened to a xellvio.com/r/… link so we can count who clicked. See per-link stats on the report's Links tab."
-                    : "Off — your original URLs are sent exactly as typed. No shortening, no click tracking, nothing on the Links tab."}
+                    ? "On — every URL in your message is replaced with a short xellvio.com/r/… link so clicks are counted. See per-link stats on the report's Links tab."
+                    : "Off — your URLs are sent exactly as you typed them. Nothing is shortened and no clicks are tracked."}
                 </p>
               </div>
               <Switch
@@ -694,6 +694,7 @@ function NewCampaignPage() {
                 onCheckedChange={(v: boolean) => setS({ ...s, trackLinks: !!v })}
               />
             </div>
+
 
             <div>
               <Label>MMS image (optional)</Label>
