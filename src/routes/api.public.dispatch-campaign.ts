@@ -25,24 +25,34 @@ const PLAN_BATCH_SIZE = 500;
 // invocation. Claims are atomic, so concurrent scheduler calls cannot send the
 // same message twice. With the scheduler fan-out this supports large campaigns
 // without increasing per-process database connection pressure.
-const DELIVER_PER_WORKER = 720;
-// Was 30. This project's Postgres tier caps out at 60 total connections, and
-// steady-state background usage (PostgREST, realtime, pg_cron, etc.) already
-// holds ~25 of those. A first-tick invocation stacks 30-way concurrent writes
-// on top of the connection load from planning/screening moments earlier —
-// under that pressure, some of the per-message status UPDATEs in
-// sendOneMessage were failing, and because those calls didn't check the
-// returned error, the code reported success anyway while the row stayed
-// stuck at status='sending' — later swept as dispatch_timeout. Confirmed via
-// direct comparison of a dispatch tick's own reported delivered/failed
-// counts against the messages table's actual state two minutes later: the
-// tick claimed success for all 9 messages in a campaign, but all 9 were
-// still 'sending' at the next tick. Lower concurrency + writeWithRetry below
-// are the two-part fix.
-const DELIVER_CONCURRENCY = 24;
+// Total messages one campaign may claim per invocation, spread across its
+// lease slots (see LEASE_SHARDS). Each slot claims a fraction of this.
+const DELIVER_PER_WORKER = 900;
+// Total in-flight sends per campaign per invocation, also split across lease
+// slots. Kept moderate on purpose: this project's Postgres tier caps out at 60
+// connections and steady-state background usage already holds ~25, so stacking
+// too many concurrent per-message status UPDATEs made some writes fail and left
+// rows stuck at status='sending' (later swept as dispatch_timeout).
+const DELIVER_CONCURRENCY = 36;
+
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
+// Observed average end-to-end time for one message (carrier submit + status
+// writes). Used to size each slot's claim to the time actually left.
+const EST_SEND_MS = 4_500;
+
+// How many workers may send for the SAME campaign at once. Message claiming is
+// atomic (SELECT ... FOR UPDATE SKIP LOCKED), so parallel senders can never
+// pick up the same recipient twice. Without this a single campaign was limited
+// to one sender at a time, which is what made 100k sends take hours.
+const LEASE_SHARDS = 3;
+// How many send slots run concurrently inside one invocation (across all
+// campaigns and lease shards).
+const CAMPAIGN_CONCURRENCY = 3;
+// Sentinel used when the lock helper is unavailable and we send unguarded.
+const UNGUARDED_LEASE = "__unguarded__";
+
 
 // ── Per-tenant throttling ────────────────────────────────────────────────────
 // One tenant with a very large campaign used to be able to soak the whole
@@ -55,17 +65,19 @@ const RUN_BUDGET_MS = 40_000;
 // Caps are per sender kind, per tick (ticks fire every ~15s):
 //   messages claimed per tenant per tick, and concurrent in-flight sends.
 const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> = {
-  // perTick is deliberately close to what one 40s invocation can actually
-  // finish at the given concurrency. Claiming more than that leaves the
-  // surplus stuck in `sending` until the stale sweep writes it off as
+  // These are per-tenant totals for one invocation; they get divided across the
+  // campaign's lease slots so each slot only claims what it can finish inside
+  // the run budget. Claiming more than a slot can finish leaves the surplus
+  // stuck in `sending` until the stale sweep writes it off as
   // `dispatch_timeout` — which is why big campaigns showed hundreds of them.
-  toll_free: { perTick: 480, concurrency: 24 },
-  ten_dlc: { perTick: 360, concurrency: 12 },
-  short_code: { perTick: 480, concurrency: 24 },
-  shared_toll_free: { perTick: 240, concurrency: 8 },
+  toll_free: { perTick: 900, concurrency: 36 },
+  ten_dlc: { perTick: 600, concurrency: 18 },
+  short_code: { perTick: 900, concurrency: 36 },
+  shared_toll_free: { perTick: 300, concurrency: 12 },
   personal: { perTick: 120, concurrency: 4 },
 };
-const TENANT_THROTTLE_DEFAULT = { perTick: 240, concurrency: 8 };
+const TENANT_THROTTLE_DEFAULT = { perTick: 300, concurrency: 12 };
+
 
 // Picture messages (MMS) are far more aggressively filtered than plain SMS.
 // A large first-time burst from one number gets rejected wholesale by the
@@ -73,9 +85,20 @@ const TENANT_THROTTLE_DEFAULT = { perTick: 240, concurrency: 8 };
 // regardless of sender kind.
 const MMS_THROTTLE = { perTick: 120, concurrency: 4 };
 
+// Order from most to least throughput. A tenant usually holds several sender
+// assets (one per country), so picking "the first asset that has a kind" used
+// to hand a verified toll-free tenant the slow default allowance whenever an
+// alphabetically earlier country used a sender ID. Use the fastest kind the
+// tenant actually holds instead.
+const THROTTLE_KIND_PRIORITY = ["toll_free", "short_code", "ten_dlc", "shared_toll_free", "personal"];
+
 function throttleForSender(sender: Sender, isMms = false) {
-  const kind = (sender.assets.find((a) => a.sender_kind)?.sender_kind ?? "").toLowerCase();
+  const kinds = new Set(
+    sender.assets.map((a) => (a.sender_kind ?? "").toLowerCase()).filter(Boolean),
+  );
+  const kind = THROTTLE_KIND_PRIORITY.find((k) => kinds.has(k)) ?? "";
   const base = TENANT_THROTTLE[kind] ?? TENANT_THROTTLE_DEFAULT;
+
   const capped = isMms
     ? { perTick: Math.min(base.perTick, MMS_THROTTLE.perTick), concurrency: Math.min(base.concurrency, MMS_THROTTLE.concurrency) }
     : base;
@@ -735,7 +758,8 @@ async function planCampaign(
 }
 
 async function deliverPending(
-  supabaseAdmin: any, campaign: any, sender: Sender, limits?: { perTick: number; concurrency: number },
+  supabaseAdmin: any, campaign: any, sender: Sender,
+  limits?: { perTick: number; concurrency: number; deadlineAt?: number },
 ): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean; throttled?: boolean }> {
   const { data: fresh } = await supabaseAdmin
     .from("campaigns").select("status").eq("id", campaign.id).maybeSingle();
@@ -744,7 +768,14 @@ async function deliverPending(
   }
 
   const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
-  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick));
+  const concurrency = Math.max(1, Math.min(DELIVER_CONCURRENCY, throttle.concurrency));
+  // Never claim more than this slot can actually finish before the invocation
+  // has to return. Surplus claimed rows sit at status='sending' and later get
+  // written off as `dispatch_timeout`, which is what made reports show
+  // thousands of unexplained failures on big campaigns.
+  const msLeft = limits?.deadlineAt ? limits.deadlineAt - Date.now() : RUN_BUDGET_MS;
+  const budgetClaim = Math.floor((Math.max(0, msLeft) / EST_SEND_MS) * concurrency);
+  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick, budgetClaim));
   if (claimLimit === 0) {
     const { count: pending } = await supabaseAdmin
       .from("messages").select("id", { count: "exact", head: true })
@@ -769,11 +800,24 @@ async function deliverPending(
   }
 
   let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
-  await runWithConcurrency(rows, Math.max(1, Math.min(DELIVER_CONCURRENCY, throttle.concurrency)), async (m: any) => {
+  const unsent: string[] = [];
+  const hardDeadline = limits?.deadlineAt ?? Date.now() + RUN_BUDGET_MS;
+  await runWithConcurrency(rows, concurrency, async (m: any) => {
+    if (Date.now() >= hardDeadline) { unsent.push(m.id); return; }
     const r = await sendOneMessage(supabaseAdmin, campaign, sender, m);
     if (r.ok) { sent++; debited += r.debited; }
     else { failed++; if (r.shaft) shaftErrors++; }
   });
+
+  // Hand anything we ran out of time for back to the queue so the next tick
+  // sends it instead of the stale sweep failing it.
+  for (let i = 0; i < unsent.length; i += 200) {
+    await supabaseAdmin.from("messages")
+      .update({ status: "queued" })
+      .in("id", unsent.slice(i, i + 200))
+      .eq("status", "sending");
+  }
+
 
 
   if (shaftErrors >= 2) {
@@ -794,7 +838,7 @@ async function deliverPending(
 
 async function processCampaign(
   supabaseAdmin: any, campaign: any, rates: Rate[], sender: Sender,
-  limits?: { perTick: number; concurrency: number },
+  limits?: { perTick: number; concurrency: number; deadlineAt?: number },
 ): Promise<any> {
   const { count: existing } = await supabaseAdmin
     .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
@@ -1052,126 +1096,170 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         // occupy more than its fair share of the invocation or of the carrier's
         // allowed submission rate.
         const tenantUsed = new Map<string, number>();
-        for (const c of due ?? []) {
 
-          if (budgetLeft() < 5_000) { deferred += 1; continue; }
-          // One lease per campaign: another in-flight tick may already be
-          // sending this campaign, but other campaigns stay free to run in
-          // parallel. Self-heals after 2 minutes if a worker was cancelled.
-          const lockName = `campaign:${c.id}`;
-          const { data: gotLock, error: lockError } = await (supabaseAdmin as any).rpc(
-            "try_acquire_dispatch_lock",
-            { _name: lockName },
-          );
-          if (lockError) {
-            console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
-          } else if (!gotLock) {
-            results.push({ id: c.id, skipped: "campaign_already_dispatching" });
-            continue;
-          }
-          try {
-
-
-            const { data: acct } = await supabaseAdmin
-              .from("accounts")
-              .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted, gorgias_enabled")
-              .eq("id", c.account_id).maybeSingle();
-            if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
-              await supabaseAdmin.from("campaigns")
-                .update({ status: "paused", paused_reason: "Tenant sending suspended", paused_at: new Date().toISOString() })
-                .eq("id", c.id);
-              results.push({ id: c.id, error: "tenant_sending_suspended" });
-              continue;
-            }
-            // ── ToS gate: tenant must have accepted the current version.
-            const { TOS_CURRENT_VERSION } = await import("@/lib/tos");
-            if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
-              await supabaseAdmin.from("campaigns")
-                .update({ status: "paused", paused_reason: "Tenant must accept updated Terms of Service before sending.", paused_at: new Date().toISOString() })
-                .eq("id", c.id);
-              results.push({ id: c.id, error: "tos_acceptance_required" });
-              continue;
-            }
-            // ── Per-campaign compliance re-confirmation must exist.
-            const { count: campTos } = await supabaseAdmin
-              .from("campaign_tos_acceptances")
-              .select("id", { count: "exact", head: true })
-              .eq("campaign_id", c.id)
-              .eq("tos_version", TOS_CURRENT_VERSION);
-            if ((campTos ?? 0) === 0) {
-              await supabaseAdmin.from("campaigns")
-                .update({ status: "paused", paused_reason: "Missing per-campaign compliance confirmation.", paused_at: new Date().toISOString() })
-                .eq("id", c.id);
-              results.push({ id: c.id, error: "campaign_acceptance_required" });
-              continue;
-            }
-
-            const { data: senderAssets } = await supabaseAdmin
-              .from("sender_assets")
-              .select("verification_status,country_code,sender_kind,phone_number,telnyx_messaging_profile_id")
-              .eq("account_id", c.account_id);
-            const verifiedSender = (senderAssets ?? []).find(
-              (s: any) => s.verification_status === "verified" && (s.telnyx_messaging_profile_id || s.phone_number),
+        // Try each lease slot in turn; the first free slot wins. Returns the
+        // acquired lease name, or null when every slot is busy.
+        async function acquireCampaignLease(campaignId: string): Promise<string | null> {
+          for (let shard = 0; shard < LEASE_SHARDS; shard += 1) {
+            const name = `campaign:${campaignId}:${shard}`;
+            const { data: got, error: lockError } = await (supabaseAdmin as any).rpc(
+              "try_acquire_dispatch_lock",
+              { _name: name },
             );
-            if ((senderAssets ?? []).length > 0 && !verifiedSender) {
-              results.push({ id: c.id, skipped: "sender_pending_verification" });
-              continue;
+            if (lockError) {
+              // Lock helper unavailable (e.g. missing after a DB move): never
+              // freeze sending — run unguarded, claiming is atomic anyway.
+              console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
+              return UNGUARDED_LEASE;
             }
-            const { isValidTelnyxUuid, ensureMessagingProfileForAccount } = await import("@/lib/telnyx.server");
-            // Auto-provision the Telnyx Messaging Profile if none valid on this account.
-            let profileId: string | null = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
-              ? (acct!.telnyx_messaging_profile_id as string)
-              : null;
-            if (!profileId) {
-              try {
-                profileId = await ensureMessagingProfileForAccount(c.account_id);
-              } catch (e: any) {
-                await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
-                results.push({ id: c.id, error: `profile_provision_failed: ${e?.message ?? e}` });
+            if (got) return name;
+          }
+          return null;
+        }
+
+        const runOneCampaign = async (c: any): Promise<any> => {
+          const { data: acct } = await supabaseAdmin
+            .from("accounts")
+            .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted, gorgias_enabled")
+            .eq("id", c.account_id).maybeSingle();
+          if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
+            await supabaseAdmin.from("campaigns")
+              .update({ status: "paused", paused_reason: "Tenant sending suspended", paused_at: new Date().toISOString() })
+              .eq("id", c.id);
+            return { error: "tenant_sending_suspended" };
+          }
+          // ── ToS gate: tenant must have accepted the current version.
+          const { TOS_CURRENT_VERSION } = await import("@/lib/tos");
+          if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
+            await supabaseAdmin.from("campaigns")
+              .update({ status: "paused", paused_reason: "Tenant must accept updated Terms of Service before sending.", paused_at: new Date().toISOString() })
+              .eq("id", c.id);
+            return { error: "tos_acceptance_required" };
+          }
+          // ── Per-campaign compliance re-confirmation must exist.
+          const { count: campTos } = await supabaseAdmin
+            .from("campaign_tos_acceptances")
+            .select("id", { count: "exact", head: true })
+            .eq("campaign_id", c.id)
+            .eq("tos_version", TOS_CURRENT_VERSION);
+          if ((campTos ?? 0) === 0) {
+            await supabaseAdmin.from("campaigns")
+              .update({ status: "paused", paused_reason: "Missing per-campaign compliance confirmation.", paused_at: new Date().toISOString() })
+              .eq("id", c.id);
+            return { error: "campaign_acceptance_required" };
+          }
+
+          const { data: senderAssets } = await supabaseAdmin
+            .from("sender_assets")
+            .select("verification_status,country_code,sender_kind,phone_number,telnyx_messaging_profile_id")
+            .eq("account_id", c.account_id);
+          const verifiedSender = (senderAssets ?? []).find(
+            (s: any) => s.verification_status === "verified" && (s.telnyx_messaging_profile_id || s.phone_number),
+          );
+          if ((senderAssets ?? []).length > 0 && !verifiedSender) {
+            return { skipped: "sender_pending_verification" };
+          }
+          const { isValidTelnyxUuid, ensureMessagingProfileForAccount } = await import("@/lib/telnyx.server");
+          // Auto-provision the Telnyx Messaging Profile if none valid on this account.
+          let profileId: string | null = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
+            ? (acct!.telnyx_messaging_profile_id as string)
+            : null;
+          if (!profileId) {
+            try {
+              profileId = await ensureMessagingProfileForAccount(c.account_id);
+            } catch (e: any) {
+              await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
+              return { error: `profile_provision_failed: ${e?.message ?? e}` };
+            }
+          }
+          const assetProfileId = isValidTelnyxUuid(verifiedSender?.telnyx_messaging_profile_id)
+            ? (verifiedSender!.telnyx_messaging_profile_id as string)
+            : null;
+          const sender: Sender = {
+            messagingProfileId: assetProfileId ?? profileId,
+            fromNumber: verifiedSender?.phone_number ?? acct?.telnyx_phone_number ?? null,
+            gorgiasEnabled: acct?.gorgias_enabled === true,
+            assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
+          };
+          const throttle = throttleForSender(sender, !!c.media_url);
+          // The tenant allowance is a per-invocation total; each lease slot gets
+          // a share of it so parallel slots add throughput without exceeding the
+          // carrier-safe submission rate or claiming more than a slot can finish.
+          const slotPerTick = Math.max(20, Math.ceil(throttle.perTick / LEASE_SHARDS));
+          const slotConcurrency = Math.max(2, Math.ceil(throttle.concurrency / LEASE_SHARDS));
+          const used = tenantUsed.get(c.account_id) ?? 0;
+          const perTick = Math.max(0, Math.min(slotPerTick, throttle.perTick - used));
+          if (perTick === 0) {
+            return { skipped: "tenant_throttle_reached" };
+          }
+          // Reserve optimistically so concurrent slots for the same tenant do
+          // not each claim the full allowance.
+          tenantUsed.set(c.account_id, used + perTick);
+          const r = await processCampaign(supabaseAdmin, c, rates, sender, {
+            perTick,
+            concurrency: slotConcurrency,
+            deadlineAt: startedAt + RUN_BUDGET_MS,
+
+          });
+
+          const actual = Number(r?.delivered_now ?? 0) + Number(r?.failed_now ?? 0);
+          tenantUsed.set(c.account_id, used + Math.min(perTick, actual));
+          return r;
+        };
+
+        // Work list: each due campaign appears once per lease slot, interleaved
+        // so every campaign gets its first slot before any campaign gets a
+        // second one. That keeps round-robin fairness across tenants while
+        // letting a single large campaign use several parallel senders.
+        const dueList = due ?? [];
+        const queue: any[] = [];
+        for (let pass = 0; pass < LEASE_SHARDS; pass += 1) {
+          for (const c of dueList) queue.push(c);
+        }
+
+        let cursor = 0;
+        const campaignWorkers = Array.from(
+          { length: Math.min(CAMPAIGN_CONCURRENCY, queue.length) },
+          async () => {
+            while (cursor < queue.length) {
+              if (budgetLeft() < 6_000) {
+                deferred += queue.length - cursor;
+                cursor = queue.length;
+                break;
+              }
+              const c = queue[cursor++];
+              const lease = await acquireCampaignLease(c.id);
+              if (!lease) {
+                // Every slot for this campaign is busy — another worker (here or
+                // in an overlapping invocation) is already sending it.
                 continue;
               }
+              try {
+                results.push({ id: c.id, ...(await runOneCampaign(c)) });
+              } catch (e: any) {
+                // A transient tick error (provider hiccup, DB timeout) must never
+                // abandon a campaign that still has work queued — marking it
+                // `failed` drops it out of the dispatch queue and strands every
+                // remaining recipient forever. Keep it `sending` so the next tick
+                // picks it up; only mark failed when nothing is left to send.
+                const { count: leftover } = await supabaseAdmin
+                  .from("messages").select("id", { count: "exact", head: true })
+                  .eq("campaign_id", c.id).in("status", ["queued", "sending"]);
+                await supabaseAdmin
+                  .from("campaigns")
+                  .update({ status: (leftover ?? 0) > 0 ? "sending" : "failed" })
+                  .eq("id", c.id);
+                results.push({ id: c.id, error: e.message, retryable: (leftover ?? 0) > 0 });
+              } finally {
+                if (lease !== UNGUARDED_LEASE) {
+                  await (supabaseAdmin as any).rpc("release_dispatch_lock", { _name: lease });
+                }
+              }
             }
-            const assetProfileId = isValidTelnyxUuid(verifiedSender?.telnyx_messaging_profile_id)
-              ? (verifiedSender!.telnyx_messaging_profile_id as string)
-              : null;
-            const sender: Sender = {
-              messagingProfileId: assetProfileId ?? profileId,
-              fromNumber: verifiedSender?.phone_number ?? acct?.telnyx_phone_number ?? null,
-              gorgiasEnabled: acct?.gorgias_enabled === true,
-              assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
-            };
-            const throttle = throttleForSender(sender, !!c.media_url);
-            const used = tenantUsed.get(c.account_id) ?? 0;
-            const perTick = Math.max(0, throttle.perTick - used);
-            if (perTick === 0) {
-              results.push({ id: c.id, skipped: "tenant_throttle_reached" });
-              continue;
-            }
-            const r = await processCampaign(supabaseAdmin, c, rates, sender, {
-              perTick,
-              concurrency: throttle.concurrency,
-            });
-            tenantUsed.set(c.account_id, used + Number(r?.delivered_now ?? 0) + Number(r?.failed_now ?? 0));
-            results.push({ id: c.id, ...r });
+          },
+        );
+        await Promise.all(campaignWorkers);
 
-          } catch (e: any) {
-            // A transient tick error (provider hiccup, DB timeout) must never
-            // abandon a campaign that still has work queued — marking it
-            // `failed` drops it out of the dispatch queue and strands every
-            // remaining recipient forever. Keep it `sending` so the next tick
-            // picks it up; only mark failed when nothing is left to send.
-            const { count: leftover } = await supabaseAdmin
-              .from("messages").select("id", { count: "exact", head: true })
-              .eq("campaign_id", c.id).in("status", ["queued", "sending"]);
-            await supabaseAdmin
-              .from("campaigns")
-              .update({ status: (leftover ?? 0) > 0 ? "sending" : "failed" })
-              .eq("id", c.id);
-            results.push({ id: c.id, error: e.message, retryable: (leftover ?? 0) > 0 });
-          } finally {
-            await (supabaseAdmin as any).rpc("release_dispatch_lock", { _name: lockName });
-          }
-        }
 
         // Recovery and reconciliation are best-effort housekeeping. Run them
         // only after outbound work so they can never consume the send budget.
