@@ -626,7 +626,10 @@ async function planCampaign(
     return out;
   };
   const base = publicBaseUrl();
-  const trackLinks = campaign.track_links !== false; // default on
+  // Opt-in only: URLs are sent exactly as the tenant typed them unless they
+  // explicitly turned link shortening on for this campaign.
+  const trackLinks = campaign.track_links === true;
+
   // Match short URLs we already generated (preview shortlinks from the builder).
   // Escape the base for regex use. Then skip re-shortening those and instead
   // just backfill message_id/campaign_id so they still count toward this send.
