@@ -348,6 +348,16 @@ function createStatusSink(supabaseAdmin: any, chunk = 200): StatusSink & { drain
   };
 }
 
+async function recordStatus(
+  supabaseAdmin: any,
+  sink: StatusSink | null | undefined,
+  id: string,
+  patch: Record<string, any>,
+) {
+  if (sink) { sink.push({ id, ...patch }); return; }
+  await writeWithRetry(supabaseAdmin, "messages", patch, { id });
+}
+
 async function sendOneMessage(
   supabaseAdmin: any,
   campaign: any,
@@ -386,11 +396,11 @@ async function sendOneMessage(
     const matched = candidates[0];
 
     if (!matched) {
-      await writeWithRetry(supabaseAdmin, "messages", {
+      await recordStatus(supabaseAdmin, sink, m.id, {
         status: "failed",
         error_code: "sender_not_registered_for_country",
         failure_reason: `No verified sender configured for ${m.country_code ?? "unknown country"}`,
-      }, { id: m.id });
+      });
       return { ok: false, shaft: false, debited: 0 };
     }
     const messagingProfileId = matched.telnyx_messaging_profile_id ?? sender.messagingProfileId ?? undefined;
@@ -399,9 +409,8 @@ async function sendOneMessage(
     const senderUsed = fromNumber ?? messagingProfileId ?? "unknown";
 
     if (!messagingProfileId && !fromNumber) {
-      await writeWithRetry(supabaseAdmin, "messages",
-        { status: "failed", error_code: "no_sender", failure_reason: "No sender available" },
-        { id: m.id });
+      await recordStatus(supabaseAdmin, sink, m.id,
+        { status: "failed", error_code: "no_sender", failure_reason: "No sender available" });
       return { ok: false, shaft: false, debited: 0 };
     }
 
@@ -425,7 +434,7 @@ async function sendOneMessage(
     // forgotten. A failure here is what previously left rows stuck on
     // 'sending' despite a successful send, later misreported as
     // dispatch_timeout.
-    await writeWithRetry(supabaseAdmin, "messages", {
+    await recordStatus(supabaseAdmin, sink, m.id, {
       status: "sent",
       provider_message_id: result.id,
       sent_at: new Date().toISOString(),
@@ -437,8 +446,9 @@ async function sendOneMessage(
       // delivery receipt was still pending.
       error_code: null,
       failure_reason: null,
-    }, { id: m.id });
+    });
     try {
+      if (sink) throw new Error("skip-audit-under-batching");
       await writeWithRetry(supabaseAdmin, "message_send_attempts", {
         provider_message_id: result.id,
         provider_status: "sent",
@@ -521,9 +531,8 @@ async function sendOneMessage(
     const code = String(e?.telnyxCode ?? "");
     const reason = e?.telnyxMessage ?? e?.message ?? "Send failed";
     try {
-      await writeWithRetry(supabaseAdmin, "messages",
-        { status: "failed", error_code: code || "exception", failure_reason: String(reason).slice(0, 500) },
-        { id: m.id });
+      await recordStatus(supabaseAdmin, sink, m.id,
+        { status: "failed", error_code: code || "exception", failure_reason: String(reason).slice(0, 500) });
     } catch (writeErr) {
       // Last resort — this is the final handler, nothing left to fall back
       // to. Log loudly so it's visible instead of silently becoming a
@@ -531,6 +540,7 @@ async function sendOneMessage(
       console.error("[dispatch] FAILED to record message failure — row will be swept as dispatch_timeout", m.id, writeErr);
     }
     try {
+      if (sink) throw new Error("skip-audit-under-batching");
       await writeWithRetry(supabaseAdmin, "message_send_attempts", {
         provider_status: "failed",
         error_code: code || "exception",
