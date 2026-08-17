@@ -424,7 +424,11 @@ function CampaignReport() {
     const deliveryUnconfirmed = progress?.deliveryUnconfirmed ?? 0;
     const failed = progress?.failed ?? 0;
     const sent = awaitingDelivery + delivered + failed;
-    const skipped = Math.max(0, attempted - (progress?.total ?? 0));
+    // Eligible recipients without a message row are still being planned; they
+    // have not been skipped. Calling this gap "skipped" made an active large
+    // campaign look like most of its audience had been discarded.
+    const pendingPlanning = Math.max(0, attempted - (progress?.total ?? 0));
+    const skipped = 0;
     const linkStats = clicksQ.data ?? { links: 0, totalClicks: 0, clickedLinks: 0 };
     const clicked = linkStats.totalClicks || events.filter((e: any) => e.type === "clicked").length;
     // One shared shortlink → every click is a distinct recipient; per-recipient
@@ -485,7 +489,7 @@ function CampaignReport() {
     });
 
     return {
-      attempted, queued, sent, awaitingDelivery, delivered, deliveryUnconfirmed, failed, skipped, clicked, uniqueClickers,
+      attempted, queued, sent, awaitingDelivery, delivered, deliveryUnconfirmed, failed, skipped, pendingPlanning, clicked, uniqueClickers,
       totalCost, reservedCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
       byCountry, failures: failures?.byReason ?? {}, series,
     };
@@ -761,8 +765,10 @@ function CampaignReport() {
                 </div>
                 <ol className="relative space-y-5 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-px before:bg-border">
                   <FunnelRow icon={Users} label="attempted" value={stats.attempted} tone="muted" />
-                  <FunnelRow icon={SkipForward} label="skipped" value={stats.skipped}
-                    sub={stats.attempted ? `${pct(stats.skipped / stats.attempted * 100)} of attempted` : undefined} tone="muted" />
+                  {stats.pendingPlanning > 0 && (
+                    <FunnelRow icon={Clock} label="preparing to send" value={stats.pendingPlanning}
+                      sub={stats.attempted ? `${pct(stats.pendingPlanning / stats.attempted * 100)} of audience` : undefined} tone="muted" />
+                  )}
                   <FunnelRow icon={Send} label="sent to carrier" value={stats.sent}
                     sub={stats.attempted ? `${pct(stats.sent / stats.attempted * 100)} of attempted` : undefined} tone="primary" />
                   {stats.awaitingDelivery > 0 && (
@@ -943,7 +949,9 @@ function RecipientActivity({
     { key: "sent",      label: "Accepted",  count: stats.awaitingDelivery },
     { key: "delivered", label: "Delivered", count: stats.delivered },
     { key: "failed",    label: "Failed",    count: stats.failed },
-    { key: "skipped",   label: "Skipped",   count: stats.skipped },
+    ...(stats.pendingPlanning > 0
+      ? [{ key: "skipped", label: "Preparing", count: stats.pendingPlanning }]
+      : []),
     { key: "queued",    label: "Queued",    count: stats.queued },
   ];
 
@@ -961,8 +969,8 @@ function RecipientActivity({
             sub={stats.attempted ? `${((stats.delivered / stats.attempted) * 100).toFixed(1)}%` : "—"} tone="success" />
           <SummaryStat label="Failed" value={stats.failed}
             sub={stats.sent ? `${((stats.failed / stats.sent) * 100).toFixed(1)}%` : "—"} tone="danger" />
-          <SummaryStat label="Skipped" value={stats.skipped}
-            sub={stats.skipped > 0 ? "no charge" : undefined} tone="muted" />
+          <SummaryStat label="Preparing" value={stats.pendingPlanning}
+            sub={stats.pendingPlanning > 0 ? "will be queued next" : undefined} tone="muted" />
           <SummaryStat label="Clicked" value={stats.uniqueClickers}
             sub={stats.delivered ? `${((stats.uniqueClickers / stats.delivered) * 100).toFixed(1)}%` : "—"} tone="primary" />
           <SummaryStat label="Opt-outs" value={optOuts} tone="danger" />
