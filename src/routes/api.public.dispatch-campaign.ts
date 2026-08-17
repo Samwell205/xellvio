@@ -1198,6 +1198,8 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           const r = await processCampaign(supabaseAdmin, c, rates, sender, {
             perTick,
             concurrency: slotConcurrency,
+            deadlineAt: startedAt + RUN_BUDGET_MS,
+
           });
 
           const actual = Number(r?.delivered_now ?? 0) + Number(r?.failed_now ?? 0);
