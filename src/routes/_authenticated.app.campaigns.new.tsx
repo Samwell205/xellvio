@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { getActiveCountryRatesRaw } from "@/lib/public-pricing.functions";
 import { createPreviewShortlink } from "@/lib/shortlinks.functions";
+import { getCampaignAudienceCountryCounts } from "@/lib/audience.functions";
 
 import { scanCampaignContent } from "@/lib/content-scanner.functions";
 import { calculateSegments } from "@/lib/sms-segments";
@@ -199,6 +200,7 @@ function NewCampaignPage() {
   );
 
   const hasAudience = s.include.length > 0 || s.profileIds.length > 0 || s.listIds.length > 0;
+  const loadAudienceCounts = useServerFn(getCampaignAudienceCountryCounts);
 
   // One aggregate round trip: recipients grouped by country. No per-contact
   // download, so picking a 100k-row list resolves instantly.
@@ -211,9 +213,7 @@ function NewCampaignPage() {
     placeholderData: (prev) => prev,
     refetchOnWindowFocus: false,
     queryFn: async (): Promise<Array<{ country_code: string; recipients: number }>> => {
-      const { data, error } = await (supabase.rpc as any)("my_eligible_country_counts", { _audience: audience });
-      if (error) throw error;
-      return ((data as any[]) ?? []).map((r) => ({ country_code: r.country_code || "??", recipients: Number(r.recipients) }));
+      return loadAudienceCounts({ data: audience });
     },
   });
   const countryCounts = countsQ.data ?? [];
@@ -600,6 +600,7 @@ function NewCampaignPage() {
                 <div className="text-xs uppercase text-muted-foreground tracking-wide">Eligible audience</div>
                 <div className="text-2xl font-extrabold">{!hasAudience ? "—" : (countsQ.isFetching ? "…" : audienceTotal.toLocaleString())}</div>
                 <div className="text-xs text-muted-foreground">subscribed, not on suppression list</div>
+                {countsQ.isError && <div className="text-xs text-destructive">Could not read this audience. Please retry.</div>}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -1049,18 +1050,17 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
 
 function ContactPicker({ selected, onChange }: { selected: string[]; onChange: (ids: string[]) => void }) {
   const [q, setQ] = useState("");
+  const search = q.trim();
   const contactsQ = useQuery({
-    queryKey: ["pick-contacts", q],
+    queryKey: ["pick-contacts", search],
+    enabled: search.length >= 2,
     queryFn: async () => {
       let query = supabase
         .from("profiles")
         .select("id, phone_e164, first_name, last_name, consents(status, channel)")
         .order("created_at", { ascending: false })
         .limit(200);
-      if (q.trim()) {
-        const s = q.trim();
-        query = query.or(`phone_e164.ilike.%${s}%,first_name.ilike.%${s}%,last_name.ilike.%${s}%`);
-      }
+      query = query.or(`phone_e164.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
       const { data, error } = await query;
       if (error) throw error;
       return (data ?? []).map((p: any) => {
@@ -1081,8 +1081,9 @@ function ContactPicker({ selected, onChange }: { selected: string[]; onChange: (
       </div>
       <Input placeholder="Search by name or phone…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="max-h-56 overflow-y-auto rounded-md border divide-y">
+        {search.length < 2 && <div className="p-3 text-sm text-muted-foreground">Type at least 2 characters to find a specific contact.</div>}
         {contactsQ.isLoading && <div className="p-3 text-sm text-muted-foreground">Loading…</div>}
-        {!contactsQ.isLoading && rows.length === 0 && (
+        {search.length >= 2 && !contactsQ.isLoading && rows.length === 0 && (
           <div className="p-3 text-sm text-muted-foreground">No contacts match. <Link to="/app/audience" className="text-primary underline">Add contacts</Link>.</div>
         )}
         {rows.map((r: any) => (
