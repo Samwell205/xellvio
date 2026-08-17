@@ -25,21 +25,16 @@ const PLAN_BATCH_SIZE = 500;
 // invocation. Claims are atomic, so concurrent scheduler calls cannot send the
 // same message twice. With the scheduler fan-out this supports large campaigns
 // without increasing per-process database connection pressure.
-const DELIVER_PER_WORKER = 720;
-// Was 30. This project's Postgres tier caps out at 60 total connections, and
-// steady-state background usage (PostgREST, realtime, pg_cron, etc.) already
-// holds ~25 of those. A first-tick invocation stacks 30-way concurrent writes
-// on top of the connection load from planning/screening moments earlier —
-// under that pressure, some of the per-message status UPDATEs in
-// sendOneMessage were failing, and because those calls didn't check the
-// returned error, the code reported success anyway while the row stayed
-// stuck at status='sending' — later swept as dispatch_timeout. Confirmed via
-// direct comparison of a dispatch tick's own reported delivered/failed
-// counts against the messages table's actual state two minutes later: the
-// tick claimed success for all 9 messages in a campaign, but all 9 were
-// still 'sending' at the next tick. Lower concurrency + writeWithRetry below
-// are the two-part fix.
-const DELIVER_CONCURRENCY = 24;
+// Total messages one campaign may claim per invocation, spread across its
+// lease slots (see LEASE_SHARDS). Each slot claims a fraction of this.
+const DELIVER_PER_WORKER = 900;
+// Total in-flight sends per campaign per invocation, also split across lease
+// slots. Kept moderate on purpose: this project's Postgres tier caps out at 60
+// connections and steady-state background usage already holds ~25, so stacking
+// too many concurrent per-message status UPDATEs made some writes fail and left
+// rows stuck at status='sending' (later swept as dispatch_timeout).
+const DELIVER_CONCURRENCY = 36;
+
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
