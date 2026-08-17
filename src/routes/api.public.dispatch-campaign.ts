@@ -1128,10 +1128,24 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             results.push({ id: c.id, ...r });
 
           } catch (e: any) {
-            await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
-            results.push({ id: c.id, error: e.message });
+            // A transient tick error (provider hiccup, DB timeout) must never
+            // abandon a campaign that still has work queued — marking it
+            // `failed` drops it out of the dispatch queue and strands every
+            // remaining recipient forever. Keep it `sending` so the next tick
+            // picks it up; only mark failed when nothing is left to send.
+            const { count: leftover } = await supabaseAdmin
+              .from("messages").select("id", { count: "exact", head: true })
+              .eq("campaign_id", c.id).in("status", ["queued", "sending"]);
+            await supabaseAdmin
+              .from("campaigns")
+              .update({ status: (leftover ?? 0) > 0 ? "sending" : "failed" })
+              .eq("id", c.id);
+            results.push({ id: c.id, error: e.message, retryable: (leftover ?? 0) > 0 });
+          } finally {
+            await (supabaseAdmin as any).rpc("release_dispatch_lock", { _name: lockName });
           }
         }
+
         // Recovery and reconciliation are best-effort housekeeping. Run them
         // only after outbound work so they can never consume the send budget.
         let recoveredInbound: { checked: number; processed: number } | { checked: number; processed: number; error: string } = { checked: 0, processed: 0 };
