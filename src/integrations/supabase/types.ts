@@ -3124,6 +3124,7 @@ export type Database = {
           true_cost: number
         }[]
       }
+      apply_message_status_batch: { Args: { _rows: Json }; Returns: number }
       bulk_import_profiles: {
         Args: { _account_id: string; _list_id: string; _rows: Json }
         Returns: {
@@ -3330,6 +3331,23 @@ export type Database = {
       try_acquire_dispatch_lock:
         | { Args: never; Returns: boolean }
         | { Args: { _name: string }; Returns: boolean }
+      unplanned_recipients_page: {
+        Args: {
+          _account_id: string
+          _audience: Json
+          _campaign_id: string
+          _limit?: number
+        }
+        Returns: {
+          country_code: string
+          custom_fields: Json
+          first_name: string
+          last_name: string
+          phone_e164: string
+          profile_id: string
+          remaining: number
+        }[]
+      }
     }
     Enums: {
       account_member_role: "viewer" | "editor" | "admin"

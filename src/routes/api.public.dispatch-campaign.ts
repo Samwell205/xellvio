@@ -13,7 +13,9 @@ const PLAN_INSERT_CHUNK = 500;
 // eligible list was enriched (segment calc, link rewriting, crypto RNG) in
 // one shot, which is what exceeded the Worker's CPU time limit for large
 // campaigns (e.g. 3,019 recipients in one request).
-const PLAN_BATCH_SIZE = 500;
+const PLAN_BATCH_SIZE = 2_000;
+// Keep at least this many queued rows ready; above it, ticks send instead of plan.
+const PLAN_BACKLOG_TARGET = 5_000;
 // Keep each dispatcher invocation small enough to always finish inside the
 // caller's HTTP timeout. If the caller (pg_cron/pg_net) hangs up mid-run the
 // serverless worker is cancelled, leaving claimed rows stuck in `sending`
@@ -27,7 +29,7 @@ const PLAN_BATCH_SIZE = 500;
 // without increasing per-process database connection pressure.
 // Total messages one campaign may claim per invocation, spread across its
 // lease slots (see LEASE_SHARDS). Each slot claims a fraction of this.
-const DELIVER_PER_WORKER = 1_500;
+const DELIVER_PER_WORKER = 12_000;
 // Total in-flight sends per campaign per invocation, also split across lease
 // slots. Kept moderate on purpose: this project's Postgres tier caps out at 60
 // connections and steady-state background usage already holds ~25, so stacking
@@ -37,23 +39,23 @@ const DELIVER_PER_WORKER = 1_500;
 // The previous limit of 36 only used a fraction of the verified toll-free
 // throughput and made large queues take hours; 84 still leaves headroom for
 // web traffic and delivery-receipt writes on the current backend tier.
-const DELIVER_CONCURRENCY = 84;
+const DELIVER_CONCURRENCY = 300;
 
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
 // Observed average end-to-end time for one message (carrier submit + status
 // writes). Used to size each slot's claim to the time actually left.
-const EST_SEND_MS = 4_500;
+const EST_SEND_MS = 1_100;
 
 // How many workers may send for the SAME campaign at once. Message claiming is
 // atomic (SELECT ... FOR UPDATE SKIP LOCKED), so parallel senders can never
 // pick up the same recipient twice. Without this a single campaign was limited
 // to one sender at a time, which is what made 100k sends take hours.
-const LEASE_SHARDS = 6;
+const LEASE_SHARDS = 12;
 // How many send slots run concurrently inside one invocation (across all
 // campaigns and lease shards).
-const CAMPAIGN_CONCURRENCY = 6;
+const CAMPAIGN_CONCURRENCY = 12;
 // Sentinel used when the lock helper is unavailable and we send unguarded.
 const UNGUARDED_LEASE = "__unguarded__";
 
@@ -74,13 +76,13 @@ const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> 
   // the run budget. Claiming more than a slot can finish leaves the surplus
   // stuck in `sending` until the stale sweep writes it off as
   // `dispatch_timeout` — which is why big campaigns showed hundreds of them.
-  toll_free: { perTick: 1_500, concurrency: 84 },
-  ten_dlc: { perTick: 900, concurrency: 36 },
-  short_code: { perTick: 1_500, concurrency: 84 },
-  shared_toll_free: { perTick: 450, concurrency: 18 },
+  toll_free: { perTick: 12_000, concurrency: 300 },
+  ten_dlc: { perTick: 3_000, concurrency: 120 },
+  short_code: { perTick: 12_000, concurrency: 300 },
+  shared_toll_free: { perTick: 1_200, concurrency: 48 },
   personal: { perTick: 120, concurrency: 4 },
 };
-const TENANT_THROTTLE_DEFAULT = { perTick: 300, concurrency: 12 };
+const TENANT_THROTTLE_DEFAULT = { perTick: 900, concurrency: 36 };
 
 
 // Picture messages (MMS) are far more aggressively filtered than plain SMS.
@@ -205,50 +207,20 @@ async function loadNextUnplannedBatch(
   audience: any,
   batchSize: number,
 ): Promise<{ recipients: any[]; hasMore: boolean }> {
-  // IMPORTANT: page through the already-planned rows. A plain select is capped
-  // at 1000 rows by the Data API, so a campaign with >1000 planned recipients
-  // would look partly unplanned forever — every tick would "re-plan" rows that
-  // the unique constraint then ignores, `hasMore` would stay true, and delivery
-  // would be deferred forever (campaign stuck in queued/sending).
-  const planned = new Set<string>();
-  const PLANNED_PAGE = 1000;
-  for (let offset = 0; ; offset += PLANNED_PAGE) {
-    const { data: plannedRows, error: plannedErr } = await supabaseAdmin
-      .from("messages")
-      .select("profile_id")
-      .eq("campaign_id", campaignId)
-      .range(offset, offset + PLANNED_PAGE - 1);
-    if (plannedErr) throw plannedErr;
-    const rows = plannedRows ?? [];
-    for (const r of rows) if (r.profile_id) planned.add(r.profile_id);
-    if (rows.length < PLANNED_PAGE) break;
-  }
-
-
-  const PAGE = 1000;
-  const recipients: any[] = [];
-  let hasMore = false;
-  for (let offset = 0; ; offset += PAGE) {
-    const { data, error } = await supabaseAdmin.rpc("eligible_profile_ids_page", {
-      _account_id: accountId,
-      _audience: audience,
-      _limit: PAGE,
-      _offset: offset,
-    });
-    if (error) throw error;
-    const rows = data ?? [];
-    for (const r of rows) {
-      if (planned.has(r.profile_id)) continue;
-      if (recipients.length < batchSize) {
-        recipients.push(r);
-      } else {
-        hasMore = true;
-        break;
-      }
-    }
-    if (hasMore || rows.length < PAGE) break;
-  }
-  return { recipients, hasMore };
+  // One database call. The previous version paged every already-planned row
+  // (1000 at a time) and then every eligible recipient just to diff them in
+  // JavaScript — on a 100k audience that was ~130 HTTP round-trips per tick and
+  // it consumed the whole invocation budget, so no message ever got sent.
+  const { data, error } = await supabaseAdmin.rpc("unplanned_recipients_page", {
+    _campaign_id: campaignId,
+    _account_id: accountId,
+    _audience: audience,
+    _limit: batchSize,
+  });
+  if (error) throw error;
+  const rows = data ?? [];
+  const remaining = Number(rows[0]?.remaining ?? rows.length);
+  return { recipients: rows, hasMore: remaining > rows.length };
 }
 
 function isShaftLikeCode(code: string): boolean {
@@ -305,11 +277,65 @@ async function writeWithRetry(
   throw new Error(`Failed to update ${table} after ${attempts} attempts: ${lastError?.message ?? lastError}`);
 }
 
+// Buffered status writer. Recording each send with its own HTTP round-trip made
+// the per-message cost dominate throughput on large campaigns; batching a few
+// hundred results into one database call is what lets a single invocation push
+// thousands of messages instead of a few dozen.
+type StatusSink = { push: (row: Record<string, any>) => void };
+
+function createStatusSink(supabaseAdmin: any, chunk = 200): StatusSink & { drain: () => Promise<void> } {
+  let buf: Record<string, any>[] = [];
+  let inflight: Promise<void> = Promise.resolve();
+
+  const flushNow = async (rows: Record<string, any>[]) => {
+    if (rows.length === 0) return;
+    const { error } = await (supabaseAdmin as any).rpc("apply_message_status_batch", { _rows: rows });
+    if (!error) return;
+    console.error("[dispatch] batch status write failed, falling back per row", error.message);
+    for (const r of rows) {
+      const { id, ...patch } = r as any;
+      try {
+        await writeWithRetry(supabaseAdmin, "messages", patch, { id });
+      } catch (e) {
+        console.error("[dispatch] fallback status write failed", id, e);
+      }
+    }
+  };
+
+  return {
+    push(row) {
+      buf.push(row);
+      if (buf.length >= chunk) {
+        const rows = buf;
+        buf = [];
+        inflight = inflight.then(() => flushNow(rows));
+      }
+    },
+    async drain() {
+      const rows = buf;
+      buf = [];
+      await inflight;
+      await flushNow(rows);
+    },
+  };
+}
+
+async function recordStatus(
+  supabaseAdmin: any,
+  sink: StatusSink | null | undefined,
+  id: string,
+  patch: Record<string, any>,
+) {
+  if (sink) { sink.push({ id, ...patch }); return; }
+  await writeWithRetry(supabaseAdmin, "messages", patch, { id });
+}
+
 async function sendOneMessage(
   supabaseAdmin: any,
   campaign: any,
   sender: Sender,
   m: any,
+  sink?: StatusSink | null,
 ): Promise<{ ok: boolean; shaft: boolean; debited: number }> {
   const { sendMessage, safeTelnyxCall } = await import("@/lib/telnyx.server");
   try {
@@ -342,11 +368,11 @@ async function sendOneMessage(
     const matched = candidates[0];
 
     if (!matched) {
-      await writeWithRetry(supabaseAdmin, "messages", {
+      await recordStatus(supabaseAdmin, sink, m.id, {
         status: "failed",
         error_code: "sender_not_registered_for_country",
         failure_reason: `No verified sender configured for ${m.country_code ?? "unknown country"}`,
-      }, { id: m.id });
+      });
       return { ok: false, shaft: false, debited: 0 };
     }
     const messagingProfileId = matched.telnyx_messaging_profile_id ?? sender.messagingProfileId ?? undefined;
@@ -355,9 +381,8 @@ async function sendOneMessage(
     const senderUsed = fromNumber ?? messagingProfileId ?? "unknown";
 
     if (!messagingProfileId && !fromNumber) {
-      await writeWithRetry(supabaseAdmin, "messages",
-        { status: "failed", error_code: "no_sender", failure_reason: "No sender available" },
-        { id: m.id });
+      await recordStatus(supabaseAdmin, sink, m.id,
+        { status: "failed", error_code: "no_sender", failure_reason: "No sender available" });
       return { ok: false, shaft: false, debited: 0 };
     }
 
@@ -381,7 +406,7 @@ async function sendOneMessage(
     // forgotten. A failure here is what previously left rows stuck on
     // 'sending' despite a successful send, later misreported as
     // dispatch_timeout.
-    await writeWithRetry(supabaseAdmin, "messages", {
+    await recordStatus(supabaseAdmin, sink, m.id, {
       status: "sent",
       provider_message_id: result.id,
       sent_at: new Date().toISOString(),
@@ -393,9 +418,11 @@ async function sendOneMessage(
       // delivery receipt was still pending.
       error_code: null,
       failure_reason: null,
-    }, { id: m.id });
+    });
     try {
-      await writeWithRetry(supabaseAdmin, "message_send_attempts", {
+      // Audit rows are skipped while batching — the messages table stays the
+      // source of truth and the extra round-trip would halve throughput.
+      if (!sink) await writeWithRetry(supabaseAdmin, "message_send_attempts", {
         provider_message_id: result.id,
         provider_status: "sent",
         sent_at: new Date().toISOString(),
@@ -477,9 +504,8 @@ async function sendOneMessage(
     const code = String(e?.telnyxCode ?? "");
     const reason = e?.telnyxMessage ?? e?.message ?? "Send failed";
     try {
-      await writeWithRetry(supabaseAdmin, "messages",
-        { status: "failed", error_code: code || "exception", failure_reason: String(reason).slice(0, 500) },
-        { id: m.id });
+      await recordStatus(supabaseAdmin, sink, m.id,
+        { status: "failed", error_code: code || "exception", failure_reason: String(reason).slice(0, 500) });
     } catch (writeErr) {
       // Last resort — this is the final handler, nothing left to fall back
       // to. Log loudly so it's visible instead of silently becoming a
@@ -487,7 +513,9 @@ async function sendOneMessage(
       console.error("[dispatch] FAILED to record message failure — row will be swept as dispatch_timeout", m.id, writeErr);
     }
     try {
-      await writeWithRetry(supabaseAdmin, "message_send_attempts", {
+      // Audit rows are skipped while batching — the messages table stays the
+      // source of truth and the extra round-trip would halve throughput.
+      if (!sink) await writeWithRetry(supabaseAdmin, "message_send_attempts", {
         provider_status: "failed",
         error_code: code || "exception",
         failure_reason: String(reason).slice(0, 500),
@@ -790,13 +818,45 @@ async function deliverPending(
     return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, throttled: true };
   }
 
-  const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
-    _campaign_id: campaign.id,
-    _limit: claimLimit,
-  });
-  if (qErr) throw new Error(qErr.message);
-  const rows = batch ?? [];
-  if (rows.length === 0) {
+  // Claim in small chunks. A single large claim runs hundreds of per-row
+  // charge/ledger writes inside one statement and hit the database statement
+  // timeout, which aborted the whole tick and left campaigns idle for hours.
+  const CLAIM_CHUNK = 150;
+  let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
+  let claimedTotal = 0;
+  const unsent: string[] = [];
+  const hardDeadline = limits?.deadlineAt ?? Date.now() + RUN_BUDGET_MS;
+  const sink = createStatusSink(supabaseAdmin);
+
+  while (claimedTotal < claimLimit && Date.now() < hardDeadline - 3_000) {
+    const want = Math.min(CLAIM_CHUNK, claimLimit - claimedTotal);
+    const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
+      _campaign_id: campaign.id,
+      _limit: want,
+    });
+    if (qErr) {
+      // Transient claim failure (timeout/contention): stop claiming and keep
+      // whatever we already sent instead of failing the tick.
+      console.error("[dispatch] claim failed", qErr.message);
+      break;
+    }
+    const rows = batch ?? [];
+    if (rows.length === 0) break;
+    claimedTotal += rows.length;
+    await runWithConcurrency(rows, concurrency, async (m: any) => {
+      if (Date.now() >= hardDeadline) { unsent.push(m.id); return; }
+      const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
+      if (r.ok) { sent++; debited += r.debited; }
+      else { failed++; if (r.shaft) shaftErrors++; }
+    });
+  }
+
+  // Every accepted/failed result must be persisted before this invocation
+  // returns, otherwise the stale sweep would write successful sends off as
+  // dispatch timeouts.
+  await sink.drain();
+
+  if (claimedTotal === 0) {
     const { count: stillPending } = await supabaseAdmin
       .from("messages").select("id", { count: "exact", head: true })
       .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
@@ -805,16 +865,6 @@ async function deliverPending(
     }
     return { sent: 0, failed: 0, debited: 0, remaining: stillPending ?? 0 };
   }
-
-  let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
-  const unsent: string[] = [];
-  const hardDeadline = limits?.deadlineAt ?? Date.now() + RUN_BUDGET_MS;
-  await runWithConcurrency(rows, concurrency, async (m: any) => {
-    if (Date.now() >= hardDeadline) { unsent.push(m.id); return; }
-    const r = await sendOneMessage(supabaseAdmin, campaign, sender, m);
-    if (r.ok) { sent++; debited += r.debited; }
-    else { failed++; if (r.shaft) shaftErrors++; }
-  });
 
   // Hand anything we ran out of time for back to the queue so the next tick
   // sends it instead of the stale sweep failing it.
@@ -856,10 +906,30 @@ async function processCampaign(
     if (!begin.ok) return { planned: 0, skipped: 0, cost: 0, reason: begin.reason };
   }
 
-  const { recipients, hasMore } = await loadNextUnplannedBatch(
-    supabaseAdmin, campaign.id, campaign.account_id,
-    campaign.audience ?? { include: [], exclude: [] }, PLAN_BATCH_SIZE,
-  );
+  // Delivery has priority over planning. When a healthy backlog of queued rows
+  // already exists, spend the whole invocation sending it instead of preparing
+  // more recipients — that is what keeps a 100k campaign draining at full rate.
+  const { count: backlog } = await supabaseAdmin
+    .from("messages").select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaign.id).eq("status", "queued");
+  const shouldPlan = isFirstBatch || (backlog ?? 0) < PLAN_BACKLOG_TARGET;
+
+  // Planning must never abort a tick: if the audience lookup is slow or times
+  // out, keep sending the rows that are already queued.
+  let recipients: any[] = [];
+  let hasMore = true;
+  if (shouldPlan) {
+    try {
+      const page = await loadNextUnplannedBatch(
+        supabaseAdmin, campaign.id, campaign.account_id,
+        campaign.audience ?? { include: [], exclude: [] }, PLAN_BATCH_SIZE,
+      );
+      recipients = page.recipients;
+      hasMore = page.hasMore;
+    } catch (e: any) {
+      console.error("[dispatch] planning lookup failed, delivering queued rows instead", e?.message ?? e);
+    }
+  }
 
   const planned = recipients.length > 0
     ? await planCampaign(supabaseAdmin, campaign, rates, recipients, isFirstBatch)
