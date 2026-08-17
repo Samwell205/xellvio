@@ -142,6 +142,10 @@ function NewCampaignPage() {
   const ratesQ = useQuery({
     queryKey: ["country-rates-active"],
     queryFn: () => loadRates(),
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
   const rates = ratesQ.data ?? [];
 
