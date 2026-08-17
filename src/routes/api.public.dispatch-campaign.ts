@@ -61,17 +61,19 @@ const UNGUARDED_LEASE = "__unguarded__";
 // Caps are per sender kind, per tick (ticks fire every ~15s):
 //   messages claimed per tenant per tick, and concurrent in-flight sends.
 const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> = {
-  // perTick is deliberately close to what one 40s invocation can actually
-  // finish at the given concurrency. Claiming more than that leaves the
-  // surplus stuck in `sending` until the stale sweep writes it off as
+  // These are per-tenant totals for one invocation; they get divided across the
+  // campaign's lease slots so each slot only claims what it can finish inside
+  // the run budget. Claiming more than a slot can finish leaves the surplus
+  // stuck in `sending` until the stale sweep writes it off as
   // `dispatch_timeout` — which is why big campaigns showed hundreds of them.
-  toll_free: { perTick: 480, concurrency: 24 },
-  ten_dlc: { perTick: 360, concurrency: 12 },
-  short_code: { perTick: 480, concurrency: 24 },
-  shared_toll_free: { perTick: 240, concurrency: 8 },
+  toll_free: { perTick: 900, concurrency: 36 },
+  ten_dlc: { perTick: 600, concurrency: 18 },
+  short_code: { perTick: 900, concurrency: 36 },
+  shared_toll_free: { perTick: 300, concurrency: 12 },
   personal: { perTick: 120, concurrency: 4 },
 };
-const TENANT_THROTTLE_DEFAULT = { perTick: 240, concurrency: 8 };
+const TENANT_THROTTLE_DEFAULT = { perTick: 300, concurrency: 12 };
+
 
 // Picture messages (MMS) are far more aggressively filtered than plain SMS.
 // A large first-time burst from one number gets rejected wholesale by the
