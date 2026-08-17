@@ -273,3 +273,228 @@ function DailySpend({ rows }: { rows: Array<{ day: string; telnyx_cost: number; 
     </div>
   );
 }
+
+type RateRef = {
+  country: string;
+  cost_per_segment: number;
+  passthrough_fee: number;
+  total_per_segment: number;
+  mms_cost_multiplier: number;
+} | null;
+
+type WindowAgg = {
+  messages: number;
+  segments: number;
+  mms_count: number;
+  telnyx_cost: number;
+  tenant_spend: number;
+  margin: number;
+  wasted_cost: number;
+  by_status: Array<{
+    status: string;
+    label: string;
+    wasted: boolean;
+    messages: number;
+    segments: number;
+    telnyx_cost: number;
+    tenant_spend: number;
+  }>;
+};
+
+function WalletBreakdown({
+  liveBalance,
+  impliedSpend,
+  window: w,
+  rateRef,
+}: {
+  liveBalance: number | null;
+  impliedSpend: number | null;
+  window?: WindowAgg;
+  rateRef?: RateRef;
+}) {
+  if (!w) return null;
+  const wastedPct = w.telnyx_cost > 0 ? (w.wasted_cost / w.telnyx_cost) * 100 : 0;
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-primary" /> Where the wallet money went — by outcome (30d)</h3>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        Every message the carrier accepted is billed the moment it hits the network, even if it never delivers. That's why your wallet drops faster than the "delivered" count suggests.
+      </p>
+
+      <div className="grid md:grid-cols-4 gap-3 mb-4">
+        <Stat label="Wallet now" value={liveBalance != null ? formatUSD(liveBalance) : "—"} />
+        <Stat label="Wallet dropped (snapshots)" value={impliedSpend != null ? formatUSD(impliedSpend) : "—"} sub="from balance snapshots" />
+        <Stat label="Carrier spend (billed)" value={formatUSD(w.telnyx_cost)} sub={`${w.segments.toLocaleString()} segments`} destructive />
+        <Stat label="Wasted on non-delivery" value={formatUSD(w.wasted_cost)} sub={`${wastedPct.toFixed(0)}% of spend`} warn={wastedPct > 20} />
+      </div>
+
+      {rateRef && (
+        <div className="text-xs text-muted-foreground mb-3 flex flex-wrap gap-x-4 gap-y-1">
+          <span>Rate math ({rateRef.country}):</span>
+          <span>{rateRef.cost_per_segment.toFixed(4)} base</span>
+          <span>+ {rateRef.passthrough_fee.toFixed(4)} passthrough</span>
+          <span>= <b className="text-foreground">{rateRef.total_per_segment.toFixed(4)}/segment</b></span>
+          <span>· MMS ×{rateRef.mms_cost_multiplier}</span>
+          <span>· spend = segments × rate × (MMS mult if MMS)</span>
+        </div>
+      )}
+
+      <div className="border rounded-md overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
+            <tr>
+              <th className="text-left p-3">Outcome</th>
+              <th className="text-right p-3">Messages</th>
+              <th className="text-right p-3">Segments</th>
+              <th className="text-right p-3">Carrier cost</th>
+              <th className="text-right p-3">Billed to tenant</th>
+            </tr>
+          </thead>
+          <tbody>
+            {w.by_status.map((s) => (
+              <tr key={s.status} className="border-t">
+                <td className="p-3 font-medium flex items-center gap-2">
+                  {s.wasted && <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
+                  {s.label}
+                </td>
+                <td className="p-3 text-right tabular-nums">{s.messages.toLocaleString()}</td>
+                <td className="p-3 text-right tabular-nums">{s.segments.toLocaleString()}</td>
+                <td className="p-3 text-right tabular-nums text-destructive">{formatUSD(s.telnyx_cost)}</td>
+                <td className="p-3 text-right tabular-nums">{formatUSD(s.tenant_spend)}</td>
+              </tr>
+            ))}
+            {w.by_status.length === 0 && (
+              <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No activity.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+function Stat({ label, value, sub, destructive, warn }: { label: string; value: string; sub?: string; destructive?: boolean; warn?: boolean }) {
+  return (
+    <div className={`rounded-lg border p-3 ${warn ? "border-amber-500/50 bg-amber-500/5" : ""}`}>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`text-lg font-semibold tabular-nums ${destructive ? "text-destructive" : ""} ${warn ? "text-amber-600" : ""}`}>{value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
+    </div>
+  );
+}
+
+function TenantDrilldown({
+  accounts,
+  accountsLoading,
+  selectedId,
+  onSelect,
+  data,
+  loading,
+  rateRef,
+}: {
+  accounts: Array<{ id: string; email: string; full_name?: string | null }>;
+  accountsLoading: boolean;
+  selectedId: string;
+  onSelect: (id: string) => void;
+  data?: Awaited<ReturnType<typeof getTelnyxTenantSpend>>;
+  loading: boolean;
+  rateRef?: RateRef;
+}) {
+  return (
+    <Card className="p-5">
+      <h3 className="font-semibold mb-3 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-primary" /> Per-tenant carrier spend (30d)</h3>
+      <p className="text-xs text-muted-foreground mb-3">Pick a tenant to see exactly which carrier money their sending cost — and how much was wasted on messages that never delivered.</p>
+      <select
+        className="w-full max-w-md mb-4 rounded-md border bg-background px-3 py-2 text-sm"
+        value={selectedId}
+        onChange={(e) => onSelect(e.target.value)}
+        disabled={accountsLoading}
+      >
+        <option value="">{accountsLoading ? "Loading tenants…" : "Select a tenant…"}</option>
+        {accounts.map((a) => (
+          <option key={a.id} value={a.id}>{a.full_name || a.email} — {a.email}</option>
+        ))}
+      </select>
+
+      {!selectedId && <div className="text-sm text-muted-foreground">Choose a tenant above to load their breakdown.</div>}
+      {selectedId && loading && <div className="text-sm text-muted-foreground">Loading tenant spend…</div>}
+
+      {selectedId && data && (
+        <div>
+          <div className="grid md:grid-cols-4 gap-3 mb-4">
+            <Stat label="Carrier spend" value={formatUSD(data.telnyx_cost)} sub={`${data.segments.toLocaleString()} segments`} destructive />
+            <Stat label="Wasted on non-delivery" value={formatUSD(data.wasted_cost)} warn={(data.telnyx_cost > 0 && (data.wasted_cost / data.telnyx_cost) * 100 > 20)} />
+            <Stat label="Billed to tenant" value={formatUSD(data.tenant_spend)} />
+            <Stat label="Messages" value={data.messages.toLocaleString()} />
+          </div>
+
+          {rateRef && (
+            <div className="text-xs text-muted-foreground mb-3">
+              Rate ({rateRef.country}): {rateRef.total_per_segment.toFixed(4)}/segment · MMS ×{rateRef.mms_cost_multiplier}
+            </div>
+          )}
+
+          <div className="border rounded-md overflow-x-auto mb-4">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
+                <tr>
+                  <th className="text-left p-3">Outcome</th>
+                  <th className="text-right p-3">Messages</th>
+                  <th className="text-right p-3">Segments</th>
+                  <th className="text-right p-3">Carrier cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.by_status.map((s) => (
+                  <tr key={s.status} className="border-t">
+                    <td className="p-3 font-medium flex items-center gap-2">
+                      {s.wasted && <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
+                      {s.label}
+                    </td>
+                    <td className="p-3 text-right tabular-nums">{s.messages.toLocaleString()}</td>
+                    <td className="p-3 text-right tabular-nums">{s.segments.toLocaleString()}</td>
+                    <td className="p-3 text-right tabular-nums text-destructive">{formatUSD(s.telnyx_cost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">By campaign</div>
+          <div className="border rounded-md overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
+                <tr>
+                  <th className="text-left p-3">Campaign</th>
+                  <th className="text-right p-3">Messages</th>
+                  <th className="text-right p-3">Segments</th>
+                  <th className="text-right p-3">Carrier cost</th>
+                  <th className="text-right p-3">Tenant spend</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.by_campaign.map((c) => (
+                  <tr key={c.campaign_id} className="border-t">
+                    <td className="p-3">
+                      <div className="font-medium">{c.name}</div>
+                      <div className="text-xs text-muted-foreground">{c.created_at ? new Date(c.created_at).toLocaleString() : ""}</div>
+                    </td>
+                    <td className="p-3 text-right tabular-nums">{c.messages.toLocaleString()}</td>
+                    <td className="p-3 text-right tabular-nums">{c.segments.toLocaleString()}</td>
+                    <td className="p-3 text-right tabular-nums text-destructive">{formatUSD(c.telnyx_cost)}</td>
+                    <td className="p-3 text-right tabular-nums">{formatUSD(c.tenant_spend)}</td>
+                  </tr>
+                ))}
+                {data.by_campaign.length === 0 && (
+                  <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No campaigns.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
