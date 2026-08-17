@@ -818,13 +818,45 @@ async function deliverPending(
     return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, throttled: true };
   }
 
-  const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
-    _campaign_id: campaign.id,
-    _limit: claimLimit,
-  });
-  if (qErr) throw new Error(qErr.message);
-  const rows = batch ?? [];
-  if (rows.length === 0) {
+  // Claim in small chunks. A single large claim runs hundreds of per-row
+  // charge/ledger writes inside one statement and hit the database statement
+  // timeout, which aborted the whole tick and left campaigns idle for hours.
+  const CLAIM_CHUNK = 150;
+  let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
+  let claimedTotal = 0;
+  const unsent: string[] = [];
+  const hardDeadline = limits?.deadlineAt ?? Date.now() + RUN_BUDGET_MS;
+  const sink = createStatusSink(supabaseAdmin);
+
+  while (claimedTotal < claimLimit && Date.now() < hardDeadline - 3_000) {
+    const want = Math.min(CLAIM_CHUNK, claimLimit - claimedTotal);
+    const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
+      _campaign_id: campaign.id,
+      _limit: want,
+    });
+    if (qErr) {
+      // Transient claim failure (timeout/contention): stop claiming and keep
+      // whatever we already sent instead of failing the tick.
+      console.error("[dispatch] claim failed", qErr.message);
+      break;
+    }
+    const rows = batch ?? [];
+    if (rows.length === 0) break;
+    claimedTotal += rows.length;
+    await runWithConcurrency(rows, concurrency, async (m: any) => {
+      if (Date.now() >= hardDeadline) { unsent.push(m.id); return; }
+      const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
+      if (r.ok) { sent++; debited += r.debited; }
+      else { failed++; if (r.shaft) shaftErrors++; }
+    });
+  }
+
+  // Every accepted/failed result must be persisted before this invocation
+  // returns, otherwise the stale sweep would write successful sends off as
+  // dispatch timeouts.
+  await sink.drain();
+
+  if (claimedTotal === 0) {
     const { count: stillPending } = await supabaseAdmin
       .from("messages").select("id", { count: "exact", head: true })
       .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
@@ -833,21 +865,6 @@ async function deliverPending(
     }
     return { sent: 0, failed: 0, debited: 0, remaining: stillPending ?? 0 };
   }
-
-  let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
-  const unsent: string[] = [];
-  const hardDeadline = limits?.deadlineAt ?? Date.now() + RUN_BUDGET_MS;
-  const sink = createStatusSink(supabaseAdmin);
-  await runWithConcurrency(rows, concurrency, async (m: any) => {
-    if (Date.now() >= hardDeadline) { unsent.push(m.id); return; }
-    const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
-    if (r.ok) { sent++; debited += r.debited; }
-    else { failed++; if (r.shaft) shaftErrors++; }
-  });
-  // Every accepted/failed result must be persisted before this invocation
-  // returns, otherwise the stale sweep would write successful sends off as
-  // dispatch timeouts.
-  await sink.drain();
 
   // Hand anything we ran out of time for back to the queue so the next tick
   // sends it instead of the stale sweep failing it.
