@@ -964,33 +964,16 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 
 
 
-        // Guard against overlapping invocations: if pg_cron fires a new tick
-        // while a previous one is still mid-flight, two concurrent calls to
-        // claim_campaign_messages for the same campaign can each claim (and
-        // charge) different rows, and if one of those invocations doesn't
-        // finish cleanly, its claimed rows are left stranded in `sending`.
-        // Self-heals after 90s if a prior run crashed without releasing.
-        const { data: gotLock, error: lockError } = await (supabaseAdmin as any).rpc(
-          "try_acquire_dispatch_lock",
-        );
-        // If the lock helper itself is unavailable (e.g. missing after a DB
-        // move), never skip forever — that silently freezes every campaign in
-        // `queued`. Log it and dispatch without the overlap guard.
-        if (lockError) {
-          console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
-        } else if (!gotLock) {
-          return Response.json({ skipped: "dispatch_already_running" });
-        }
-
-        try {
-          return await runDispatchTick(supabaseAdmin);
-        } finally {
-          await (supabaseAdmin as any).rpc("release_dispatch_lock");
-        }
+        // Campaign-level leases (acquired inside runDispatchTick) let several
+        // scheduler ticks send for different campaigns at the same time. A
+        // single global lock used to serialize every tenant's sending, which
+        // is what made large campaigns crawl for hours.
+        return await runDispatchTick(supabaseAdmin);
       },
     },
   },
 });
+
 
 async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         const { data: ratesRows } = await supabaseAdmin
