@@ -1229,7 +1229,9 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
               .from("campaigns")
               .update({ status: "sending", paused_reason: null })
               .in("id", strandedIds)
-              .in("status", ["failed", "sent"]);
+              .in("status", ["failed", "sent"])
+              // Campaigns the user explicitly stopped must stay stopped.
+              .or(`paused_reason.is.null,paused_reason.neq.${STOPPED_AS_SENT}`);
           }
         } catch (e: any) {
           console.error("[dispatch] stranded-campaign revival failed", e?.message ?? e);
