@@ -96,7 +96,10 @@ function NewCampaignPage() {
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], listIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
-    excludedCountries: [], trackLinks: true,
+    // Link shortening is opt-in: nobody's URLs get rewritten unless the tenant
+    // switches it on for this campaign.
+    excludedCountries: [], trackLinks: false,
+
   });
 
 
@@ -121,7 +124,7 @@ function NewCampaignPage() {
           scheduleAt: data.schedule_at ? new Date(data.schedule_at).toISOString().slice(0, 16) : "",
           smartSkipHours: data.smart_skip_hours ?? 8,
           excludedCountries: Array.isArray(aud.excluded_countries) ? aud.excluded_countries : [],
-          trackLinks: (data as any).track_links !== false,
+          trackLinks: (data as any).track_links === true,
 
         }));
       }
@@ -254,7 +257,21 @@ function NewCampaignPage() {
     () => (s.body.toUpperCase().includes("STOP") ? s.body : s.body + STOP_LINE),
     [s.body],
   );
-  const seg = calculateSegments(bodyWithStop);
+  // Exactly what the contact receives: with shortening on, every URL is
+  // rewritten to a xellvio.com/r/… link at send time, so the preview shows it
+  // that way too (already-shortened links are left alone).
+  const previewBody = useMemo(() => {
+    if (!s.trackLinks) return bodyWithStop;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://xellvio.com";
+    let n = 0;
+    return bodyWithStop.replace(/(https?:\/\/[^\s<>()[\]"']+)/gi, (url) => {
+      if (new RegExp(`^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/r/[a-zA-Z0-9]{4,16}$`).test(url)) return url;
+      n += 1;
+      return `${origin}/r/${"abcdefgh".slice(0, 6)}${n}`;
+    });
+  }, [bodyWithStop, s.trackLinks]);
+  const seg = calculateSegments(previewBody);
+
 
   // Detect non-GSM-7 characters that force Unicode encoding (70/67-char segments
   // instead of 160/153). Common culprits: • “ ” ‘ ’ — – … and non-breaking space.
@@ -657,18 +674,18 @@ function NewCampaignPage() {
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {s.trackLinks
-                  ? "Your link is shortened to a xellvio.com/r/… link so we can count who clicked. Tap it in the phone preview below to test."
-                  : "Links are inserted as-is (link tracking is off)."}
+                  ? "Link shortening is on, so this URL is added as a xellvio.com/r/… link and clicks are counted. Tap it in the phone preview below to test."
+                  : "Your URL is added exactly as typed. Turn on link shortening below if you want a short link and click tracking."}
               </p>
             </div>
 
             <div className="rounded-md border p-3 flex items-start justify-between gap-4">
               <div className="space-y-1">
-                <Label className="cursor-pointer" htmlFor="track-links-toggle">Track link clicks</Label>
+                <Label className="cursor-pointer" htmlFor="track-links-toggle">Shorten links &amp; track clicks</Label>
                 <p className="text-xs text-muted-foreground max-w-md">
                   {s.trackLinks
-                    ? "On — any URL in your message is shortened to a xellvio.com/r/… link so we can count who clicked. See per-link stats on the report's Links tab."
-                    : "Off — your original URLs are sent exactly as typed. No shortening, no click tracking, nothing on the Links tab."}
+                    ? "On — every URL in your message is replaced with a short xellvio.com/r/… link so clicks are counted. See per-link stats on the report's Links tab."
+                    : "Off — your URLs are sent exactly as you typed them. Nothing is shortened and no clicks are tracked."}
                 </p>
               </div>
               <Switch
@@ -677,6 +694,7 @@ function NewCampaignPage() {
                 onCheckedChange={(v: boolean) => setS({ ...s, trackLinks: !!v })}
               />
             </div>
+
 
             <div>
               <Label>MMS image (optional)</Label>
@@ -711,9 +729,15 @@ function NewCampaignPage() {
                       className="w-full max-h-64 rounded-lg object-cover border"
                     />
                   )}
-                  {bodyWithStop ? renderPreviewWithLinks(bodyWithStop) : <span className="text-muted-foreground">Your message will appear here…</span>}
+                  {previewBody ? renderPreviewWithLinks(previewBody) : <span className="text-muted-foreground">Your message will appear here…</span>}
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                {s.trackLinks
+                  ? "Exactly how your contact sees it — links are shortened on send (codes shown here are examples)."
+                  : "Exactly how your contact sees it — links are sent as typed."}
+              </p>
+
             </div>
           </Card>
 
@@ -844,7 +868,7 @@ function NewCampaignPage() {
           <SenderRoutingCard breakdown={fullBreakdown} sendersByCountry={sendersByCountry} onToggleCountry={toggleCountry} />
           <div>
             <Label>Final message</Label>
-            <Card className="p-3 mt-1 bg-muted/30 whitespace-pre-wrap text-sm">{bodyWithStop}</Card>
+            <Card className="p-3 mt-1 bg-muted/30 whitespace-pre-wrap text-sm">{previewBody}</Card>
           </div>
         </Card>
       )}
