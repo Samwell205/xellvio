@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { getActiveCountryRatesRaw } from "@/lib/public-pricing.functions";
 import { createPreviewShortlink } from "@/lib/shortlinks.functions";
-import { getCampaignAudienceCountryCounts } from "@/lib/audience.functions";
+import { getCampaignAudienceCountryCounts, listAudienceContactLists } from "@/lib/audience.functions";
 
 import { scanCampaignContent } from "@/lib/content-scanner.functions";
 import { calculateSegments } from "@/lib/sms-segments";
@@ -138,9 +138,14 @@ function NewCampaignPage() {
     queryFn: async () => (await supabase.from("segments").select("id,name,query").order("name")).data ?? [],
   });
 
+  const loadContactLists = useServerFn(listAudienceContactLists);
   const listsQ = useQuery({
     queryKey: ["lists-pick"],
-    queryFn: async () => (await supabase.from("contact_lists").select("id,name").order("name")).data ?? [],
+    queryFn: async () => loadContactLists(),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
   const loadRates = useServerFn(getActiveCountryRatesRaw);
   const ratesQ = useQuery({
