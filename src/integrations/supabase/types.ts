@@ -3124,6 +3124,7 @@ export type Database = {
           true_cost: number
         }[]
       }
+      apply_message_status_batch: { Args: { _rows: Json }; Returns: number }
       bulk_import_profiles: {
         Args: { _account_id: string; _list_id: string; _rows: Json }
         Returns: {
