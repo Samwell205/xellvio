@@ -80,7 +80,7 @@ export function normalizePhone(
 
   for (const c of candidates) {
     const p = parsePhoneNumberFromString(c.value, c.country);
-    if (p?.isValid()) return { e164: p.number, country: p.country ?? rowCc || defCc || "" };
+    if (p?.isValid()) return { e164: p.number, country: p.country ?? (rowCc || defCc || "") };
   }
   return { error: `Invalid phone "${input}"` };
 }
