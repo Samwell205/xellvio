@@ -394,7 +394,7 @@ function TenantDrilldown({
   loading,
   rateRef,
 }: {
-  accounts: Array<{ id: string; email: string; full_name?: string | null }>;
+  accounts: Array<{ id: string; email: string | null; full_name?: string | null }>;
   accountsLoading: boolean;
   selectedId: string;
   onSelect: (id: string) => void;
