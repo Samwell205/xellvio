@@ -932,7 +932,9 @@ function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, 
 
       <div>
         <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">By country ({audienceCount} recipients)</div>
-        {loading ? (
+        {error ? (
+          <div className="text-xs text-destructive">{error}</div>
+        ) : loading ? (
           <div className="text-xs text-muted-foreground">Calculating…</div>
         ) : breakdown.length === 0 ? (
           <div className="text-xs text-muted-foreground">Pick an audience in step 1 to see per-country pricing.</div>
