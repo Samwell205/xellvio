@@ -37,18 +37,25 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       mmsMultByCountry.set(r.country_code, Number((r as any).mms_cost_multiplier ?? r.mms_multiplier ?? 3));
     }
 
-    // Pull messages that were actually submitted to Telnyx in windows
-    async function pullSince(iso: string) {
+    // Pull every message submitted to the carrier in a window. We include
+    // `failed` because the carrier bills the moment a message is accepted — a
+    // message that the carrier accepted and then failed to deliver still cost
+    // us money. Excluding it was why the admin carrier-cost figure never tied
+    // back to the wallet balance drop. (`queued`/`sending` are excluded: those
+    // haven't been submitted yet, so the carrier hasn't billed them.)
+    async function pullSince(iso: string, accountCampaignIds?: string[]) {
       const pageSize = 1000;
       let from = 0;
       const rows: Array<{ campaign_id: string; country_code: string | null; segments_count: number | null; cost: number | null; status: string; created_at: string; is_mms: boolean | null }> = [];
       while (true) {
-        const { data, error } = await supabaseAdmin
+        let q = supabaseAdmin
           .from("messages")
           .select("campaign_id,country_code,segments_count,cost,status,created_at,is_mms")
           .gte("created_at", iso)
-          .in("status", ["sent", "delivered", "delivery_unconfirmed", "undelivered"])
+          .in("status", ["sent", "delivered", "delivery_unconfirmed", "undelivered", "failed"])
           .range(from, from + pageSize - 1);
+        if (accountCampaignIds && accountCampaignIds.length) q = q.in("campaign_id", accountCampaignIds);
+        const { data, error } = await q;
         if (error) throw new Error(error.message);
         if (!data || data.length === 0) break;
         rows.push(...data);
@@ -67,6 +74,15 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       return (costByCountry.get(cc) ?? 0) * segs * mmsMult;
     }
 
+    // Human label + "wasted" flag for each carrier outcome
+    const STATUS_META: Record<string, { label: string; wasted: boolean }> = {
+      delivered: { label: "Delivered", wasted: false },
+      sent: { label: "Accepted, awaiting receipt", wasted: false },
+      delivery_unconfirmed: { label: "Not confirmed (timed out)", wasted: true },
+      undelivered: { label: "Undelivered", wasted: true },
+      failed: { label: "Failed at carrier", wasted: true },
+    };
+
     const now = Date.now();
     const iso24h = new Date(now - 24 * 3600 * 1000).toISOString();
     const iso7d = new Date(now - 7 * 24 * 3600 * 1000).toISOString();
@@ -81,9 +97,11 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       let messages = 0;
       let mmsCount = 0;
       const byCountry = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number; mms_count: number }>();
+      const byStatus = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number }>();
       for (const r of rows) {
         const segs = Number(r.segments_count ?? 1);
         const cc = r.country_code ?? "??";
+        const st = r.status ?? "unknown";
         const tCost = realCarrierCost(r);
         const spend = Number(r.cost ?? 0);
         telnyxCost += tCost;
@@ -98,12 +116,32 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
         b.tenant_spend += spend;
         if (r.is_mms) b.mms_count += 1;
         byCountry.set(cc, b);
+        const s = byStatus.get(st) ?? { messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0 };
+        s.messages += 1;
+        s.segments += segs;
+        s.telnyx_cost += tCost;
+        s.tenant_spend += spend;
+        byStatus.set(st, s);
       }
+      const byStatusOut = Array.from(byStatus.entries())
+        .map(([status, v]) => ({
+          status,
+          label: STATUS_META[status]?.label ?? status,
+          wasted: STATUS_META[status]?.wasted ?? false,
+          messages: v.messages,
+          segments: v.segments,
+          telnyx_cost: Number(v.telnyx_cost.toFixed(4)),
+          tenant_spend: Number(v.tenant_spend.toFixed(4)),
+        }))
+        .sort((a, b) => b.telnyx_cost - a.telnyx_cost);
+      const wastedCost = byStatusOut.filter((s) => s.wasted).reduce((a, s) => a + s.telnyx_cost, 0);
       return {
         messages, segments, mms_count: mmsCount,
         telnyx_cost: Number(telnyxCost.toFixed(4)),
         tenant_spend: Number(tenantSpend.toFixed(4)),
         margin: Number((tenantSpend - telnyxCost).toFixed(4)),
+        wasted_cost: Number(wastedCost.toFixed(4)),
+        by_status: byStatusOut,
         by_country: Array.from(byCountry.entries())
           .map(([country, v]) => ({ country, ...v, telnyx_cost: Number(v.telnyx_cost.toFixed(4)), tenant_spend: Number(v.tenant_spend.toFixed(4)) }))
           .sort((a, b) => b.telnyx_cost - a.telnyx_cost),
@@ -183,6 +221,18 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
     const impliedSpendFromSnapshots = firstSnap && latestSnap
       ? Number(firstSnap.balance) - Number(latestSnap.balance) : null;
 
+    // Per-segment rate reference, so the UI can show the math (segments × rate)
+    const usRate = rates?.find((r: any) => r.country_code === "US");
+    const rateRef = usRate
+      ? {
+          country: "US",
+          cost_per_segment: Number(Number(usRate.cost_price ?? 0).toFixed(4)),
+          passthrough_fee: Number(Number((usRate as any).passthrough_fee ?? 0).toFixed(4)),
+          total_per_segment: Number((Number(usRate.cost_price ?? 0) + Number((usRate as any).passthrough_fee ?? 0)).toFixed(4)),
+          mms_cost_multiplier: Number((usRate as any).mms_cost_multiplier ?? (usRate as any).mms_multiplier ?? 3),
+        }
+      : null;
+
     return {
       snapshots: snapshots ?? [],
       latest: latestSnap,
@@ -191,6 +241,134 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       windows: { last_24h: w24, last_7d: w7, last_30d: w30 },
       daily: Array.from(daily.values()).map((d) => ({ ...d, telnyx_cost: Number(d.telnyx_cost.toFixed(4)) })),
       top_campaigns: topCampaignsHydrated,
+      rate_ref: rateRef,
+    };
+  });
+
+/**
+ * Per-tenant carrier spend breakdown by outcome. Answers "how much carrier
+ * money did this one tenant's sending cost me, and how much of it was wasted
+ * on messages that never delivered." Reuses the same cost model as the
+ * platform overview (country_rates × segments × MMS multiplier).
+ */
+export const getTelnyxTenantSpend = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { accountId: string }) => z.object({ accountId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const admin = supabaseAdmin as any;
+
+    // Country rates
+    const { data: rates } = await admin
+      .from("country_rates")
+      .select("country_code,cost_price,sell_price,mms_multiplier,mms_cost_multiplier,passthrough_fee");
+    const costByCountry = new Map<string, number>();
+    const mmsMultByCountry = new Map<string, number>();
+    for (const r of rates ?? []) {
+      costByCountry.set(r.country_code, Number(r.cost_price ?? 0) + Number((r as any).passthrough_fee ?? 0));
+      mmsMultByCountry.set(r.country_code, Number((r as any).mms_cost_multiplier ?? r.mms_multiplier ?? 3));
+    }
+    function realCarrierCost(r: { country_code: string | null; segments_count: number | null; is_mms: boolean | null }) {
+      const cc = r.country_code ?? "??";
+      const segs = Number(r.segments_count ?? 1);
+      const mmsMult = r.is_mms ? (mmsMultByCountry.get(cc) ?? 3) : 1;
+      return (costByCountry.get(cc) ?? 0) * segs * mmsMult;
+    }
+    const STATUS_META: Record<string, { label: string; wasted: boolean }> = {
+      delivered: { label: "Delivered", wasted: false },
+      sent: { label: "Accepted, awaiting receipt", wasted: false },
+      delivery_unconfirmed: { label: "Not confirmed (timed out)", wasted: true },
+      undelivered: { label: "Undelivered", wasted: true },
+      failed: { label: "Failed at carrier", wasted: true },
+    };
+
+    // All campaigns for this tenant
+    const { data: camps } = await admin
+      .from("campaigns").select("id,name,created_at").eq("account_id", data.accountId);
+    const campaignIds = (camps ?? []).map((c: any) => c.id);
+    const campaignNames = new Map<string, { name: string; created_at: string }>(
+      (camps ?? []).map((c: any) => [c.id, { name: c.name ?? "Untitled", created_at: c.created_at }]),
+    );
+
+    const iso30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    const rows = campaignIds.length ? await pullSinceT(iso30d, campaignIds) : [];
+    async function pullSinceT(iso: string, ids: string[]) {
+      const pageSize = 1000;
+      let from = 0;
+      const out: any[] = [];
+      while (true) {
+        const { data: d, error } = await admin
+          .from("messages")
+          .select("campaign_id,country_code,segments_count,cost,status,created_at,is_mms")
+          .gte("created_at", iso)
+          .in("status", ["sent", "delivered", "delivery_unconfirmed", "undelivered", "failed"])
+          .in("campaign_id", ids)
+          .range(from, from + pageSize - 1);
+        if (error) throw new Error(error.message);
+        if (!d || d.length === 0) break;
+        out.push(...d);
+        if (d.length < pageSize) break;
+        from += pageSize;
+        if (out.length > 200_000) break;
+      }
+      return out;
+    }
+
+    // Aggregate by status + by campaign
+    const byStatus = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number }>();
+    const byCamp = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number }>();
+    let totalCost = 0, totalSpend = 0, totalSegs = 0, totalMsgs = 0;
+    for (const r of rows) {
+      const segs = Number(r.segments_count ?? 1);
+      const st = r.status ?? "unknown";
+      const tCost = realCarrierCost(r);
+      const spend = Number(r.cost ?? 0);
+      totalCost += tCost; totalSpend += spend; totalSegs += segs; totalMsgs += 1;
+      const s = byStatus.get(st) ?? { messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0 };
+      s.messages += 1; s.segments += segs; s.telnyx_cost += tCost; s.tenant_spend += spend;
+      byStatus.set(st, s);
+      const c = byCamp.get(r.campaign_id) ?? { messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0 };
+      c.messages += 1; c.segments += segs; c.telnyx_cost += tCost; c.tenant_spend += spend;
+      byCamp.set(r.campaign_id, c);
+    }
+    const byStatusOut = Array.from(byStatus.entries())
+      .map(([status, v]) => ({
+        status, label: STATUS_META[status]?.label ?? status, wasted: STATUS_META[status]?.wasted ?? false,
+        messages: v.messages, segments: v.segments,
+        telnyx_cost: Number(v.telnyx_cost.toFixed(4)), tenant_spend: Number(v.tenant_spend.toFixed(4)),
+      }))
+      .sort((a, b) => b.telnyx_cost - a.telnyx_cost);
+    const wastedCost = byStatusOut.filter((s) => s.wasted).reduce((a, s) => a + s.telnyx_cost, 0);
+    const byCampOut = Array.from(byCamp.entries())
+      .map(([cid, v]) => ({
+        campaign_id: cid,
+        name: campaignNames.get(cid)?.name ?? "Unknown",
+        created_at: campaignNames.get(cid)?.created_at ?? null,
+        ...v, telnyx_cost: Number(v.telnyx_cost.toFixed(4)), tenant_spend: Number(v.tenant_spend.toFixed(4)),
+      }))
+      .sort((a, b) => b.telnyx_cost - a.telnyx_cost);
+
+    const usRate = rates?.find((r: any) => r.country_code === "US");
+    const rateRef = usRate
+      ? {
+          country: "US",
+          cost_per_segment: Number(Number(usRate.cost_price ?? 0).toFixed(4)),
+          passthrough_fee: Number(Number((usRate as any).passthrough_fee ?? 0).toFixed(4)),
+          total_per_segment: Number((Number(usRate.cost_price ?? 0) + Number((usRate as any).passthrough_fee ?? 0)).toFixed(4)),
+          mms_cost_multiplier: Number((usRate as any).mms_cost_multiplier ?? (usRate as any).mms_multiplier ?? 3),
+        }
+      : null;
+
+    return {
+      messages: totalMsgs,
+      segments: totalSegs,
+      telnyx_cost: Number(totalCost.toFixed(4)),
+      tenant_spend: Number(totalSpend.toFixed(4)),
+      wasted_cost: Number(wastedCost.toFixed(4)),
+      by_status: byStatusOut,
+      by_campaign: byCampOut,
+      rate_ref: rateRef,
     };
   });
 
