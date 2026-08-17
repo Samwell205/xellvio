@@ -2,10 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import Papa from "papaparse";
 import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountId } from "@/hooks/useAccountId";
+import ImportCsvDialog from "@/components/ImportCsvDialog";
 import { getAudienceListCounts, getAudienceStats, listAudienceContactLists, listAudienceProfiles } from "@/lib/audience.functions";
 
 
@@ -49,11 +49,6 @@ type ProfileRow = {
 
 type ContactList = { id: string; name: string; description: string | null };
 
-const PHONE_KEYS = ["phone", "phone_number", "phonenumber", "mobile", "mobile_number", "cell", "msisdn", "number", "tel", "telephone", "to"];
-const FIRST_KEYS = ["first_name", "firstname", "fname", "given_name"];
-const LAST_KEYS = ["last_name", "lastname", "lname", "surname", "family_name"];
-const COUNTRY_KEYS = ["country", "country_code", "iso", "iso2"];
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const CSV_TEMPLATE = `phone,first_name,last_name,country
 +15551234567,Ada,Lovelace,US
 +447911123456,Alan,Turing,GB
