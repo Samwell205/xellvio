@@ -599,6 +599,37 @@ function CampaignReport() {
                 </AlertDialogContent>
               </AlertDialog>
             )}
+            {!["sent", "cancelled", "failed"].includes(c.status) && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={stopSentM.isPending}
+                    title="Stop sending now and finish the campaign as Sent. The report stays exactly as it is."
+                  >
+                    <CheckCircle2 className="size-3 mr-1" />
+                    {stopSentM.isPending ? "Stopping…" : "Stop & mark as sent"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Stop sending and mark as sent?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      No further recipients will be queued or sent. The report keeps every
+                      current number — delivered, sent, not delivered and failed — along
+                      with the cost already incurred, and the campaign will show as Sent.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep sending</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => stopSentM.mutate()}>
+                      Stop &amp; mark as sent
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             {/* Provider portal link removed — tenants shouldn't see upstream provider */}
             <Button asChild variant="outline" size="sm">
               <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
