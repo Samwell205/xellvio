@@ -37,18 +37,25 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       mmsMultByCountry.set(r.country_code, Number((r as any).mms_cost_multiplier ?? r.mms_multiplier ?? 3));
     }
 
-    // Pull messages that were actually submitted to Telnyx in windows
-    async function pullSince(iso: string) {
+    // Pull every message submitted to the carrier in a window. We include
+    // `failed` because the carrier bills the moment a message is accepted — a
+    // message that the carrier accepted and then failed to deliver still cost
+    // us money. Excluding it was why the admin carrier-cost figure never tied
+    // back to the wallet balance drop. (`queued`/`sending` are excluded: those
+    // haven't been submitted yet, so the carrier hasn't billed them.)
+    async function pullSince(iso: string, accountCampaignIds?: string[]) {
       const pageSize = 1000;
       let from = 0;
       const rows: Array<{ campaign_id: string; country_code: string | null; segments_count: number | null; cost: number | null; status: string; created_at: string; is_mms: boolean | null }> = [];
       while (true) {
-        const { data, error } = await supabaseAdmin
+        let q = supabaseAdmin
           .from("messages")
           .select("campaign_id,country_code,segments_count,cost,status,created_at,is_mms")
           .gte("created_at", iso)
-          .in("status", ["sent", "delivered", "delivery_unconfirmed", "undelivered"])
+          .in("status", ["sent", "delivered", "delivery_unconfirmed", "undelivered", "failed"])
           .range(from, from + pageSize - 1);
+        if (accountCampaignIds && accountCampaignIds.length) q = q.in("campaign_id", accountCampaignIds);
+        const { data, error } = await q;
         if (error) throw new Error(error.message);
         if (!data || data.length === 0) break;
         rows.push(...data);
@@ -66,6 +73,15 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       const mmsMult = r.is_mms ? (mmsMultByCountry.get(cc) ?? 3) : 1;
       return (costByCountry.get(cc) ?? 0) * segs * mmsMult;
     }
+
+    // Human label + "wasted" flag for each carrier outcome
+    const STATUS_META: Record<string, { label: string; wasted: boolean }> = {
+      delivered: { label: "Delivered", wasted: false },
+      sent: { label: "Accepted, awaiting receipt", wasted: false },
+      delivery_unconfirmed: { label: "Not confirmed (timed out)", wasted: true },
+      undelivered: { label: "Undelivered", wasted: true },
+      failed: { label: "Failed at carrier", wasted: true },
+    };
 
     const now = Date.now();
     const iso24h = new Date(now - 24 * 3600 * 1000).toISOString();
