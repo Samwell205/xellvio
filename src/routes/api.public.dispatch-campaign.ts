@@ -15,7 +15,7 @@ const PLAN_INSERT_CHUNK = 500;
 // campaigns (e.g. 3,019 recipients in one request).
 const PLAN_BATCH_SIZE = 2_000;
 // Keep at least this many queued rows ready; above it, ticks send instead of plan.
-const PLAN_BACKLOG_TARGET = 20_000;
+const PLAN_BACKLOG_TARGET = 5_000;
 // Keep each dispatcher invocation small enough to always finish inside the
 // caller's HTTP timeout. If the caller (pg_cron/pg_net) hangs up mid-run the
 // serverless worker is cancelled, leaving claimed rows stuck in `sending`
@@ -914,12 +914,22 @@ async function processCampaign(
     .eq("campaign_id", campaign.id).eq("status", "queued");
   const shouldPlan = isFirstBatch || (backlog ?? 0) < PLAN_BACKLOG_TARGET;
 
-  const { recipients, hasMore } = shouldPlan
-    ? await loadNextUnplannedBatch(
+  // Planning must never abort a tick: if the audience lookup is slow or times
+  // out, keep sending the rows that are already queued.
+  let recipients: any[] = [];
+  let hasMore = true;
+  if (shouldPlan) {
+    try {
+      const page = await loadNextUnplannedBatch(
         supabaseAdmin, campaign.id, campaign.account_id,
         campaign.audience ?? { include: [], exclude: [] }, PLAN_BATCH_SIZE,
-      )
-    : { recipients: [] as any[], hasMore: true };
+      );
+      recipients = page.recipients;
+      hasMore = page.hasMore;
+    } catch (e: any) {
+      console.error("[dispatch] planning lookup failed, delivering queued rows instead", e?.message ?? e);
+    }
+  }
 
   const planned = recipients.length > 0
     ? await planCampaign(supabaseAdmin, campaign, rates, recipients, isFirstBatch)
