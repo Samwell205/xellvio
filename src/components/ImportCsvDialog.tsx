@@ -92,6 +92,30 @@ export default function ImportCsvDialog({
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  async function createList() {
+    const name = newListName.trim();
+    if (!name) { toast.error("Name required"); return; }
+    setCreatingBusy(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from("contact_lists")
+        .insert({ account_id: acctId ?? u.user!.id, name })
+        .select("id")
+        .single();
+      if (error) throw error;
+      toast.success("List created");
+      setListId(data!.id);
+      setCreatingList(false);
+      setNewListName("");
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to create list");
+    } finally { setCreatingBusy(false); }
+  }
+
+
+
   function handleFile(f: File) {
     setResult(null); setProgress(null);
     setFile(f);
