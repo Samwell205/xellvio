@@ -97,9 +97,11 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       let messages = 0;
       let mmsCount = 0;
       const byCountry = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number; mms_count: number }>();
+      const byStatus = new Map<string, { messages: number; segments: number; telnyx_cost: number; tenant_spend: number }>();
       for (const r of rows) {
         const segs = Number(r.segments_count ?? 1);
         const cc = r.country_code ?? "??";
+        const st = r.status ?? "unknown";
         const tCost = realCarrierCost(r);
         const spend = Number(r.cost ?? 0);
         telnyxCost += tCost;
@@ -114,12 +116,32 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
         b.tenant_spend += spend;
         if (r.is_mms) b.mms_count += 1;
         byCountry.set(cc, b);
+        const s = byStatus.get(st) ?? { messages: 0, segments: 0, telnyx_cost: 0, tenant_spend: 0 };
+        s.messages += 1;
+        s.segments += segs;
+        s.telnyx_cost += tCost;
+        s.tenant_spend += spend;
+        byStatus.set(st, s);
       }
+      const byStatusOut = Array.from(byStatus.entries())
+        .map(([status, v]) => ({
+          status,
+          label: STATUS_META[status]?.label ?? status,
+          wasted: STATUS_META[status]?.wasted ?? false,
+          messages: v.messages,
+          segments: v.segments,
+          telnyx_cost: Number(v.telnyx_cost.toFixed(4)),
+          tenant_spend: Number(v.tenant_spend.toFixed(4)),
+        }))
+        .sort((a, b) => b.telnyx_cost - a.telnyx_cost);
+      const wastedCost = byStatusOut.filter((s) => s.wasted).reduce((a, s) => a + s.telnyx_cost, 0);
       return {
         messages, segments, mms_count: mmsCount,
         telnyx_cost: Number(telnyxCost.toFixed(4)),
         tenant_spend: Number(tenantSpend.toFixed(4)),
         margin: Number((tenantSpend - telnyxCost).toFixed(4)),
+        wasted_cost: Number(wastedCost.toFixed(4)),
+        by_status: byStatusOut,
         by_country: Array.from(byCountry.entries())
           .map(([country, v]) => ({ country, ...v, telnyx_cost: Number(v.telnyx_cost.toFixed(4)), tenant_spend: Number(v.tenant_spend.toFixed(4)) }))
           .sort((a, b) => b.telnyx_cost - a.telnyx_cost),
