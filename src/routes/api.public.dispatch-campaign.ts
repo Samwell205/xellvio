@@ -1146,12 +1146,13 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
           };
           const throttle = throttleForSender(sender, !!c.media_url);
-          // The tenant's allowance covers every lease slot it may occupy in this
-          // invocation, so sharding actually increases throughput instead of
-          // tripping the per-tenant cap on the second slot.
-          const tenantBudget = throttle.perTick * LEASE_SHARDS;
+          // The tenant allowance is a per-invocation total; each lease slot gets
+          // a share of it so parallel slots add throughput without exceeding the
+          // carrier-safe submission rate or claiming more than a slot can finish.
+          const slotPerTick = Math.max(20, Math.ceil(throttle.perTick / LEASE_SHARDS));
+          const slotConcurrency = Math.max(2, Math.ceil(throttle.concurrency / LEASE_SHARDS));
           const used = tenantUsed.get(c.account_id) ?? 0;
-          const perTick = Math.max(0, Math.min(throttle.perTick, tenantBudget - used));
+          const perTick = Math.max(0, Math.min(slotPerTick, throttle.perTick - used));
           if (perTick === 0) {
             return { skipped: "tenant_throttle_reached" };
           }
@@ -1160,8 +1161,9 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           tenantUsed.set(c.account_id, used + perTick);
           const r = await processCampaign(supabaseAdmin, c, rates, sender, {
             perTick,
-            concurrency: throttle.concurrency,
+            concurrency: slotConcurrency,
           });
+
           const actual = Number(r?.delivered_now ?? 0) + Number(r?.failed_now ?? 0);
           tenantUsed.set(c.account_id, used + Math.min(perTick, actual));
           return r;
