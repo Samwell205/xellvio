@@ -305,11 +305,55 @@ async function writeWithRetry(
   throw new Error(`Failed to update ${table} after ${attempts} attempts: ${lastError?.message ?? lastError}`);
 }
 
+// Buffered status writer. Recording each send with its own HTTP round-trip made
+// the per-message cost dominate throughput on large campaigns; batching a few
+// hundred results into one database call is what lets a single invocation push
+// thousands of messages instead of a few dozen.
+type StatusSink = { push: (row: Record<string, any>) => void };
+
+function createStatusSink(supabaseAdmin: any, chunk = 200): StatusSink & { drain: () => Promise<void> } {
+  let buf: Record<string, any>[] = [];
+  let inflight: Promise<void> = Promise.resolve();
+
+  const flushNow = async (rows: Record<string, any>[]) => {
+    if (rows.length === 0) return;
+    const { error } = await (supabaseAdmin as any).rpc("apply_message_status_batch", { _rows: rows });
+    if (!error) return;
+    console.error("[dispatch] batch status write failed, falling back per row", error.message);
+    for (const r of rows) {
+      const { id, ...patch } = r as any;
+      try {
+        await writeWithRetry(supabaseAdmin, "messages", patch, { id });
+      } catch (e) {
+        console.error("[dispatch] fallback status write failed", id, e);
+      }
+    }
+  };
+
+  return {
+    push(row) {
+      buf.push(row);
+      if (buf.length >= chunk) {
+        const rows = buf;
+        buf = [];
+        inflight = inflight.then(() => flushNow(rows));
+      }
+    },
+    async drain() {
+      const rows = buf;
+      buf = [];
+      await inflight;
+      await flushNow(rows);
+    },
+  };
+}
+
 async function sendOneMessage(
   supabaseAdmin: any,
   campaign: any,
   sender: Sender,
   m: any,
+  sink?: StatusSink | null,
 ): Promise<{ ok: boolean; shaft: boolean; debited: number }> {
   const { sendMessage, safeTelnyxCall } = await import("@/lib/telnyx.server");
   try {
