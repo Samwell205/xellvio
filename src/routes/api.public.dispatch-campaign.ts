@@ -13,7 +13,9 @@ const PLAN_INSERT_CHUNK = 500;
 // eligible list was enriched (segment calc, link rewriting, crypto RNG) in
 // one shot, which is what exceeded the Worker's CPU time limit for large
 // campaigns (e.g. 3,019 recipients in one request).
-const PLAN_BATCH_SIZE = 500;
+const PLAN_BATCH_SIZE = 2_000;
+// Keep at least this many queued rows ready; above it, ticks send instead of plan.
+const PLAN_BACKLOG_TARGET = 20_000;
 // Keep each dispatcher invocation small enough to always finish inside the
 // caller's HTTP timeout. If the caller (pg_cron/pg_net) hangs up mid-run the
 // serverless worker is cancelled, leaving claimed rows stuck in `sending`
@@ -205,50 +207,20 @@ async function loadNextUnplannedBatch(
   audience: any,
   batchSize: number,
 ): Promise<{ recipients: any[]; hasMore: boolean }> {
-  // IMPORTANT: page through the already-planned rows. A plain select is capped
-  // at 1000 rows by the Data API, so a campaign with >1000 planned recipients
-  // would look partly unplanned forever — every tick would "re-plan" rows that
-  // the unique constraint then ignores, `hasMore` would stay true, and delivery
-  // would be deferred forever (campaign stuck in queued/sending).
-  const planned = new Set<string>();
-  const PLANNED_PAGE = 1000;
-  for (let offset = 0; ; offset += PLANNED_PAGE) {
-    const { data: plannedRows, error: plannedErr } = await supabaseAdmin
-      .from("messages")
-      .select("profile_id")
-      .eq("campaign_id", campaignId)
-      .range(offset, offset + PLANNED_PAGE - 1);
-    if (plannedErr) throw plannedErr;
-    const rows = plannedRows ?? [];
-    for (const r of rows) if (r.profile_id) planned.add(r.profile_id);
-    if (rows.length < PLANNED_PAGE) break;
-  }
-
-
-  const PAGE = 1000;
-  const recipients: any[] = [];
-  let hasMore = false;
-  for (let offset = 0; ; offset += PAGE) {
-    const { data, error } = await supabaseAdmin.rpc("eligible_profile_ids_page", {
-      _account_id: accountId,
-      _audience: audience,
-      _limit: PAGE,
-      _offset: offset,
-    });
-    if (error) throw error;
-    const rows = data ?? [];
-    for (const r of rows) {
-      if (planned.has(r.profile_id)) continue;
-      if (recipients.length < batchSize) {
-        recipients.push(r);
-      } else {
-        hasMore = true;
-        break;
-      }
-    }
-    if (hasMore || rows.length < PAGE) break;
-  }
-  return { recipients, hasMore };
+  // One database call. The previous version paged every already-planned row
+  // (1000 at a time) and then every eligible recipient just to diff them in
+  // JavaScript — on a 100k audience that was ~130 HTTP round-trips per tick and
+  // it consumed the whole invocation budget, so no message ever got sent.
+  const { data, error } = await supabaseAdmin.rpc("unplanned_recipients_page", {
+    _campaign_id: campaignId,
+    _account_id: accountId,
+    _audience: audience,
+    _limit: batchSize,
+  });
+  if (error) throw error;
+  const rows = data ?? [];
+  const remaining = Number(rows[0]?.remaining ?? rows.length);
+  return { recipients: rows, hasMore: remaining > rows.length };
 }
 
 function isShaftLikeCode(code: string): boolean {
@@ -917,10 +889,20 @@ async function processCampaign(
     if (!begin.ok) return { planned: 0, skipped: 0, cost: 0, reason: begin.reason };
   }
 
-  const { recipients, hasMore } = await loadNextUnplannedBatch(
-    supabaseAdmin, campaign.id, campaign.account_id,
-    campaign.audience ?? { include: [], exclude: [] }, PLAN_BATCH_SIZE,
-  );
+  // Delivery has priority over planning. When a healthy backlog of queued rows
+  // already exists, spend the whole invocation sending it instead of preparing
+  // more recipients — that is what keeps a 100k campaign draining at full rate.
+  const { count: backlog } = await supabaseAdmin
+    .from("messages").select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaign.id).eq("status", "queued");
+  const shouldPlan = isFirstBatch || (backlog ?? 0) < PLAN_BACKLOG_TARGET;
+
+  const { recipients, hasMore } = shouldPlan
+    ? await loadNextUnplannedBatch(
+        supabaseAdmin, campaign.id, campaign.account_id,
+        campaign.audience ?? { include: [], exclude: [] }, PLAN_BATCH_SIZE,
+      )
+    : { recipients: [] as any[], hasMore: true };
 
   const planned = recipients.length > 0
     ? await planCampaign(supabaseAdmin, campaign, rates, recipients, isFirstBatch)
