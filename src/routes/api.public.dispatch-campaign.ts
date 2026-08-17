@@ -1007,6 +1007,28 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           }
         }
 
+        // ── Self-heal: any campaign that got marked `failed` (or `sent`) while
+        // it still has queued recipients is stranded — nothing would ever pick
+        // it up again. Put it back into the sending queue before we build the
+        // due list. Cancelled and paused campaigns are intentionally excluded.
+        try {
+          const { data: stranded } = await supabaseAdmin
+            .from("messages")
+            .select("campaign_id")
+            .eq("status", "queued")
+            .limit(5000);
+          const strandedIds = Array.from(new Set((stranded ?? []).map((r: any) => r.campaign_id))).filter(Boolean);
+          if (strandedIds.length > 0) {
+            await supabaseAdmin
+              .from("campaigns")
+              .update({ status: "sending", paused_reason: null })
+              .in("id", strandedIds)
+              .in("status", ["failed", "sent"]);
+          }
+        } catch (e: any) {
+          console.error("[dispatch] stranded-campaign revival failed", e?.message ?? e);
+        }
+
 
         const { data: due, error } = await supabaseAdmin
           .from("campaigns")
