@@ -754,7 +754,8 @@ async function planCampaign(
 }
 
 async function deliverPending(
-  supabaseAdmin: any, campaign: any, sender: Sender, limits?: { perTick: number; concurrency: number },
+  supabaseAdmin: any, campaign: any, sender: Sender,
+  limits?: { perTick: number; concurrency: number; deadlineAt?: number },
 ): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean; throttled?: boolean }> {
   const { data: fresh } = await supabaseAdmin
     .from("campaigns").select("status").eq("id", campaign.id).maybeSingle();
@@ -763,7 +764,14 @@ async function deliverPending(
   }
 
   const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
-  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick));
+  const concurrency = Math.max(1, Math.min(DELIVER_CONCURRENCY, throttle.concurrency));
+  // Never claim more than this slot can actually finish before the invocation
+  // has to return. Surplus claimed rows sit at status='sending' and later get
+  // written off as `dispatch_timeout`, which is what made reports show
+  // thousands of unexplained failures on big campaigns.
+  const msLeft = limits?.deadlineAt ? limits.deadlineAt - Date.now() : RUN_BUDGET_MS;
+  const budgetClaim = Math.floor((Math.max(0, msLeft) / EST_SEND_MS) * concurrency);
+  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick, budgetClaim));
   if (claimLimit === 0) {
     const { count: pending } = await supabaseAdmin
       .from("messages").select("id", { count: "exact", head: true })
@@ -788,11 +796,24 @@ async function deliverPending(
   }
 
   let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
-  await runWithConcurrency(rows, Math.max(1, Math.min(DELIVER_CONCURRENCY, throttle.concurrency)), async (m: any) => {
+  const unsent: string[] = [];
+  const hardDeadline = limits?.deadlineAt ?? Date.now() + RUN_BUDGET_MS;
+  await runWithConcurrency(rows, concurrency, async (m: any) => {
+    if (Date.now() >= hardDeadline) { unsent.push(m.id); return; }
     const r = await sendOneMessage(supabaseAdmin, campaign, sender, m);
     if (r.ok) { sent++; debited += r.debited; }
     else { failed++; if (r.shaft) shaftErrors++; }
   });
+
+  // Hand anything we ran out of time for back to the queue so the next tick
+  // sends it instead of the stale sweep failing it.
+  for (let i = 0; i < unsent.length; i += 200) {
+    await supabaseAdmin.from("messages")
+      .update({ status: "queued" })
+      .in("id", unsent.slice(i, i + 200))
+      .eq("status", "sending");
+  }
+
 
 
   if (shaftErrors >= 2) {
