@@ -208,6 +208,40 @@ function NewCampaignPage() {
   const countryCounts = countsQ.data ?? [];
   const audienceTotal = useMemo(() => countryCounts.reduce((a, b) => a + b.recipients, 0), [countryCounts]);
 
+  const [exportingAudience, setExportingAudience] = useState(false);
+  // Export pulls the full recipient list on demand only (paged), so building a
+  // campaign never downloads every contact up front.
+  const exportEligibleAudience = async () => {
+    setExportingAudience(true);
+    try {
+      const PAGE = 5000;
+      const rows: any[] = [];
+      for (let offset = 0; ; offset += PAGE) {
+        const { data, error } = await (supabase.rpc as any)("my_eligible_profile_ids_page", {
+          _audience: audience, _limit: PAGE, _offset: offset,
+        });
+        if (error) throw error;
+        const batch = (data as any[]) ?? [];
+        rows.push(...batch);
+        if (batch.length < PAGE) break;
+      }
+      const header = "profile_id,phone_e164,first_name,last_name,country_code\n";
+      const body = rows.map((a: any) =>
+        [a.profile_id, a.phone_e164, (a.first_name ?? "").replace(/[,"\n]/g, " "), (a.last_name ?? "").replace(/[,"\n]/g, " "), a.country_code ?? ""].join(","),
+      ).join("\n");
+      const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `eligible-audience-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not export audience");
+    } finally {
+      setExportingAudience(false);
+    }
+  };
+
   const bodyWithStop = useMemo(
     () => (s.body.toUpperCase().includes("STOP") ? s.body : s.body + STOP_LINE),
     [s.body],
@@ -685,7 +719,7 @@ function NewCampaignPage() {
               totalCost={totalCost}
               breakdown={breakdown}
               audienceCount={activeRecipientCount}
-              loading={audienceQ.isFetching || ratesQ.isFetching}
+              loading={countsQ.isFetching || ratesQ.isFetching}
             />
           </div>
         </div>
