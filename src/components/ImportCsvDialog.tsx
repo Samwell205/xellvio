@@ -163,11 +163,14 @@ export default function ImportCsvDialog({
     };
 
     await new Promise<void>((resolve, reject) => {
+      // NOTE: worker mode cannot pause/resume the parser, which silently ends
+      // the stream before any row is saved. Stream on the main thread in small
+      // chunks instead — pause/resume keeps memory flat and the UI responsive.
       Papa.parse<Record<string, string>>(file, {
-        header: true, skipEmptyLines: true, worker: true, chunkSize: 1024 * 512,
-        chunk: async (res, parser) => {
+        header: true, skipEmptyLines: true, chunkSize: 1024 * 256,
+        chunk: (res, parser) => {
           parser.pause();
-          try {
+          (async () => {
             for (const row of res.data) {
               const idx = rowIndex++;
               if (idx < resumeFrom) { processed++; continue; }
@@ -196,12 +199,13 @@ export default function ImportCsvDialog({
               });
               if (buffer.length >= BATCH_ROWS) await flush(false);
             }
-            if (cancelRef.current) { parser.abort(); resolve(); return; }
-            parser.resume();
-          } catch (e) {
-            parser.abort();
-            reject(e);
-          }
+          })().then(
+            () => {
+              if (cancelRef.current) { parser.abort(); resolve(); return; }
+              parser.resume();
+            },
+            (e) => { parser.abort(); reject(e); },
+          );
         },
         complete: () => resolve(),
         error: (e) => reject(e),
