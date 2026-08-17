@@ -258,14 +258,34 @@ export default function ImportCsvDialog({
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Add to list</Label>
-              <Select value={listId} onValueChange={setListId} disabled={busy}>
-                <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No list</SelectItem>
-                  {lists.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {creatingList ? (
+                <div className="flex items-center gap-1.5">
+                  <Input autoFocus className="w-40" placeholder="New list name" value={newListName}
+                    disabled={busy || creatingBusy}
+                    onChange={(e) => setNewListName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); createList(); } }} />
+                  <Button size="sm" onClick={createList} disabled={creatingBusy || !newListName.trim()}>
+                    {creatingBusy ? "…" : "Create"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setCreatingList(false); setNewListName(""); }}>Cancel</Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Select value={listId} onValueChange={setListId} disabled={busy}>
+                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No list</SelectItem>
+                      {lists.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" size="sm" variant="outline" disabled={busy}
+                    onClick={() => setCreatingList(true)}>
+                    <Plus className="size-4 mr-1" />New list
+                  </Button>
+                </div>
+              )}
             </div>
+
             <div className="space-y-1">
               <Label className="text-xs">Default country</Label>
               <Input className="w-24" maxLength={2} value={defaultCountry} disabled={busy}
