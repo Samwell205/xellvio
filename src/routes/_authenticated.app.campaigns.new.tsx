@@ -45,7 +45,7 @@ type State = {
   include: string[];
   exclude: string[];
   profileIds: string[];
-  _fromLists?: string[];
+  listIds: string[];
   body: string;
   mediaUrl: string;
   sendMode: "now" | "scheduled" | "smart";
@@ -94,7 +94,7 @@ function NewCampaignPage() {
   const [step, setStep] = useState<StepIdx>(0);
   const [campaignId, setCampaignId] = useState<string | null>(search.id ?? null);
   const [s, setS] = useState<State>({
-    name: "", include: [], exclude: [], profileIds: [], body: "", mediaUrl: "",
+    name: "", include: [], exclude: [], profileIds: [], listIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
     excludedCountries: [], trackLinks: true,
   });
@@ -114,6 +114,7 @@ function NewCampaignPage() {
           include: aud.include ?? [],
           exclude: aud.exclude ?? [],
           profileIds: aud.profile_ids ?? [],
+          listIds: aud.list_ids ?? [],
           body: (data.message_body ?? "").replace(STOP_LINE, ""),
           mediaUrl: data.media_url ?? "",
           sendMode: (data.send_mode as any) ?? "now",
@@ -137,37 +138,6 @@ function NewCampaignPage() {
     queryKey: ["lists-pick"],
     queryFn: async () => (await supabase.from("contact_lists").select("id,name").order("name")).data ?? [],
   });
-  const [selectedListIds, setSelectedListIds] = useState<string[]>([]);
-
-  // Expand selected contact lists into profile IDs and merge into s.profileIds
-  useQuery({
-    queryKey: ["list-members-expand", selectedListIds],
-    enabled: selectedListIds.length > 0,
-    queryFn: async () => {
-      // Page through profile_list_members so lists >1000 are fully expanded.
-      const all: string[] = [];
-      const PAGE = 1000;
-      for (let offset = 0; ; offset += PAGE) {
-        const { data, error } = await supabase
-          .from("profile_list_members")
-          .select("profile_id")
-          .in("list_id", selectedListIds)
-          .order("profile_id", { ascending: true })
-          .range(offset, offset + PAGE - 1);
-        if (error) throw error;
-        const batch = (data ?? []).map((m: any) => m.profile_id);
-        all.push(...batch);
-        if (batch.length < PAGE) break;
-      }
-      const ids = Array.from(new Set(all));
-      setS((prev) => {
-        const manual = prev.profileIds.filter((id) => !prev._fromLists?.includes(id));
-        return { ...prev, profileIds: Array.from(new Set([...manual, ...ids])), _fromLists: ids } as any;
-      });
-      return ids;
-    },
-  });
-
   const loadRates = useServerFn(getActiveCountryRatesRaw);
   const ratesQ = useQuery({
     queryKey: ["country-rates-active"],
@@ -216,36 +186,27 @@ function NewCampaignPage() {
     return m;
   }, [senderList]);
 
-  const audience = useMemo(() => ({ include: s.include, exclude: s.exclude, profile_ids: s.profileIds }), [s.include, s.exclude, s.profileIds]);
+  const audience = useMemo(
+    () => ({ include: s.include, exclude: s.exclude, profile_ids: s.profileIds, list_ids: s.listIds }),
+    [s.include, s.exclude, s.profileIds, s.listIds],
+  );
 
-  const audienceQ = useQuery({
-    queryKey: ["campaign-audience", audience],
-    enabled: s.include.length > 0 || s.profileIds.length > 0,
-    queryFn: async () => {
-      const { data: countData, error: countError } = await (supabase.rpc as any)(
-        "my_eligible_profile_count",
-        { _audience: audience },
-      );
-      if (countError) throw countError;
+  const hasAudience = s.include.length > 0 || s.profileIds.length > 0 || s.listIds.length > 0;
 
-      // Page through a backend helper with explicit offset/limit because RPC
-      // responses are capped at 1000 rows by the API gateway.
-      const total = Number(countData ?? 0);
-      const PAGE = 1000;
-      const all: any[] = [];
-      for (let offset = 0; offset < total; offset += PAGE) {
-        const { data, error } = await (supabase.rpc as any)(
-          "my_eligible_profile_ids_page",
-          { _audience: audience, _limit: PAGE, _offset: offset },
-        );
-        if (error) throw error;
-        const rows = (data as any[]) ?? [];
-        all.push(...rows);
-      }
-      return all;
+  // One aggregate round trip: recipients grouped by country. No per-contact
+  // download, so picking a 100k-row list resolves instantly.
+  const countsQ = useQuery({
+    queryKey: ["campaign-audience-counts", audience],
+    enabled: hasAudience,
+    staleTime: 30_000,
+    queryFn: async (): Promise<Array<{ country_code: string; recipients: number }>> => {
+      const { data, error } = await (supabase.rpc as any)("my_eligible_country_counts", { _audience: audience });
+      if (error) throw error;
+      return ((data as any[]) ?? []).map((r) => ({ country_code: r.country_code || "??", recipients: Number(r.recipients) }));
     },
   });
-  const audienceList = audienceQ.data ?? [];
+  const countryCounts = countsQ.data ?? [];
+  const audienceTotal = useMemo(() => countryCounts.reduce((a, b) => a + b.recipients, 0), [countryCounts]);
 
   const bodyWithStop = useMemo(
     () => (s.body.toUpperCase().includes("STOP") ? s.body : s.body + STOP_LINE),
@@ -281,27 +242,13 @@ function NewCampaignPage() {
     setS({ ...s, body: out });
   };
 
-  // Resolve country code per recipient (memoized)
-  const recipientCountries = useMemo(() => {
-    return audienceList.map((p: any) => ({
-      profile_id: p.profile_id,
-      country_code: p.country_code || countryFromPhone(p.phone_e164, rates) || "??",
-    }));
-  }, [audienceList, rates]);
-
   const excludedSet = useMemo(() => new Set(s.excludedCountries), [s.excludedCountries]);
-
-  // Profile IDs that survive country exclusion (used at launch time)
-  const includedProfileIds = useMemo(
-    () => recipientCountries.filter((r) => !excludedSet.has(r.country_code)).map((r) => r.profile_id),
-    [recipientCountries, excludedSet],
-  );
 
   // Per-country breakdown — includes ALL countries; `excluded` flag drives UI + cost skip
   const fullBreakdown = useMemo(() => {
-    if (rates.length === 0 || recipientCountries.length === 0) return [];
+    if (rates.length === 0 || countryCounts.length === 0) return [];
     const counts: Record<string, number> = {};
-    for (const p of recipientCountries) counts[p.country_code] = (counts[p.country_code] ?? 0) + 1;
+    for (const c of countryCounts) counts[c.country_code] = (counts[c.country_code] ?? 0) + c.recipients;
     const hasMedia = !!s.mediaUrl;
     // MMS (US/CA) = one billable message with an attachment, priced at
     // rate x MMS multiplier — never multiplied by SMS segments. Elsewhere the
@@ -326,7 +273,7 @@ function NewCampaignPage() {
       };
     }).sort((a, b) => b.subtotal - a.subtotal);
 
-  }, [recipientCountries, rates, seg.segments, s.mediaUrl, excludedSet]);
+  }, [countryCounts, rates, seg.segments, s.mediaUrl, excludedSet]);
 
   // Active rows = countries actually being sent to
   const breakdown = useMemo(() => fullBreakdown.filter((b) => !b.excluded), [fullBreakdown]);
@@ -412,7 +359,7 @@ function NewCampaignPage() {
 
 
   const canNext = (() => {
-    if (step === 0) return s.name.trim().length > 0 && (s.include.length > 0 || s.profileIds.length > 0);
+    if (step === 0) return s.name.trim().length > 0 && hasAudience;
     if (step === 1) return s.body.trim().length > 0 && !insufficient;
     if (step === 2) return s.sendMode !== "scheduled" || !!s.scheduleAt;
     if (step === 3) return s.testSent || testLimitReached;
@@ -427,12 +374,10 @@ function NewCampaignPage() {
     const launching = targetStatus === "queued" || targetStatus === "scheduled";
     // On launch, if the user excluded any country, narrow to explicit profile IDs
     // so the dispatcher only sends to recipients in the kept countries.
+    // Country exclusions are applied server-side by eligible_profile_ids, so the
+    // audience stays compact (list ids / segment ids) even for huge lists.
     const audiencePayload: any = { ...audience, excluded_countries: s.excludedCountries };
-    if (launching && s.excludedCountries.length > 0 && recipientCountries.length > 0) {
-      audiencePayload.include = [];
-      audiencePayload.exclude = [];
-      audiencePayload.profile_ids = includedProfileIds;
-    }
+    void launching;
     const payload: any = {
       account_id: u.user!.id,
       name: s.name.trim(),
@@ -579,8 +524,8 @@ function NewCampaignPage() {
           </div>
           <ListPicker
             lists={listsQ.data ?? []}
-            selected={selectedListIds}
-            onChange={setSelectedListIds}
+            selected={s.listIds}
+            onChange={(ids) => setS((prev) => ({ ...prev, listIds: ids }))}
           />
           <SegmentPicker
             title="Include segments"
@@ -594,32 +539,22 @@ function NewCampaignPage() {
               <div className="size-10 rounded-lg bg-primary/15 text-primary grid place-items-center"><Users className="size-5" /></div>
               <div>
                 <div className="text-xs uppercase text-muted-foreground tracking-wide">Eligible audience</div>
-                <div className="text-2xl font-extrabold">{(s.include.length === 0 && s.profileIds.length === 0) ? "—" : (audienceQ.isFetching ? "…" : audienceList.length)}</div>
+                <div className="text-2xl font-extrabold">{!hasAudience ? "—" : (countsQ.isFetching ? "…" : audienceTotal.toLocaleString())}</div>
                 <div className="text-xs text-muted-foreground">subscribed, not on suppression list</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {audienceList.length > 0 && (
+              {audienceTotal > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    const header = "profile_id,phone_e164,first_name,last_name,country_code\n";
-                    const body = audienceList.map((a: any) =>
-                      [a.profile_id, a.phone_e164, (a.first_name ?? "").replace(/[,"\n]/g, " "), (a.last_name ?? "").replace(/[,"\n]/g, " "), a.country_code ?? ""].join(","),
-                    ).join("\n");
-                    const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url; a.download = `eligible-audience-${new Date().toISOString().slice(0, 10)}.csv`;
-                    document.body.appendChild(a); a.click(); a.remove();
-                    URL.revokeObjectURL(url);
-                  }}
+                  disabled={exportingAudience}
+                  onClick={exportEligibleAudience}
                 >
-                  <Send className="size-4 mr-1.5 rotate-90" />Export CSV
+                  <Send className="size-4 mr-1.5 rotate-90" />{exportingAudience ? "Preparing…" : "Export CSV"}
                 </Button>
               )}
-              {s.include.length === 0 && s.profileIds.length === 0 && <span className="text-xs text-muted-foreground">Pick contacts above to see the eligible audience.</span>}
+              {!hasAudience && <span className="text-xs text-muted-foreground">Pick contacts above to see the eligible audience.</span>}
             </div>
           </Card>
         </Card>
@@ -836,7 +771,7 @@ function NewCampaignPage() {
         <Card className="p-5 space-y-4">
           <div className="grid md:grid-cols-2 gap-4 text-sm">
             <ReviewItem label="Name" value={s.name} />
-            <ReviewItem label="Eligible audience" value={s.excludedCountries.length > 0 ? `${activeRecipientCount} (of ${audienceList.length}; ${s.excludedCountries.length} country skipped)` : String(audienceList.length)} />
+            <ReviewItem label="Eligible audience" value={s.excludedCountries.length > 0 ? `${activeRecipientCount} (of ${audienceTotal}; ${s.excludedCountries.length} country skipped)` : String(audienceTotal)} />
             <ReviewItem label="Send mode" value={s.sendMode} />
             <ReviewItem label="Schedule" value={s.sendMode === "scheduled" ? new Date(s.scheduleAt).toLocaleString() : "—"} />
             <ReviewItem label="Segments / message" value={`${seg.segments} × ${seg.encoding}`} />

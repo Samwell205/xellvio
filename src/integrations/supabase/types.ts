@@ -3192,6 +3192,13 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      eligible_country_counts: {
+        Args: { _account_id: string; _audience: Json }
+        Returns: {
+          country_code: string
+          recipients: number
+        }[]
+      }
       eligible_profile_ids: {
         Args: { _account_id: string; _audience: Json }
         Returns: {
@@ -3258,6 +3265,13 @@ export type Database = {
           source_queue: string
         }
         Returns: number
+      }
+      my_eligible_country_counts: {
+        Args: { _audience: Json }
+        Returns: {
+          country_code: string
+          recipients: number
+        }[]
       }
       my_eligible_profile_count: { Args: { _audience: Json }; Returns: number }
       my_eligible_profile_ids: {
