@@ -142,6 +142,10 @@ function NewCampaignPage() {
   const ratesQ = useQuery({
     queryKey: ["country-rates-active"],
     queryFn: () => loadRates(),
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
   const rates = ratesQ.data ?? [];
 
@@ -198,7 +202,11 @@ function NewCampaignPage() {
   const countsQ = useQuery({
     queryKey: ["campaign-audience-counts", audience],
     enabled: hasAudience,
-    staleTime: 30_000,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    retry: 1,
+    placeholderData: (prev) => prev,
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<Array<{ country_code: string; recipients: number }>> => {
       const { data, error } = await (supabase.rpc as any)("my_eligible_country_counts", { _audience: audience });
       if (error) throw error;
@@ -719,7 +727,8 @@ function NewCampaignPage() {
               totalCost={totalCost}
               breakdown={breakdown}
               audienceCount={activeRecipientCount}
-              loading={countsQ.isFetching || ratesQ.isFetching}
+              loading={hasAudience && countryCounts.length === 0 && (countsQ.isPending || countsQ.isFetching || ratesQ.isPending)}
+              error={countsQ.isError ? ((countsQ.error as any)?.message ?? "Could not calculate cost") : null}
             />
           </div>
         </div>
@@ -881,10 +890,10 @@ function NewCampaignPage() {
   );
 }
 
-function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, audienceCount, loading }: {
+function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, audienceCount, loading, error }: {
   insufficient: boolean; balance: number; balanceAfter: number; totalCost: number;
   breakdown: Array<{ country_code: string; country_name: string; recipients: number; unit: number; mult: number; segments: number; subtotal: number; priced: boolean }>;
-  audienceCount: number; loading: boolean;
+  audienceCount: number; loading: boolean; error?: string | null;
 }) {
   return (
     <Card className="p-5 space-y-4 self-start sticky top-4">
@@ -923,7 +932,9 @@ function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, 
 
       <div>
         <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">By country ({audienceCount} recipients)</div>
-        {loading ? (
+        {error ? (
+          <div className="text-xs text-destructive">{error}</div>
+        ) : loading ? (
           <div className="text-xs text-muted-foreground">Calculating…</div>
         ) : breakdown.length === 0 ? (
           <div className="text-xs text-muted-foreground">Pick an audience in step 1 to see per-country pricing.</div>
