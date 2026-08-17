@@ -566,10 +566,11 @@ async function beginCampaignIfNeeded(
   // bounded planner page is enough to prove that the audience is non-empty;
   // subsequent pages keep planning resumably across ticks.
   if (firstBatchRecipients === 0) {
-    await supabaseAdmin.from("campaigns")
-      .update({ status: "failed", paused_reason: "No eligible recipients — the selected audience was empty after exclusions" })
-      .eq("id", campaign.id);
-    return { ok: false, reason: "no_eligible_recipients" };
+    // Multiple lease shards can all observe `existing = 0` before the first
+    // shard commits its inserts. A later shard may then receive an empty page
+    // because those recipients have just been claimed by its sibling. Do not
+    // turn that harmless race (or a deferred lookup) into a permanent failure.
+    return { ok: false, reason: "planning_deferred" };
   }
 
   // ── Full compliance screening once per campaign (all body-scoped checks +
@@ -933,6 +934,7 @@ async function processCampaign(
   // out, keep sending the rows that are already queued.
   let recipients: any[] = [];
   let hasMore = true;
+  let planningLookupSucceeded = !shouldPlan;
   if (shouldPlan) {
     try {
       const page = await loadNextUnplannedBatch(
@@ -941,12 +943,16 @@ async function processCampaign(
       );
       recipients = page.recipients;
       hasMore = page.hasMore;
+      planningLookupSucceeded = true;
     } catch (e: any) {
       console.error("[dispatch] planning lookup failed, delivering queued rows instead", e?.message ?? e);
     }
   }
 
   if (isFirstBatch) {
+    if (!planningLookupSucceeded) {
+      return { planned: 0, skipped: 0, cost: 0, reason: "planning_deferred" };
+    }
     const begin = await beginCampaignIfNeeded(supabaseAdmin, campaign, recipients.length);
     if (!begin.ok) return { planned: 0, skipped: 0, cost: 0, reason: begin.reason };
   }
@@ -965,6 +971,16 @@ async function processCampaign(
   // recipient pages are still being planned. Large campaigns therefore begin
   // immediately instead of showing zero progress for several cron intervals.
   const delivered = await deliverPending(supabaseAdmin, campaign, sender, limits);
+  if (hasMore) {
+    // deliverPending only sees rows that have already been planned. It must not
+    // finalize the campaign while later audience pages still need planning.
+    await supabaseAdmin.from("campaigns")
+      .update({ status: "sending", paused_reason: null })
+      .eq("id", campaign.id)
+      .neq("status", "paused")
+      .neq("status", "cancelled")
+      .neq("status", "blocked_content");
+  }
   return {
     ...planned,
     planning_remaining: hasMore,
