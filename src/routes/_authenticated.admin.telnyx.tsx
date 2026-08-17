@@ -86,8 +86,14 @@ function AdminTelnyxPage() {
         </div>
       </Card>
 
+      <WalletBreakdown
+        liveBalance={bal.data?.ok ? Number(bal.data.balance) : null}
+        impliedSpend={spend.data?.implied_spend_from_snapshots ?? null}
+        window={spend.data?.windows.last_30d}
+        rateRef={spend.data?.rate_ref}
+      />
+
       <Card className="p-5">
-        <h3 className="font-semibold mb-3">Spend by country (last 30 days)</h3>
         <div className="border rounded-md overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-muted-foreground text-xs uppercase">
