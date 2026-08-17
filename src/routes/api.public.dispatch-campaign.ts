@@ -1245,12 +1245,14 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           const sinceIso = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
           const { data: recentDone } = await supabaseAdmin
             .from("campaigns")
-            .select("id, account_id, audience, updated_at")
+            .select("id, account_id, audience, updated_at, paused_reason")
             .eq("status", "sent")
             .gte("updated_at", sinceIso)
             .order("updated_at", { ascending: false })
             .limit(10);
           for (const c of recentDone ?? []) {
+            // User-stopped campaigns are final — never plan more recipients.
+            if (c.paused_reason === STOPPED_AS_SENT) continue;
             if (await hasUnplannedRecipients(supabaseAdmin, c)) {
               await supabaseAdmin
                 .from("campaigns")
