@@ -27,7 +27,7 @@ const PLAN_BATCH_SIZE = 500;
 // without increasing per-process database connection pressure.
 // Total messages one campaign may claim per invocation, spread across its
 // lease slots (see LEASE_SHARDS). Each slot claims a fraction of this.
-const DELIVER_PER_WORKER = 1_500;
+const DELIVER_PER_WORKER = 6_000;
 // Total in-flight sends per campaign per invocation, also split across lease
 // slots. Kept moderate on purpose: this project's Postgres tier caps out at 60
 // connections and steady-state background usage already holds ~25, so stacking
@@ -37,23 +37,23 @@ const DELIVER_PER_WORKER = 1_500;
 // The previous limit of 36 only used a fraction of the verified toll-free
 // throughput and made large queues take hours; 84 still leaves headroom for
 // web traffic and delivery-receipt writes on the current backend tier.
-const DELIVER_CONCURRENCY = 84;
+const DELIVER_CONCURRENCY = 300;
 
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
 // Observed average end-to-end time for one message (carrier submit + status
 // writes). Used to size each slot's claim to the time actually left.
-const EST_SEND_MS = 4_500;
+const EST_SEND_MS = 1_100;
 
 // How many workers may send for the SAME campaign at once. Message claiming is
 // atomic (SELECT ... FOR UPDATE SKIP LOCKED), so parallel senders can never
 // pick up the same recipient twice. Without this a single campaign was limited
 // to one sender at a time, which is what made 100k sends take hours.
-const LEASE_SHARDS = 6;
+const LEASE_SHARDS = 12;
 // How many send slots run concurrently inside one invocation (across all
 // campaigns and lease shards).
-const CAMPAIGN_CONCURRENCY = 6;
+const CAMPAIGN_CONCURRENCY = 12;
 // Sentinel used when the lock helper is unavailable and we send unguarded.
 const UNGUARDED_LEASE = "__unguarded__";
 
@@ -74,13 +74,13 @@ const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> 
   // the run budget. Claiming more than a slot can finish leaves the surplus
   // stuck in `sending` until the stale sweep writes it off as
   // `dispatch_timeout` — which is why big campaigns showed hundreds of them.
-  toll_free: { perTick: 1_500, concurrency: 84 },
-  ten_dlc: { perTick: 900, concurrency: 36 },
-  short_code: { perTick: 1_500, concurrency: 84 },
-  shared_toll_free: { perTick: 450, concurrency: 18 },
+  toll_free: { perTick: 6_000, concurrency: 300 },
+  ten_dlc: { perTick: 3_000, concurrency: 120 },
+  short_code: { perTick: 6_000, concurrency: 300 },
+  shared_toll_free: { perTick: 1_200, concurrency: 48 },
   personal: { perTick: 120, concurrency: 4 },
 };
-const TENANT_THROTTLE_DEFAULT = { perTick: 300, concurrency: 12 };
+const TENANT_THROTTLE_DEFAULT = { perTick: 900, concurrency: 36 };
 
 
 // Picture messages (MMS) are far more aggressively filtered than plain SMS.
@@ -448,8 +448,9 @@ async function sendOneMessage(
       failure_reason: null,
     });
     try {
-      if (sink) throw new Error("skip-audit-under-batching");
-      await writeWithRetry(supabaseAdmin, "message_send_attempts", {
+      // Audit rows are skipped while batching — the messages table stays the
+      // source of truth and the extra round-trip would halve throughput.
+      if (!sink) await writeWithRetry(supabaseAdmin, "message_send_attempts", {
         provider_message_id: result.id,
         provider_status: "sent",
         sent_at: new Date().toISOString(),
@@ -540,8 +541,9 @@ async function sendOneMessage(
       console.error("[dispatch] FAILED to record message failure — row will be swept as dispatch_timeout", m.id, writeErr);
     }
     try {
-      if (sink) throw new Error("skip-audit-under-batching");
-      await writeWithRetry(supabaseAdmin, "message_send_attempts", {
+      // Audit rows are skipped while batching — the messages table stays the
+      // source of truth and the extra round-trip would halve throughput.
+      if (!sink) await writeWithRetry(supabaseAdmin, "message_send_attempts", {
         provider_status: "failed",
         error_code: code || "exception",
         failure_reason: String(reason).slice(0, 500),
@@ -863,12 +865,17 @@ async function deliverPending(
   let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
   const unsent: string[] = [];
   const hardDeadline = limits?.deadlineAt ?? Date.now() + RUN_BUDGET_MS;
+  const sink = createStatusSink(supabaseAdmin);
   await runWithConcurrency(rows, concurrency, async (m: any) => {
     if (Date.now() >= hardDeadline) { unsent.push(m.id); return; }
-    const r = await sendOneMessage(supabaseAdmin, campaign, sender, m);
+    const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
     if (r.ok) { sent++; debited += r.debited; }
     else { failed++; if (r.shaft) shaftErrors++; }
   });
+  // Every accepted/failed result must be persisted before this invocation
+  // returns, otherwise the stale sweep would write successful sends off as
+  // dispatch timeouts.
+  await sink.drain();
 
   // Hand anything we ran out of time for back to the queue so the next tick
   // sends it instead of the stale sweep failing it.
