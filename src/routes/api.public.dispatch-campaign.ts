@@ -550,7 +550,7 @@ async function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) =>
  * getting inserted after this step passes.
  */
 async function beginCampaignIfNeeded(
-  supabaseAdmin: any, campaign: any,
+  supabaseAdmin: any, campaign: any, firstBatchRecipients: number,
 ): Promise<{ ok: true } | { ok: false; reason?: string }> {
   // ── Legacy fast keyword scan (kept for backwards compat with the badge).
   const preScan = keywordScan(campaign.message_body ?? "");
@@ -561,23 +561,16 @@ async function beginCampaignIfNeeded(
     return { ok: false, reason: "blocked_content" };
   }
 
-  // Only the SIZE of the audience is needed here, so aggregate it in the
-  // database. Pulling every recipient row (100k+) into this worker just to
-  // read `.length` blew the statement timeout and stranded whole campaigns
-  // before a single message row existed.
-  const audience = campaign.audience ?? { include: [], exclude: [] };
-  let eligibleCount = 0;
-  const { data: ccRows, error: ccErr } = await supabaseAdmin.rpc("eligible_country_counts", {
-    _account_id: campaign.account_id,
-    _audience: audience,
-  });
-  if (ccErr) throw new Error(`Audience count failed: ${ccErr.message}`);
-  for (const row of ccRows ?? []) eligibleCount += Number((row as any).recipients ?? 0);
-  if (eligibleCount === 0) {
-    await supabaseAdmin.from("campaigns")
-      .update({ status: "failed", paused_reason: "No eligible recipients — the selected audience was empty after exclusions" })
-      .eq("id", campaign.id);
-    return { ok: false, reason: "no_eligible_recipients" };
+  // Do not count the complete audience here. A 100k+ list can exceed the
+  // database statement timeout before the first message row is created. The
+  // bounded planner page is enough to prove that the audience is non-empty;
+  // subsequent pages keep planning resumably across ticks.
+  if (firstBatchRecipients === 0) {
+    // Multiple lease shards can all observe `existing = 0` before the first
+    // shard commits its inserts. A later shard may then receive an empty page
+    // because those recipients have just been claimed by its sibling. Do not
+    // turn that harmless race (or a deferred lookup) into a permanent failure.
+    return { ok: false, reason: "planning_deferred" };
   }
 
   // ── Full compliance screening once per campaign (all body-scoped checks +
@@ -586,7 +579,7 @@ async function beginCampaignIfNeeded(
   const { screenMessageContent } = await import("@/lib/content-screening.server");
   const screen = await screenMessageContent(campaign.message_body ?? "", campaign.account_id, {
     campaignId: campaign.id,
-    plannedRecipients: eligibleCount,
+    plannedRecipients: firstBatchRecipients,
     context: "campaign_plan",
   });
   if (screen.action === "blocked") {
@@ -929,11 +922,6 @@ async function processCampaign(
     .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
   const isFirstBatch = (existing ?? 0) === 0;
 
-  if (isFirstBatch) {
-    const begin = await beginCampaignIfNeeded(supabaseAdmin, campaign);
-    if (!begin.ok) return { planned: 0, skipped: 0, cost: 0, reason: begin.reason };
-  }
-
   // Delivery has priority over planning. When a healthy backlog of queued rows
   // already exists, spend the whole invocation sending it instead of preparing
   // more recipients — that is what keeps a 100k campaign draining at full rate.
@@ -946,6 +934,7 @@ async function processCampaign(
   // out, keep sending the rows that are already queued.
   let recipients: any[] = [];
   let hasMore = true;
+  let planningLookupSucceeded = !shouldPlan;
   if (shouldPlan) {
     try {
       const page = await loadNextUnplannedBatch(
@@ -954,9 +943,18 @@ async function processCampaign(
       );
       recipients = page.recipients;
       hasMore = page.hasMore;
+      planningLookupSucceeded = true;
     } catch (e: any) {
       console.error("[dispatch] planning lookup failed, delivering queued rows instead", e?.message ?? e);
     }
+  }
+
+  if (isFirstBatch) {
+    if (!planningLookupSucceeded) {
+      return { planned: 0, skipped: 0, cost: 0, reason: "planning_deferred" };
+    }
+    const begin = await beginCampaignIfNeeded(supabaseAdmin, campaign, recipients.length);
+    if (!begin.ok) return { planned: 0, skipped: 0, cost: 0, reason: begin.reason };
   }
 
   const planned = recipients.length > 0
@@ -973,6 +971,16 @@ async function processCampaign(
   // recipient pages are still being planned. Large campaigns therefore begin
   // immediately instead of showing zero progress for several cron intervals.
   const delivered = await deliverPending(supabaseAdmin, campaign, sender, limits);
+  if (hasMore) {
+    // deliverPending only sees rows that have already been planned. It must not
+    // finalize the campaign while later audience pages still need planning.
+    await supabaseAdmin.from("campaigns")
+      .update({ status: "sending", paused_reason: null })
+      .eq("id", campaign.id)
+      .neq("status", "paused")
+      .neq("status", "cancelled")
+      .neq("status", "blocked_content");
+  }
   return {
     ...planned,
     planning_remaining: hasMore,
