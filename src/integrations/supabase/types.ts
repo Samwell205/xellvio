@@ -704,6 +704,72 @@ export type Database = {
           },
         ]
       }
+      contact_import_jobs: {
+        Row: {
+          account_id: string
+          created_at: string
+          duplicate_count: number
+          file_name: string
+          file_size: number | null
+          id: string
+          inserted_count: number
+          invalid_count: number
+          list_id: string | null
+          mapping: Json
+          processed_rows: number
+          status: string
+          total_rows: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          duplicate_count?: number
+          file_name: string
+          file_size?: number | null
+          id?: string
+          inserted_count?: number
+          invalid_count?: number
+          list_id?: string | null
+          mapping?: Json
+          processed_rows?: number
+          status?: string
+          total_rows?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          duplicate_count?: number
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          inserted_count?: number
+          invalid_count?: number
+          list_id?: string | null
+          mapping?: Json
+          processed_rows?: number
+          status?: string
+          total_rows?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_import_jobs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_import_jobs_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "contact_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_lists: {
         Row: {
           account_id: string
@@ -3056,6 +3122,12 @@ export type Database = {
           mms_count: number
           segments: number
           true_cost: number
+        }[]
+      }
+      bulk_import_profiles: {
+        Args: { _account_id: string; _list_id: string; _rows: Json }
+        Returns: {
+          upserted: number
         }[]
       }
       campaign_report_summary: { Args: { _campaign_id: string }; Returns: Json }
