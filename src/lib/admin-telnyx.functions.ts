@@ -222,7 +222,7 @@ export const getTelnyxSpendOverview = createServerFn({ method: "GET" })
       ? Number(firstSnap.balance) - Number(latestSnap.balance) : null;
 
     // Per-segment rate reference, so the UI can show the math (segments × rate)
-    const usRate = rates?.find((r) => r.country_code === "US");
+    const usRate = rates?.find((r: any) => r.country_code === "US");
     const rateRef = usRate
       ? {
           country: "US",
@@ -352,7 +352,7 @@ export const getTelnyxTenantSpend = createServerFn({ method: "GET" })
       }))
       .sort((a, b) => b.telnyx_cost - a.telnyx_cost);
 
-    const usRate = rates?.find((r) => r.country_code === "US");
+    const usRate = rates?.find((r: any) => r.country_code === "US");
     const rateRef = usRate
       ? {
           country: "US",
