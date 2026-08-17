@@ -164,8 +164,17 @@ function AdminTelnyxPage() {
         </div>
       </Card>
 
+      <TenantDrilldown
+        accounts={accounts.data ?? []}
+        accountsLoading={accounts.isLoading}
+        selectedId={tenantId}
+        onSelect={setTenantId}
+        data={tenantSpend.data}
+        loading={tenantSpend.isLoading && !!tenantId}
+        rateRef={spend.data?.rate_ref}
+      />
+
       <Card className="p-5 space-y-2">
-        <h3 className="font-semibold">Where to double-check on Telnyx</h3>
         <ul className="text-sm space-y-1 list-disc pl-5 text-muted-foreground">
           <li><a className="underline text-primary" href="https://portal.telnyx.com/#/app/billing/transactions" target="_blank" rel="noreferrer">Billing → Transactions</a> — every top-up and every debit line item.</li>
           <li><a className="underline text-primary" href="https://portal.telnyx.com/#/app/reporting/messaging" target="_blank" rel="noreferrer">Reporting → Messaging</a> — per-message MDRs with cost and destination.</li>
