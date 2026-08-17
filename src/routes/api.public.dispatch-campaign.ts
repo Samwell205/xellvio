@@ -838,7 +838,7 @@ async function deliverPending(
 
 async function processCampaign(
   supabaseAdmin: any, campaign: any, rates: Rate[], sender: Sender,
-  limits?: { perTick: number; concurrency: number },
+  limits?: { perTick: number; concurrency: number; deadlineAt?: number },
 ): Promise<any> {
   const { count: existing } = await supabaseAdmin
     .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
