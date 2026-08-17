@@ -81,9 +81,20 @@ const TENANT_THROTTLE_DEFAULT = { perTick: 300, concurrency: 12 };
 // regardless of sender kind.
 const MMS_THROTTLE = { perTick: 120, concurrency: 4 };
 
+// Order from most to least throughput. A tenant usually holds several sender
+// assets (one per country), so picking "the first asset that has a kind" used
+// to hand a verified toll-free tenant the slow default allowance whenever an
+// alphabetically earlier country used a sender ID. Use the fastest kind the
+// tenant actually holds instead.
+const THROTTLE_KIND_PRIORITY = ["toll_free", "short_code", "ten_dlc", "shared_toll_free", "personal"];
+
 function throttleForSender(sender: Sender, isMms = false) {
-  const kind = (sender.assets.find((a) => a.sender_kind)?.sender_kind ?? "").toLowerCase();
+  const kinds = new Set(
+    sender.assets.map((a) => (a.sender_kind ?? "").toLowerCase()).filter(Boolean),
+  );
+  const kind = THROTTLE_KIND_PRIORITY.find((k) => kinds.has(k)) ?? "";
   const base = TENANT_THROTTLE[kind] ?? TENANT_THROTTLE_DEFAULT;
+
   const capped = isMms
     ? { perTick: Math.min(base.perTick, MMS_THROTTLE.perTick), concurrency: Math.min(base.concurrency, MMS_THROTTLE.concurrency) }
     : base;
