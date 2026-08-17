@@ -729,9 +729,15 @@ function NewCampaignPage() {
                       className="w-full max-h-64 rounded-lg object-cover border"
                     />
                   )}
-                  {bodyWithStop ? renderPreviewWithLinks(bodyWithStop) : <span className="text-muted-foreground">Your message will appear here…</span>}
+                  {previewBody ? renderPreviewWithLinks(previewBody) : <span className="text-muted-foreground">Your message will appear here…</span>}
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                {s.trackLinks
+                  ? "Exactly how your contact sees it — links are shortened on send (codes shown here are examples)."
+                  : "Exactly how your contact sees it — links are sent as typed."}
+              </p>
+
             </div>
           </Card>
 
