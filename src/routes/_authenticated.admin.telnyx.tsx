@@ -19,9 +19,19 @@ export const Route = createFileRoute("/_authenticated/admin/telnyx")({
 function AdminTelnyxPage() {
   const spendFn = useServerFn(getTelnyxSpendOverview);
   const balFn = useServerFn(getTelnyxLiveBalance);
+  const tenantSpendFn = useServerFn(getTelnyxTenantSpend);
+  const accountsFn = useServerFn(adminListAccountsLite);
 
   const spend = useQuery({ queryKey: ["admin-telnyx-spend"], queryFn: () => spendFn(), refetchInterval: 60_000 });
   const bal = useQuery({ queryKey: ["admin-telnyx-live"], queryFn: () => balFn(), refetchInterval: 60_000 });
+  const accounts = useQuery({ queryKey: ["admin-accounts-lite"], queryFn: () => accountsFn() });
+
+  const [tenantId, setTenantId] = useState<string>("");
+  const tenantSpend = useQuery({
+    queryKey: ["admin-telnyx-tenant-spend", tenantId],
+    queryFn: () => tenantSpendFn({ data: { accountId: tenantId } }),
+    enabled: !!tenantId,
+  });
 
   return (
     <div className="space-y-6 max-w-7xl">
