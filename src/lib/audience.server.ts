@@ -13,6 +13,15 @@ export type AudienceProfileRow = {
 
 export type AudienceContactList = { id: string; name: string; description: string | null };
 
+export type CampaignAudience = {
+  include: string[];
+  exclude: string[];
+  profile_ids: string[];
+  list_ids: string[];
+};
+
+export type AudienceCountryCount = { country_code: string; recipients: number };
+
 async function getAudienceAccountId(userId: string) {
   const acting = await resolveActingAccount(userId);
   assertPermission(acting, "audience");
@@ -68,6 +77,23 @@ export async function getAudienceListCountsForUser(userId: string) {
     out[list.id] = count ?? 0;
   }));
   return out;
+}
+
+export async function getCampaignAudienceCountryCountsForUser(
+  userId: string,
+  audience: CampaignAudience,
+): Promise<AudienceCountryCount[]> {
+  const accountId = await getAudienceAccountId(userId);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await (supabaseAdmin.rpc as any)("eligible_country_counts", {
+    _account_id: accountId,
+    _audience: audience,
+  });
+  if (error) throw error;
+  return ((data ?? []) as Array<{ country_code: string | null; recipients: number | string }>).map((row) => ({
+    country_code: row.country_code || "??",
+    recipients: Number(row.recipients),
+  }));
 }
 
 export async function listAudienceProfilesForUser(userId: string, listId: string | null): Promise<AudienceProfileRow[]> {
