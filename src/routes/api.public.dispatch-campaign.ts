@@ -38,6 +38,10 @@ const DELIVER_CONCURRENCY = 36;
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
 const RUN_BUDGET_MS = 40_000;
+// Observed average end-to-end time for one message (carrier submit + status
+// writes). Used to size each slot's claim to the time actually left.
+const EST_SEND_MS = 4_500;
+
 // How many workers may send for the SAME campaign at once. Message claiming is
 // atomic (SELECT ... FOR UPDATE SKIP LOCKED), so parallel senders can never
 // pick up the same recipient twice. Without this a single campaign was limited
