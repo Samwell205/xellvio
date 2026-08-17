@@ -13,8 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Download, Upload, Zap, RotateCcw } from "lucide-react";
+import { AlertTriangle, Download, Upload, Zap, RotateCcw, Plus } from "lucide-react";
 import { normalizePhone } from "@/lib/phone-normalize";
+import { supabase } from "@/integrations/supabase/client";
+import { useAccountId } from "@/hooks/useAccountId";
 import {
   startImportJob, importProfilesBatch, finishImportJob, getActiveImportJob,
   type ImportJob, type ImportRow,
@@ -52,6 +54,7 @@ export default function ImportCsvDialog({
   lists, onDone, onDownloadTemplate,
 }: { lists: ContactList[]; onDone: () => void; onDownloadTemplate: () => void }) {
   const qc = useQueryClient();
+  const acctId = useAccountId();
   const startJob = useServerFn(startImportJob);
   const importBatch = useServerFn(importProfilesBatch);
   const finishJob = useServerFn(finishImportJob);
