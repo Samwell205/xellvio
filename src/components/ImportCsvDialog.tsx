@@ -163,11 +163,14 @@ export default function ImportCsvDialog({
     };
 
     await new Promise<void>((resolve, reject) => {
+      // NOTE: worker mode cannot pause/resume the parser, which silently ends
+      // the stream before any row is saved. Stream on the main thread in small
+      // chunks instead — pause/resume keeps memory flat and the UI responsive.
       Papa.parse<Record<string, string>>(file, {
-        header: true, skipEmptyLines: true, worker: true, chunkSize: 1024 * 512,
-        chunk: async (res, parser) => {
+        header: true, skipEmptyLines: true, chunkSize: 1024 * 256,
+        chunk: (res, parser) => {
           parser.pause();
-          try {
+          (async () => {
             for (const row of res.data) {
               const idx = rowIndex++;
               if (idx < resumeFrom) { processed++; continue; }
@@ -196,12 +199,13 @@ export default function ImportCsvDialog({
               });
               if (buffer.length >= BATCH_ROWS) await flush(false);
             }
-            if (cancelRef.current) { parser.abort(); resolve(); return; }
-            parser.resume();
-          } catch (e) {
-            parser.abort();
-            reject(e);
-          }
+          })().then(
+            () => {
+              if (cancelRef.current) { parser.abort(); resolve(); return; }
+              parser.resume();
+            },
+            (e) => { parser.abort(); reject(e); },
+          );
         },
         complete: () => resolve(),
         error: (e) => reject(e),
@@ -219,7 +223,14 @@ export default function ImportCsvDialog({
     setResult({ inserted, invalid, duplicates: dupes, errors });
     qc.invalidateQueries({ queryKey: ["audience-profiles"] });
     onDone();
-    if (!cancelRef.current) toast.success(`Imported ${fmtInt(inserted)} contacts`);
+    if (cancelRef.current) return;
+    if (processed === 0) {
+      toast.error("No rows were read from the file — check the CSV has a header row and data.");
+    } else if (inserted === 0) {
+      toast.error(`Nothing saved: ${fmtInt(invalid)} invalid, ${fmtInt(dupes)} duplicate rows. Check the phone column mapping.`);
+    } else {
+      toast.success(`Imported ${fmtInt(inserted)} contacts`);
+    }
   }
 
   const selectableRows = useMemo(() => sample.length - excludedRows.size, [sample, excludedRows]);
