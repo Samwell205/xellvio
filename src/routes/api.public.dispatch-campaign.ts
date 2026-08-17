@@ -1028,7 +1028,22 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         for (const c of due ?? []) {
 
           if (budgetLeft() < 5_000) { deferred += 1; continue; }
+          // One lease per campaign: another in-flight tick may already be
+          // sending this campaign, but other campaigns stay free to run in
+          // parallel. Self-heals after 2 minutes if a worker was cancelled.
+          const lockName = `campaign:${c.id}`;
+          const { data: gotLock, error: lockError } = await (supabaseAdmin as any).rpc(
+            "try_acquire_dispatch_lock",
+            { _name: lockName },
+          );
+          if (lockError) {
+            console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
+          } else if (!gotLock) {
+            results.push({ id: c.id, skipped: "campaign_already_dispatching" });
+            continue;
+          }
           try {
+
 
             const { data: acct } = await supabaseAdmin
               .from("accounts")
