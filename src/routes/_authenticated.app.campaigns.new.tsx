@@ -257,7 +257,21 @@ function NewCampaignPage() {
     () => (s.body.toUpperCase().includes("STOP") ? s.body : s.body + STOP_LINE),
     [s.body],
   );
-  const seg = calculateSegments(bodyWithStop);
+  // Exactly what the contact receives: with shortening on, every URL is
+  // rewritten to a xellvio.com/r/… link at send time, so the preview shows it
+  // that way too (already-shortened links are left alone).
+  const previewBody = useMemo(() => {
+    if (!s.trackLinks) return bodyWithStop;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://xellvio.com";
+    let n = 0;
+    return bodyWithStop.replace(/(https?:\/\/[^\s<>()[\]"']+)/gi, (url) => {
+      if (new RegExp(`^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/r/[a-zA-Z0-9]{4,16}$`).test(url)) return url;
+      n += 1;
+      return `${origin}/r/${"abcdefgh".slice(0, 6)}${n}`;
+    });
+  }, [bodyWithStop, s.trackLinks]);
+  const seg = calculateSegments(previewBody);
+
 
   // Detect non-GSM-7 characters that force Unicode encoding (70/67-char segments
   // instead of 160/153). Common culprits: • “ ” ‘ ’ — – … and non-breaking space.
