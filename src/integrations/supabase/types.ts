@@ -3320,12 +3320,16 @@ export type Database = {
         Args: { _admin_note: string; _withdrawal_id: string }
         Returns: undefined
       }
-      release_dispatch_lock: { Args: never; Returns: undefined }
+      release_dispatch_lock:
+        | { Args: never; Returns: undefined }
+        | { Args: { _name: string }; Returns: undefined }
       topup_account: {
         Args: { _account_id: string; _amount: number; _description: string }
         Returns: number
       }
-      try_acquire_dispatch_lock: { Args: never; Returns: boolean }
+      try_acquire_dispatch_lock:
+        | { Args: never; Returns: boolean }
+        | { Args: { _name: string }; Returns: boolean }
     }
     Enums: {
       account_member_role: "viewer" | "editor" | "admin"

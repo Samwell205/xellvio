@@ -55,13 +55,18 @@ const RUN_BUDGET_MS = 40_000;
 // Caps are per sender kind, per tick (ticks fire every ~15s):
 //   messages claimed per tenant per tick, and concurrent in-flight sends.
 const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> = {
-  toll_free: { perTick: 720, concurrency: 24 },
+  // perTick is deliberately close to what one 40s invocation can actually
+  // finish at the given concurrency. Claiming more than that leaves the
+  // surplus stuck in `sending` until the stale sweep writes it off as
+  // `dispatch_timeout` — which is why big campaigns showed hundreds of them.
+  toll_free: { perTick: 480, concurrency: 24 },
   ten_dlc: { perTick: 360, concurrency: 12 },
-  short_code: { perTick: 720, concurrency: 24 },
+  short_code: { perTick: 480, concurrency: 24 },
   shared_toll_free: { perTick: 240, concurrency: 8 },
   personal: { perTick: 120, concurrency: 4 },
 };
 const TENANT_THROTTLE_DEFAULT = { perTick: 240, concurrency: 8 };
+
 // Picture messages (MMS) are far more aggressively filtered than plain SMS.
 // A large first-time burst from one number gets rejected wholesale by the
 // recipient carriers (error 40008), so MMS sends are paced much slower
@@ -964,33 +969,16 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 
 
 
-        // Guard against overlapping invocations: if pg_cron fires a new tick
-        // while a previous one is still mid-flight, two concurrent calls to
-        // claim_campaign_messages for the same campaign can each claim (and
-        // charge) different rows, and if one of those invocations doesn't
-        // finish cleanly, its claimed rows are left stranded in `sending`.
-        // Self-heals after 90s if a prior run crashed without releasing.
-        const { data: gotLock, error: lockError } = await (supabaseAdmin as any).rpc(
-          "try_acquire_dispatch_lock",
-        );
-        // If the lock helper itself is unavailable (e.g. missing after a DB
-        // move), never skip forever — that silently freezes every campaign in
-        // `queued`. Log it and dispatch without the overlap guard.
-        if (lockError) {
-          console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
-        } else if (!gotLock) {
-          return Response.json({ skipped: "dispatch_already_running" });
-        }
-
-        try {
-          return await runDispatchTick(supabaseAdmin);
-        } finally {
-          await (supabaseAdmin as any).rpc("release_dispatch_lock");
-        }
+        // Campaign-level leases (acquired inside runDispatchTick) let several
+        // scheduler ticks send for different campaigns at the same time. A
+        // single global lock used to serialize every tenant's sending, which
+        // is what made large campaigns crawl for hours.
+        return await runDispatchTick(supabaseAdmin);
       },
     },
   },
 });
+
 
 async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         const { data: ratesRows } = await supabaseAdmin
@@ -1019,6 +1007,28 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           }
         }
 
+        // ── Self-heal: any campaign that got marked `failed` (or `sent`) while
+        // it still has queued recipients is stranded — nothing would ever pick
+        // it up again. Put it back into the sending queue before we build the
+        // due list. Cancelled and paused campaigns are intentionally excluded.
+        try {
+          const { data: stranded } = await supabaseAdmin
+            .from("messages")
+            .select("campaign_id")
+            .eq("status", "queued")
+            .limit(5000);
+          const strandedIds = Array.from(new Set((stranded ?? []).map((r: any) => r.campaign_id))).filter(Boolean);
+          if (strandedIds.length > 0) {
+            await supabaseAdmin
+              .from("campaigns")
+              .update({ status: "sending", paused_reason: null })
+              .in("id", strandedIds)
+              .in("status", ["failed", "sent"]);
+          }
+        } catch (e: any) {
+          console.error("[dispatch] stranded-campaign revival failed", e?.message ?? e);
+        }
+
 
         const { data: due, error } = await supabaseAdmin
           .from("campaigns")
@@ -1045,7 +1055,22 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         for (const c of due ?? []) {
 
           if (budgetLeft() < 5_000) { deferred += 1; continue; }
+          // One lease per campaign: another in-flight tick may already be
+          // sending this campaign, but other campaigns stay free to run in
+          // parallel. Self-heals after 2 minutes if a worker was cancelled.
+          const lockName = `campaign:${c.id}`;
+          const { data: gotLock, error: lockError } = await (supabaseAdmin as any).rpc(
+            "try_acquire_dispatch_lock",
+            { _name: lockName },
+          );
+          if (lockError) {
+            console.error("[dispatch] lock unavailable, running unguarded", lockError.message);
+          } else if (!gotLock) {
+            results.push({ id: c.id, skipped: "campaign_already_dispatching" });
+            continue;
+          }
           try {
+
 
             const { data: acct } = await supabaseAdmin
               .from("accounts")
@@ -1130,10 +1155,24 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             results.push({ id: c.id, ...r });
 
           } catch (e: any) {
-            await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
-            results.push({ id: c.id, error: e.message });
+            // A transient tick error (provider hiccup, DB timeout) must never
+            // abandon a campaign that still has work queued — marking it
+            // `failed` drops it out of the dispatch queue and strands every
+            // remaining recipient forever. Keep it `sending` so the next tick
+            // picks it up; only mark failed when nothing is left to send.
+            const { count: leftover } = await supabaseAdmin
+              .from("messages").select("id", { count: "exact", head: true })
+              .eq("campaign_id", c.id).in("status", ["queued", "sending"]);
+            await supabaseAdmin
+              .from("campaigns")
+              .update({ status: (leftover ?? 0) > 0 ? "sending" : "failed" })
+              .eq("id", c.id);
+            results.push({ id: c.id, error: e.message, retryable: (leftover ?? 0) > 0 });
+          } finally {
+            await (supabaseAdmin as any).rpc("release_dispatch_lock", { _name: lockName });
           }
         }
+
         // Recovery and reconciliation are best-effort housekeeping. Run them
         // only after outbound work so they can never consume the send budget.
         let recoveredInbound: { checked: number; processed: number } | { checked: number; processed: number; error: string } = { checked: 0, processed: 0 };
