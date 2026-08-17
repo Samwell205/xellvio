@@ -232,8 +232,16 @@ async function hasUnplannedRecipients(supabaseAdmin: any, campaign: any): Promis
   }
 }
 
+/** True when the user explicitly stopped this campaign and asked it to read as Sent. */
+async function isStoppedByUser(supabaseAdmin: any, campaignId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("campaigns").select("status, paused_reason").eq("id", campaignId).maybeSingle();
+  return data?.status === "sent" && data?.paused_reason === STOPPED_AS_SENT;
+}
+
 /** Finalize as `sent` only when nothing is left to plan or deliver. */
 async function finalizeIfComplete(supabaseAdmin: any, campaign: any): Promise<void> {
+  if (await isStoppedByUser(supabaseAdmin, campaign.id)) return;
   if (await hasUnplannedRecipients(supabaseAdmin, campaign)) {
     await supabaseAdmin.from("campaigns")
       .update({ status: "sending" })
