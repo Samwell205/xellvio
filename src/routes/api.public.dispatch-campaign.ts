@@ -55,13 +55,18 @@ const RUN_BUDGET_MS = 40_000;
 // Caps are per sender kind, per tick (ticks fire every ~15s):
 //   messages claimed per tenant per tick, and concurrent in-flight sends.
 const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> = {
-  toll_free: { perTick: 720, concurrency: 24 },
+  // perTick is deliberately close to what one 40s invocation can actually
+  // finish at the given concurrency. Claiming more than that leaves the
+  // surplus stuck in `sending` until the stale sweep writes it off as
+  // `dispatch_timeout` — which is why big campaigns showed hundreds of them.
+  toll_free: { perTick: 480, concurrency: 24 },
   ten_dlc: { perTick: 360, concurrency: 12 },
-  short_code: { perTick: 720, concurrency: 24 },
+  short_code: { perTick: 480, concurrency: 24 },
   shared_toll_free: { perTick: 240, concurrency: 8 },
   personal: { perTick: 120, concurrency: 4 },
 };
 const TENANT_THROTTLE_DEFAULT = { perTick: 240, concurrency: 8 };
+
 // Picture messages (MMS) are far more aggressively filtered than plain SMS.
 // A large first-time burst from one number gets rejected wholesale by the
 // recipient carriers (error 40008), so MMS sends are paced much slower
