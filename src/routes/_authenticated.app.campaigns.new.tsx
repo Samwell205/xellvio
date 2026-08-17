@@ -890,10 +890,10 @@ function NewCampaignPage() {
   );
 }
 
-function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, audienceCount, loading }: {
+function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, audienceCount, loading, error }: {
   insufficient: boolean; balance: number; balanceAfter: number; totalCost: number;
   breakdown: Array<{ country_code: string; country_name: string; recipients: number; unit: number; mult: number; segments: number; subtotal: number; priced: boolean }>;
-  audienceCount: number; loading: boolean;
+  audienceCount: number; loading: boolean; error?: string | null;
 }) {
   return (
     <Card className="p-5 space-y-4 self-start sticky top-4">
