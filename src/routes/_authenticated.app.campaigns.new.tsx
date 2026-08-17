@@ -214,7 +214,7 @@ function NewCampaignPage() {
   const exportEligibleAudience = async () => {
     setExportingAudience(true);
     try {
-      const PAGE = 5000;
+      const PAGE = 1000;
       const rows: any[] = [];
       for (let offset = 0; ; offset += PAGE) {
         const { data, error } = await (supabase.rpc as any)("my_eligible_profile_ids_page", {
