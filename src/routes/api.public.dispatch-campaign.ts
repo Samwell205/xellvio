@@ -1018,7 +1018,7 @@ async function processCampaign(
   // recipient pages are still being planned. Large campaigns therefore begin
   // immediately instead of showing zero progress for several cron intervals.
   const delivered = await deliverPending(supabaseAdmin, campaign, sender, limits);
-  if (hasMore) {
+  if (hasMore && !(await isStoppedByUser(supabaseAdmin, campaign.id))) {
     // deliverPending only sees rows that have already been planned. It must not
     // finalize the campaign while later audience pages still need planning.
     await supabaseAdmin.from("campaigns")
