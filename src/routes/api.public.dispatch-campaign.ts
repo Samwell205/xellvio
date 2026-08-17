@@ -173,23 +173,6 @@ type Sender = {
   }>;
 };
 
-async function loadEligibleRecipients(supabaseAdmin: any, accountId: string, audience: any): Promise<any[]> {
-  const PAGE = 1000;
-  const recipients: any[] = [];
-  for (let offset = 0; ; offset += PAGE) {
-    const { data, error } = await supabaseAdmin.rpc("eligible_profile_ids_page", {
-      _account_id: accountId,
-      _audience: audience,
-      _limit: PAGE,
-      _offset: offset,
-    });
-    if (error) throw error;
-    const rows = data ?? [];
-    recipients.push(...rows);
-    if (rows.length < PAGE) break;
-  }
-  return recipients;
-}
 
 /**
  * Page through the eligible list, skipping profiles that already have a
@@ -336,7 +319,7 @@ async function sendOneMessage(
   sender: Sender,
   m: any,
   sink?: StatusSink | null,
-): Promise<{ ok: boolean; shaft: boolean; debited: number }> {
+): Promise<{ ok: boolean; shaft: boolean; debited: number; rateLimited?: boolean }> {
   const { sendMessage, safeTelnyxCall } = await import("@/lib/telnyx.server");
   try {
     const sendAsMms = !!campaign.media_url && supportsMms(m.country_code) && !m.force_sms;
@@ -503,6 +486,24 @@ async function sendOneMessage(
   } catch (e: any) {
     const code = String(e?.telnyxCode ?? "");
     const reason = e?.telnyxMessage ?? e?.message ?? "Send failed";
+    // Carrier rate limiting is transient, never a delivery failure. Put the
+    // row straight back in the queue (it stays paid, so it is not charged
+    // twice) and tell the caller to back off instead of burning thousands of
+    // recipients as "failed" the moment we push too fast.
+    const rateLimited = code === "10011" || /429|rate limit|maximum number of allowed requests/i.test(String(reason));
+    if (rateLimited) {
+      try {
+        await recordStatus(supabaseAdmin, sink, m.id, {
+          status: "queued",
+          dispatch_started_at: null,
+          error_code: null,
+          failure_reason: null,
+        });
+      } catch (writeErr) {
+        console.error("[dispatch] failed to requeue rate-limited message", m.id, writeErr);
+      }
+      return { ok: false, shaft: false, debited: 0, rateLimited: true };
+    }
     try {
       await recordStatus(supabaseAdmin, sink, m.id,
         { status: "failed", error_code: code || "exception", failure_reason: String(reason).slice(0, 500) });
@@ -560,10 +561,23 @@ async function beginCampaignIfNeeded(
     return { ok: false, reason: "blocked_content" };
   }
 
-  const list = await loadEligibleRecipients(supabaseAdmin, campaign.account_id, campaign.audience ?? { include: [], exclude: [] });
-  if (list.length === 0) {
-    await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
-    return { ok: false };
+  // Only the SIZE of the audience is needed here, so aggregate it in the
+  // database. Pulling every recipient row (100k+) into this worker just to
+  // read `.length` blew the statement timeout and stranded whole campaigns
+  // before a single message row existed.
+  const audience = campaign.audience ?? { include: [], exclude: [] };
+  let eligibleCount = 0;
+  const { data: ccRows, error: ccErr } = await supabaseAdmin.rpc("eligible_country_counts", {
+    _account_id: campaign.account_id,
+    _audience: audience,
+  });
+  if (ccErr) throw new Error(`Audience count failed: ${ccErr.message}`);
+  for (const row of ccRows ?? []) eligibleCount += Number((row as any).recipients ?? 0);
+  if (eligibleCount === 0) {
+    await supabaseAdmin.from("campaigns")
+      .update({ status: "failed", paused_reason: "No eligible recipients — the selected audience was empty after exclusions" })
+      .eq("id", campaign.id);
+    return { ok: false, reason: "no_eligible_recipients" };
   }
 
   // ── Full compliance screening once per campaign (all body-scoped checks +
@@ -572,7 +586,7 @@ async function beginCampaignIfNeeded(
   const { screenMessageContent } = await import("@/lib/content-screening.server");
   const screen = await screenMessageContent(campaign.message_body ?? "", campaign.account_id, {
     campaignId: campaign.id,
-    plannedRecipients: list.length,
+    plannedRecipients: eligibleCount,
     context: "campaign_plan",
   });
   if (screen.action === "blocked") {
@@ -822,6 +836,9 @@ async function deliverPending(
   // charge/ledger writes inside one statement and hit the database statement
   // timeout, which aborted the whole tick and left campaigns idle for hours.
   const CLAIM_CHUNK = 150;
+  // Adaptive in-flight limit: drops when the carrier rate-limits us, recovers
+  // once requests are being accepted again.
+  let effectiveConcurrency = concurrency;
   let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
   let claimedTotal = 0;
   const unsent: string[] = [];
@@ -843,12 +860,23 @@ async function deliverPending(
     const rows = batch ?? [];
     if (rows.length === 0) break;
     claimedTotal += rows.length;
-    await runWithConcurrency(rows, concurrency, async (m: any) => {
+    let rateLimitHits = 0;
+    await runWithConcurrency(rows, effectiveConcurrency, async (m: any) => {
       if (Date.now() >= hardDeadline) { unsent.push(m.id); return; }
       const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
       if (r.ok) { sent++; debited += r.debited; }
+      else if (r.rateLimited) { rateLimitHits++; }
       else { failed++; if (r.shaft) shaftErrors++; }
     });
+    if (rateLimitHits > 0) {
+      // The carrier told us we are pushing too fast. Halve the in-flight
+      // requests and pause briefly instead of hammering it — the requeued
+      // rows go out on the next pass at a sustainable rate.
+      effectiveConcurrency = Math.max(4, Math.floor(effectiveConcurrency / 2));
+      await new Promise((r) => setTimeout(r, Math.min(2_000, 200 * rateLimitHits)));
+    } else if (effectiveConcurrency < concurrency) {
+      effectiveConcurrency = Math.min(concurrency, effectiveConcurrency * 2);
+    }
   }
 
   // Every accepted/failed result must be persisted before this invocation
@@ -1064,7 +1092,9 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           process.env.SUPABASE_PUBLISHABLE_KEY,
           process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           process.env.SUPABASE_ANON_KEY,
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhc2UiLCJyZWYiOiJkYnlxa3RmZWNmYnVrZ2xjaWloYyIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzgxNzg2OTk2LCJleHAiOjIwOTczNjI5OTZ9.IijlbZkJPlNvjp0_be_JRBYjrNwJmdWpte51rSSFcjw",
+          // Fallback so the cron trigger keeps working even if the env var is
+          // missing on a deployment. Must match the key the cron jobs send.
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieXFrdGZlY2ZidWtnbGNpaWhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODY5OTYsImV4cCI6MjA5NzM2Mjk5Nn0.IijlbZkJPlNvjp0_be_JRBYjrNwJmdWpte51rSSFcjw",
         ].filter((value): value is string => Boolean(value)));
         if (!apiKey || !validApiKeys.has(apiKey)) {
           return new Response("Unauthorized", { status: 401 });
@@ -1245,7 +1275,10 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             try {
               profileId = await ensureMessagingProfileForAccount(c.account_id);
             } catch (e: any) {
-              await supabaseAdmin.from("campaigns").update({ status: "failed" }).eq("id", c.id);
+              await supabaseAdmin.from("campaigns").update({
+                status: "failed",
+                paused_reason: `Could not prepare a sending profile: ${e?.message ?? e}`,
+              }).eq("id", c.id);
               return { error: `profile_provision_failed: ${e?.message ?? e}` };
             }
           }
@@ -1322,11 +1355,25 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
                 const { count: leftover } = await supabaseAdmin
                   .from("messages").select("id", { count: "exact", head: true })
                   .eq("campaign_id", c.id).in("status", ["queued", "sending"]);
-                await supabaseAdmin
-                  .from("campaigns")
-                  .update({ status: (leftover ?? 0) > 0 ? "sending" : "failed" })
-                  .eq("id", c.id);
-                results.push({ id: c.id, error: e.message, retryable: (leftover ?? 0) > 0 });
+                const { count: everPlanned } = await supabaseAdmin
+                  .from("messages").select("id", { count: "exact", head: true })
+                  .eq("campaign_id", c.id);
+                const note = `Temporary send error, retrying: ${e?.message ?? e}`;
+                if ((leftover ?? 0) > 0) {
+                  await supabaseAdmin.from("campaigns")
+                    .update({ status: "sending", paused_reason: note }).eq("id", c.id);
+                } else if ((everPlanned ?? 0) === 0) {
+                  // Nothing was ever planned: the tick blew up before a single
+                  // recipient row existed. Failing here strands the whole
+                  // campaign, so put it back in the queue for the next tick.
+                  await supabaseAdmin.from("campaigns")
+                    .update({ status: "queued", paused_reason: note }).eq("id", c.id);
+                } else {
+                  await supabaseAdmin.from("campaigns")
+                    .update({ status: "failed", paused_reason: e?.message ?? "Send failed" }).eq("id", c.id);
+                }
+                console.error("[dispatch] campaign tick failed", c.id, e?.message ?? e);
+                results.push({ id: c.id, error: e.message, retryable: true });
               } finally {
                 if (lease !== UNGUARDED_LEASE) {
                   await (supabaseAdmin as any).rpc("release_dispatch_lock", { _name: lease });
