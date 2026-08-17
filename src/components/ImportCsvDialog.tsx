@@ -13,8 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Download, Upload, Zap, RotateCcw } from "lucide-react";
+import { AlertTriangle, Download, Upload, Zap, RotateCcw, Plus } from "lucide-react";
 import { normalizePhone } from "@/lib/phone-normalize";
+import { supabase } from "@/integrations/supabase/client";
+import { useAccountId } from "@/hooks/useAccountId";
 import {
   startImportJob, importProfilesBatch, finishImportJob, getActiveImportJob,
   type ImportJob, type ImportRow,
@@ -52,6 +54,7 @@ export default function ImportCsvDialog({
   lists, onDone, onDownloadTemplate,
 }: { lists: ContactList[]; onDone: () => void; onDownloadTemplate: () => void }) {
   const qc = useQueryClient();
+  const acctId = useAccountId();
   const startJob = useServerFn(startImportJob);
   const importBatch = useServerFn(importProfilesBatch);
   const finishJob = useServerFn(finishImportJob);
@@ -66,6 +69,10 @@ export default function ImportCsvDialog({
   const [excludedCols, setExcludedCols] = useState<Set<string>>(new Set());
   const [excludedRows, setExcludedRows] = useState<Set<number>>(new Set());
   const [listId, setListId] = useState<string>("none");
+  const [creatingList, setCreatingList] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const [creatingBusy, setCreatingBusy] = useState(false);
+
   const [defaultCountry, setDefaultCountry] = useState("US");
   const [estimatedRows, setEstimatedRows] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -87,6 +94,30 @@ export default function ImportCsvDialog({
     if (!keepResume) setResumeJob(null);
     if (fileRef.current) fileRef.current.value = "";
   }
+
+  async function createList() {
+    const name = newListName.trim();
+    if (!name) { toast.error("Name required"); return; }
+    setCreatingBusy(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from("contact_lists")
+        .insert({ account_id: acctId ?? u.user!.id, name })
+        .select("id")
+        .single();
+      if (error) throw error;
+      toast.success("List created");
+      setListId(data!.id);
+      setCreatingList(false);
+      setNewListName("");
+      onDone();
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to create list");
+    } finally { setCreatingBusy(false); }
+  }
+
+
 
   function handleFile(f: File) {
     setResult(null); setProgress(null);
@@ -258,14 +289,34 @@ export default function ImportCsvDialog({
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Add to list</Label>
-              <Select value={listId} onValueChange={setListId} disabled={busy}>
-                <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No list</SelectItem>
-                  {lists.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {creatingList ? (
+                <div className="flex items-center gap-1.5">
+                  <Input autoFocus className="w-40" placeholder="New list name" value={newListName}
+                    disabled={busy || creatingBusy}
+                    onChange={(e) => setNewListName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); createList(); } }} />
+                  <Button size="sm" onClick={createList} disabled={creatingBusy || !newListName.trim()}>
+                    {creatingBusy ? "…" : "Create"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setCreatingList(false); setNewListName(""); }}>Cancel</Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Select value={listId} onValueChange={setListId} disabled={busy}>
+                    <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No list</SelectItem>
+                      {lists.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" size="sm" variant="outline" disabled={busy}
+                    onClick={() => setCreatingList(true)}>
+                    <Plus className="size-4 mr-1" />New list
+                  </Button>
+                </div>
+              )}
             </div>
+
             <div className="space-y-1">
               <Label className="text-xs">Default country</Label>
               <Input className="w-24" maxLength={2} value={defaultCountry} disabled={busy}
