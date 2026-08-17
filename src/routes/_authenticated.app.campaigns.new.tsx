@@ -202,7 +202,11 @@ function NewCampaignPage() {
   const countsQ = useQuery({
     queryKey: ["campaign-audience-counts", audience],
     enabled: hasAudience,
-    staleTime: 30_000,
+    staleTime: 60_000,
+    gcTime: 10 * 60_000,
+    retry: 1,
+    placeholderData: (prev) => prev,
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<Array<{ country_code: string; recipients: number }>> => {
       const { data, error } = await (supabase.rpc as any)("my_eligible_country_counts", { _audience: audience });
       if (error) throw error;
