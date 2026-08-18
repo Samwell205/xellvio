@@ -1,0 +1,1 @@
+UPDATE public.campaigns SET status='sent', paused_reason='Stopped by user' WHERE id='840d2dcc-fb70-4288-88cb-c09dcfc08561';

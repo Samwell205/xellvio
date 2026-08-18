@@ -782,7 +782,21 @@ async function planCampaign(
     const { error: insErr } = await supabaseAdmin
       .from("messages")
       .upsert(chunk, { onConflict: "campaign_id,profile_id", ignoreDuplicates: true });
-    if (insErr) throw new Error(`Failed to insert message batch: ${insErr.message}`);
+    if (!insErr) continue;
+    // A contact deleted while the campaign was being planned breaks the
+    // profile foreign key for that one row. Never fail the whole campaign for
+    // it: retry the chunk row-by-row and skip only the orphaned recipients.
+    const isFk = /foreign key|23503/i.test(insErr.message);
+    if (!isFk) throw new Error(`Failed to insert message batch: ${insErr.message}`);
+    for (const row of chunk) {
+      const { error: rowErr } = await supabaseAdmin
+        .from("messages")
+        .upsert([row], { onConflict: "campaign_id,profile_id", ignoreDuplicates: true });
+      if (rowErr && !/foreign key|23503/i.test(rowErr.message)) {
+        throw new Error(`Failed to insert message batch: ${rowErr.message}`);
+      }
+      if (rowErr) console.error("[dispatch] skipped orphaned recipient", row.profile_id);
+    }
   }
 
   // Insert link_clicks rows only for messages that actually got queued (not
@@ -1456,8 +1470,19 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
                   await supabaseAdmin.from("campaigns")
                     .update({ status: "queued", paused_reason: note }).eq("id", c.id);
                 } else {
+                  // Some recipients were already handed to the carrier, so the
+                  // campaign did send — finalize it as sent and keep the error
+                  // as a note instead of showing the tenant a red "Failed".
+                  const { count: handedOff } = await supabaseAdmin
+                    .from("messages").select("id", { count: "exact", head: true })
+                    .eq("campaign_id", c.id)
+                    .in("status", ["sent", "delivered", "delivery_unconfirmed", "undelivered"]);
                   await supabaseAdmin.from("campaigns")
-                    .update({ status: "failed", paused_reason: e?.message ?? "Send failed" }).eq("id", c.id);
+                    .update({
+                      status: (handedOff ?? 0) > 0 ? "sent" : "failed",
+                      paused_reason: e?.message ?? "Send failed",
+                    })
+                    .eq("id", c.id);
                 }
                 console.error("[dispatch] campaign tick failed", c.id, e?.message ?? e);
                 results.push({ id: c.id, error: e.message, retryable: true });
