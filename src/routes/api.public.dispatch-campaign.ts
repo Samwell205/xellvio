@@ -1059,20 +1059,22 @@ async function reconcileStaleCarrierReceipts(
 ): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
   // Many US/CA MMS and international carriers never return a final delivery
   // receipt at all — the carrier accepted and finalized the message and simply
-  // stays silent. Waiting 24h left whole campaigns parked on "Awaiting", so
-  // after 3h with no receipt we preserve the provider's unconfirmed result
-  // internally; user-facing reports classify that terminal outcome as failed.
-  const giveUpCutoff = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+  // stays silent. Real receipts land within minutes, so after 1 hour with no
+  // receipt we preserve the provider's unconfirmed result internally;
+  // user-facing reports classify that terminal outcome as failed, so every
+  // recipient ends up as either delivered or failed.
+  const giveUpCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { data: expiredRows } = await supabaseAdmin
     .from("messages")
     .update({
       status: "delivery_unconfirmed",
-      failure_reason: "Carrier accepted the message but never returned a delivery receipt (waited 3 hours).",
+      failure_reason: "Carrier accepted the message but never returned a delivery receipt (waited 1 hour).",
     })
     .eq("status", "sent")
     .lt("sent_at", giveUpCutoff)
     .select("id");
   const expired = (expiredRows ?? []).length;
+
 
   const checkedRecentlyCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const sentCutoff = new Date(Date.now() - (opts.minAgeMs ?? 3 * 60 * 1000)).toISOString();
