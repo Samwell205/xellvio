@@ -1,12 +1,15 @@
-import { createFileRoute, Outlet, redirect, Link } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Lock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { provisionCurrentAccount } from "@/lib/provision-account.functions";
 import { TosReAcceptModal } from "@/components/TosReAcceptModal";
+import { useSession } from "@/hooks/useAccountId";
+import { firstAllowedPath, requiredPermissionFor } from "@/lib/route-permissions";
+import { PERMISSION_LABELS } from "@/lib/team-permissions";
 
 export const Route = createFileRoute("/_authenticated/app")({
   beforeLoad: async () => {
@@ -17,6 +20,39 @@ export const Route = createFileRoute("/_authenticated/app")({
   component: AppShell,
 });
 
+/**
+ * Blocks teammates from opening areas the workspace owner did not grant them,
+ * even by typing the URL directly. Owners are never restricted.
+ */
+function PermissionGuard({ children }: { children: React.ReactNode }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const { data: session, isLoading } = useSession();
+
+  const needed = requiredPermissionFor(pathname);
+  const allowed =
+    !session || session.isOwner || !needed || session.permissions[needed] === true;
+
+  useEffect(() => {
+    if (!session || allowed) return;
+    const target = firstAllowedPath(session.permissions);
+    if (target !== pathname) navigate({ to: target, replace: true });
+  }, [session, allowed, pathname, navigate]);
+
+  if (isLoading || allowed) return <>{children}</>;
+
+  return (
+    <div className="max-w-md mx-auto mt-16 rounded-lg border bg-background p-6 text-center">
+      <Lock className="size-6 mx-auto text-muted-foreground" />
+      <h1 className="mt-3 text-lg font-semibold">You don't have access to this area</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Your access to this workspace doesn't include{" "}
+        {needed ? PERMISSION_LABELS[needed] : "this page"}. Ask the workspace owner to enable it.
+      </p>
+    </div>
+  );
+}
+
 function AppShell() {
   // Ensure this tenant has a carrier messaging profile provisioned.
   // Idempotent: no-op if already set. Covers new signups AND existing users.
@@ -26,6 +62,7 @@ function AppShell() {
     provisioned.current = true;
     provisionCurrentAccount().catch(() => { /* non-fatal */ });
   }, []);
+
 
   return (
     <SidebarProvider>
@@ -46,8 +83,11 @@ function AppShell() {
             </div>
           </header>
           <main className="flex-1 p-4 md:p-6 max-w-[1400px] w-full mx-auto">
-            <Outlet />
+            <PermissionGuard>
+              <Outlet />
+            </PermissionGuard>
           </main>
+
         </div>
         <TosReAcceptModal />
       </div>
