@@ -34,7 +34,7 @@ export function requiredPermissionFor(pathname: string): PermissionKey | null {
 }
 
 /** First landing page a teammate with these permissions is allowed to open. */
-export function firstAllowedРath(perms: Partial<Record<PermissionKey, boolean>>): string {
+export function firstAllowedPath(perms: Partial<Record<PermissionKey, boolean>>): string {
   const order: { path: string; perm: PermissionKey }[] = [
     { path: "/app", perm: "dashboard" },
     { path: "/app/inbox", perm: "inbox" },
