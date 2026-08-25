@@ -83,8 +83,11 @@ function AppShell() {
             </div>
           </header>
           <main className="flex-1 p-4 md:p-6 max-w-[1400px] w-full mx-auto">
-            <Outlet />
+            <PermissionGuard>
+              <Outlet />
+            </PermissionGuard>
           </main>
+
         </div>
         <TosReAcceptModal />
       </div>
