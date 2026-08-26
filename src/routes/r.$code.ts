@@ -29,11 +29,17 @@ async function healMissingCode(code: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: msg } = await supabaseAdmin
     .from("messages")
-    .select("id,campaign_id,account_id")
+    .select("id,campaign_id")
     .like("rendered_body", `%/r/${code}%`)
     .limit(1)
     .maybeSingle();
   if (!msg?.campaign_id) return null;
+
+  const { data: camp } = await supabaseAdmin
+    .from("campaigns")
+    .select("message_body,account_id")
+    .eq("id", msg.campaign_id)
+    .maybeSingle();
 
   const { data: sibling } = await supabaseAdmin
     .from("link_clicks")
@@ -44,11 +50,6 @@ async function healMissingCode(code: string) {
   let url: string | null = (sibling as any)?.url ?? null;
 
   if (!url) {
-    const { data: camp } = await supabaseAdmin
-      .from("campaigns")
-      .select("message_body")
-      .eq("id", msg.campaign_id)
-      .maybeSingle();
     url = ((camp as any)?.message_body ?? "").match(/https?:\/\/[^\s<>()[\]"']+/)?.[0] ?? null;
   }
   if (!url) return null;
@@ -59,7 +60,7 @@ async function healMissingCode(code: string) {
     url,
     message_id: (msg as any).id,
     campaign_id: msg.campaign_id,
-    account_id: (msg as any).account_id ?? null,
+    account_id: (camp as any)?.account_id ?? null,
     clicks: 1,
     first_click_at: new Date().toISOString(),
     last_click_at: new Date().toISOString(),
