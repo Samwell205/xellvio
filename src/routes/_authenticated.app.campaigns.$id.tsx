@@ -415,6 +415,26 @@ function CampaignReport() {
     },
   });
 
+  // Exactly what a recipient received: the rendered body of a real sent message
+  // (merge fields filled in, links already replaced with their short URLs).
+  const sentSampleQ = useQuery({
+    queryKey: ["campaign-sent-sample", id],
+    enabled: !!campaignQ.data,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("rendered_body,phone_e164,created_at")
+        .eq("campaign_id", id)
+        .not("rendered_body", "is", null)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      return (data as any) ?? null;
+    },
+  });
+
+
+
   const optOutsQ = useQuery({
     queryKey: ["campaign-optouts", id, campaignQ.data?.created_at],
     enabled: !!campaignQ.data,
@@ -709,9 +729,23 @@ function CampaignReport() {
             {/* Phone + audience */}
             <div className="space-y-5">
               <Card className="p-5">
-                <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3">Text Message</div>
-                <PhonePreview body={c.message_body} mediaUrl={c.media_url} />
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide">Text Message</div>
+                  <Badge variant={sentSampleQ.data?.rendered_body ? "secondary" : "outline"} className="text-[10px]">
+                    {sentSampleQ.data?.rendered_body ? "Exactly as sent" : "Draft template"}
+                  </Badge>
+                </div>
+                <PhonePreview
+                  body={sentSampleQ.data?.rendered_body ?? c.message_body}
+                  mediaUrl={c.media_url}
+                />
+                <div className="mt-3 text-[11px] text-muted-foreground">
+                  {sentSampleQ.data?.rendered_body
+                    ? "This is the real message body delivered to a recipient, including any shortened tracking links."
+                    : "No message has been rendered yet — showing the campaign template."}
+                </div>
               </Card>
+
 
               <Card className="p-5 space-y-4">
                 <div>
@@ -1172,11 +1206,12 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
   });
 
   const perUrl = useMemo(() => {
-    const map = new Map<string, { url: string; total: number; unique: number; sent: number; messagesClicked: Set<string> }>();
+    const map = new Map<string, { url: string; total: number; unique: number; sent: number; messagesClicked: Set<string>; codes: Set<string> }>();
     for (const r of linksQ.data ?? []) {
-      const cur = map.get(r.url) ?? { url: r.url, total: 0, unique: 0, sent: 0, messagesClicked: new Set<string>() };
+      const cur = map.get(r.url) ?? { url: r.url, total: 0, unique: 0, sent: 0, messagesClicked: new Set<string>(), codes: new Set<string>() };
       cur.sent += 1;
       cur.total += Number(r.clicks ?? 0);
+      if (r.short_code) cur.codes.add(r.short_code as string);
       if ((r.clicks ?? 0) > 0) cur.messagesClicked.add(r.message_id as string);
       map.set(r.url, cur);
     }
@@ -1184,6 +1219,7 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
       .map((r) => ({ ...r, unique: r.messagesClicked.size }))
       .sort((a, b) => b.total - a.total);
   }, [linksQ.data]);
+
 
   return (
     <div className="space-y-5">
@@ -1212,6 +1248,7 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
             <TableHeader>
               <TableRow>
                 <TableHead>Destination URL</TableHead>
+                <TableHead>Short link sent</TableHead>
                 <TableHead className="text-right">Sent to</TableHead>
                 <TableHead className="text-right">People clicked</TableHead>
                 <TableHead className="text-right">Total clicks</TableHead>
@@ -1219,18 +1256,33 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
               </TableRow>
             </TableHeader>
             <TableBody>
-              {perUrl.map((r) => (
+              {perUrl.map((r) => {
+                const codes = [...r.codes];
+                return (
                 <TableRow key={r.url}>
-                  <TableCell className="max-w-[420px]">
+                  <TableCell className="max-w-[360px]">
                     <a href={r.url} target="_blank" rel="noreferrer noopener" className="text-primary hover:underline break-all text-sm">{r.url}</a>
+                  </TableCell>
+                  <TableCell className="max-w-[220px] text-sm">
+                    {codes.length === 0 ? (
+                      <span className="text-muted-foreground">Sent unshortened</span>
+                    ) : codes.length === 1 ? (
+                      <span className="font-mono text-xs break-all">xellvio.com/r/{codes[0]}</span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">
+                        {codes.length.toLocaleString()} unique short links (one per recipient)
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{r.sent.toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.unique.toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.total.toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.sent ? ((r.unique / r.sent) * 100).toFixed(1) + "%" : "—"}</TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
+
           </Table>
         )}
       </Card>
