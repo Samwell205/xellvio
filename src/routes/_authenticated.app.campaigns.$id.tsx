@@ -1248,6 +1248,7 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
             <TableHeader>
               <TableRow>
                 <TableHead>Destination URL</TableHead>
+                <TableHead>Short link sent</TableHead>
                 <TableHead className="text-right">Sent to</TableHead>
                 <TableHead className="text-right">People clicked</TableHead>
                 <TableHead className="text-right">Total clicks</TableHead>
@@ -1255,18 +1256,33 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
               </TableRow>
             </TableHeader>
             <TableBody>
-              {perUrl.map((r) => (
+              {perUrl.map((r) => {
+                const codes = [...r.codes];
+                return (
                 <TableRow key={r.url}>
-                  <TableCell className="max-w-[420px]">
+                  <TableCell className="max-w-[360px]">
                     <a href={r.url} target="_blank" rel="noreferrer noopener" className="text-primary hover:underline break-all text-sm">{r.url}</a>
+                  </TableCell>
+                  <TableCell className="max-w-[220px] text-sm">
+                    {codes.length === 0 ? (
+                      <span className="text-muted-foreground">Sent unshortened</span>
+                    ) : codes.length === 1 ? (
+                      <span className="font-mono text-xs break-all">xellvio.com/r/{codes[0]}</span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">
+                        {codes.length.toLocaleString()} unique short links (one per recipient)
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{r.sent.toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.unique.toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.total.toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums">{r.sent ? ((r.unique / r.sent) * 100).toFixed(1) + "%" : "—"}</TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
+
           </Table>
         )}
       </Card>
