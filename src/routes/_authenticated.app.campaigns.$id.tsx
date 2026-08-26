@@ -415,6 +415,26 @@ function CampaignReport() {
     },
   });
 
+  // Exactly what a recipient received: the rendered body of a real sent message
+  // (merge fields filled in, links already replaced with their short URLs).
+  const sentSampleQ = useQuery({
+    queryKey: ["campaign-sent-sample", id],
+    enabled: !!campaignQ.data,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("rendered_body,phone_e164,created_at")
+        .eq("campaign_id", id)
+        .not("rendered_body", "is", null)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      return (data as any) ?? null;
+    },
+  });
+
+
+
   const optOutsQ = useQuery({
     queryKey: ["campaign-optouts", id, campaignQ.data?.created_at],
     enabled: !!campaignQ.data,
