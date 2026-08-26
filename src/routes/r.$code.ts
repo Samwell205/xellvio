@@ -20,9 +20,18 @@ async function trackAndRedirect(code: string, request: Request): Promise<Respons
       .select("url, message_id, campaign_id")
       .eq("short_code", code)
       .maybeSingle();
-    if (!fallback) return new Response("Link not found or expired.", { status: 404 });
-    link = fallback;
+    if (fallback) {
+      link = fallback;
+    } else {
+      // Self-heal: the code is in a real delivered message but its tracking row
+      // is missing. Recover the destination from the campaign that sent it so
+      // the recipient still lands on the right page.
+      const healed = await healMissingCode(code);
+      if (!healed) return notFoundResponse();
+      link = healed;
+    }
   }
+
 
   const ua = request.headers.get("user-agent") ?? null;
   const ip = request.headers.get("cf-connecting-ip")
