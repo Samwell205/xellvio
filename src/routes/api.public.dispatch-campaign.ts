@@ -801,13 +801,42 @@ async function planCampaign(
 
   // Insert link_clicks rows only for messages that actually got queued (not
   // insufficient_balance failures — those never send, so no click can happen).
+  // This MUST succeed: a message whose short code has no row goes out with a
+  // dead link ("Link not found or expired") for the recipient. Retry each
+  // chunk, then row-by-row, and only give up on a single row as a last resort.
   const queuedIds = new Set(queuedRows.map((r) => r.id));
   const linksToInsert = linkRows.filter((l) => queuedIds.has(l.message_id));
-  for (let i = 0; i < linksToInsert.length; i += PLAN_INSERT_CHUNK) {
-    const chunk = linksToInsert.slice(i, i + PLAN_INSERT_CHUNK);
-    const { error: linkErr } = await supabaseAdmin.from("link_clicks").insert(chunk);
-    if (linkErr) console.error("[dispatch] link_clicks insert failed", linkErr.message);
+  const LINK_CHUNK = 200;
+  for (let i = 0; i < linksToInsert.length; i += LINK_CHUNK) {
+    const chunk = linksToInsert.slice(i, i + LINK_CHUNK);
+    let inserted = false;
+    for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
+      const { error } = await supabaseAdmin.from("link_clicks").insert(chunk);
+      if (!error) { inserted = true; break; }
+      console.error("[dispatch] link_clicks chunk insert failed", error.message);
+      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
+    }
+    if (inserted) continue;
+    // Chunk-level failure: never let it kill the whole batch of links.
+    for (const row of chunk) {
+      let ok = false;
+      for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+        const { error } = await supabaseAdmin.from("link_clicks").insert([row]);
+        if (!error) { ok = true; break; }
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      if (!ok) {
+        // Last resort: don't send a dead link — cancel this recipient's message.
+        console.error("[dispatch] shortlink row unrecoverable, cancelling message", row.message_id);
+        await supabaseAdmin
+          .from("messages")
+          .update({ status: "failed", error_code: "shortlink_failed", failure_reason: "Tracking link could not be created." })
+          .eq("id", row.message_id)
+          .eq("status", "queued");
+      }
+    }
   }
+
 
   // Backfill preview shortlinks (created in the builder before dispatch) with
   // this campaign so their clicks show up on this campaign's report.
