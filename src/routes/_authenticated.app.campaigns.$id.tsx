@@ -1206,11 +1206,12 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
   });
 
   const perUrl = useMemo(() => {
-    const map = new Map<string, { url: string; total: number; unique: number; sent: number; messagesClicked: Set<string> }>();
+    const map = new Map<string, { url: string; total: number; unique: number; sent: number; messagesClicked: Set<string>; codes: Set<string> }>();
     for (const r of linksQ.data ?? []) {
-      const cur = map.get(r.url) ?? { url: r.url, total: 0, unique: 0, sent: 0, messagesClicked: new Set<string>() };
+      const cur = map.get(r.url) ?? { url: r.url, total: 0, unique: 0, sent: 0, messagesClicked: new Set<string>(), codes: new Set<string>() };
       cur.sent += 1;
       cur.total += Number(r.clicks ?? 0);
+      if (r.short_code) cur.codes.add(r.short_code as string);
       if ((r.clicks ?? 0) > 0) cur.messagesClicked.add(r.message_id as string);
       map.set(r.url, cur);
     }
@@ -1218,6 +1219,7 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
       .map((r) => ({ ...r, unique: r.messagesClicked.size }))
       .sort((a, b) => b.total - a.total);
   }, [linksQ.data]);
+
 
   return (
     <div className="space-y-5">
