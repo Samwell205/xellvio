@@ -729,9 +729,23 @@ function CampaignReport() {
             {/* Phone + audience */}
             <div className="space-y-5">
               <Card className="p-5">
-                <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3">Text Message</div>
-                <PhonePreview body={c.message_body} mediaUrl={c.media_url} />
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide">Text Message</div>
+                  <Badge variant={sentSampleQ.data?.rendered_body ? "secondary" : "outline"} className="text-[10px]">
+                    {sentSampleQ.data?.rendered_body ? "Exactly as sent" : "Draft template"}
+                  </Badge>
+                </div>
+                <PhonePreview
+                  body={sentSampleQ.data?.rendered_body ?? c.message_body}
+                  mediaUrl={c.media_url}
+                />
+                <div className="mt-3 text-[11px] text-muted-foreground">
+                  {sentSampleQ.data?.rendered_body
+                    ? "This is the real message body delivered to a recipient, including any shortened tracking links."
+                    : "No message has been rendered yet — showing the campaign template."}
+                </div>
               </Card>
+
 
               <Card className="p-5 space-y-4">
                 <div>
