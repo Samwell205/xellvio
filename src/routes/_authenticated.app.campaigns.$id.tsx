@@ -5,6 +5,8 @@ import { reconcileCampaignMessages } from "@/lib/reconcile-messages.functions";
 import {
   cancelCampaign,
   stopCampaignAsSent,
+  pauseCampaign,
+  resumeCampaign,
   retryMessage,
   retryFailedMessages,
 } from "@/lib/campaign-control.functions";
@@ -41,6 +43,7 @@ import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
   Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
   DollarSign, Wallet, Activity, XCircle, Download, RotateCw, ExternalLink,
+  Pause, Play,
 } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
@@ -326,6 +329,32 @@ function CampaignReport() {
     onError: (e: any) => toast.error(e?.message ?? "Failed to stop campaign"),
   });
 
+  const pauseFn = useServerFn(pauseCampaign);
+  const pauseM = useMutation({
+    mutationFn: () => pauseFn({ data: { campaignId: id } }),
+    onSuccess: (r: any) => {
+      toast.success(
+        `Campaign paused. ${Number(r?.pausedMessages ?? 0).toLocaleString()} message${
+          Number(r?.pausedMessages ?? 0) === 1 ? "" : "s"
+        } are on hold until you resume.`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to pause campaign"),
+  });
+
+  const resumeFn = useServerFn(resumeCampaign);
+  const resumeM = useMutation({
+    mutationFn: () => resumeFn({ data: { campaignId: id } }),
+    onSuccess: () => {
+      toast.success("Campaign resumed — sending will continue within a minute.");
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to resume campaign"),
+  });
+
   const retryOneFn = useServerFn(retryMessage);
   const retryOneM = useMutation({
     mutationFn: async ({ messageId, forceSms = false }: { messageId: string; forceSms?: boolean }) => {
@@ -597,6 +626,29 @@ function CampaignReport() {
                 <DropdownMenuItem onClick={() => exportPhoneNumbers("all", "all")}>All recipients</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {["queued", "sending", "processing", "scheduled"].includes(c.status) && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pauseM.isPending}
+                onClick={() => pauseM.mutate()}
+                title="Hold the remaining messages. You can resume any time — nothing already sent is affected."
+              >
+                <Pause className="size-3 mr-1" />
+                {pauseM.isPending ? "Pausing…" : "Pause campaign"}
+              </Button>
+            )}
+            {c.status === "paused_by_user" && (
+              <Button
+                size="sm"
+                disabled={resumeM.isPending}
+                onClick={() => resumeM.mutate()}
+                title="Continue sending the remaining messages."
+              >
+                <Play className="size-3 mr-1" />
+                {resumeM.isPending ? "Resuming…" : "Resume campaign"}
+              </Button>
+            )}
             {!["sent", "cancelled", "failed"].includes(c.status) && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -671,6 +723,20 @@ function CampaignReport() {
           </div>
         </div>
       </div>
+
+      {c.status === "paused_by_user" && (
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
+          <Pause className="size-5 text-warning-foreground shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <div className="font-semibold mb-0.5">Campaign paused</div>
+            <div className="text-muted-foreground">
+              The remaining messages are on hold and you are not charged for them. Click
+              “Resume campaign” to continue sending. Messages already handed to the carrier
+              keep being delivered.
+            </div>
+          </div>
+        </div>
+      )}
 
       {c.status === "paused_low_balance" && (
         <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-4 flex items-start gap-3">
