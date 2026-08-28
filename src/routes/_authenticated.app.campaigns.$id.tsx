@@ -5,6 +5,8 @@ import { reconcileCampaignMessages } from "@/lib/reconcile-messages.functions";
 import {
   cancelCampaign,
   stopCampaignAsSent,
+  pauseCampaign,
+  resumeCampaign,
   retryMessage,
   retryFailedMessages,
 } from "@/lib/campaign-control.functions";
