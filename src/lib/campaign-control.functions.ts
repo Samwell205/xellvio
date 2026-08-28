@@ -100,6 +100,76 @@ export const stopCampaignAsSent = createServerFn({ method: "POST" })
     return { ok: true, stoppedMessages: ids.length };
   });
 
+// Pause an in-flight campaign. Nothing already handed to the carrier is
+// touched — queued rows simply stay queued until the tenant resumes. The
+// dispatcher only selects campaigns in queued/sending/scheduled, so flipping
+// the status to `paused_by_user` stops further dispatch immediately.
+export const pauseCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { campaignId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: campaign, error: cErr } = await supabase
+      .from("campaigns")
+      .select("id, status")
+      .eq("id", data.campaignId)
+      .maybeSingle();
+    if (cErr) throw new Error(cErr.message);
+    if (!campaign) throw new Error("Campaign not found");
+    if (!["queued", "sending", "processing", "scheduled"].includes(campaign.status)) {
+      throw new Error(`Cannot pause a campaign in state "${campaign.status}"`);
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    await supabaseAdmin
+      .from("campaigns")
+      .update({
+        status: "paused_by_user",
+        paused_reason: "Paused by user",
+        paused_at: new Date().toISOString(),
+      })
+      .eq("id", data.campaignId);
+
+    const { count } = await supabaseAdmin
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", data.campaignId)
+      .eq("status", "queued");
+
+    return { ok: true, pausedMessages: count ?? 0 };
+  });
+
+// Resume a campaign the tenant paused. Puts it back in the dispatcher's queue;
+// remaining queued rows go out on the next tick.
+export const resumeCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { campaignId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const { data: campaign, error: cErr } = await supabase
+      .from("campaigns")
+      .select("id, status")
+      .eq("id", data.campaignId)
+      .maybeSingle();
+    if (cErr) throw new Error(cErr.message);
+    if (!campaign) throw new Error("Campaign not found");
+    if (campaign.status !== "paused_by_user") {
+      throw new Error(`Cannot resume a campaign in state "${campaign.status}"`);
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    await supabaseAdmin
+      .from("campaigns")
+      .update({ status: "sending", paused_reason: null, paused_at: null })
+      .eq("id", data.campaignId);
+
+    return { ok: true };
+  });
+
 // Retry a single failed / undelivered message by resetting it to `queued` so
 // the next dispatcher tick sends it again. Skips insufficient_balance rows
 // unless the account now has enough credit — those get re-queued too and the
