@@ -20,6 +20,7 @@ type Status =
   | "completed"
   | "draft"
   | "paused_low_balance"
+  | "paused_by_user"
   | "processing"
   | "blocked_content";
 
