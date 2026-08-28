@@ -724,6 +724,20 @@ function CampaignReport() {
         </div>
       </div>
 
+      {c.status === "paused_by_user" && (
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
+          <Pause className="size-5 text-warning-foreground shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <div className="font-semibold mb-0.5">Campaign paused</div>
+            <div className="text-muted-foreground">
+              The remaining messages are on hold and you are not charged for them. Click
+              “Resume campaign” to continue sending. Messages already handed to the carrier
+              keep being delivered.
+            </div>
+          </div>
+        </div>
+      )}
+
       {c.status === "paused_low_balance" && (
         <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-4 flex items-start gap-3">
           <RefreshCw className="size-5 text-amber-600 animate-spin shrink-0 mt-0.5" />
