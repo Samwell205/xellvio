@@ -43,6 +43,7 @@ import {
   ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
   Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
   DollarSign, Wallet, Activity, XCircle, Download, RotateCw, ExternalLink,
+  Pause, Play,
 } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
