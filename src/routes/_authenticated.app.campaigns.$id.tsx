@@ -626,6 +626,29 @@ function CampaignReport() {
                 <DropdownMenuItem onClick={() => exportPhoneNumbers("all", "all")}>All recipients</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {["queued", "sending", "processing", "scheduled"].includes(c.status) && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pauseM.isPending}
+                onClick={() => pauseM.mutate()}
+                title="Hold the remaining messages. You can resume any time — nothing already sent is affected."
+              >
+                <Pause className="size-3 mr-1" />
+                {pauseM.isPending ? "Pausing…" : "Pause campaign"}
+              </Button>
+            )}
+            {c.status === "paused_by_user" && (
+              <Button
+                size="sm"
+                disabled={resumeM.isPending}
+                onClick={() => resumeM.mutate()}
+                title="Continue sending the remaining messages."
+              >
+                <Play className="size-3 mr-1" />
+                {resumeM.isPending ? "Resuming…" : "Resume campaign"}
+              </Button>
+            )}
             {!["sent", "cancelled", "failed"].includes(c.status) && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
