@@ -328,6 +328,32 @@ function CampaignReport() {
     onError: (e: any) => toast.error(e?.message ?? "Failed to stop campaign"),
   });
 
+  const pauseFn = useServerFn(pauseCampaign);
+  const pauseM = useMutation({
+    mutationFn: () => pauseFn({ data: { campaignId: id } }),
+    onSuccess: (r: any) => {
+      toast.success(
+        `Campaign paused. ${Number(r?.pausedMessages ?? 0).toLocaleString()} message${
+          Number(r?.pausedMessages ?? 0) === 1 ? "" : "s"
+        } are on hold until you resume.`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to pause campaign"),
+  });
+
+  const resumeFn = useServerFn(resumeCampaign);
+  const resumeM = useMutation({
+    mutationFn: () => resumeFn({ data: { campaignId: id } }),
+    onSuccess: () => {
+      toast.success("Campaign resumed — sending will continue within a minute.");
+      queryClient.invalidateQueries({ queryKey: ["campaign", id] });
+      queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to resume campaign"),
+  });
+
   const retryOneFn = useServerFn(retryMessage);
   const retryOneM = useMutation({
     mutationFn: async ({ messageId, forceSms = false }: { messageId: string; forceSms?: boolean }) => {
