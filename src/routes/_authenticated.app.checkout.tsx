@@ -47,8 +47,29 @@ function CheckoutPage() {
   const credits = pack ? Number(pack.credits) : Number(amountParam ?? 0);
   const orderLabel = pack ? pack.name : isCustom ? `Custom — ${formatUSD(amount)} in credits` : "—";
 
-  const [method, setMethod] = useState<Method>("paystack");
+  const cardConfigured = isCardCheckoutConfigured();
+  const loadEligibility = useServerFn(getCardEligibility);
+  const eligibilityQ = useQuery({
+    queryKey: ["card-eligibility"],
+    queryFn: () => loadEligibility(),
+    enabled: cardConfigured,
+    staleTime: 5 * 60 * 1000,
+  });
+  const cardAllowed = !!eligibilityQ.data?.allowed;
+
+  const [method, setMethod] = useState<Method>("card");
   const [coin, setCoin] = useState<string>(DEFAULT_CRYPTO_COIN);
+  const [showCardForm, setShowCardForm] = useState(false);
+
+  useEffect(() => {
+    if (!cardConfigured || (eligibilityQ.data && !cardAllowed)) {
+      setMethod((m) => (m === "card" ? "paystack" : m));
+    }
+  }, [cardConfigured, eligibilityQ.data, cardAllowed]);
+
+  useEffect(() => {
+    setShowCardForm(false);
+  }, [method, packParam, amountParam]);
 
   const initPaystack = useServerFn(initPaystackCheckout);
   const initPaystackCustom = useServerFn(initPaystackCheckoutCustom);
