@@ -18,9 +18,12 @@ export const ensureMyAccount = createServerFn({ method: "POST" })
       (typeof meta.name === "string" && meta.name) ||
       "";
 
+    const req = getRequest();
+    const geo = req?.headers ? await enrichGeo(geoFromHeaders(req.headers)) : { ip: null, country: null, region: null, city: null };
+
     const { data: existing, error: lookupError } = await supabaseAdmin
       .from("accounts")
-      .select("id,email,contact_email,full_name")
+      .select("id,email,contact_email,full_name,signup_ip,signup_country")
       .eq("id", userId)
       .maybeSingle();
     if (lookupError) throw lookupError;
@@ -31,22 +34,46 @@ export const ensureMyAccount = createServerFn({ method: "POST" })
         email,
         contact_email: email,
         full_name: fullName,
+        signup_ip: geo.ip,
+        signup_country: geo.country,
+        signup_region: geo.region,
+        signup_city: geo.city,
+        last_seen_ip: geo.ip,
+        last_seen_country: geo.country,
+        last_seen_region: geo.region,
+        last_seen_city: geo.city,
+        last_seen_at: new Date().toISOString(),
       });
       if (error) throw error;
       await supabaseAdmin.from("user_roles").upsert({ user_id: userId, role: "user" }, { onConflict: "user_id,role" });
       return { created: true };
     }
 
-    const patch: { email?: string; contact_email?: string; full_name?: string } = {};
+    const patch: Record<string, unknown> = {};
     if (!existing.email && email) patch.email = email;
     if (!existing.contact_email && email) patch.contact_email = email;
     if (!existing.full_name && fullName) patch.full_name = fullName;
+    if (geo.ip || geo.country) {
+      // Backfill signup location once for accounts created before location tracking.
+      if (!(existing as any).signup_country && !(existing as any).signup_ip) {
+        patch.signup_ip = geo.ip;
+        patch.signup_country = geo.country;
+        patch.signup_region = geo.region;
+        patch.signup_city = geo.city;
+      }
+      patch.last_seen_ip = geo.ip;
+      patch.last_seen_country = geo.country;
+      patch.last_seen_region = geo.region;
+      patch.last_seen_city = geo.city;
+      patch.last_seen_at = new Date().toISOString();
+    }
     if (Object.keys(patch).length > 0) {
       const { error } = await supabaseAdmin.from("accounts").update(patch).eq("id", userId);
       if (error) throw error;
     }
     await supabaseAdmin.from("user_roles").upsert({ user_id: userId, role: "user" }, { onConflict: "user_id,role" });
     return { created: false };
+
   });
 
 /** Returns onboarding/Twilio provisioning status without exposing credentials to the client. */
