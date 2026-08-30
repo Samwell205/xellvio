@@ -14,6 +14,38 @@ export const getCardEligibility = createServerFn({ method: "GET" }).handler(asyn
 
 type CheckoutResult = { clientSecret: string; reference: string } | { error: string };
 
+/**
+ * Catalog price IDs for the standard USD credit packs. When the pack amount
+ * matches one of these, we bill the catalog price so the payments dashboard
+ * shows the pack name. Custom amounts fall back to dynamic pricing.
+ */
+const CATALOG_PRICE_BY_USD: Record<number, string> = {
+  5: "credits_starter_5_onetime",
+  10: "credits_basic_10_onetime",
+  25: "credits_growth_25_onetime",
+  50: "credits_pro_50_onetime",
+  100: "credits_scale_100_onetime",
+  250: "credits_business_250_onetime",
+  500: "credits_enterprise_500_onetime",
+};
+
+async function resolveCatalogPrice(
+  stripe: Stripe,
+  amountUsd: number,
+): Promise<string | null> {
+  const lookupKey = CATALOG_PRICE_BY_USD[amountUsd];
+  if (!lookupKey) return null;
+  try {
+    const prices = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+    const price = prices.data[0];
+    // Only use it when the catalog amount still matches the pack amount.
+    if (price && price.unit_amount === Math.round(amountUsd * 100)) return price.id;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function createSession(opts: {
   environment: StripeEnv;
   amountUsd: number;
@@ -23,18 +55,22 @@ async function createSession(opts: {
   accountId: string;
   email?: string;
   returnUrl: string;
+  useCatalog: boolean;
 }): Promise<{ clientSecret: string }> {
   const stripe = createStripeClient(opts.environment);
+  const catalogPriceId = opts.useCatalog ? await resolveCatalogPrice(stripe, opts.amountUsd) : null;
   const session = await stripe.checkout.sessions.create({
     line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: { name: opts.label },
-          unit_amount: Math.round(opts.amountUsd * 100),
-        },
-        quantity: 1,
-      },
+      catalogPriceId
+        ? { price: catalogPriceId, quantity: 1 }
+        : {
+            price_data: {
+              currency: "usd",
+              product_data: { name: opts.label },
+              unit_amount: Math.round(opts.amountUsd * 100),
+            },
+            quantity: 1,
+          },
     ],
     mode: "payment",
     ui_mode: "embedded_page",
