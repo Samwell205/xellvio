@@ -311,6 +311,11 @@ export type Database = {
           gorgias_enabled: boolean
           id: string
           is_seller: boolean
+          last_seen_at: string | null
+          last_seen_city: string | null
+          last_seen_country: string | null
+          last_seen_ip: string | null
+          last_seen_region: string | null
           legal_business_name: string | null
           monthly_volume_estimate: number | null
           onboarding_status: string
@@ -325,6 +330,10 @@ export type Database = {
           seller_lifetime_earnings: number
           sending_suspended_at: string | null
           sending_suspended_reason: string | null
+          signup_city: string | null
+          signup_country: string | null
+          signup_ip: string | null
+          signup_region: string | null
           sms_consent_disclosures_confirmed_at: string | null
           sms_consent_disclosures_version: string | null
           sms_target_countries: string[] | null
@@ -361,6 +370,11 @@ export type Database = {
           gorgias_enabled?: boolean
           id: string
           is_seller?: boolean
+          last_seen_at?: string | null
+          last_seen_city?: string | null
+          last_seen_country?: string | null
+          last_seen_ip?: string | null
+          last_seen_region?: string | null
           legal_business_name?: string | null
           monthly_volume_estimate?: number | null
           onboarding_status?: string
@@ -375,6 +389,10 @@ export type Database = {
           seller_lifetime_earnings?: number
           sending_suspended_at?: string | null
           sending_suspended_reason?: string | null
+          signup_city?: string | null
+          signup_country?: string | null
+          signup_ip?: string | null
+          signup_region?: string | null
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
@@ -411,6 +429,11 @@ export type Database = {
           gorgias_enabled?: boolean
           id?: string
           is_seller?: boolean
+          last_seen_at?: string | null
+          last_seen_city?: string | null
+          last_seen_country?: string | null
+          last_seen_ip?: string | null
+          last_seen_region?: string | null
           legal_business_name?: string | null
           monthly_volume_estimate?: number | null
           onboarding_status?: string
@@ -425,6 +448,10 @@ export type Database = {
           seller_lifetime_earnings?: number
           sending_suspended_at?: string | null
           sending_suspended_reason?: string | null
+          signup_city?: string | null
+          signup_country?: string | null
+          signup_ip?: string | null
+          signup_region?: string | null
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
