@@ -85,6 +85,8 @@ const KEYWORD_PATTERNS: Array<{
       /\b(casino|sportsbook|poker room|blackjack|roulette|slot machine|lottery|jackpot|scratch[-\s]?off)\b/gi,
       /\b(bet now|place your bet|wager|parlay|free spins|deposit bonus|no deposit bonus)\b/gi,
       /\b(online casino|gambling site|betting app|sports betting)\b/gi,
+      /\b(sports? bettor|sports? handicapper|betting picks?|sports? picks?|winning picks?)\b/gi,
+      /\b(?:free|paid|premium|daily)\s+(?:ncaa|nfl|nba|nhl|mlb|football|basketball|baseball|hockey)\s+(?:winner|pick|lock|play)\b/gi,
     ],
   },
   {
