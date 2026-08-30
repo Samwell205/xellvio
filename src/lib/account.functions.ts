@@ -68,7 +68,7 @@ export const ensureMyAccount = createServerFn({ method: "POST" })
       patch.last_seen_at = new Date().toISOString();
     }
     if (Object.keys(patch).length > 0) {
-      const { error } = await supabaseAdmin.from("accounts").update(patch).eq("id", userId);
+      const { error } = await supabaseAdmin.from("accounts").update(patch as Record<string, never>).eq("id", userId);
       if (error) throw error;
     }
     await supabaseAdmin.from("user_roles").upsert({ user_id: userId, role: "user" }, { onConflict: "user_id,role" });
