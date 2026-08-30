@@ -49,7 +49,7 @@ export const ensureMyAccount = createServerFn({ method: "POST" })
       return { created: true };
     }
 
-    const patch: Record<string, unknown> = {};
+    const patch: Record<string, string | null> = {};
     if (!existing.email && email) patch.email = email;
     if (!existing.contact_email && email) patch.contact_email = email;
     if (!existing.full_name && fullName) patch.full_name = fullName;
