@@ -9,12 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wallet, CreditCard, Bitcoin, ArrowLeft } from "lucide-react";
+import { Wallet, CreditCard, Bitcoin, ArrowLeft, Globe, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
 import { listCreditPacks, initPaystackCheckout, initPaystackCheckoutCustom } from "@/lib/billing-packs.functions";
 import { CRYPTO_COINS, DEFAULT_CRYPTO_COIN } from "@/lib/crypto-coins";
 import { initNowPaymentsCheckout, initNowPaymentsCheckoutCustom } from "@/lib/nowpayments.functions";
+import { getCardEligibility } from "@/lib/stripe-checkout.functions";
+import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { isCardCheckoutConfigured } from "@/lib/stripe";
 
 export const Route = createFileRoute("/_authenticated/app/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Xellvio" }] }),
@@ -26,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/app/checkout")({
   component: CheckoutPage,
 });
 
-type Method = "paystack" | "crypto";
+type Method = "card" | "paystack" | "crypto";
 const COINS = CRYPTO_COINS;
 
 function CheckoutPage() {
@@ -43,8 +47,29 @@ function CheckoutPage() {
   const credits = pack ? Number(pack.credits) : Number(amountParam ?? 0);
   const orderLabel = pack ? pack.name : isCustom ? `Custom — ${formatUSD(amount)} in credits` : "—";
 
-  const [method, setMethod] = useState<Method>("paystack");
+  const cardConfigured = isCardCheckoutConfigured();
+  const loadEligibility = useServerFn(getCardEligibility);
+  const eligibilityQ = useQuery({
+    queryKey: ["card-eligibility"],
+    queryFn: () => loadEligibility(),
+    enabled: cardConfigured,
+    staleTime: 5 * 60 * 1000,
+  });
+  const cardAllowed = !!eligibilityQ.data?.allowed;
+
+  const [method, setMethod] = useState<Method>("card");
   const [coin, setCoin] = useState<string>(DEFAULT_CRYPTO_COIN);
+  const [showCardForm, setShowCardForm] = useState(false);
+
+  useEffect(() => {
+    if (!cardConfigured || (eligibilityQ.data && !cardAllowed)) {
+      setMethod((m) => (m === "card" ? "paystack" : m));
+    }
+  }, [cardConfigured, eligibilityQ.data, cardAllowed]);
+
+  useEffect(() => {
+    setShowCardForm(false);
+  }, [method, packParam, amountParam]);
 
   const initPaystack = useServerFn(initPaystackCheckout);
   const initPaystackCustom = useServerFn(initPaystackCheckoutCustom);
@@ -100,6 +125,24 @@ function CheckoutPage() {
       <Card className="p-5 space-y-4">
         <h3 className="font-semibold">Payment method</h3>
         <RadioGroup value={method} onValueChange={(v) => setMethod(v as Method)} className="grid sm:grid-cols-2 gap-3">
+          {cardConfigured && (
+            <label
+              className={`rounded-xl border p-4 flex items-start gap-3 ${method === "card" ? "border-primary bg-primary/5" : ""} ${cardAllowed ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
+            >
+              <RadioGroupItem value="card" id="m-card" className="mt-1" disabled={!cardAllowed} />
+              <div className="flex-1">
+                <div className="font-medium flex items-center gap-2"><Globe className="size-4" /> International card</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Visa, Mastercard, Amex, Apple Pay and Google Pay. Credits land instantly.
+                </p>
+                {eligibilityQ.data && !cardAllowed && (
+                  <p className="text-xs text-destructive mt-1.5 flex items-start gap-1">
+                    <ShieldAlert className="size-3.5 mt-0.5 shrink-0" /> {eligibilityQ.data.message}
+                  </p>
+                )}
+              </div>
+            </label>
+          )}
           <label className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "paystack" ? "border-primary bg-primary/5" : ""}`}>
             <RadioGroupItem value="paystack" id="m-paystack" className="mt-1" />
             <div className="flex-1">
@@ -129,9 +172,31 @@ function CheckoutPage() {
           </div>
         )}
 
-        <Button className="w-full" size="lg" onClick={() => pay.mutate()} disabled={pay.isPending || !amount}>
-          {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
-        </Button>
+        {method === "card" ? (
+          <div className="space-y-3">
+            <PaymentTestModeBanner />
+            {showCardForm ? (
+              <StripeEmbeddedCheckout
+                packId={pack?.id}
+                amount={pack ? undefined : amount}
+                returnUrl={`${window.location.origin}/app/billing?card=success`}
+              />
+            ) : (
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => setShowCardForm(true)}
+                disabled={!amount || !cardAllowed}
+              >
+                {`Pay ${formatUSD(amount)} by card`}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <Button className="w-full" size="lg" onClick={() => pay.mutate()} disabled={pay.isPending || !amount}>
+            {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
+          </Button>
+        )}
       </Card>
     </div>
   );
