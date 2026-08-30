@@ -66,7 +66,9 @@ async function createSession(opts: {
         : {
             price_data: {
               currency: "usd",
-              product_data: { name: opts.label },
+              // Tax code is required for managed payments eligibility; prepaid
+              // messaging credits are an electronically supplied service.
+              product_data: { name: opts.label, tax_code: "txcd_10103001" },
               unit_amount: Math.round(opts.amountUsd * 100),
             },
             quantity: 1,
