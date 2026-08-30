@@ -105,6 +105,8 @@ function AdminAccountsPage() {
                   <th className="p-3">Business</th>
                   <th className="p-3">Email</th>
                   <th className="p-3">Status</th>
+                  <th className="p-3">Location</th>
+
                   <th className="p-3 text-right">Balance</th>
                   <th className="p-3">Joined</th>
                   <th className="p-3 text-right">Actions</th>
