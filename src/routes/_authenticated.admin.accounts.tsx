@@ -27,8 +27,9 @@ function AdminAccountsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,sending_suspended_at,sending_suspended_reason,created_at")
+        .select("id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,sending_suspended_at,sending_suspended_reason,created_at,signup_country,signup_region,signup_city,signup_ip,last_seen_country,last_seen_city,last_seen_at")
         .order("created_at", { ascending: false });
+
       if (error) throw error;
       return data ?? [];
     },
