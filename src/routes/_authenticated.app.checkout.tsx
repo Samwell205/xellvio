@@ -125,6 +125,24 @@ function CheckoutPage() {
       <Card className="p-5 space-y-4">
         <h3 className="font-semibold">Payment method</h3>
         <RadioGroup value={method} onValueChange={(v) => setMethod(v as Method)} className="grid sm:grid-cols-2 gap-3">
+          {cardConfigured && (
+            <label
+              className={`rounded-xl border p-4 flex items-start gap-3 ${method === "card" ? "border-primary bg-primary/5" : ""} ${cardAllowed ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
+            >
+              <RadioGroupItem value="card" id="m-card" className="mt-1" disabled={!cardAllowed} />
+              <div className="flex-1">
+                <div className="font-medium flex items-center gap-2"><Globe className="size-4" /> International card</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Visa, Mastercard, Amex, Apple Pay and Google Pay. Credits land instantly.
+                </p>
+                {eligibilityQ.data && !cardAllowed && (
+                  <p className="text-xs text-destructive mt-1.5 flex items-start gap-1">
+                    <ShieldAlert className="size-3.5 mt-0.5 shrink-0" /> {eligibilityQ.data.message}
+                  </p>
+                )}
+              </div>
+            </label>
+          )}
           <label className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "paystack" ? "border-primary bg-primary/5" : ""}`}>
             <RadioGroupItem value="paystack" id="m-paystack" className="mt-1" />
             <div className="flex-1">
