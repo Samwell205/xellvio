@@ -132,6 +132,24 @@ function AdminAccountsPage() {
                           )}
                         </div>
                       </td>
+                      <td className="p-3 text-muted-foreground">
+                        {(() => {
+                          const r = a as any;
+                          const parts = [r.signup_city, r.signup_region, r.signup_country].filter(Boolean);
+                          const lastParts = [r.last_seen_city, r.last_seen_country].filter(Boolean);
+                          if (parts.length === 0 && lastParts.length === 0) return <span title="Captured on next sign-in">Unknown</span>;
+                          return (
+                            <div className="flex flex-col leading-tight">
+                              <span className="text-foreground">{parts.join(", ") || "Unknown"}</span>
+                              {r.signup_ip && <span className="text-xs">{r.signup_ip}</span>}
+                              {lastParts.length > 0 && (
+                                <span className="text-xs">Last seen: {lastParts.join(", ")}</span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </td>
+
                       <td className="p-3 text-right tabular-nums">${Number(a.credit_balance).toFixed(2)}</td>
                       <td className="p-3 text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</td>
                       <td className="p-3 text-right">
