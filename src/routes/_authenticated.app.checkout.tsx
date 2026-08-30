@@ -9,12 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wallet, CreditCard, Bitcoin, ArrowLeft } from "lucide-react";
+import { Wallet, CreditCard, Bitcoin, ArrowLeft, Globe, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
 import { listCreditPacks, initPaystackCheckout, initPaystackCheckoutCustom } from "@/lib/billing-packs.functions";
 import { CRYPTO_COINS, DEFAULT_CRYPTO_COIN } from "@/lib/crypto-coins";
 import { initNowPaymentsCheckout, initNowPaymentsCheckoutCustom } from "@/lib/nowpayments.functions";
+import { getCardEligibility } from "@/lib/stripe-checkout.functions";
+import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { isCardCheckoutConfigured } from "@/lib/stripe";
 
 export const Route = createFileRoute("/_authenticated/app/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Xellvio" }] }),
@@ -26,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/app/checkout")({
   component: CheckoutPage,
 });
 
-type Method = "paystack" | "crypto";
+type Method = "card" | "paystack" | "crypto";
 const COINS = CRYPTO_COINS;
 
 function CheckoutPage() {
