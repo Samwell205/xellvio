@@ -26,7 +26,6 @@ async function inspectNetwork(ip: string | null): Promise<NetCheck> {
       is_tor?: boolean;
       is_datacenter?: boolean;
       location?: { country_code?: string };
-besides: undefined;
     };
     return {
       country: j.location?.country_code ?? null,
