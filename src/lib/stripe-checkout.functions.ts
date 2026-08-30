@@ -170,6 +170,7 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
         accountId: context.userId,
         email: userRes?.user?.email ?? undefined,
         returnUrl: data.returnUrl,
+        useCatalog: !!packId,
       });
       if (!clientSecret) return { error: "Card checkout did not start — please try again." };
       return { clientSecret, reference };
