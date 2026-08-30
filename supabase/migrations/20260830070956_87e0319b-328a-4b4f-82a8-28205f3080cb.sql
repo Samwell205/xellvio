@@ -1,0 +1,2 @@
+ALTER TABLE public.payments DROP CONSTRAINT payments_provider_check;
+ALTER TABLE public.payments ADD CONSTRAINT payments_provider_check CHECK (provider = ANY (ARRAY['paystack'::text,'payoneer'::text,'nowpayments'::text,'stripe'::text]));
