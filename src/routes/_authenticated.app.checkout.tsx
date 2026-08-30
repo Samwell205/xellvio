@@ -172,9 +172,31 @@ function CheckoutPage() {
           </div>
         )}
 
-        <Button className="w-full" size="lg" onClick={() => pay.mutate()} disabled={pay.isPending || !amount}>
-          {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
-        </Button>
+        {method === "card" ? (
+          <div className="space-y-3">
+            <PaymentTestModeBanner />
+            {showCardForm ? (
+              <StripeEmbeddedCheckout
+                packId={pack?.id}
+                amount={pack ? undefined : amount}
+                returnUrl={`${window.location.origin}/app/billing?card=success`}
+              />
+            ) : (
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => setShowCardForm(true)}
+                disabled={!amount || !cardAllowed}
+              >
+                {`Pay ${formatUSD(amount)} by card`}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <Button className="w-full" size="lg" onClick={() => pay.mutate()} disabled={pay.isPending || !amount}>
+            {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
+          </Button>
+        )}
       </Card>
     </div>
   );
