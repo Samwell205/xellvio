@@ -215,7 +215,17 @@ export async function getPhoneNumberByE164(phone: string): Promise<{ id: string;
  * assigned to a Messaging Profile (i.e. carrier-verified and ready to send).
  * Paginated internally; caps at ~2000 rows to be safe.
  */
+const NANP_TOLLFREE_PREFIXES = ["800", "833", "844", "855", "866", "877", "888"];
+
+/** True for +1 toll-free ranges (800/833/844/855/866/877/888). */
+export function isNanpTollfree(phone: string): boolean {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.length !== 11 || !digits.startsWith("1")) return false;
+  return NANP_TOLLFREE_PREFIXES.includes(digits.slice(1, 4));
+}
+
 export async function listAccountNumbersByType(
+
   phoneNumberType: "toll-free" | "local" | "mobile" | "national",
 ): Promise<
   Array<{ id: string; phone_number: string; messaging_profile_id: string | null; country_code: string | null }>
