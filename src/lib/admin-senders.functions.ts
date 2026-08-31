@@ -231,7 +231,7 @@ async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): 
         rejection_reason: staleReason,
         friendly_rejection_reason: staleReason,
         last_synced_at: new Date().toISOString(),
-      }).eq("is_shared", true).not("phone_number", "in", `(${keepPhones.map((p) => `"${p}"`).join(",")})`);
+      }).eq("is_shared", true).eq("sender_kind", "toll_free").not("phone_number", "in", `(${keepPhones.map((p) => `"${p}"`).join(",")})`);
     } else {
       await supabaseAdmin.from("shared_tollfree_pool").delete().neq("phone_number", "");
       await supabaseAdmin.from("sender_assets").update({
@@ -239,7 +239,7 @@ async function syncSharedPoolFromTelnyx(supabaseAdmin: any, createdBy: string): 
         rejection_reason: staleReason,
         friendly_rejection_reason: staleReason,
         last_synced_at: new Date().toISOString(),
-      }).eq("is_shared", true);
+      }).eq("is_shared", true).eq("sender_kind", "toll_free");
     }
     if (rows.length) {
       await supabaseAdmin.from("shared_tollfree_pool").upsert(rows, { onConflict: "phone_number" });
