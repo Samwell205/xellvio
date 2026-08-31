@@ -215,7 +215,17 @@ export async function getPhoneNumberByE164(phone: string): Promise<{ id: string;
  * assigned to a Messaging Profile (i.e. carrier-verified and ready to send).
  * Paginated internally; caps at ~2000 rows to be safe.
  */
+const NANP_TOLLFREE_PREFIXES = ["800", "833", "844", "855", "866", "877", "888"];
+
+/** True for +1 toll-free ranges (800/833/844/855/866/877/888). */
+export function isNanpTollfree(phone: string): boolean {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.length !== 11 || !digits.startsWith("1")) return false;
+  return NANP_TOLLFREE_PREFIXES.includes(digits.slice(1, 4));
+}
+
 export async function listAccountNumbersByType(
+
   phoneNumberType: "toll-free" | "local" | "mobile" | "national",
 ): Promise<
   Array<{ id: string; phone_number: string; messaging_profile_id: string | null; country_code: string | null }>
@@ -235,6 +245,11 @@ export async function listAccountNumbersByType(
       },
     });
     for (const r of res.data ?? []) {
+      // Some carrier accounts ignore the type filter, so double-check the type
+      // that came back and (for local) exclude North-American toll-free ranges.
+      const type = (r.phone_number_type ?? "").toLowerCase();
+      if (type && type.replace(/_/g, "-") !== phoneNumberType) continue;
+      if (phoneNumberType === "local" && isNanpTollfree(r.phone_number)) continue;
       out.push({
         id: r.id,
         phone_number: r.phone_number,
@@ -242,6 +257,7 @@ export async function listAccountNumbersByType(
         country_code: r.country_code ?? null,
       });
     }
+
     const total = res.meta?.total_pages ?? 1;
     if (page >= total) break;
     page += 1;
