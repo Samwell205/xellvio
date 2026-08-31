@@ -398,10 +398,11 @@ async function sendOneMessage(
       .filter((a) => {
         if (!(a.telnyx_messaging_profile_id || a.phone_number)) return false;
         if (a.country_code === m.country_code) return true;
-        // Toll-free numbers approved in US or CA work for both (NANP TFV).
+        // Verified North American toll-free and local numbers can route to
+        // both US and Canada.
         if (
           isNanp &&
-          a.sender_kind === "toll_free" &&
+          (a.sender_kind === "toll_free" || a.sender_kind === "local") &&
           (a.country_code === "US" || a.country_code === "CA")
         ) return true;
         return false;
