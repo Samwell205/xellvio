@@ -192,10 +192,12 @@ export const resumeCampaign = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    await supabaseAdmin
+    const { error: resumeErr } = await supabaseAdmin
       .from("campaigns")
       .update({ status: "sending", paused_reason: null, paused_at: null })
       .eq("id", data.campaignId);
+    if (resumeErr) throw new Error(resumeErr.message);
+
 
     return { ok: true };
   });
