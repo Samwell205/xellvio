@@ -14,7 +14,9 @@ import {
   adminListSharedTollfree, adminCreateSharedTollfree, adminAttachSharedTollfree,
   adminDetachSharedTollfree, adminDeleteSharedTollfree,
   adminGetTfnAdvertisedAvailable, adminSetTfnAdvertisedAvailable,
+  adminListLocalNumbers, adminAttachLocalNumber, adminDetachLocalNumber,
 } from "@/lib/admin-senders.functions";
+
 
 import { adminListAccountsLite } from "@/lib/admin-verifiers.functions";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
