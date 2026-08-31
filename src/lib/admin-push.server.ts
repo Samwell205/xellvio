@@ -18,8 +18,13 @@ export async function sendAdminPush(payload: AdminPushPayload): Promise<void> {
   }
 
   try {
-    const webpush = (await import("web-push")).default;
+    // `web-push` is CommonJS: depending on the runtime its API lands either on
+    // the namespace or on `.default`. Accept both, otherwise setVapidDetails
+    // is undefined and every push throws.
+    const mod: any = await import("web-push");
+    const webpush: any = typeof mod?.setVapidDetails === "function" ? mod : (mod?.default ?? mod);
     webpush.setVapidDetails(subject, pub, priv);
+
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: subs } = await supabaseAdmin
