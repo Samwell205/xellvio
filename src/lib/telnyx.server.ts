@@ -235,6 +235,11 @@ export async function listAccountNumbersByType(
       },
     });
     for (const r of res.data ?? []) {
+      // Some carrier accounts ignore the type filter, so double-check the type
+      // that came back and (for local) exclude North-American toll-free ranges.
+      const type = (r.phone_number_type ?? "").toLowerCase();
+      if (type && type.replace(/_/g, "-") !== phoneNumberType) continue;
+      if (phoneNumberType === "local" && isNanpTollfree(r.phone_number)) continue;
       out.push({
         id: r.id,
         phone_number: r.phone_number,
@@ -242,6 +247,7 @@ export async function listAccountNumbersByType(
         country_code: r.country_code ?? null,
       });
     }
+
     const total = res.meta?.total_pages ?? 1;
     if (page >= total) break;
     page += 1;
