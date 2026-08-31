@@ -588,3 +588,165 @@ function SharedTollfreePoolPanel() {
   );
 }
 
+
+function LocalTenDlcPanel() {
+  const qc = useQueryClient();
+  const listFn = useServerFn(adminListLocalNumbers);
+  const attachFn = useServerFn(adminAttachLocalNumber);
+  const detachFn = useServerFn(adminDetachLocalNumber);
+  const listAccountsFn = useServerFn(adminListAccountsLite);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-local-numbers"],
+    queryFn: () => listFn(),
+    refetchInterval: 120_000,
+  });
+  const items = ((data as any)?.items ?? []) as Array<any>;
+  const loadError = (data as any)?.error as string | null | undefined;
+
+  const { data: accounts } = useQuery({
+    queryKey: ["admin-accounts-lite"],
+    queryFn: () => listAccountsFn(),
+  });
+
+  const [attachTarget, setAttachTarget] = useState<{ phone: string; country: string } | null>(null);
+  const [attachSearch, setAttachSearch] = useState("");
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["admin-local-numbers"] });
+    qc.invalidateQueries({ queryKey: ["admin-senders"] });
+  };
+
+  const attachMut = useMutation({
+    mutationFn: (v: { phone_number: string; account_id: string; country: string }) => attachFn({ data: v }),
+    onSuccess: () => { toast.success("Tenant attached — they can send with this number now."); setAttachTarget(null); setAttachSearch(""); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const detachMut = useMutation({
+    mutationFn: (v: { phone_number: string; account_id: string }) => detachFn({ data: v }),
+    onSuccess: () => { toast.success("Tenant detached."); invalidate(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const filteredAccounts = useMemo(() => {
+    const q = attachSearch.trim().toLowerCase();
+    const list = (accounts ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>;
+    if (!q) return list.slice(0, 50);
+    return list.filter(a =>
+      (a.email ?? "").toLowerCase().includes(q) ||
+      (a.full_name ?? "").toLowerCase().includes(q),
+    ).slice(0, 50);
+  }, [accounts, attachSearch]);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-3">
+        <div>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Radio className="size-4 text-primary" /> Local numbers (10DLC)
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Local numbers on your carrier account. Once a number is registered to an approved 10DLC brand and
+            campaign and sits on a Messaging Profile, attach any tenant here and they can send US SMS with it
+            immediately. We keep the number on its existing Messaging Profile so the 10DLC campaign link stays intact.
+          </p>
+          {loadError && <p className="text-xs text-destructive mt-2">Carrier lookup failed: {loadError}</p>}
+        </div>
+        <Button size="sm" variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ["admin-local-numbers"] })}>
+          <RefreshCw className="size-4 mr-1" /> Reload
+        </Button>
+      </CardHeader>
+      <CardContent className="p-0 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+            <tr>
+              <th className="text-left p-2">Number</th>
+              <th className="text-left p-2">Country</th>
+              <th className="text-left p-2">Messaging profile</th>
+              <th className="text-left p-2">Attached tenants</th>
+              <th className="text-right p-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && (
+              <tr><td colSpan={5} className="p-6 text-center text-muted-foreground"><Loader2 className="size-4 mr-2 inline animate-spin" /> Loading…</td></tr>
+            )}
+            {!isLoading && items.length === 0 && (
+              <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No local numbers found on your carrier account.</td></tr>
+            )}
+            {items.map((p) => (
+              <tr key={p.phone_number} className="border-t align-top">
+                <td className="p-2 font-mono text-xs">{p.phone_number}</td>
+                <td className="p-2 font-mono text-xs">{p.country_code}</td>
+                <td className="p-2 text-xs">
+                  {p.telnyx_messaging_profile_id
+                    ? <Badge variant="outline" className={STATUS_COLORS.verified}>Linked</Badge>
+                    : <span className="text-amber-600">Not on a Messaging Profile</span>}
+                </td>
+                <td className="p-2">
+                  {(p.attachments ?? []).length === 0 ? (
+                    <span className="text-xs text-muted-foreground">No tenants attached yet.</span>
+                  ) : (
+                    <div className="space-y-1">
+                      {p.attachments.map((a: any) => (
+                        <div key={a.account_id} className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded px-2 py-1">
+                          <div>
+                            <div className="font-medium">{a.tenant_business || a.tenant_email || a.account_id.slice(0, 8)}</div>
+                            <div className="text-muted-foreground">{a.tenant_email ?? ""}</div>
+                          </div>
+                          <Button size="sm" variant="ghost"
+                            onClick={() => { if (confirm(`Detach ${a.tenant_email ?? "tenant"} from ${p.phone_number}?`)) detachMut.mutate({ phone_number: p.phone_number, account_id: a.account_id }); }}
+                            disabled={detachMut.isPending}>
+                            <Unlink className="size-3 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td className="p-2 text-right whitespace-nowrap">
+                  <Button size="sm" variant="outline"
+                    disabled={!p.telnyx_messaging_profile_id}
+                    onClick={() => setAttachTarget({ phone: p.phone_number, country: p.country_code || "US" })}>
+                    <Plus className="size-3 mr-1" /> Assign tenant
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </CardContent>
+
+      <Dialog open={!!attachTarget} onOpenChange={(o) => { if (!o) { setAttachTarget(null); setAttachSearch(""); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Assign {attachTarget?.phone} to a tenant</DialogTitle>
+            <DialogDescription>
+              The tenant gets a verified local sender for {attachTarget?.country} and can send campaigns straight away.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input placeholder="Search by email or name…" value={attachSearch} onChange={(e) => setAttachSearch(e.target.value)} />
+            <div className="max-h-60 overflow-y-auto border rounded-md divide-y">
+              {filteredAccounts.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => attachTarget && attachMut.mutate({ phone_number: attachTarget.phone, account_id: a.id, country: attachTarget.country })}
+                  disabled={attachMut.isPending}
+                  className="w-full text-left px-2 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
+                >
+                  <div className="font-medium">{a.email ?? "—"}</div>
+                  <div className="text-muted-foreground">{a.full_name ?? ""} · {a.id.slice(0, 8)}</div>
+                </button>
+              ))}
+              {filteredAccounts.length === 0 && (
+                <div className="p-2 text-xs text-muted-foreground">No tenants match.</div>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
