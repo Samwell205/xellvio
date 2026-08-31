@@ -500,3 +500,167 @@ export const adminSetTfnAdvertisedAvailable = createServerFn({ method: "POST" })
 
 
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Local (10DLC) numbers
+//
+// A local number registered to an approved 10DLC brand + campaign in Telnyx can
+// be handed to one or more tenants. We keep the number on the Messaging Profile
+// it already belongs to (that is what the 10DLC campaign is linked through),
+// and simply give the tenant a verified `local` sender_asset pointing at it.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const adminListLocalNumbers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let numbers: Array<{ id: string; phone_number: string; messaging_profile_id: string | null; country_code: string | null }> = [];
+    let error: string | null = null;
+    try {
+      const { listAccountLocalNumbers } = await import("@/lib/telnyx.server");
+      numbers = await listAccountLocalNumbers();
+    } catch (e: any) {
+      error = e?.message ?? "Could not load local numbers from the carrier.";
+    }
+
+    const phones = numbers.map((n) => n.phone_number);
+    const { data: attachments } = phones.length
+      ? await supabaseAdmin
+          .from("sender_assets")
+          .select("id,account_id,phone_number,country_code,sender_kind,verification_status")
+          .eq("sender_kind", "local")
+          .in("phone_number", phones)
+      : { data: [] as any[] };
+    const acctIds = Array.from(new Set((attachments ?? []).map((a: any) => a.account_id)));
+    const { data: accts } = acctIds.length
+      ? await supabaseAdmin.from("accounts").select("id,email,legal_business_name").in("id", acctIds)
+      : { data: [] as any[] };
+    const byAcct = new Map((accts ?? []).map((a: any) => [a.id, a]));
+    const byPhone = new Map<string, Map<string, any>>();
+    for (const a of attachments ?? []) {
+      const bucket = byPhone.get(a.phone_number) ?? new Map<string, any>();
+      if (!bucket.has(a.account_id)) {
+        bucket.set(a.account_id, {
+          ...a,
+          tenant_email: byAcct.get(a.account_id)?.email ?? null,
+          tenant_business: byAcct.get(a.account_id)?.legal_business_name ?? null,
+        });
+      }
+      byPhone.set(a.phone_number, bucket);
+    }
+
+    const items = numbers.map((n) => ({
+      phone_number: n.phone_number,
+      country_code: (n.country_code ?? "US").toUpperCase(),
+      telnyx_phone_number_id: n.id,
+      telnyx_messaging_profile_id: n.messaging_profile_id,
+      attachments: Array.from((byPhone.get(n.phone_number) ?? new Map()).values()),
+    }));
+    return { items, error };
+  });
+
+export const adminAttachLocalNumber = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      phone_number: z.string().trim().regex(/^\+\d{6,15}$/, "E.164 phone required, e.g. +17178319662"),
+      account_id: z.string().uuid(),
+      country: z.string().length(2).default("US"),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { getPhoneNumberByE164 } = await import("@/lib/telnyx.server");
+
+    const found = await getPhoneNumberByE164(data.phone_number);
+    if (!found) throw new Error("This number is not on your carrier account.");
+    const profileId = found.messaging_profile_id;
+    if (!profileId) {
+      throw new Error("Assign this number to a Messaging Profile (the one linked to your 10DLC campaign) first, then attach a tenant.");
+    }
+
+    const country = data.country.toUpperCase();
+    const nowIso = new Date().toISOString();
+
+    const { data: existing } = await supabaseAdmin
+      .from("sender_assets")
+      .select("id,phone_number")
+      .eq("account_id", data.account_id)
+      .eq("country_code", country)
+      .eq("sender_kind", "local")
+      .maybeSingle();
+    if (existing?.phone_number && existing.phone_number !== data.phone_number) {
+      throw new Error(`Tenant already has a different local number (${existing.phone_number}) for ${country}. Detach it first.`);
+    }
+
+    const { error: upsertErr } = await supabaseAdmin.from("sender_assets").upsert({
+      account_id: data.account_id,
+      country_code: country,
+      sender_kind: "local",
+      phone_number: data.phone_number,
+      telnyx_phone_number_id: found.id,
+      telnyx_messaging_profile_id: profileId,
+      verification_status: "verified",
+      verified_at: nowIso,
+      rejected_at: null,
+      rejection_reason: null,
+      friendly_rejection_reason: null,
+      last_synced_at: nowIso,
+      is_shared: true,
+    }, { onConflict: "account_id,country_code,sender_kind" });
+    if (upsertErr) throw new Error(upsertErr.message);
+
+    await supabaseAdmin.from("numbers").upsert({
+      account_id: data.account_id,
+      phone_number: data.phone_number,
+      telnyx_number_id: found.id,
+      telnyx_messaging_profile_id: profileId,
+      country_code: country,
+      number_type: "personal",
+      status: "active",
+    }, { onConflict: "phone_number" });
+
+    // Make sure the tenant can actually start sending.
+    const { data: acct } = await supabaseAdmin
+      .from("accounts")
+      .select("telnyx_phone_number,telnyx_messaging_profile_id")
+      .eq("id", data.account_id).maybeSingle();
+    if (!acct?.telnyx_phone_number) {
+      await supabaseAdmin.from("accounts").update({
+        telnyx_phone_number: data.phone_number,
+        telnyx_number_id: found.id,
+        telnyx_messaging_profile_id: profileId,
+      }).eq("id", data.account_id);
+    }
+    await supabaseAdmin.from("accounts").update({ onboarding_status: "active" }).eq("id", data.account_id);
+
+    return { ok: true };
+  });
+
+export const adminDetachLocalNumber = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      phone_number: z.string().trim().regex(/^\+\d{6,15}$/),
+      account_id: z.string().uuid(),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("sender_assets")
+      .delete()
+      .eq("account_id", data.account_id)
+      .eq("phone_number", data.phone_number)
+      .eq("sender_kind", "local");
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("numbers").delete()
+      .eq("account_id", data.account_id).eq("phone_number", data.phone_number);
+    await supabaseAdmin.from("accounts").update({
+      telnyx_phone_number: null, telnyx_number_id: null,
+    }).eq("id", data.account_id).eq("telnyx_phone_number", data.phone_number);
+    return { ok: true };
+  });
