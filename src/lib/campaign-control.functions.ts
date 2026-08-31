@@ -77,28 +77,56 @@ export const stopCampaignAsSent = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Stop the queue: rows not yet handed to the carrier must not be sent, but
-    // nothing already sent/delivered/failed is touched.
-    const { data: queuedRows } = await supabaseAdmin
+    // nothing already sent/delivered/failed is touched. Loop until the queue is
+    // empty — a single capped page left large campaigns with tens of thousands
+    // of rows stuck at `queued` forever once the campaign flipped to `sent`.
+    let stopped = 0;
+    for (let pass = 0; pass < 200; pass++) {
+      const { data: queuedRows } = await supabaseAdmin
+        .from("messages")
+        .select("id")
+        .eq("campaign_id", data.campaignId)
+        .in("status", ["queued", "pending"])
+        .limit(5000);
+      const ids = (queuedRows ?? []).map((r: any) => r.id);
+      if (ids.length === 0) break;
+      for (let i = 0; i < ids.length; i += 500) {
+        await supabaseAdmin
+          .from("messages")
+          .update({ status: "failed", error_code: "cancelled_by_user" })
+          .in("id", ids.slice(i, i + 500));
+      }
+      stopped += ids.length;
+    }
+
+    const { error: campErr } = await supabaseAdmin
+      .from("campaigns")
+      .update({ status: "sent", paused_reason: STOPPED_AS_SENT })
+      .eq("id", data.campaignId);
+    if (campErr) throw new Error(campErr.message);
+
+    // Anything planned in the tiny window while we were draining the queue is
+    // swept here so the report cannot keep phantom queued rows.
+    const { data: leftovers } = await supabaseAdmin
       .from("messages")
       .select("id")
       .eq("campaign_id", data.campaignId)
       .in("status", ["queued", "pending"])
-      .limit(20000);
-    const ids = (queuedRows ?? []).map((r: any) => r.id);
-    for (let i = 0; i < ids.length; i += 500) {
-      await supabaseAdmin
-        .from("messages")
-        .update({ status: "failed", error_code: "cancelled_by_user" })
-        .in("id", ids.slice(i, i + 500));
+      .limit(5000);
+    const leftoverIds = (leftovers ?? []).map((r: any) => r.id);
+    if (leftoverIds.length > 0) {
+      for (let i = 0; i < leftoverIds.length; i += 500) {
+        await supabaseAdmin
+          .from("messages")
+          .update({ status: "failed", error_code: "cancelled_by_user" })
+          .in("id", leftoverIds.slice(i, i + 500));
+      }
+      stopped += leftoverIds.length;
     }
 
-    await supabaseAdmin
-      .from("campaigns")
-      .update({ status: "sent", paused_reason: STOPPED_AS_SENT })
-      .eq("id", data.campaignId);
-
-    return { ok: true, stoppedMessages: ids.length };
+    return { ok: true, stoppedMessages: stopped };
   });
+
 
 // Pause an in-flight campaign. Nothing already handed to the carrier is
 // touched — queued rows simply stay queued until the tenant resumes. The
@@ -123,7 +151,7 @@ export const pauseCampaign = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    await supabaseAdmin
+    const { error: pauseErr } = await supabaseAdmin
       .from("campaigns")
       .update({
         status: "paused_by_user",
@@ -131,6 +159,8 @@ export const pauseCampaign = createServerFn({ method: "POST" })
         paused_at: new Date().toISOString(),
       })
       .eq("id", data.campaignId);
+    if (pauseErr) throw new Error(pauseErr.message);
+
 
     const { count } = await supabaseAdmin
       .from("messages")
@@ -162,10 +192,12 @@ export const resumeCampaign = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    await supabaseAdmin
+    const { error: resumeErr } = await supabaseAdmin
       .from("campaigns")
       .update({ status: "sending", paused_reason: null, paused_at: null })
       .eq("id", data.campaignId);
+    if (resumeErr) throw new Error(resumeErr.message);
+
 
     return { ok: true };
   });

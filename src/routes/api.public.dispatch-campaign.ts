@@ -369,7 +369,19 @@ async function sendOneMessage(
 ): Promise<{ ok: boolean; shaft: boolean; debited: number; rateLimited?: boolean }> {
   const { sendMessage, safeTelnyxCall } = await import("@/lib/telnyx.server");
   try {
+    // The carrier rejects anything that is not a single E.164 number (error
+    // 40310). Such a recipient can never succeed, so fail it here as a
+    // permanent per-recipient error instead of burning a carrier call.
+    if (!/^\+[1-9]\d{7,14}$/.test(String(m.phone_e164 ?? "").trim())) {
+      await recordStatus(supabaseAdmin, sink, m.id, {
+        status: "failed",
+        error_code: "invalid_phone_number",
+        failure_reason: "Recipient number is not a valid international (E.164) number",
+      });
+      return { ok: false, shaft: false, debited: 0 };
+    }
     const sendAsMms = !!campaign.media_url && supportsMms(m.country_code) && !m.force_sms;
+
     const messageBody =
       campaign.media_url && !sendAsMms && !m.force_sms ? fallbackMediaBody(m.rendered_body, m.id) : m.rendered_body;
 
