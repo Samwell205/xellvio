@@ -29,7 +29,7 @@ async function healMissingCode(code: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: msg } = await supabaseAdmin
     .from("messages")
-    .select("id,campaign_id")
+    .select("id,campaign_id,rendered_body")
     .like("rendered_body", `%/r/${code}%`)
     .limit(1)
     .maybeSingle();
@@ -41,33 +41,36 @@ async function healMissingCode(code: string) {
     .eq("id", msg.campaign_id)
     .maybeSingle();
 
-  const { data: sibling } = await supabaseAdmin
-    .from("link_clicks")
-    .select("url")
-    .eq("campaign_id", msg.campaign_id)
-    .limit(1)
-    .maybeSingle();
-  let url: string | null = (sibling as any)?.url ?? null;
-
-  if (!url) {
-    url = ((camp as any)?.message_body ?? "").match(/https?:\/\/[^\s<>()[\]"']+/)?.[0] ?? null;
-  }
+  // Recover the EXACT destination this code stood for: the dispatcher shortens
+  // every URL in the body in order, so the nth short code in the delivered text
+  // corresponds to the nth URL in the original campaign body. Guessing from a
+  // sibling link would send recipients to the wrong page.
+  const rendered = String((msg as any).rendered_body ?? "");
+  const codes = [...rendered.matchAll(/\/r\/([A-Za-z0-9]{4,16})/g)].map((m) => m[1]);
+  const position = codes.indexOf(code);
+  const originals = String((camp as any)?.message_body ?? "").match(/https?:\/\/[^\s<>()[\]"']+/g) ?? [];
+  const url = position >= 0 ? originals[position] ?? null : null;
   if (!url) return null;
 
   // Recreate the row so future clicks (and the report) count normally.
-  await supabaseAdmin.from("link_clicks").insert({
-    short_code: code,
-    url,
-    message_id: (msg as any).id,
-    campaign_id: msg.campaign_id,
-    account_id: (camp as any)?.account_id ?? null,
-    clicks: 1,
-    first_click_at: new Date().toISOString(),
-    last_click_at: new Date().toISOString(),
-  } as any);
+  // account_id is NOT NULL, so skip the insert rather than fail silently.
+  const accountId = (camp as any)?.account_id ?? null;
+  if (accountId) {
+    await supabaseAdmin.from("link_clicks").insert({
+      short_code: code,
+      url,
+      message_id: (msg as any).id,
+      campaign_id: msg.campaign_id,
+      account_id: accountId,
+      clicks: 1,
+      first_click_at: new Date().toISOString(),
+      last_click_at: new Date().toISOString(),
+    } as any);
+  }
 
   return { url, message_id: (msg as any).id, campaign_id: msg.campaign_id };
 }
+
 
 
 
