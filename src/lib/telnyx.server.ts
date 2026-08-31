@@ -215,7 +215,9 @@ export async function getPhoneNumberByE164(phone: string): Promise<{ id: string;
  * assigned to a Messaging Profile (i.e. carrier-verified and ready to send).
  * Paginated internally; caps at ~2000 rows to be safe.
  */
-export async function listAccountTollfreeNumbers(): Promise<
+export async function listAccountNumbersByType(
+  phoneNumberType: "toll-free" | "local" | "mobile" | "national",
+): Promise<
   Array<{ id: string; phone_number: string; messaging_profile_id: string | null; country_code: string | null }>
 > {
   const out: Array<{ id: string; phone_number: string; messaging_profile_id: string | null; country_code: string | null }> = [];
@@ -227,7 +229,7 @@ export async function listAccountTollfreeNumbers(): Promise<
       meta?: { total_pages?: number; page_number?: number };
     }>("/phone_numbers", {
       query: {
-        "filter[phone_number_type]": "toll-free",
+        "filter[phone_number_type]": phoneNumberType,
         "page[number]": page,
         "page[size]": pageSize,
       },
@@ -246,6 +248,16 @@ export async function listAccountTollfreeNumbers(): Promise<
   }
   return out;
 }
+
+export async function listAccountTollfreeNumbers() {
+  return listAccountNumbersByType("toll-free");
+}
+
+/** Local (10DLC-capable) numbers on the Telnyx account. */
+export async function listAccountLocalNumbers() {
+  return listAccountNumbersByType("local");
+}
+
 
 type VerifiedTollfreeRecord = {
   id?: string;
