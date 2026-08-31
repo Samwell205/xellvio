@@ -78,6 +78,16 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
       if (a.verification_status !== "verified") continue;
       if (!sendersByCountry[a.country_code]) sendersByCountry[a.country_code] = a;
     }
+    const nanpNumber = (assets ?? []).find(
+      (a) =>
+        a.verification_status === "verified" &&
+        (a.sender_kind === "toll_free" || a.sender_kind === "local") &&
+        (a.country_code === "US" || a.country_code === "CA"),
+    );
+    if (nanpNumber) {
+      if (!sendersByCountry.US) sendersByCountry.US = nanpNumber;
+      if (!sendersByCountry.CA) sendersByCountry.CA = nanpNumber;
+    }
 
     const rows: SenderPreviewRow[] = Object.entries(counts)
       .map(([cc, n]) => {

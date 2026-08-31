@@ -83,9 +83,10 @@ export const sendTestSms = createServerFn({ method: "POST" })
       ? eligible.filter(
           (a) =>
             a.country_code === countryCode ||
-            // Toll-free numbers approved in US or CA work for both (NANP TFV).
+            // Verified North American toll-free and local numbers can route to
+            // both US and Canada.
             ((countryCode === "US" || countryCode === "CA") &&
-              a.sender_kind === "toll_free" &&
+              (a.sender_kind === "toll_free" || a.sender_kind === "local") &&
               (a.country_code === "US" || a.country_code === "CA")),
         )
       : eligible;
