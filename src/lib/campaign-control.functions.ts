@@ -151,7 +151,7 @@ export const pauseCampaign = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    await supabaseAdmin
+    const { error: pauseErr } = await supabaseAdmin
       .from("campaigns")
       .update({
         status: "paused_by_user",
@@ -159,6 +159,8 @@ export const pauseCampaign = createServerFn({ method: "POST" })
         paused_at: new Date().toISOString(),
       })
       .eq("id", data.campaignId);
+    if (pauseErr) throw new Error(pauseErr.message);
+
 
     const { count } = await supabaseAdmin
       .from("messages")
