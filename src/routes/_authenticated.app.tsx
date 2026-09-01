@@ -30,8 +30,11 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
   const { data: session, isLoading } = useSession();
 
   const needed = requiredPermissionFor(pathname);
+  const ownerOnly = isOwnerOnlyPath(pathname);
   const allowed =
-    !session || session.isOwner || !needed || session.permissions[needed] === true;
+    !session ||
+    session.isOwner ||
+    (!ownerOnly && (!needed || session.permissions[needed] === true));
 
   useEffect(() => {
     if (!session || allowed) return;
