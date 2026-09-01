@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { provisionCurrentAccount } from "@/lib/provision-account.functions";
 import { TosReAcceptModal } from "@/components/TosReAcceptModal";
 import { useSession } from "@/hooks/useAccountId";
-import { firstAllowedPath, requiredPermissionFor } from "@/lib/route-permissions";
+import { firstAllowedPath, isOwnerOnlyPath, requiredPermissionFor } from "@/lib/route-permissions";
 import { PERMISSION_LABELS } from "@/lib/team-permissions";
 
 export const Route = createFileRoute("/_authenticated/app")({
