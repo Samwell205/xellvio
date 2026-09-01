@@ -3216,6 +3216,14 @@ export type Database = {
         Returns: number
       }
       decrypt_twilio_token: { Args: { _cipher: string }; Returns: string }
+      delete_contact_list: {
+        Args: {
+          _account_id: string
+          _list_id: string
+          _with_contacts?: boolean
+        }
+        Returns: number
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

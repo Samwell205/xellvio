@@ -6,7 +6,7 @@ import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js"
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountId } from "@/hooks/useAccountId";
 import ImportCsvDialog from "@/components/ImportCsvDialog";
-import { getAudienceListCounts, getAudienceStats, listAudienceContactLists, listAudienceProfiles } from "@/lib/audience.functions";
+import { deleteContactList, getAudienceListCounts, getAudienceStats, listAudienceContactLists, listAudienceProfiles } from "@/lib/audience.functions";
 
 
 import { Card } from "@/components/ui/card";
@@ -384,7 +384,7 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
   const [desc, setDesc] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
+  const deleteListFn = useServerFn(deleteContactList);
 
   async function save() {
     if (!name.trim()) { toast.error("Name required"); return; }
@@ -409,45 +409,28 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
 
   async function remove(id: string) {
     if (!confirm("Delete this list? Contacts will remain — only the grouping is removed.")) return;
-    const { error } = await sb.from("contact_lists").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("List deleted");
-    onDone();
+    setBusy(true);
+    try {
+      await deleteListFn({ data: { listId: id, withContacts: false } });
+      toast.success("List deleted");
+      onDone();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to delete list");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function removeWithContacts(id: string, name: string) {
     if (!confirm(`Delete list "${name}" AND every contact inside it? This cannot be undone.`)) return;
     setBusy(true);
     try {
-      // Fetch all member profile ids (paginated)
-      const profileIds: string[] = [];
-      let from = 0;
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const { data, error } = await sb
-          .from("profile_list_members")
-          .select("profile_id")
-          .eq("list_id", id)
-          .range(from, from + 999);
-        if (error) throw error;
-        const rows = data ?? [];
-        profileIds.push(...rows.map((r: any) => r.profile_id));
-        if (rows.length < 1000) break;
-        from += 1000;
-      }
-      // Delete profiles in chunks (cascades will clear memberships, consents, etc.)
-      for (let i = 0; i < profileIds.length; i += 500) {
-        const chunk = profileIds.slice(i, i + 500);
-        if (chunk.length === 0) break;
-        const { error } = await sb.from("profiles").delete().in("id", chunk);
-        if (error) throw error;
-      }
-      const { error: lerr } = await sb.from("contact_lists").delete().eq("id", id);
-      if (lerr) throw lerr;
-      toast.success(`List and ${profileIds.length} contact${profileIds.length === 1 ? "" : "s"} deleted`);
+      const res = await deleteListFn({ data: { listId: id, withContacts: true } });
+      const n = res?.deletedContacts ?? 0;
+      toast.success(`List and ${n} contact${n === 1 ? "" : "s"} deleted`);
       onDone();
     } catch (e: any) {
-      toast.error(e.message ?? "Failed to delete list with contacts");
+      toast.error(e?.message ?? "Failed to delete list with contacts");
     } finally {
       setBusy(false);
     }

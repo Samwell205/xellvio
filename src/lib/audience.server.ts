@@ -179,3 +179,18 @@ export async function listAudienceProfilesForUser(userId: string, listId: string
   mapped.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
   return mapped;
 }
+export async function deleteContactListForUser(
+  userId: string,
+  listId: string,
+  withContacts: boolean,
+): Promise<{ deletedContacts: number }> {
+  const accountId = await getAudienceAccountId(userId);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await (supabaseAdmin.rpc as any)("delete_contact_list", {
+    _account_id: accountId,
+    _list_id: listId,
+    _with_contacts: withContacts,
+  });
+  if (error) throw error;
+  return { deletedContacts: Number(data ?? 0) };
+}
