@@ -21,7 +21,14 @@ const ROUTE_PERMS: { prefix: string; exact?: boolean; perm: PermissionKey }[] = 
 ];
 
 /** Routes every teammate may open regardless of permissions. */
-const ALWAYS_ALLOWED = ["/app/my-academy", "/app/pricing-calculator", "/app/onboarding"];
+const ALWAYS_ALLOWED = ["/app/onboarding"];
+
+/** Routes only the workspace owner may open (not part of the permission grid). */
+const OWNER_ONLY = ["/app/my-academy", "/app/academy", "/app/pricing-calculator"];
+
+export function isOwnerOnlyPath(pathname: string): boolean {
+  return OWNER_ONLY.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
 
 export function requiredPermissionFor(pathname: string): PermissionKey | null {
   if (ALWAYS_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
