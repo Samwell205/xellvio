@@ -21,7 +21,14 @@ const ROUTE_PERMS: { prefix: string; exact?: boolean; perm: PermissionKey }[] = 
 ];
 
 /** Routes every teammate may open regardless of permissions. */
-const ALWAYS_ALLOWED = ["/app/my-academy", "/app/pricing-calculator", "/app/onboarding"];
+const ALWAYS_ALLOWED = ["/app/onboarding"];
+
+/** Routes only the workspace owner may open (not part of the permission grid). */
+const OWNER_ONLY = ["/app/my-academy", "/app/academy", "/app/pricing-calculator"];
+
+export function isOwnerOnlyPath(pathname: string): boolean {
+  return OWNER_ONLY.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
 
 export function requiredPermissionFor(pathname: string): PermissionKey | null {
   if (ALWAYS_ALLOWED.some((p) => pathname === p || pathname.startsWith(p + "/"))) return null;
@@ -47,5 +54,5 @@ export function firstAllowedPath(perms: Partial<Record<PermissionKey, boolean>>)
     { path: "/app/billing", perm: "billing" },
     { path: "/app/settings", perm: "settings" },
   ];
-  return order.find((o) => perms[o.perm])?.path ?? "/app/my-academy";
+  return order.find((o) => perms[o.perm])?.path ?? "/app/onboarding";
 }

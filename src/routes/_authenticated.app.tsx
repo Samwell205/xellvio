@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { provisionCurrentAccount } from "@/lib/provision-account.functions";
 import { TosReAcceptModal } from "@/components/TosReAcceptModal";
 import { useSession } from "@/hooks/useAccountId";
-import { firstAllowedPath, requiredPermissionFor } from "@/lib/route-permissions";
+import { firstAllowedPath, isOwnerOnlyPath, requiredPermissionFor } from "@/lib/route-permissions";
 import { PERMISSION_LABELS } from "@/lib/team-permissions";
 
 export const Route = createFileRoute("/_authenticated/app")({
@@ -30,8 +30,11 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
   const { data: session, isLoading } = useSession();
 
   const needed = requiredPermissionFor(pathname);
+  const ownerOnly = isOwnerOnlyPath(pathname);
   const allowed =
-    !session || session.isOwner || !needed || session.permissions[needed] === true;
+    !session ||
+    session.isOwner ||
+    (!ownerOnly && (!needed || session.permissions[needed] === true));
 
   useEffect(() => {
     if (!session || allowed) return;

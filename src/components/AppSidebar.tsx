@@ -15,7 +15,7 @@ import { getInboxUnreadCount } from "@/lib/inbox.functions";
 import { useServerFn } from "@tanstack/react-start";
 import type { PermissionKey } from "@/lib/team-permissions";
 
-type Item = { title: string; url: string; icon: any; exact?: boolean; perm?: PermissionKey };
+type Item = { title: string; url: string; icon: any; exact?: boolean; perm?: PermissionKey; ownerOnly?: boolean };
 
 const items: Item[] = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true, perm: "dashboard" },
@@ -28,13 +28,13 @@ const items: Item[] = [
   { title: "Segments", url: "/app/segments", icon: Filter, perm: "segments" },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff, perm: "suppressions" },
   { title: "Team", url: "/app/team", icon: UserPlus, perm: "team" },
-  { title: "My Academy", url: "/app/my-academy", icon: GraduationCap },
+  { title: "My Academy", url: "/app/my-academy", icon: GraduationCap, ownerOnly: true },
 ];
 
 const settingsChildren: Item[] = [
   { title: "Account", url: "/app/settings", icon: Settings, exact: true, perm: "settings" },
   { title: "Billing", url: "/app/billing", icon: Wallet, perm: "billing" },
-  { title: "SMS Pricing", url: "/app/pricing-calculator", icon: Calculator },
+  { title: "SMS Pricing", url: "/app/pricing-calculator", icon: Calculator, ownerOnly: true },
 ];
 
 export function AppSidebar() {
@@ -49,15 +49,16 @@ export function AppSidebar() {
     staleTime: 60_000,
   });
 
-  const canSee = (perm?: PermissionKey) => {
-    if (!perm) return true;
+  const canSee = (it: Item) => {
     if (!session) return true; // don't hide while loading
     if (session.isOwner) return true;
-    return !!session.permissions[perm];
+    if (it.ownerOnly) return false;
+    if (!it.perm) return true;
+    return !!session.permissions[it.perm];
   };
 
-  const visibleItems = items.filter((it) => canSee(it.perm));
-  const canInbox = canSee("inbox");
+  const visibleItems = items.filter(canSee);
+  const canInbox = canSee({ title: "Inbox", url: "/app/inbox", icon: Inbox, perm: "inbox" });
   const acctKey = (session as any)?.accountId ?? (session as any)?.workspaceOwnerId ?? "self";
   const unreadFn = useServerFn(getInboxUnreadCount);
   const inboxQ = useQuery({
@@ -72,7 +73,7 @@ export function AppSidebar() {
     refetchInterval: 20_000,
   });
   const unread = pathname.startsWith("/app/inbox") ? 0 : (inboxQ.data?.count ?? 0);
-  const visibleSettings = settingsChildren.filter((it) => canSee(it.perm));
+  const visibleSettings = settingsChildren.filter(canSee);
   const settingsActive = visibleSettings.some((c) => isActive(c.url, c.exact));
   const [settingsOpen, setSettingsOpen] = useState(settingsActive);
   useEffect(() => { if (settingsActive) setSettingsOpen(true); }, [settingsActive]);
