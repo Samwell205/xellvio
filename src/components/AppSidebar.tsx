@@ -50,7 +50,8 @@ export function AppSidebar() {
   });
 
   const canSee = (it: Item) => {
-    if (!session) return true; // don't hide while loading
+    // Hide everything until we know the session, so restricted links never flash.
+    if (!session) return false;
     if (session.isOwner) return true;
     if (it.ownerOnly) return false;
     if (!it.perm) return true;
