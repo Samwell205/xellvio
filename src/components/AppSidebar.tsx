@@ -34,7 +34,7 @@ const items: Item[] = [
 const settingsChildren: Item[] = [
   { title: "Account", url: "/app/settings", icon: Settings, exact: true, perm: "settings" },
   { title: "Billing", url: "/app/billing", icon: Wallet, perm: "billing" },
-  { title: "SMS Pricing", url: "/app/pricing-calculator", icon: Calculator },
+  { title: "SMS Pricing", url: "/app/pricing-calculator", icon: Calculator, ownerOnly: true },
 ];
 
 export function AppSidebar() {
