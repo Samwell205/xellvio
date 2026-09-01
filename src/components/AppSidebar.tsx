@@ -58,7 +58,7 @@ export function AppSidebar() {
   };
 
   const visibleItems = items.filter(canSee);
-  const canInbox = canSee("inbox");
+  const canInbox = canSee({ title: "Inbox", url: "/app/inbox", icon: Inbox, perm: "inbox" });
   const acctKey = (session as any)?.accountId ?? (session as any)?.workspaceOwnerId ?? "self";
   const unreadFn = useServerFn(getInboxUnreadCount);
   const inboxQ = useQuery({
@@ -73,7 +73,7 @@ export function AppSidebar() {
     refetchInterval: 20_000,
   });
   const unread = pathname.startsWith("/app/inbox") ? 0 : (inboxQ.data?.count ?? 0);
-  const visibleSettings = settingsChildren.filter((it) => canSee(it.perm));
+  const visibleSettings = settingsChildren.filter(canSee);
   const settingsActive = visibleSettings.some((c) => isActive(c.url, c.exact));
   const [settingsOpen, setSettingsOpen] = useState(settingsActive);
   useEffect(() => { if (settingsActive) setSettingsOpen(true); }, [settingsActive]);
