@@ -42,7 +42,17 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
     if (target !== pathname) navigate({ to: target, replace: true });
   }, [session, allowed, pathname, navigate]);
 
-  if (isLoading || allowed) return <>{children}</>;
+  // Don't render page content until permissions are known (avoids a flash of
+  // restricted pages on refresh).
+  if (isLoading || !session) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
+  if (allowed) return <>{children}</>;
 
   return (
     <div className="max-w-md mx-auto mt-16 rounded-lg border bg-background p-6 text-center">
