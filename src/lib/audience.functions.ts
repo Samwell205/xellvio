@@ -7,6 +7,7 @@ import {
   getAudienceStatsForUser,
   listAudienceContactListsForUser,
   listAudienceProfilesForUser,
+  deleteContactListForUser,
 } from "./audience.server";
 
 const CampaignAudienceSchema = z.object({
@@ -37,3 +38,11 @@ export const getCampaignAudienceCountryCounts = createServerFn({ method: "POST" 
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => CampaignAudienceSchema.parse(input))
   .handler(async ({ data, context }) => getCampaignAudienceCountryCountsForUser(context.userId, data));
+export const deleteContactList = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ listId: z.string().uuid(), withContacts: z.boolean().default(false) }).parse(input),
+  )
+  .handler(async ({ data, context }) =>
+    deleteContactListForUser(context.userId, data.listId, data.withContacts),
+  );
