@@ -49,14 +49,15 @@ export function AppSidebar() {
     staleTime: 60_000,
   });
 
-  const canSee = (perm?: PermissionKey) => {
-    if (!perm) return true;
+  const canSee = (it: Item) => {
     if (!session) return true; // don't hide while loading
     if (session.isOwner) return true;
-    return !!session.permissions[perm];
+    if (it.ownerOnly) return false;
+    if (!it.perm) return true;
+    return !!session.permissions[it.perm];
   };
 
-  const visibleItems = items.filter((it) => canSee(it.perm));
+  const visibleItems = items.filter(canSee);
   const canInbox = canSee("inbox");
   const acctKey = (session as any)?.accountId ?? (session as any)?.workspaceOwnerId ?? "self";
   const unreadFn = useServerFn(getInboxUnreadCount);
