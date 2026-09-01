@@ -28,7 +28,7 @@ const items: Item[] = [
   { title: "Segments", url: "/app/segments", icon: Filter, perm: "segments" },
   { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff, perm: "suppressions" },
   { title: "Team", url: "/app/team", icon: UserPlus, perm: "team" },
-  { title: "My Academy", url: "/app/my-academy", icon: GraduationCap },
+  { title: "My Academy", url: "/app/my-academy", icon: GraduationCap, ownerOnly: true },
 ];
 
 const settingsChildren: Item[] = [
