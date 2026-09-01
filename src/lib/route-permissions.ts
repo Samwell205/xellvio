@@ -54,5 +54,5 @@ export function firstAllowedPath(perms: Partial<Record<PermissionKey, boolean>>)
     { path: "/app/billing", perm: "billing" },
     { path: "/app/settings", perm: "settings" },
   ];
-  return order.find((o) => perms[o.perm])?.path ?? "/app/my-academy";
+  return order.find((o) => perms[o.perm])?.path ?? "/app/onboarding";
 }
