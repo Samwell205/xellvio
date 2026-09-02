@@ -240,17 +240,44 @@ async function isStoppedByUser(supabaseAdmin: any, campaignId: string): Promise<
   return data?.status === "sent" && data?.paused_reason === STOPPED_AS_SENT;
 }
 
+/** Statuses from which the dispatcher may legally move a campaign back to
+ * `sending`. Anything else (cancelled, paused_by_user, blocked_content, or a
+ * user-stopped `sent`) is a terminal/user-owned state and must stay put. */
+const REVIVABLE_STATUSES = ["queued", "sending", "processing", "scheduled", "sent", "failed"];
+
+/** Guarded "put this campaign back in the sending queue". Never resurrects a
+ * campaign the user cancelled, paused or stopped. */
+async function markSending(supabaseAdmin: any, campaignId: string, pausedReason?: string | null) {
+  const patch: any = { status: "sending" };
+  if (pausedReason !== undefined) patch.paused_reason = pausedReason;
+  await supabaseAdmin
+    .from("campaigns")
+    .update(patch)
+    .eq("id", campaignId)
+    .in("status", REVIVABLE_STATUSES)
+    .or(`paused_reason.is.null,paused_reason.neq.${STOPPED_AS_SENT}`);
+}
+
+/** True when the user cancelled/paused this campaign — dispatch must stop. */
+async function isUserStopped(supabaseAdmin: any, campaignId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("campaigns").select("status, paused_reason").eq("id", campaignId).maybeSingle();
+  if (!data) return true;
+  if (["cancelled", "paused", "paused_by_user", "blocked_content"].includes(data.status)) return true;
+  return data.status === "sent" && data.paused_reason === STOPPED_AS_SENT;
+}
+
 /** Finalize as `sent` only when nothing is left to plan or deliver. */
 async function finalizeIfComplete(supabaseAdmin: any, campaign: any): Promise<void> {
   if (await isStoppedByUser(supabaseAdmin, campaign.id)) return;
+  if (await isUserStopped(supabaseAdmin, campaign.id)) return;
   if (await hasUnplannedRecipients(supabaseAdmin, campaign)) {
-    await supabaseAdmin.from("campaigns")
-      .update({ status: "sending" })
-      .eq("id", campaign.id)
-      .in("status", ["queued", "sending", "sent"]);
+    await markSending(supabaseAdmin, campaign.id);
     return;
   }
-  await supabaseAdmin.from("campaigns").update({ status: "sent" }).eq("id", campaign.id);
+  await supabaseAdmin.from("campaigns").update({ status: "sent" })
+    .eq("id", campaign.id)
+    .in("status", ["queued", "sending", "processing", "scheduled"]);
 }
 
 function isShaftLikeCode(code: string): boolean {
@@ -883,7 +910,7 @@ async function planCampaign(
     return { planned: 0, skipped: failedRows.length, cost: totalCost, reason };
   }
   if (isFirstBatch) {
-    await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
+    await markSending(supabaseAdmin, campaign.id);
     try {
       const { sendAdminPush } = await import("@/lib/admin-push.server");
       const { data: acct } = await supabaseAdmin.from("accounts")
@@ -897,7 +924,7 @@ async function planCampaign(
       });
     } catch (e) { console.error("[dispatch] push start failed", e); }
   } else if (queuedRows.length > 0) {
-    await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
+    await markSending(supabaseAdmin, campaign.id);
   }
   return { planned: queuedRows.length, skipped: failedRows.length, cost: totalCost };
 }
@@ -1012,7 +1039,7 @@ async function deliverPending(
   if ((remaining ?? 0) === 0) {
     await finalizeIfComplete(supabaseAdmin, campaign);
   } else {
-    await supabaseAdmin.from("campaigns").update({ status: "sending" }).eq("id", campaign.id);
+    await markSending(supabaseAdmin, campaign.id);
   }
   return { sent, failed, debited: +debited.toFixed(4), remaining: remaining ?? 0 };
 }
@@ -1077,12 +1104,7 @@ async function processCampaign(
   if (hasMore && !(await isStoppedByUser(supabaseAdmin, campaign.id))) {
     // deliverPending only sees rows that have already been planned. It must not
     // finalize the campaign while later audience pages still need planning.
-    await supabaseAdmin.from("campaigns")
-      .update({ status: "sending", paused_reason: null })
-      .eq("id", campaign.id)
-      .neq("status", "paused")
-      .neq("status", "cancelled")
-      .neq("status", "blocked_content");
+    await markSending(supabaseAdmin, campaign.id, null);
   }
   return {
     ...planned,
@@ -1316,7 +1338,8 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
                 .from("campaigns")
                 .update({ status: "sending", paused_reason: null })
                 .eq("id", c.id)
-                .eq("status", "sent");
+                .eq("status", "sent")
+                .is("paused_reason", null);
             }
           }
         } catch (e: any) {
@@ -1505,8 +1528,7 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
                   .eq("campaign_id", c.id);
                 const note = `Temporary send error, retrying: ${e?.message ?? e}`;
                 if ((leftover ?? 0) > 0) {
-                  await supabaseAdmin.from("campaigns")
-                    .update({ status: "sending", paused_reason: note }).eq("id", c.id);
+                  await markSending(supabaseAdmin, c.id, note);
                 } else if ((everPlanned ?? 0) === 0) {
                   // Nothing was ever planned: the tick blew up before a single
                   // recipient row existed. Failing here strands the whole
