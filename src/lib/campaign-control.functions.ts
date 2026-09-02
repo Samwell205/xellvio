@@ -26,30 +26,43 @@ export const cancelCampaign = createServerFn({ method: "POST" })
       return { ok: true, alreadyStopped: true, cancelledMessages: 0 };
     }
 
-    // Load queued/sending row ids so we can report a count. Use admin to be
-    // resilient to the tiny RLS window while a row is "sending".
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: queuedRows } = await supabaseAdmin
-      .from("messages")
-      .select("id")
-      .eq("campaign_id", data.campaignId)
-      .in("status", ["queued", "pending"]);
-    const ids = (queuedRows ?? []).map((r: any) => r.id);
-
-    if (ids.length > 0) {
-      await supabaseAdmin
-        .from("messages")
-        .update({ status: "failed", error_code: "cancelled_by_user" })
-        .in("id", ids);
-    }
-
+    // Flip the campaign FIRST so the dispatcher stops claiming new rows while
+    // we drain the queue (it refuses to send for a cancelled campaign).
     await supabaseAdmin
       .from("campaigns")
       .update({ status: "cancelled", paused_reason: "Cancelled by user" })
       .eq("id", data.campaignId);
 
-    return { ok: true, cancelledMessages: ids.length };
+    // Drain page by page: a single capped query left tens of thousands of rows
+    // stuck at `queued` on large campaigns.
+    let cancelled = 0;
+    for (let pass = 0; pass < 200; pass++) {
+      const { data: queuedRows } = await supabaseAdmin
+        .from("messages")
+        .select("id")
+        .eq("campaign_id", data.campaignId)
+        .in("status", ["queued", "pending"])
+        .limit(5000);
+      const ids = (queuedRows ?? []).map((r: any) => r.id);
+      if (ids.length === 0) break;
+      for (let i = 0; i < ids.length; i += 500) {
+        await supabaseAdmin
+          .from("messages")
+          .update({ status: "failed", error_code: "cancelled_by_user" })
+          .in("id", ids.slice(i, i + 500));
+      }
+      cancelled += ids.length;
+    }
+
+    // Re-assert the status in case a dispatcher tick raced us.
+    await supabaseAdmin
+      .from("campaigns")
+      .update({ status: "cancelled", paused_reason: "Cancelled by user" })
+      .eq("id", data.campaignId);
+
+    return { ok: true, cancelledMessages: cancelled };
   });
 
 // Stop an in-flight campaign but finish it as `sent`: no further recipients are
