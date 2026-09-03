@@ -940,7 +940,7 @@ const SPAM_BLOCK_MIN_SAMPLE = 20;
 const SPAM_BLOCK_RATIO = 0.2;
 const PREFLIGHT_AUDIENCE_MIN = 2_000;
 const PREFLIGHT_SAMPLE_SIZE = 25;
-const PREFLIGHT_WAIT_MS = 5 * 60 * 1000;
+const PREFLIGHT_WAIT_MS = 10 * 60 * 1000;
 
 async function carrierSpamBlockRate(supabaseAdmin: any, campaignId: string) {
   const finalized = ["delivered", "failed", "undelivered"];
@@ -1003,7 +1003,17 @@ async function carrierPreflight(
 
   const firstSentAt = firstSubmitted?.sent_at ? new Date(firstSubmitted.sent_at).getTime() : Date.now();
   const waitExpired = Date.now() - firstSentAt >= PREFLIGHT_WAIT_MS;
-  return { allowance: waitExpired ? null : 0, waiting: !waitExpired, blocked: false };
+  if (waitExpired) {
+    await supabaseAdmin.from("campaigns").update({
+      status: "paused",
+      paused_at: new Date().toISOString(),
+      paused_reason:
+        `Paused by carrier preflight: only ${done} of the initial ${sent} test messages received a final carrier result within 10 minutes. ` +
+        `The remaining audience was not sent or charged. Review the test results before resuming.`,
+    }).eq("id", campaignId).in("status", ["sending", "queued"]);
+    return { allowance: 0, waiting: false, blocked: true };
+  }
+  return { allowance: 0, waiting: true, blocked: false };
 }
 
 async function deliverPending(
