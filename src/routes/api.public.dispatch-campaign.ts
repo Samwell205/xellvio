@@ -678,14 +678,26 @@ async function beginCampaignIfNeeded(
     return { ok: false, reason: "blocked_by_screening" };
   }
   if (screen.action === "held_for_review") {
-    await supabaseAdmin.from("campaigns")
-      .update({
-        status: "paused",
-        paused_reason: `Held for review (risk ${screen.riskScore}/100). ${screen.blockedReasons.slice(0, 2).join(" · ")}`,
-        paused_at: new Date().toISOString(),
-      }).eq("id", campaign.id);
-    return { ok: false, reason: "held_for_review" };
+    // An admin (or the auto-approve sweep) may already have approved this
+    // exact campaign's content. Re-screening on the next dispatch tick must
+    // not put it back on hold, otherwise an approved campaign can never send.
+    const { data: approved } = await supabaseAdmin
+      .from("review_queue")
+      .select("id")
+      .eq("campaign_id", campaign.id)
+      .eq("status", "approved")
+      .limit(1);
+    if (!approved?.length) {
+      await supabaseAdmin.from("campaigns")
+        .update({
+          status: "paused",
+          paused_reason: `Held for review (risk ${screen.riskScore}/100). ${screen.blockedReasons.slice(0, 2).join(" · ")}`,
+          paused_at: new Date().toISOString(),
+        }).eq("id", campaign.id);
+      return { ok: false, reason: "held_for_review" };
+    }
   }
+
 
   return { ok: true };
 }
