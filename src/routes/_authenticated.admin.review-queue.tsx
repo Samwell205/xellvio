@@ -53,7 +53,7 @@ function ReviewQueuePage() {
       <div>
         <h1 className="text-2xl font-extrabold">Compliance review queue</h1>
         <p className="text-sm text-muted-foreground">
-          Flagged messages holding for admin approval. Pending items auto-approve after 2h if untouched.
+          Flagged messages holding for admin approval. Pending items auto-approve after 15 minutes if untouched.
         </p>
       </div>
       <div className="flex gap-2">
