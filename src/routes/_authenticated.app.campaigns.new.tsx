@@ -502,6 +502,7 @@ function NewCampaignPage() {
 
   async function persistCampaign(
     targetStatus: "draft" | "queued" | "scheduled" | "blocked_content",
+    messageBody = bodyWithStop,
   ): Promise<string | null> {
     if (!s.name.trim()) return null;
     const { data: u } = await supabase.auth.getUser();
@@ -516,7 +517,7 @@ function NewCampaignPage() {
       account_id: u.user!.id,
       name: s.name.trim(),
       audience: audiencePayload,
-      message_body: bodyWithStop,
+      message_body: messageBody,
       media_url: s.mediaUrl || null,
       send_mode: s.sendMode,
       schedule_at: s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
@@ -579,19 +580,26 @@ function NewCampaignPage() {
     }
     setSaving(true);
     try {
+      // Resolve every opted-in tracking URL before scanning and saving. The
+      // dispatcher also rewrites URLs as a backstop, but storing the resolved
+      // body here makes the review screen and report show exactly what will be
+      // sent instead of the tenant's original long URL.
+      const outgoingBody = launch && s.trackLinks
+        ? await shortenMessageUrls(bodyWithStop)
+        : bodyWithStop;
       // Layer 1+2: Content safety scan before any launch
       if (launch) {
-        const scan = await callContentScan({ data: { messageBody: bodyWithStop, mediaUrl: s.mediaUrl || undefined } });
+        const scan = await callContentScan({ data: { messageBody: outgoingBody, mediaUrl: s.mediaUrl || undefined } });
         if (!scan.allowed) {
           // Save as blocked so user sees it in their list, then stop
-          await persistCampaign("blocked_content");
+          await persistCampaign("blocked_content", outgoingBody);
           toast.error(`Blocked: ${scan.reason ?? "Content violates platform policy."}`);
           navigate({ to: "/app/campaigns" });
           return;
         }
       }
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
-      const savedId = await persistCampaign(status);
+      const savedId = await persistCampaign(status, outgoingBody);
       // Record per-campaign compliance re-confirmation. Dispatcher refuses to send without it.
       if (launch && savedId) {
         const { acceptCampaignTos } = await import("@/lib/tos.functions");
