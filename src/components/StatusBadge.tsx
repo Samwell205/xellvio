@@ -19,10 +19,13 @@ type Status =
   | "scheduled"
   | "completed"
   | "draft"
+  | "paused"
+  | "cancelled"
   | "paused_low_balance"
   | "paused_by_user"
   | "processing"
   | "blocked_content";
+
 
 const map: Record<Status, { label: string; cls: string; Icon: React.ComponentType<{ className?: string }> }> = {
   pending: { label: "Pending verification", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
@@ -32,7 +35,10 @@ const map: Record<Status, { label: string; cls: string; Icon: React.ComponentTyp
   draft: { label: "Draft", cls: "bg-muted text-muted-foreground border-border", Icon: Clock },
   processing: { label: "Processing", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Loader2 },
   paused_low_balance: { label: "Paused", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
+  paused: { label: "Held for review", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: ShieldOff },
+  cancelled: { label: "Cancelled", cls: "bg-muted text-muted-foreground border-border", Icon: XCircle },
   paused_by_user: { label: "Paused by you", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
+
   approved: { label: "Approved", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   active: { label: "Active", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   delivered: { label: "Delivered", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
