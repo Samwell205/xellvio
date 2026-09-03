@@ -268,19 +268,64 @@ function NewCampaignPage() {
     () => (s.body.toUpperCase().includes("STOP") ? s.body : s.body + STOP_LINE),
     [s.body],
   );
-  // Exactly what the contact receives: with shortening on, every URL is
-  // rewritten to a xellvio.com/r/… link at send time, so the preview shows it
-  // that way too (already-shortened links are left alone).
+  const callShortlink = useServerFn(createPreviewShortlink);
+  const [previewShortUrls, setPreviewShortUrls] = useState<Record<string, string>>({});
+  const [previewLinksPending, setPreviewLinksPending] = useState(false);
+
+  // Create real, database-backed short links for the phone preview. The old
+  // preview used sample codes such as /r/abcdef1; those looked clickable but
+  // could never resolve because no tracking row existed for them.
+  useEffect(() => {
+    if (!s.trackLinks) {
+      setPreviewLinksPending(false);
+      return;
+    }
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://xellvio.com";
+    const escapedOrigin = origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const shortUrlPattern = new RegExp(`^${escapedOrigin}/r/[a-zA-Z0-9]{4,16}$`);
+    const urls = Array.from(new Set(bodyWithStop.match(/https?:\/\/[^\s<>()[\]"']+/gi) ?? []))
+      .filter((url) => !shortUrlPattern.test(url) && !previewShortUrls[url]);
+    if (urls.length === 0) {
+      setPreviewLinksPending(false);
+      return;
+    }
+
+    let cancelled = false;
+    setPreviewLinksPending(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const created = await Promise.all(
+          urls.map(async (url) => {
+            const result = await callShortlink({ data: { url, campaignId: campaignId ?? null } });
+            return [url, result.shortUrl] as const;
+          }),
+        );
+        if (!cancelled) {
+          setPreviewShortUrls((current) => ({ ...current, ...Object.fromEntries(created) }));
+        }
+      } catch (error: any) {
+        if (!cancelled) toast.error(error?.message ?? "Could not create the short-link preview.");
+      } finally {
+        if (!cancelled) setPreviewLinksPending(false);
+      }
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [bodyWithStop, campaignId, callShortlink, previewShortUrls, s.trackLinks]);
+
+  // Exactly what the contact receives: every displayed /r/ code is a real
+  // redirect that can safely be clicked before the campaign is launched.
   const previewBody = useMemo(() => {
     if (!s.trackLinks) return bodyWithStop;
     const origin = typeof window !== "undefined" ? window.location.origin : "https://xellvio.com";
-    let n = 0;
     return bodyWithStop.replace(/(https?:\/\/[^\s<>()[\]"']+)/gi, (url) => {
       if (new RegExp(`^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/r/[a-zA-Z0-9]{4,16}$`).test(url)) return url;
-      n += 1;
-      return `${origin}/r/${"abcdefgh".slice(0, 6)}${n}`;
+      return previewShortUrls[url] ?? url;
     });
-  }, [bodyWithStop, s.trackLinks]);
+  }, [bodyWithStop, previewShortUrls, s.trackLinks]);
   const seg = calculateSegments(previewBody);
 
 
@@ -383,7 +428,6 @@ function NewCampaignPage() {
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shorteningLink, setShorteningLink] = useState(false);
-  const callShortlink = useServerFn(createPreviewShortlink);
 
   async function shortenMessageUrls(message: string): Promise<string> {
     if (!s.trackLinks) return message;
@@ -762,11 +806,14 @@ function NewCampaignPage() {
                     />
                   )}
                   {previewBody ? renderPreviewWithLinks(previewBody) : <span className="text-muted-foreground">Your message will appear here…</span>}
+                  {previewLinksPending && (
+                    <span className="block text-xs text-muted-foreground">Creating verified short link…</span>
+                  )}
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2 text-center">
                 {s.trackLinks
-                  ? "Exactly how your contact sees it — links are shortened on send (codes shown here are examples)."
+                  ? "Exactly how your contact sees it — every displayed short link is active and verified."
                   : "Exactly how your contact sees it — links are sent as typed."}
               </p>
 
