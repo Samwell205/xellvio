@@ -157,6 +157,12 @@ const KEYWORD_PATTERNS: Array<{
     patterns: [
       /\b(verify your account|suspicious activity|account locked|click here to verify|update your payment)\b/gi,
       /\burgent action required\b/gi,
+      // Carriers commonly reject unsolicited filing/compliance notices that
+      // combine an action command with a link, even when the destination is a
+      // real business website. Hold these for review before a bulk send rather
+      // than learning from thousands of paid 40002 delivery failures.
+      /\b(?:filing|compliance)\s+(?:step|report|notice|status)\b[\s\S]{0,180}\b(?:file|submit|complete|review|act|click)\s+(?:now|here|today)\b/gi,
+      /\b(?:file|submit|complete|review)\s+(?:now|here|today)\b[\s\S]{0,180}\b(?:filing|compliance)\s+(?:step|report|notice|status)\b/gi,
     ],
   },
 ];

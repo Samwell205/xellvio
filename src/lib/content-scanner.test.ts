@@ -24,3 +24,23 @@ Reply STOP to unsubscribe.`);
     expect(keywordScan(message)).toEqual({ allowed: true, confidence: "none" });
   });
 });
+
+describe("keywordScan carrier-risk classification", () => {
+  it("holds urgent filing and compliance link language for review", () => {
+    const result = keywordScan(
+      "COTA SUPPLY LLC: Filing Step Required. Your Compliance Report is still pending. File Now: https://example.com/home Reply STOP to unsubscribe.",
+    );
+
+    expect(result).toMatchObject({
+      allowed: true,
+      category: "phishing",
+      confidence: "keyword",
+    });
+  });
+
+  it("does not flag an ordinary identified business update with a link", () => {
+    expect(
+      keywordScan("COTA SUPPLY LLC: Your order is ready for pickup. View details: https://example.com Reply STOP to unsubscribe."),
+    ).toEqual({ allowed: true, confidence: "none" });
+  });
+});
