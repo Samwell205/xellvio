@@ -685,7 +685,7 @@ async function beginCampaignIfNeeded(
       .from("review_queue")
       .select("id")
       .eq("campaign_id", campaign.id)
-      .eq("status", "approved")
+      .in("status", ["approved", "auto_approved"])
       .limit(1);
     if (!approved?.length) {
       await supabaseAdmin.from("campaigns")
