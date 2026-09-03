@@ -92,8 +92,9 @@ function renderPreviewWithLinks(text: string): ReactNode {
 function NewCampaignPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/app/campaigns/new" });
+  const editingCampaignId = search.id ?? null;
   const [step, setStep] = useState<StepIdx>(0);
-  const [campaignId, setCampaignId] = useState<string | null>(search.id ?? null);
+  const [campaignId, setCampaignId] = useState<string | null>(editingCampaignId);
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], listIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
@@ -106,10 +107,11 @@ function NewCampaignPage() {
 
   // Load existing draft when editing
   useQuery({
-    queryKey: ["campaign-draft", campaignId],
-    enabled: !!campaignId,
+    queryKey: ["campaign-draft", editingCampaignId],
+    enabled: !!editingCampaignId,
     queryFn: async () => {
-      const { data } = await supabase.from("campaigns").select("*").eq("id", campaignId!).maybeSingle();
+      if (!editingCampaignId) return null;
+      const { data } = await supabase.from("campaigns").select("*").eq("id", editingCampaignId).maybeSingle();
       if (data) {
         const aud: any = data.audience ?? {};
         setS((prev) => ({
