@@ -198,10 +198,18 @@ export async function screenMessageContent(
 
   // ---- Score + decision --------------------------------------------------
   const riskScore = Math.min(100, reasons.reduce((s, r) => s + r.score, 0));
-  const action: ScreeningResult["action"] =
+  let action: ScreeningResult["action"] =
     riskScore >= 70 ? "blocked" : riskScore >= 40 ? "held_for_review" : "passed";
 
+  // Review-queue candidates are NOT violations — they are "look at this later"
+  // signals. When the caller cannot wait for review (test sends), let the
+  // message through instead of hard-blocking on an advisory score.
+  if (action === "held_for_review" && opts.skipReviewQueue) {
+    action = "passed";
+  }
+
   const blockedReasons = reasons.map((r) => r.message);
+
 
   // Audit log — every decision.
   try {
