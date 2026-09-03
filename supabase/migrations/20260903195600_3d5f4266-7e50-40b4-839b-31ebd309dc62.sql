@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS messages_campaign_status_created_idx ON public.messages (campaign_id, status, created_at);

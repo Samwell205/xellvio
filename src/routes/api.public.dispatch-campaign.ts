@@ -958,7 +958,7 @@ async function deliverPending(
   // Claim in small chunks. A single large claim runs hundreds of per-row
   // charge/ledger writes inside one statement and hit the database statement
   // timeout, which aborted the whole tick and left campaigns idle for hours.
-  const CLAIM_CHUNK = 150;
+  const CLAIM_CHUNK = 500;
   // Adaptive in-flight limit: drops when the carrier rate-limits us, recovers
   // once requests are being accepted again.
   let effectiveConcurrency = concurrency;
