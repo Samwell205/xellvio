@@ -873,7 +873,7 @@ function NewCampaignPage() {
               <div>
                 {testLimitReached
                   ? <>Daily test limit reached. You can proceed without another test today.</>
-                  : <>A test send is <b>required</b> before you can schedule or launch a campaign.</>}
+                  : <>A test send is <b>required</b> before launch. Large campaigns also start with a 25-recipient carrier check before the remaining audience is released.</>}
               </div>
               <span className="text-xs font-medium whitespace-nowrap">
                 {testUsage.used}/{testUsage.limit} used today
