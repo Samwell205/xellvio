@@ -92,8 +92,9 @@ function renderPreviewWithLinks(text: string): ReactNode {
 function NewCampaignPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: "/_authenticated/app/campaigns/new" });
+  const editingCampaignId = search.id ?? null;
   const [step, setStep] = useState<StepIdx>(0);
-  const [campaignId, setCampaignId] = useState<string | null>(search.id ?? null);
+  const [campaignId, setCampaignId] = useState<string | null>(editingCampaignId);
   const [s, setS] = useState<State>({
     name: "", include: [], exclude: [], profileIds: [], listIds: [], body: "", mediaUrl: "",
     sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
@@ -106,10 +107,11 @@ function NewCampaignPage() {
 
   // Load existing draft when editing
   useQuery({
-    queryKey: ["campaign-draft", campaignId],
-    enabled: !!campaignId,
+    queryKey: ["campaign-draft", editingCampaignId],
+    enabled: !!editingCampaignId,
     queryFn: async () => {
-      const { data } = await supabase.from("campaigns").select("*").eq("id", campaignId!).maybeSingle();
+      if (!editingCampaignId) return null;
+      const { data } = await supabase.from("campaigns").select("*").eq("id", editingCampaignId).maybeSingle();
       if (data) {
         const aud: any = data.audience ?? {};
         setS((prev) => ({
@@ -382,6 +384,24 @@ function NewCampaignPage() {
   const [saving, setSaving] = useState(false);
   const [shorteningLink, setShorteningLink] = useState(false);
   const callShortlink = useServerFn(createPreviewShortlink);
+
+  async function shortenMessageUrls(message: string): Promise<string> {
+    if (!s.trackLinks) return message;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://xellvio.com";
+    const escapedOrigin = origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const shortUrlPattern = new RegExp(`^${escapedOrigin}/r/[a-zA-Z0-9]{4,16}$`);
+    const urls = message.match(/https?:\/\/[^\s<>()[\]"']+/gi) ?? [];
+    const replacements = new Map<string, string>();
+
+    for (const url of Array.from(new Set(urls))) {
+      if (shortUrlPattern.test(url)) continue;
+      const { shortUrl } = await callShortlink({ data: { url, campaignId: campaignId ?? null } });
+      replacements.set(url, shortUrl);
+    }
+
+    return message.replace(/https?:\/\/[^\s<>()[\]"']+/gi, (url) => replacements.get(url) ?? url);
+  }
+
   async function addShortLink(url: string, el?: HTMLInputElement | null) {
     let candidate = url;
     if (!/^https?:\/\//i.test(candidate)) candidate = `https://${candidate}`;
@@ -400,9 +420,10 @@ function NewCampaignPage() {
       setS((prev) => ({ ...prev, body: (prev.body ? prev.body.trimEnd() + " " : "") + shortUrl }));
       if (el) el.value = "";
     } catch (err: any) {
-      toast.error(err?.message ?? "Could not shorten link — added original URL.");
-      setS((prev) => ({ ...prev, body: (prev.body ? prev.body.trimEnd() + " " : "") + candidate }));
-      if (el) el.value = "";
+      // Never silently add the original URL while shortening is enabled. That
+      // made campaigns look configured for tracking even though the long URL
+      // was what recipients ultimately received.
+      toast.error(err?.message ?? "Could not shorten this link. Please try again.");
     } finally {
       setShorteningLink(false);
     }
@@ -415,7 +436,8 @@ function NewCampaignPage() {
     if (testLimitReached) { toast.error(`Daily test limit reached (${testUsage.limit}/day).`); return; }
     setSending(true);
     try {
-      const res = await callTestSend({ data: { to: s.testTo, body: bodyWithStop, country: testCountry ?? undefined } });
+      const testBody = await shortenMessageUrls(bodyWithStop);
+      const res = await callTestSend({ data: { to: s.testTo, body: testBody, country: testCountry ?? undefined } });
       toast.success(`Test sent (sid ${res.sid.slice(0, 10)}…)`);
       setS({ ...s, testSent: true });
       testUsageQ.refetch();
@@ -497,7 +519,7 @@ function NewCampaignPage() {
     }, 1200);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, JSON.stringify(audience), JSON.stringify(s.excludedCountries)]);
+  }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, s.trackLinks, JSON.stringify(audience), JSON.stringify(s.excludedCountries)]);
 
   const [complianceAccepted, setComplianceAccepted] = useState(false);
 
@@ -701,7 +723,7 @@ function NewCampaignPage() {
               <Switch
                 id="track-links-toggle"
                 checked={s.trackLinks}
-                onCheckedChange={(v: boolean) => setS({ ...s, trackLinks: !!v })}
+                onCheckedChange={(v: boolean) => setS((prev) => ({ ...prev, trackLinks: !!v }))}
               />
             </div>
 
