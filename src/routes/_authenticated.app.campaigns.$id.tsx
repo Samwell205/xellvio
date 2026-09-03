@@ -735,7 +735,7 @@ function CampaignReport() {
             </div>
             <div className="text-xs mt-1 text-muted-foreground">
               Nothing has been sent or charged. Our team reviews it and it releases automatically
-              within 2 hours if no issue is found. To send sooner, edit the wording — urgent
+              within 15 minutes if no issue is found. To send sooner, edit the wording — urgent
               “compliance / filing / step required + act now” phrasing is rejected by mobile
               carriers even when the business is legitimate.
             </div>

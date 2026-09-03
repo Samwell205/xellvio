@@ -6,7 +6,8 @@
 // Screening runs seven independent checks, produces a 0–100 risk score, and
 // makes a three-way decision:
 //   score < 40 → passed (send normally)
-//   score 40–69 → held for admin review (auto-approves after opts.autoApproveHours)
+//   score 55–69 → held for admin review (auto-approves after opts.autoApproveHours,
+//                 default 15 minutes so urgent tenant sends are not stalled)
 //   score ≥ 70 → blocked entirely
 // Every decision (pass / hold / block) is written to content_screening_log.
 
@@ -40,7 +41,7 @@ export interface ScreenOpts {
   context?: string;
   /** Skip enqueueing a review_queue row (e.g. for test sends where a hold makes no sense). */
   skipReviewQueue?: boolean;
-  /** Auto-approval TTL for review-queue entries in hours. Defaults to 2. */
+  /** Auto-approval TTL for review-queue entries in hours. Defaults to 0.25 (15 min). */
   autoApproveHours?: number;
 }
 
@@ -231,7 +232,7 @@ export async function screenMessageContent(
   if (action === "held_for_review" && !opts.skipReviewQueue) {
     try {
       const autoApproveAt = new Date(
-        Date.now() + (opts.autoApproveHours ?? 2) * 60 * 60 * 1000,
+        Date.now() + (opts.autoApproveHours ?? 0.25) * 60 * 60 * 1000,
       ).toISOString();
       const { data: q } = await supabaseAdmin
         .from("review_queue")
