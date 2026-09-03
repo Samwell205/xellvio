@@ -1404,13 +1404,16 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
 
         const nowIso = new Date().toISOString();
 
-        // ── Auto-approve expired review-queue entries and requeue their campaigns.
+        // ── Auto-approve expired review-queue entries and any advisory-only
+        // score below the current review threshold. The latter is a fail-safe
+        // for campaigns held by an older worker version while deployments roll
+        // over, so a low-risk message cannot remain stranded for hours.
         const nowExpiry = new Date().toISOString();
         const { data: expiredReviews } = await supabaseAdmin
           .from("review_queue")
           .select("id, campaign_id")
           .eq("status", "pending")
-          .lte("auto_approve_at", nowExpiry);
+          .or(`auto_approve_at.lte.${nowExpiry},risk_score.lt.55`);
         for (const r of expiredReviews ?? []) {
           await supabaseAdmin.from("review_queue")
             .update({ status: "auto_approved", resolved_at: nowExpiry })
