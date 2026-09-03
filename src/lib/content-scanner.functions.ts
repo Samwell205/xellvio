@@ -19,6 +19,14 @@ export const scanCampaignContent = createServerFn({ method: "POST" })
       return keywordResult;
     }
 
+    // A keyword "flag" is an advisory match that the full dispatcher
+    // screening handles consistently. Do not send it through a second AI
+    // classifier here: that made the builder block content which the
+    // dispatcher had just approved and successfully launched.
+    if (keywordResult.confidence === "keyword") {
+      return keywordResult;
+    }
+
     // If keyword scan is clean but we want extra safety, run AI scan
     // We run AI on ALL messages to catch clever wording / obfuscation
     const aiResult = await aiScan(data.messageBody);
