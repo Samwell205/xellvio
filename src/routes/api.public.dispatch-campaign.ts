@@ -1482,6 +1482,25 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         // Try each lease slot in turn; the first free slot wins. Returns the
         // acquired lease name, or null when every slot is busy.
         async function acquireCampaignLease(campaignId: string): Promise<string | null> {
+          // Before the carrier canary has been submitted, every parallel worker
+          // must contend for ONE shared lease. Without this, 12 lease shards can
+          // each observe zero submitted rows and each send a 25-message sample.
+          const [{ count: planned }, { count: submitted }] = await Promise.all([
+            supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId),
+            supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId).not("provider_message_id", "is", null),
+          ]);
+          if ((planned ?? 0) >= PREFLIGHT_AUDIENCE_MIN && (submitted ?? 0) < PREFLIGHT_SAMPLE_SIZE) {
+            const name = `campaign:${campaignId}:preflight`;
+            const { data: got, error: lockError } = await (supabaseAdmin as any).rpc(
+              "try_acquire_dispatch_lock",
+              { _name: name },
+            );
+            if (lockError) {
+              console.error("[dispatch] preflight lock unavailable", lockError.message);
+              return null;
+            }
+            return got ? name : null;
+          }
           for (let shard = 0; shard < LEASE_SHARDS; shard += 1) {
             const name = `campaign:${campaignId}:${shard}`;
             const { data: got, error: lockError } = await (supabaseAdmin as any).rpc(
