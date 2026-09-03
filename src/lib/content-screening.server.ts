@@ -199,7 +199,7 @@ export async function screenMessageContent(
   // ---- Score + decision --------------------------------------------------
   const riskScore = Math.min(100, reasons.reduce((s, r) => s + r.score, 0));
   let action: ScreeningResult["action"] =
-    riskScore >= 70 ? "blocked" : riskScore >= 40 ? "held_for_review" : "passed";
+    riskScore >= 70 ? "blocked" : riskScore >= 55 ? "held_for_review" : "passed";
 
   // Review-queue candidates are NOT violations — they are "look at this later"
   // signals. When the caller cannot wait for review (test sends), let the
