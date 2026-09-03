@@ -1690,7 +1690,15 @@ const REASON_LABELS: Record<string, string> = {
   "21610": "Recipient replied STOP — number opted out",
   "21614": "Not a valid mobile number",
   "40008": "Recipient carrier rejected this message. It reached the carrier, but was not accepted for delivery.",
+  "40002": "Blocked by the carrier's spam filter — the wording or the link in this message is being filtered. Change the message text/link or use a different registered sender, then resend.",
+  "40001": "Destination is a landline or cannot receive text messages",
+  "40012": "Invalid or non-routable destination number",
+  "10002": "Invalid destination number",
+  "40300": "Carrier block rule between your sender and this number",
+  "40309": "Destination region is not enabled on your sending profile",
+  "40310": "Invalid destination format",
 };
+
 function friendlyReason(code: string): string {
   return REASON_LABELS[code] ?? "See carrier documentation";
 }
