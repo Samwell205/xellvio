@@ -75,7 +75,16 @@ export function AppSidebar() {
     return !!session.permissions[it.perm];
   };
 
-  const visibleItems = items.filter(canSee);
+  const visibleItems: Entry[] = items
+    .map((e) => (isGroup(e) ? { ...e, children: e.children.filter(canSee) } : e))
+    .filter((e) => (isGroup(e) ? e.children.length > 0 : canSee(e)));
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const groupActive = (g: Group) => g.children.some((c) => isActive(c.url, c.exact));
+  useEffect(() => {
+    const active = items.filter(isGroup).filter(groupActive).map((g) => g.title);
+    if (active.length) setOpenGroups((p) => ({ ...p, ...Object.fromEntries(active.map((t) => [t, true])) }));
+  }, [pathname]);
+
   const canInbox = canSee({ title: "Inbox", url: "/app/inbox", icon: Inbox, perm: "inbox" });
   const acctKey = (session as any)?.accountId ?? (session as any)?.workspaceOwnerId ?? "self";
   const unreadFn = useServerFn(getInboxUnreadCount);
