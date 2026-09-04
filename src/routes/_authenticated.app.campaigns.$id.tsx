@@ -212,14 +212,19 @@ function CampaignReport() {
     queryKey: ["campaign-events", id],
     refetchInterval: poll(60_000),
     queryFn: async () => {
+      // Filter by campaign in the database. Pulling the newest 2000 clicks
+      // platform-wide and filtering in the browser returned nothing for a
+      // campaign whose clicks were older than other tenants' traffic.
       const { data } = await supabase
         .from("events")
         .select("id, type, created_at, message_id, payload")
         .eq("type", "clicked")
+        .eq("payload->>campaign_id", id)
         .order("created_at", { ascending: false })
-        .limit(2000);
-      return (data ?? []).filter((e: any) => e?.payload?.campaign_id === id);
+        .limit(5000);
+      return (data ?? []) as any[];
     },
+
   });
 
   // Authoritative click counters live on link_clicks (works for both
