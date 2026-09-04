@@ -14,7 +14,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Code2, Copy, ExternalLink, FormInput, Plus, Trash2 } from "lucide-react";
+import { TemplateGallery } from "@/components/growth/TemplateGallery";
+import { FORM_TEMPLATES } from "@/lib/growth-templates";
+import { Code2, Copy, ExternalLink, FormInput, LayoutGrid, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/signup-forms")({
   head: () => ({
@@ -71,6 +73,14 @@ function SignupFormsPage() {
   const subsQ = useQuery({ queryKey: ["signup-submissions"], queryFn: () => subsFn(), refetchInterval: 30_000 });
   const listsQ = useQuery({ queryKey: ["contact-lists"], queryFn: () => listsFn() });
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [gallery, setGallery] = useState(false);
+
+  const applyTemplate = (id: string) => {
+    const t = FORM_TEMPLATES.find((x) => x.id === id);
+    if (!t) return;
+    setGallery(false);
+    setDraft({ ...EMPTY, ...t.values, name: t.label });
+  };
 
   const save = useMutation({
     mutationFn: async (d: Draft) => saveFn({ data: d }),
@@ -103,7 +113,10 @@ function SignupFormsPage() {
             Collect phone numbers on your own website — share the link or paste the embed code anywhere.
           </p>
         </div>
-        <Button onClick={() => setDraft({ ...EMPTY })}><Plus className="mr-2 size-4" />Create form</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Create blank form</Button>
+          <Button onClick={() => setGallery(true)}><LayoutGrid className="mr-2 size-4" />Browse templates</Button>
+        </div>
       </div>
 
       {forms.length === 0 ? (
@@ -115,7 +128,10 @@ function SignupFormsPage() {
               Start from a ready-made form, choose the list it feeds, and paste it on your site in one line of code.
             </p>
           </div>
-          <Button onClick={() => setDraft({ ...EMPTY })}>Create blank form</Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button onClick={() => setGallery(true)}>Browse {FORM_TEMPLATES.length} templates</Button>
+            <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Create blank form</Button>
+          </div>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -252,6 +268,21 @@ function SignupFormsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <TemplateGallery
+        open={gallery}
+        onOpenChange={setGallery}
+        title="Browse sign-up form templates"
+        description="Pick a starting point — every word, colour and setting stays editable."
+        items={FORM_TEMPLATES.map((t) => ({
+          id: t.id,
+          label: t.label,
+          category: t.category,
+          blurb: t.blurb,
+          preview: { headline: t.values.headline, sub: t.values.description, cta: t.values.cta_label, theme: t.values.theme, accent: t.values.accent },
+        }))}
+        onPick={applyTemplate}
+        onBlank={() => { setGallery(false); setDraft({ ...EMPTY }); }}
+      />
     </div>
   );
 }

@@ -14,7 +14,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Copy, ExternalLink, LayoutTemplate, Plus, Trash2 } from "lucide-react";
+import { TemplateGallery } from "@/components/growth/TemplateGallery";
+import { PAGE_TEMPLATES } from "@/lib/growth-templates";
+import { Copy, ExternalLink, LayoutGrid, LayoutTemplate, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/landing-pages")({
   head: () => ({
@@ -69,6 +71,14 @@ function LandingPagesPage() {
   const pagesQ = useQuery({ queryKey: ["landing-pages"], queryFn: () => listFn() });
   const listsQ = useQuery({ queryKey: ["contact-lists"], queryFn: () => listsFn() });
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [gallery, setGallery] = useState(false);
+
+  const applyTemplate = (id: string) => {
+    const t = PAGE_TEMPLATES.find((x) => x.id === id);
+    if (!t) return;
+    setGallery(false);
+    setDraft({ ...EMPTY, ...t.values, name: t.label });
+  };
 
   const save = useMutation({
     mutationFn: async (d: Draft) => saveFn({ data: { ...d, image_url: d.image_url || null } }),
@@ -101,7 +111,10 @@ function LandingPagesPage() {
             A shareable page with your offer and a phone-number box. Everyone who signs up lands in the list you choose.
           </p>
         </div>
-        <Button onClick={() => setDraft({ ...EMPTY })}><Plus className="mr-2 size-4" />Create landing page</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Create blank page</Button>
+          <Button onClick={() => setGallery(true)}><LayoutGrid className="mr-2 size-4" />Browse templates</Button>
+        </div>
       </div>
 
       {pages.length === 0 ? (
@@ -113,7 +126,10 @@ function LandingPagesPage() {
               Publish a page in a minute, share the link in bio, ads or QR codes, and watch subscribers come in.
             </p>
           </div>
-          <Button onClick={() => setDraft({ ...EMPTY })}>Create your first page</Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button onClick={() => setGallery(true)}>Browse {PAGE_TEMPLATES.length} templates</Button>
+            <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Create blank page</Button>
+          </div>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
@@ -221,6 +237,21 @@ function LandingPagesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <TemplateGallery
+        open={gallery}
+        onOpenChange={setGallery}
+        title="Browse landing page templates"
+        description="Pick a starting point — every word, colour and setting stays editable."
+        items={PAGE_TEMPLATES.map((t) => ({
+          id: t.id,
+          label: t.label,
+          category: t.category,
+          blurb: t.blurb,
+          preview: { headline: t.values.headline, sub: t.values.subheadline, cta: t.values.cta_label, theme: t.values.theme, accent: t.values.accent },
+        }))}
+        onPick={applyTemplate}
+        onBlank={() => { setGallery(false); setDraft({ ...EMPTY }); }}
+      />
     </div>
   );
 }
