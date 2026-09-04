@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Send, X, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useServerFn } from "@tanstack/react-start";
+import { useRouterState } from "@tanstack/react-router";
 import { chatWithSupportBot } from "@/lib/chat.functions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,9 @@ export function AiChatWidget() {
   const [loading, setLoading] = useState(false);
   const sendChat = useServerFn(chatWithSupportBot);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // Full-screen editors (automation builder) need the bottom-right corner for their own controls.
+  const hidden = /^\/app\/automations\/[^/]+/.test(pathname);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -51,6 +55,8 @@ export function AiChatWidget() {
       setLoading(false);
     }
   }
+
+  if (hidden) return null;
 
   return (
     <>
