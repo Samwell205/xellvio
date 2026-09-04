@@ -6,6 +6,7 @@ import {
   SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Logo } from "./Logo";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
@@ -43,6 +44,9 @@ const items: Entry[] = [
       { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff, perm: "suppressions" },
     ],
   },
+];
+
+const advancedItems: Entry[] = [
   { title: "Team", url: "/app/team", icon: UserPlus, perm: "team" },
   { title: "My Academy", url: "/app/my-academy", icon: GraduationCap, ownerOnly: true },
 ];
@@ -78,6 +82,7 @@ export function AppSidebar() {
   const visibleItems: Entry[] = items
     .map((e) => (isGroup(e) ? { ...e, children: e.children.filter(canSee) } : e))
     .filter((e) => (isGroup(e) ? e.children.length > 0 : canSee(e)));
+  const visibleAdvanced: Entry[] = advancedItems.filter((e) => (isGroup(e) ? false : canSee(e)));
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const groupActive = (g: Group) => g.children.some((c) => isActive(c.url, c.exact));
   useEffect(() => {
