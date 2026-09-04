@@ -56,6 +56,8 @@ export function AiChatWidget() {
     }
   }
 
+  if (hidden) return null;
+
   return (
     <>
       <button
