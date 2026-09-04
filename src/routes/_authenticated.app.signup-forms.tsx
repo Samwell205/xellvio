@@ -73,6 +73,14 @@ function SignupFormsPage() {
   const subsQ = useQuery({ queryKey: ["signup-submissions"], queryFn: () => subsFn(), refetchInterval: 30_000 });
   const listsQ = useQuery({ queryKey: ["contact-lists"], queryFn: () => listsFn() });
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [gallery, setGallery] = useState(false);
+
+  const applyTemplate = (id: string) => {
+    const t = FORM_TEMPLATES.find((x) => x.id === id);
+    if (!t) return;
+    setGallery(false);
+    setDraft({ ...EMPTY, ...t.values, name: t.label });
+  };
 
   const save = useMutation({
     mutationFn: async (d: Draft) => saveFn({ data: d }),
