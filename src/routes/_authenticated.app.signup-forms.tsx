@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from "sonner";
 import { TemplateGallery } from "@/components/growth/TemplateGallery";
 import { FORM_TEMPLATES } from "@/lib/growth-templates";
-import { Code2, Copy, ExternalLink, FormInput, LayoutGrid, Plus, Trash2 } from "lucide-react";
+import { Code2, Copy, ExternalLink, FormInput, LayoutGrid, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/signup-forms")({
   head: () => ({
