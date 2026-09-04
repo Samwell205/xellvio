@@ -203,15 +203,20 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     }
     const totalClicks = clickRows.reduce((s, r) => s + Number(r.clicks ?? 0), 0);
     const clickedLinks = clickRows.filter((r) => Number(r.clicks ?? 0) > 0).length;
-    // With one shared shortlink each click is a distinct recipient; with
-    // per-recipient links each clicked link is one recipient.
-    const engaged = clickRows.length > 1 ? clickedLinks : totalClicks;
+    // Two shortening styles exist. When a campaign has roughly one short link
+    // per recipient, each clicked link is one engaged recipient. When a handful
+    // of links are SHARED by every recipient (the common case), the number of
+    // clicked link rows is meaningless as engagement — every click came from a
+    // different recipient, so the click total is the right figure.
+    const perRecipientLinks = totals.delivered > 0 && clickRows.length >= totals.delivered * 0.5;
+    const engaged = perRecipientLinks ? clickedLinks : totalClicks;
     const clicks = {
       links: clickRows.length,
       total_clicks: totalClicks,
       clicked_links: engaged,
       click_rate: totals.delivered > 0 ? +Math.min(100, (engaged / totals.delivered) * 100).toFixed(1) : 0,
     };
+
 
 
     return {
