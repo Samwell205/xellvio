@@ -115,6 +115,22 @@ export const submitSubscribe = createServerFn({ method: "POST" })
           listId: source.list_id,
         });
       }
+      const { fireAutomationTrigger } = await import("./automation-engine.server");
+      await fireAutomationTrigger({
+        accountId: source.account_id,
+        phone,
+        type: "trigger.form_submitted",
+        formId: source.id,
+      });
+      await fireAutomationTrigger({ accountId: source.account_id, phone, type: "trigger.contact_created" });
+      if (source.list_id) {
+        await fireAutomationTrigger({
+          accountId: source.account_id,
+          phone,
+          type: "trigger.contact_added",
+          listId: source.list_id,
+        });
+      }
     } catch {
       /* signup still succeeds if automation scheduling hiccups */
     }

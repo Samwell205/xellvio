@@ -612,6 +612,133 @@ export type Database = {
           },
         ]
       }
+      automation_run_events: {
+        Row: {
+          account_id: string
+          automation_id: string
+          created_at: string
+          detail: string | null
+          id: string
+          node_key: string | null
+          node_type: string | null
+          outcome: string
+          run_id: string
+        }
+        Insert: {
+          account_id: string
+          automation_id: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          node_key?: string | null
+          node_type?: string | null
+          outcome: string
+          run_id: string
+        }
+        Update: {
+          account_id?: string
+          automation_id?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          node_key?: string | null
+          node_type?: string | null
+          outcome?: string
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_run_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_run_events_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_run_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "automation_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_runs: {
+        Row: {
+          account_id: string
+          automation_id: string
+          completed_at: string | null
+          context: Json
+          current_node_key: string | null
+          entered_at: string
+          id: string
+          last_error: string | null
+          phone_e164: string
+          profile_id: string | null
+          status: string
+          steps_run: number
+          updated_at: string
+          wait_until: string | null
+          waiting_for: string | null
+        }
+        Insert: {
+          account_id: string
+          automation_id: string
+          completed_at?: string | null
+          context?: Json
+          current_node_key?: string | null
+          entered_at?: string
+          id?: string
+          last_error?: string | null
+          phone_e164: string
+          profile_id?: string | null
+          status?: string
+          steps_run?: number
+          updated_at?: string
+          wait_until?: string | null
+          waiting_for?: string | null
+        }
+        Update: {
+          account_id?: string
+          automation_id?: string
+          completed_at?: string | null
+          context?: Json
+          current_node_key?: string | null
+          entered_at?: string
+          id?: string
+          last_error?: string | null
+          phone_e164?: string
+          profile_id?: string | null
+          status?: string
+          steps_run?: number
+          updated_at?: string
+          wait_until?: string | null
+          waiting_for?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_runs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automations: {
         Row: {
           account_id: string

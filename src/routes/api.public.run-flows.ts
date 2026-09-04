@@ -10,7 +10,9 @@ export const Route = createFileRoute("/api/public/run-flows")({
         }
         const { processDueFlowRuns } = await import("@/lib/flows.server");
         const result = await processDueFlowRuns(150);
-        return Response.json(result);
+        const { processDueAutomationRuns } = await import("@/lib/automation-engine.server");
+        const automations = await processDueAutomationRuns(150);
+        return Response.json({ ...result, automations });
       },
     },
   },

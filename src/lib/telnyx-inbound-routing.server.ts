@@ -177,6 +177,26 @@ export async function handleTelnyxInboundMessage(payload: any) {
     }
   }
 
+  // Saved automation graphs: reply-driven triggers and wait-for-reply branches.
+  try {
+    const { fireAutomationTrigger, handleInboundForAutomations } = await import("@/lib/automation-engine.server");
+    const optedOut = STOP_WORDS.includes(upper);
+    const keyword = upper.trim().split(/\s+/)[0] ?? "";
+    await Promise.all(
+      targetAccountIds.flatMap((accountId) => [
+        handleInboundForAutomations({ accountId, phone: from, body: bodyText, optedOut }),
+        optedOut
+          ? fireAutomationTrigger({ accountId, phone: from, type: "trigger.opted_out" })
+          : fireAutomationTrigger({ accountId, phone: from, type: "trigger.sms_received", payload: { body: bodyText } }),
+        !optedOut && keyword
+          ? fireAutomationTrigger({ accountId, phone: from, type: "trigger.keyword_received", keyword })
+          : Promise.resolve(null),
+      ]),
+    );
+  } catch {
+    // automations must never break inbound handling
+  }
+
 
   try {
     const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");

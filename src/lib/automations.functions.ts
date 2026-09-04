@@ -282,3 +282,74 @@ export const duplicateAutomation = createServerFn({ method: "POST" })
     }
     return { id: created.id as string };
   });
+
+/** Live journey activity: who is in this automation and what has happened. */
+export const getAutomationActivity = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const accountId = await acct(context.userId);
+    const { data: automation } = await supabaseAdmin
+      .from("automations")
+      .select("id")
+      .eq("id", data.id)
+      .eq("account_id", accountId)
+      .maybeSingle();
+    if (!automation) throw new Error("Automation not found");
+
+    const [{ data: runs }, { data: events }] = await Promise.all([
+      supabaseAdmin
+        .from("automation_runs")
+        .select("id,phone_e164,status,current_node_key,wait_until,waiting_for,steps_run,last_error,entered_at,updated_at")
+        .eq("automation_id", data.id)
+        .order("updated_at", { ascending: false })
+        .limit(50),
+      supabaseAdmin
+        .from("automation_run_events")
+        .select("id,run_id,node_key,node_type,outcome,detail,created_at")
+        .eq("automation_id", data.id)
+        .order("created_at", { ascending: false })
+        .limit(80),
+    ]);
+
+    const counts = { active: 0, waiting: 0, completed: 0, exited: 0, failed: 0 } as Record<string, number>;
+    for (const r of runs ?? []) counts[r.status] = (counts[r.status] ?? 0) + 1;
+
+    return { runs: runs ?? [], events: events ?? [], counts };
+  });
+
+/** Walk one real contact through the automation without sending anything. */
+export const testRunAutomation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ id: z.string().uuid(), phone: z.string().trim().min(5).max(20), node_key: z.string().min(1) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const accountId = await acct(context.userId);
+    const { data: automation } = await supabaseAdmin
+      .from("automations")
+      .select("id")
+      .eq("id", data.id)
+      .eq("account_id", accountId)
+      .maybeSingle();
+    if (!automation) throw new Error("Automation not found");
+
+    const { startRun } = await import("./automation-engine.server");
+    const run = await startRun({
+      accountId,
+      automationId: data.id,
+      phone: data.phone,
+      startNodeKey: data.node_key,
+      test: true,
+    });
+    if (!run) return { ok: false, message: "That contact is already in this automation." };
+
+    const { data: events } = await supabaseAdmin
+      .from("automation_run_events")
+      .select("node_key,node_type,outcome,detail,created_at")
+      .eq("run_id", run.id)
+      .order("created_at", { ascending: true });
+    return { ok: true, run_id: run.id, events: events ?? [] };
+  });

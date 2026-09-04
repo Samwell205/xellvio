@@ -23,6 +23,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronLeft,
+  LayoutTemplate,
   Loader2,
   Maximize2,
   Minus,
@@ -62,8 +63,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { defaultConfig, outputsFor, stepDef, type NodeConfig } from "@/lib/automation-catalog";
-import { simulate, validateGraph, type GraphEdge, type GraphNode } from "@/lib/automation-validation";
+import { defaultConfig, isTriggerType, outputsFor, stepDef, type NodeConfig } from "@/lib/automation-catalog";
+import {
+  canConnect,
+  orphanNodeIds,
+  simulate,
+  validateGraph,
+  type GraphEdge,
+  type GraphNode,
+} from "@/lib/automation-validation";
+import { AUTOMATION_TEMPLATES, materialiseTemplate } from "@/lib/automation-templates";
 import { deleteAutomation, saveAutomation, setAutomationStatus, type AutomationRecord } from "@/lib/automations.functions";
 import { sendFlowTest } from "@/lib/flows.functions";
 import { cn } from "@/lib/utils";
@@ -73,6 +82,8 @@ import { InsertEdge } from "./InsertEdge";
 import { StepLibrary } from "./StepLibrary";
 import { ConfigPanel, type ConfigTarget } from "./ConfigPanel";
 import { AddStepDialog } from "./AddStepDialog";
+import { TemplatePicker } from "./TemplatePicker";
+
 
 type SNode = Node;
 type Snapshot = { nodes: SNode[]; edges: Edge[] };
@@ -156,6 +167,12 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [deleteFlowOpen, setDeleteFlowOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  /** Click-to-connect: the branch we are currently linking from. */
+  const [connectSource, setConnectSource] = useState<{ nodeId: string; handleId: string } | null>(null);
+  /** When set, the next step picked is attached to this branch. */
+  const [addAfterTarget, setAddAfterTarget] = useState<{ nodeId: string; handleId: string } | null>(null);
+
 
   // ---------- history ----------
   const past = useRef<Snapshot[]>([]);
@@ -291,37 +308,65 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
     };
   }, []);
 
+  /** Free outgoing branches of a step, in order. */
+  const freeHandles = useCallback(
+    (nodeId: string) => {
+      const n = nodes.find((x) => x.id === nodeId);
+      if (!n) return [];
+      const d = n.data as unknown as StepNodeData;
+      const outs = outputsFor(d.stepType, d.config ?? {});
+      const taken = new Set(edges.filter((e) => e.source === nodeId).map((e) => e.sourceHandle ?? outs[0]?.id));
+      return outs.filter((o) => !taken.has(o.id));
+    },
+    [nodes, edges],
+  );
+
   const addStep = useCallback(
-    (type: string, at?: { x: number; y: number }) => {
+    (type: string, at?: { x: number; y: number }, attach?: { nodeId: string; handleId: string }) => {
       commit();
-      // Place under the lowest node when no position given.
-      const fallback = nodes.length
-        ? { x: nodes[nodes.length - 1]!.position.x, y: Math.max(...nodes.map((n) => n.position.y)) + 170 }
-        : { x: 0, y: 0 };
+      const anchor = attach ? nodes.find((n) => n.id === attach.nodeId) : undefined;
+      const fallback = anchor
+        ? { x: anchor.position.x, y: anchor.position.y + 190 }
+        : nodes.length
+          ? { x: nodes[nodes.length - 1]!.position.x, y: Math.max(...nodes.map((n) => n.position.y)) + 190 }
+          : { x: 0, y: 0 };
       const node = makeNode(type, at ?? fallback);
       setNodes((ns) => [...ns, node]);
-      // auto-connect from the single last node when it has one free output
-      if (!at && nodes.length) {
+
+      if (attach) {
+        setEdges((es) => [
+          ...es,
+          { id: newKey("e"), source: attach.nodeId, target: node.id, sourceHandle: attach.handleId, type: "insert" },
+        ]);
+      } else if (!at && nodes.length) {
+        // Auto-continue the chain from the lowest step when it has exactly one free branch.
         const lowest = nodes.reduce((a, b) => (a.position.y >= b.position.y ? a : b));
-        const d = lowest.data as unknown as StepNodeData;
-        const outs = outputsFor(d.stepType, d.config ?? {});
-        if (outs.length === 1 && !edges.some((e) => e.source === lowest.id)) {
+        const free = freeHandles(lowest.id);
+        const outs = outputsFor(
+          (lowest.data as unknown as StepNodeData).stepType,
+          (lowest.data as unknown as StepNodeData).config ?? {},
+        );
+        if (outs.length === 1 && free.length === 1 && !isTriggerType(type)) {
           setEdges((es) => [
             ...es,
-            { id: newKey("e"), source: lowest.id, target: node.id, sourceHandle: outs[0]!.id, type: "insert" },
+            { id: newKey("e"), source: lowest.id, target: node.id, sourceHandle: free[0]!.id, type: "insert" },
           ]);
         }
       }
       setConfigId(node.id);
       toast.success(`${stepDef(type).label} added`);
     },
-    [commit, nodes, edges, makeNode, setNodes, setEdges],
+    [commit, nodes, makeNode, setNodes, setEdges, freeHandles],
   );
 
   const insertBetween = useCallback(
     (edgeId: string, type: string) => {
       const edge = edges.find((e) => e.id === edgeId);
       if (!edge) return;
+      if (isTriggerType(type)) {
+        toast.error("A trigger cannot sit in the middle of a journey.");
+        return;
+      }
       commit();
       const src = nodes.find((n) => n.id === edge.source);
       const tgt = nodes.find((n) => n.id === edge.target);
@@ -342,6 +387,45 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
       setConfigId(node.id);
     },
     [edges, nodes, commit, makeNode, setNodes, setEdges],
+  );
+
+  /** Move an existing, unconnected step into the middle of a link. */
+  const spliceIntoEdge = useCallback(
+    (nodeId: string, edgeId: string) => {
+      const edge = edges.find((e) => e.id === edgeId);
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!edge || !node) return;
+      const d = node.data as unknown as StepNodeData;
+      if (isTriggerType(d.stepType)) return;
+      const outs = outputsFor(d.stepType, d.config ?? {});
+      commit();
+      setEdges((es) => [
+        ...es.filter((e) => e.id !== edgeId),
+        { id: newKey("e"), source: edge.source, target: nodeId, sourceHandle: edge.sourceHandle ?? undefined, type: "insert" },
+        ...(outs.length
+          ? [{ id: newKey("e"), source: nodeId, target: edge.target, sourceHandle: outs[0]!.id, type: "insert" } as Edge]
+          : []),
+      ]);
+      toast.success("Step inserted into the path");
+    },
+    [edges, nodes, commit, setEdges],
+  );
+
+  /** Nearest link to a canvas point, used when dropping a step on top of a link. */
+  const edgeNear = useCallback(
+    (pos: { x: number; y: number }, radius = 90) => {
+      let best: { id: string; dist: number } | null = null;
+      for (const e of edges) {
+        const s = nodes.find((n) => n.id === e.source);
+        const t = nodes.find((n) => n.id === e.target);
+        if (!s || !t) continue;
+        const mid = { x: (s.position.x + t.position.x) / 2 + 132, y: (s.position.y + t.position.y) / 2 + 60 };
+        const dist = Math.hypot(mid.x - pos.x, mid.y - pos.y);
+        if (dist <= radius && (!best || dist < best.dist)) best = { id: e.id, dist };
+      }
+      return best?.id ?? null;
+    },
+    [edges, nodes],
   );
 
   const duplicateNode = useCallback(
@@ -365,15 +449,121 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
   const removeNode = useCallback(
     (id: string) => {
       commit();
+      // Heal the journey: reconnect what led in to what led out, so deleting a
+      // step in the middle never leaves the rest of the path stranded.
+      const incoming = edges.filter((e) => e.target === id);
+      const outgoing = edges.filter((e) => e.source === id);
+      const healed: Edge[] = [];
+      if (incoming.length && outgoing.length) {
+        const firstOut = outgoing[0]!;
+        for (const inc of incoming) {
+          healed.push({
+            id: newKey("e"),
+            source: inc.source,
+            target: firstOut.target,
+            sourceHandle: inc.sourceHandle ?? undefined,
+            type: "insert",
+          });
+        }
+      }
       setNodes((ns) => ns.filter((n) => n.id !== id));
-      setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
+      setEdges((es) => [...es.filter((e) => e.source !== id && e.target !== id), ...healed]);
       if (configId === id) setConfigId(null);
-      toast.success("Step deleted");
+      setConnectSource(null);
+      toast.success(healed.length ? "Step deleted and the path reconnected" : "Step deleted");
     },
-    [commit, setNodes, setEdges, configId],
+    [commit, setNodes, setEdges, configId, edges],
+  );
+
+  const applyTemplate = useCallback(
+    (templateId: string) => {
+      const tpl = AUTOMATION_TEMPLATES.find((t) => t.id === templateId);
+      if (!tpl) return;
+      commit();
+      const built = materialiseTemplate(tpl);
+      const map = new Map<string, string>();
+      const newNodes: SNode[] = built.nodes.map((n) => {
+        const id = newKey();
+        map.set(n.key, id);
+        return {
+          id,
+          type: "step",
+          position: n.position,
+          data: {
+            stepType: n.type,
+            label: stepDef(n.type).label,
+            config: n.config as NodeConfig,
+            disabled: false,
+          } as unknown as Record<string, unknown>,
+        };
+      });
+      const newEdges: Edge[] = built.edges.map((e) => ({
+        id: newKey("e"),
+        source: map.get(e.source)!,
+        target: map.get(e.target)!,
+        sourceHandle: e.sourceHandle ?? outputsFor(
+          built.nodes.find((n) => n.key === e.source)!.type,
+          built.nodes.find((n) => n.key === e.source)!.config as NodeConfig,
+        )[0]?.id,
+        type: "insert",
+      }));
+      setNodes(newNodes);
+      setEdges(newEdges);
+      setName((prev) => (prev.trim().startsWith("Automation —") || !prev.trim() ? tpl.name : prev));
+      setTemplatesOpen(false);
+      setConfigId(null);
+      toast.success(`${tpl.name} template applied — edit any step to make it yours`);
+      setTimeout(() => rf.fitView({ padding: 0.25, duration: 400 }), 60);
+    },
+    [commit, setNodes, setEdges, rf],
+  );
+
+  const tryConnect = useCallback(
+    (c: { source: string; target: string; sourceHandle?: string | null }) => {
+      const { g, e } = toGraph(nodes, edges);
+      const check = canConnect(g, e, c);
+      if (!check.ok) {
+        toast.error(check.reason);
+        return false;
+      }
+      commit();
+      setEdges((es) => [
+        ...es,
+        {
+          id: newKey("e"),
+          source: c.source,
+          target: c.target,
+          sourceHandle: c.sourceHandle ?? undefined,
+          type: "insert",
+        } as Edge,
+      ]);
+
+      return true;
+    },
+    [nodes, edges, commit, setEdges],
+  );
+
+  /** Drag an existing link's end onto another step to re-route it. */
+  const reconnectEdge = useCallback(
+    (oldEdge: Edge, c: Connection) => {
+      const remaining = edges.filter((e) => e.id !== oldEdge.id);
+      const { g, e } = toGraph(nodes, remaining);
+      const check = canConnect(g, e, { source: c.source, target: c.target, sourceHandle: c.sourceHandle });
+      if (!check.ok) {
+        toast.error(check.reason);
+        return;
+      }
+      commit();
+      setEdges([
+        ...remaining,
+        { id: newKey("e"), source: c.source, target: c.target, sourceHandle: c.sourceHandle ?? undefined, type: "insert" },
+      ]);
+    },
+    [edges, nodes, commit, setEdges],
   );
 
   const actions: BuilderActions = useMemo(
+
     () => ({
       openConfig: (id) => setConfigId(id),
       duplicateNode,
@@ -389,31 +579,53 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
         setAddOpen(true);
       },
       testNode: () => setTestOpen(true),
+      beginConnect: (nodeId, handleId) => setConnectSource({ nodeId, handleId }),
+      cancelConnect: () => setConnectSource(null),
+      completeConnect: (nodeId) => {
+        if (!connectSource) return;
+        const ok = tryConnect({ source: connectSource.nodeId, target: nodeId, sourceHandle: connectSource.handleId });
+        if (ok) setConnectSource(null);
+      },
+      connectSource,
+      canAcceptConnect: (nodeId) => {
+        if (!connectSource) return false;
+        const { g, e } = toGraph(nodes, edges);
+        return canConnect(g, e, { source: connectSource.nodeId, target: nodeId, sourceHandle: connectSource.handleId }).ok;
+      },
+      connectedHandles: (nodeId) => {
+        const n = nodes.find((x) => x.id === nodeId);
+        const d = n?.data as unknown as StepNodeData | undefined;
+        const outs = d ? outputsFor(d.stepType, d.config ?? {}) : [];
+        return new Set(
+          edges.filter((e) => e.source === nodeId).map((e) => String(e.sourceHandle ?? outs[0]?.id ?? "out")),
+        );
+      },
+      addAfter: (nodeId, handleId) => {
+        setAddAfterTarget({ nodeId, handleId });
+        setAddOpen(true);
+      },
     }),
-    [duplicateNode, nodes, commit, patchNode],
+    [duplicateNode, nodes, edges, commit, patchNode, connectSource, tryConnect],
   );
 
   const onConnect = useCallback(
     (c: Connection) => {
-      if (c.source === c.target) {
-        toast.error("A step cannot connect to itself.");
-        return;
-      }
-      const srcNode = nodes.find((n) => n.id === c.source);
-      const tgtNode = nodes.find((n) => n.id === c.target);
-      if (!srcNode || !tgtNode) return;
-      if ((tgtNode.data as unknown as StepNodeData).stepType.startsWith("trigger.")) {
-        toast.error("Triggers always start the automation.");
-        return;
-      }
-      if (edges.some((e) => e.source === c.source && (e.sourceHandle ?? "out") === (c.sourceHandle ?? "out"))) {
-        toast.error("That output already leads somewhere. Remove the existing link first.");
-        return;
-      }
-      commit();
-      setEdges((es) => addEdge({ ...c, id: newKey("e"), type: "insert" }, es));
+      tryConnect({ source: c.source, target: c.target, sourceHandle: c.sourceHandle });
     },
-    [nodes, edges, commit, setEdges],
+    [tryConnect],
+  );
+
+  /** Live feedback while dragging a link — invalid targets simply won't accept it. */
+  const isValidConnection = useCallback(
+    (c: Connection | Edge) => {
+      const { g, e } = toGraph(nodes, edges);
+      return canConnect(g, e, {
+        source: (c as Connection).source ?? "",
+        target: (c as Connection).target ?? "",
+        sourceHandle: (c as Connection).sourceHandle ?? null,
+      }).ok;
+    },
+    [nodes, edges],
   );
 
   // ---------- drag & drop from library ----------
@@ -423,10 +635,28 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
       const type = event.dataTransfer.getData("application/xellvio-step");
       if (!type) return;
       const position = rf.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      // Dropping right on top of a link inserts the step into that path.
+      const hit = isTriggerType(type) ? null : edgeNear(position);
+      if (hit) {
+        insertBetween(hit, type);
+        return;
+      }
       addStep(type, { x: position.x - 130, y: position.y - 40 });
     },
-    [rf, addStep],
+    [rf, addStep, edgeNear, insertBetween],
   );
+
+  /** Dragging an unconnected step onto a link splices it into the path. */
+  const onNodeDragStop = useCallback(
+    (_: unknown, node: SNode) => {
+      const connected = edges.some((e) => e.source === node.id || e.target === node.id);
+      if (connected) return;
+      const hit = edgeNear({ x: node.position.x + 132, y: node.position.y + 60 }, 110);
+      if (hit) spliceIntoEdge(node.id, hit);
+    },
+    [edges, edgeNear, spliceIntoEdge],
+  );
+
 
   // ---------- keyboard ----------
   useEffect(() => {
@@ -544,16 +774,18 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
     return { id: n.id, stepType: d.stepType, label: d.label ?? "", config: d.config ?? {} };
   }, [configId, nodes]);
 
-  const nodesWithFlags = useMemo(
-    () =>
-      nodes.map((n) => {
-        const hasError = issues.some((i) => i.nodeId === n.id && i.severity === "error");
-        const d = n.data as unknown as StepNodeData;
-        if (!!d.hasError === hasError) return n;
-        return { ...n, data: { ...(n.data as object), hasError } as Record<string, unknown> };
-      }),
-    [nodes, issues],
-  );
+  const nodesWithFlags = useMemo(() => {
+    const { g, e } = toGraph(nodes, edges);
+    const orphans = orphanNodeIds(g, e);
+    return nodes.map((n) => {
+      const hasError = issues.some((i) => i.nodeId === n.id && i.severity === "error");
+      const isOrphan = orphans.has(n.id);
+      const d = n.data as unknown as StepNodeData;
+      if (!!d.hasError === hasError && !!d.isOrphan === isOrphan) return n;
+      return { ...n, data: { ...(n.data as object), hasError, isOrphan } as Record<string, unknown> };
+    });
+  }, [nodes, edges, issues]);
+
 
   const statusChip =
     status === "active"
@@ -644,6 +876,9 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
               </PopoverContent>
             </Popover>
 
+            <Button variant="outline" size="sm" onClick={() => setTemplatesOpen(true)}>
+              <LayoutTemplate className="mr-1.5 h-4 w-4" /> Templates
+            </Button>
             <Button variant="outline" size="sm" onClick={() => saveMutation.mutate(false)} disabled={saveMutation.isPending}>
               <Save className="mr-1.5 h-4 w-4" /> Save
             </Button>
@@ -692,10 +927,21 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              isValidConnection={isValidConnection}
+              connectionRadius={30}
               onNodeDragStart={() => commit()}
-              onNodeClick={(_, n) => setConfigId(n.id)}
-              onPaneClick={() => setConfigId(null)}
+              onNodeDragStop={onNodeDragStop}
+              onNodeClick={(_, n) => {
+                if (connectSource) return;
+                setConfigId(n.id);
+              }}
+              onPaneClick={() => {
+                setConfigId(null);
+                setConnectSource(null);
+              }}
               onEdgesDelete={() => commit()}
+              edgesReconnectable
+
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
               defaultEdgeOptions={{ type: "insert" }}
@@ -752,9 +998,14 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
                   </span>
                   <h3 className="text-base font-semibold">Start building your automation</h3>
                   <p className="mt-1 text-sm text-muted-foreground">Choose a trigger to begin.</p>
-                  <Button className="mt-4" onClick={() => setTriggerPickerOpen(true)}>
-                    <Plus className="mr-1.5 h-4 w-4" /> Add trigger
-                  </Button>
+                  <div className="mt-4 flex flex-col gap-2">
+                    <Button onClick={() => setTemplatesOpen(true)}>
+                      <LayoutTemplate className="mr-1.5 h-4 w-4" /> Start from a template
+                    </Button>
+                    <Button variant="outline" onClick={() => setTriggerPickerOpen(true)}>
+                      <Plus className="mr-1.5 h-4 w-4" /> Choose a trigger myself
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
@@ -814,17 +1065,25 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
       {/* ---------- DIALOGS ---------- */}
       <AddStepDialog
         open={addOpen}
+        hideTriggers={!!insertEdgeId || !!addAfterTarget}
         onOpenChange={(v) => {
           setAddOpen(v);
-          if (!v) setInsertEdgeId(null);
+          if (!v) {
+            setInsertEdgeId(null);
+            setAddAfterTarget(null);
+          }
         }}
         onPick={(type) => {
           if (insertEdgeId) insertBetween(insertEdgeId, type);
+          else if (addAfterTarget) addStep(type, undefined, addAfterTarget);
           else addStep(type);
         }}
-        title="Add a step here"
-        description="The step you pick is inserted and reconnected automatically."
+        title={addAfterTarget ? "What happens next?" : "Add a step here"}
+        description="The step you pick is added and connected automatically."
       />
+
+      <TemplatePicker open={templatesOpen} onOpenChange={setTemplatesOpen} onPick={applyTemplate} replacing={nodes.length > 0} />
+
 
       <AddStepDialog
         open={triggerPickerOpen}

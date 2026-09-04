@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CATEGORY_META, STEP_DEFINITIONS, type StepCategory } from "@/lib/automation-catalog";
+import { CATEGORY_META, LIBRARY_STEPS, type StepCategory } from "@/lib/automation-catalog";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -12,20 +12,27 @@ type Props = {
   onPick: (type: string) => void;
   /** Restrict to one category, e.g. triggers only. */
   only?: StepCategory;
+  /** Hide triggers — used when inserting into the middle of a journey. */
+  hideTriggers?: boolean;
   title?: string;
   description?: string;
 };
 
-export function AddStepDialog({ open, onOpenChange, onPick, only, title, description }: Props) {
+export function AddStepDialog({ open, onOpenChange, onPick, only, hideTriggers, title, description }: Props) {
   const [query, setQuery] = useState("");
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return STEP_DEFINITIONS.filter(
+    return LIBRARY_STEPS.filter(
       (d) =>
         (!only || d.category === only) &&
-        (!q || d.label.toLowerCase().includes(q) || d.description.toLowerCase().includes(q)),
+        (!hideTriggers || d.category !== "trigger") &&
+        (!q ||
+          d.label.toLowerCase().includes(q) ||
+          d.description.toLowerCase().includes(q) ||
+          (d.keywords ?? "").includes(q)),
     );
-  }, [query, only]);
+  }, [query, only, hideTriggers]);
+
 
   return (
     <Dialog

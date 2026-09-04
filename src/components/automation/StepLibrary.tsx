@@ -3,7 +3,7 @@ import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CATEGORY_META, CATEGORY_ORDER, STEP_DEFINITIONS, type StepDefinition } from "@/lib/automation-catalog";
+import { CATEGORY_META, CATEGORY_ORDER, CATEGORY_TITLES, LIBRARY_STEPS, type StepDefinition } from "@/lib/automation-catalog";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -18,10 +18,14 @@ export function StepLibrary({ onAdd, collapsed, onToggle }: Props) {
   const grouped = useMemo(() => {
     const q = query.trim().toLowerCase();
     const match = (d: StepDefinition) =>
-      !q || d.label.toLowerCase().includes(q) || d.description.toLowerCase().includes(q) || d.type.includes(q);
+      !q ||
+      d.label.toLowerCase().includes(q) ||
+      d.description.toLowerCase().includes(q) ||
+      d.type.includes(q) ||
+      (d.keywords ?? "").includes(q);
     return CATEGORY_ORDER.map((cat) => ({
       cat,
-      items: STEP_DEFINITIONS.filter((d) => d.category === cat && match(d)),
+      items: LIBRARY_STEPS.filter((d) => d.category === cat && match(d)),
     })).filter((g) => g.items.length);
   }, [query]);
 
@@ -61,7 +65,7 @@ export function StepLibrary({ onAdd, collapsed, onToggle }: Props) {
             return (
               <div key={cat}>
                 <p className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {cat === "trigger" ? "Triggers" : cat === "action" ? "Actions" : cat === "logic" ? "Logic" : "Timing"}
+                  {CATEGORY_TITLES[cat]}
                 </p>
                 <div className="space-y-1">
                   {items.map((d) => {
