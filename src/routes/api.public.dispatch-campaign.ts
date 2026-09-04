@@ -1563,12 +1563,21 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             return { error: "tos_acceptance_required" };
           }
           // ── Per-campaign compliance re-confirmation must exist.
+          // The builder writes this row immediately after flipping the campaign
+          // to `queued`, so a tick landing in that split second must NOT pause
+          // the campaign — it just skips and picks it up on the next pass.
           const { count: campTos } = await supabaseAdmin
             .from("campaign_tos_acceptances")
             .select("id", { count: "exact", head: true })
             .eq("campaign_id", c.id)
             .eq("tos_version", TOS_CURRENT_VERSION);
           if ((campTos ?? 0) === 0) {
+            const { data: created } = await supabaseAdmin
+              .from("campaigns").select("created_at").eq("id", c.id).maybeSingle();
+            const ageMs = created?.created_at
+              ? Date.now() - new Date(created.created_at as string).getTime()
+              : Number.POSITIVE_INFINITY;
+            if (ageMs < 3 * 60 * 1000) return { skipped: "awaiting_campaign_acceptance" };
             await supabaseAdmin.from("campaigns")
               .update({ status: "paused", paused_reason: "Missing per-campaign compliance confirmation.", paused_at: new Date().toISOString() })
               .eq("id", c.id);
