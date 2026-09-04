@@ -2,8 +2,8 @@ import { createFileRoute, Outlet, redirect, Link, useRouterState, useNavigate } 
 import { useEffect, useRef } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { CommandPalette, useCommandPalette } from "@/components/CommandPalette";
 import { Bell, Search, Lock } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { provisionCurrentAccount } from "@/lib/provision-account.functions";
 import { TosReAcceptModal } from "@/components/TosReAcceptModal";
