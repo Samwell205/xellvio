@@ -16,20 +16,37 @@ import { useServerFn } from "@tanstack/react-start";
 import type { PermissionKey } from "@/lib/team-permissions";
 
 type Item = { title: string; url: string; icon: any; exact?: boolean; perm?: PermissionKey; ownerOnly?: boolean };
+type Group = { title: string; icon: any; children: Item[] };
+type Entry = Item | Group;
 
-const items: Item[] = [
+const isGroup = (e: Entry): e is Group => "children" in e;
+
+const items: Entry[] = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true, perm: "dashboard" },
   { title: "Campaigns", url: "/app/campaigns", icon: Megaphone, perm: "campaigns" },
   { title: "Inbox", url: "/app/inbox", icon: Inbox, perm: "inbox" },
-  { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText, perm: "setup_sms" },
-  { title: "10DLC (US local)", url: "/app/setup-10dlc", icon: MessageSquareText, perm: "setup_sms" },
-  { title: "Toll-free verification", url: "/app/toll-free-verification", icon: ShieldCheck, perm: "setup_sms" },
-  { title: "Audience", url: "/app/audience", icon: Users, perm: "audience" },
-  { title: "Segments", url: "/app/segments", icon: Filter, perm: "segments" },
-  { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff, perm: "suppressions" },
+  {
+    title: "Sender setup",
+    icon: MessageSquareText,
+    children: [
+      { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText, perm: "setup_sms" },
+      { title: "10DLC (US local)", url: "/app/setup-10dlc", icon: MessageSquareText, perm: "setup_sms" },
+      { title: "Toll-free verification", url: "/app/toll-free-verification", icon: ShieldCheck, perm: "setup_sms" },
+    ],
+  },
+  {
+    title: "Contacts",
+    icon: Users,
+    children: [
+      { title: "Audience", url: "/app/audience", icon: Users, perm: "audience" },
+      { title: "Segments", url: "/app/segments", icon: Filter, perm: "segments" },
+      { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff, perm: "suppressions" },
+    ],
+  },
   { title: "Team", url: "/app/team", icon: UserPlus, perm: "team" },
   { title: "My Academy", url: "/app/my-academy", icon: GraduationCap, ownerOnly: true },
 ];
+
 
 const settingsChildren: Item[] = [
   { title: "Account", url: "/app/settings", icon: Settings, exact: true, perm: "settings" },
@@ -58,7 +75,16 @@ export function AppSidebar() {
     return !!session.permissions[it.perm];
   };
 
-  const visibleItems = items.filter(canSee);
+  const visibleItems: Entry[] = items
+    .map((e) => (isGroup(e) ? { ...e, children: e.children.filter(canSee) } : e))
+    .filter((e) => (isGroup(e) ? e.children.length > 0 : canSee(e)));
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const groupActive = (g: Group) => g.children.some((c) => isActive(c.url, c.exact));
+  useEffect(() => {
+    const active = items.filter(isGroup).filter(groupActive).map((g) => g.title);
+    if (active.length) setOpenGroups((p) => ({ ...p, ...Object.fromEntries(active.map((t) => [t, true])) }));
+  }, [pathname]);
+
   const canInbox = canSee({ title: "Inbox", url: "/app/inbox", icon: Inbox, perm: "inbox" });
   const acctKey = (session as any)?.accountId ?? (session as any)?.workspaceOwnerId ?? "self";
   const unreadFn = useServerFn(getInboxUnreadCount);
@@ -109,7 +135,53 @@ export function AppSidebar() {
         <SidebarGroup className="px-2 py-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {visibleItems.map((it) => {
+              {visibleItems.map((entry) => {
+                if (isGroup(entry)) {
+                  const gActive = groupActive(entry);
+                  const open = collapsed ? false : !!openGroups[entry.title];
+                  return (
+                    <Collapsible
+                      key={entry.title}
+                      open={open}
+                      onOpenChange={(v) => setOpenGroups((p) => ({ ...p, [entry.title]: v }))}
+                    >
+                      <SidebarMenuItem>
+                        {collapsed ? (
+                          <SidebarMenuButton asChild isActive={gActive} className="h-10 px-3 text-[0.9375rem] rounded-lg">
+                            <Link to={entry.children[0].url} className="flex items-center gap-3">
+                              <entry.icon className="size-[1.125rem]" />
+                            </Link>
+                          </SidebarMenuButton>
+                        ) : (
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton isActive={gActive} className="w-full h-10 px-3 text-[0.9375rem] rounded-lg">
+                              <entry.icon className="size-[1.125rem]" />
+                              <span className="truncate">{entry.title}</span>
+                              <ChevronDown className={`ml-auto size-4 transition-transform ${open ? "rotate-180" : ""}`} />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                        )}
+                        {!collapsed && (
+                          <CollapsibleContent>
+                            <SidebarMenuSub className="gap-1 mt-1">
+                              {entry.children.map((c) => (
+                                <SidebarMenuSubItem key={c.url}>
+                                  <SidebarMenuSubButton asChild isActive={isActive(c.url, c.exact)} className="h-9">
+                                    <Link to={c.url} className="flex items-center gap-2.5">
+                                      <c.icon className="size-4" />
+                                      <span className="truncate">{c.title}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        )}
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  );
+                }
+                const it = entry;
                 const showBadge = it.url === "/app/inbox" && unread > 0;
                 return (
                   <SidebarMenuItem key={it.url}>
@@ -130,6 +202,7 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
