@@ -1400,10 +1400,12 @@ function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetC
   const loadTf = useServerFn(getMyTollfreeVerification);
   const tf = useQuery({ queryKey: ["tollfree-verification"], queryFn: () => loadTf() });
   const asset = (tf.data as any)?.asset ?? null;
+  const altSender = (tf.data as any)?.altVerifiedSender ?? null;
   // An admin-assigned verified number has no carrier verification ID of its own,
-  // but it is still fully approved — trust "verified" on its own.
+  // but it is still fully approved — trust "verified" on its own. A verified
+  // US/CA local (10DLC) number assigned by an admin also clears US/CA sending.
   const status: string | null =
-    asset?.verification_status === "verified"
+    asset?.verification_status === "verified" || altSender
       ? "verified"
       : asset?.telnyx_verification_id
         ? (asset?.verification_status ?? null)
@@ -1431,8 +1433,10 @@ function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetC
     : "Only required to send SMS to US or Canada. Skip if you don't plan to send there.";
   if (status === "verified") {
     badge = <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" /> Approved</Badge>;
-    blurb = `Your toll-free number ${asset?.phone_number ?? ""} is approved for US/Canada delivery.`;
+    const num = asset?.verification_status === "verified" ? asset?.phone_number : altSender?.phone_number;
+    blurb = `Your number ${num ?? ""} is approved for US/Canada delivery — nothing else to submit.`;
   } else if (status === "rejected") {
+
     blurb = asset?.friendly_rejection_reason ?? "Carrier rejected the submission — open to resubmit.";
     badge = <Badge variant="destructive" className="gap-1"><X className="size-3" /> Rejected</Badge>;
   } else if (status === "in_review" || status === "submitted") {
