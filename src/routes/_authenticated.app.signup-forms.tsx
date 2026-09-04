@@ -113,7 +113,10 @@ function SignupFormsPage() {
             Collect phone numbers on your own website — share the link or paste the embed code anywhere.
           </p>
         </div>
-        <Button onClick={() => setDraft({ ...EMPTY })}><Plus className="mr-2 size-4" />Create form</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Create blank form</Button>
+          <Button onClick={() => setGallery(true)}><LayoutGrid className="mr-2 size-4" />Browse templates</Button>
+        </div>
       </div>
 
       {forms.length === 0 ? (
@@ -125,7 +128,10 @@ function SignupFormsPage() {
               Start from a ready-made form, choose the list it feeds, and paste it on your site in one line of code.
             </p>
           </div>
-          <Button onClick={() => setDraft({ ...EMPTY })}>Create blank form</Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button onClick={() => setGallery(true)}>Browse {FORM_TEMPLATES.length} templates</Button>
+            <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Create blank form</Button>
+          </div>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
