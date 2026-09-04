@@ -634,12 +634,29 @@ export function categoriesFor(kind: "form" | "page") {
 }
 
 /** Fresh copy so a template applied twice never shares ids. */
+/** Tasteful default motion so every template feels alive out of the box. */
+function motionDefaults(b: Block, index: number): Block["styles"] {
+  const s = { ...(b.styles ?? {}) };
+  if (s.animation === undefined) {
+    if (b.type === "section") {
+      s.animation = "fadeUp";
+      s.animationDelay = Math.min(240, index * 80);
+    } else if (["heading", "text", "image", "form", "features", "testimonials", "pricing", "stats"].includes(b.type)) {
+      s.animation = "fadeUp";
+      s.animationDelay = Math.min(240, index * 60);
+    }
+  }
+  if (s.hoverEffect === undefined && (b.type === "button" || b.type === "submit")) s.hoverEffect = "lift";
+  if (s.depth === undefined && ["features", "testimonials", "pricing"].includes(b.type)) s.depth = "soft";
+  return s;
+}
+
 export function instantiate(t: BuilderTemplate): { blocks: Block[]; theme: Theme } {
-  const clone = (b: Block): Block => ({
+  const clone = (b: Block, index: number): Block => ({
     ...b,
     id: Math.random().toString(36).slice(2, 10),
     content: JSON.parse(JSON.stringify(b.content ?? {})),
-    styles: { ...(b.styles ?? {}) },
+    styles: motionDefaults(b, index),
     settings: { ...(b.settings ?? {}) },
     children: b.children?.map(clone),
   });

@@ -16,7 +16,12 @@ export const Route = createFileRoute("/f/$slug")({
     const title = (d.seo_title || d.headline || d.name || "Sign up").slice(0, 70);
     const description = (d.seo_description || d.description || "Join our text list.").slice(0, 155);
     const url = `https://xellvio.com/f/${params.slug}`;
-    const image: string | null = typeof d.og_image_url === "string" && d.og_image_url.startsWith("https://") ? d.og_image_url : null;
+    const rawImage = typeof d.og_image_url === "string" ? d.og_image_url.trim() : "";
+    const image: string | null = rawImage.startsWith("https://")
+      ? rawImage
+      : rawImage.startsWith("/")
+        ? `https://xellvio.com${rawImage}`
+        : null;
     return {
       meta: [
         { title },

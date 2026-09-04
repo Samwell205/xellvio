@@ -3,7 +3,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const SEO_FIELDS = "logo_url,seo_title,seo_description,og_image_url,design,blocks,builder_theme";
+const SEO_FIELDS =
+  "logo_url,seo_title,seo_description,og_image_url,design,blocks,builder_theme,published_blocks,published_theme";
+
+/**
+ * Visitors always see the last published snapshot. Designs published before
+ * snapshots existed fall back to the working copy so nothing goes blank.
+ */
+function livePresentation(row: Record<string, any>) {
+  const { published_blocks, published_theme, ...rest } = row;
+  const blocks = Array.isArray(published_blocks) && published_blocks.length ? published_blocks : rest.blocks;
+  return { ...rest, blocks, builder_theme: published_theme ?? rest.builder_theme };
+}
 const PAGE_FIELDS =
   `id,slug,name,headline,subheadline,body,cta_label,success_message,consent_text,theme,accent,image_url,sections,published,views,account_id,list_id,${SEO_FIELDS}`;
 const FORM_FIELDS =
@@ -25,7 +36,7 @@ export const getPublicLandingPage = createServerFn({ method: "GET" })
       .update({ views: ((page as any).views ?? 0) + 1 })
       .eq("id", (page as any).id);
     const { account_id, list_id, ...pub } = page as any;
-    return pub as Record<string, any>;
+    return livePresentation(pub) as Record<string, any>;
   });
 
 export const getPublicSignupForm = createServerFn({ method: "GET" })
@@ -44,7 +55,7 @@ export const getPublicSignupForm = createServerFn({ method: "GET" })
       .update({ views: ((form as any).views ?? 0) + 1 } as any)
       .eq("id", (form as any).id);
     const { account_id, list_id, ...pub } = form as any;
-    return pub as Record<string, any>;
+    return livePresentation(pub) as Record<string, any>;
   });
 
 

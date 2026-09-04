@@ -118,6 +118,7 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
+import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media.$'
 import { Route as ApiPublicCampaignMediaSplatRouteImport } from './routes/api.public.campaign-media.$'
 import { Route as AcademySlugLessonLessonSlugRouteImport } from './routes/academy.$slug.lesson.$lessonSlug'
 import { Route as VerifierVerifyDashboardWithdrawalsRouteImport } from './routes/_verifier.verify.dashboard.withdrawals'
@@ -726,6 +727,11 @@ const ApiPublicOptInProofSplatRoute =
     path: '/api/public/opt-in-proof/$',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicMediaSplatRoute = ApiPublicMediaSplatRouteImport.update({
+  id: '/api/public/media/$',
+  path: '/api/public/media/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCampaignMediaSplatRoute =
   ApiPublicCampaignMediaSplatRouteImport.update({
     id: '/api/public/campaign-media/$',
@@ -926,6 +932,7 @@ export interface FileRoutesByFullPath {
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
   '/academy/$slug/lesson/$lessonSlug': typeof AcademySlugLessonLessonSlugRoute
   '/api/public/campaign-media/$': typeof ApiPublicCampaignMediaSplatRoute
+  '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -1045,6 +1052,7 @@ export interface FileRoutesByTo {
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
   '/academy/$slug/lesson/$lessonSlug': typeof AcademySlugLessonLessonSlugRoute
   '/api/public/campaign-media/$': typeof ApiPublicCampaignMediaSplatRoute
+  '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -1172,6 +1180,7 @@ export interface FileRoutesById {
   '/_verifier/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
   '/academy/$slug/lesson/$lessonSlug': typeof AcademySlugLessonLessonSlugRoute
   '/api/public/campaign-media/$': typeof ApiPublicCampaignMediaSplatRoute
+  '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -1298,6 +1307,7 @@ export interface FileRouteTypes {
     | '/verify/dashboard/withdrawals'
     | '/academy/$slug/lesson/$lessonSlug'
     | '/api/public/campaign-media/$'
+    | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
     | '/lovable/email/auth/preview'
@@ -1417,6 +1427,7 @@ export interface FileRouteTypes {
     | '/verify/dashboard/withdrawals'
     | '/academy/$slug/lesson/$lessonSlug'
     | '/api/public/campaign-media/$'
+    | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
     | '/lovable/email/auth/preview'
@@ -1543,6 +1554,7 @@ export interface FileRouteTypes {
     | '/_verifier/verify/dashboard/withdrawals'
     | '/academy/$slug/lesson/$lessonSlug'
     | '/api/public/campaign-media/$'
+    | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
     | '/lovable/email/auth/preview'
@@ -1612,6 +1624,7 @@ export interface RootRouteChildren {
   ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicCampaignMediaSplatRoute: typeof ApiPublicCampaignMediaSplatRoute
+  ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -2386,6 +2399,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOptInProofSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/media/$': {
+      id: '/api/public/media/$'
+      path: '/api/public/media/$'
+      fullPath: '/api/public/media/$'
+      preLoaderRoute: typeof ApiPublicMediaSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/campaign-media/$': {
       id: '/api/public/campaign-media/$'
       path: '/api/public/campaign-media/$'
@@ -2800,6 +2820,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicCampaignMediaSplatRoute: ApiPublicCampaignMediaSplatRoute,
+  ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,

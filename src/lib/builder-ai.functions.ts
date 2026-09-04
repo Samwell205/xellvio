@@ -9,11 +9,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const Input = z.object({
   kind: z.enum(["form", "page"]),
   mode: z
-    .enum(["create", "improve", "professional", "convert", "mobile", "simplify", "copy", "brand"])
+    .enum(["create", "improve", "professional", "convert", "mobile", "simplify", "copy", "brand", "animate", "edit"])
     .default("create"),
   prompt: z.string().trim().max(4000).default(""),
   blocks: z.array(z.any()).max(300).default([]),
   theme: z.record(z.string(), z.any()).default({}),
+  focusId: z.string().max(60).optional(),
+  focusLabel: z.string().max(60).optional(),
   history: z
     .array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(2000) }))
     .max(12)
@@ -59,7 +61,12 @@ styles (all optional): align("left"|"center"|"right"), fontSize, mobileFontSize,
  lineHeight, letterSpacing, textTransform("none"|"uppercase"), color, background,
  backgroundImage, paddingY, paddingX, marginTop, marginBottom, radius, borderWidth,
  borderColor, shadow(bool), width("auto"|"full"), maxWidth, columns, mobileColumns, gap,
- minHeight, hideOnMobile(bool), opacity.
+ minHeight, hideOnMobile(bool), opacity,
+ animation("none"|"fadeIn"|"fadeUp"|"fadeDown"|"fadeLeft"|"fadeRight"|"zoomIn"|"popIn"|"blurIn"|"flipIn"|"tiltIn"|"riseIn"),
+ animationDelay(ms), animationDuration(ms),
+ hoverEffect("none"|"lift"|"grow"|"sink"|"glow"|"tilt3d"|"shine"),
+ depth("none"|"soft"|"raised"|"floating"|"glass"), overlay(0-90 image tint %),
+ backgroundBlend("none"|"overlay"|"multiply"|"screen"|"soft-light"), parallax(bool), sticky(bool), rotate(deg), tilt(bool).
 color/background may be a hex value OR a theme token:
  "primary" | "primaryText" | "secondary" | "background" | "surface" | "text" | "heading" | "muted" | "border" | "transparent".
 
@@ -75,6 +82,7 @@ Rules:
 - Professional marketing design: clear hierarchy, generous spacing (section paddingY 64–96),
   one obvious CTA, high contrast, no clutter, mobileColumns 1 for multi-column layouts.
 - Never output HTML for layout; use blocks.
+- Motion should feel premium and restrained: entrance animations on sections/headlines with staggered animationDelay (0/80/160ms), hoverEffect on buttons and cards, depth for cards. Never animate every element.
 `;
 
 function systemPrompt(kind: "form" | "page") {
@@ -98,6 +106,8 @@ const MODE_INSTRUCTIONS: Record<string, string> = {
   simplify: "Simplify: remove non-essential elements and decoration, keep the core message and form.",
   copy: "Rewrite only the copy (headings, paragraphs, CTA labels) to be sharper and more persuasive. Keep structure and styles.",
   brand: "Apply the brand described by the user consistently across theme and blocks.",
+  animate: "Add tasteful motion and depth: staggered entrance animations on key sections, hover effects on buttons and cards, subtle depth on cards. Do not change copy or structure.",
+  edit: "Make exactly the change the user asked for and nothing else. Keep every other block, id, style and word identical.",
 };
 
 function extractJson(raw: string): any {
@@ -126,6 +136,9 @@ export const generateBuilderDesign = createServerFn({ method: "POST" })
       MODE_INSTRUCTIONS[data.mode] ?? MODE_INSTRUCTIONS.create,
       hasDesign ? `Current design JSON:\n${current}` : "There is no design yet — build one from scratch.",
       conversation ? `Recent conversation:\n${conversation}` : "",
+      data.focusId
+        ? `The user has selected the "${data.focusLabel ?? "element"}" block with id "${data.focusId}". Focus your change on that block and its children unless the request clearly concerns the whole design.`
+        : "",
       data.prompt ? `User request: ${data.prompt}` : "",
       hasDesign
         ? "Return the COMPLETE updated design (all blocks), modifying only what the request needs and keeping existing ids for untouched blocks."

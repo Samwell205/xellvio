@@ -7,9 +7,12 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import {
   type Block,
   type Theme,
+  BUILDER_MOTION_CSS,
   FONT_STACKS,
+  depthStyle,
   findFormBlock,
   inputStyle,
+  motionProps,
   resolveColor,
   themeButtonStyle,
 } from "@/lib/builder/schema";
@@ -170,6 +173,7 @@ export function BlockCanvas({
           minHeight: "100%",
         }}
       >
+        <style dangerouslySetInnerHTML={{ __html: BUILDER_MOTION_CSS }} />
         <BlockList blocks={blocks} parentId={null} />
       </div>
     </RenderCtx.Provider>
@@ -239,9 +243,30 @@ export function BlockView({ block }: { block: Block }) {
   const selectable = !!onSelect;
   const selected = selectedId === block.id;
 
-  const inner = <BlockBody block={block} />;
+  const motion = motionProps(s);
+  const depth = depthStyle(s.depth);
+  const hasEffects = !!motion.className || Object.keys(depth).length > 0 || !!s.rotate || !!s.sticky;
+
+  let inner: React.ReactNode = <BlockBody block={block} />;
+  if (hasEffects) {
+    inner = (
+      <div
+        className={motion.className || undefined}
+        style={{
+          ...motion.style,
+          ...depth,
+          ...(s.rotate ? { transform: `rotate(${s.rotate}deg)` } : {}),
+          ...(s.sticky ? { position: "sticky", top: 0, zIndex: 20 } : {}),
+          ...(Object.keys(depth).length ? { borderRadius: s.radius ?? theme.radius } : {}),
+        }}
+      >
+        {inner}
+      </div>
+    );
+  }
 
   if (!selectable) return inner;
+
 
   return (
     <div
@@ -281,19 +306,30 @@ function BlockBody({ block }: { block: Block }) {
   switch (block.type) {
     case "section": {
       const bg = resolveColor(theme, s.background);
+      const overlay = Math.max(0, Math.min(90, s.overlay ?? 0)) / 100;
       return (
         <section
+          className={s.parallax && s.backgroundImage ? "xb-parallax" : undefined}
           style={{
+            position: "relative",
             background: s.backgroundImage
               ? `linear-gradient(0deg, ${bg ?? "transparent"}, ${bg ?? "transparent"}), url(${s.backgroundImage}) center/cover no-repeat`
               : bg,
+            backgroundBlendMode: s.backgroundImage && s.backgroundBlend && s.backgroundBlend !== "none" ? s.backgroundBlend : undefined,
             padding: `${(s.paddingY ?? 64) * k}px ${(s.paddingX ?? 24) * k}px`,
             minHeight: s.minHeight ? s.minHeight * k : undefined,
             textAlign: s.align,
             color: resolveColor(theme, s.color),
+            overflow: "hidden",
           }}
         >
-          <div style={{ maxWidth: s.maxWidth ?? theme.maxWidth, margin: "0 auto" }}>
+          {overlay > 0 ? (
+            <div
+              aria-hidden
+              style={{ position: "absolute", inset: 0, background: `rgba(6,8,15,${overlay})`, pointerEvents: "none" }}
+            />
+          ) : null}
+          <div style={{ position: "relative", maxWidth: s.maxWidth ?? theme.maxWidth, margin: "0 auto" }}>
             <Children block={block} />
           </div>
         </section>

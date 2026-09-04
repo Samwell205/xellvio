@@ -20,11 +20,13 @@ import {
   Tablet,
   Undo2,
   Eye,
+  Rocket,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
   type Block,
   type Theme,
+  BLOCK_LABELS,
   cloneBlock,
   duplicateBlockInTree,
   findBlock,
@@ -40,6 +42,8 @@ import { ElementLibrary, type NewBlockFactory } from "./ElementLibrary";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { AiDesignPanel, type AiTurn } from "./AiDesignPanel";
 import { TemplateBrowser } from "./TemplateBrowser";
+import { PublishDialog } from "./PublishDialog";
+import { MediaField } from "./MediaPicker";
 
 export type BuilderDoc = {
   id?: string;
@@ -52,6 +56,7 @@ export type BuilderDoc = {
   og_image_url: string;
   list_id: string | null;
   published: boolean;
+  last_published_at?: string | null;
 };
 
 export type SaveState = "saved" | "saving" | "dirty";
@@ -87,6 +92,7 @@ export function VisualBuilder({
   const [ai, setAi] = useState(startMode === "ai");
   const [templates, setTemplates] = useState(startMode === "templates");
   const [settings, setSettings] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
   const [turns, setTurns] = useState<AiTurn[]>([]);
   const [aiSnapshot, setAiSnapshot] = useState<{ blocks: Block[]; theme: Theme } | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -256,7 +262,10 @@ export function VisualBuilder({
             <Button variant={ai ? "secondary" : "outline"} size="sm" className="h-8 gap-1.5" onClick={() => setAi((v) => !v)}><Sparkles className="size-4" /><span className="hidden md:inline">Design with AI</span></Button>
             <Button variant={preview ? "secondary" : "outline"} size="sm" className="h-8 gap-1.5" onClick={() => setPreview((v) => !v)}><Eye className="size-4" /><span className="hidden md:inline">Preview</span></Button>
             <Button variant="outline" size="icon" className="size-8" onClick={() => setSettings(true)} aria-label="Settings"><Settings className="size-4" /></Button>
-            <Button size="sm" className="h-8" disabled={!doc.name.trim() || saveState === "saving"} onClick={onSave}>Save</Button>
+            <Button variant="outline" size="sm" className="h-8" disabled={!doc.name.trim() || saveState === "saving"} onClick={onSave}>Save</Button>
+            <Button size="sm" className="h-8 gap-1.5" disabled={!doc.id} onClick={() => setPublishOpen(true)}>
+              <Rocket className="size-4" /><span className="hidden md:inline">Publish</span>
+            </Button>
           </div>
         </header>
 
@@ -305,6 +314,8 @@ export function VisualBuilder({
                 kind={kind}
                 blocks={doc.blocks}
                 theme={doc.theme}
+                focusId={selectedId}
+                focusLabel={selected ? BLOCK_LABELS[selected.type] : null}
                 turns={turns}
                 setTurns={setTurns}
                 onApply={applyAi}
@@ -349,6 +360,24 @@ export function VisualBuilder({
               setTemplates(false);
               setSelectedId(null);
               toast.success("Template applied — edit anything you like");
+            }}
+          />
+        ) : null}
+
+        {publishOpen ? (
+          <PublishDialog
+            kind={kind}
+            id={doc.id}
+            slug={doc.slug}
+            published={doc.published}
+            lastPublishedAt={doc.last_published_at ?? null}
+            publicUrl={publicUrl}
+            onClose={() => setPublishOpen(false)}
+            onSlugChange={(slug) => onChange({ ...doc, slug })}
+            onPublishedChange={(published) => onChange({ ...doc, published })}
+            onRestore={(blocks, theme) => {
+              commit({ blocks, theme });
+              setSelectedId(null);
             }}
           />
         ) : null}
@@ -488,10 +517,7 @@ function SettingsDialog({
             <Label className="text-xs">Search description</Label>
             <Textarea rows={3} maxLength={160} value={doc.seo_description} onChange={(e) => set({ seo_description: e.target.value })} />
           </div>
-          <div>
-            <Label className="text-xs">Social share image URL</Label>
-            <Input placeholder="https://…" value={doc.og_image_url} onChange={(e) => set({ og_image_url: e.target.value })} />
-          </div>
+          <MediaField label="Social share image (1200 × 630)" value={doc.og_image_url} onChange={(og_image_url) => set({ og_image_url })} />
           <Button className="w-full" onClick={onClose}>Done</Button>
         </div>
       </DialogContent>
