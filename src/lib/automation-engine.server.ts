@@ -644,8 +644,14 @@ export async function processDueAutomationRuns(limit = 100) {
     .limit(Math.min(limit, 200));
   if (!due?.length) return { processed: 0 };
 
+  // Paused or archived automations hold everyone in place until they resume.
+  const ids = Array.from(new Set(due.map((r: Json) => r.automation_id)));
+  const { data: statusRows } = await db.from("automations").select("id,status").in("id", ids);
+  const statuses = new Map<string, string>((statusRows ?? []).map((r: Json) => [r.id, r.status]));
+
   const graphs = new Map<string, Graph>();
   for (const run of due) {
+    if (statuses.get(run.automation_id) !== "active") continue;
     try {
       if (!graphs.has(run.automation_id)) graphs.set(run.automation_id, await loadGraph(run.automation_id));
       const graph = graphs.get(run.automation_id)!;
