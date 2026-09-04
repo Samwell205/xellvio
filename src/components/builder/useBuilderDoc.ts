@@ -57,20 +57,16 @@ export function useBuilderDoc(save: (doc: BuilderDoc) => Promise<{ id?: string; 
 
   const flush = useCallback(async () => {
     const current = latest.current;
-    console.log("[autosave] flush", !!current, current?.name);
     if (!current || !current.name.trim()) return;
     setSaveState("saving");
     try {
-      console.log("[autosave] calling save");
       const r = await save(current);
-      console.log("[autosave] saved", JSON.stringify(r));
       dirty.current = false;
       setSaveState("saved");
       if (r?.id && latest.current && !latest.current.id) {
         setDoc((d) => (d ? { ...d, id: r.id, slug: r.slug ?? d.slug } : d));
       }
-    } catch (e) {
-      console.log("[autosave] error", (e as any)?.message, e);
+    } catch {
       setSaveState("dirty");
     }
   }, [save]);
