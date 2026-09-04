@@ -19,6 +19,7 @@ const MODES: { id: string; label: string; hint: string }[] = [
   { id: "convert", label: "Increase conversions", hint: "Stronger CTA and copy" },
   { id: "mobile", label: "Make mobile-friendly", hint: "Single column, tighter type" },
   { id: "simplify", label: "Simplify", hint: "Remove the clutter" },
+  { id: "animate", label: "Add motion & depth", hint: "Tasteful animation on scroll and hover" },
 ];
 
 const PLACEHOLDER =
@@ -34,10 +35,14 @@ export function AiDesignPanel({
   setTurns,
   onUndoAi,
   canUndoAi,
+  focusId,
+  focusLabel,
 }: {
   kind: "form" | "page";
   blocks: Block[];
   theme: Theme;
+  focusId?: string | null;
+  focusLabel?: string | null;
   onApply: (blocks: Block[], theme: Theme, summary: string[]) => void;
   onClose: () => void;
   turns: AiTurn[];
@@ -54,12 +59,15 @@ export function AiDesignPanel({
 
   const run = async (usedMode = mode, text = prompt) => {
     if (busy) return;
-    if (usedMode === "create" && !text.trim()) {
+    if ((usedMode === "create" || usedMode === "edit") && !text.trim()) {
       toast.info("Tell the AI what you want to create first.");
       return;
     }
     setBusy(true);
-    const nextTurns: AiTurn[] = [...turns, { role: "user", text: text.trim() || MODES.find((m) => m.id === usedMode)!.label }];
+    const nextTurns: AiTurn[] = [
+      ...turns,
+      { role: "user", text: text.trim() || MODES.find((m) => m.id === usedMode)?.label || "Update the design" },
+    ];
     setTurns(nextTurns);
     setPrompt("");
     try {
@@ -70,6 +78,7 @@ export function AiDesignPanel({
           prompt: text.trim(),
           blocks: blocks as any,
           theme: theme as any,
+          ...(focusId ? { focusId, focusLabel: focusLabel ?? "element" } : {}),
           history: turns.slice(-8).map((t) => ({ role: t.role, text: t.text.slice(0, 2000) })),
         },
       });
@@ -189,17 +198,22 @@ export function AiDesignPanel({
             ))}
           </div>
         ) : null}
+        {focusId ? (
+          <p className="rounded-md bg-accent px-2 py-1 text-[10.5px] text-muted-foreground">
+            Editing the selected <span className="font-semibold">{focusLabel ?? "element"}</span> — click empty space on the canvas to work on the whole design.
+          </p>
+        ) : null}
         <Textarea
           rows={4}
           value={prompt}
           placeholder={turns.length ? "What would you like to change?" : PLACEHOLDER}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void run("create", prompt);
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void run(blocks.length ? "edit" : "create", prompt);
           }}
           className="text-xs"
         />
-        <Button className="w-full gap-1.5" disabled={busy} onClick={() => void run(turns.length ? "create" : mode, prompt)}>
+        <Button className="w-full gap-1.5" disabled={busy} onClick={() => void run(blocks.length ? "edit" : mode, prompt)}>
           {busy ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
           {turns.length ? "Send" : "Generate design"}
         </Button>

@@ -1630,12 +1630,16 @@ export type Database = {
           headline: string
           id: string
           image_url: string | null
+          last_published_at: string | null
           list_id: string | null
           logo_url: string | null
           name: string
           og_image_url: string | null
           published: boolean
           published_at: string | null
+          published_blocks: Json | null
+          published_theme: Json | null
+          published_version: number | null
           sections: Json
           seo_description: string | null
           seo_title: string | null
@@ -1660,12 +1664,16 @@ export type Database = {
           headline?: string
           id?: string
           image_url?: string | null
+          last_published_at?: string | null
           list_id?: string | null
           logo_url?: string | null
           name: string
           og_image_url?: string | null
           published?: boolean
           published_at?: string | null
+          published_blocks?: Json | null
+          published_theme?: Json | null
+          published_version?: number | null
           sections?: Json
           seo_description?: string | null
           seo_title?: string | null
@@ -1690,12 +1698,16 @@ export type Database = {
           headline?: string
           id?: string
           image_url?: string | null
+          last_published_at?: string | null
           list_id?: string | null
           logo_url?: string | null
           name?: string
           og_image_url?: string | null
           published?: boolean
           published_at?: string | null
+          published_blocks?: Json | null
+          published_theme?: Json | null
+          published_version?: number | null
           sections?: Json
           seo_description?: string | null
           seo_title?: string | null
@@ -1841,6 +1853,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      media_assets: {
+        Row: {
+          account_id: string
+          content_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          name: string
+          size: number
+          storage_path: string
+          url: string
+        }
+        Insert: {
+          account_id: string
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          name: string
+          size?: number
+          storage_path: string
+          url: string
+        }
+        Update: {
+          account_id?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          size?: number
+          storage_path?: string
+          url?: string
+        }
+        Relationships: []
       }
       message_send_attempts: {
         Row: {
@@ -2674,12 +2725,16 @@ export type Database = {
           headline: string
           id: string
           image_url: string | null
+          last_published_at: string | null
           list_id: string | null
           logo_url: string | null
           name: string
           og_image_url: string | null
           published: boolean
           published_at: string | null
+          published_blocks: Json | null
+          published_theme: Json | null
+          published_version: number | null
           seo_description: string | null
           seo_title: string | null
           slug: string
@@ -2703,12 +2758,16 @@ export type Database = {
           headline?: string
           id?: string
           image_url?: string | null
+          last_published_at?: string | null
           list_id?: string | null
           logo_url?: string | null
           name: string
           og_image_url?: string | null
           published?: boolean
           published_at?: string | null
+          published_blocks?: Json | null
+          published_theme?: Json | null
+          published_version?: number | null
           seo_description?: string | null
           seo_title?: string | null
           slug: string
@@ -2732,12 +2791,16 @@ export type Database = {
           headline?: string
           id?: string
           image_url?: string | null
+          last_published_at?: string | null
           list_id?: string | null
           logo_url?: string | null
           name?: string
           og_image_url?: string | null
           published?: boolean
           published_at?: string | null
+          published_blocks?: Json | null
+          published_theme?: Json | null
+          published_version?: number | null
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
@@ -3685,6 +3748,45 @@ export type Database = {
           is_active?: boolean
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      website_versions: {
+        Row: {
+          account_id: string
+          blocks: Json | null
+          builder_theme: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          label: string | null
+          resource_id: string
+          version: number
+        }
+        Insert: {
+          account_id: string
+          blocks?: Json | null
+          builder_theme?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          label?: string | null
+          resource_id: string
+          version?: number
+        }
+        Update: {
+          account_id?: string
+          blocks?: Json | null
+          builder_theme?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          label?: string | null
+          resource_id?: string
+          version?: number
         }
         Relationships: []
       }

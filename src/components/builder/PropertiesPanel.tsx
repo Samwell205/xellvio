@@ -18,9 +18,13 @@ import {
   FIELD_KINDS,
   FIELD_LABELS,
   FONT_STACKS,
+  ANIMATIONS,
+  DEPTH_LEVELS,
+  HOVER_EFFECTS,
   type FontKey,
 } from "@/lib/builder/schema";
 import { generateBuilderCopy } from "@/lib/builder-ai.functions";
+import { MediaField } from "./MediaPicker";
 
 const FONTS: FontKey[] = ["sans", "grotesk", "serif", "slab", "rounded", "mono"];
 const FONT_NAMES: Record<FontKey, string> = {
@@ -120,10 +124,11 @@ export function PropertiesPanel({
       </div>
 
       <Tabs defaultValue="content" className="min-h-0 flex-1 overflow-hidden">
-        <TabsList className="m-2 grid grid-cols-3">
+        <TabsList className="m-2 grid grid-cols-4">
           <TabsTrigger value="content" className="text-xs">Content</TabsTrigger>
           <TabsTrigger value="style" className="text-xs">Style</TabsTrigger>
           <TabsTrigger value="layout" className="text-xs">Layout</TabsTrigger>
+          <TabsTrigger value="motion" className="text-xs">Motion</TabsTrigger>
         </TabsList>
 
         <div className="h-[calc(100%-3rem)] overflow-y-auto px-3 pb-8">
@@ -157,9 +162,26 @@ export function PropertiesPanel({
             <Row label="Shadow"><Switch checked={!!s.shadow} onCheckedChange={(shadow) => setStyles({ shadow })} /></Row>
             <Row label="Opacity"><Num value={s.opacity} onChange={(opacity) => setStyles({ opacity })} placeholder="1" /></Row>
             {block.type === "section" ? (
-              <Row label="Background image">
-                <Input className="h-8 text-xs" value={s.backgroundImage ?? ""} placeholder="https://…" onChange={(e) => setStyles({ backgroundImage: e.target.value })} />
-              </Row>
+              <>
+                <MediaField
+                  label="Background image"
+                  value={s.backgroundImage}
+                  onChange={(backgroundImage) => setStyles({ backgroundImage })}
+                />
+                <Row label="Image tint">
+                  <Num value={s.overlay} onChange={(overlay) => setStyles({ overlay })} placeholder="0–90%" />
+                </Row>
+                <Row label="Blend">
+                  <Select value={s.backgroundBlend ?? "none"} onValueChange={(v) => setStyles({ backgroundBlend: v as Styles["backgroundBlend"] })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["none", "overlay", "multiply", "screen", "soft-light"].map((b) => (
+                        <SelectItem key={b} value={b}>{b === "none" ? "Normal" : b}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Row>
+              </>
             ) : null}
           </TabsContent>
 
@@ -193,6 +215,50 @@ export function PropertiesPanel({
               </Select>
             </Row>
             <Row label="Hide on mobile"><Switch checked={!!s.hideOnMobile} onCheckedChange={(hideOnMobile) => setStyles({ hideOnMobile })} /></Row>
+            <Row label="Stick to top"><Switch checked={!!s.sticky} onCheckedChange={(sticky) => setStyles({ sticky })} /></Row>
+          </TabsContent>
+
+          <TabsContent value="motion" className="mt-0 space-y-3">
+            <Row label="Entrance">
+              <Select value={s.animation ?? "none"} onValueChange={(v) => setStyles({ animation: v as Styles["animation"] })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ANIMATIONS).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Row>
+            <Row label="Delay (ms)"><Num value={s.animationDelay} onChange={(animationDelay) => setStyles({ animationDelay })} placeholder="0" /></Row>
+            <Row label="Speed (ms)"><Num value={s.animationDuration} onChange={(animationDuration) => setStyles({ animationDuration })} placeholder="620" /></Row>
+            <Row label="On hover">
+              <Select value={s.hoverEffect ?? "none"} onValueChange={(v) => setStyles({ hoverEffect: v as Styles["hoverEffect"] })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(HOVER_EFFECTS).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Row>
+            <Row label="Depth">
+              <Select value={s.depth ?? "none"} onValueChange={(v) => setStyles({ depth: v as Styles["depth"] })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(DEPTH_LEVELS).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Row>
+            <Row label="Tilt in 3D"><Switch checked={!!s.tilt} onCheckedChange={(tilt) => setStyles({ tilt })} /></Row>
+            <Row label="Rotate (°)"><Num value={s.rotate} onChange={(rotate) => setStyles({ rotate })} placeholder="0" /></Row>
+            {block.type === "section" ? (
+              <Row label="Parallax bg"><Switch checked={!!s.parallax} onCheckedChange={(parallax) => setStyles({ parallax })} /></Row>
+            ) : null}
+            <p className="pt-1 text-[11px] leading-relaxed text-muted-foreground">
+              Motion is disabled automatically for visitors who ask their device to reduce animation.
+            </p>
           </TabsContent>
         </div>
       </Tabs>
@@ -322,15 +388,14 @@ function ContentEditor({ block, setContent, pageContext }: { block: Block; setCo
     case "logo":
       return (
         <>
-          <Row label="Image URL"><Input className="h-8 text-xs" value={c.url ?? ""} placeholder="https://…" onChange={(e) => setContent({ url: e.target.value })} /></Row>
+          <MediaField label="Image" value={c.url} onChange={(url) => setContent({ url })} />
           <Row label="Alt text"><Input className="h-8 text-xs" value={c.alt ?? ""} onChange={(e) => setContent({ alt: e.target.value })} /></Row>
-          {c.url ? <img src={c.url} alt="" className="max-h-28 rounded border object-contain" /> : null}
         </>
       );
     case "icon":
       return <Row label="Icon"><Input className="h-8 text-xs" value={c.glyph ?? ""} onChange={(e) => setContent({ glyph: e.target.value })} /></Row>;
     case "video":
-      return <Row label="Video URL"><Input className="h-8 text-xs" value={c.url ?? ""} placeholder="YouTube or Vimeo link" onChange={(e) => setContent({ url: e.target.value })} /></Row>;
+      return <MediaField label="Video" accept="any" value={c.url} onChange={(url) => setContent({ url })} />;
     case "html":
       return <Textarea rows={8} className="font-mono text-xs" value={c.html ?? ""} onChange={(e) => setContent({ html: e.target.value })} />;
     case "social":

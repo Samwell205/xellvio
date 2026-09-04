@@ -144,7 +144,138 @@ export type Styles = {
   hoverBackground?: string;
   hoverColor?: string;
   opacity?: number;
+  /* motion & depth */
+  animation?: AnimationKey;
+  animationDelay?: number;
+  animationDuration?: number;
+  hoverEffect?: HoverEffectKey;
+  depth?: DepthKey;
+  overlay?: number;
+  backgroundBlend?: "none" | "overlay" | "multiply" | "screen" | "soft-light";
+  parallax?: boolean;
+  sticky?: boolean;
+  rotate?: number;
+  tilt?: boolean;
 };
+
+/* --------------------------------- motion ---------------------------------- */
+
+export const ANIMATIONS = {
+  none: "None",
+  fadeIn: "Fade in",
+  fadeUp: "Fade up",
+  fadeDown: "Fade down",
+  fadeLeft: "Fade from left",
+  fadeRight: "Fade from right",
+  zoomIn: "Zoom in",
+  popIn: "Pop in",
+  blurIn: "Blur in",
+  flipIn: "3D flip in",
+  tiltIn: "3D tilt in",
+  riseIn: "3D rise in",
+} as const;
+export type AnimationKey = keyof typeof ANIMATIONS;
+
+export const HOVER_EFFECTS = {
+  none: "None",
+  lift: "Lift",
+  grow: "Grow",
+  sink: "Press in",
+  glow: "Glow",
+  tilt3d: "3D tilt",
+  shine: "Shine",
+} as const;
+export type HoverEffectKey = keyof typeof HOVER_EFFECTS;
+
+export const DEPTH_LEVELS = {
+  none: "Flat",
+  soft: "Soft",
+  raised: "Raised",
+  floating: "Floating",
+  glass: "Glass",
+} as const;
+export type DepthKey = keyof typeof DEPTH_LEVELS;
+
+/** Shadow / surface treatment for a depth level. */
+export function depthStyle(depth?: DepthKey): React.CSSProperties {
+  switch (depth) {
+    case "soft":
+      return { boxShadow: "0 2px 10px rgba(15,23,42,.06)" };
+    case "raised":
+      return { boxShadow: "0 12px 28px -12px rgba(15,23,42,.28)" };
+    case "floating":
+      return { boxShadow: "0 32px 60px -24px rgba(15,23,42,.45)" };
+    case "glass":
+      return {
+        boxShadow: "0 18px 40px -18px rgba(15,23,42,.35)",
+        backdropFilter: "blur(14px) saturate(150%)",
+        WebkitBackdropFilter: "blur(14px) saturate(150%)",
+      } as React.CSSProperties;
+    default:
+      return {};
+  }
+}
+
+/** Class names + inline timing for a block's motion settings. */
+export function motionProps(styles: Styles = {}) {
+  const classes: string[] = [];
+  const style: React.CSSProperties = {};
+  if (styles.animation && styles.animation !== "none") {
+    classes.push("xb-anim", `xb-anim-${styles.animation}`);
+    (style as any).animationDelay = `${Math.max(0, styles.animationDelay ?? 0)}ms`;
+    (style as any).animationDuration = `${Math.max(120, styles.animationDuration ?? 620)}ms`;
+  }
+  if (styles.hoverEffect && styles.hoverEffect !== "none") classes.push(`xb-hover-${styles.hoverEffect}`);
+  if (styles.parallax) classes.push("xb-parallax");
+  if (styles.tilt) classes.push("xb-hover-tilt3d");
+  return { className: classes.join(" "), style };
+}
+
+/** Stylesheet injected once per rendered design (editor canvas and public page). */
+export const BUILDER_MOTION_CSS = `
+@keyframes xb-fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes xb-fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+@keyframes xb-fadeDown{from{opacity:0;transform:translateY(-28px)}to{opacity:1;transform:none}}
+@keyframes xb-fadeLeft{from{opacity:0;transform:translateX(-34px)}to{opacity:1;transform:none}}
+@keyframes xb-fadeRight{from{opacity:0;transform:translateX(34px)}to{opacity:1;transform:none}}
+@keyframes xb-zoomIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+@keyframes xb-popIn{0%{opacity:0;transform:scale(.86)}70%{opacity:1;transform:scale(1.03)}100%{transform:none}}
+@keyframes xb-blurIn{from{opacity:0;filter:blur(14px)}to{opacity:1;filter:blur(0)}}
+@keyframes xb-flipIn{from{opacity:0;transform:perspective(900px) rotateY(28deg)}to{opacity:1;transform:none}}
+@keyframes xb-tiltIn{from{opacity:0;transform:perspective(900px) rotateX(22deg) translateY(26px)}to{opacity:1;transform:none}}
+@keyframes xb-riseIn{from{opacity:0;transform:perspective(900px) translateZ(-140px)}to{opacity:1;transform:none}}
+.xb-anim{animation-duration:620ms;animation-timing-function:cubic-bezier(.22,.61,.36,1);animation-fill-mode:both}
+.xb-anim-fadeIn{animation-name:xb-fadeIn}
+.xb-anim-fadeUp{animation-name:xb-fadeUp}
+.xb-anim-fadeDown{animation-name:xb-fadeDown}
+.xb-anim-fadeLeft{animation-name:xb-fadeLeft}
+.xb-anim-fadeRight{animation-name:xb-fadeRight}
+.xb-anim-zoomIn{animation-name:xb-zoomIn}
+.xb-anim-popIn{animation-name:xb-popIn}
+.xb-anim-blurIn{animation-name:xb-blurIn}
+.xb-anim-flipIn{animation-name:xb-flipIn}
+.xb-anim-tiltIn{animation-name:xb-tiltIn}
+.xb-anim-riseIn{animation-name:xb-riseIn}
+@supports (animation-timeline: view()){
+  .xb-anim{animation-timeline:view();animation-range:entry 0% cover 32%;animation-fill-mode:both;animation-delay:0ms !important}
+}
+.xb-hover-lift,.xb-hover-grow,.xb-hover-sink,.xb-hover-glow,.xb-hover-tilt3d{transition:transform .25s cubic-bezier(.22,.61,.36,1),box-shadow .25s ease,filter .25s ease}
+.xb-hover-lift:hover{transform:translateY(-6px);box-shadow:0 22px 44px -20px rgba(15,23,42,.42)}
+.xb-hover-grow:hover{transform:scale(1.035)}
+.xb-hover-sink:hover{transform:translateY(2px) scale(.99)}
+.xb-hover-glow:hover{filter:brightness(1.06);box-shadow:0 0 0 3px rgba(99,102,241,.22)}
+.xb-hover-tilt3d{transform-style:preserve-3d}
+.xb-hover-tilt3d:hover{transform:perspective(900px) rotateX(6deg) rotateY(-6deg) translateY(-4px)}
+.xb-hover-shine{position:relative;overflow:hidden}
+.xb-hover-shine::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);transform:translateX(-120%);transition:transform .7s ease}
+.xb-hover-shine:hover::after{transform:translateX(120%)}
+.xb-parallax{background-attachment:fixed}
+@media (prefers-reduced-motion: reduce){
+  .xb-anim{animation:none !important;opacity:1 !important;transform:none !important;filter:none !important}
+  .xb-hover-lift:hover,.xb-hover-grow:hover,.xb-hover-sink:hover,.xb-hover-tilt3d:hover{transform:none}
+  .xb-parallax{background-attachment:scroll}
+}
+`;
 
 export type BlockType =
   // structure

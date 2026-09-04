@@ -38,6 +38,7 @@ export function docFromRow(row: any, fallback: { blocks: Block[]; theme: Theme }
     og_image_url: row?.og_image_url ?? "",
     list_id: row?.list_id ?? null,
     published: row?.published ?? true,
+    last_published_at: row?.last_published_at ?? null,
   };
 }
 
