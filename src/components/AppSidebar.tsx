@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, GraduationCap, Building2 } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, GraduationCap, Building2, Workflow, Sparkles, FormInput, LayoutTemplate, ListTree } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
@@ -40,8 +40,18 @@ const items: Entry[] = [
     icon: Users,
     children: [
       { title: "Audience", url: "/app/audience", icon: Users, perm: "audience" },
+      { title: "Lists & segments", url: "/app/lists", icon: ListTree, perm: "audience" },
       { title: "Segments", url: "/app/segments", icon: Filter, perm: "segments" },
       { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff, perm: "suppressions" },
+    ],
+  },
+  { title: "Flows", url: "/app/flows", icon: Workflow, perm: "campaigns" },
+  {
+    title: "Growth tools",
+    icon: Sparkles,
+    children: [
+      { title: "Sign-up forms", url: "/app/signup-forms", icon: FormInput, perm: "audience" },
+      { title: "Landing pages", url: "/app/landing-pages", icon: LayoutTemplate, perm: "audience" },
     ],
   },
 ];
@@ -50,6 +60,7 @@ const advancedItems: Entry[] = [
   { title: "Team", url: "/app/team", icon: UserPlus, perm: "team" },
   { title: "My Academy", url: "/app/my-academy", icon: GraduationCap, ownerOnly: true },
 ];
+
 
 
 const settingsChildren: Item[] = [
