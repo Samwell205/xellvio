@@ -121,7 +121,20 @@ export const getMyTollfreeVerification = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    return { asset: asset ?? null };
+    // A tenant may instead have an admin-assigned verified US/CA local (10DLC)
+    // number. That already clears US/CA sending, so no toll-free request is needed.
+    const { data: altSender } = await supabaseAdmin
+      .from("sender_assets")
+      .select("phone_number,sender_kind,country_code,is_shared")
+      .eq("account_id", acting.accountId)
+      .eq("verification_status", "verified")
+      .in("sender_kind", ["local", "toll_free"])
+      .in("country_code", ["US", "CA", "PR"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return { asset: asset ?? null, altVerifiedSender: altSender ?? null };
+
   });
 
 export const TOLLFREE_SETUP_FEE_USD = 5;
