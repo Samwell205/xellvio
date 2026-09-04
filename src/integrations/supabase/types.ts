@@ -3289,6 +3289,14 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_service: { Args: never; Returns: boolean }
+      link_domain_filter_stats: {
+        Args: { _domains: string[] }
+        Returns: {
+          domain: string
+          filtered: number
+          total: number
+        }[]
+      }
       mark_verifier_withdrawal_paid: {
         Args: { _admin_note?: string; _withdrawal_id: string }
         Returns: number
