@@ -1493,7 +1493,10 @@ export type Database = {
         Row: {
           accent: string
           account_id: string
+          blocks: Json | null
           body: string
+          builder_theme: Json | null
+          consent_text: string | null
           created_at: string
           cta_label: string
           design: Json
@@ -1520,7 +1523,10 @@ export type Database = {
         Insert: {
           accent?: string
           account_id: string
+          blocks?: Json | null
           body?: string
+          builder_theme?: Json | null
+          consent_text?: string | null
           created_at?: string
           cta_label?: string
           design?: Json
@@ -1547,7 +1553,10 @@ export type Database = {
         Update: {
           accent?: string
           account_id?: string
+          blocks?: Json | null
           body?: string
+          builder_theme?: Json | null
+          consent_text?: string | null
           created_at?: string
           cta_label?: string
           design?: Json
@@ -2527,6 +2536,8 @@ export type Database = {
         Row: {
           accent: string
           account_id: string
+          blocks: Json | null
+          builder_theme: Json | null
           collect_name: boolean
           consent_text: string
           created_at: string
@@ -2554,6 +2565,8 @@ export type Database = {
         Insert: {
           accent?: string
           account_id: string
+          blocks?: Json | null
+          builder_theme?: Json | null
           collect_name?: boolean
           consent_text?: string
           created_at?: string
@@ -2581,6 +2594,8 @@ export type Database = {
         Update: {
           accent?: string
           account_id?: string
+          blocks?: Json | null
+          builder_theme?: Json | null
           collect_name?: boolean
           consent_text?: string
           created_at?: string
