@@ -136,22 +136,22 @@ export function AppSidebar() {
 
 
         {visibleSettings.length > 0 && (
-          <SidebarGroup className="mt-auto">
-            <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroup className="mt-auto px-2 py-0">
+            <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-wider">Settings</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
+              <SidebarMenu className="gap-1">
                 <Collapsible open={collapsed ? false : settingsOpen} onOpenChange={setSettingsOpen}>
                   <SidebarMenuItem>
                     {collapsed ? (
-                      <SidebarMenuButton asChild isActive={settingsActive} className="h-8 text-sm">
+                      <SidebarMenuButton asChild isActive={settingsActive} className="h-10 px-3 text-[0.9375rem] rounded-lg">
                         <Link to={visibleSettings[0].url} className="flex items-center gap-3">
-                          <Settings className="size-4" />
+                          <Settings className="size-[1.125rem]" />
                         </Link>
                       </SidebarMenuButton>
                     ) : (
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton isActive={settingsActive} className="w-full h-8 text-sm">
-                          <Settings className="size-4" />
+                        <SidebarMenuButton isActive={settingsActive} className="w-full h-10 px-3 text-[0.9375rem] rounded-lg">
+                          <Settings className="size-[1.125rem]" />
                           <span>Settings</span>
                           <ChevronDown className={`ml-auto size-4 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
                         </SidebarMenuButton>
@@ -159,12 +159,12 @@ export function AppSidebar() {
                     )}
                     {!collapsed && (
                       <CollapsibleContent>
-                        <SidebarMenuSub className="gap-0.5">
+                        <SidebarMenuSub className="gap-1 mt-1">
                           {visibleSettings.map((c) => (
                             <SidebarMenuSubItem key={c.url}>
-                              <SidebarMenuSubButton asChild isActive={isActive(c.url, c.exact)}>
-                                <Link to={c.url} className="flex items-center gap-2">
-                                  <c.icon className="size-3.5" />
+                              <SidebarMenuSubButton asChild isActive={isActive(c.url, c.exact)} className="h-9">
+                                <Link to={c.url} className="flex items-center gap-2.5">
+                                  <c.icon className="size-4" />
                                   <span>{c.title}</span>
                                 </Link>
                               </SidebarMenuSubButton>
@@ -180,11 +180,11 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarFooter className="border-t">
+      <SidebarFooter className="border-t p-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={signOut} className="h-8 text-sm">
-              <LogOut className="size-4" />
+            <SidebarMenuButton onClick={signOut} className="h-10 px-3 text-[0.9375rem] rounded-lg">
+              <LogOut className="size-[1.125rem]" />
               {!collapsed && <span>Sign out</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -193,3 +193,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
