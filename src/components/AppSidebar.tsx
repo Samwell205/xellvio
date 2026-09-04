@@ -86,36 +86,37 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
-        <div className="p-1.5">{!collapsed ? <Logo /> : <div className="size-8 rounded-lg bg-primary" />}</div>
+      <SidebarHeader className="border-b h-16 justify-center px-4">
+        <div className="flex items-center">
+          {!collapsed ? <Logo className="text-xl" /> : <div className="size-8 rounded-lg bg-primary" />}
+        </div>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="px-1 py-3">
         {!collapsed && session && !session.isOwner && (
-          <div className="mx-2 mt-2 rounded-md border bg-muted/40 p-2 text-xs">
+          <div className="mx-2 mb-1 rounded-lg border bg-muted/40 p-3 text-xs">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Building2 className="size-3.5" />
               <span>Working in</span>
             </div>
-            <div className="mt-0.5 font-medium truncate">
+            <div className="mt-1 font-medium truncate">
               {session.workspaceOwnerName || session.workspaceOwnerEmail || "shared workspace"}
             </div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">
               {session.role}
             </div>
           </div>
         )}
-        <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+        <SidebarGroup className="px-2 py-0">
           <SidebarGroupContent>
-            <SidebarMenu className="gap-0.5">
+            <SidebarMenu className="gap-1">
               {visibleItems.map((it) => {
                 const showBadge = it.url === "/app/inbox" && unread > 0;
                 return (
                   <SidebarMenuItem key={it.url}>
-                    <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)} className="h-8 text-sm">
+                    <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)} className="h-10 px-3 text-[0.9375rem] rounded-lg">
                       <Link to={it.url} className="flex items-center gap-3">
-                        <it.icon className="size-4" />
-                        {!collapsed && <span>{it.title}</span>}
+                        <it.icon className="size-[1.125rem] shrink-0" />
+                        {!collapsed && <span className="truncate">{it.title}</span>}
                         {showBadge && !collapsed && (
                           <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
                             {unread > 99 ? "99+" : unread}
@@ -133,23 +134,24 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+
         {visibleSettings.length > 0 && (
-          <SidebarGroup className="mt-auto">
-            <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroup className="mt-auto px-2 py-0">
+            <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-wider">Settings</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
+              <SidebarMenu className="gap-1">
                 <Collapsible open={collapsed ? false : settingsOpen} onOpenChange={setSettingsOpen}>
                   <SidebarMenuItem>
                     {collapsed ? (
-                      <SidebarMenuButton asChild isActive={settingsActive} className="h-8 text-sm">
+                      <SidebarMenuButton asChild isActive={settingsActive} className="h-10 px-3 text-[0.9375rem] rounded-lg">
                         <Link to={visibleSettings[0].url} className="flex items-center gap-3">
-                          <Settings className="size-4" />
+                          <Settings className="size-[1.125rem]" />
                         </Link>
                       </SidebarMenuButton>
                     ) : (
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton isActive={settingsActive} className="w-full h-8 text-sm">
-                          <Settings className="size-4" />
+                        <SidebarMenuButton isActive={settingsActive} className="w-full h-10 px-3 text-[0.9375rem] rounded-lg">
+                          <Settings className="size-[1.125rem]" />
                           <span>Settings</span>
                           <ChevronDown className={`ml-auto size-4 transition-transform ${settingsOpen ? "rotate-180" : ""}`} />
                         </SidebarMenuButton>
@@ -157,12 +159,12 @@ export function AppSidebar() {
                     )}
                     {!collapsed && (
                       <CollapsibleContent>
-                        <SidebarMenuSub className="gap-0.5">
+                        <SidebarMenuSub className="gap-1 mt-1">
                           {visibleSettings.map((c) => (
                             <SidebarMenuSubItem key={c.url}>
-                              <SidebarMenuSubButton asChild isActive={isActive(c.url, c.exact)}>
-                                <Link to={c.url} className="flex items-center gap-2">
-                                  <c.icon className="size-3.5" />
+                              <SidebarMenuSubButton asChild isActive={isActive(c.url, c.exact)} className="h-9">
+                                <Link to={c.url} className="flex items-center gap-2.5">
+                                  <c.icon className="size-4" />
                                   <span>{c.title}</span>
                                 </Link>
                               </SidebarMenuSubButton>
@@ -178,11 +180,11 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarFooter className="border-t">
+      <SidebarFooter className="border-t p-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={signOut} className="h-8 text-sm">
-              <LogOut className="size-4" />
+            <SidebarMenuButton onClick={signOut} className="h-10 px-3 text-[0.9375rem] rounded-lg">
+              <LogOut className="size-[1.125rem]" />
               {!collapsed && <span>Sign out</span>}
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -191,3 +193,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
