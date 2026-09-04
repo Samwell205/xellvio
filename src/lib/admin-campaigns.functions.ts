@@ -257,9 +257,13 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     }
     const totalClicks = clickRows.reduce((s, r) => s + Number(r.clicks ?? 0), 0);
     const clickedLinks = clickRows.filter((r) => Number(r.clicks ?? 0) > 0).length;
-    // Shared shortlink → each click is a distinct recipient; per-recipient
-    // links → each clicked link is one recipient.
-    const engagedClickers = clickRows.length > 1 ? clickedLinks : totalClicks;
+    // Only treat clicked-link rows as engaged recipients when the campaign has
+    // roughly one short link per recipient. With links SHARED by everyone (the
+    // common case) each click came from a different recipient, so use the click
+    // total instead of the tiny number of link rows.
+    const perRecipientLinks = totals.delivered > 0 && clickRows.length >= totals.delivered * 0.5;
+    const engagedClickers = perRecipientLinks ? clickedLinks : totalClicks;
+
 
     return {
       clicks: {
