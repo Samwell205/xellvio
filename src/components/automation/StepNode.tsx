@@ -80,7 +80,7 @@ function StepNodeInner({ id, data, selected }: NodeProps) {
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={() => actions.deleteNode(id)}>
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => actions.deleteNode(id)}>
                 <Trash2 className="mr-2 h-4 w-4" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>

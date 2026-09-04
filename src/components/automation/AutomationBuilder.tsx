@@ -662,7 +662,7 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
                 <DropdownMenuItem onClick={() => changeStatus("draft")}>Move back to draft</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => rf.fitView({ padding: 0.25, duration: 300 })}>Fit to screen</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={() => setDeleteFlowOpen(true)}>
+                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteFlowOpen(true)}>
                   Delete automation
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -695,7 +695,7 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
               defaultViewport={automation.viewport}
               snapToGrid
               snapGrid={[16, 16]}
-              multiSelectionKeyDown={["Shift", "Meta", "Control"]}
+              multiSelectionKeyCode={["Shift", "Meta", "Control"]}
               selectionOnDrag
               panOnScroll
               minZoom={0.2}

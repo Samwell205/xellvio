@@ -149,7 +149,7 @@ function AutomationsPage() {
                   <Copy className="mr-2 h-4 w-4" /> Duplicate
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  variant="destructive"
+                  className="text-destructive focus:text-destructive"
                   onClick={async () => {
                     await remove({ data: { id: a.id } });
                     toast.success("Automation deleted");

@@ -15,7 +15,7 @@ const NodeSchema = z.object({
   type: z.string().min(1).max(64),
   label: z.string().max(160).default(""),
   position: z.object({ x: z.number(), y: z.number() }),
-  configuration: z.record(z.string(), z.unknown()).default({}),
+  configuration: z.record(z.string(), z.any()).default({}),
   disabled: z.boolean().default(false),
 });
 
@@ -39,7 +39,7 @@ export type AutomationRecord = {
     type: string;
     label: string;
     position: { x: number; y: number };
-    configuration: Record<string, unknown>;
+    configuration: Record<string, any>;
     disabled: boolean;
   }[];
   connections: {
