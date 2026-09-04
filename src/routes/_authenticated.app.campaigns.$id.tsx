@@ -728,16 +728,17 @@ function CampaignReport() {
         <div className="rounded-md border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
           <AlertTriangle className="size-5 text-warning-foreground shrink-0 mt-0.5" />
           <div className="text-sm">
-            <div className="font-semibold mb-0.5">Held for compliance review</div>
+            <div className="font-semibold mb-0.5">
+              {(progress?.total ?? 0) > 0 ? "Sending is on hold" : "Held for compliance review"}
+            </div>
             <div className="text-muted-foreground">
               {c.paused_reason ??
                 "This message was held for review before sending. Nothing has been sent or charged yet."}
             </div>
             <div className="text-xs mt-1 text-muted-foreground">
-              Nothing has been sent or charged. Our team reviews it and it releases automatically
-              within 15 minutes if no issue is found. To send sooner, edit the wording — urgent
-              “compliance / filing / step required + act now” phrasing is rejected by mobile
-              carriers even when the business is legitimate.
+              {(progress?.total ?? 0) > 0
+                ? "Messages already handed to the carrier keep being delivered — the counters below are live. Remaining recipients resume automatically once the hold clears."
+                : "Nothing has been sent or charged. It releases automatically within 15 minutes if no issue is found. To send sooner, edit the wording — urgent “compliance / filing / step required + act now” phrasing is rejected by mobile carriers even when the business is legitimate."}
             </div>
           </div>
         </div>
