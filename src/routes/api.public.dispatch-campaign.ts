@@ -1425,6 +1425,46 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           }
         }
 
+        // ── Self-heal: campaigns paused only because the per-campaign
+        // compliance confirmation was not visible yet (a tick raced the
+        // builder). If the acceptance row now exists, release them instead of
+        // leaving them stuck on a "Held for review" banner forever.
+        try {
+          const { TOS_CURRENT_VERSION: tosV } = await import("@/lib/tos");
+          const { data: stuckAcceptance } = await supabaseAdmin
+            .from("campaigns")
+            .select("id")
+            .eq("status", "paused")
+            .ilike("paused_reason", "Missing per-campaign compliance%")
+            .limit(50);
+          for (const sc of stuckAcceptance ?? []) {
+            const { count: has } = await supabaseAdmin
+              .from("campaign_tos_acceptances")
+              .select("id", { count: "exact", head: true })
+              .eq("campaign_id", sc.id)
+              .eq("tos_version", tosV);
+            if ((has ?? 0) === 0) continue;
+            const { count: pendingMsgs } = await supabaseAdmin
+              .from("messages")
+              .select("id", { count: "exact", head: true })
+              .eq("campaign_id", sc.id)
+              .in("status", ["queued", "sending"]);
+            await supabaseAdmin
+              .from("campaigns")
+              .update({
+                status: (pendingMsgs ?? 0) > 0 ? "sending" : "queued",
+                paused_reason: null,
+                paused_at: null,
+              })
+              .eq("id", sc.id)
+              .eq("status", "paused");
+          }
+        } catch (e: any) {
+          console.error("[dispatch] acceptance-hold self-heal failed", e?.message ?? e);
+        }
+
+
+
         // ── Self-heal: any campaign that got marked `failed` (or `sent`) while
         // it still has queued recipients is stranded — nothing would ever pick
         // it up again. Put it back into the sending queue before we build the
@@ -1563,12 +1603,21 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             return { error: "tos_acceptance_required" };
           }
           // ── Per-campaign compliance re-confirmation must exist.
+          // The builder writes this row immediately after flipping the campaign
+          // to `queued`, so a tick landing in that split second must NOT pause
+          // the campaign — it just skips and picks it up on the next pass.
           const { count: campTos } = await supabaseAdmin
             .from("campaign_tos_acceptances")
             .select("id", { count: "exact", head: true })
             .eq("campaign_id", c.id)
             .eq("tos_version", TOS_CURRENT_VERSION);
           if ((campTos ?? 0) === 0) {
+            const { data: created } = await supabaseAdmin
+              .from("campaigns").select("created_at").eq("id", c.id).maybeSingle();
+            const ageMs = created?.created_at
+              ? Date.now() - new Date(created.created_at as string).getTime()
+              : Number.POSITIVE_INFINITY;
+            if (ageMs < 3 * 60 * 1000) return { skipped: "awaiting_campaign_acceptance" };
             await supabaseAdmin.from("campaigns")
               .update({ status: "paused", paused_reason: "Missing per-campaign compliance confirmation.", paused_at: new Date().toISOString() })
               .eq("id", c.id);
