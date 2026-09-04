@@ -493,11 +493,14 @@ function CampaignReport() {
     const skipped = 0;
     const linkStats = clicksQ.data ?? { links: 0, totalClicks: 0, clickedLinks: 0 };
     const clicked = linkStats.totalClicks || events.filter((e: any) => e.type === "clicked").length;
-    // One shared shortlink → every click is a distinct recipient; per-recipient
-    // links → each clicked link is one recipient.
-    const uniqueClickers = linkStats.links > 1
+    // Only count "clicked links" as people when the campaign made roughly one
+    // short link per recipient. When a few links are shared by the whole
+    // audience, every click is a different recipient, so use the click total.
+    const perRecipientLinks = delivered > 0 && linkStats.links >= delivered * 0.5;
+    const uniqueClickers = perRecipientLinks
       ? linkStats.clickedLinks
       : Math.min(clicked, Math.max(delivered, clicked));
+
 
     const totalCost = Number(s?.billed_cost ?? 0);
     const reservedCost = Number(s?.reserved_cost ?? 0);
