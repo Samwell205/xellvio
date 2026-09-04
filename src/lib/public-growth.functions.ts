@@ -3,10 +3,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const SEO_FIELDS = "logo_url,seo_title,seo_description,og_image_url,design";
 const PAGE_FIELDS =
-  "id,slug,name,headline,subheadline,body,cta_label,success_message,theme,accent,image_url,published,views,account_id,list_id";
+  `id,slug,name,headline,subheadline,body,cta_label,success_message,consent_text,theme,accent,image_url,sections,published,views,account_id,list_id,${SEO_FIELDS}`;
 const FORM_FIELDS =
-  "id,slug,name,headline,description,cta_label,success_message,collect_name,consent_text,theme,accent,published,account_id,list_id";
+  `id,slug,name,headline,description,cta_label,success_message,collect_name,consent_text,theme,accent,image_url,published,views,account_id,list_id,${SEO_FIELDS}`;
 
 export const getPublicLandingPage = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(80) }).parse(input))
@@ -38,9 +39,14 @@ export const getPublicSignupForm = createServerFn({ method: "GET" })
       .eq("published", true)
       .maybeSingle();
     if (!form) return null;
+    await supabaseAdmin
+      .from("signup_forms")
+      .update({ views: ((form as any).views ?? 0) + 1 } as any)
+      .eq("id", (form as any).id);
     const { account_id, list_id, ...pub } = form as any;
-    return pub;
+    return pub as Record<string, any>;
   });
+
 
 const SubmitSchema = z.object({
   sourceType: z.enum(["landing_page", "signup_form"]),

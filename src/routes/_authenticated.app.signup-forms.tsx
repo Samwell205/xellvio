@@ -2,21 +2,24 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { deleteSignupForm, listRecentSubmissions, listSignupForms, saveSignupForm } from "@/lib/growth.functions";
+import {
+  deleteSignupForm,
+  duplicateSignupForm,
+  exportWebsiteLeads,
+  listRecentSubmissions,
+  listSignupForms,
+  saveSignupForm,
+} from "@/lib/growth.functions";
 import { listAudienceContactLists } from "@/lib/audience.functions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { TemplateGallery } from "@/components/growth/TemplateGallery";
 import { FORM_TEMPLATES } from "@/lib/growth-templates";
-import { Code2, Copy, ExternalLink, FormInput, LayoutGrid, Trash2 } from "lucide-react";
+import { FormEditor, type FormDraft } from "@/components/website/FormEditor";
+import { LIGHT_DESIGN, mergeDesign } from "@/lib/website-design";
+import { Code2, Copy, CopyPlus, Download, ExternalLink, FormInput, LayoutGrid, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/signup-forms")({
   head: () => ({
@@ -32,47 +35,52 @@ export const Route = createFileRoute("/_authenticated/app/signup-forms")({
   component: SignupFormsPage,
 });
 
-type Draft = {
-  id?: string;
-  name: string;
-  headline: string;
-  description: string;
-  cta_label: string;
-  success_message: string;
-  collect_name: boolean;
-  consent_text: string;
-  theme: "light" | "dark";
-  accent: string;
-  list_id: string | null;
-  published: boolean;
-};
-
-const EMPTY: Draft = {
+const EMPTY: FormDraft = {
   name: "",
   headline: "Get exclusive offers by text",
   description: "Be first to know about new drops and sales.",
   cta_label: "Subscribe",
   success_message: "You are on the list!",
   collect_name: true,
-  consent_text: "By subscribing you agree to receive recurring marketing texts. Message and data rates may apply. Reply STOP to opt out.",
-  theme: "light",
-  accent: "#111827",
+  consent_text:
+    "By subscribing you agree to receive recurring marketing texts. Message and data rates may apply. Reply STOP to opt out.",
+  design: LIGHT_DESIGN,
+  logo_url: "",
+  image_url: "",
+  seo_title: "",
+  seo_description: "",
+  og_image_url: "",
   list_id: null,
   published: true,
 };
+
+function downloadCsv(rows: Record<string, unknown>[], filename: string) {
+  if (rows.length === 0) return toast.info("No signups to export yet");
+  const cols = Object.keys(rows[0]!);
+  const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function SignupFormsPage() {
   const qc = useQueryClient();
   const listFn = useServerFn(listSignupForms);
   const saveFn = useServerFn(saveSignupForm);
   const delFn = useServerFn(deleteSignupForm);
+  const dupFn = useServerFn(duplicateSignupForm);
+  const exportFn = useServerFn(exportWebsiteLeads);
   const subsFn = useServerFn(listRecentSubmissions);
   const listsFn = useServerFn(listAudienceContactLists);
 
   const formsQ = useQuery({ queryKey: ["signup-forms"], queryFn: () => listFn() });
   const subsQ = useQuery({ queryKey: ["signup-submissions"], queryFn: () => subsFn(), refetchInterval: 30_000 });
   const listsQ = useQuery({ queryKey: ["contact-lists"], queryFn: () => listsFn() });
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [draft, setDraft] = useState<FormDraft | null>(null);
   const [gallery, setGallery] = useState(false);
 
   const applyTemplate = (id: string) => {
@@ -83,7 +91,17 @@ function SignupFormsPage() {
   };
 
   const save = useMutation({
-    mutationFn: async (d: Draft) => saveFn({ data: d }),
+    mutationFn: async (d: FormDraft) =>
+      saveFn({
+        data: {
+          ...d,
+          logo_url: d.logo_url || null,
+          image_url: d.image_url || null,
+          seo_title: d.seo_title || null,
+          seo_description: d.seo_description || null,
+          og_image_url: d.og_image_url || null,
+        },
+      }),
     onSuccess: () => {
       toast.success("Form saved");
       setDraft(null);
@@ -101,8 +119,39 @@ function SignupFormsPage() {
     onError: (e: any) => toast.error(e.message ?? "Could not delete"),
   });
 
+  const dup = useMutation({
+    mutationFn: async (id: string) => dupFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Copy created");
+      qc.invalidateQueries({ queryKey: ["signup-forms"] });
+    },
+    onError: (e: any) => toast.error(e.message ?? "Could not duplicate"),
+  });
+
   const forms = formsQ.data ?? [];
   const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const urlFor = (slug: string) => `${origin}/f/${slug}`;
+
+  const openEdit = (f: any) =>
+    setDraft({
+      id: f.id,
+      slug: f.slug,
+      name: f.name,
+      headline: f.headline ?? "",
+      description: f.description ?? "",
+      cta_label: f.cta_label ?? "Subscribe",
+      success_message: f.success_message ?? "",
+      consent_text: f.consent_text ?? EMPTY.consent_text,
+      collect_name: !!f.collect_name,
+      design: mergeDesign(f.design),
+      logo_url: f.logo_url ?? "",
+      image_url: f.image_url ?? "",
+      seo_title: f.seo_title ?? "",
+      seo_description: f.seo_description ?? "",
+      og_image_url: f.og_image_url ?? "",
+      list_id: f.list_id ?? null,
+      published: !!f.published,
+    });
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -110,11 +159,11 @@ function SignupFormsPage() {
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold tracking-tight">Sign-up forms</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Collect phone numbers on your own website — share the link or paste the embed code anywhere.
+            A hosted form you can share or embed. Everyone who subscribes goes straight into the list you pick.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Create blank form</Button>
+          <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Start from scratch</Button>
           <Button onClick={() => setGallery(true)}><LayoutGrid className="mr-2 size-4" />Browse templates</Button>
         </div>
       </div>
@@ -123,151 +172,111 @@ function SignupFormsPage() {
         <Card className="flex flex-col items-center gap-4 p-14 text-center">
           <FormInput className="size-10 text-primary" />
           <div className="space-y-1">
-            <h2 className="text-xl font-semibold">Turn visitors into subscribers</h2>
+            <h2 className="text-xl font-semibold">Collect subscribers anywhere</h2>
             <p className="mx-auto max-w-md text-sm text-muted-foreground">
-              Start from a ready-made form, choose the list it feeds, and paste it on your site in one line of code.
+              Pick a template, edit the words and colours, then share the link or embed it on your site.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-2">
             <Button onClick={() => setGallery(true)}>Browse {FORM_TEMPLATES.length} templates</Button>
-            <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Create blank form</Button>
+            <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Start from scratch</Button>
           </div>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
-          {forms.map((f: any) => (
-            <Card key={f.id} className="space-y-3 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold">{f.name}</h3>
-                  <p className="text-xs text-muted-foreground">{f.headline}</p>
+          {forms.map((f: any) => {
+            const views = Number(f.views ?? 0);
+            const subs = Number(f.submissions ?? 0);
+            return (
+              <Card key={f.id} className="space-y-3 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-semibold">{f.name}</h3>
+                    <p className="text-xs text-muted-foreground">{f.headline}</p>
+                  </div>
+                  <Badge variant={f.published ? "default" : "outline"}>{f.published ? "Live" : "Draft"}</Badge>
                 </div>
-                <Badge variant={f.published ? "default" : "outline"}>{f.published ? "Live" : "Draft"}</Badge>
-              </div>
-              <div className="flex gap-4 text-xs text-muted-foreground">
-                <span>{f.views ?? 0} views</span>
-                <span>{f.submissions ?? 0} signups</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(`${origin}/f/${f.slug}`); toast.success("Link copied"); }}>
-                  <Copy className="mr-1 size-3" />Copy link
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(
-                      `<iframe src="${origin}/f/${f.slug}" style="border:0;width:100%;max-width:480px;height:520px" title="${f.name}"></iframe>`,
-                    );
-                    toast.success("Embed code copied");
-                  }}
-                >
-                  <Code2 className="mr-1 size-3" />Copy embed code
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <a href={`/f/${f.slug}`} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 size-3" />Preview</a>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setDraft({
-                      id: f.id,
-                      name: f.name,
-                      headline: f.headline ?? "",
-                      description: f.description ?? "",
-                      cta_label: f.cta_label ?? "Subscribe",
-                      success_message: f.success_message ?? "",
-                      collect_name: !!f.collect_name,
-                      consent_text: f.consent_text ?? EMPTY.consent_text,
-                      theme: f.theme === "dark" ? "dark" : "light",
-                      accent: f.accent ?? "#111827",
-                      list_id: f.list_id ?? null,
-                      published: !!f.published,
-                    })
-                  }
-                >
-                  Edit
-                </Button>
-                <Button variant="ghost" size="icon" onClick={() => remove.mutate(f.id)}>
-                  <Trash2 className="size-4 text-destructive" />
-                </Button>
-              </div>
-            </Card>
-          ))}
+                <div className="flex gap-4 text-xs text-muted-foreground">
+                  <span>{views} views</span>
+                  <span>{subs} signups</span>
+                  <span>{views > 0 ? ((subs / views) * 100).toFixed(1) : "0.0"}% conversion</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(urlFor(f.slug)); toast.success("Link copied"); }}>
+                    <Copy className="mr-1 size-3" />Copy link
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `<iframe src="${urlFor(f.slug)}" style="width:100%;height:560px;border:0" title="${f.name}"></iframe>`,
+                      );
+                      toast.success("Embed code copied");
+                    }}
+                  >
+                    <Code2 className="mr-1 size-3" />Embed
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={`/f/${f.slug}`} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 size-3" />View</a>
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openEdit(f)}>Edit</Button>
+                  <Button variant="outline" size="sm" onClick={() => dup.mutate(f.id)}><CopyPlus className="mr-1 size-3" />Duplicate</Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const rows = await exportFn({ data: { sourceId: f.id } });
+                      downloadCsv(rows as any[], `${f.slug}-signups.csv`);
+                    }}
+                  >
+                    <Download className="mr-1 size-3" />Leads
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => remove.mutate(f.id)}>
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      {(subsQ.data?.length ?? 0) > 0 && (
+      {(subsQ.data ?? []).length > 0 ? (
         <Card className="p-5">
-          <h3 className="font-semibold">Latest signups</h3>
-          <div className="mt-3 space-y-2 text-sm">
-            {subsQ.data!.slice(0, 10).map((s: any) => (
-              <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 last:border-0">
-                <span className="font-mono text-xs">{s.phone_e164}</span>
-                <span>{s.first_name ?? "—"}</span>
-                <span className="text-xs capitalize text-muted-foreground">{String(s.source_type).replace("_", " ")}</span>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="font-semibold">Latest signups</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => downloadCsv((await exportFn({ data: {} })) as any[], "all-signups.csv")}
+            >
+              <Download className="mr-1 size-3" />Export all
+            </Button>
+          </div>
+          <div className="divide-y text-sm">
+            {(subsQ.data ?? []).slice(0, 10).map((s: any) => (
+              <div key={s.id} className="flex items-center justify-between gap-3 py-2">
+                <span>{s.first_name ? `${s.first_name} — ` : ""}{s.phone_e164}</span>
                 <span className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleString()}</span>
               </div>
             ))}
           </div>
         </Card>
-      )}
+      ) : null}
 
-      <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{draft?.id ? "Edit form" : "New sign-up form"}</DialogTitle>
-            <DialogDescription>Choose the wording, the list, and where signups should land.</DialogDescription>
-          </DialogHeader>
-          {draft && (
-            <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div><Label>Internal name</Label><Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></div>
-                <div>
-                  <Label>Add signups to</Label>
-                  <Select value={draft.list_id ?? "none"} onValueChange={(v) => setDraft({ ...draft, list_id: v === "none" ? null : v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No list (contacts only)</SelectItem>
-                      {(listsQ.data ?? []).map((l: any) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div><Label>Headline</Label><Input value={draft.headline} onChange={(e) => setDraft({ ...draft, headline: e.target.value })} maxLength={160} /></div>
-              <div><Label>Description</Label><Textarea rows={2} value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} maxLength={400} /></div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div><Label>Button text</Label><Input value={draft.cta_label} onChange={(e) => setDraft({ ...draft, cta_label: e.target.value })} maxLength={40} /></div>
-                <div>
-                  <Label>Look</Label>
-                  <Select value={draft.theme} onValueChange={(v) => setDraft({ ...draft, theme: v as "light" | "dark" })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="light">Light</SelectItem><SelectItem value="dark">Dark</SelectItem></SelectContent>
-                  </Select>
-                </div>
-                <div><Label>Button colour</Label><Input type="color" value={draft.accent} onChange={(e) => setDraft({ ...draft, accent: e.target.value })} /></div>
-              </div>
-              <div><Label>Consent wording (required by carriers)</Label><Textarea rows={2} value={draft.consent_text} onChange={(e) => setDraft({ ...draft, consent_text: e.target.value })} maxLength={400} /></div>
-              <div><Label>Thank-you message</Label><Input value={draft.success_message} onChange={(e) => setDraft({ ...draft, success_message: e.target.value })} maxLength={200} /></div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div><div className="text-sm font-medium">Ask for a first name</div><p className="text-xs text-muted-foreground">Lets you personalise your texts.</p></div>
-                <Switch checked={draft.collect_name} onCheckedChange={(v) => setDraft({ ...draft, collect_name: v })} />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div><div className="text-sm font-medium">Publish this form</div><p className="text-xs text-muted-foreground">Turn on to accept signups.</p></div>
-                <Switch checked={draft.published} onCheckedChange={(v) => setDraft({ ...draft, published: v })} />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDraft(null)}>Cancel</Button>
-            <Button disabled={!draft?.name.trim() || save.isPending} onClick={() => draft && save.mutate(draft)}>
-              {save.isPending ? "Saving…" : "Save form"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {draft ? (
+        <FormEditor
+          draft={draft}
+          onChange={setDraft}
+          onClose={() => setDraft(null)}
+          onSave={() => save.mutate(draft)}
+          saving={save.isPending}
+          lists={(listsQ.data ?? []) as { id: string; name: string }[]}
+          publicUrl={draft.slug ? urlFor(draft.slug) : undefined}
+        />
+      ) : null}
+
       <TemplateGallery
         open={gallery}
         onOpenChange={setGallery}
@@ -278,7 +287,8 @@ function SignupFormsPage() {
           label: t.label,
           category: t.category,
           blurb: t.blurb,
-          preview: { headline: t.values.headline, sub: t.values.description, cta: t.values.cta_label, theme: t.values.theme, accent: t.values.accent },
+          design: t.values.design,
+          preview: { headline: t.values.headline, sub: t.values.description, cta: t.values.cta_label },
         }))}
         onPick={applyTemplate}
         onBlank={() => { setGallery(false); setDraft({ ...EMPTY }); }}
