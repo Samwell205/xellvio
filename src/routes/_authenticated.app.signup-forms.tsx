@@ -268,6 +268,21 @@ function SignupFormsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <TemplateGallery
+        open={gallery}
+        onOpenChange={setGallery}
+        title="Browse sign-up form templates"
+        description="Pick a starting point — every word, colour and setting stays editable."
+        items={FORM_TEMPLATES.map((t) => ({
+          id: t.id,
+          label: t.label,
+          category: t.category,
+          blurb: t.blurb,
+          preview: { headline: t.values.headline, sub: t.values.description, cta: t.values.cta_label, theme: t.values.theme, accent: t.values.accent },
+        }))}
+        onPick={applyTemplate}
+        onBlank={() => { setGallery(false); setDraft({ ...EMPTY }); }}
+      />
     </div>
   );
 }
