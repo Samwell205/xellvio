@@ -16,20 +16,37 @@ import { useServerFn } from "@tanstack/react-start";
 import type { PermissionKey } from "@/lib/team-permissions";
 
 type Item = { title: string; url: string; icon: any; exact?: boolean; perm?: PermissionKey; ownerOnly?: boolean };
+type Group = { title: string; icon: any; children: Item[] };
+type Entry = Item | Group;
 
-const items: Item[] = [
+const isGroup = (e: Entry): e is Group => "children" in e;
+
+const items: Entry[] = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard, exact: true, perm: "dashboard" },
   { title: "Campaigns", url: "/app/campaigns", icon: Megaphone, perm: "campaigns" },
   { title: "Inbox", url: "/app/inbox", icon: Inbox, perm: "inbox" },
-  { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText, perm: "setup_sms" },
-  { title: "10DLC (US local)", url: "/app/setup-10dlc", icon: MessageSquareText, perm: "setup_sms" },
-  { title: "Toll-free verification", url: "/app/toll-free-verification", icon: ShieldCheck, perm: "setup_sms" },
-  { title: "Audience", url: "/app/audience", icon: Users, perm: "audience" },
-  { title: "Segments", url: "/app/segments", icon: Filter, perm: "segments" },
-  { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff, perm: "suppressions" },
+  {
+    title: "Sender setup",
+    icon: MessageSquareText,
+    children: [
+      { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText, perm: "setup_sms" },
+      { title: "10DLC (US local)", url: "/app/setup-10dlc", icon: MessageSquareText, perm: "setup_sms" },
+      { title: "Toll-free verification", url: "/app/toll-free-verification", icon: ShieldCheck, perm: "setup_sms" },
+    ],
+  },
+  {
+    title: "Contacts",
+    icon: Users,
+    children: [
+      { title: "Audience", url: "/app/audience", icon: Users, perm: "audience" },
+      { title: "Segments", url: "/app/segments", icon: Filter, perm: "segments" },
+      { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff, perm: "suppressions" },
+    ],
+  },
   { title: "Team", url: "/app/team", icon: UserPlus, perm: "team" },
   { title: "My Academy", url: "/app/my-academy", icon: GraduationCap, ownerOnly: true },
 ];
+
 
 const settingsChildren: Item[] = [
   { title: "Account", url: "/app/settings", icon: Settings, exact: true, perm: "settings" },
