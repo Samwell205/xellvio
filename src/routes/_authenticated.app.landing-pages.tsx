@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -14,19 +14,18 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { TemplateGallery } from "@/components/growth/TemplateGallery";
-import { PAGE_TEMPLATES } from "@/lib/growth-templates";
-import { PageEditor, type PageDraft } from "@/components/website/PageEditor";
-import { blankSection, LIGHT_DESIGN, mergeDesign, parseSections } from "@/lib/website-design";
-import { Copy, CopyPlus, Download, ExternalLink, LayoutGrid, LayoutTemplate, Trash2 } from "lucide-react";
+import { VisualBuilder, type BuilderDoc } from "@/components/builder/VisualBuilder";
+import { docFromRow, legacyFieldsFromDoc, useBuilderDoc } from "@/components/builder/useBuilderDoc";
+import { blankDesign } from "@/lib/builder/templates";
+import { Copy, CopyPlus, Download, ExternalLink, LayoutGrid, LayoutTemplate, Sparkles, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/landing-pages")({
   head: () => ({
     meta: [
       { title: "Landing pages — Xellvio" },
-      { name: "description", content: "Build hosted landing pages that collect phone numbers straight into your SMS lists." },
+      { name: "description", content: "Design hosted landing pages with templates and an AI design assistant that collect phone numbers into your SMS lists." },
       { property: "og:title", content: "Landing pages — Xellvio" },
-      { property: "og:description", content: "Build hosted landing pages that collect phone numbers straight into your SMS lists." },
+      { property: "og:description", content: "Design hosted landing pages with templates and an AI design assistant that collect phone numbers into your SMS lists." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -34,22 +33,8 @@ export const Route = createFileRoute("/_authenticated/app/landing-pages")({
   component: LandingPagesPage,
 });
 
-const EMPTY: PageDraft = {
-  name: "",
-  headline: "Get 15% off your first order",
-  subheadline: "Join our text list for early access to drops and deals.",
-  body: "",
-  cta_label: "Sign up",
-  success_message: "Thanks — watch your phone for your code!",
-  design: LIGHT_DESIGN,
-  sections: [blankSection("hero"), blankSection("features"), blankSection("footer")],
-  logo_url: "",
-  seo_title: "",
-  seo_description: "",
-  og_image_url: "",
-  list_id: null,
-  published: true,
-};
+const DEFAULT_CONSENT =
+  "By signing up you agree to receive recurring marketing texts. Message and data rates may apply. Reply STOP to opt out.";
 
 function downloadCsv(rows: Record<string, unknown>[], filename: string) {
   if (rows.length === 0) return toast.info("No signups to export yet");
@@ -75,36 +60,38 @@ function LandingPagesPage() {
 
   const pagesQ = useQuery({ queryKey: ["landing-pages"], queryFn: () => listFn() });
   const listsQ = useQuery({ queryKey: ["contact-lists"], queryFn: () => listsFn() });
-  const [draft, setDraft] = useState<PageDraft | null>(null);
-  const [gallery, setGallery] = useState(false);
 
-  const applyTemplate = (id: string) => {
-    const t = PAGE_TEMPLATES.find((x) => x.id === id);
-    if (!t) return;
-    setGallery(false);
-    setDraft({ ...EMPTY, ...t.values, body: "", name: t.label });
-  };
-
-  const save = useMutation({
-    mutationFn: async (d: PageDraft) =>
-      saveFn({
+  const persist = useCallback(
+    async (d: BuilderDoc) => {
+      const legacy = legacyFieldsFromDoc(d);
+      const r = (await saveFn({
         data: {
-          ...d,
+          id: d.id,
+          name: d.name,
+          headline: legacy.headline || d.name,
+          subheadline: legacy.sub,
+          body: "",
+          cta_label: legacy.cta,
+          success_message: legacy.successMessage,
+          consent_text: legacy.consentText || DEFAULT_CONSENT,
+          blocks: d.blocks as any,
+          builder_theme: d.theme as any,
           image_url: null,
-          logo_url: d.logo_url || null,
+          logo_url: null,
           seo_title: d.seo_title || null,
           seo_description: d.seo_description || null,
           og_image_url: d.og_image_url || null,
-          consent_text: d.consent_text || null,
+          list_id: d.list_id,
+          published: d.published,
         },
-      }),
-    onSuccess: () => {
-      toast.success("Landing page saved");
-      setDraft(null);
+      })) as any;
       qc.invalidateQueries({ queryKey: ["landing-pages"] });
+      return { id: r?.id, slug: r?.slug };
     },
-    onError: (e: any) => toast.error(e.message ?? "Could not save"),
-  });
+    [saveFn, qc],
+  );
+
+  const builder = useBuilderDoc(persist);
 
   const remove = useMutation({
     mutationFn: async (id: string) => delFn({ data: { id } }),
@@ -128,42 +115,52 @@ function LandingPagesPage() {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const urlFor = (slug: string) => `${origin}/p/${slug}`;
 
-  const openEdit = (p: any) =>
-    setDraft({
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      headline: p.headline ?? "",
-      subheadline: p.subheadline ?? "",
-      body: p.body ?? "",
-      cta_label: p.cta_label ?? "Sign up",
-      success_message: p.success_message ?? "",
-      consent_text: p.consent_text ?? "",
-      design: mergeDesign(p.design),
-      sections:
-        parseSections(p.sections).length > 0
-          ? parseSections(p.sections)
-          : [{ ...blankSection("hero"), headline: p.headline ?? p.name, subheadline: p.subheadline ?? "", body: p.body ?? "" } as any],
-      logo_url: p.logo_url ?? "",
-      seo_title: p.seo_title ?? "",
-      seo_description: p.seo_description ?? "",
-      og_image_url: p.og_image_url ?? "",
-      list_id: p.list_id ?? null,
-      published: !!p.published,
-    });
+  const startNew = (mode: "scratch" | "templates" | "ai") => {
+    const fallback = blankDesign("page");
+    builder.open(
+      {
+        name: mode === "scratch" ? "Untitled page" : "",
+        blocks: fallback.blocks,
+        theme: fallback.theme,
+        seo_title: "",
+        seo_description: "",
+        og_image_url: "",
+        list_id: null,
+        published: true,
+      },
+      mode,
+    );
+  };
+
+  if (builder.doc) {
+    return (
+      <VisualBuilder
+        kind="page"
+        doc={builder.doc}
+        onChange={builder.change}
+        onClose={builder.close}
+        onSave={builder.saveNow}
+        saveState={builder.saveState}
+        lists={(listsQ.data ?? []) as { id: string; name: string }[]}
+        publicUrl={builder.doc.slug ? urlFor(builder.doc.slug) : undefined}
+        startMode={builder.startMode}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
+        <div className="min-w-0 space-y-1">
           <h1 className="text-3xl font-semibold tracking-tight">Landing pages</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            A shareable page with your offer and a phone-number box. Everyone who signs up lands in the list you choose.
+            Build a full page visually, start from a template, or describe it and let the design assistant build it for you.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Start from scratch</Button>
-          <Button onClick={() => setGallery(true)}><LayoutGrid className="mr-2 size-4" />Browse templates</Button>
+          <Button variant="outline" onClick={() => startNew("scratch")}>Start from scratch</Button>
+          <Button variant="outline" onClick={() => startNew("templates")}><LayoutGrid className="mr-2 size-4" />Templates</Button>
+          <Button onClick={() => startNew("ai")}><Sparkles className="mr-2 size-4" />Design with AI</Button>
         </div>
       </div>
 
@@ -171,14 +168,14 @@ function LandingPagesPage() {
         <Card className="flex flex-col items-center gap-4 p-14 text-center">
           <LayoutTemplate className="size-10 text-primary" />
           <div className="space-y-1">
-            <h2 className="text-xl font-semibold">Grow your list without a website</h2>
+            <h2 className="text-xl font-semibold">Launch a page in minutes</h2>
             <p className="mx-auto max-w-md text-sm text-muted-foreground">
-              Publish a page in a minute, share the link in bio, ads or QR codes, and watch subscribers come in.
+              Every section, word, colour and font stays editable — and every signup lands straight in your list.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-2">
-            <Button onClick={() => setGallery(true)}>Browse {PAGE_TEMPLATES.length} templates</Button>
-            <Button variant="outline" onClick={() => setDraft({ ...EMPTY })}>Start from scratch</Button>
+            <Button onClick={() => startNew("templates")}>Browse templates</Button>
+            <Button variant="outline" onClick={() => startNew("ai")}>Describe it to AI</Button>
           </div>
         </Card>
       ) : (
@@ -189,9 +186,9 @@ function LandingPagesPage() {
             return (
               <Card key={p.id} className="space-y-3 p-5">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-semibold">{p.name}</h3>
-                    <p className="text-xs text-muted-foreground">{p.headline}</p>
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold">{p.name}</h3>
+                    <p className="truncate text-xs text-muted-foreground">{p.headline}</p>
                   </div>
                   <Badge variant={p.published ? "default" : "outline"}>{p.published ? "Live" : "Draft"}</Badge>
                 </div>
@@ -207,15 +204,12 @@ function LandingPagesPage() {
                   <Button variant="outline" size="sm" asChild>
                     <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 size-3" />View</a>
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => openEdit(p)}>Edit</Button>
+                  <Button variant="outline" size="sm" onClick={() => builder.open(docFromRow(p, blankDesign("page")))}>Edit</Button>
                   <Button variant="outline" size="sm" onClick={() => dup.mutate(p.id)}><CopyPlus className="mr-1 size-3" />Duplicate</Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={async () => {
-                      const rows = await exportFn({ data: { sourceId: p.id } });
-                      downloadCsv(rows as any[], `${p.slug}-signups.csv`);
-                    }}
+                    onClick={async () => downloadCsv((await exportFn({ data: { sourceId: p.id } })) as any[], `${p.slug}-signups.csv`)}
                   >
                     <Download className="mr-1 size-3" />Leads
                   </Button>
@@ -228,40 +222,6 @@ function LandingPagesPage() {
           })}
         </div>
       )}
-
-      {draft ? (
-        <PageEditor
-          draft={draft}
-          onChange={setDraft}
-          onClose={() => setDraft(null)}
-          onSave={() => save.mutate(draft)}
-          saving={save.isPending}
-          lists={(listsQ.data ?? []) as { id: string; name: string }[]}
-          publicUrl={draft.slug ? urlFor(draft.slug) : undefined}
-        />
-      ) : null}
-
-      <TemplateGallery
-        open={gallery}
-        onOpenChange={setGallery}
-        title="Browse landing page templates"
-        description="Pick a starting point — every section, word and colour stays editable."
-        items={PAGE_TEMPLATES.map((t) => ({
-          id: t.id,
-          label: t.label,
-          category: t.category,
-          blurb: t.blurb,
-          design: t.values.design,
-          preview: {
-            headline: t.values.headline,
-            sub: t.values.subheadline,
-            cta: t.values.cta_label,
-            blocks: t.values.sections.map((s) => s.type),
-          },
-        }))}
-        onPick={applyTemplate}
-        onBlank={() => { setGallery(false); setDraft({ ...EMPTY }); }}
-      />
     </div>
   );
 }

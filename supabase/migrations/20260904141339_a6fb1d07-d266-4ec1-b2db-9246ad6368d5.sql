@@ -1,0 +1,2 @@
+ALTER TABLE public.signup_forms ADD COLUMN IF NOT EXISTS blocks jsonb, ADD COLUMN IF NOT EXISTS builder_theme jsonb;
+ALTER TABLE public.landing_pages ADD COLUMN IF NOT EXISTS blocks jsonb, ADD COLUMN IF NOT EXISTS builder_theme jsonb;

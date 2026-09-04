@@ -2,6 +2,8 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { getPublicLandingPage, submitSubscribe } from "@/lib/public-growth.functions";
 import { PageRenderer } from "@/components/website/renderers";
 import { blankSection, mergeDesign, parseSections, type Section } from "@/lib/website-design";
+import { BlockCanvas } from "@/components/builder/BlockRenderer";
+import { mergeTheme, normalizeBlocks } from "@/lib/builder/schema";
 
 const DEFAULT_CONSENT =
   "By signing up you agree to receive recurring marketing texts. Message and data rates may apply. Reply STOP to opt out.";
@@ -38,6 +40,30 @@ export const Route = createFileRoute("/p/$slug")({
 function LandingPageView() {
   const page = Route.useLoaderData() as any;
   const design = mergeDesign(page.design);
+  const blocks = normalizeBlocks(page.blocks);
+  if (blocks.length > 0) {
+    return (
+      <main style={{ minHeight: "100vh" }}>
+        <BlockCanvas
+          blocks={blocks}
+          theme={mergeTheme(page.builder_theme)}
+          interactive
+          onSubmit={async ({ phone, firstName, lastName }) => {
+            const r = await submitSubscribe({
+              data: {
+                sourceType: "landing_page",
+                slug: page.slug,
+                phone,
+                firstName: firstName || null,
+                lastName: lastName || null,
+              },
+            });
+            return r.message;
+          }}
+        />
+      </main>
+    );
+  }
   let sections: Section[] = parseSections(page.sections);
 
   if (sections.length === 0) {

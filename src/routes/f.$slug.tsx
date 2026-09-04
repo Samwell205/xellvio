@@ -2,6 +2,8 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { getPublicSignupForm, submitSubscribe } from "@/lib/public-growth.functions";
 import { FormRenderer } from "@/components/website/renderers";
 import { mergeDesign } from "@/lib/website-design";
+import { BlockCanvas } from "@/components/builder/BlockRenderer";
+import { mergeTheme, normalizeBlocks } from "@/lib/builder/schema";
 
 export const Route = createFileRoute("/f/$slug")({
   loader: async ({ params }) => {
@@ -35,6 +37,28 @@ export const Route = createFileRoute("/f/$slug")({
 function SignupFormView() {
   const form = Route.useLoaderData() as any;
   const design = mergeDesign(form.design);
+  const blocks = normalizeBlocks(form.blocks);
+
+  const submit = async ({ phone, firstName, lastName }: { phone: string; firstName?: string; lastName?: string }) => {
+    const r = await submitSubscribe({
+      data: {
+        sourceType: "signup_form",
+        slug: form.slug,
+        phone,
+        firstName: firstName || null,
+        lastName: lastName || null,
+      },
+    });
+    return r.message;
+  };
+
+  if (blocks.length > 0) {
+    return (
+      <main style={{ minHeight: "100vh" }}>
+        <BlockCanvas blocks={blocks} theme={mergeTheme(form.builder_theme)} interactive onSubmit={submit} />
+      </main>
+    );
+  }
 
   return (
     <main style={{ minHeight: "100vh" }}>

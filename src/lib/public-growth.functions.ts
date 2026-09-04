@@ -3,7 +3,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const SEO_FIELDS = "logo_url,seo_title,seo_description,og_image_url,design";
+const SEO_FIELDS = "logo_url,seo_title,seo_description,og_image_url,design,blocks,builder_theme";
 const PAGE_FIELDS =
   `id,slug,name,headline,subheadline,body,cta_label,success_message,consent_text,theme,accent,image_url,sections,published,views,account_id,list_id,${SEO_FIELDS}`;
 const FORM_FIELDS =
