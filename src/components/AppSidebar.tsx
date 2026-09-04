@@ -45,6 +45,7 @@ const items: Entry[] = [
       { title: "Suppressions", url: "/app/suppressions", icon: ShieldOff, perm: "suppressions" },
     ],
   },
+  { title: "Automations", url: "/app/automations", icon: Workflow, perm: "campaigns" },
   { title: "Flows", url: "/app/flows", icon: Workflow, perm: "campaigns" },
   {
     title: "Website",
