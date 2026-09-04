@@ -15,11 +15,12 @@ import {
   type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
+  Activity,
   ArrowLeft,
   CheckCircle2,
   ChevronLeft,
@@ -73,7 +74,13 @@ import {
   type GraphNode,
 } from "@/lib/automation-validation";
 import { AUTOMATION_TEMPLATES, materialiseTemplate } from "@/lib/automation-templates";
-import { deleteAutomation, saveAutomation, setAutomationStatus, type AutomationRecord } from "@/lib/automations.functions";
+import {
+  deleteAutomation,
+  getAutomationActivity,
+  saveAutomation,
+  setAutomationStatus,
+  type AutomationRecord,
+} from "@/lib/automations.functions";
 import { sendFlowTest } from "@/lib/flows.functions";
 import { cn } from "@/lib/utils";
 import { BuilderContext, type BuilderActions } from "./context";
@@ -162,6 +169,7 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [activateOpen, setActivateOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [testContact, setTestContact] = useState<string>(contacts[0]?.id ?? "");
   const [testLog, setTestLog] = useState<{ nodeId: string; note: string }[] | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
@@ -217,6 +225,13 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
   const setStatusFn = useServerFn(setAutomationStatus);
   const removeFlow = useServerFn(deleteAutomation);
   const smsTest = useServerFn(sendFlowTest);
+  const fetchActivity = useServerFn(getAutomationActivity);
+  const activityQuery = useQuery({
+    queryKey: ["automation-activity", automation.id],
+    queryFn: () => fetchActivity({ data: { id: automation.id } }),
+    enabled: activityOpen,
+    refetchInterval: activityOpen ? 15_000 : false,
+  });
 
   const saveMutation = useMutation({
     mutationFn: async (silent: boolean) => {
@@ -885,6 +900,9 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
             <Button variant="outline" size="sm" onClick={() => { setTestLog(null); setTestOpen(true); }}>
               <Sparkles className="mr-1.5 h-4 w-4" /> Test
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)}>
+              <Activity className="mr-1.5 h-4 w-4" /> Activity
+            </Button>
             {status === "active" ? (
               <Button size="sm" variant="secondary" onClick={() => changeStatus("paused")}>
                 <Pause className="mr-1.5 h-4 w-4" /> Pause
@@ -1169,6 +1187,52 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Activity</DialogTitle>
+            <DialogDescription>Who is travelling through this automation right now, and what has happened.</DialogDescription>
+          </DialogHeader>
+          {activityQuery.isLoading && <p className="text-sm text-muted-foreground">Loading activity…</p>}
+          {activityQuery.data && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {(["active", "waiting", "completed", "exited", "failed"] as const).map((k) => (
+                  <div key={k} className="rounded-lg border p-3">
+                    <p className="text-lg font-semibold">{activityQuery.data.counts[k] ?? 0}</p>
+                    <p className="text-[11px] capitalize text-muted-foreground">{k === "exited" ? "left early" : k}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-2">
+                {activityQuery.data.events.length === 0 && (
+                  <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+                    Nothing has happened yet. Activate the automation and activity will show up here.
+                  </p>
+                )}
+                {activityQuery.data.events.map((ev) => (
+                  <div key={ev.id} className="flex items-start gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {ev.node_type ? stepDef(ev.node_type).label : "Journey"} · {ev.outcome}
+                      </p>
+                      {ev.detail && <p className="truncate text-muted-foreground">{ev.detail}</p>}
+                    </div>
+                    <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
+                      {new Date(ev.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setActivityOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={testOpen} onOpenChange={setTestOpen}>
         <DialogContent>
