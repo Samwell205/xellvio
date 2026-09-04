@@ -135,7 +135,53 @@ export function AppSidebar() {
         <SidebarGroup className="px-2 py-0">
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {visibleItems.map((it) => {
+              {visibleItems.map((entry) => {
+                if (isGroup(entry)) {
+                  const gActive = groupActive(entry);
+                  const open = collapsed ? false : !!openGroups[entry.title];
+                  return (
+                    <Collapsible
+                      key={entry.title}
+                      open={open}
+                      onOpenChange={(v) => setOpenGroups((p) => ({ ...p, [entry.title]: v }))}
+                    >
+                      <SidebarMenuItem>
+                        {collapsed ? (
+                          <SidebarMenuButton asChild isActive={gActive} className="h-10 px-3 text-[0.9375rem] rounded-lg">
+                            <Link to={entry.children[0].url} className="flex items-center gap-3">
+                              <entry.icon className="size-[1.125rem]" />
+                            </Link>
+                          </SidebarMenuButton>
+                        ) : (
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton isActive={gActive} className="w-full h-10 px-3 text-[0.9375rem] rounded-lg">
+                              <entry.icon className="size-[1.125rem]" />
+                              <span className="truncate">{entry.title}</span>
+                              <ChevronDown className={`ml-auto size-4 transition-transform ${open ? "rotate-180" : ""}`} />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                        )}
+                        {!collapsed && (
+                          <CollapsibleContent>
+                            <SidebarMenuSub className="gap-1 mt-1">
+                              {entry.children.map((c) => (
+                                <SidebarMenuSubItem key={c.url}>
+                                  <SidebarMenuSubButton asChild isActive={isActive(c.url, c.exact)} className="h-9">
+                                    <Link to={c.url} className="flex items-center gap-2.5">
+                                      <c.icon className="size-4" />
+                                      <span className="truncate">{c.title}</span>
+                                    </Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        )}
+                      </SidebarMenuItem>
+                    </Collapsible>
+                  );
+                }
+                const it = entry;
                 const showBadge = it.url === "/app/inbox" && unread > 0;
                 return (
                   <SidebarMenuItem key={it.url}>
@@ -156,6 +202,7 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
