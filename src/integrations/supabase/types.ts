@@ -299,6 +299,7 @@ export type Database = {
           avatar_url: string | null
           business_address: string | null
           business_reg_number: string | null
+          click_domain: string | null
           company: string | null
           contact_email: string | null
           created_at: string
@@ -358,6 +359,7 @@ export type Database = {
           avatar_url?: string | null
           business_address?: string | null
           business_reg_number?: string | null
+          click_domain?: string | null
           company?: string | null
           contact_email?: string | null
           created_at?: string
@@ -417,6 +419,7 @@ export type Database = {
           avatar_url?: string | null
           business_address?: string | null
           business_reg_number?: string | null
+          click_domain?: string | null
           company?: string | null
           contact_email?: string | null
           created_at?: string
