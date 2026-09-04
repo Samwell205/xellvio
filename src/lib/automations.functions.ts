@@ -351,5 +351,10 @@ export const testRunAutomation = createServerFn({ method: "POST" })
       .select("node_key,node_type,outcome,detail,created_at")
       .eq("run_id", run.id)
       .order("created_at", { ascending: true });
+    // A test must never keep the contact locked out of the real journey.
+    await supabaseAdmin
+      .from("automation_runs")
+      .update({ status: "completed", completed_at: new Date().toISOString(), wait_until: null, waiting_for: null })
+      .eq("id", run.id);
     return { ok: true, run_id: run.id, events: events ?? [] };
   });
