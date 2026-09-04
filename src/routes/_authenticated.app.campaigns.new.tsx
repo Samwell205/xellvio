@@ -27,6 +27,10 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
+
+// A tracked short link may live on the shared platform domain or on a
+// tenant's branded click domain, so match any host with a /r/<code> path.
+const TRACKED_SHORT_URL = /^https?:\/\/[a-zA-Z0-9.-]+\/r\/[a-zA-Z0-9]{4,16}$/;
   Megaphone, Users, MessageSquare, CalendarClock, CheckCircle2,
   ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone, DollarSign, Phone,
 } from "lucide-react";
@@ -280,9 +284,7 @@ function NewCampaignPage() {
       setPreviewLinksPending(false);
       return;
     }
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://xellvio.com";
-    const escapedOrigin = origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const shortUrlPattern = new RegExp(`^${escapedOrigin}/r/[a-zA-Z0-9]{4,16}$`);
+    const shortUrlPattern = TRACKED_SHORT_URL;
     const urls = Array.from(new Set(bodyWithStop.match(/https?:\/\/[^\s<>()[\]"']+/gi) ?? []))
       .filter((url) => !shortUrlPattern.test(url) && !previewShortUrls[url]);
     if (urls.length === 0) {
@@ -320,9 +322,8 @@ function NewCampaignPage() {
   // redirect that can safely be clicked before the campaign is launched.
   const previewBody = useMemo(() => {
     if (!s.trackLinks) return bodyWithStop;
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://xellvio.com";
     return bodyWithStop.replace(/(https?:\/\/[^\s<>()[\]"']+)/gi, (url) => {
-      if (new RegExp(`^${origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}/r/[a-zA-Z0-9]{4,16}$`).test(url)) return url;
+      if (TRACKED_SHORT_URL.test(url)) return url;
       return previewShortUrls[url] ?? url;
     });
   }, [bodyWithStop, previewShortUrls, s.trackLinks]);
@@ -431,9 +432,7 @@ function NewCampaignPage() {
 
   async function shortenMessageUrls(message: string): Promise<string> {
     if (!s.trackLinks) return message;
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://xellvio.com";
-    const escapedOrigin = origin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const shortUrlPattern = new RegExp(`^${escapedOrigin}/r/[a-zA-Z0-9]{4,16}$`);
+    const shortUrlPattern = TRACKED_SHORT_URL;
     const urls = message.match(/https?:\/\/[^\s<>()[\]"']+/gi) ?? [];
     const replacements = new Map<string, string>();
 
@@ -763,7 +762,7 @@ function NewCampaignPage() {
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {s.trackLinks
-                  ? "Link shortening is on, so this URL is added as a xellvio.com/r/… link and clicks are counted. Tap it in the phone preview below to test."
+                  ? "Link shortening is on, so this URL is added as a tracked short link and clicks are counted. Tap it in the phone preview below to test."
                   : "Your URL is added exactly as typed. Turn on link shortening below if you want a short link and click tracking."}
               </p>
             </div>
@@ -773,7 +772,7 @@ function NewCampaignPage() {
                 <Label className="cursor-pointer" htmlFor="track-links-toggle">Shorten links &amp; track clicks</Label>
                 <p className="text-xs text-muted-foreground max-w-md">
                   {s.trackLinks
-                    ? "On — every URL in your message is replaced with a short xellvio.com/r/… link so clicks are counted. See per-link stats on the report's Links tab."
+                    ? "On — every URL in your message is replaced with a tracked short link so clicks are counted. See per-link stats on the report's Links tab."
                     : "Off — your URLs are sent exactly as you typed them. Nothing is shortened and no clicks are tracked."}
                 </p>
               </div>
