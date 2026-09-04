@@ -27,13 +27,13 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
+  Megaphone, Users, MessageSquare, CalendarClock, CheckCircle2,
+  ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone, DollarSign, Phone,
+} from "lucide-react";
 
 // A tracked short link may live on the shared platform domain or on a
 // tenant's branded click domain, so match any host with a /r/<code> path.
 const TRACKED_SHORT_URL = /^https?:\/\/[a-zA-Z0-9.-]+\/r\/[a-zA-Z0-9]{4,16}$/;
-  Megaphone, Users, MessageSquare, CalendarClock, CheckCircle2,
-  ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone, DollarSign, Phone,
-} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/new")({
   head: () => ({ meta: [{ title: "New campaign — Xellvio" }] }),
