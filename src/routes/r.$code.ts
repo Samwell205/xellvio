@@ -119,6 +119,25 @@ async function trackAndRedirect(code: string, request: Request): Promise<Respons
     /* click audit is best-effort */
   }
 
+  try {
+    const { data: msg } = await supabaseAdmin
+      .from("messages")
+      .select("account_id, phone_e164")
+      .eq("id", link.message_id)
+      .maybeSingle();
+    if ((msg as any)?.account_id && (msg as any)?.phone_e164) {
+      const { fireAutomationTrigger } = await import("@/lib/automation-engine.server");
+      await fireAutomationTrigger({
+        accountId: (msg as any).account_id,
+        phone: (msg as any).phone_e164,
+        type: "trigger.link_clicked",
+        payload: { url: link.url },
+      });
+    }
+  } catch {
+    /* automations never block the redirect */
+  }
+
   return new Response(null, { status: 302, headers: { Location: link.url, "Cache-Control": "no-store" } });
 }
 

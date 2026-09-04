@@ -26,6 +26,7 @@ import {
   stepDef,
   type NodeConfig,
 } from "@/lib/automation-catalog";
+import { RESERVED_KEYWORDS } from "@/lib/automation-validation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -138,6 +139,117 @@ export function ConfigPanel({ target, lists, senders, onClose, onSave, onSendTes
             </div>
           )}
 
+          {target.stepType === "trigger.contact_removed_from_list" && (
+            <Field label="List">
+              <Select value={str("list_id") || "any"} onValueChange={(v) => set("list_id", v === "any" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Any list" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any list</SelectItem>
+                  {lists.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          {target.stepType === "trigger.keyword_received" && (
+            <>
+              <Field label="Keyword">
+                <Input
+                  value={str("keyword")}
+                  onChange={(e) => set("keyword", e.target.value.toUpperCase())}
+                  placeholder="JOIN"
+                />
+              </Field>
+              <Field label="How should we match it?">
+                <Select value={str("match_type") || "exact"} onValueChange={(v) => set("match_type", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="exact">The whole message is the keyword</SelectItem>
+                    <SelectItem value="starts_with">The message starts with it</SelectItem>
+                    <SelectItem value="contains">The message contains it</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              {RESERVED_KEYWORDS.includes(str("keyword").trim().toUpperCase()) && (
+                <p className="rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
+                  “{str("keyword").toUpperCase()}” is reserved for opt-out and help replies, which we always handle for
+                  you. Pick a different word.
+                </p>
+              )}
+            </>
+          )}
+
+          {target.stepType === "trigger.form_submitted" && (
+            <Field label="Form">
+              <Input
+                value={str("form_name")}
+                onChange={(e) => set("form_name", e.target.value)}
+                placeholder="Any sign-up form"
+              />
+            </Field>
+          )}
+
+          {(target.stepType === "trigger.sms_received" || target.stepType === "trigger.link_clicked") && (
+            <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+              {target.stepType === "trigger.sms_received"
+                ? "Anyone who texts one of your numbers enters here. Opt-out words are always handled for you first."
+                : "Anyone who taps a tracked link in your messages enters here."}
+            </p>
+          )}
+
+          {(target.stepType === "trigger.recurring" ||
+            target.stepType === "trigger.birthday" ||
+            target.stepType === "trigger.anniversary") && (
+            <>
+              {target.stepType === "trigger.recurring" && (
+                <Field label="Weekday">
+                  <Select value={str("weekday") || "monday"} onValueChange={(v) => set("weekday", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].map((d) => (
+                        <SelectItem key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Time"><Input type="time" value={str("run_time") || "09:00"} onChange={(e) => set("run_time", e.target.value)} /></Field>
+                {target.stepType !== "trigger.recurring" && (
+                  <Field label="Days before/after">
+                    <Input
+                      type="number"
+                      value={String(config["offset_days"] ?? 0)}
+                      onChange={(e) => set("offset_days", Number(e.target.value))}
+                    />
+                  </Field>
+                )}
+              </div>
+              <TimezoneField value={str("timezone") || "UTC"} onChange={(v) => set("timezone", v)} />
+            </>
+          )}
+
+          {target.stepType === "trigger.date_field" && (
+            <>
+              <Field label="Date field on the contact">
+                <Input value={str("field")} onChange={(e) => set("field", e.target.value)} placeholder="renewal_date" />
+              </Field>
+              <Field label="Days before/after">
+                <Input type="number" value={String(config["offset_days"] ?? 0)} onChange={(e) => set("offset_days", Number(e.target.value))} />
+              </Field>
+            </>
+          )}
+
+          {target.stepType === "trigger.webhook_received" && (
+            <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+              Once this automation is live we generate a private web address for it. Anything posted to that address
+              starts the journey for the matching contact.
+            </p>
+          )}
+
+
           {/* ---------- SEND EMAIL ---------- */}
           {target.stepType === "action.send_email" && (
             <>
@@ -184,6 +296,18 @@ export function ConfigPanel({ target, lists, senders, onClose, onSave, onSendTes
                 <span>{smsSegments(smsBody)} segment{smsSegments(smsBody) === 1 ? "" : "s"}</span>
               </div>
               <TagRow onInsert={(t) => insertTag("body", t)} />
+              <div className="space-y-3 rounded-lg border p-3">
+                <ToggleRow
+                  label="Shorten and track links"
+                  checked={config["shorten_links"] !== false}
+                  onChange={(v) => set("shorten_links", v)}
+                />
+                <ToggleRow
+                  label="Skip contacts without SMS consent"
+                  checked={config["respect_consent"] !== false}
+                  onChange={(v) => set("respect_consent", v)}
+                />
+              </div>
               <div className="space-y-2 rounded-lg border p-3">
                 <Label className="text-xs">Send a test to</Label>
                 <Input value={str("test_phone")} onChange={(e) => set("test_phone", e.target.value)} placeholder="+1 555 000 1234" />
@@ -231,6 +355,33 @@ export function ConfigPanel({ target, lists, senders, onClose, onSave, onSendTes
 
           {target.stepType === "action.move_pipeline_stage" && (
             <Field label="Stage"><Input value={str("stage")} onChange={(e) => set("stage", e.target.value)} placeholder="e.g. Negotiation" /></Field>
+          )}
+
+          {(target.stepType === "action.add_to_list" ||
+            target.stepType === "action.remove_from_list" ||
+            target.stepType === "logic.in_list") && (
+            <Field label="List">
+              <Select
+                value={str("list_id")}
+                onValueChange={(v) => {
+                  set("list_id", v);
+                  set("list_name", lists.find((l) => l.id === v)?.name ?? "");
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Choose a list" /></SelectTrigger>
+                <SelectContent>
+                  {lists.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+
+          {target.stepType === "action.opt_out" && (
+            <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+              The contact is added to your suppression list straight away and stops receiving marketing texts.
+            </p>
           )}
 
           {(target.stepType === "action.send_webhook" || target.stepType === "action.api_request") && (
@@ -309,7 +460,69 @@ export function ConfigPanel({ target, lists, senders, onClose, onSave, onSendTes
             </>
           )}
 
+          {target.stepType === "timing.wait_for_reply" && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Wait up to">
+                  <Input type="number" min={1} value={String(config["amount"] ?? 24)} onChange={(e) => set("amount", Number(e.target.value))} />
+                </Field>
+                <Field label="Unit">
+                  <Select value={String(config["unit"] ?? "hours")} onValueChange={(v) => set("unit", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["minutes", "hours", "days"].map((u) => (
+                        <SelectItem key={u} value={u}>{u.charAt(0).toUpperCase() + u.slice(1)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
+              <Field label="What counts as Yes?">
+                <Select value={str("expect") || "any"} onValueChange={(v) => set("expect", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="any">Any reply at all</SelectItem>
+                    <SelectItem value="keywords">Only these words</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              {str("expect") === "keywords" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Yes words">
+                    <Input value={str("keywords_yes")} onChange={(e) => set("keywords_yes", e.target.value.toUpperCase())} placeholder="YES, SURE" />
+                  </Field>
+                  <Field label="No words">
+                    <Input value={str("keywords_no")} onChange={(e) => set("keywords_no", e.target.value.toUpperCase())} placeholder="NO, LATER" />
+                  </Field>
+                </div>
+              )}
+              <p className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+                Three paths leave this step: Yes, No, and No response when the time runs out.
+              </p>
+            </>
+          )}
+
           {/* ---------- LOGIC ---------- */}
+          {target.stepType === "logic.check_consent" && (
+            <div className="space-y-3 rounded-lg border p-3">
+              <ToggleRow label="Require SMS consent" checked={config["require_consent"] !== false} onChange={(v) => set("require_consent", v)} />
+              <ToggleRow label="Skip anyone who opted out" checked={config["skip_opted_out"] !== false} onChange={(v) => set("skip_opted_out", v)} />
+              <p className="text-xs text-muted-foreground">
+                Contacts without consent take the No path, so you never text someone who did not ask for it.
+              </p>
+            </div>
+          )}
+
+          {target.stepType === "logic.has_tag" && (
+            <Field label="Tag"><Input value={str("tag")} onChange={(e) => set("tag", e.target.value)} placeholder="e.g. vip" /></Field>
+          )}
+
+          {(target.stepType === "logic.clicked_link" || target.stepType === "logic.replied") && (
+            <Field label="Look back over (days)">
+              <Input type="number" min={1} value={String(config["window_days"] ?? 3)} onChange={(e) => set("window_days", Number(e.target.value))} />
+            </Field>
+          )}
+
           {(target.stepType === "logic.if_else" || target.stepType === "logic.condition_split") && (
             <ConditionList
               title="Rules"
