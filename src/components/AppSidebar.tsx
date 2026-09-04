@@ -47,7 +47,7 @@ const items: Entry[] = [
   },
   { title: "Flows", url: "/app/flows", icon: Workflow, perm: "campaigns" },
   {
-    title: "Growth tools",
+    title: "Website",
     icon: Sparkles,
     children: [
       { title: "Sign-up forms", url: "/app/signup-forms", icon: FormInput, perm: "audience" },
