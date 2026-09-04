@@ -5,11 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, ShieldOff, ShieldCheck, Ban, PlayCircle, Wand2 } from "lucide-react";
+import { Loader2, ShieldOff, ShieldCheck, Ban, PlayCircle, Wand2, Link2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminSetSuspension } from "@/lib/account.functions";
 import { adminSuspendTenantSending, adminResumeTenantSending } from "@/lib/compliance-admin.functions";
 import { adminBackfillProvisioning } from "@/lib/provision-account.functions";
+import { adminSetClickDomain } from "@/lib/click-domain.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/accounts")({
   head: () => ({ meta: [{ title: "Tenant accounts — Admin" }] }),
@@ -27,7 +28,7 @@ function AdminAccountsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,sending_suspended_at,sending_suspended_reason,created_at,signup_country,signup_region,signup_city,signup_ip,last_seen_country,last_seen_city,last_seen_at")
+        .select("id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,sending_suspended_at,sending_suspended_reason,created_at,signup_country,signup_region,signup_city,signup_ip,click_domain,last_seen_country,last_seen_city,last_seen_at")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -62,6 +63,17 @@ function AdminAccountsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
       toast.success("Sending resumed");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const clickDomainFn = useServerFn(adminSetClickDomain);
+  const setClickDomain = useMutation({
+    mutationFn: ({ id, domain }: { id: string; domain: string }) =>
+      clickDomainFn({ data: { accountId: id, domain } }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
+      toast.success(r.branded ? `Tracked links now use ${r.clickBase}` : "Reverted to the shared link domain");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -106,6 +118,7 @@ function AdminAccountsPage() {
                   <th className="p-3">Email</th>
                   <th className="p-3">Status</th>
                   <th className="p-3">Location</th>
+                  <th className="p-3">Link domain</th>
 
                   <th className="p-3 text-right">Balance</th>
                   <th className="p-3">Joined</th>
@@ -150,6 +163,12 @@ function AdminAccountsPage() {
                         })()}
                       </td>
 
+                      <td className="p-3">
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {(a as any).click_domain || "xellvio.com"}/r/…
+                        </span>
+                      </td>
+
                       <td className="p-3 text-right tabular-nums">${Number(a.credit_balance).toFixed(2)}</td>
                       <td className="p-3 text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</td>
                       <td className="p-3 text-right">
@@ -176,6 +195,22 @@ function AdminAccountsPage() {
                           )}
                           <Button
                             size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const next = window.prompt(
+                                "Branded click domain for tracked links (e.g. links.yourbrand.com). It must be connected to this project as a custom domain first. Leave empty to use the shared xellvio.com links.",
+                                (a as any).click_domain ?? "",
+                              );
+                              if (next === null) return;
+                              setClickDomain.mutate({ id: a.id, domain: next });
+                            }}
+                            disabled={setClickDomain.isPending}
+                            title="Give this tenant its own short-link domain so carrier reputation is not shared"
+                          >
+                            <Link2 className="size-3.5 mr-1.5" />Link domain
+                          </Button>
+                          <Button
+                            size="sm"
                             variant={suspended ? "outline" : "secondary"}
                             onClick={() => setStatus.mutate({ id: a.id, suspend: !suspended })}
                             disabled={setStatus.isPending}
@@ -188,7 +223,7 @@ function AdminAccountsPage() {
                   );
                 })}
                 {(accounts.data ?? []).length === 0 && (
-                  <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">No accounts yet.</td></tr>
+                  <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No accounts yet.</td></tr>
                 )}
               </tbody>
             </table>

@@ -763,7 +763,10 @@ async function planCampaign(
     for (let i = 0; i < len; i++) out += SHORT_ALPHABET[bytes[i] % SHORT_ALPHABET.length];
     return out;
   };
-  const base = publicBaseUrl();
+  // Branded per-tenant click domain when configured, else the shared origin.
+  const { clickBaseUrl, defaultClickBase } = await import("@/lib/click-domain.server");
+  const base = await clickBaseUrl(campaign.account_id);
+  const sharedBase = defaultClickBase();
   // Opt-in only: URLs are sent exactly as the tenant typed them unless they
   // explicitly turned link shortening on for this campaign.
   const trackLinks = campaign.track_links === true;
@@ -771,8 +774,9 @@ async function planCampaign(
   // Match short URLs we already generated (preview shortlinks from the builder).
   // Escape the base for regex use. Then skip re-shortening those and instead
   // just backfill message_id/campaign_id so they still count toward this send.
-  const escapedBase = base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const SHORT_RE = new RegExp(`^${escapedBase}/r/([a-zA-Z0-9]{4,16})$`);
+  const escapeRe = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const knownBases = Array.from(new Set([base, sharedBase])).map(escapeRe).join("|");
+  const SHORT_RE = new RegExp(`^(?:${knownBases})/r/([a-zA-Z0-9]{4,16})$`);
   const existingShortsToBind: Array<{ short_code: string; message_id: string }> = [];
   const rewriteBody = (body: string, messageId: string): string => {
     if (!trackLinks) return body;

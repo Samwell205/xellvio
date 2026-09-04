@@ -1354,7 +1354,7 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
                     {codes.length === 0 ? (
                       <span className="text-muted-foreground">Sent unshortened</span>
                     ) : codes.length === 1 ? (
-                      <span className="font-mono text-xs break-all">xellvio.com/r/{codes[0]}</span>
+                      <span className="font-mono text-xs break-all">/r/{codes[0]}</span>
                     ) : (
                       <span className="text-muted-foreground text-xs">
                         {codes.length.toLocaleString()} unique short links (one per recipient)
