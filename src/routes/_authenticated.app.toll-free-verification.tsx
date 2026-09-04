@@ -321,15 +321,20 @@ function TollfreeVerificationPage() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <BadgeCheck className="size-5 text-emerald-600" />
-              Your toll-free number is verified
+              {asset?.verification_status === "verified"
+                ? "Your toll-free number is verified"
+                : "Your sending number is already verified"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <p>
-              {asset?.phone_number ? <span className="font-mono text-foreground">{asset.phone_number}</span> : "Your toll-free number"}{" "}
+              {(asset?.phone_number || altSender?.phone_number)
+                ? <span className="font-mono text-foreground">{asset?.phone_number || altSender?.phone_number}</span>
+                : "Your number"}{" "}
               is approved for US, Canada and Puerto Rico delivery. There is nothing else to submit —
               no new verification request is needed.
             </p>
+
             <Button asChild size="sm">
               <Link to="/app/campaigns/new">Start a campaign</Link>
             </Button>
