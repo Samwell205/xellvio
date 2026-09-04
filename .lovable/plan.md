@@ -1,74 +1,78 @@
-# Tenant bulk email campaigns
+# Upgrade the landing page + sign-up form builder
 
-Goal: let each tenant compose one email, pick an audience from their contact lists, and send it to thousands of recipients — each personalized, each tracked as sent / failed / bounced / opened / clicked / unsubscribed. Mirrors your SMS campaign model, but on the email channel.
+Your builders already store designs as real editable pieces, so this work builds on
+that instead of starting over. Nothing else in Xellvio changes.
 
-## Why a separate transport (not Lovable's built-in email)
+The full brief is very large, so I've split it into stages you can approve one at a
+time. I'd build stage 1 now.
 
-Lovable's built-in email (`notify.xellvio.com`) is transactional-only by policy: one recipient who expects the email from a specific action. Bulk campaigns to contact lists are marketing email and must not go through it — mixing the two damages deliverability for your auth/receipt emails.
+## Stage 1 — the things that are missing today (build now)
 
-So bulk email campaigns route through **Resend** (a dedicated marketing provider). Your code already integrates it (`src/lib/email/mailer.server.ts` branches on `RESEND_API_KEY`); the key just isn't set yet. This keeps auth/receipt emails on Lovable's reliable path and puts marketing blasts on Resend, exactly as email best practice recommends.
+**Real uploads and a media library**
+- Upload images, logos and videos straight from the editor (drag a file onto a
+  picture and it uploads and replaces it).
+- A per-tenant media library: upload, search, rename, delete, reuse, copy link.
+  Each business only ever sees its own files.
+- Every picture, logo and video piece gets Upload / Library / Paste link.
 
-## Prerequisite you complete first (configuration only)
+**AI that changes the page you're looking at**
+- Ask in plain words ("make the hero more premium", "add a phone number field",
+  "fix the mobile layout") and the AI edits the current design instead of
+  replacing it.
+- Before/After review with Apply, Discard and Try again, plus a timestamped
+  design history you can restore from.
+- If you have a section or a button selected, the AI only touches that.
 
-1. **Add a Resend API key** as a project secret (`RESEND_API_KEY`). I'll add it once you give me the key, or you can paste it into the Secrets panel.
-2. **Verify a sending subdomain in Resend** — because `notify.xellvio.com` is delegated to Lovable, Resend can't verify it. Verify a different subdomain (e.g. `mail.xellvio.com`) in your Resend account and add the DNS records Resend shows you at your registrar. Bulk campaigns send from `Xellvio <mail@mail.xellvio.com>` (or whatever you verify).
+**Motion and depth**
+- Scroll reveals (fade, fade up, slide, scale, blur, stagger), parallax and
+  sticky sections, hover lift/glow/zoom, and tasteful 3D-feel hero visuals
+  (gradient spheres, floating cards, mesh backgrounds) — all as settings you can
+  turn down or off, lighter on phones, and switched off for anyone who asks their
+  device to reduce motion.
 
-These are the only steps that need you. Everything below I build.
+**Safe publishing**
+- Editing never touches the live page: you edit a draft and press Publish.
+- Editable web address (xellvio.com/p/your-name), checked for duplicates and
+  reserved words.
+- Version list with preview and restore.
 
-## Schema (one migration)
+## Stage 2 — design quality and choice
 
-- `profiles.email` — new nullable `text` column + index. Right now emails only live inside `custom_fields`, so bulk email isn't possible until contacts have a real email field.
-- `consents` — already flexible (`channel` is free-text). Email opt-in is stored as `channel = 'email'` rows. No enum change. (You chose separate email opt-in, so a contact subscribed to SMS is not emailed unless they also have an email consent row.)
-- `email_campaigns` — new table: `id`, `account_id`, `name`, `subject`, `preheader`, `html_body`, `text_body`, `from_name`, `cta_text`, `cta_url`, `status` (draft/sending/sent/paused/failed), `audience` (jsonb: list_ids / segment / profile ids), counters (sent/failed/bounced/opened/clicked/unsubscribed), `created_by`, timestamps. RLS account-scoped, like `campaigns`.
-- `email_campaign_messages` — new table: `id`, `campaign_id`, `profile_id`, `recipient_email`, `status` (queued/sending/sent/failed/bounced/opened/clicked/unsubscribed/dropped), `resend_message_id`, `error_message`, timestamps. RLS account-scoped, like `messages`.
-- Reuse the existing `suppressed_emails` table for bounce/complaint/unsubscribe suppression across email campaigns (it already keys by address).
-- `GRANT` + RLS on every new public table (account-scoped, `has_account_access` like the SMS tables).
+- A much bigger template library across business, shop, services, education,
+  creator, events and startup, with several looks per industry (minimal, luxury,
+  futuristic, bold, playful, corporate, editorial, tech) and real scrollable
+  desktop/tablet/phone previews.
+- "Turn this template into a page for my agency" — AI rewrites the words and
+  colours while keeping the layout.
+- A brand settings screen (colours, fonts, spacing, button and card style) the AI
+  designs with.
+- Layers tree, copy/paste/duplicate/rename, zoom and fit to screen, keyboard
+  shortcuts.
 
-## Sending path (Resend-direct, dedicated queue)
+## Stage 3 — richer forms
 
-- A dedicated `email_campaigns` pgmq queue, separate from the Lovable `transactional_emails` queue. This keeps marketing traffic off the transactional path entirely.
-- A `/api/public/dispatch-email-campaign` worker route, mirroring your SMS dispatcher: triggered on enqueue + by pg_cron, drains in batches, respects a per-campaign and platform throttle.
-- Per recipient: suppression check → personalize (`{{name}}`) → render HTML + plain text → mint an unsubscribe token → enqueue with idempotency key `email-<campaignId>-<profileId>`. The worker calls Resend directly through the existing `sendMail` (Resend branch), with `List-Unsubscribe` one-click headers.
-- Pause/resume and "Stop & mark as sent" controls, exactly like SMS campaigns.
+- Many more field types, multi-column and split-screen layouts, multi-step forms
+  with a progress bar, show-a-field-only-if logic, field states, and finish
+  actions that add the person to a list, tag them, redirect them or start an
+  automation.
 
-## Tracking (opens + link clicks)
+## Stage 4 — your own domain
 
-You chose opens + clicks. Two options, I'll use whichever is simpler at build time:
+- Connect offers.yourbusiness.com, see the exact DNS record to add, verification
+  and certificate status, and serve your pages on it.
+- This one depends on the hosting side accepting tenant domains, so I want to
+  confirm what's actually possible before promising it — I won't ship a domain
+  screen that doesn't really connect anything.
 
-- **Resend native tracking** — enable Resend's open pixel + click tracking on each send, then receive events via a webhook.
-- **Self-hosted tracking domain** — rewrite links to a click-redirect on a tracking subdomain and embed an open pixel; more control, more DNS setup.
+## Technical notes
 
-Either way: a `/api/public/resend-webhook` route verifies the Resend signature and handles `delivered`, `opened`, `clicked`, `bounced`, `complained`, `failed` events — updating `email_campaign_messages` status and campaign counters. Bounce/complaint → insert into `suppressed_emails` so that address is never emailed again.
-
-## Compliance (can't skip)
-
-- **Unsubscribe** — one-click unsubscribe per recipient (reuse your unsubscribe-token flow + the `/email/unsubscribe` page).
-- **Suppression** — checked before every send; bounces/complaints/unsubscribes permanently suppress the address.
-- **Physical address** — CAN-SPAM requires a real postal address in the footer of marketing email. I'll add a platform setting for the company address and inject it into the campaign footer.
-- **Content screening** — run the existing content scanner (gambling/spam) on the campaign body before sending, so tenants can't blast prohibited content over email either.
-- **Throttling** — per-campaign and platform-wide rate limits to protect deliverability and your Resend quota.
-
-## UI (tenant-facing, mirrors SMS campaigns)
-
-- New **Email campaigns** section under `/app`: composer (subject, preheader, rich-text/HTML body, optional CTA, optional image), audience picker filtered to email-consented contacts who have an email, live recipient count, send/schedule, pause/resume, stop & mark sent.
-- **Report page**: sent / delivered / failed / bounced / opened / clicked / unsubscribed counts, open rate, click rate, per-recipient table.
-- **Admin oversight** (optional, can defer): aggregate view of all tenants' email campaigns.
-
-## Pricing: decided later
-
-No per-send billing in v1 — tenant balances are not debited for email sends. We wire pricing in a follow-up once you decide the model.
-
-## What's reused vs new
-
-- **Reused**: branded email layout, content scanner, suppression table, unsubscribe-token flow, account/acting-account + permission guards, `sendMail` Resend branch.
-- **New**: `email_campaigns` + `email_campaign_messages` tables, dedicated queue + dispatcher route, Resend webhook route, tenant Email campaigns UI, physical-address setting.
-
-## Build order
-
-1. Resend key + verified marketing subdomain (you).
-2. Migration: `profiles.email`, consent rows, `email_campaigns`, `email_campaign_messages`, grants + RLS.
-3. Dispatcher queue + worker route (Resend-direct, throttle, suppression, unsubscribe).
-4. Resend webhook route → status + counters + suppression.
-5. Content screening + CAN-SPAM footer (postal address).
-6. Tenant Email campaigns UI (compose → audience → send → report, pause/resume/stop).
-7. Verify one real send end-to-end (sent → delivered → opened → clicked → unsubscribed).
+- Extend `src/lib/builder/schema.ts` with `animation`, `layout` (grid/flex/
+  absolute/z-index), per-breakpoint styles and richer field config; the renderer
+  (`BlockRenderer.tsx`) reads them so public pages and previews stay identical.
+- New `media_assets` table + private-by-default storage bucket, tenant-scoped
+  RLS and GRANTs, upload through a server function; 3D/heavy visuals are lazy
+  loaded so pages without them stay light.
+- `landing_pages` / `signup_forms` gain draft vs published snapshots plus a
+  `page_versions` table; public routes read the published snapshot only.
+- AI stays in `builder-ai.functions.ts`, returning block JSON patches keyed by
+  component id — never markup.
