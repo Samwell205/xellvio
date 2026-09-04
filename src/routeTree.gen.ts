@@ -42,7 +42,9 @@ import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-p
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
+import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
 import { Route as AcademyVerifyRouteImport } from './routes/academy.verify'
@@ -57,6 +59,7 @@ import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/em
 import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.telnyx-status'
 import { Route as ApiPublicTelnyxInboundRouteImport } from './routes/api.public.telnyx-inbound'
 import { Route as ApiPublicSnapshotFinanceRouteImport } from './routes/api.public.snapshot-finance'
+import { Route as ApiPublicRunFlowsRouteImport } from './routes/api.public.run-flows'
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
 import { Route as ApiPublicPollCarrierBalanceRouteImport } from './routes/api.public.poll-carrier-balance'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
@@ -67,6 +70,7 @@ import { Route as AuthenticatedSellersDashboardRouteImport } from './routes/_aut
 import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './routes/_authenticated.app.toll-free-verification'
 import { Route as AuthenticatedAppTeamRouteImport } from './routes/_authenticated.app.team'
 import { Route as AuthenticatedAppSuppressionsRouteImport } from './routes/_authenticated.app.suppressions'
+import { Route as AuthenticatedAppSignupFormsRouteImport } from './routes/_authenticated.app.signup-forms'
 import { Route as AuthenticatedAppSetupSmsRouteImport } from './routes/_authenticated.app.setup-sms'
 import { Route as AuthenticatedAppSetup10dlcRouteImport } from './routes/_authenticated.app.setup-10dlc'
 import { Route as AuthenticatedAppSettingsRouteImport } from './routes/_authenticated.app.settings'
@@ -74,7 +78,10 @@ import { Route as AuthenticatedAppSegmentsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAppPricingCalculatorRouteImport } from './routes/_authenticated.app.pricing-calculator'
 import { Route as AuthenticatedAppOnboardingRouteImport } from './routes/_authenticated.app.onboarding'
 import { Route as AuthenticatedAppMyAcademyRouteImport } from './routes/_authenticated.app.my-academy'
+import { Route as AuthenticatedAppListsRouteImport } from './routes/_authenticated.app.lists'
+import { Route as AuthenticatedAppLandingPagesRouteImport } from './routes/_authenticated.app.landing-pages'
 import { Route as AuthenticatedAppInboxRouteImport } from './routes/_authenticated.app.inbox'
+import { Route as AuthenticatedAppFlowsRouteImport } from './routes/_authenticated.app.flows'
 import { Route as AuthenticatedAppCheckoutRouteImport } from './routes/_authenticated.app.checkout'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
@@ -288,9 +295,19 @@ const RCodeRoute = RCodeRouteImport.update({
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MMessageIdRoute = MMessageIdRouteImport.update({
   id: '/m/$messageId',
   path: '/m/$messageId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FSlugRoute = FSlugRouteImport.update({
+  id: '/f/$slug',
+  path: '/f/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -366,6 +383,11 @@ const ApiPublicSnapshotFinanceRoute =
     path: '/api/public/snapshot-finance',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicRunFlowsRoute = ApiPublicRunFlowsRouteImport.update({
+  id: '/api/public/run-flows',
+  path: '/api/public/run-flows',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPollVerificationsRoute =
   ApiPublicPollVerificationsRouteImport.update({
     id: '/api/public/poll-verifications',
@@ -424,6 +446,12 @@ const AuthenticatedAppSuppressionsRoute =
     path: '/suppressions',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppSignupFormsRoute =
+  AuthenticatedAppSignupFormsRouteImport.update({
+    id: '/signup-forms',
+    path: '/signup-forms',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppSetupSmsRoute =
   AuthenticatedAppSetupSmsRouteImport.update({
     id: '/setup-sms',
@@ -466,9 +494,25 @@ const AuthenticatedAppMyAcademyRoute =
     path: '/my-academy',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppListsRoute = AuthenticatedAppListsRouteImport.update({
+  id: '/lists',
+  path: '/lists',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppLandingPagesRoute =
+  AuthenticatedAppLandingPagesRouteImport.update({
+    id: '/landing-pages',
+    path: '/landing-pages',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppInboxRoute = AuthenticatedAppInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => AuthenticatedAppRoute,
+} as any)
+const AuthenticatedAppFlowsRoute = AuthenticatedAppFlowsRouteImport.update({
+  id: '/flows',
+  path: '/flows',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
 const AuthenticatedAppCheckoutRoute =
@@ -793,7 +837,9 @@ export interface FileRoutesByFullPath {
   '/academy/verify': typeof AcademyVerifyRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
@@ -823,7 +869,10 @@ export interface FileRoutesByFullPath {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/app/flows': typeof AuthenticatedAppFlowsRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
+  '/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
+  '/app/lists': typeof AuthenticatedAppListsRoute
   '/app/my-academy': typeof AuthenticatedAppMyAcademyRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
@@ -831,6 +880,7 @@ export interface FileRoutesByFullPath {
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup-10dlc': typeof AuthenticatedAppSetup10dlcRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
+  '/app/signup-forms': typeof AuthenticatedAppSignupFormsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
@@ -841,6 +891,7 @@ export interface FileRoutesByFullPath {
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-carrier-balance': typeof ApiPublicPollCarrierBalanceRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
+  '/api/public/run-flows': typeof ApiPublicRunFlowsRoute
   '/api/public/snapshot-finance': typeof ApiPublicSnapshotFinanceRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
@@ -905,7 +956,9 @@ export interface FileRoutesByTo {
   '/academy/verify': typeof AcademyVerifyRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
@@ -934,13 +987,17 @@ export interface FileRoutesByTo {
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/app/flows': typeof AuthenticatedAppFlowsRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
+  '/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
+  '/app/lists': typeof AuthenticatedAppListsRoute
   '/app/my-academy': typeof AuthenticatedAppMyAcademyRoute
   '/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
   '/app/settings': typeof AuthenticatedAppSettingsRoute
   '/app/setup-10dlc': typeof AuthenticatedAppSetup10dlcRoute
   '/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
+  '/app/signup-forms': typeof AuthenticatedAppSignupFormsRoute
   '/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
@@ -951,6 +1008,7 @@ export interface FileRoutesByTo {
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-carrier-balance': typeof ApiPublicPollCarrierBalanceRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
+  '/api/public/run-flows': typeof ApiPublicRunFlowsRoute
   '/api/public/snapshot-finance': typeof ApiPublicSnapshotFinanceRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
@@ -1021,7 +1079,9 @@ export interface FileRoutesById {
   '/academy/verify': typeof AcademyVerifyRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
@@ -1051,7 +1111,10 @@ export interface FileRoutesById {
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/_authenticated/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/_authenticated/app/flows': typeof AuthenticatedAppFlowsRoute
   '/_authenticated/app/inbox': typeof AuthenticatedAppInboxRoute
+  '/_authenticated/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
+  '/_authenticated/app/lists': typeof AuthenticatedAppListsRoute
   '/_authenticated/app/my-academy': typeof AuthenticatedAppMyAcademyRoute
   '/_authenticated/app/onboarding': typeof AuthenticatedAppOnboardingRoute
   '/_authenticated/app/pricing-calculator': typeof AuthenticatedAppPricingCalculatorRoute
@@ -1059,6 +1122,7 @@ export interface FileRoutesById {
   '/_authenticated/app/settings': typeof AuthenticatedAppSettingsRoute
   '/_authenticated/app/setup-10dlc': typeof AuthenticatedAppSetup10dlcRoute
   '/_authenticated/app/setup-sms': typeof AuthenticatedAppSetupSmsRoute
+  '/_authenticated/app/signup-forms': typeof AuthenticatedAppSignupFormsRoute
   '/_authenticated/app/suppressions': typeof AuthenticatedAppSuppressionsRoute
   '/_authenticated/app/team': typeof AuthenticatedAppTeamRoute
   '/_authenticated/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
@@ -1069,6 +1133,7 @@ export interface FileRoutesById {
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
   '/api/public/poll-carrier-balance': typeof ApiPublicPollCarrierBalanceRoute
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
+  '/api/public/run-flows': typeof ApiPublicRunFlowsRoute
   '/api/public/snapshot-finance': typeof ApiPublicSnapshotFinanceRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
@@ -1138,7 +1203,9 @@ export interface FileRouteTypes {
     | '/academy/verify'
     | '/api/setup-sms'
     | '/email/unsubscribe'
+    | '/f/$slug'
     | '/m/$messageId'
+    | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
     | '/verify/auth'
@@ -1168,7 +1235,10 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/campaigns'
     | '/app/checkout'
+    | '/app/flows'
     | '/app/inbox'
+    | '/app/landing-pages'
+    | '/app/lists'
     | '/app/my-academy'
     | '/app/onboarding'
     | '/app/pricing-calculator'
@@ -1176,6 +1246,7 @@ export interface FileRouteTypes {
     | '/app/settings'
     | '/app/setup-10dlc'
     | '/app/setup-sms'
+    | '/app/signup-forms'
     | '/app/suppressions'
     | '/app/team'
     | '/app/toll-free-verification'
@@ -1186,6 +1257,7 @@ export interface FileRouteTypes {
     | '/api/public/paystack-webhook'
     | '/api/public/poll-carrier-balance'
     | '/api/public/poll-verifications'
+    | '/api/public/run-flows'
     | '/api/public/snapshot-finance'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
@@ -1250,7 +1322,9 @@ export interface FileRouteTypes {
     | '/academy/verify'
     | '/api/setup-sms'
     | '/email/unsubscribe'
+    | '/f/$slug'
     | '/m/$messageId'
+    | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
     | '/verify/auth'
@@ -1279,13 +1353,17 @@ export interface FileRouteTypes {
     | '/app/audience'
     | '/app/billing'
     | '/app/checkout'
+    | '/app/flows'
     | '/app/inbox'
+    | '/app/landing-pages'
+    | '/app/lists'
     | '/app/my-academy'
     | '/app/onboarding'
     | '/app/pricing-calculator'
     | '/app/settings'
     | '/app/setup-10dlc'
     | '/app/setup-sms'
+    | '/app/signup-forms'
     | '/app/suppressions'
     | '/app/team'
     | '/app/toll-free-verification'
@@ -1296,6 +1374,7 @@ export interface FileRouteTypes {
     | '/api/public/paystack-webhook'
     | '/api/public/poll-carrier-balance'
     | '/api/public/poll-verifications'
+    | '/api/public/run-flows'
     | '/api/public/snapshot-finance'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
@@ -1365,7 +1444,9 @@ export interface FileRouteTypes {
     | '/academy/verify'
     | '/api/setup-sms'
     | '/email/unsubscribe'
+    | '/f/$slug'
     | '/m/$messageId'
+    | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
     | '/verify/auth'
@@ -1395,7 +1476,10 @@ export interface FileRouteTypes {
     | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
     | '/_authenticated/app/checkout'
+    | '/_authenticated/app/flows'
     | '/_authenticated/app/inbox'
+    | '/_authenticated/app/landing-pages'
+    | '/_authenticated/app/lists'
     | '/_authenticated/app/my-academy'
     | '/_authenticated/app/onboarding'
     | '/_authenticated/app/pricing-calculator'
@@ -1403,6 +1487,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/settings'
     | '/_authenticated/app/setup-10dlc'
     | '/_authenticated/app/setup-sms'
+    | '/_authenticated/app/signup-forms'
     | '/_authenticated/app/suppressions'
     | '/_authenticated/app/team'
     | '/_authenticated/app/toll-free-verification'
@@ -1413,6 +1498,7 @@ export interface FileRouteTypes {
     | '/api/public/paystack-webhook'
     | '/api/public/poll-carrier-balance'
     | '/api/public/poll-verifications'
+    | '/api/public/run-flows'
     | '/api/public/snapshot-finance'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
@@ -1479,7 +1565,9 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  FSlugRoute: typeof FSlugRoute
   MMessageIdRoute: typeof MMessageIdRoute
+  PSlugRoute: typeof PSlugRoute
   RCodeRoute: typeof RCodeRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
@@ -1492,6 +1580,7 @@ export interface RootRouteChildren {
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
   ApiPublicPollCarrierBalanceRoute: typeof ApiPublicPollCarrierBalanceRoute
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
+  ApiPublicRunFlowsRoute: typeof ApiPublicRunFlowsRoute
   ApiPublicSnapshotFinanceRoute: typeof ApiPublicSnapshotFinanceRoute
   ApiPublicTelnyxInboundRoute: typeof ApiPublicTelnyxInboundRoute
   ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
@@ -1739,11 +1828,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/m/$messageId': {
       id: '/m/$messageId'
       path: '/m/$messageId'
       fullPath: '/m/$messageId'
       preLoaderRoute: typeof MMessageIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/f/$slug': {
+      id: '/f/$slug'
+      path: '/f/$slug'
+      fullPath: '/f/$slug'
+      preLoaderRoute: typeof FSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -1844,6 +1947,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSnapshotFinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/run-flows': {
+      id: '/api/public/run-flows'
+      path: '/api/public/run-flows'
+      fullPath: '/api/public/run-flows'
+      preLoaderRoute: typeof ApiPublicRunFlowsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/poll-verifications': {
       id: '/api/public/poll-verifications'
       path: '/api/public/poll-verifications'
@@ -1914,6 +2024,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppSuppressionsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/signup-forms': {
+      id: '/_authenticated/app/signup-forms'
+      path: '/signup-forms'
+      fullPath: '/app/signup-forms'
+      preLoaderRoute: typeof AuthenticatedAppSignupFormsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/setup-sms': {
       id: '/_authenticated/app/setup-sms'
       path: '/setup-sms'
@@ -1963,11 +2080,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppMyAcademyRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/lists': {
+      id: '/_authenticated/app/lists'
+      path: '/lists'
+      fullPath: '/app/lists'
+      preLoaderRoute: typeof AuthenticatedAppListsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/landing-pages': {
+      id: '/_authenticated/app/landing-pages'
+      path: '/landing-pages'
+      fullPath: '/app/landing-pages'
+      preLoaderRoute: typeof AuthenticatedAppLandingPagesRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/inbox': {
       id: '/_authenticated/app/inbox'
       path: '/inbox'
       fullPath: '/app/inbox'
       preLoaderRoute: typeof AuthenticatedAppInboxRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/flows': {
+      id: '/_authenticated/app/flows'
+      path: '/flows'
+      fullPath: '/app/flows'
+      preLoaderRoute: typeof AuthenticatedAppFlowsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/checkout': {
@@ -2442,7 +2580,10 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
   AuthenticatedAppCheckoutRoute: typeof AuthenticatedAppCheckoutRoute
+  AuthenticatedAppFlowsRoute: typeof AuthenticatedAppFlowsRoute
   AuthenticatedAppInboxRoute: typeof AuthenticatedAppInboxRoute
+  AuthenticatedAppLandingPagesRoute: typeof AuthenticatedAppLandingPagesRoute
+  AuthenticatedAppListsRoute: typeof AuthenticatedAppListsRoute
   AuthenticatedAppMyAcademyRoute: typeof AuthenticatedAppMyAcademyRoute
   AuthenticatedAppOnboardingRoute: typeof AuthenticatedAppOnboardingRoute
   AuthenticatedAppPricingCalculatorRoute: typeof AuthenticatedAppPricingCalculatorRoute
@@ -2450,6 +2591,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppSettingsRoute: typeof AuthenticatedAppSettingsRoute
   AuthenticatedAppSetup10dlcRoute: typeof AuthenticatedAppSetup10dlcRoute
   AuthenticatedAppSetupSmsRoute: typeof AuthenticatedAppSetupSmsRoute
+  AuthenticatedAppSignupFormsRoute: typeof AuthenticatedAppSignupFormsRoute
   AuthenticatedAppSuppressionsRoute: typeof AuthenticatedAppSuppressionsRoute
   AuthenticatedAppTeamRoute: typeof AuthenticatedAppTeamRoute
   AuthenticatedAppTollFreeVerificationRoute: typeof AuthenticatedAppTollFreeVerificationRoute
@@ -2461,7 +2603,10 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
   AuthenticatedAppCheckoutRoute: AuthenticatedAppCheckoutRoute,
+  AuthenticatedAppFlowsRoute: AuthenticatedAppFlowsRoute,
   AuthenticatedAppInboxRoute: AuthenticatedAppInboxRoute,
+  AuthenticatedAppLandingPagesRoute: AuthenticatedAppLandingPagesRoute,
+  AuthenticatedAppListsRoute: AuthenticatedAppListsRoute,
   AuthenticatedAppMyAcademyRoute: AuthenticatedAppMyAcademyRoute,
   AuthenticatedAppOnboardingRoute: AuthenticatedAppOnboardingRoute,
   AuthenticatedAppPricingCalculatorRoute:
@@ -2470,6 +2615,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppSettingsRoute: AuthenticatedAppSettingsRoute,
   AuthenticatedAppSetup10dlcRoute: AuthenticatedAppSetup10dlcRoute,
   AuthenticatedAppSetupSmsRoute: AuthenticatedAppSetupSmsRoute,
+  AuthenticatedAppSignupFormsRoute: AuthenticatedAppSignupFormsRoute,
   AuthenticatedAppSuppressionsRoute: AuthenticatedAppSuppressionsRoute,
   AuthenticatedAppTeamRoute: AuthenticatedAppTeamRoute,
   AuthenticatedAppTollFreeVerificationRoute:
@@ -2589,7 +2735,9 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiSetupSmsRoute: ApiSetupSmsRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  FSlugRoute: FSlugRoute,
   MMessageIdRoute: MMessageIdRoute,
+  PSlugRoute: PSlugRoute,
   RCodeRoute: RCodeRoute,
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
@@ -2602,6 +2750,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
   ApiPublicPollCarrierBalanceRoute: ApiPublicPollCarrierBalanceRoute,
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
+  ApiPublicRunFlowsRoute: ApiPublicRunFlowsRoute,
   ApiPublicSnapshotFinanceRoute: ApiPublicSnapshotFinanceRoute,
   ApiPublicTelnyxInboundRoute: ApiPublicTelnyxInboundRoute,
   ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,

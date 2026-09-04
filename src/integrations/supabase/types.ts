@@ -806,6 +806,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_favorite: boolean
           name: string
           updated_at: string
         }
@@ -814,6 +815,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_favorite?: boolean
           name: string
           updated_at?: string
         }
@@ -822,6 +824,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_favorite?: boolean
           name?: string
           updated_at?: string
         }
@@ -1336,6 +1339,77 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      landing_pages: {
+        Row: {
+          accent: string
+          account_id: string
+          body: string
+          created_at: string
+          cta_label: string
+          headline: string
+          id: string
+          image_url: string | null
+          list_id: string | null
+          name: string
+          published: boolean
+          slug: string
+          subheadline: string
+          submissions: number
+          success_message: string
+          theme: string
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          accent?: string
+          account_id: string
+          body?: string
+          created_at?: string
+          cta_label?: string
+          headline?: string
+          id?: string
+          image_url?: string | null
+          list_id?: string | null
+          name: string
+          published?: boolean
+          slug: string
+          subheadline?: string
+          submissions?: number
+          success_message?: string
+          theme?: string
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          accent?: string
+          account_id?: string
+          body?: string
+          created_at?: string
+          cta_label?: string
+          headline?: string
+          id?: string
+          image_url?: string | null
+          list_id?: string | null
+          name?: string
+          published?: boolean
+          slug?: string
+          subheadline?: string
+          submissions?: number
+          success_message?: string
+          theme?: string
+          updated_at?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_pages_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "contact_lists"
             referencedColumns: ["id"]
           },
         ]
@@ -2282,6 +2356,216 @@ export type Database = {
         }
         Relationships: []
       }
+      signup_forms: {
+        Row: {
+          accent: string
+          account_id: string
+          collect_name: boolean
+          consent_text: string
+          created_at: string
+          cta_label: string
+          description: string
+          headline: string
+          id: string
+          list_id: string | null
+          name: string
+          published: boolean
+          slug: string
+          submissions: number
+          success_message: string
+          theme: string
+          updated_at: string
+          views: number
+        }
+        Insert: {
+          accent?: string
+          account_id: string
+          collect_name?: boolean
+          consent_text?: string
+          created_at?: string
+          cta_label?: string
+          description?: string
+          headline?: string
+          id?: string
+          list_id?: string | null
+          name: string
+          published?: boolean
+          slug: string
+          submissions?: number
+          success_message?: string
+          theme?: string
+          updated_at?: string
+          views?: number
+        }
+        Update: {
+          accent?: string
+          account_id?: string
+          collect_name?: boolean
+          consent_text?: string
+          created_at?: string
+          cta_label?: string
+          description?: string
+          headline?: string
+          id?: string
+          list_id?: string | null
+          name?: string
+          published?: boolean
+          slug?: string
+          submissions?: number
+          success_message?: string
+          theme?: string
+          updated_at?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signup_forms_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "contact_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_flow_runs: {
+        Row: {
+          account_id: string
+          created_at: string
+          error: string | null
+          flow_id: string
+          id: string
+          phone_e164: string
+          run_at: string
+          sent_at: string | null
+          status: string
+          step_id: string | null
+          step_position: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          error?: string | null
+          flow_id: string
+          id?: string
+          phone_e164: string
+          run_at?: string
+          sent_at?: string | null
+          status?: string
+          step_id?: string | null
+          step_position?: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          error?: string | null
+          flow_id?: string
+          id?: string
+          phone_e164?: string
+          run_at?: string
+          sent_at?: string | null
+          status?: string
+          step_id?: string | null
+          step_position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_flow_runs_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "sms_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_flow_runs_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "sms_flow_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_flow_steps: {
+        Row: {
+          account_id: string
+          body: string
+          created_at: string
+          delay_minutes: number
+          flow_id: string
+          id: string
+          position: number
+        }
+        Insert: {
+          account_id: string
+          body: string
+          created_at?: string
+          delay_minutes?: number
+          flow_id: string
+          id?: string
+          position?: number
+        }
+        Update: {
+          account_id?: string
+          body?: string
+          created_at?: string
+          delay_minutes?: number
+          flow_id?: string
+          id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_flow_steps_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "sms_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_flows: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          name: string
+          status: string
+          trigger_keyword: string | null
+          trigger_list_id: string | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          name: string
+          status?: string
+          trigger_keyword?: string | null
+          trigger_list_id?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string
+          trigger_keyword?: string | null
+          trigger_list_id?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_flows_trigger_list_id_fkey"
+            columns: ["trigger_list_id"]
+            isOneToOne: false
+            referencedRelation: "contact_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_thread_messages: {
         Row: {
           account_id: string
@@ -2318,6 +2602,42 @@ export type Database = {
           provider_sid?: string | null
           status?: string | null
           to_number?: string | null
+        }
+        Relationships: []
+      }
+      subscribe_submissions: {
+        Row: {
+          account_id: string
+          created_at: string
+          first_name: string | null
+          id: string
+          ip_hash: string | null
+          last_name: string | null
+          phone_e164: string
+          source_id: string
+          source_type: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          ip_hash?: string | null
+          last_name?: string | null
+          phone_e164: string
+          source_id: string
+          source_type: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          ip_hash?: string | null
+          last_name?: string | null
+          phone_e164?: string
+          source_id?: string
+          source_type?: string
         }
         Relationships: []
       }
