@@ -234,7 +234,7 @@ export function VisualBuilder({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="flex h-[97vh] max-w-[99vw] flex-col gap-0 overflow-hidden p-0 sm:max-w-[99vw]">
+      <DialogContent className="flex h-[97vh] max-w-[99vw] flex-col gap-0 overflow-hidden p-0 sm:max-w-[99vw] [&>button]:hidden">
         <DialogTitle className="sr-only">{kind === "form" ? "Sign-up form builder" : "Landing page builder"}</DialogTitle>
 
         {/* toolbar */}
@@ -270,7 +270,20 @@ export function VisualBuilder({
         </header>
 
         {/* body */}
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[228px_minmax(0,1fr)_300px]">
+        <div
+          className={
+            "grid min-h-0 flex-1 grid-cols-1 " +
+            (preview
+              ? ai
+                ? "lg:grid-cols-[minmax(0,1fr)_360px]"
+                : "lg:grid-cols-[minmax(0,1fr)]"
+              : ai
+                ? "lg:grid-cols-[228px_minmax(0,1fr)_360px]"
+                : "lg:grid-cols-[228px_minmax(0,1fr)_300px]")
+          }
+        >
+
+
           {!preview ? (
             <aside className="hidden min-h-0 border-r lg:block">
               <ElementLibrary
