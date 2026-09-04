@@ -12,10 +12,7 @@ function shortCode(len = 8) {
   return out;
 }
 
-function publicBaseUrl(): string {
-  const raw = process.env.PUBLIC_BASE_URL || process.env.SITE_URL || "https://xellvio.com";
-  return raw.replace(/\/+$/, "");
-}
+
 
 /** Create a shortlink usable in the campaign builder before dispatch.
  * Returns { code, shortUrl } — inject shortUrl into the message body. */
@@ -39,7 +36,11 @@ export const createPreviewShortlink = createServerFn({ method: "POST" })
         campaign_id: data.campaignId ?? null,
         message_id: null,
       } as any);
-      if (!error) return { code, shortUrl: `${publicBaseUrl()}/r/${code}` };
+      if (!error) {
+        const { clickBaseUrl } = await import("./click-domain.server");
+        const base = await clickBaseUrl(acting.accountId);
+        return { code, shortUrl: `${base}/r/${code}` };
+      }
       // 23505 unique_violation → retry with a fresh code
       if ((error as any).code !== "23505") throw new Error(error.message);
     }
