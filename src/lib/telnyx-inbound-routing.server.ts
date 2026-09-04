@@ -160,7 +160,23 @@ export async function handleTelnyxInboundMessage(payload: any) {
     if (engagedProfileIds.length > 0) {
       await admin.from("profiles").update({ two_way_opt_in: true }).in("id", engagedProfileIds);
     }
+
+    // Keyword automations: a single-word reply may start a tenant's flow.
+    try {
+      const keyword = upper.trim().split(/\s+/)[0] ?? "";
+      if (keyword && keyword.length <= 40) {
+        const { enqueueFlowTriggers } = await import("@/lib/flows.server");
+        await Promise.all(
+          targetAccountIds.map((accountId) =>
+            enqueueFlowTriggers({ accountId, phone: from, trigger: "keyword_reply", keyword }),
+          ),
+        );
+      }
+    } catch {
+      // never block inbound handling on automations
+    }
   }
+
 
   try {
     const { forwardSmsToGorgias } = await import("@/lib/gorgias.server");
