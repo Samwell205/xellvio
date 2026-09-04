@@ -158,6 +158,14 @@ export async function enqueueFlowTriggers(opts: {
     .from("sms_flow_runs")
     .upsert(rows, { onConflict: "flow_id,phone_e164,step_position", ignoreDuplicates: true });
   if (error) return { scheduled: 0, error: error.message };
+  // Anything with no delay goes out straight away so keyword replies feel instant.
+  if (rows.some((r) => new Date(r.run_at).getTime() <= Date.now() + 1000)) {
+    try {
+      await processDueFlowRuns(20);
+    } catch {
+      /* the scheduled sweep will retry */
+    }
+  }
   return { scheduled: rows.length };
 }
 
