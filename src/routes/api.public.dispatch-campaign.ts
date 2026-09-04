@@ -1422,6 +1422,7 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             await supabaseAdmin.from("campaigns")
               .update({ status: "queued", paused_reason: null })
               .eq("id", r.campaign_id).eq("status", "paused");
+          }
         }
 
         // ── Self-heal: campaigns paused only because the per-campaign
