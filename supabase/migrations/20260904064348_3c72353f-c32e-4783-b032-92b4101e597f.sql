@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.link_domain_filter_stats(text[]) FROM authenticated;
