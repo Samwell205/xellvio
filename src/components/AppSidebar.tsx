@@ -212,6 +212,35 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {visibleAdvanced.length > 0 && (
+          <SidebarGroup className="px-2 py-0 mt-4">
+            {!collapsed && (
+              <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-wider">
+                Advanced
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {visibleAdvanced.filter((e) => !isGroup(e)).map((e) => {
+                  const it = e as Item;
+                  return (
+                    <SidebarMenuItem key={it.url}>
+                      <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)} className="h-10 px-3 text-[0.9375rem] rounded-lg">
+                        <Link to={it.url} className="flex items-center gap-3">
+                          <it.icon className="size-[1.125rem] shrink-0" />
+                          {!collapsed && <span className="truncate">{it.title}</span>}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+
+
 
         {visibleSettings.length > 0 && (
           <SidebarGroup className="mt-auto px-2 py-0">
