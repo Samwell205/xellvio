@@ -149,13 +149,16 @@ function TollfreeVerificationPage() {
   });
 
   const asset = data?.asset ?? null;
+  const altSender = (data as any)?.altVerifiedSender ?? null;
   const rawStatus = (asset?.verification_status as Status | "pending" | null) ?? null;
   // Admin-assigned numbers from an already-verified toll-free are marked verified
   // without their own carrier verification ID — treat them as fully approved.
-  const isVerified = rawStatus === "verified";
+  // A verified US/CA local (10DLC) number assigned by an admin also clears sending.
+  const isVerified = rawStatus === "verified" || !!altSender;
   const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review";
   const status: Status | null =
     isVerified ? "verified" : rawStatus === "pending" || (trustsCarrier && !asset?.telnyx_verification_id) ? null : rawStatus;
+
   const payload = (asset?.verification_payload as any) ?? null;
   const submissionStarted = !!asset?.telnyx_verification_id || isVerified;
   const hasReservedNumber = !isVerified && !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
