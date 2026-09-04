@@ -128,113 +128,165 @@ function BillingPage() {
   // using the admin-configured FX rate, but customers shop in USD.
   const usdPacks = (packs.data ?? []).filter((p) => p.currency === "USD");
 
+  const spend30d = (tx.data ?? [])
+    .filter((t) => t.type === "debit" && new Date(t.created_at).getTime() > Date.now() - 30 * 86400_000)
+    .reduce((s, t) => s + Number(t.amount), 0);
+  const lastPaid = (payments.data ?? []).find((p) => p.status === "paid");
+
+  const TABS = [
+    { id: "overview", label: "Overview" },
+    { id: "payments", label: "Payments & invoices" },
+    { id: "preferences", label: "Preferences" },
+  ] as const;
+
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2"><Wallet className="size-6" /> Billing</h1>
-        <p className="text-sm text-muted-foreground">Buy credits, view payments, and manage auto top-ups.</p>
+    <div className="mx-auto max-w-6xl space-y-8">
+      <div className="space-y-1">
+        <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
+          <Wallet className="size-6" /> Billing
+        </h1>
+        <p className="text-sm text-muted-foreground">Your balance, payments and top-up preferences.</p>
       </div>
 
-      <Card className="p-6 bg-gradient-to-br from-primary/10 to-transparent">
-        <div className="text-xs uppercase text-muted-foreground tracking-wide">Current balance</div>
-        <div className="text-4xl font-extrabold mt-1">{formatUSD(balance)}</div>
-        <p className="text-xs text-muted-foreground mt-2">
-          SMS are billed per recipient at the country rate × segments. We never debit more than your available balance — any messages your balance can't cover are skipped, not charged. If low balance blocks sending, contact our support team.
-        </p>
-      </Card>
+      <div className="flex flex-wrap gap-1 border-b">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`-mb-px border-b-2 px-4 py-2.5 text-sm transition-colors ${
+              tab === t.id ? "border-primary font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      <Card className="p-6 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2"><Sparkles className="size-5 text-primary" /><h3 className="font-semibold">Buy credits</h3></div>
-          <span className="text-xs text-muted-foreground">Priced in USD · pay by card or crypto</span>
+      {tab === "overview" && (
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="p-6">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Available balance</div>
+              <div className="mt-1 text-3xl font-extrabold tabular-nums">{formatUSD(balance)}</div>
+              <p className="mt-2 text-xs text-muted-foreground">Credits are used as your messages go out.</p>
+            </Card>
+            <Card className="p-6">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Spent in the last 30 days</div>
+              <div className="mt-1 text-3xl font-extrabold tabular-nums">{formatUSD(spend30d)}</div>
+              <p className="mt-2 text-xs text-muted-foreground">Across all campaigns and replies.</p>
+            </Card>
+            <Card className="p-6">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Payment method</div>
+              <div className="mt-1 text-lg font-semibold capitalize">{lastPaid?.provider ?? "Card or crypto"}</div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {lastPaid ? `Last payment ${new Date(lastPaid.created_at).toLocaleDateString()}` : "Choose at checkout — nothing is stored here."}
+              </p>
+            </Card>
+          </div>
+
+          <Card className="space-y-4 p-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2"><Sparkles className="size-5 text-primary" /><h3 className="font-semibold">Add credits</h3></div>
+              <span className="text-xs text-muted-foreground">Priced in USD · pay by card or crypto</span>
+            </div>
+            <PackPicker packs={usdPacks.filter((p) => Number(p.price) <= 500)} />
+            <p className="text-xs text-muted-foreground">
+              Messages are billed per recipient at the country rate × segments. We never debit more than your available
+              balance — anything your balance can't cover is skipped, not charged.
+            </p>
+          </Card>
         </div>
-        <PackPicker packs={usdPacks.filter((p) => Number(p.price) <= 500)} />
-      </Card>
+      )}
 
+      {tab === "payments" && (
+        <div className="space-y-6">
+          <Card className="p-6">
+            <h3 className="mb-3 font-semibold">Payment history</h3>
+            {(payments.data?.length ?? 0) === 0 ? (
+              <p className="text-sm text-muted-foreground">No payments yet.</p>
+            ) : (
+              <div className="overflow-hidden rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="p-3 text-left">When</th>
+                      <th className="p-3 text-left">Provider</th>
+                      <th className="p-3 text-left">Amount</th>
+                      <th className="p-3 text-left">Credits</th>
+                      <th className="p-3 text-left">Status</th>
+                      <th className="p-3 text-left">Reference</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payments.data!.map((p) => (
+                      <tr key={p.id} className="border-t">
+                        <td className="p-3 text-xs text-muted-foreground">{new Date(p.created_at).toLocaleString()}</td>
+                        <td className="p-3 capitalize">{p.provider}</td>
+                        <td className="p-3 tabular-nums">{formatMoney(Number(p.amount), p.currency)}</td>
+                        <td className="p-3 tabular-nums">{formatUSD(Number(p.credits))}</td>
+                        <td className="p-3"><PaymentStatus s={p.status} /></td>
+                        <td className="max-w-[180px] truncate p-3 font-mono text-xs text-muted-foreground">{p.provider_reference ?? "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
 
-      <Card className="p-6">
-        <h3 className="font-semibold mb-3">Payment history</h3>
-        {(payments.data?.length ?? 0) === 0 ? (
-          <p className="text-sm text-muted-foreground">No payments yet.</p>
-        ) : (
-          <div className="border rounded-md overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
-                <tr>
-                  <th className="text-left p-3">When</th>
-                  <th className="text-left p-3">Provider</th>
-                  <th className="text-left p-3">Amount</th>
-                  <th className="text-left p-3">Credits</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Reference</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.data!.map((p) => (
-                  <tr key={p.id} className="border-t">
-                    <td className="p-3 text-xs text-muted-foreground">{new Date(p.created_at).toLocaleString()}</td>
-                    <td className="p-3 capitalize">{p.provider}</td>
-                    <td className="p-3 tabular-nums">{formatMoney(Number(p.amount), p.currency)}</td>
-                    <td className="p-3 tabular-nums">{formatUSD(Number(p.credits))}</td>
-                    <td className="p-3"><PaymentStatus s={p.status} /></td>
-                    <td className="p-3 text-xs font-mono text-muted-foreground truncate max-w-[180px]">{p.provider_reference ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
-
-      <Card className="p-6 space-y-4">
-        <div className="flex items-center gap-2"><Settings2 className="size-5 text-primary" /><h3 className="font-semibold">Auto top-up</h3></div>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-medium text-sm">Automatically add funds when balance is low</div>
-            <p className="text-xs text-muted-foreground">Requires a saved Paystack card (coming soon).</p>
-          </div>
-          <Switch checked={auto.enabled} onCheckedChange={(v) => setAuto({ ...auto, enabled: v })} />
+          <Card className="p-6">
+            <h3 className="mb-3 font-semibold">Credit ledger</h3>
+            {(tx.data?.length ?? 0) === 0 ? (
+              <p className="text-sm text-muted-foreground">No transactions yet.</p>
+            ) : (
+              <div className="overflow-hidden rounded-md border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr><th className="p-3 text-left">When</th><th className="p-3 text-left">Type</th><th className="p-3 text-left">Description</th><th className="p-3 text-right">Amount</th><th className="p-3 text-right">Balance after</th></tr>
+                  </thead>
+                  <tbody>
+                    {tx.data!.map((t) => (
+                      <tr key={t.id} className="border-t">
+                        <td className="p-3 text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
+                        <td className="p-3"><TypeBadge type={t.type} /></td>
+                        <td className="max-w-xs truncate p-3">{t.description ?? "—"}</td>
+                        <td className={`p-3 text-right font-medium tabular-nums ${t.type === "topup" || t.type === "refund" ? "text-success" : "text-destructive"}`}>
+                          {t.type === "topup" || t.type === "refund" ? "+" : "−"}{formatUSD(Number(t.amount))}
+                        </td>
+                        <td className="p-3 text-right tabular-nums">{formatUSD(Number(t.balance_after))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
         </div>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div>
-            <Label>When balance falls below</Label>
-            <Input type="number" min={1} value={auto.threshold} onChange={(e) => setAuto({ ...auto, threshold: Number(e.target.value) })} disabled={!auto.enabled} />
-          </div>
-          <div>
-            <Label>Add this amount (USD credits)</Label>
-            <Input type="number" min={1} value={auto.amount} onChange={(e) => setAuto({ ...auto, amount: Number(e.target.value) })} disabled={!auto.enabled} />
-          </div>
-        </div>
-        <Button onClick={() => saveAuto.mutate()} disabled={saveAuto.isPending} variant="outline">Save auto top-up</Button>
-      </Card>
+      )}
 
-      <Card className="p-6">
-        <h3 className="font-semibold mb-3">Credit ledger</h3>
-        {(tx.data?.length ?? 0) === 0 ? (
-          <p className="text-sm text-muted-foreground">No transactions yet.</p>
-        ) : (
-          <div className="border rounded-md overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
-                <tr><th className="text-left p-3">When</th><th className="text-left p-3">Type</th><th className="text-left p-3">Description</th><th className="text-right p-3">Amount</th><th className="text-right p-3">Balance after</th></tr>
-              </thead>
-              <tbody>
-                {tx.data!.map((t) => (
-                  <tr key={t.id} className="border-t">
-                    <td className="p-3 text-xs text-muted-foreground">{new Date(t.created_at).toLocaleString()}</td>
-                    <td className="p-3"><TypeBadge type={t.type} /></td>
-                    <td className="p-3 truncate max-w-xs">{t.description ?? "—"}</td>
-                    <td className={`p-3 text-right font-medium tabular-nums ${t.type === "topup" || t.type === "refund" ? "text-success" : "text-destructive"}`}>
-                      {t.type === "topup" || t.type === "refund" ? "+" : "−"}{formatUSD(Number(t.amount))}
-                    </td>
-                    <td className="p-3 text-right tabular-nums">{formatUSD(Number(t.balance_after))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {tab === "preferences" && (
+        <Card className="max-w-2xl space-y-4 p-6">
+          <div className="flex items-center gap-2"><Settings2 className="size-5 text-primary" /><h3 className="font-semibold">Auto top-up</h3></div>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Automatically add funds when balance is low</div>
+              <p className="text-xs text-muted-foreground">Requires a saved card (coming soon).</p>
+            </div>
+            <Switch checked={auto.enabled} onCheckedChange={(v) => setAuto({ ...auto, enabled: v })} />
           </div>
-        )}
-      </Card>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label>When balance falls below</Label>
+              <Input type="number" min={1} value={auto.threshold} onChange={(e) => setAuto({ ...auto, threshold: Number(e.target.value) })} disabled={!auto.enabled} />
+            </div>
+            <div>
+              <Label>Add this amount (USD credits)</Label>
+              <Input type="number" min={1} value={auto.amount} onChange={(e) => setAuto({ ...auto, amount: Number(e.target.value) })} disabled={!auto.enabled} />
+            </div>
+          </div>
+          <Button onClick={() => saveAuto.mutate()} disabled={saveAuto.isPending} variant="outline">Save auto top-up</Button>
+        </Card>
+      )}
     </div>
   );
 }
