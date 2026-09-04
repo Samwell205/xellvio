@@ -287,13 +287,49 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarFooter className="border-t p-3">
+      <SidebarFooter className="border-t p-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={signOut} className="h-10 px-3 text-[0.9375rem] rounded-lg">
-              <LogOut className="size-[1.125rem]" />
-              {!collapsed && <span>Sign out</span>}
-            </SidebarMenuButton>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <SidebarMenuButton className="h-12 px-2 rounded-lg data-[state=open]:bg-accent">
+                  <span className="size-7 shrink-0 rounded-full bg-primary/15 text-primary grid place-items-center text-[11px] font-semibold">
+                    {(session?.workspaceOwnerName || session?.workspaceOwnerEmail || "X").slice(0, 2).toUpperCase()}
+                  </span>
+                  {!collapsed && (
+                    <>
+                      <span className="min-w-0 text-left">
+                        <span className="block truncate text-sm font-medium">
+                          {session?.workspaceOwnerName || session?.workspaceOwnerEmail || "My workspace"}
+                        </span>
+                        <span className="block truncate text-[11px] text-muted-foreground capitalize">
+                          {session?.role ?? ""}
+                        </span>
+                      </span>
+                      <ChevronDown className="ml-auto size-4 shrink-0" />
+                    </>
+                  )}
+                </SidebarMenuButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56">
+                <DropdownMenuLabel className="truncate font-normal text-xs text-muted-foreground">
+                  {session?.workspaceOwnerEmail || "Signed in"}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {visibleSettings.map((c) => (
+                  <DropdownMenuItem key={c.url} asChild>
+                    <Link to={c.url} className="flex items-center gap-2">
+                      <c.icon className="size-4" />
+                      {c.title}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut} className="gap-2">
+                  <LogOut className="size-4" /> Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
