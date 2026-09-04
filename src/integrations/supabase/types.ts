@@ -507,6 +507,152 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_connections: {
+        Row: {
+          account_id: string
+          automation_id: string
+          created_at: string
+          edge_key: string
+          id: string
+          source_handle: string | null
+          source_node_key: string
+          target_handle: string | null
+          target_node_key: string
+        }
+        Insert: {
+          account_id: string
+          automation_id: string
+          created_at?: string
+          edge_key: string
+          id?: string
+          source_handle?: string | null
+          source_node_key: string
+          target_handle?: string | null
+          target_node_key: string
+        }
+        Update: {
+          account_id?: string
+          automation_id?: string
+          created_at?: string
+          edge_key?: string
+          id?: string
+          source_handle?: string | null
+          source_node_key?: string
+          target_handle?: string | null
+          target_node_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_connections_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_connections_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_nodes: {
+        Row: {
+          account_id: string
+          automation_id: string
+          configuration: Json
+          created_at: string
+          disabled: boolean
+          id: string
+          label: string
+          node_key: string
+          position: Json
+          type: string
+        }
+        Insert: {
+          account_id: string
+          automation_id: string
+          configuration?: Json
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          label?: string
+          node_key: string
+          position?: Json
+          type: string
+        }
+        Update: {
+          account_id?: string
+          automation_id?: string
+          configuration?: Json
+          created_at?: string
+          disabled?: boolean
+          id?: string
+          label?: string
+          node_key?: string
+          position?: Json
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_nodes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_nodes_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automations: {
+        Row: {
+          account_id: string
+          activated_at: string | null
+          created_at: string
+          id: string
+          name: string
+          status: string
+          updated_at: string
+          viewport: Json
+        }
+        Insert: {
+          account_id: string
+          activated_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          viewport?: Json
+        }
+        Update: {
+          account_id?: string
+          activated_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          viewport?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_settings: {
         Row: {
           default_currency: string
