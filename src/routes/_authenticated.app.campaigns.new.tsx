@@ -599,13 +599,18 @@ function NewCampaignPage() {
         }
       }
       const status = !launch ? "draft" : s.sendMode === "now" ? "queued" : "scheduled";
-      const savedId = await persistCampaign(status, outgoingBody);
-      // Record per-campaign compliance re-confirmation. Dispatcher refuses to send without it.
+      // Save as draft first, record the per-campaign compliance confirmation,
+      // and only then flip to the launch status. Flipping first let a dispatcher
+      // tick see a queued campaign with no acceptance row and hold it for review.
+      const savedId = await persistCampaign(launch ? "draft" : status, outgoingBody);
       if (launch && savedId) {
         const { acceptCampaignTos } = await import("@/lib/tos.functions");
         await acceptCampaignTos({
           data: { campaignId: savedId, userAgent: navigator.userAgent.slice(0, 500) },
         });
+        const { error: statusErr } = await supabase
+          .from("campaigns").update({ status }).eq("id", savedId);
+        if (statusErr) throw statusErr;
       }
       toast.success(launch ? "Campaign launched" : "Saved as draft");
       navigate({ to: "/app/campaigns" });
