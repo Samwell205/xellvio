@@ -271,20 +271,18 @@ export function VisualBuilder({
 
         {/* body */}
         <div
-          className="grid min-h-0 flex-1 grid-cols-1"
-          style={{
-            gridTemplateColumns: undefined,
-          }}
-          data-layout={preview ? (ai ? "preview-ai" : "preview") : ai ? "edit-ai" : "edit"}
+          className={
+            "grid min-h-0 flex-1 grid-cols-1 " +
+            (preview
+              ? ai
+                ? "lg:grid-cols-[minmax(0,1fr)_360px]"
+                : "lg:grid-cols-[minmax(0,1fr)]"
+              : ai
+                ? "lg:grid-cols-[228px_minmax(0,1fr)_360px]"
+                : "lg:grid-cols-[228px_minmax(0,1fr)_300px]")
+          }
         >
-          <style>{`
-            @media (min-width: 1024px) {
-              [data-layout="edit"] { grid-template-columns: 228px minmax(0,1fr) 300px; }
-              [data-layout="edit-ai"] { grid-template-columns: 228px minmax(0,1fr) 360px; }
-              [data-layout="preview-ai"] { grid-template-columns: minmax(0,1fr) 360px; }
-              [data-layout="preview"] { grid-template-columns: minmax(0,1fr); }
-            }
-          `}</style>
+
 
           {!preview ? (
             <aside className="hidden min-h-0 border-r lg:block">
