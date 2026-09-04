@@ -141,6 +141,41 @@ export async function screenMessageContent(
     }
   }
 
+  // ---- (c2) Carrier link reputation -------------------------------------
+  // Learn from real carrier receipts: if a link domain in this message has
+  // already been rejected with Telnyx 40002 (carrier spam filter) on recent
+  // sends, block/flag it now instead of burning carrier spend again.
+  if (domains.length > 0) {
+    try {
+      const { data: stats } = await supabaseAdmin.rpc("link_domain_filter_stats", {
+        _domains: domains,
+      });
+      for (const row of (stats ?? []) as Array<{ domain: string; total: number; filtered: number }>) {
+        const total = Number(row.total ?? 0);
+        const filtered = Number(row.filtered ?? 0);
+        if (total < 8 || filtered === 0) continue;
+        const rate = filtered / total;
+        if (rate >= 0.8) {
+          reasons.push({
+            code: "carrier_filtered_domain",
+            message: `Carriers are blocking the link ${row.domain}: ${filtered} of the last ${total} messages containing it were rejected as spam (carrier code 40002). Sending it again will be filtered and still charged. Use a different, branded destination domain for this link.`,
+            score: 75,
+            detail: `${row.domain} filtered=${filtered}/${total}`,
+          });
+        } else if (rate >= 0.3) {
+          reasons.push({
+            code: "carrier_filtered_domain_risk",
+            message: `The link ${row.domain} has a high carrier rejection rate (${filtered} of the last ${total} messages were spam-filtered). Expect poor delivery — consider a different destination domain.`,
+            score: 35,
+            detail: `${row.domain} filtered=${filtered}/${total}`,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[screening] link reputation check failed, failing open", e);
+    }
+  }
+
   // ---- (d) Volume anomaly (vs. trailing 7-day average) ------------------
   if (opts.plannedRecipients && opts.plannedRecipients > 0) {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
