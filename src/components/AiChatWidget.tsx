@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Send, X, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useServerFn } from "@tanstack/react-start";
+import { useRouterState } from "@tanstack/react-router";
 import { chatWithSupportBot } from "@/lib/chat.functions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
