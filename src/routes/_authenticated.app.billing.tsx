@@ -47,6 +47,7 @@ function BillingPage() {
   const payments = useQuery({ queryKey: ["my-payments"], queryFn: () => paymentsFn(), refetchInterval: 15_000 });
 
   const callAuto = useServerFn(saveAutoRecharge);
+  const [tab, setTab] = useState<"overview" | "payments" | "preferences">("overview");
   const [auto, setAuto] = useState({ enabled: false, threshold: 10, amount: 25 });
   useEffect(() => {
     if (!account.data) return;
