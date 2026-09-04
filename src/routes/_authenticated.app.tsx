@@ -77,6 +77,8 @@ function AppShell() {
   }, []);
 
 
+  const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-muted/30">
@@ -84,18 +86,29 @@ function AppShell() {
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-14 sticky top-0 z-30 bg-background/80 backdrop-blur border-b flex items-center gap-3 px-4">
             <SidebarTrigger />
-            <div className="relative flex-1 max-w-md hidden md:block">
-              <Search className="size-4 absolute left-3 top-2.5 text-muted-foreground" />
-              <Input placeholder="Search contacts, campaigns…" className="pl-9 h-9 bg-muted/50 border-transparent focus-visible:bg-background" />
+            <div className="flex-1 flex justify-center px-2">
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                className="group flex h-9 w-full max-w-xl items-center gap-2 rounded-lg border bg-background px-3 text-left text-sm text-muted-foreground transition hover:border-primary/40 hover:bg-muted/40"
+              >
+                <Search className="size-4 shrink-0" />
+                <span className="truncate">Search</span>
+                <kbd className="ml-auto hidden shrink-0 rounded border bg-muted px-1.5 py-0.5 font-sans text-[10px] font-medium tracking-wide sm:inline-block">
+                  ctrl+k
+                </kbd>
+              </button>
             </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <button className="size-9 grid place-items-center rounded-md hover:bg-accent" aria-label="Notifications">
                 <Bell className="size-4" />
               </button>
               <Link to="/app/settings" aria-label="Account settings" className="size-8 rounded-full bg-gradient-to-br from-primary to-primary/60 hover:ring-2 hover:ring-primary/40 transition" />
             </div>
           </header>
+          <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
           <main className="flex-1 p-4 md:p-6 max-w-[1400px] w-full mx-auto">
+
             <PermissionGuard>
               <Outlet />
             </PermissionGuard>
