@@ -1515,7 +1515,10 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
                 .update({ status: "sending", paused_reason: null })
                 .eq("id", c.id)
                 .eq("status", "sent")
-                .is("paused_reason", null);
+                // A leftover transient note (e.g. "Temporary send error, retrying: …")
+                // must not permanently exclude the campaign from revival. Only a
+                // user-stopped campaign stays final, and that case is skipped above.
+                .or(`paused_reason.is.null,paused_reason.neq.${STOPPED_AS_SENT}`);
             }
           }
         } catch (e: any) {
