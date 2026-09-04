@@ -4,18 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
+import { FONT_STACKS, buttonStyle, headingStyle, type Design } from "@/lib/website-design";
 
 export type GalleryItem = {
   id: string;
   label: string;
   category: string;
   blurb: string;
+  design: Design;
   preview: {
     headline: string;
     sub?: string;
     cta: string;
-    theme: "light" | "dark";
-    accent: string;
+    blocks?: string[];
   };
 };
 
@@ -29,6 +30,69 @@ type Props = {
   onBlank: () => void;
 };
 
+function Thumb({ item }: { item: GalleryItem }) {
+  const d = item.design;
+  return (
+    <div
+      className="overflow-hidden"
+      style={{
+        background: d.background,
+        color: d.text,
+        fontFamily: FONT_STACKS[d.font],
+        borderRadius: 10,
+        padding: "1rem",
+        minHeight: 176,
+      }}
+    >
+      <div style={{ ...headingStyle(d, 1.05), fontWeight: 800 }}>{item.preview.headline}</div>
+      {item.preview.sub ? (
+        <p style={{ color: d.muted, fontSize: ".72rem", margin: ".35rem 0 0", lineHeight: 1.45 }}>{item.preview.sub}</p>
+      ) : null}
+      <div
+        style={{
+          marginTop: ".7rem",
+          background: d.surface,
+          border: `1px solid ${d.border}`,
+          borderRadius: Math.min(d.radius, 12),
+          padding: ".55rem",
+        }}
+      >
+        <div style={{ height: 20, borderRadius: 6, border: `1px solid ${d.border}`, background: d.background }} />
+        <div
+          style={{
+            ...buttonStyle(d),
+            marginTop: ".45rem",
+            padding: ".35rem",
+            textAlign: "center",
+            fontSize: ".7rem",
+            fontWeight: 600,
+          }}
+        >
+          {item.preview.cta}
+        </div>
+      </div>
+      {item.preview.blocks?.length ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: ".6rem" }}>
+          {item.preview.blocks.map((b, i) => (
+            <span
+              key={i}
+              style={{
+                fontSize: ".6rem",
+                color: d.muted,
+                border: `1px solid ${d.border}`,
+                borderRadius: 999,
+                padding: "1px 6px",
+              }}
+            >
+              {b}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function TemplateGallery({ open, onOpenChange, title, description, items, onPick, onBlank }: Props) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
@@ -41,7 +105,7 @@ export function TemplateGallery({ open, onOpenChange, title, description, items,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-4xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-5xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -55,16 +119,11 @@ export function TemplateGallery({ open, onOpenChange, title, description, items,
           <Button variant="outline" onClick={onBlank}>Start from blank</Button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {cats.map((c) => (
-            <Badge
-              key={c}
-              variant={c === cat ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => setCat(c)}
-            >
+            <Button key={c} size="sm" variant={cat === c ? "default" : "outline"} className="h-7 rounded-full px-3 text-xs" onClick={() => setCat(c)}>
               {c}
-            </Badge>
+            </Button>
           ))}
         </div>
 
@@ -76,37 +135,18 @@ export function TemplateGallery({ open, onOpenChange, title, description, items,
               onClick={() => onPick(i.id)}
               className="group overflow-hidden rounded-xl border text-left transition hover:border-primary hover:shadow-md"
             >
-              <div
-                className="flex h-40 flex-col justify-center gap-2 p-4"
-                style={{
-                  background: i.preview.theme === "dark" ? "#0b1120" : "#f8fafc",
-                  color: i.preview.theme === "dark" ? "#f8fafc" : "#0f172a",
-                }}
-              >
-                <div className="text-sm font-semibold leading-snug">{i.preview.headline}</div>
-                {i.preview.sub && <div className="text-[11px] opacity-70 leading-snug">{i.preview.sub}</div>}
-                <div
-                  className="mt-1 h-6 rounded-md border"
-                  style={{ borderColor: i.preview.theme === "dark" ? "#334155" : "#cbd5e1" }}
-                />
-                <div
-                  className="rounded-md px-2 py-1 text-center text-[11px] font-medium text-white"
-                  style={{ background: i.preview.accent }}
-                >
-                  {i.preview.cta}
-                </div>
-              </div>
+              <Thumb item={i} />
               <div className="space-y-1 border-t p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium">{i.label}</span>
+                  <span className="text-sm font-semibold">{i.label}</span>
                   <Badge variant="outline" className="text-[10px]">{i.category}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">{i.blurb}</p>
               </div>
             </button>
           ))}
+          {shown.length === 0 && <p className="p-6 text-sm text-muted-foreground">No templates match that search.</p>}
         </div>
-        {shown.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No templates match that search.</p>}
       </DialogContent>
     </Dialog>
   );

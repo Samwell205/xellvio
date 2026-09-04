@@ -1350,12 +1350,19 @@ export type Database = {
           body: string
           created_at: string
           cta_label: string
+          design: Json
           headline: string
           id: string
           image_url: string | null
           list_id: string | null
+          logo_url: string | null
           name: string
+          og_image_url: string | null
           published: boolean
+          published_at: string | null
+          sections: Json
+          seo_description: string | null
+          seo_title: string | null
           slug: string
           subheadline: string
           submissions: number
@@ -1370,12 +1377,19 @@ export type Database = {
           body?: string
           created_at?: string
           cta_label?: string
+          design?: Json
           headline?: string
           id?: string
           image_url?: string | null
           list_id?: string | null
+          logo_url?: string | null
           name: string
+          og_image_url?: string | null
           published?: boolean
+          published_at?: string | null
+          sections?: Json
+          seo_description?: string | null
+          seo_title?: string | null
           slug: string
           subheadline?: string
           submissions?: number
@@ -1390,12 +1404,19 @@ export type Database = {
           body?: string
           created_at?: string
           cta_label?: string
+          design?: Json
           headline?: string
           id?: string
           image_url?: string | null
           list_id?: string | null
+          logo_url?: string | null
           name?: string
+          og_image_url?: string | null
           published?: boolean
+          published_at?: string | null
+          sections?: Json
+          seo_description?: string | null
+          seo_title?: string | null
           slug?: string
           subheadline?: string
           submissions?: number
@@ -2365,11 +2386,18 @@ export type Database = {
           created_at: string
           cta_label: string
           description: string
+          design: Json
           headline: string
           id: string
+          image_url: string | null
           list_id: string | null
+          logo_url: string | null
           name: string
+          og_image_url: string | null
           published: boolean
+          published_at: string | null
+          seo_description: string | null
+          seo_title: string | null
           slug: string
           submissions: number
           success_message: string
@@ -2385,11 +2413,18 @@ export type Database = {
           created_at?: string
           cta_label?: string
           description?: string
+          design?: Json
           headline?: string
           id?: string
+          image_url?: string | null
           list_id?: string | null
+          logo_url?: string | null
           name: string
+          og_image_url?: string | null
           published?: boolean
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
           slug: string
           submissions?: number
           success_message?: string
@@ -2405,11 +2440,18 @@ export type Database = {
           created_at?: string
           cta_label?: string
           description?: string
+          design?: Json
           headline?: string
           id?: string
+          image_url?: string | null
           list_id?: string | null
+          logo_url?: string | null
           name?: string
+          og_image_url?: string | null
           published?: boolean
+          published_at?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
           slug?: string
           submissions?: number
           success_message?: string
