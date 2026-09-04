@@ -75,11 +75,11 @@ export function AiDesignPanel({
         data: {
           kind,
           mode: usedMode as any,
-          prompt: text.trim(),
+          prompt: text.trim().slice(0, 24000),
           blocks: blocks as any,
           theme: theme as any,
           ...(focusId ? { focusId, focusLabel: focusLabel ?? "element" } : {}),
-          history: turns.slice(-8).map((t) => ({ role: t.role, text: t.text.slice(0, 2000) })),
+          history: turns.slice(-8).map((t) => ({ role: t.role, text: t.text.slice(0, 4000) })),
         },
       });
       const nextBlocks = normalizeBlocks(r.blocks);

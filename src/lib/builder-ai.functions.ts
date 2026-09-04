@@ -11,13 +11,13 @@ const Input = z.object({
   mode: z
     .enum(["create", "improve", "professional", "convert", "mobile", "simplify", "copy", "brand", "animate", "edit"])
     .default("create"),
-  prompt: z.string().trim().max(4000).default(""),
+  prompt: z.string().trim().max(24000).default(""),
   blocks: z.array(z.any()).max(300).default([]),
   theme: z.record(z.string(), z.any()).default({}),
   focusId: z.string().max(60).optional(),
   focusLabel: z.string().max(60).optional(),
   history: z
-    .array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(2000) }))
+    .array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(4000) }))
     .max(12)
     .default([]),
 });
