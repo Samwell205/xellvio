@@ -14,7 +14,9 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Code2, Copy, ExternalLink, FormInput, Plus, Trash2 } from "lucide-react";
+import { TemplateGallery } from "@/components/growth/TemplateGallery";
+import { FORM_TEMPLATES } from "@/lib/growth-templates";
+import { Code2, Copy, ExternalLink, FormInput, LayoutGrid, Plus, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/signup-forms")({
   head: () => ({
