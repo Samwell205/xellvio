@@ -245,7 +245,14 @@ function BuilderInner({ automation, lists, senders, contacts }: Props) {
 
   // autosave
   const dirty = useRef(false);
+  const mounted = useRef(false);
   useEffect(() => {
+    if (!mounted.current) {
+      // First render just mirrors what was loaded from the server — nothing to save.
+      mounted.current = true;
+      setSaveState("saved");
+      return;
+    }
     dirty.current = true;
     setSaveState("idle");
     const t = setTimeout(() => {
