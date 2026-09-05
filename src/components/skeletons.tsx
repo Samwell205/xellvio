@@ -72,9 +72,7 @@ export function ChartSkeleton({ className }: { className?: string }) {
       <Shimmer className="h-4 w-40" />
       <div className="mt-6 flex h-40 items-end gap-2">
         {[45, 70, 35, 85, 55, 65, 40, 78, 50, 60, 30, 72].map((h, i) => (
-          <Shimmer key={i} className="flex-1 rounded-sm" style={undefined as never} />
-        )).map((el, i) => (
-          <div key={i} className="flex-1" style={{ height: `${[45, 70, 35, 85, 55, 65, 40, 78, 50, 60, 30, 72][i]}%` }}>
+          <div key={i} className="flex-1" style={{ height: `${h}%` }}>
             <Shimmer className="h-full w-full rounded-sm" />
           </div>
         ))}
