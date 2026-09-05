@@ -117,7 +117,12 @@ export function ConnectDialog({
               <DialogTitle>
                 {mode === "reconnect" ? `Reconnect ${app.name}` : `Connect your ${app.name} account`}
               </DialogTitle>
-              <DialogDescription>{AUTH_TYPE_LABELS[app.auth_type] ?? "Secure connection"}</DialogDescription>
+              <DialogDescription>
+                {spec?.capabilities.verified
+                  ? `Checked against ${app.name} before it is saved`
+                  : (AUTH_TYPE_LABELS[app.auth_type] ?? "Secure connection")}
+              </DialogDescription>
+
             </div>
           </div>
         </DialogHeader>
