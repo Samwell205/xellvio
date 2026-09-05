@@ -118,6 +118,7 @@ import { Route as AuthenticatedAdminNumberRequestsRouteImport } from './routes/_
 import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authenticated.admin.messaging'
 import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated.admin.messages'
 import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated.admin.marketplace'
+import { Route as AuthenticatedAdminGrowthRouteImport } from './routes/_authenticated.admin.growth'
 import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated.admin.finance'
 import { Route as AuthenticatedAdminEmailRouteImport } from './routes/_authenticated.admin.email'
 import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_authenticated.admin.compliance'
@@ -734,6 +735,12 @@ const AuthenticatedAdminMarketplaceRoute =
     path: '/marketplace',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminGrowthRoute =
+  AuthenticatedAdminGrowthRouteImport.update({
+    id: '/growth',
+    path: '/growth',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminFinanceRoute =
   AuthenticatedAdminFinanceRouteImport.update({
     id: '/finance',
@@ -1030,6 +1037,7 @@ export interface FileRoutesByFullPath {
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/email': typeof AuthenticatedAdminEmailRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
+  '/admin/growth': typeof AuthenticatedAdminGrowthRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
@@ -1175,6 +1183,7 @@ export interface FileRoutesByTo {
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/email': typeof AuthenticatedAdminEmailRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
+  '/admin/growth': typeof AuthenticatedAdminGrowthRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
@@ -1324,6 +1333,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/_authenticated/admin/email': typeof AuthenticatedAdminEmailRoute
   '/_authenticated/admin/finance': typeof AuthenticatedAdminFinanceRoute
+  '/_authenticated/admin/growth': typeof AuthenticatedAdminGrowthRoute
   '/_authenticated/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/_authenticated/admin/messaging': typeof AuthenticatedAdminMessagingRoute
@@ -1474,6 +1484,7 @@ export interface FileRouteTypes {
     | '/admin/compliance'
     | '/admin/email'
     | '/admin/finance'
+    | '/admin/growth'
     | '/admin/marketplace'
     | '/admin/messages'
     | '/admin/messaging'
@@ -1619,6 +1630,7 @@ export interface FileRouteTypes {
     | '/admin/compliance'
     | '/admin/email'
     | '/admin/finance'
+    | '/admin/growth'
     | '/admin/marketplace'
     | '/admin/messages'
     | '/admin/messaging'
@@ -1767,6 +1779,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/compliance'
     | '/_authenticated/admin/email'
     | '/_authenticated/admin/finance'
+    | '/_authenticated/admin/growth'
     | '/_authenticated/admin/marketplace'
     | '/_authenticated/admin/messages'
     | '/_authenticated/admin/messaging'
@@ -2695,6 +2708,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminMarketplaceRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/growth': {
+      id: '/_authenticated/admin/growth'
+      path: '/growth'
+      fullPath: '/admin/growth'
+      preLoaderRoute: typeof AuthenticatedAdminGrowthRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/finance': {
       id: '/_authenticated/admin/finance'
       path: '/finance'
@@ -2996,6 +3016,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminComplianceRoute: typeof AuthenticatedAdminComplianceRoute
   AuthenticatedAdminEmailRoute: typeof AuthenticatedAdminEmailRoute
   AuthenticatedAdminFinanceRoute: typeof AuthenticatedAdminFinanceRoute
+  AuthenticatedAdminGrowthRoute: typeof AuthenticatedAdminGrowthRoute
   AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
   AuthenticatedAdminMessagingRoute: typeof AuthenticatedAdminMessagingRoute
@@ -3021,6 +3042,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminComplianceRoute: AuthenticatedAdminComplianceRoute,
   AuthenticatedAdminEmailRoute: AuthenticatedAdminEmailRoute,
   AuthenticatedAdminFinanceRoute: AuthenticatedAdminFinanceRoute,
+  AuthenticatedAdminGrowthRoute: AuthenticatedAdminGrowthRoute,
   AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
   AuthenticatedAdminMessagingRoute: AuthenticatedAdminMessagingRoute,
