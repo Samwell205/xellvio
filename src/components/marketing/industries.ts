@@ -63,7 +63,7 @@ export const INDUSTRIES: Industry[] = [
       { name: "Win back quiet buyers", steps: ["Segment: no engagement 60 days", "Win-back offer", "Branch on click", "Tag re-engaged"] },
     ],
     templates: [
-      { label: "Product launch page", to: "/templates/landing-pages/product-launch" },
+      { label: "Product launch page", to: "/templates/landing-pages/product-promo" },
       { label: "Newsletter sign-up form", to: "/templates/sign-up-forms/newsletter" },
       { label: "Welcome series automation", to: "/templates/automations/welcome-series" },
     ],
@@ -104,7 +104,7 @@ export const INDUSTRIES: Industry[] = [
       { name: "Loyalty night", steps: ["Segment: VIP tag", "Invite text", "Reminder 2 hours before", "Report attendance interest"] },
     ],
     templates: [
-      { label: "Local offer landing page", to: "/templates/landing-pages/local-offer" },
+      { label: "Local offer landing page", to: "/templates/landing-pages/product-promo" },
       { label: "In-store sign-up form", to: "/templates/sign-up-forms/lead-capture" },
       { label: "Keyword opt-in automation", to: "/templates/automations/keyword-optin" },
     ],
@@ -146,7 +146,7 @@ export const INDUSTRIES: Industry[] = [
     ],
     templates: [
       { label: "Quote request form", to: "/templates/sign-up-forms/lead-capture" },
-      { label: "Consultation booking page", to: "/templates/landing-pages/consultation" },
+      { label: "Consultation booking page", to: "/templates/landing-pages/consultant" },
       { label: "Lead follow-up automation", to: "/templates/automations/signup-form-followup" },
     ],
     related: [rel.forms, rel.automations, rel.sms, rel.reporting],
@@ -186,7 +186,7 @@ export const INDUSTRIES: Industry[] = [
       { name: "After the event", steps: ["Tag: attended", "Thank-you text", "Recording or offer link", "Report clicks"] },
     ],
     templates: [
-      { label: "Webinar registration page", to: "/templates/landing-pages/webinar" },
+      { label: "Webinar registration page", to: "/templates/landing-pages/webinar-page" },
       { label: "Event registration form", to: "/templates/sign-up-forms/webinar" },
       { label: "Welcome series automation", to: "/templates/automations/welcome-series" },
     ],
@@ -228,7 +228,7 @@ export const INDUSTRIES: Industry[] = [
     ],
     templates: [
       { label: "Course enrolment page", to: "/templates/landing-pages/course" },
-      { label: "Course interest form", to: "/templates/sign-up-forms/course" },
+      { label: "Course interest form", to: "/templates/sign-up-forms/free-course" },
       { label: "Lead follow-up automation", to: "/templates/automations/signup-form-followup" },
     ],
     related: [rel.forms, rel.audiences, rel.automations, rel.compliance],
