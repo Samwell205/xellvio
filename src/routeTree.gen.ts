@@ -69,6 +69,8 @@ import { Route as TemplatesCategoryIndexRouteImport } from './routes/templates.$
 import { Route as MarketplaceAppsIndexRouteImport } from './routes/marketplace.apps.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
+import { Route as TemplatesUseCaseGoalRouteImport } from './routes/templates.use-case.$goal'
+import { Route as TemplatesIndustryIndustryRouteImport } from './routes/templates.industry.$industry'
 import { Route as TemplatesCategorySlugRouteImport } from './routes/templates.$category.$slug'
 import { Route as MarketplaceAppsSlugRouteImport } from './routes/marketplace.apps.$slug'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
@@ -149,6 +151,7 @@ import { Route as AuthenticatedAppAppsSlugRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminTelnyxTfnRouteImport } from './routes/_authenticated.admin.telnyx.tfn'
 import { Route as AuthenticatedAdminTelnyxAuditRouteImport } from './routes/_authenticated.admin.telnyx.audit'
 import { Route as AuthenticatedAdminCampaignsIdRouteImport } from './routes/_authenticated.admin.campaigns.$id'
+import { Route as AuthenticatedAppUseTemplateCategorySlugRouteImport } from './routes/_authenticated.app.use-template.$category.$slug'
 import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -451,6 +454,17 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const TemplatesUseCaseGoalRoute = TemplatesUseCaseGoalRouteImport.update({
+  id: '/templates/use-case/$goal',
+  path: '/templates/use-case/$goal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemplatesIndustryIndustryRoute =
+  TemplatesIndustryIndustryRouteImport.update({
+    id: '/templates/industry/$industry',
+    path: '/templates/industry/$industry',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const TemplatesCategorySlugRoute = TemplatesCategorySlugRouteImport.update({
   id: '/templates/$category/$slug',
   path: '/templates/$category/$slug',
@@ -911,6 +925,12 @@ const AuthenticatedAdminCampaignsIdRoute =
     path: '/campaigns/$id',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAppUseTemplateCategorySlugRoute =
+  AuthenticatedAppUseTemplateCategorySlugRouteImport.update({
+    id: '/use-template/$category/$slug',
+    path: '/use-template/$category/$slug',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppCampaignsIdReportRoute =
   AuthenticatedAppCampaignsIdReportRouteImport.update({
     id: '/report',
@@ -1026,6 +1046,8 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
+  '/templates/industry/$industry': typeof TemplatesIndustryIndustryRoute
+  '/templates/use-case/$goal': typeof TemplatesUseCaseGoalRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
@@ -1058,6 +1080,7 @@ export interface FileRoutesByFullPath {
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
+  '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1162,6 +1185,8 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
+  '/templates/industry/$industry': typeof TemplatesIndustryIndustryRoute
+  '/templates/use-case/$goal': typeof TemplatesUseCaseGoalRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps': typeof MarketplaceAppsIndexRoute
@@ -1194,6 +1219,7 @@ export interface FileRoutesByTo {
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
+  '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1306,6 +1332,8 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
+  '/templates/industry/$industry': typeof TemplatesIndustryIndustryRoute
+  '/templates/use-case/$goal': typeof TemplatesUseCaseGoalRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
@@ -1338,6 +1366,7 @@ export interface FileRoutesById {
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
+  '/_authenticated/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1449,6 +1478,8 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
     | '/templates/$category/$slug'
+    | '/templates/industry/$industry'
+    | '/templates/use-case/$goal'
     | '/admin/'
     | '/app/'
     | '/marketplace/apps/'
@@ -1481,6 +1512,7 @@ export interface FileRouteTypes {
     | '/app/segments/'
     | '/verify/dashboard/'
     | '/app/campaigns/$id/report'
+    | '/app/use-template/$category/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1585,6 +1617,8 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
     | '/templates/$category/$slug'
+    | '/templates/industry/$industry'
+    | '/templates/use-case/$goal'
     | '/admin'
     | '/app'
     | '/marketplace/apps'
@@ -1617,6 +1651,7 @@ export interface FileRouteTypes {
     | '/app/segments'
     | '/verify/dashboard'
     | '/app/campaigns/$id/report'
+    | '/app/use-template/$category/$slug'
   id:
     | '__root__'
     | '/'
@@ -1728,6 +1763,8 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
     | '/templates/$category/$slug'
+    | '/templates/industry/$industry'
+    | '/templates/use-case/$goal'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/marketplace/apps/'
@@ -1760,6 +1797,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/segments/'
     | '/_verifier/verify/dashboard/'
     | '/_authenticated/app/campaigns/$id/report'
+    | '/_authenticated/app/use-template/$category/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1826,6 +1864,8 @@ export interface RootRouteChildren {
   ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   TemplatesCategorySlugRoute: typeof TemplatesCategorySlugRoute
+  TemplatesIndustryIndustryRoute: typeof TemplatesIndustryIndustryRoute
+  TemplatesUseCaseGoalRoute: typeof TemplatesUseCaseGoalRoute
   TemplatesCategoryIndexRoute: typeof TemplatesCategoryIndexRoute
   ApiPublicCampaignMediaSplatRoute: typeof ApiPublicCampaignMediaSplatRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
@@ -2259,6 +2299,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/templates/use-case/$goal': {
+      id: '/templates/use-case/$goal'
+      path: '/templates/use-case/$goal'
+      fullPath: '/templates/use-case/$goal'
+      preLoaderRoute: typeof TemplatesUseCaseGoalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/templates/industry/$industry': {
+      id: '/templates/industry/$industry'
+      path: '/templates/industry/$industry'
+      fullPath: '/templates/industry/$industry'
+      preLoaderRoute: typeof TemplatesIndustryIndustryRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/templates/$category/$slug': {
       id: '/templates/$category/$slug'
@@ -2820,6 +2874,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/app/use-template/$category/$slug': {
+      id: '/_authenticated/app/use-template/$category/$slug'
+      path: '/use-template/$category/$slug'
+      fullPath: '/app/use-template/$category/$slug'
+      preLoaderRoute: typeof AuthenticatedAppUseTemplateCategorySlugRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/campaigns/$id/report': {
       id: '/_authenticated/app/campaigns/$id/report'
       path: '/report'
@@ -2973,6 +3034,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAutomationsIdRoute: typeof AuthenticatedAppAutomationsIdRoute
   AuthenticatedAppAppsIndexRoute: typeof AuthenticatedAppAppsIndexRoute
   AuthenticatedAppAutomationsIndexRoute: typeof AuthenticatedAppAutomationsIndexRoute
+  AuthenticatedAppUseTemplateCategorySlugRoute: typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -3002,6 +3064,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAutomationsIdRoute: AuthenticatedAppAutomationsIdRoute,
   AuthenticatedAppAppsIndexRoute: AuthenticatedAppAppsIndexRoute,
   AuthenticatedAppAutomationsIndexRoute: AuthenticatedAppAutomationsIndexRoute,
+  AuthenticatedAppUseTemplateCategorySlugRoute:
+    AuthenticatedAppUseTemplateCategorySlugRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
@@ -3143,6 +3207,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   TemplatesCategorySlugRoute: TemplatesCategorySlugRoute,
+  TemplatesIndustryIndustryRoute: TemplatesIndustryIndustryRoute,
+  TemplatesUseCaseGoalRoute: TemplatesUseCaseGoalRoute,
   TemplatesCategoryIndexRoute: TemplatesCategoryIndexRoute,
   ApiPublicCampaignMediaSplatRoute: ApiPublicCampaignMediaSplatRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,

@@ -3,6 +3,15 @@ import type {} from "@tanstack/react-start";
 
 import { INDUSTRIES } from "@/components/marketing/industries";
 import { CATEGORY_META, PUBLIC_TEMPLATES, type TemplateCategory } from "@/lib/marketing/template-catalog";
+import {
+  GOAL_LABEL,
+  INDUSTRY_LABEL,
+  MIN_COLLECTION_SIZE,
+  templatesByGoal,
+  templatesByIndustry,
+  type Goal,
+  type Industry,
+} from "@/lib/templates/library";
 import { PUBLIC_PAGES, SITE_URL } from "@/lib/seo";
 
 interface SitemapEntry {
@@ -77,7 +86,15 @@ export const Route = createFileRoute("/sitemap.xml")({
             changefreq: "monthly",
             priority: "0.5",
           })),
+          // Industry / goal template collections, only where enough real templates exist.
+          ...(Object.keys(INDUSTRY_LABEL) as Industry[])
+            .filter((i) => templatesByIndustry(i).length >= MIN_COLLECTION_SIZE)
+            .map((i) => ({ path: `/templates/industry/${i}`, changefreq: "monthly", priority: "0.6" })),
+          ...(Object.keys(GOAL_LABEL) as Goal[])
+            .filter((g) => templatesByGoal(g).length >= MIN_COLLECTION_SIZE)
+            .map((g) => ({ path: `/templates/use-case/${g}`, changefreq: "monthly", priority: "0.6" })),
           ...(await publishedLandingPages()),
+
         ];
 
         const urls = entries.map((e) =>

@@ -1,19 +1,61 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, LayoutTemplate, FormInput, Workflow } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, LayoutTemplate, FormInput, Workflow, Search } from "lucide-react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { ChannelCta } from "@/components/marketing/ProductKit";
+import { TemplateGrid } from "@/components/marketing/TemplateLibraryGrid";
 import { CATEGORY_META, templatesInCategory, type TemplateCategory } from "@/lib/marketing/template-catalog";
+import {
+  COMPLEXITY_LABEL,
+  GOAL_LABEL,
+  INDUSTRY_LABEL,
+  MIN_COLLECTION_SIZE,
+  TEMPLATE_LIBRARY,
+  filterTemplates,
+  isGoal,
+  isIndustry,
+  templatesByGoal,
+  templatesByIndustry,
+  type Complexity,
+  type Goal,
+  type Industry,
+  type TemplateType,
+} from "@/lib/templates/library";
 import { pageHead } from "@/lib/seo";
+import { cn } from "@/lib/utils";
+
+type Search = {
+  q?: string;
+  type?: TemplateType | "all";
+  industry?: Industry | "all";
+  goal?: Goal | "all";
+  level?: Complexity | "all";
+};
+
+const TYPES: { value: TemplateType | "all"; label: string }[] = [
+  { value: "all", label: "All templates" },
+  { value: "landing-page", label: "Landing pages" },
+  { value: "signup-form", label: "Sign-up forms" },
+  { value: "automation", label: "Automations" },
+];
 
 export const Route = createFileRoute("/templates/")({
+  validateSearch: (search: Record<string, unknown>): Search => ({
+    q: typeof search.q === "string" ? search.q.slice(0, 60) : undefined,
+    type: TYPES.some((t) => t.value === search.type) ? (search.type as TemplateType | "all") : undefined,
+    industry: typeof search.industry === "string" && isIndustry(search.industry) ? search.industry : undefined,
+    goal: typeof search.goal === "string" && isGoal(search.goal) ? search.goal : undefined,
+    level:
+      search.level === "starter" || search.level === "intermediate" || search.level === "advanced"
+        ? search.level
+        : undefined,
+  }),
   head: () =>
     pageHead({
       path: "/templates",
-      title: "Templates for Landing Pages, Forms and Automations",
-      description:
-        "Browse Xellvio templates: 12 landing pages, 10 sign-up forms and 10 SMS automations you can preview here and edit inside Xellvio. Every template is ready to publish or activate.",
-      keywords: ["landing page templates", "sign up form templates", "sms automation templates"],
+      title: "Free SMS, Landing Page and Form Templates",
+      description: `Browse ${TEMPLATE_LIBRARY.length} free Xellvio templates: landing pages, sign-up forms and SMS automations. Preview any template, then open it in your workspace and publish it.`,
+      keywords: ["sms templates", "landing page templates", "sign up form templates", "sms automation templates"],
     }),
   component: TemplatesHub,
 });
@@ -24,8 +66,53 @@ const ICONS: Record<TemplateCategory, typeof LayoutTemplate> = {
   automations: Workflow,
 };
 
+function Chip({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full border px-4 py-2 text-sm font-medium transition-colors",
+        active
+          ? "border-foreground bg-ink text-ink-foreground"
+          : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 function TemplatesHub() {
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  const set = (patch: Partial<Search>) =>
+    navigate({ to: "/templates", search: (prev) => ({ ...prev, ...patch }), replace: true, resetScroll: false });
+
+  const filters = {
+    q: search.q,
+    type: search.type ?? "all",
+    industry: search.industry ?? "all",
+    goal: search.goal ?? "all",
+    complexity: search.level ?? "all",
+  };
+  const results = filterTemplates(filters);
+  const filtering = Boolean(search.q || search.type || search.industry || search.goal || search.level);
+  const featured = TEMPLATE_LIBRARY.filter((t) => t.featured);
   const categories = Object.keys(CATEGORY_META) as TemplateCategory[];
+  const industries = (Object.keys(INDUSTRY_LABEL) as Industry[]).filter(
+    (i) => templatesByIndustry(i).length >= MIN_COLLECTION_SIZE,
+  );
+  const goals = (Object.keys(GOAL_LABEL) as Goal[]).filter((g) => templatesByGoal(g).length >= MIN_COLLECTION_SIZE);
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <MarketingNav />
@@ -37,14 +124,100 @@ function TemplatesHub() {
               Start from something that already works
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              Every template below ships inside Xellvio. Preview it here, then open it in the builder, change
-              the copy and colours, and publish or activate it on your own account.
+              {TEMPLATE_LIBRARY.length} free templates that ship inside Xellvio. Preview one here, then open it in your
+              workspace — it arrives as an editable draft, not a locked design.
             </p>
+
+            <div className="mt-9 max-w-xl">
+              <label className="relative block">
+                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={search.q ?? ""}
+                  onChange={(e) => set({ q: e.target.value || undefined })}
+                  placeholder="Search templates — webinar, discount, win-back…"
+                  className="w-full rounded-full border border-border bg-card py-3.5 pl-11 pr-4 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-foreground/40"
+                  aria-label="Search templates"
+                />
+              </label>
+            </div>
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1400px] px-5 sm:px-8 py-16">
-          <div className="grid gap-6 md:grid-cols-3">
+        <section className="mx-auto max-w-[1400px] px-5 sm:px-8 py-12">
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {TYPES.map((t) => (
+                <Chip
+                  key={t.value}
+                  active={filters.type === t.value}
+                  onClick={() => set({ type: t.value === "all" ? undefined : t.value })}
+                >
+                  {t.label}
+                </Chip>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {goals.map((g) => (
+                <Chip key={g} active={filters.goal === g} onClick={() => set({ goal: filters.goal === g ? undefined : g })}>
+                  {GOAL_LABEL[g]}
+                </Chip>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {industries.map((i) => (
+                <Chip
+                  key={i}
+                  active={filters.industry === i}
+                  onClick={() => set({ industry: filters.industry === i ? undefined : i })}
+                >
+                  {INDUSTRY_LABEL[i]}
+                </Chip>
+              ))}
+              {(Object.keys(COMPLEXITY_LABEL) as Complexity[]).map((c) => (
+                <Chip
+                  key={c}
+                  active={filters.complexity === c}
+                  onClick={() => set({ level: filters.complexity === c ? undefined : c })}
+                >
+                  {COMPLEXITY_LABEL[c]}
+                </Chip>
+              ))}
+              {filtering && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate({ to: "/templates", search: {}, replace: true, resetScroll: false })
+                  }
+                  className="rounded-full px-4 py-2 text-sm font-semibold text-foreground underline"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          </div>
+
+          {!filtering && (
+            <div className="mt-14">
+              <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Most-used templates</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                The ones teams open first when they start a list, fill an event or follow up on leads.
+              </p>
+              <div className="mt-7">
+                <TemplateGrid items={featured} />
+              </div>
+            </div>
+          )}
+
+          <div className="mt-14">
+            <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+              {filtering ? `${results.length} template${results.length === 1 ? "" : "s"}` : "Every template"}
+            </h2>
+            <div className="mt-7">
+              <TemplateGrid items={results} />
+            </div>
+          </div>
+
+          <div className="mt-16 grid gap-6 md:grid-cols-3">
             {categories.map((c) => {
               const meta = CATEGORY_META[c];
               const Icon = ICONS[c];
@@ -65,6 +238,39 @@ function TemplatesHub() {
                 </Link>
               );
             })}
+          </div>
+
+          <div className="mt-14 grid gap-8 rounded-3xl border border-border bg-muted/40 p-8 md:grid-cols-2">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Browse by industry</h2>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {industries.map((i) => (
+                  <Link
+                    key={i}
+                    to="/templates/industry/$industry"
+                    params={{ industry: i }}
+                    className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:border-foreground/40"
+                  >
+                    {INDUSTRY_LABEL[i]}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Browse by goal</h2>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {goals.map((g) => (
+                  <Link
+                    key={g}
+                    to="/templates/use-case/$goal"
+                    params={{ goal: g }}
+                    className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:border-foreground/40"
+                  >
+                    {GOAL_LABEL[g]}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="mt-14 rounded-3xl border border-border bg-muted/40 p-8">

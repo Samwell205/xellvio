@@ -1227,6 +1227,8 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          source_template: string | null
+          source_template_version: string | null
           status: string
           updated_at: string
           viewport: Json
@@ -1237,6 +1239,8 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          source_template?: string | null
+          source_template_version?: string | null
           status?: string
           updated_at?: string
           viewport?: Json
@@ -1247,6 +1251,8 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          source_template?: string | null
+          source_template_version?: string | null
           status?: string
           updated_at?: string
           viewport?: Json
@@ -1630,6 +1636,398 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: []
+      }
+      content_authors: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          expertise: string[]
+          id: string
+          is_organization: boolean
+          links: Json
+          name: string
+          slug: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          expertise?: string[]
+          id?: string
+          is_organization?: boolean
+          links?: Json
+          name: string
+          slug: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          expertise?: string[]
+          id?: string
+          is_organization?: boolean
+          links?: Json
+          name?: string
+          slug?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      content_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          path: string
+          props: Json
+          session_id: string | null
+          slug: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          path: string
+          props?: Json
+          session_id?: string | null
+          slug?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          path?: string
+          props?: Json
+          session_id?: string | null
+          slug?: string | null
+        }
+        Relationships: []
+      }
+      content_gaps: {
+        Row: {
+          audience: string
+          created_at: string
+          id: string
+          notes: string | null
+          plan_id: string | null
+          post_slug: string | null
+          priority: Database["public"]["Enums"]["plan_priority"]
+          product: string | null
+          question: string
+          status: Database["public"]["Enums"]["gap_status"]
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          post_slug?: string | null
+          priority?: Database["public"]["Enums"]["plan_priority"]
+          product?: string | null
+          question: string
+          status?: Database["public"]["Enums"]["gap_status"]
+          topic?: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          plan_id?: string | null
+          post_slug?: string | null
+          priority?: Database["public"]["Enums"]["plan_priority"]
+          product?: string | null
+          question?: string
+          status?: Database["public"]["Enums"]["gap_status"]
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_gaps_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "content_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_plans: {
+        Row: {
+          author_id: string | null
+          brief_generated_at: string | null
+          cluster_role: Database["public"]["Enums"]["plan_role"]
+          content_angle: string | null
+          content_goal: string
+          content_type: Database["public"]["Enums"]["content_kind"]
+          created_at: string
+          cta_key: string | null
+          depends_on: string[]
+          faq_ideas: string[]
+          funnel_stage: Database["public"]["Enums"]["plan_funnel"]
+          id: string
+          industries: string[]
+          internal_links: string[]
+          key_questions: string[]
+          meta_description: string | null
+          notes: string | null
+          outline: Json
+          post_id: string | null
+          primary_keyword: string
+          priority: Database["public"]["Enums"]["plan_priority"]
+          products: string[]
+          scheduled_for: string | null
+          score_authority: number
+          score_conversion: number
+          score_gap: number
+          score_intent: number
+          score_linking: number
+          score_relevance: number
+          search_intent: Database["public"]["Enums"]["plan_intent"]
+          secondary_keywords: string[]
+          status: Database["public"]["Enums"]["plan_status"]
+          target_audience: string
+          templates: string[]
+          title: string
+          topic: string
+          updated_at: string
+          writer_notes: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          brief_generated_at?: string | null
+          cluster_role?: Database["public"]["Enums"]["plan_role"]
+          content_angle?: string | null
+          content_goal?: string
+          content_type?: Database["public"]["Enums"]["content_kind"]
+          created_at?: string
+          cta_key?: string | null
+          depends_on?: string[]
+          faq_ideas?: string[]
+          funnel_stage?: Database["public"]["Enums"]["plan_funnel"]
+          id?: string
+          industries?: string[]
+          internal_links?: string[]
+          key_questions?: string[]
+          meta_description?: string | null
+          notes?: string | null
+          outline?: Json
+          post_id?: string | null
+          primary_keyword: string
+          priority?: Database["public"]["Enums"]["plan_priority"]
+          products?: string[]
+          scheduled_for?: string | null
+          score_authority?: number
+          score_conversion?: number
+          score_gap?: number
+          score_intent?: number
+          score_linking?: number
+          score_relevance?: number
+          search_intent?: Database["public"]["Enums"]["plan_intent"]
+          secondary_keywords?: string[]
+          status?: Database["public"]["Enums"]["plan_status"]
+          target_audience?: string
+          templates?: string[]
+          title: string
+          topic?: string
+          updated_at?: string
+          writer_notes?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          brief_generated_at?: string | null
+          cluster_role?: Database["public"]["Enums"]["plan_role"]
+          content_angle?: string | null
+          content_goal?: string
+          content_type?: Database["public"]["Enums"]["content_kind"]
+          created_at?: string
+          cta_key?: string | null
+          depends_on?: string[]
+          faq_ideas?: string[]
+          funnel_stage?: Database["public"]["Enums"]["plan_funnel"]
+          id?: string
+          industries?: string[]
+          internal_links?: string[]
+          key_questions?: string[]
+          meta_description?: string | null
+          notes?: string | null
+          outline?: Json
+          post_id?: string | null
+          primary_keyword?: string
+          priority?: Database["public"]["Enums"]["plan_priority"]
+          products?: string[]
+          scheduled_for?: string | null
+          score_authority?: number
+          score_conversion?: number
+          score_gap?: number
+          score_intent?: number
+          score_linking?: number
+          score_relevance?: number
+          search_intent?: Database["public"]["Enums"]["plan_intent"]
+          secondary_keywords?: string[]
+          status?: Database["public"]["Enums"]["plan_status"]
+          target_audience?: string
+          templates?: string[]
+          title?: string
+          topic?: string
+          updated_at?: string
+          writer_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_plans_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "content_authors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_plans_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "content_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_posts: {
+        Row: {
+          author_id: string | null
+          body: string
+          canonical_url: string | null
+          content_type: Database["public"]["Enums"]["content_kind"]
+          created_at: string
+          cta_key: string | null
+          excerpt: string
+          faqs: Json
+          featured: boolean
+          featured_image: string | null
+          id: string
+          image_alt: string | null
+          indexable: boolean
+          industries: string[]
+          last_reviewed_at: string | null
+          meta_description: string | null
+          next_review_at: string | null
+          og_image: string | null
+          plan_id: string | null
+          primary_keyword: string | null
+          published_at: string | null
+          related_posts: string[]
+          related_products: string[]
+          related_solutions: string[]
+          related_templates: string[]
+          review_interval_months: number
+          review_notes: string | null
+          schema_type: string
+          seo_title: string | null
+          slug: string
+          status: Database["public"]["Enums"]["content_status"]
+          tags: string[]
+          title: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body?: string
+          canonical_url?: string | null
+          content_type?: Database["public"]["Enums"]["content_kind"]
+          created_at?: string
+          cta_key?: string | null
+          excerpt?: string
+          faqs?: Json
+          featured?: boolean
+          featured_image?: string | null
+          id?: string
+          image_alt?: string | null
+          indexable?: boolean
+          industries?: string[]
+          last_reviewed_at?: string | null
+          meta_description?: string | null
+          next_review_at?: string | null
+          og_image?: string | null
+          plan_id?: string | null
+          primary_keyword?: string | null
+          published_at?: string | null
+          related_posts?: string[]
+          related_products?: string[]
+          related_solutions?: string[]
+          related_templates?: string[]
+          review_interval_months?: number
+          review_notes?: string | null
+          schema_type?: string
+          seo_title?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["content_status"]
+          tags?: string[]
+          title: string
+          topic?: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          canonical_url?: string | null
+          content_type?: Database["public"]["Enums"]["content_kind"]
+          created_at?: string
+          cta_key?: string | null
+          excerpt?: string
+          faqs?: Json
+          featured?: boolean
+          featured_image?: string | null
+          id?: string
+          image_alt?: string | null
+          indexable?: boolean
+          industries?: string[]
+          last_reviewed_at?: string | null
+          meta_description?: string | null
+          next_review_at?: string | null
+          og_image?: string | null
+          plan_id?: string | null
+          primary_keyword?: string | null
+          published_at?: string | null
+          related_posts?: string[]
+          related_products?: string[]
+          related_solutions?: string[]
+          related_templates?: string[]
+          review_interval_months?: number
+          review_notes?: string | null
+          schema_type?: string
+          seo_title?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["content_status"]
+          tags?: string[]
+          title?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "content_authors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_posts_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "content_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       content_screening_log: {
         Row: {
@@ -2269,6 +2667,8 @@ export type Database = {
           seo_indexable: boolean
           seo_title: string | null
           slug: string
+          source_template: string | null
+          source_template_version: string | null
           subheadline: string
           submissions: number
           success_message: string
@@ -2304,6 +2704,8 @@ export type Database = {
           seo_indexable?: boolean
           seo_title?: string | null
           slug: string
+          source_template?: string | null
+          source_template_version?: string | null
           subheadline?: string
           submissions?: number
           success_message?: string
@@ -2339,6 +2741,8 @@ export type Database = {
           seo_indexable?: boolean
           seo_title?: string | null
           slug?: string
+          source_template?: string | null
+          source_template_version?: string | null
           subheadline?: string
           submissions?: number
           success_message?: string
@@ -3365,6 +3769,8 @@ export type Database = {
           seo_description: string | null
           seo_title: string | null
           slug: string
+          source_template: string | null
+          source_template_version: string | null
           submissions: number
           success_message: string
           theme: string
@@ -3398,6 +3804,8 @@ export type Database = {
           seo_description?: string | null
           seo_title?: string | null
           slug: string
+          source_template?: string | null
+          source_template_version?: string | null
           submissions?: number
           success_message?: string
           theme?: string
@@ -3431,6 +3839,8 @@ export type Database = {
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
+          source_template?: string | null
+          source_template_version?: string | null
           submissions?: number
           success_message?: string
           theme?: string
@@ -3753,6 +4163,44 @@ export type Database = {
           reference?: string | null
         }
         Relationships: []
+      }
+      template_events: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          event: string
+          id: string
+          referrer: string | null
+          template_slug: string
+          template_type: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          event: string
+          id?: string
+          referrer?: string | null
+          template_slug: string
+          template_type: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          event?: string
+          id?: string
+          referrer?: string | null
+          template_slug?: string
+          template_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_10dlc_registrations: {
         Row: {
@@ -4874,11 +5322,50 @@ export type Database = {
     Enums: {
       account_member_role: "viewer" | "editor" | "admin"
       app_role: "admin" | "user"
+      content_kind:
+        | "article"
+        | "guide"
+        | "tutorial"
+        | "pillar"
+        | "glossary"
+        | "case_study"
+      content_status:
+        | "draft"
+        | "in_review"
+        | "approved"
+        | "scheduled"
+        | "published"
+        | "archived"
+      gap_status: "not_created" | "planned" | "in_progress" | "covered"
       number_request_country: "US" | "CA"
       number_request_status: "pending" | "approved" | "rejected" | "provisioned"
       number_request_type: "toll_free" | "ten_dlc" | "short_code"
       phone_number_status: "active" | "pending" | "released"
       phone_number_type: "toll_free" | "personal"
+      plan_funnel: "awareness" | "consideration" | "decision" | "conversion"
+      plan_intent:
+        | "informational"
+        | "commercial"
+        | "product"
+        | "comparison"
+        | "transactional"
+      plan_priority: "high" | "medium" | "low"
+      plan_role:
+        | "pillar"
+        | "foundational"
+        | "practical"
+        | "commercial"
+        | "template"
+      plan_status:
+        | "idea"
+        | "planned"
+        | "brief_ready"
+        | "writing"
+        | "in_review"
+        | "ready_to_publish"
+        | "published"
+        | "updating"
+        | "archived"
       sender_id_status: "pending" | "approved" | "rejected"
       verifier_tfn_status:
         | "assigned"
@@ -5021,11 +5508,55 @@ export const Constants = {
     Enums: {
       account_member_role: ["viewer", "editor", "admin"],
       app_role: ["admin", "user"],
+      content_kind: [
+        "article",
+        "guide",
+        "tutorial",
+        "pillar",
+        "glossary",
+        "case_study",
+      ],
+      content_status: [
+        "draft",
+        "in_review",
+        "approved",
+        "scheduled",
+        "published",
+        "archived",
+      ],
+      gap_status: ["not_created", "planned", "in_progress", "covered"],
       number_request_country: ["US", "CA"],
       number_request_status: ["pending", "approved", "rejected", "provisioned"],
       number_request_type: ["toll_free", "ten_dlc", "short_code"],
       phone_number_status: ["active", "pending", "released"],
       phone_number_type: ["toll_free", "personal"],
+      plan_funnel: ["awareness", "consideration", "decision", "conversion"],
+      plan_intent: [
+        "informational",
+        "commercial",
+        "product",
+        "comparison",
+        "transactional",
+      ],
+      plan_priority: ["high", "medium", "low"],
+      plan_role: [
+        "pillar",
+        "foundational",
+        "practical",
+        "commercial",
+        "template",
+      ],
+      plan_status: [
+        "idea",
+        "planned",
+        "brief_ready",
+        "writing",
+        "in_review",
+        "ready_to_publish",
+        "published",
+        "updating",
+        "archived",
+      ],
       sender_id_status: ["pending", "approved", "rejected"],
       verifier_tfn_status: [
         "assigned",

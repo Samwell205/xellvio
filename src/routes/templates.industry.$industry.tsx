@@ -1,42 +1,48 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { ChannelCta } from "@/components/marketing/ProductKit";
 import { CategoryLinks, TemplateGrid } from "@/components/marketing/TemplateLibraryGrid";
-import { CATEGORY_META, isTemplateCategory } from "@/lib/marketing/template-catalog";
-import { CATEGORY_TO_TYPE, templatesByType } from "@/lib/templates/library";
+import {
+  INDUSTRY_LABEL,
+  MIN_COLLECTION_SIZE,
+  isIndustry,
+  templatesByIndustry,
+} from "@/lib/templates/library";
 import { pageHead } from "@/lib/seo";
 
-export const Route = createFileRoute("/templates/$category/")({
+export const Route = createFileRoute("/templates/industry/$industry")({
+  loader: ({ params }) => {
+    if (!isIndustry(params.industry)) throw notFound();
+    // Thin collections stay off the site rather than becoming near-empty pages.
+    if (templatesByIndustry(params.industry).length < MIN_COLLECTION_SIZE) throw notFound();
+  },
   head: ({ params }) => {
-    if (!isTemplateCategory(params.category)) {
+    if (!isIndustry(params.industry)) {
       return { meta: [{ title: "Templates | Xellvio" }, { name: "robots", content: "noindex" }] };
     }
-    const meta = CATEGORY_META[params.category];
+    const label = INDUSTRY_LABEL[params.industry];
+    const items = templatesByIndustry(params.industry);
+    const path = `/templates/industry/${params.industry}`;
     return pageHead({
-      path: meta.path,
-      title: meta.title,
-      description: meta.description,
+      path,
+      title: `${label} SMS and Landing Page Templates`,
+      description: `${items.length} free Xellvio templates for ${label.toLowerCase()}: landing pages, sign-up forms and SMS automations you can preview, edit and publish.`,
       breadcrumbs: [
         { name: "Home", path: "/" },
         { name: "Templates", path: "/templates" },
-        { name: meta.label, path: meta.path },
+        { name: label, path },
       ],
     });
   },
-  loader: ({ params }) => {
-    if (!isTemplateCategory(params.category)) throw notFound();
-    return { category: params.category };
-  },
-  component: CategoryPage,
+  component: IndustryCollection,
 });
 
-function CategoryPage() {
-  const params = Route.useParams();
-  const category = isTemplateCategory(params.category) ? params.category : "landing-pages";
-  const meta = CATEGORY_META[category];
-  const items = templatesByType(CATEGORY_TO_TYPE[category]!);
+function IndustryCollection() {
+  const { industry } = Route.useParams();
+  const key = isIndustry(industry) ? industry : "ecommerce";
+  const label = INDUSTRY_LABEL[key];
+  const items = templatesByIndustry(key);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -49,33 +55,28 @@ function CategoryPage() {
               <span className="px-2">/</span>
               <Link to="/templates" className="hover:text-foreground">Templates</Link>
               <span className="px-2">/</span>
-              <span className="text-foreground">{meta.label}</span>
+              <span className="text-foreground">{label}</span>
             </nav>
             <h1 className="mt-5 max-w-3xl text-4xl md:text-[52px] font-extrabold leading-[1.06] tracking-tight text-foreground">
-              {meta.label}
+              Templates for {label.toLowerCase()}
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">{meta.intro}</p>
-            <Link
-              to={meta.product}
-              className="mt-7 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground hover:gap-2.5 transition-all"
-            >
-              Learn how this works in Xellvio <ArrowRight className="size-4" />
-            </Link>
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+              {items.length} templates chosen for {label.toLowerCase()} — pages and forms to collect the contact, and
+              automations to follow up. Everything stays editable once it is in your workspace.
+            </p>
           </div>
         </section>
 
         <section className="mx-auto max-w-[1400px] px-5 sm:px-8 py-16">
           <TemplateGrid items={items} />
-
           <div className="mt-14">
-            <CategoryLinks exclude={category} />
+            <CategoryLinks />
           </div>
         </section>
 
-
         <ChannelCta
-          title="Make one of these yours"
-          body="Create a free Xellvio account and open any template in the builder."
+          title={`Launch your first ${label.toLowerCase()} template`}
+          body="Create a free account and the template opens in your workspace, ready to edit."
           cta={{ label: "Start free", to: "/auth" }}
         />
       </main>
