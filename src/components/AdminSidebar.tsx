@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2,
   Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, GraduationCap, Megaphone, Phone, Scale, PhoneOutgoing, Send,
-} from "lucide-react";
+} , Blocks } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
@@ -48,6 +48,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
       { title: "Country rates", url: "/admin/rates", icon: Settings2 },
       { title: "Toll-free logs", url: "/admin/tollfree-attempts", icon: ClipboardList },
       { title: "Marketplace", url: "/admin/marketplace", icon: CreditCard },
+      { title: "App Marketplace", url: "/admin/apps", icon: Blocks },
       { title: "Verifier marketplace", url: "/admin/verifiers", icon: ShieldCheck },
       { title: "Academy authoring", url: "/admin/academy", icon: GraduationCap },
     ],
