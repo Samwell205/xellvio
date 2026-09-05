@@ -172,9 +172,9 @@ const PILLARS: Pillar[] = [
   {
     eyebrow: "Messaging",
     title: "Marketing that keeps the conversation going",
-    body: "Run SMS and email from one audience, one calendar and one set of numbers — every message reacts to what people actually do.",
+    body: "Run every text from one audience, one calendar and one set of numbers — every message reacts to what people actually do.",
     cta: { label: "Explore messaging", to: "/sms-marketing" },
-    tags: ["SMS campaigns", "Email campaigns", "Two-way inbox"],
+    tags: ["SMS campaigns", "Two-way inbox", "Link tracking"],
     visual: <MessagingVisual />,
   },
   {
@@ -209,14 +209,6 @@ const PILLARS: Pillar[] = [
     tags: ["Segments", "Consent tracking", "Suppressions"],
     visual: <AudienceVisual />,
   },
-  {
-    eyebrow: "App marketplace",
-    title: "Plugged into the tools you already run",
-    body: "Connect your store, payments, CRM and workspace tools in a few clicks — or build your own with our API and webhooks.",
-    cta: { label: "Browse the marketplace", to: "/marketplace" },
-    tags: ["41 apps", "Open API", "Webhooks"],
-    visual: <AppsVisual />,
-  },
 ];
 
 const ICONS = [Smartphone, Sparkles, Workflow, BarChart3, Users, Blocks];
@@ -232,7 +224,7 @@ export function PlatformShowcase() {
           Everything you need to talk to customers — not just texting
         </motion.h2>
         <motion.p {...reveal} className="mt-5 max-w-2xl text-lg text-muted-foreground">
-          Messaging, AI, automations, reporting, audience data and integrations in a single platform, so your team stops stitching tools together.
+          Messaging, AI, automations, reporting and audience data in a single platform, so your team stops stitching tools together.
         </motion.p>
 
         <div className="mt-16 grid gap-x-10 gap-y-16 md:grid-cols-2">

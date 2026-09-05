@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import {
   ArrowRight, Globe2, ShieldCheck, BarChart3, Users, Code2, Calendar, Workflow,
   Check, MessageSquare, Sparkles, ChevronDown, Activity, Send, MousePointerClick,
-  Mail, Smartphone, Flag, Play,
+  Smartphone, Flag, Play,
 } from "lucide-react";
 import { useState } from "react";
 import { MarketingNav } from "@/components/MarketingNav";
@@ -50,7 +50,6 @@ function HomePage() {
             { value: "24/7", label: "delivery monitoring" },
           ]}
         />
-        <Channels />
         <PlatformShowcase />
         <FeatureGrid />
         <EditorialActivity />
@@ -77,7 +76,7 @@ function Hero() {
             One platform for<br/>every customer message
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-xl">
-            SMS, email, automations, AI, reporting and integrations in one place — so every conversation reacts to what your customers actually do.
+            SMS, automations, AI, reporting and audience data in one place — so every conversation reacts to what your customers actually do.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link to="/auth" className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-full px-5 py-3 font-semibold hover:bg-primary/90 transition-colors">Sign up <ArrowRight className="size-4" /></Link>
@@ -163,7 +162,7 @@ function EditorialActivity() {
             <div className="font-bold text-foreground mb-4">Activity log</div>
             <div className="space-y-3">
               {[
-                { i: Mail, t: "Opened a cross-sell SMS", d: "Today · 12:45 PM" },
+                { i: MousePointerClick, t: "Opened a cross-sell SMS", d: "Today · 12:45 PM" },
                 { i: Check, t: "Submitted a review", d: "Today · 7:03 AM" },
                 { i: Send, t: "Checkout started", d: "Yesterday · 5:11 PM" },
                 { i: MousePointerClick, t: "Viewed product", d: "Nov 24 · 2:13 PM" },
@@ -202,7 +201,7 @@ function EditorialReach() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div {...fade}>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Reach customers across channels, and across the globe</h2>
-          <p className="mt-5 text-muted-foreground">With all your channels in one platform, it's easy to combine SMS, email, and mobile messaging into global omnichannel experiences.</p>
+          <p className="mt-5 text-muted-foreground">With all your channels in one platform, it's easy to combine texting, automations and mobile messaging into global experiences.</p>
           <ul className="mt-6 space-y-4 text-muted-foreground">
             <li className="flex gap-3"><span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Meet customers anywhere with multi-channel flows.</li>
             <li className="flex gap-3"><span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Engage globally — SMS available in 190+ countries.</li>
@@ -235,7 +234,7 @@ function EditorialAttribution() {
             <div className="font-bold text-foreground mb-4">Attribution windows</div>
             <div className="space-y-3">
               {[
-                { l: "Opened email", v: "10 days" },
+                { l: "Replied to SMS", v: "10 days" },
                 { l: "Clicked SMS", v: "24 hours", active: true },
                 { l: "Opened push", v: "5 days" },
               ].map((r) => (
