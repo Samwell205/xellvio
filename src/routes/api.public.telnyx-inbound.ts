@@ -27,7 +27,13 @@ export const Route = createFileRoute("/api/public/telnyx-inbound")({
         const ts = request.headers.get("telnyx-timestamp");
         const pub = process.env.TELNYX_PUBLIC_KEY;
 
-        if (pub && !verifyTelnyxSignature(raw, sig, ts, pub)) {
+        // Fail closed: without the signing key we cannot tell a real carrier
+        // webhook from a forged one, so nothing is processed.
+        if (!pub) {
+          console.error("[telnyx-inbound] TELNYX_PUBLIC_KEY not set — rejecting webhook");
+          return new Response("Webhook verification unavailable", { status: 401 });
+        }
+        if (!verifyTelnyxSignature(raw, sig, ts, pub)) {
           return new Response("Invalid signature", { status: 401 });
         }
 
