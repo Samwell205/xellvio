@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { importTemplate } from "@/lib/template-import.functions";
 import { findLibraryTemplate } from "@/lib/templates/library";
+import { trackProduct } from "@/lib/growth/track";
 
 export const Route = createFileRoute("/_authenticated/app/use-template/$category/$slug")({
   component: UseTemplate,
@@ -29,6 +30,7 @@ function UseTemplate() {
     }
     run({ data: { category, slug } })
       .then((res) => {
+        trackProduct("template_imported", { name: res.name });
         toast.success(`${res.name} added to your workspace as a draft`);
         navigate({ to: res.to, replace: true });
       })

@@ -30,6 +30,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
+import { trackProduct } from "@/lib/growth/track";
   Megaphone,
   Users,
   MessageSquare,
@@ -720,6 +721,7 @@ function NewCampaignPage() {
           .eq("id", savedId);
         if (statusErr) throw statusErr;
       }
+      trackProduct(launch ? "campaign_sent" : "campaign_created");
       toast.success(launch ? "Campaign launched" : "Saved as draft");
       navigate({ to: "/app/campaigns" });
     } catch (e: any) {
