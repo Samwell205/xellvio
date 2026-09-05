@@ -63,6 +63,9 @@ export const TRACKED_EVENTS = [
   "checkout_started",
   "subscription_started",
   "subscription_cancelled",
+  // real-user performance measurement
+  "web_vital",
+  "route_transition",
 ] as const;
 
 export type TrackedEvent = (typeof TRACKED_EVENTS)[number];
