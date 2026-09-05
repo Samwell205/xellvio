@@ -728,9 +728,17 @@ async function computeOverview(db: any, data: { days: number }) {
       insights,
       events_recorded: events.length,
     };
+}
+
+export const growthOverview = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => WindowSchema.parse(input ?? {}))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase);
+    return computeOverview(await admin(), data);
   });
 
-export type GrowthOverview = Awaited<ReturnType<typeof growthOverview>>;
+export type GrowthOverview = Awaited<ReturnType<typeof computeOverview>>;
 
 /* ------------------------------------------------------------------ */
 /* Configuration, experiments, alerts                                  */
