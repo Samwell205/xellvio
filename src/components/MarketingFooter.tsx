@@ -47,19 +47,12 @@ export function MarketingFooter() {
             { label: "Cookie Policy", to: "/cookies" },
           ]} />
         </div>
-        <div>
-          <h4 className="font-semibold text-sm mb-3">Contact</h4>
-          <ul className="space-y-2 text-sm text-secondary-foreground/70">
-            <li><Link to="/contact" className="hover:text-secondary-foreground">Contact form</Link></li>
-            <li>
-              <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-secondary-foreground break-all">{SUPPORT_EMAIL}</a>
-            </li>
-            <li>
-              <a href={`mailto:${ABUSE_EMAIL}`} className="hover:text-secondary-foreground break-all">
-                Report abuse: {ABUSE_EMAIL}
-              </a>
-            </li>
-          </ul>
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 border-t border-white/10 pt-8 text-sm text-secondary-foreground/70">
+          <Link to="/contact" className="hover:text-secondary-foreground">Contact form</Link>
+          <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-secondary-foreground break-all">{SUPPORT_EMAIL}</a>
+          <a href={`mailto:${ABUSE_EMAIL}`} className="hover:text-secondary-foreground break-all">
+            Report abuse: {ABUSE_EMAIL}
+          </a>
         </div>
       </div>
       <div className="border-t border-white/10">
