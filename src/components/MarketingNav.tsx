@@ -31,9 +31,9 @@ export function MarketingNav() {
       onKeyDown={(e) => { if (e.key === "Escape") setOpenMenu(null); }}
     >
       <div className="mx-auto flex h-[68px] max-w-[1400px] items-center gap-8 px-5 sm:px-8">
-        <Link to="/" className="shrink-0" onClick={() => setOpenMenu(null)}>
+        <div className="shrink-0" onClick={() => setOpenMenu(null)}>
           <Logo />
-        </Link>
+        </div>
 
         <nav className="hidden lg:flex items-center gap-1 text-[15px] font-medium">
           {NAV.map((entry) =>
