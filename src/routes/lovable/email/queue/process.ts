@@ -220,6 +220,17 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
               }
             }
 
+            // Safety net: older or hand-built payloads can be missing the fields the
+            // email service requires. Normalize them here so the message is sent
+            // instead of failing with a 400 until it is dropped.
+            const normalizedIdempotencyKey =
+              (typeof payload.idempotency_key === 'string' && payload.idempotency_key) ||
+              (typeof payload.message_id === 'string' && payload.message_id) ||
+              `${queue}-${msg.msg_id}`
+            const normalizedPurpose =
+              (typeof payload.purpose === 'string' && payload.purpose) ||
+              (queue === 'auth_emails' ? 'auth' : 'transactional')
+
             try {
               await sendMail(
                 {
@@ -230,9 +241,9 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
                   subject: payload.subject,
                   html: payload.html,
                   text: payload.text,
-                  purpose: payload.purpose,
+                  purpose: normalizedPurpose,
                   label: payload.label,
-                  idempotency_key: payload.idempotency_key,
+                  idempotency_key: normalizedIdempotencyKey,
                   unsubscribe_token: payload.unsubscribe_token,
                   message_id: payload.message_id,
                 }
