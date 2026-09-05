@@ -88,6 +88,7 @@ import { Route as AuthenticatedAppListsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppLandingPagesRouteImport } from './routes/_authenticated.app.landing-pages'
 import { Route as AuthenticatedAppInboxRouteImport } from './routes/_authenticated.app.inbox'
 import { Route as AuthenticatedAppFlowsRouteImport } from './routes/_authenticated.app.flows'
+import { Route as AuthenticatedAppDeveloperRouteImport } from './routes/_authenticated.app.developer'
 import { Route as AuthenticatedAppCheckoutRouteImport } from './routes/_authenticated.app.checkout'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
@@ -556,6 +557,12 @@ const AuthenticatedAppFlowsRoute = AuthenticatedAppFlowsRouteImport.update({
   path: '/flows',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppDeveloperRoute =
+  AuthenticatedAppDeveloperRouteImport.update({
+    id: '/developer',
+    path: '/developer',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppCheckoutRoute =
   AuthenticatedAppCheckoutRouteImport.update({
     id: '/checkout',
@@ -943,6 +950,7 @@ export interface FileRoutesByFullPath {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/app/developer': typeof AuthenticatedAppDeveloperRoute
   '/app/flows': typeof AuthenticatedAppFlowsRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
   '/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
@@ -1071,6 +1079,7 @@ export interface FileRoutesByTo {
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/app/developer': typeof AuthenticatedAppDeveloperRoute
   '/app/flows': typeof AuthenticatedAppFlowsRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
   '/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
@@ -1206,6 +1215,7 @@ export interface FileRoutesById {
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/_authenticated/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/_authenticated/app/developer': typeof AuthenticatedAppDeveloperRoute
   '/_authenticated/app/flows': typeof AuthenticatedAppFlowsRoute
   '/_authenticated/app/inbox': typeof AuthenticatedAppInboxRoute
   '/_authenticated/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
@@ -1341,6 +1351,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/campaigns'
     | '/app/checkout'
+    | '/app/developer'
     | '/app/flows'
     | '/app/inbox'
     | '/app/landing-pages'
@@ -1469,6 +1480,7 @@ export interface FileRouteTypes {
     | '/app/audience'
     | '/app/billing'
     | '/app/checkout'
+    | '/app/developer'
     | '/app/flows'
     | '/app/inbox'
     | '/app/landing-pages'
@@ -1603,6 +1615,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
     | '/_authenticated/app/checkout'
+    | '/_authenticated/app/developer'
     | '/_authenticated/app/flows'
     | '/_authenticated/app/inbox'
     | '/_authenticated/app/landing-pages'
@@ -2286,6 +2299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppFlowsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/developer': {
+      id: '/_authenticated/app/developer'
+      path: '/developer'
+      fullPath: '/app/developer'
+      preLoaderRoute: typeof AuthenticatedAppDeveloperRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/checkout': {
       id: '/_authenticated/app/checkout'
       path: '/checkout'
@@ -2793,6 +2813,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
   AuthenticatedAppCheckoutRoute: typeof AuthenticatedAppCheckoutRoute
+  AuthenticatedAppDeveloperRoute: typeof AuthenticatedAppDeveloperRoute
   AuthenticatedAppFlowsRoute: typeof AuthenticatedAppFlowsRoute
   AuthenticatedAppInboxRoute: typeof AuthenticatedAppInboxRoute
   AuthenticatedAppLandingPagesRoute: typeof AuthenticatedAppLandingPagesRoute
@@ -2820,6 +2841,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
   AuthenticatedAppCheckoutRoute: AuthenticatedAppCheckoutRoute,
+  AuthenticatedAppDeveloperRoute: AuthenticatedAppDeveloperRoute,
   AuthenticatedAppFlowsRoute: AuthenticatedAppFlowsRoute,
   AuthenticatedAppInboxRoute: AuthenticatedAppInboxRoute,
   AuthenticatedAppLandingPagesRoute: AuthenticatedAppLandingPagesRoute,
