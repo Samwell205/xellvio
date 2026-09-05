@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { AppLogo } from "./AppLogo";
-import { connectApp } from "@/lib/marketplace.functions";
+import { connectApp } from "@/lib/marketplace-apps.functions";
 import { AUTH_TYPE_LABELS } from "@/lib/marketplace/catalog";
 
 export type ConnectTarget = {

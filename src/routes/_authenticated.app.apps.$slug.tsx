@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, Bolt, CheckCircle2, Radio, ShieldCheck, Trash2 } from "lucide-react";
 import { AUTH_TYPE_LABELS, getApp } from "@/lib/marketplace/catalog";
-import { disconnectApp, listMyInstallations, updateConnection } from "@/lib/marketplace.functions";
+import { disconnectApp, listMyInstallations, updateConnection } from "@/lib/marketplace-apps.functions";
 import { AppLogo } from "@/components/marketplace/AppLogo";
 import { ConnectDialog } from "@/components/marketplace/ConnectDialog";
 import { Badge } from "@/components/ui/badge";

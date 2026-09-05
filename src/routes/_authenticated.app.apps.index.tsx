@@ -11,7 +11,7 @@ import {
   listMyInstallations,
   recommendedApps,
   type InstalledApp,
-} from "@/lib/marketplace.functions";
+} from "@/lib/marketplace-apps.functions";
 import { AppCard } from "@/components/marketplace/AppCard";
 import { AppLogo } from "@/components/marketplace/AppLogo";
 import { ConnectDialog, type ConnectTarget } from "@/components/marketplace/ConnectDialog";
