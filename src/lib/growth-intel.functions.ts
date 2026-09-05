@@ -205,12 +205,7 @@ function activationOf(facts: WorkspaceFacts, activationEvents: ActivationEventKe
 /* The one dashboard payload.                                          */
 /* ------------------------------------------------------------------ */
 
-export const growthOverview = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => WindowSchema.parse(input ?? {}))
-  .handler(async ({ data, context }) => {
-    await ensureAdmin(context.supabase);
-    const db = await admin();
+async function computeOverview(db: any, data: { days: number }) {
     const since = daysAgo(data.days);
     const prevSince = daysAgo(data.days * 2);
 
