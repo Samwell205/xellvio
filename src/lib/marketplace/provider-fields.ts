@@ -13,7 +13,29 @@ export type ProviderField = {
   secret?: boolean;
   optional?: boolean;
   help?: string;
+  /** Shape the value must match before the form can continue. */
+  pattern?: "domain" | "url";
 };
+
+const PATTERNS: Record<"domain" | "url", { test: (v: string) => boolean; message: string }> = {
+  domain: {
+    test: (v) => /^(https?:\/\/)?[a-z0-9][a-z0-9.-]*\.[a-z]{2,}\/?$/i.test(v.trim()),
+    message: "Enter a website address, for example example.myshopify.com — not an email address.",
+  },
+  url: {
+    test: (v) => /^https?:\/\/[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(\/.*)?$/i.test(v.trim()),
+    message: "Enter a full link starting with https:// — not an email address.",
+  },
+};
+
+/** Returns an error message when the value does not match the field's expected shape. */
+export function fieldError(field: ProviderField, value: string): string | null {
+  const v = (value ?? "").trim();
+  if (!v) return field.optional ? null : "This field is required.";
+  if (!field.pattern) return null;
+  const rule = PATTERNS[field.pattern];
+  return rule.test(v) ? null : rule.message;
+}
 
 export type ProviderCapabilities = {
   /** Credentials are checked against the provider before the connection is saved. */
