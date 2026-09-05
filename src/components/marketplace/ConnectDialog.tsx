@@ -13,7 +13,7 @@ import { AppLogo } from "./AppLogo";
 import { connectApp } from "@/lib/marketplace-apps.functions";
 import { listSenderOptions } from "@/lib/marketplace-integrations.functions";
 import { AUTH_TYPE_LABELS } from "@/lib/marketplace/catalog";
-import { specFor } from "@/lib/marketplace/provider-fields";
+import { fieldError, specFor } from "@/lib/marketplace/provider-fields";
 import { useQuery } from "@tanstack/react-query";
 
 export type ConnectTarget = {
@@ -102,10 +102,13 @@ export function ConnectDialog({
   }
 
   if (!app) return null;
-  const requiredKeys = fields.filter((f) => !f.optional).map((f) => f.key);
+  const errors: Record<string, string | null> = Object.fromEntries(
+    fields.map((f) => [f.key, fieldError(f, values[f.key] ?? "")]),
+  );
+  const touched = (key: string) => (values[key] ?? "").trim().length > 0;
   const canContinue = isSmsApp
     ? !!senderNumber
-    : requiredKeys.length === 0 || requiredKeys.every((k) => !!values[k]?.trim());
+    : fields.every((f) => !errors[f.key]);
 
   return (
     <Dialog open={open} onOpenChange={close}>
@@ -189,7 +192,11 @@ export function ConnectDialog({
                   value={values[f.key] ?? ""}
                   onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
                 />
-                {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}
+                {touched(f.key) && errors[f.key] ? (
+                  <p className="text-xs text-destructive">{errors[f.key]}</p>
+                ) : (
+                  f.help && <p className="text-xs text-muted-foreground">{f.help}</p>
+                )}
               </div>
             ))}
             <div className="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">

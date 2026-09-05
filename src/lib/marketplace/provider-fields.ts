@@ -13,7 +13,29 @@ export type ProviderField = {
   secret?: boolean;
   optional?: boolean;
   help?: string;
+  /** Shape the value must match before the form can continue. */
+  pattern?: "domain" | "url";
 };
+
+const PATTERNS: Record<"domain" | "url", { test: (v: string) => boolean; message: string }> = {
+  domain: {
+    test: (v) => /^(https?:\/\/)?[a-z0-9][a-z0-9.-]*\.[a-z]{2,}\/?$/i.test(v.trim()),
+    message: "Enter a website address, for example example.myshopify.com — not an email address.",
+  },
+  url: {
+    test: (v) => /^https?:\/\/[a-z0-9][a-z0-9.-]*\.[a-z]{2,}(\/.*)?$/i.test(v.trim()),
+    message: "Enter a full link starting with https:// — not an email address.",
+  },
+};
+
+/** Returns an error message when the value does not match the field's expected shape. */
+export function fieldError(field: ProviderField, value: string): string | null {
+  const v = (value ?? "").trim();
+  if (!v) return field.optional ? null : "This field is required.";
+  if (!field.pattern) return null;
+  const rule = PATTERNS[field.pattern];
+  return rule.test(v) ? null : rule.message;
+}
 
 export type ProviderCapabilities = {
   /** Credentials are checked against the provider before the connection is saved. */
@@ -70,7 +92,7 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
     syncLabel: "Import Shopify customers as contacts",
     hint: "In Shopify: Settings → Apps and sales channels → Develop apps → create an app with read access to customers and orders, then install it and copy the Admin API access token.",
     fields: [
-      { key: "shop_domain", label: "Store domain", placeholder: "example.myshopify.com" },
+      { key: "shop_domain", label: "Store domain", placeholder: "example.myshopify.com", pattern: "domain" },
       { key: "access_token", label: "Admin API access token", placeholder: "shpat_…", secret: true },
     ],
   },
@@ -79,7 +101,7 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
     syncLabel: "Import WooCommerce customers as contacts",
     hint: "In WordPress: WooCommerce → Settings → Advanced → REST API → add a read-only key.",
     fields: [
-      { key: "store_url", label: "Store URL", placeholder: "https://example.com" },
+      { key: "store_url", label: "Store URL", placeholder: "https://example.com", pattern: "url" },
       { key: "consumer_key", label: "Consumer key", placeholder: "ck_…", secret: true },
       { key: "consumer_secret", label: "Consumer secret", placeholder: "cs_…", secret: true },
     ],
@@ -140,7 +162,7 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
     capabilities: caps(true, true),
     syncLabel: "Import ActiveCampaign contacts",
     fields: [
-      { key: "base_url", label: "Account URL", placeholder: "https://youraccount.api-us1.com" },
+      { key: "base_url", label: "Account URL", placeholder: "https://youraccount.api-us1.com", pattern: "url" },
       { key: "api_key", label: "API key", secret: true },
     ],
   },
@@ -168,12 +190,12 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
     capabilities: caps(true, false, true),
     hint: "Create an incoming webhook for the channel Xellvio should post to.",
     fields: [
-      { key: "webhook_url", label: "Incoming webhook URL", placeholder: "https://hooks.slack.com/services/…", secret: true },
+      { key: "webhook_url", label: "Incoming webhook URL", placeholder: "https://hooks.slack.com/services/…", secret: true, pattern: "url" },
     ],
   },
   discord: {
     capabilities: caps(true, false, true),
-    fields: [{ key: "webhook_url", label: "Channel webhook URL", secret: true }],
+    fields: [{ key: "webhook_url", label: "Channel webhook URL", secret: true, pattern: "url" }],
   },
   twilio: {
     capabilities: caps(true),
@@ -188,13 +210,13 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
     capabilities: caps(true, false, true),
     hint: "Xellvio sends a signed test payload to this URL to confirm it is reachable.",
     fields: [
-      { key: "endpoint", label: "Endpoint URL", placeholder: "https://api.example.com/xellvio" },
+      { key: "endpoint", label: "Endpoint URL", placeholder: "https://api.example.com/xellvio", pattern: "url" },
       { key: "secret", label: "Signing secret", secret: true, optional: true },
     ],
   },
-  zapier: { capabilities: caps(true, false, true), fields: [{ key: "endpoint", label: "Zap webhook URL", placeholder: "https://hooks.zapier.com/…" }] },
-  make: { capabilities: caps(true, false, true), fields: [{ key: "endpoint", label: "Make webhook URL", placeholder: "https://hook.eu1.make.com/…" }] },
-  n8n: { capabilities: caps(true, false, true), fields: [{ key: "endpoint", label: "n8n webhook URL" }] },
+  zapier: { capabilities: caps(true, false, true), fields: [{ key: "endpoint", label: "Zap webhook URL", placeholder: "https://hooks.zapier.com/…", pattern: "url" }] },
+  make: { capabilities: caps(true, false, true), fields: [{ key: "endpoint", label: "Make webhook URL", placeholder: "https://hook.eu1.make.com/…", pattern: "url" }] },
+  n8n: { capabilities: caps(true, false, true), fields: [{ key: "endpoint", label: "n8n webhook URL", pattern: "url" }] },
 
   // ── AI ────────────────────────────────────────────────────────────────────
   openai: { capabilities: caps(true), fields: [{ key: "api_key", label: "API key", placeholder: "sk-…", secret: true }] },
@@ -225,7 +247,7 @@ export function fallbackFields(authType: string, appName: string): ProviderField
     case "bearer_token":
       return [
         { key: "access_token", label: "Access token", secret: true },
-        { key: "base_url", label: "Base URL", placeholder: "https://your-instance.example.com", optional: true },
+        { key: "base_url", label: "Base URL", placeholder: "https://your-instance.example.com", optional: true, pattern: "url" },
       ];
     case "oauth2":
       return [
@@ -237,7 +259,7 @@ export function fallbackFields(authType: string, appName: string): ProviderField
       return [];
     default:
       return [
-        { key: "endpoint", label: "Endpoint URL", placeholder: "https://api.example.com" },
+        { key: "endpoint", label: "Endpoint URL", placeholder: "https://api.example.com", pattern: "url" },
         { key: "secret", label: "Signing secret", secret: true, optional: true },
       ];
   }
