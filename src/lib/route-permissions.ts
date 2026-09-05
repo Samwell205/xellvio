@@ -28,7 +28,7 @@ const ROUTE_PERMS: { prefix: string; exact?: boolean; perm: PermissionKey }[] = 
 const ALWAYS_ALLOWED = ["/app/onboarding"];
 
 /** Routes only the workspace owner may open (not part of the permission grid). */
-const OWNER_ONLY = ["/app/my-academy", "/app/academy", "/app/pricing-calculator"];
+const OWNER_ONLY = ["/app/pricing-calculator"];
 
 export function isOwnerOnlyPath(pathname: string): boolean {
   return OWNER_ONLY.some((p) => pathname === p || pathname.startsWith(p + "/"));

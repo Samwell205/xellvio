@@ -67,7 +67,6 @@ const items: Entry[] = [
 
 const advancedItems: Entry[] = [
   { title: "Team", url: "/app/team", icon: UserPlus, perm: "team" },
-  { title: "My Academy", url: "/app/my-academy", icon: GraduationCap, ownerOnly: true },
 ];
 
 
