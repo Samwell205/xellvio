@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Bolt, CheckCircle2, Radio, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, Bolt, CheckCircle2, ExternalLink, Radio, ShieldCheck, Trash2 } from "lucide-react";
 import { AUTH_TYPE_LABELS, getApp } from "@/lib/marketplace/catalog";
+import { guideFor } from "@/lib/marketplace/setup-guides";
 import { disconnectApp, listMyInstallations, updateConnection } from "@/lib/marketplace-apps.functions";
 import { AppLogo } from "@/components/marketplace/AppLogo";
 import { ConnectDialog } from "@/components/marketplace/ConnectDialog";
@@ -223,10 +224,32 @@ function WorkspaceAppDetail() {
             <CardHeader>
               <CardTitle className="text-base">Setup guide</CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              {a.setup_guide || `Authorise ${a.name}, then choose what it may sync with this workspace.`}
+            <CardContent className="space-y-4 text-sm text-muted-foreground">
+              <p>{a.setup_guide || `Authorise ${a.name}, then choose what it may sync with this workspace.`}</p>
+              <ol className="space-y-2.5">
+                {guideFor(a.slug, a.auth_type).steps.map((s: string, i: number) => (
+                  <li key={i} className="flex gap-2.5">
+                    <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                      {i + 1}
+                    </span>
+                    <span className="leading-relaxed">{s}</span>
+                  </li>
+                ))}
+              </ol>
+              {guideFor(a.slug, a.auth_type).docsUrl && (
+                <a
+                  href={guideFor(a.slug, a.auth_type).docsUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                >
+                  <ExternalLink className="size-3.5" />
+                  {guideFor(a.slug, a.auth_type).docsLabel ?? `${a.name} documentation`}
+                </a>
+              )}
             </CardContent>
           </Card>
+
           <div className="rounded-2xl border bg-muted/40 p-5 text-sm text-muted-foreground">
             <ShieldCheck className="size-5 text-primary" />
             <p className="mt-2">

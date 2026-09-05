@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, KeyRound, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ChevronDown, ExternalLink, KeyRound, ListOrdered, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ import { connectApp } from "@/lib/marketplace-apps.functions";
 import { listSenderOptions } from "@/lib/marketplace-integrations.functions";
 import { AUTH_TYPE_LABELS } from "@/lib/marketplace/catalog";
 import { fieldError, specFor } from "@/lib/marketplace/provider-fields";
+import { guideFor } from "@/lib/marketplace/setup-guides";
 import { useQuery } from "@tanstack/react-query";
 
 export type ConnectTarget = {
@@ -49,6 +50,11 @@ export function ConnectDialog({
   const run = useServerFn(connectApp);
 
   const spec = useMemo(() => (app ? specFor(app.slug, app.auth_type, app.name) : null), [app]);
+  const guide = useMemo(
+    () => (app ? guideFor(app.slug, app.auth_type) : { steps: [] as string[] }),
+    [app],
+  );
+
   const fields = spec?.fields ?? [];
   const isSmsApp = spec?.connectMode === "xellvio_sms";
   const [senderNumber, setSenderNumber] = useState("");
@@ -148,7 +154,40 @@ export function ConnectDialog({
 
         {step === 0 && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{spec?.hint || app.setup_guide}</p>
+            {(spec?.hint || app.setup_guide) && (
+              <p className="text-sm text-muted-foreground">{spec?.hint || app.setup_guide}</p>
+            )}
+            {guide.steps.length > 0 && (
+              <details open className="rounded-lg border bg-muted/30">
+                <summary className="flex cursor-pointer list-none items-center gap-2 p-3 text-sm font-medium">
+                  <ListOrdered className="size-4 text-primary" />
+                  How to get these details
+                  <ChevronDown className="ml-auto size-4 text-muted-foreground" />
+                </summary>
+                <ol className="space-y-2 border-t px-3 py-3">
+                  {guide.steps.map((s, i) => (
+                    <li key={i} className="flex gap-2.5 text-sm text-muted-foreground">
+                      <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                        {i + 1}
+                      </span>
+                      <span className="leading-relaxed">{s}</span>
+                    </li>
+                  ))}
+                </ol>
+                {guide.docsUrl && (
+                  <a
+                    href={guide.docsUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="flex items-center gap-1.5 border-t px-3 py-2.5 text-xs font-medium text-primary hover:underline"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    {guide.docsLabel ?? `${app.name} documentation`}
+                  </a>
+                )}
+              </details>
+            )}
+
             {isSmsApp && (
               <div className="space-y-2">
                 <Label>Sending number</Label>
