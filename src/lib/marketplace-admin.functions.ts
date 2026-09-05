@@ -113,7 +113,7 @@ export const adminReviewApp = createServerFn({ method: "POST" })
         patch["visibility"] = "private";
         break;
     }
-    const { error } = await sb.from("apps").update(patch).eq("id", data.appId);
+    const { error } = await sb.from("apps").update(patch as never).eq("id", data.appId);
     if (error) throw new Error(error.message);
     await sb.from("integration_logs").insert({
       app_id: data.appId,

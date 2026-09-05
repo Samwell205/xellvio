@@ -21,7 +21,7 @@ export type InstalledApp = {
     name: string | null;
     status: string;
     accountLabel: string | null;
-    settings: Record<string, unknown>;
+    settings: Record<string, string | number | boolean | null>;
     lastError: string | null;
     lastSyncedAt: string | null;
     createdAt: string;

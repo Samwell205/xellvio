@@ -35,7 +35,7 @@ export const Route = createFileRoute("/marketplace/apps/")({
 
 function BrowseApps() {
   const { q, category, sort } = Route.useSearch();
-  const navigate = useNavigate({ from: "/marketplace/apps" });
+  const navigate = useNavigate({ from: "/marketplace/apps/" });
   const cats = useQuery({ queryKey: ["mkt-categories"], queryFn: listCategories });
   const apps = useQuery({
     queryKey: ["mkt-apps", q ?? "", category ?? "", sort ?? "popular"],
@@ -43,7 +43,7 @@ function BrowseApps() {
   });
 
   const setSearch = (next: Partial<SearchParams>) =>
-    navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
+    navigate({ search: { q, category, sort, ...next }, replace: true });
 
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-10 md:px-6">
