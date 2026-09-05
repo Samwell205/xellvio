@@ -155,13 +155,18 @@ function RootComponent() {
   }, [router, queryClient]);
 
   // Organic-traffic + conversion measurement. No-op unless a measurement ID is set.
+  // First-party growth measurement always runs (no cookies, no personal data).
   useEffect(() => {
     initAnalytics();
-    trackPageView(window.location.pathname + window.location.search);
+    const path = window.location.pathname;
+    trackPageView(path + window.location.search);
+    trackView(path);
     return router.subscribe("onResolved", ({ toLocation }) => {
       trackPageView(toLocation.href);
+      trackView(toLocation.pathname);
     });
   }, [router]);
+
 
   return (
     <QueryClientProvider client={queryClient}>
