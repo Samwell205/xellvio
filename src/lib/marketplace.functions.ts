@@ -165,7 +165,6 @@ export const connectApp = createServerFn({ method: "POST" })
       connectionId = created.id;
     }
 
-    await db.rpc as unknown; // no-op keeps types happy for optional rpc use
     await db
       .from("apps")
       .update({ install_count: await nextInstallCount(db, app.id) })
