@@ -85,16 +85,55 @@ Rules:
 - Motion should feel premium and restrained: entrance animations on sections/headlines with staggered animationDelay (0/80/160ms), hoverEffect on buttons and cards, depth for cards. Never animate every element.
 `;
 
+/**
+ * How Xellvio models websites, landing pages and the leads they capture.
+ * The AI must design inside this model so what it produces maps cleanly onto
+ * the stored data instead of inventing a new shape every session.
+ */
+const DATA_MODEL_DOC = `
+Xellvio's data model (design inside it, never around it):
+
+1. Separation of concerns. Page content, captured leads, and lead delivery are three
+   separate things. You only ever produce content: ordered sections plus theme tokens.
+   Never invent tracking, CRM push, notification or delivery configuration inside blocks.
+2. Brand tokens live once, on the theme (site level) — colours, fonts, radius, spacing,
+   button style. Blocks reference tokens ("primary", "surface", "heading", "muted", ...)
+   instead of hardcoded hex values, so the whole site can be reskinned without touching
+   content. Only use a raw hex when the user explicitly asks for that exact colour.
+3. A page is an ordered list of sections, each with a validated block type and a content
+   object. Never fabricate new block types: pick the closest supported type and express
+   the idea through its content and styles.
+4. Lead capture is the commercial asset. Every form must:
+   - contain a phone field (this platform sends SMS) and, where sensible, email;
+   - use stable, machine-readable field labels that map to promoted columns
+     (First name, Last name, Email, Phone, Company) rather than clever custom labels;
+   - mark only genuinely needed fields required — friction costs leads;
+   - include explicit consent copy in the form's consentText for SMS/marketing
+     opt-in (compliance is not optional), and never ask for sensitive data
+     (passwords, card numbers, government IDs, health data).
+   Extra questions are fine but keep them few; the fewer fields, the higher the conversion.
+5. Deduplication happens on email and normalised phone, so never ask for the same
+   identifier twice or split a phone number across multiple fields.
+6. Pages carry their own SEO identity: a clear H1 (exactly one heading level 1 per page),
+   descriptive image alt text, and copy that supports the page title and description.
+7. Extend, do not replace: reuse existing block ids, existing theme tokens and the
+   existing structure whenever the request does not require changing them.
+`;
+
 function systemPrompt(kind: "form" | "page") {
   return `You are Xellvio's senior product designer and conversion copywriter. You design ${
     kind === "form" ? "SMS sign-up forms" : "marketing landing pages"
   } as structured JSON.
 
 ${SCHEMA_DOC}
+${DATA_MODEL_DOC}
 
 Respond with ONLY minified JSON in this exact shape:
-{"blocks":[...],"theme":{...},"summary":["short change 1","short change 2"]}
-"theme" may be omitted when unchanged. "summary" is 1-6 plain-English bullet points describing what you changed. No markdown, no commentary, no code fences.`;
+{"blocks":[...],"theme":{...},"seo":{"title":"","description":""},"summary":["short change 1","short change 2"]}
+"theme" may be omitted when unchanged. "seo" is optional: include it for landing pages when you
+write or rewrite the main headline — title under 60 characters, description under 160, both
+specific to the page content. "summary" is 1-6 plain-English bullet points describing what you
+changed. No markdown, no commentary, no code fences.`;
 }
 
 const MODE_INSTRUCTIONS: Record<string, string> = {
@@ -161,9 +200,13 @@ export const generateBuilderDesign = createServerFn({ method: "POST" })
     const summary: string[] = Array.isArray(parsed?.summary)
       ? parsed.summary.filter((s: unknown) => typeof s === "string").slice(0, 8)
       : [];
+    const seoTitle = typeof parsed?.seo?.title === "string" ? parsed.seo.title.trim().slice(0, 70) : "";
+    const seoDescription =
+      typeof parsed?.seo?.description === "string" ? parsed.seo.description.trim().slice(0, 200) : "";
     return {
       blocks,
       theme: parsed?.theme && typeof parsed.theme === "object" ? parsed.theme : null,
+      seo: seoTitle || seoDescription ? { title: seoTitle, description: seoDescription } : null,
       summary: summary.length ? summary : ["Updated the design"],
     };
   });
