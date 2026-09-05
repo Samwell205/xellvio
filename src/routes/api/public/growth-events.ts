@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { TRACKED_EVENTS } from "@/lib/growth/taxonomy";
 
 /**
  * Public, unauthenticated growth event intake.
@@ -11,8 +12,12 @@ import { z } from "zod";
 
 const str = (max: number) => z.string().trim().max(max).nullish();
 
+// Only the project's known vocabulary is stored, so the event stream cannot be
+// polluted by arbitrary names from outside.
+const KNOWN_EVENTS = new Set<string>(TRACKED_EVENTS as readonly string[]);
+
 const EventSchema = z.object({
-  event: z.string().trim().min(1).max(60),
+  event: z.string().trim().min(1).max(60).refine((v) => KNOWN_EVENTS.has(v), "unknown event"),
   session_id: str(80),
   account_id: z.string().uuid().nullish(),
   path: str(300),
