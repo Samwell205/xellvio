@@ -40,14 +40,14 @@ export function FeatureDiscovery() {
             <div className="font-medium text-sm">{s.title}</div>
             <p className="text-xs text-muted-foreground flex-1">{s.reason}</p>
             <Button asChild size="sm" variant="secondary" className="w-fit">
-              <Link
-                to={s.href}
+              <a
+                href={s.href}
                 onClick={() =>
                   track({ event: "feature_suggestion_clicked", entity_type: "suggestion", entity_slug: s.key })
                 }
               >
                 {s.cta}
-              </Link>
+              </a>
             </Button>
           </div>
         ))}
