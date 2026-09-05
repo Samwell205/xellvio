@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
+import { INDUSTRIES } from "@/components/marketing/industries";
+import { CATEGORY_META, PUBLIC_TEMPLATES, type TemplateCategory } from "@/lib/marketing/template-catalog";
 import { PUBLIC_PAGES, SITE_URL } from "@/lib/seo";
 
 interface SitemapEntry {
@@ -53,11 +55,27 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        const categories = Object.keys(CATEGORY_META) as TemplateCategory[];
         const entries: SitemapEntry[] = [
           ...PUBLIC_PAGES.map((p) => ({
             path: p.path,
             changefreq: p.changefreq,
             priority: p.priority,
+          })),
+          ...INDUSTRIES.map((i) => ({
+            path: `/solutions/${i.slug}`,
+            changefreq: "monthly",
+            priority: "0.7",
+          })),
+          ...categories.map((c) => ({
+            path: CATEGORY_META[c].path,
+            changefreq: "monthly",
+            priority: "0.6",
+          })),
+          ...PUBLIC_TEMPLATES.map((t) => ({
+            path: `${CATEGORY_META[t.category].path}/${t.slug}`,
+            changefreq: "monthly",
+            priority: "0.5",
           })),
           ...(await publishedLandingPages()),
         ];
