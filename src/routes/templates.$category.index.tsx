@@ -36,7 +36,7 @@ function CategoryPage() {
   const params = Route.useParams();
   const category = isTemplateCategory(params.category) ? params.category : "landing-pages";
   const meta = CATEGORY_META[category];
-  const items = templatesInCategory(category);
+  const items = templatesByType(CATEGORY_TO_TYPE[category]!);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
