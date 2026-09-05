@@ -85,6 +85,7 @@ import { Route as ApiPublicPollCarrierBalanceRouteImport } from './routes/api.pu
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicNowpaymentsPollRouteImport } from './routes/api/public/nowpayments-poll'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
+import { Route as ApiPublicGrowthEventsRouteImport } from './routes/api/public/growth-events'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedSellersDashboardRouteImport } from './routes/_authenticated.sellers.dashboard'
 import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './routes/_authenticated.app.toll-free-verification'
@@ -541,6 +542,11 @@ const ApiPublicNowpaymentsPollRoute =
 const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
   id: '/api/public/nowpayments-ipn',
   path: '/api/public/nowpayments-ipn',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicGrowthEventsRoute = ApiPublicGrowthEventsRouteImport.update({
+  id: '/api/public/growth-events',
+  path: '/api/public/growth-events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicDispatchCampaignRoute =
@@ -1056,6 +1062,7 @@ export interface FileRoutesByFullPath {
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/growth-events': typeof ApiPublicGrowthEventsRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -1198,6 +1205,7 @@ export interface FileRoutesByTo {
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/growth-events': typeof ApiPublicGrowthEventsRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -1348,6 +1356,7 @@ export interface FileRoutesById {
   '/_authenticated/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/_authenticated/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/growth-events': typeof ApiPublicGrowthEventsRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -1497,6 +1506,7 @@ export interface FileRouteTypes {
     | '/app/toll-free-verification'
     | '/sellers/dashboard'
     | '/api/public/dispatch-campaign'
+    | '/api/public/growth-events'
     | '/api/public/nowpayments-ipn'
     | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
@@ -1639,6 +1649,7 @@ export interface FileRouteTypes {
     | '/app/toll-free-verification'
     | '/sellers/dashboard'
     | '/api/public/dispatch-campaign'
+    | '/api/public/growth-events'
     | '/api/public/nowpayments-ipn'
     | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
@@ -1788,6 +1799,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/toll-free-verification'
     | '/_authenticated/sellers/dashboard'
     | '/api/public/dispatch-campaign'
+    | '/api/public/growth-events'
     | '/api/public/nowpayments-ipn'
     | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
@@ -1892,6 +1904,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
+  ApiPublicGrowthEventsRoute: typeof ApiPublicGrowthEventsRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicNowpaymentsPollRoute: typeof ApiPublicNowpaymentsPollRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
@@ -2449,6 +2462,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/nowpayments-ipn'
       fullPath: '/api/public/nowpayments-ipn'
       preLoaderRoute: typeof ApiPublicNowpaymentsIpnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/growth-events': {
+      id: '/api/public/growth-events'
+      path: '/api/public/growth-events'
+      fullPath: '/api/public/growth-events'
+      preLoaderRoute: typeof ApiPublicGrowthEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/dispatch-campaign': {
@@ -3260,6 +3280,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
+  ApiPublicGrowthEventsRoute: ApiPublicGrowthEventsRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicNowpaymentsPollRoute: ApiPublicNowpaymentsPollRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
