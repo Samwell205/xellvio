@@ -18,6 +18,7 @@ import { Route as SmsMarketingRouteImport } from './routes/sms-marketing'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupFormsRouteImport } from './routes/signup-forms'
 import { Route as SellersRouteImport } from './routes/sellers'
+import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReportingRouteImport } from './routes/reporting'
 import { Route as ProhibitedContentRouteImport } from './routes/prohibited-content'
@@ -192,6 +193,11 @@ const SignupFormsRoute = SignupFormsRouteImport.update({
 const SellersRoute = SellersRouteImport.update({
   id: '/sellers',
   path: '/sellers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesRoute = ResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -932,6 +938,7 @@ export interface FileRoutesByFullPath {
   '/prohibited-content': typeof ProhibitedContentRoute
   '/reporting': typeof ReportingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/resources': typeof ResourcesRoute
   '/sellers': typeof SellersRoute
   '/signup-forms': typeof SignupFormsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1070,6 +1077,7 @@ export interface FileRoutesByTo {
   '/prohibited-content': typeof ProhibitedContentRoute
   '/reporting': typeof ReportingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/resources': typeof ResourcesRoute
   '/sellers': typeof SellersRoute
   '/signup-forms': typeof SignupFormsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1208,6 +1216,7 @@ export interface FileRoutesById {
   '/prohibited-content': typeof ProhibitedContentRoute
   '/reporting': typeof ReportingRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/resources': typeof ResourcesRoute
   '/sellers': typeof SellersRoute
   '/signup-forms': typeof SignupFormsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1349,6 +1358,7 @@ export interface FileRouteTypes {
     | '/prohibited-content'
     | '/reporting'
     | '/reset-password'
+    | '/resources'
     | '/sellers'
     | '/signup-forms'
     | '/sitemap.xml'
@@ -1487,6 +1497,7 @@ export interface FileRouteTypes {
     | '/prohibited-content'
     | '/reporting'
     | '/reset-password'
+    | '/resources'
     | '/sellers'
     | '/signup-forms'
     | '/sitemap.xml'
@@ -1624,6 +1635,7 @@ export interface FileRouteTypes {
     | '/prohibited-content'
     | '/reporting'
     | '/reset-password'
+    | '/resources'
     | '/sellers'
     | '/signup-forms'
     | '/sitemap.xml'
@@ -1766,6 +1778,7 @@ export interface RootRouteChildren {
   ProhibitedContentRoute: typeof ProhibitedContentRoute
   ReportingRoute: typeof ReportingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ResourcesRoute: typeof ResourcesRoute
   SellersRoute: typeof SellersRoute
   SignupFormsRoute: typeof SignupFormsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -1876,6 +1889,13 @@ declare module '@tanstack/react-router' {
       path: '/sellers'
       fullPath: '/sellers'
       preLoaderRoute: typeof SellersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources': {
+      id: '/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof ResourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -3065,6 +3085,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProhibitedContentRoute: ProhibitedContentRoute,
   ReportingRoute: ReportingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ResourcesRoute: ResourcesRoute,
   SellersRoute: SellersRoute,
   SignupFormsRoute: SignupFormsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
