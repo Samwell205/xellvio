@@ -65,7 +65,7 @@ function CategoryPage() {
         </section>
 
         <section className="mx-auto max-w-[1400px] px-5 sm:px-8 py-16">
-          <TemplateGrid items={templatesByType(CATEGORY_TO_TYPE[category]!)} />
+          <TemplateGrid items={items} />
 
           <div className="mt-14">
             <CategoryLinks exclude={category} />

@@ -93,9 +93,9 @@ function Chip({
 
 function TemplatesHub() {
   const search = Route.useSearch();
-  const navigate = useNavigate({ from: "/templates/" });
+  const navigate = useNavigate();
   const set = (patch: Partial<Search>) =>
-    navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true, resetScroll: false });
+    navigate({ to: "/templates", search: (prev) => ({ ...prev, ...patch }), replace: true, resetScroll: false });
 
   const filters = {
     q: search.q,
@@ -186,7 +186,7 @@ function TemplatesHub() {
                 <button
                   type="button"
                   onClick={() =>
-                    navigate({ search: {}, replace: true, resetScroll: false })
+                    navigate({ to: "/templates", search: {}, replace: true, resetScroll: false })
                   }
                   className="rounded-full px-4 py-2 text-sm font-semibold text-foreground underline"
                 >
