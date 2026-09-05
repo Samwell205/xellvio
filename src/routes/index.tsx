@@ -8,6 +8,7 @@ import {
 import { useState } from "react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { PlatformShowcase } from "@/components/marketing/PlatformShowcase";
 import { StatsMarquee, reveal } from "@/components/marketing/ProductKit";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -98,6 +99,7 @@ function HomePage() {
           ]}
         />
         <Channels />
+        <PlatformShowcase />
         <FeatureGrid />
         <EditorialActivity />
         <EditorialAttribution />
@@ -120,10 +122,10 @@ function Hero() {
         <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
           <p className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">Xellvio</p>
           <h1 className="mt-4 text-5xl sm:text-6xl md:text-[64px] font-extrabold tracking-tight leading-[1.02] text-foreground">
-            SMS marketing<br/>built for smarter sends
+            One platform for<br/>every customer message
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-xl">
-            Reach, convert, and retain customers with personalized, timely conversations — all powered by automation and unified data.
+            SMS, email, automations, AI, reporting and integrations in one place — so every conversation reacts to what your customers actually do.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link to="/auth" className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-full px-5 py-3 font-semibold hover:bg-primary/90 transition-colors">Sign up <ArrowRight className="size-4" /></Link>
