@@ -2,15 +2,18 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { ShieldCheck } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getCachedIsAdmin } from "@/lib/auth-cache";
 import { Badge } from "@/components/ui/badge";
 import { LowBalanceBanner } from "@/components/BalanceCard";
+import { RouteFallback } from "@/components/RouteFallback";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async () => {
-    const { data, error } = await supabase.rpc("has_role", { _role: "admin" });
-    if (error || data !== true) throw redirect({ to: "/app" });
+    // Cached per session: repeating this RPC on every admin navigation added a
+    // round-trip of dead time before any page could render.
+    if (!(await getCachedIsAdmin())) throw redirect({ to: "/app" });
   },
+  pendingComponent: RouteFallback,
   component: AdminShell,
 });
 

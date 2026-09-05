@@ -11,19 +11,21 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { CommandPalette, useCommandPalette } from "@/components/CommandPalette";
 import { Bell, Search, Lock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getCachedIsAdmin } from "@/lib/auth-cache";
 import { provisionCurrentAccount } from "@/lib/provision-account.functions";
 import { TosReAcceptModal } from "@/components/TosReAcceptModal";
 import { useSession } from "@/hooks/useAccountId";
 import { firstAllowedPath, isOwnerOnlyPath, requiredPermissionFor } from "@/lib/route-permissions";
 import { PERMISSION_LABELS } from "@/lib/team-permissions";
+import { RouteFallback, skeletonFor } from "@/components/RouteFallback";
 
 export const Route = createFileRoute("/_authenticated/app")({
   beforeLoad: async () => {
     // Admins use a dedicated admin console and don't have tenant SMS/campaign UI.
-    const { data } = await supabase.rpc("has_role", { _role: "admin" });
-    if (data === true) throw redirect({ to: "/admin" });
+    // Cached for the session so this RPC isn't repeated on every navigation.
+    if (await getCachedIsAdmin()) throw redirect({ to: "/admin" });
   },
+  pendingComponent: RouteFallback,
   component: AppShell,
 });
 
@@ -52,11 +54,7 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
   // Don't render page content until permissions are known (avoids a flash of
   // restricted pages on refresh).
   if (isLoading || !session) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
-        Loading…
-      </div>
-    );
+    return skeletonFor(pathname);
   }
 
   if (allowed) return <>{children}</>;

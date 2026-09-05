@@ -138,12 +138,17 @@ function RootComponent() {
   useEffect(() => {
     let mounted = true;
     let unsub: (() => void) | undefined;
-    import("@/integrations/supabase/client").then(({ supabase }) => {
+    Promise.all([
+      import("@/integrations/supabase/client"),
+      import("@/lib/auth-cache"),
+    ]).then(([{ supabase }, { clearAuthCache }]) => {
       if (!mounted) return;
       const { data } = supabase.auth.onAuthStateChange((event) => {
         if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") {
           return;
         }
+        // Identity changed — drop the cached session/role checks.
+        clearAuthCache();
         router.invalidate();
         if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       });
