@@ -101,7 +101,7 @@ function PartnersIndex() {
             See what partners build on.
           </p>
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
-            <Link to="/marketplace/apps" className="text-primary underline">Apps & integrations</Link>
+            Apps & integrations
             <Link to="/sms-marketing" className="text-primary underline">SMS marketing</Link>
             <Link to="/automations" className="text-primary underline">Automations</Link>
             <Link to="/landing-pages" className="text-primary underline">Landing pages</Link>

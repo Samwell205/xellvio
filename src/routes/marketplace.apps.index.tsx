@@ -26,6 +26,7 @@ export const Route = createFileRoute("/marketplace/apps/")({
   head: () =>
     pageHead({
       path: "/marketplace/apps",
+      robots: "noindex",
       title: "Browse Marketplace Apps",
       description:
         "Search every app and integration available for Xellvio, from ecommerce platforms and CRMs to forms, analytics and automation tools.",

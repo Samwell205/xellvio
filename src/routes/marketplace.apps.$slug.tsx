@@ -33,6 +33,7 @@ export const Route = createFileRoute("/marketplace/apps/$slug")({
         { property: "og:description", content: description },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
+        { name: "robots", content: "noindex, nofollow" },
       ],
     };
   },

@@ -106,12 +106,13 @@ async function enqueueLowBalanceEmail(args: {
       <p><a href="https://portal.telnyx.com/#/app/billing/payments" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600;">Top up Telnyx</a></p>
     </div>`;
   const text = `${subject}\n\nCurrent: ${fmt(args.balance)}\nLow: ${fmt(args.thresholdLow)}\nCritical: ${fmt(args.thresholdCritical)}\n\nTop up: https://portal.telnyx.com/#/app/billing/payments`;
-  await supabaseAdmin.rpc("enqueue_email", {
-    queue_name: "transactional_emails",
-    payload: {
-      to: args.to, subject, html, text,
-      template_name: "telnyx_low_balance_alert",
-      message_id: `telnyx-balance-${args.status}-${new Date().toISOString().slice(0, 13)}`,
-    } as any,
+  const { enqueueRawBrandedEmail } = await import("@/lib/email/send-internal.server");
+  await enqueueRawBrandedEmail({
+    to: args.to,
+    subject,
+    html,
+    text,
+    label: "telnyx_low_balance_alert",
+    idempotencyKey: `telnyx-balance-${args.status}-${new Date().toISOString().slice(0, 13)}`,
   });
 }
