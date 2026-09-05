@@ -149,6 +149,7 @@ import { Route as AuthenticatedAppAppsSlugRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminTelnyxTfnRouteImport } from './routes/_authenticated.admin.telnyx.tfn'
 import { Route as AuthenticatedAdminTelnyxAuditRouteImport } from './routes/_authenticated.admin.telnyx.audit'
 import { Route as AuthenticatedAdminCampaignsIdRouteImport } from './routes/_authenticated.admin.campaigns.$id'
+import { Route as AuthenticatedAppUseTemplateCategorySlugRouteImport } from './routes/_authenticated.app.use-template.$category.$slug'
 import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -911,6 +912,12 @@ const AuthenticatedAdminCampaignsIdRoute =
     path: '/campaigns/$id',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAppUseTemplateCategorySlugRoute =
+  AuthenticatedAppUseTemplateCategorySlugRouteImport.update({
+    id: '/use-template/$category/$slug',
+    path: '/use-template/$category/$slug',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppCampaignsIdReportRoute =
   AuthenticatedAppCampaignsIdReportRouteImport.update({
     id: '/report',
@@ -1058,6 +1065,7 @@ export interface FileRoutesByFullPath {
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
+  '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1194,6 +1202,7 @@ export interface FileRoutesByTo {
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
   '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
+  '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1338,6 +1347,7 @@ export interface FileRoutesById {
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
+  '/_authenticated/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1481,6 +1491,7 @@ export interface FileRouteTypes {
     | '/app/segments/'
     | '/verify/dashboard/'
     | '/app/campaigns/$id/report'
+    | '/app/use-template/$category/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1617,6 +1628,7 @@ export interface FileRouteTypes {
     | '/app/segments'
     | '/verify/dashboard'
     | '/app/campaigns/$id/report'
+    | '/app/use-template/$category/$slug'
   id:
     | '__root__'
     | '/'
@@ -1760,6 +1772,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/segments/'
     | '/_verifier/verify/dashboard/'
     | '/_authenticated/app/campaigns/$id/report'
+    | '/_authenticated/app/use-template/$category/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2820,6 +2833,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/app/use-template/$category/$slug': {
+      id: '/_authenticated/app/use-template/$category/$slug'
+      path: '/use-template/$category/$slug'
+      fullPath: '/app/use-template/$category/$slug'
+      preLoaderRoute: typeof AuthenticatedAppUseTemplateCategorySlugRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/campaigns/$id/report': {
       id: '/_authenticated/app/campaigns/$id/report'
       path: '/report'
@@ -2973,6 +2993,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAutomationsIdRoute: typeof AuthenticatedAppAutomationsIdRoute
   AuthenticatedAppAppsIndexRoute: typeof AuthenticatedAppAppsIndexRoute
   AuthenticatedAppAutomationsIndexRoute: typeof AuthenticatedAppAutomationsIndexRoute
+  AuthenticatedAppUseTemplateCategorySlugRoute: typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
 
 const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
@@ -3002,6 +3023,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAutomationsIdRoute: AuthenticatedAppAutomationsIdRoute,
   AuthenticatedAppAppsIndexRoute: AuthenticatedAppAppsIndexRoute,
   AuthenticatedAppAutomationsIndexRoute: AuthenticatedAppAutomationsIndexRoute,
+  AuthenticatedAppUseTemplateCategorySlugRoute:
+    AuthenticatedAppUseTemplateCategorySlugRoute,
 }
 
 const AuthenticatedAppRouteWithChildren =
