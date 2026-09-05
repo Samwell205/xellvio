@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
-  ArrowUpRight, Check, Sparkles, Smartphone, Mail, Blocks, BarChart3, Users, Workflow,
+  ArrowUpRight, Check, Sparkles, Smartphone, BarChart3, Users, Workflow,
 } from "lucide-react";
 import { reveal } from "@/components/marketing/ProductKit";
 
@@ -107,7 +107,7 @@ function AnalyticsVisual() {
   return (
     <Frame>
       <div className="rounded-2xl border bg-card p-5 shadow-sm">
-        <div className="text-sm font-bold text-foreground">Revenue by channel</div>
+        <div className="text-sm font-bold text-foreground">Revenue by campaign</div>
         <div className="mt-6 flex h-32 items-end gap-2.5">
           {bars.map((h, i) => (
             <div key={i} className="flex-1 space-y-1">
@@ -118,7 +118,7 @@ function AnalyticsVisual() {
         </div>
         <div className="mt-4 flex gap-4 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-primary" /> SMS</span>
-          <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-coral/40" /> Email</span>
+          <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-coral/40" /> Clicks</span>
         </div>
       </div>
     </Frame>
@@ -141,7 +141,7 @@ function AudienceVisual() {
             ["Lifetime value", "$4,583.09"],
             ["Replies sent", "12"],
             ["Last click", "2 days ago"],
-            ["Consent", "SMS + email"],
+            ["Consent", "SMS opted in"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-3">
               <dt className="text-muted-foreground">{k}</dt>
@@ -149,20 +149,6 @@ function AudienceVisual() {
             </div>
           ))}
         </dl>
-      </div>
-    </Frame>
-  );
-}
-
-function AppsVisual() {
-  return (
-    <Frame>
-      <div className="grid grid-cols-3 gap-2.5">
-        {["Shopify", "Stripe", "HubSpot", "Slack", "Zapier", "WooCommerce", "Klaviyo", "Notion", "+30 more"].map((n) => (
-          <div key={n} className="rounded-xl border bg-card px-2 py-4 text-center text-[11px] font-semibold text-foreground shadow-sm">
-            {n}
-          </div>
-        ))}
       </div>
     </Frame>
   );
@@ -211,7 +197,7 @@ const PILLARS: Pillar[] = [
   },
 ];
 
-const ICONS = [Smartphone, Sparkles, Workflow, BarChart3, Users, Blocks];
+const ICONS = [Smartphone, Sparkles, Workflow, BarChart3, Users];
 
 export function PlatformShowcase() {
   return (
