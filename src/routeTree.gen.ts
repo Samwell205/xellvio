@@ -63,6 +63,7 @@ import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.ap
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as TemplatesCategoryIndexRouteImport } from './routes/templates.$category.index'
 import { Route as MarketplaceAppsIndexRouteImport } from './routes/marketplace.apps.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
@@ -417,6 +418,11 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const TemplatesCategoryIndexRoute = TemplatesCategoryIndexRouteImport.update({
+  id: '/templates/$category/',
+  path: '/templates/$category/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MarketplaceAppsIndexRoute = MarketplaceAppsIndexRouteImport.update({
   id: '/apps/',
   path: '/apps/',
@@ -1002,6 +1008,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
+  '/templates/$category/': typeof TemplatesCategoryIndexRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
@@ -1134,6 +1141,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps': typeof MarketplaceAppsIndexRoute
+  '/templates/$category': typeof TemplatesCategoryIndexRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
@@ -1274,6 +1282,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
+  '/templates/$category/': typeof TemplatesCategoryIndexRoute
   '/_authenticated/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/_authenticated/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
@@ -1413,6 +1422,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/app/'
     | '/marketplace/apps/'
+    | '/templates/$category/'
     | '/admin/campaigns/$id'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
@@ -1545,6 +1555,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/marketplace/apps'
+    | '/templates/$category'
     | '/admin/campaigns/$id'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
@@ -1684,6 +1695,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/marketplace/apps/'
+    | '/templates/$category/'
     | '/_authenticated/admin/campaigns/$id'
     | '/_authenticated/admin/telnyx/audit'
     | '/_authenticated/admin/telnyx/tfn'
@@ -1776,6 +1788,7 @@ export interface RootRouteChildren {
   ApiPublicTelnyxInboundRoute: typeof ApiPublicTelnyxInboundRoute
   ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  TemplatesCategoryIndexRoute: typeof TemplatesCategoryIndexRoute
   ApiPublicCampaignMediaSplatRoute: typeof ApiPublicCampaignMediaSplatRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
@@ -2165,6 +2178,13 @@ declare module '@tanstack/react-router' {
       path: '/.mcp/list-tools'
       fullPath: '/.mcp/list-tools'
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/templates/$category/': {
+      id: '/templates/$category/'
+      path: '/templates/$category'
+      fullPath: '/templates/$category/'
+      preLoaderRoute: typeof TemplatesCategoryIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketplace/apps/': {
@@ -3060,6 +3080,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTelnyxInboundRoute: ApiPublicTelnyxInboundRoute,
   ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  TemplatesCategoryIndexRoute: TemplatesCategoryIndexRoute,
   ApiPublicCampaignMediaSplatRoute: ApiPublicCampaignMediaSplatRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
