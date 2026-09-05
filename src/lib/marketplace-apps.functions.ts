@@ -210,7 +210,14 @@ export const connectApp = createServerFn({ method: "POST" })
       request_data: { fields: Object.keys(data.credentials) } as never,
     });
 
-    return { installationId: install.id, connectionId, appName: app.name };
+    return {
+      installationId: install.id,
+      connectionId,
+      appName: app.name,
+      accountLabel: verified?.accountLabel ?? null,
+      note: verified?.note ?? null,
+    };
+
   });
 
 async function nextInstallCount(db: any, appId: string): Promise<number> {
