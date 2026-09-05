@@ -115,6 +115,7 @@ import { Route as VerifierVerifyDashboardIndexRouteImport } from './routes/_veri
 import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
 import { Route as AuthenticatedAppAutomationsIndexRouteImport } from './routes/_authenticated.app.automations.index'
+import { Route as AuthenticatedAppAppsIndexRouteImport } from './routes/_authenticated.app.apps.index'
 import { Route as AuthenticatedAdminCampaignsIndexRouteImport } from './routes/_authenticated.admin.campaigns.index'
 import { Route as AuthenticatedAdminAcademyIndexRouteImport } from './routes/_authenticated.admin.academy.index'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
@@ -711,6 +712,12 @@ const AuthenticatedAppAutomationsIndexRoute =
     path: '/automations/',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAppsIndexRoute =
+  AuthenticatedAppAppsIndexRouteImport.update({
+    id: '/apps/',
+    path: '/apps/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAdminCampaignsIndexRoute =
   AuthenticatedAdminCampaignsIndexRouteImport.update({
     id: '/campaigns/',
@@ -984,6 +991,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/academy/': typeof AuthenticatedAdminAcademyIndexRoute
   '/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
+  '/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
@@ -1109,6 +1117,7 @@ export interface FileRoutesByTo {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/academy': typeof AuthenticatedAdminAcademyIndexRoute
   '/admin/campaigns': typeof AuthenticatedAdminCampaignsIndexRoute
+  '/app/apps': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
@@ -1243,6 +1252,7 @@ export interface FileRoutesById {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/_authenticated/admin/academy/': typeof AuthenticatedAdminAcademyIndexRoute
   '/_authenticated/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
+  '/_authenticated/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/_authenticated/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
@@ -1376,6 +1386,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/admin/academy/'
     | '/admin/campaigns/'
+    | '/app/apps/'
     | '/app/automations/'
     | '/app/campaigns/'
     | '/app/segments/'
@@ -1501,6 +1512,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/admin/academy'
     | '/admin/campaigns'
+    | '/app/apps'
     | '/app/automations'
     | '/app/campaigns'
     | '/app/segments'
@@ -1634,6 +1646,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/_authenticated/admin/academy/'
     | '/_authenticated/admin/campaigns/'
+    | '/_authenticated/app/apps/'
     | '/_authenticated/app/automations/'
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/segments/'
@@ -2449,6 +2462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAutomationsIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/apps/': {
+      id: '/_authenticated/app/apps/'
+      path: '/apps'
+      fullPath: '/app/apps/'
+      preLoaderRoute: typeof AuthenticatedAppAppsIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/admin/campaigns/': {
       id: '/_authenticated/admin/campaigns/'
       path: '/campaigns'
@@ -2770,6 +2790,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppTollFreeVerificationRoute: typeof AuthenticatedAppTollFreeVerificationRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAutomationsIdRoute: typeof AuthenticatedAppAutomationsIdRoute
+  AuthenticatedAppAppsIndexRoute: typeof AuthenticatedAppAppsIndexRoute
   AuthenticatedAppAutomationsIndexRoute: typeof AuthenticatedAppAutomationsIndexRoute
 }
 
@@ -2797,6 +2818,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
     AuthenticatedAppTollFreeVerificationRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAutomationsIdRoute: AuthenticatedAppAutomationsIdRoute,
+  AuthenticatedAppAppsIndexRoute: AuthenticatedAppAppsIndexRoute,
   AuthenticatedAppAutomationsIndexRoute: AuthenticatedAppAutomationsIndexRoute,
 }
 
