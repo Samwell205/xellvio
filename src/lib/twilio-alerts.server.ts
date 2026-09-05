@@ -84,14 +84,15 @@ export async function fireCapacityAlert(args: AlertArgs): Promise<void> {
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const stamp = new Date().toISOString().slice(0, 16).replace(/[:T-]/g, "");
+    const { enqueueRawBrandedEmail } = await import("@/lib/email/send-internal.server");
     await Promise.all(settings.emails.map((to) =>
-      supabaseAdmin.rpc("enqueue_email", {
-        queue_name: "transactional_emails",
-        payload: {
-          to, subject, html, text,
-          template_name: "telnyx_capacity_alert",
-          message_id: `telnyx-capacity-${args.kind}-${stamp}-${to}`,
-        } as any,
+      enqueueRawBrandedEmail({
+        to,
+        subject,
+        html,
+        text,
+        label: "telnyx_capacity_alert",
+        idempotencyKey: `telnyx-capacity-${args.kind}-${stamp}-${to}`,
       }),
     ));
     try {
