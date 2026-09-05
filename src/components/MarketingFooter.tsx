@@ -5,36 +5,48 @@ import { ABUSE_EMAIL, SUPPORT_EMAIL } from "@/content/legal";
 export function MarketingFooter() {
   return (
     <footer className="border-t bg-secondary text-secondary-foreground">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-14 grid gap-10 md:grid-cols-6">
-        <div className="md:col-span-2 space-y-4">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-14 space-y-12">
+        <div className="space-y-4">
           <Logo className="text-secondary-foreground" />
-          <p className="text-sm text-secondary-foreground/70 max-w-xs">
-            Reach customers worldwide. Fast. Reliable. Compliant bulk SMS for modern businesses.
+          <p className="text-sm text-secondary-foreground/70 max-w-md">
+            The customer messaging platform for SMS, email, automations and reporting — trusted for compliant bulk
+            messaging in 190+ countries.
           </p>
         </div>
-        <FooterCol title="Product" items={[
-          { label: "SMS marketing", to: "/sms-marketing" },
-          { label: "Email marketing", to: "/email-marketing" },
-          { label: "Features", to: "/features" },
-          { label: "Pricing", to: "/pricing" },
-        ]} />
-
-
-        <FooterCol title="Company" items={[
-          { label: "About", to: "/about" },
-          { label: "Contact", to: "/contact" },
-          { label: "Solutions", to: "/solutions" },
-        ]} />
-        <FooterCol title="Legal" items={[
-          { label: "Privacy Policy", to: "/privacy" },
-          { label: "Terms of Service", to: "/terms" },
-          { label: "Acceptable Use", to: "/aup" },
-          { label: "Anti-Spam Policy", to: "/anti-spam" },
-          { label: "Prohibited Content", to: "/prohibited-content" },
-          { label: "SMS Terms & Consent", to: "/sms-terms" },
-          { label: "Data Processing Addendum", to: "/dpa" },
-          { label: "Cookie Policy", to: "/cookies" },
-        ]} />
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+          <FooterCol title="Channels" items={[
+            { label: "SMS marketing", to: "/sms-marketing" },
+            { label: "Email marketing", to: "/email-marketing" },
+            { label: "Email to SMS", to: "/solutions/email-to-sms" },
+          ]} />
+          <FooterCol title="Platform" items={[
+            { label: "All features", to: "/features" },
+            { label: "Automations", to: "/features" },
+            { label: "Landing pages & forms", to: "/features" },
+            { label: "Reporting", to: "/features" },
+            { label: "Pricing", to: "/pricing" },
+          ]} />
+          <FooterCol title="Resources" items={[
+            { label: "Documentation", to: "/docs" },
+            { label: "Solutions by industry", to: "/solutions" },
+            { label: "Earn as a verifier", to: "/verify" },
+          ]} />
+          <FooterCol title="Company" items={[
+            { label: "About Xellvio", to: "/about" },
+            { label: "Contact us", to: "/contact" },
+            { label: "Log in", to: "/auth" },
+          ]} />
+          <FooterCol title="Legal" items={[
+            { label: "Privacy Policy", to: "/privacy" },
+            { label: "Terms of Service", to: "/terms" },
+            { label: "Acceptable Use", to: "/aup" },
+            { label: "Anti-Spam Policy", to: "/anti-spam" },
+            { label: "Prohibited Content", to: "/prohibited-content" },
+            { label: "SMS Terms & Consent", to: "/sms-terms" },
+            { label: "Data Processing Addendum", to: "/dpa" },
+            { label: "Cookie Policy", to: "/cookies" },
+          ]} />
+        </div>
         <div>
           <h4 className="font-semibold text-sm mb-3">Contact</h4>
           <ul className="space-y-2 text-sm text-secondary-foreground/70">
