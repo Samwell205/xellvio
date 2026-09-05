@@ -98,6 +98,7 @@ function HomePage() {
           ]}
         />
         <Channels />
+        <PlatformShowcase />
         <FeatureGrid />
         <EditorialActivity />
         <EditorialAttribution />
