@@ -229,3 +229,92 @@ export async function sendBrandedEmail(
   });
   return { success: true };
 }
+
+/**
+ * Enqueue a branded email whose body is already rendered HTML (internal
+ * operational alerts that have no React template).
+ *
+ * Use this instead of calling the enqueue_email RPC directly: it fills in every
+ * field the email service requires (sender, purpose, idempotency key,
+ * unsubscribe token). A payload missing any of them is rejected with a 400 and
+ * eventually dropped, so the alert would never arrive.
+ */
+export async function enqueueRawBrandedEmail(args: {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  label: string;
+  idempotencyKey: string;
+}): Promise<{ success: boolean; reason?: string }> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const recipient = (args.to || "").trim().toLowerCase();
+  if (!recipient) return { success: false, reason: "no_recipient" };
+
+  const { data: existing } = await supabaseAdmin
+    .from("email_send_log")
+    .select("id")
+    .eq("message_id", args.idempotencyKey)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return { success: true, reason: "already_enqueued" };
+
+  const { data: suppressed } = await supabaseAdmin
+    .from("suppressed_emails")
+    .select("email")
+    .eq("email", recipient)
+    .maybeSingle();
+  if (suppressed) return { success: false, reason: "suppressed" };
+
+  let unsubscribeToken: string | null = null;
+  try {
+    const token = generateToken();
+    const { data: row } = await supabaseAdmin
+      .from("email_unsubscribe_tokens")
+      .upsert({ email: recipient, token }, { onConflict: "email" })
+      .select("token")
+      .maybeSingle();
+    unsubscribeToken = row?.token ?? token;
+  } catch (err) {
+    console.warn("[send-internal] could not mint unsubscribe token", err);
+  }
+
+  await supabaseAdmin.from("email_send_log").insert({
+    message_id: args.idempotencyKey,
+    template_name: args.label,
+    recipient_email: recipient,
+    status: "pending",
+  });
+
+  const { error: enqueueError } = await supabaseAdmin.rpc("enqueue_email", {
+    queue_name: "transactional_emails",
+    payload: {
+      message_id: args.idempotencyKey,
+      to: recipient,
+      from: FROM_ADDRESS,
+      sender_domain: SENDER_DOMAIN,
+      subject: args.subject,
+      html: args.html,
+      text: args.text,
+      purpose: "transactional",
+      label: args.label,
+      idempotency_key: args.idempotencyKey,
+      ...(unsubscribeToken ? { unsubscribe_token: unsubscribeToken } : {}),
+      queued_at: new Date().toISOString(),
+      site_name: SITE_NAME,
+    } as any,
+  });
+
+  if (enqueueError) {
+    console.error("[send-internal] raw enqueue failed", { label: args.label, error: enqueueError });
+    await supabaseAdmin.from("email_send_log").insert({
+      message_id: args.idempotencyKey,
+      template_name: args.label,
+      recipient_email: recipient,
+      status: "failed",
+      error_message: enqueueError.message ?? "enqueue failed",
+    });
+    return { success: false, reason: "enqueue_failed" };
+  }
+  return { success: true };
+}
