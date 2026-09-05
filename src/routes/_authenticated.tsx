@@ -1,7 +1,8 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { ensureMyAccount } from "@/lib/account.functions";
 import { claimPendingInvites } from "@/lib/team.functions";
+import { claimAccountEnsure, getCachedUser } from "@/lib/auth-cache";
+import { RouteFallback } from "@/components/RouteFallback";
 
 export const Route = createFileRoute("/_authenticated")({
   head: () => ({
@@ -9,15 +10,21 @@ export const Route = createFileRoute("/_authenticated")({
   }),
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    if (!data.user.email_confirmed_at) {
-      throw redirect({ to: "/verify-email", search: { email: data.user.email ?? "" } });
+    // Session check reads the locally stored, signed session on repeat
+    // navigations instead of round-tripping to the auth server every time.
+    const user = await getCachedUser();
+    if (!user) throw redirect({ to: "/auth" });
+    if (!user.email_confirmed_at) {
+      throw redirect({ to: "/verify-email", search: { email: user.email ?? "" } });
     }
-    await ensureMyAccount();
-    // Auto-accept any pending workspace invites for this user (best-effort, non-blocking).
-    claimPendingInvites().catch(() => {});
-    return { user: data.user };
+    // Account provisioning + invite claiming only need to happen once per
+    // session, and must never block a route transition.
+    if (claimAccountEnsure()) {
+      ensureMyAccount().catch(() => {});
+      claimPendingInvites().catch(() => {});
+    }
+    return { user };
   },
+  pendingComponent: RouteFallback,
   component: () => <Outlet />,
 });
