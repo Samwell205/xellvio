@@ -52,6 +52,7 @@ import { Route as MarketplaceIndexRouteImport } from './routes/marketplace.index
 import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
+import { Route as SolutionsIndustryRouteImport } from './routes/solutions.$industry'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as MarketplaceDevelopersRouteImport } from './routes/marketplace.developers'
@@ -361,6 +362,11 @@ const VerifyAuthRoute = VerifyAuthRouteImport.update({
 const SolutionsEmailToSmsRoute = SolutionsEmailToSmsRouteImport.update({
   id: '/email-to-sms',
   path: '/email-to-sms',
+  getParentRoute: () => SolutionsRoute,
+} as any)
+const SolutionsIndustryRoute = SolutionsIndustryRouteImport.update({
+  id: '/$industry',
+  path: '/$industry',
   getParentRoute: () => SolutionsRoute,
 } as any)
 const RCodeRoute = RCodeRouteImport.update({
@@ -960,6 +966,7 @@ export interface FileRoutesByFullPath {
   '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
+  '/solutions/$industry': typeof SolutionsIndustryRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
@@ -1097,6 +1104,7 @@ export interface FileRoutesByTo {
   '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
+  '/solutions/$industry': typeof SolutionsIndustryRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
@@ -1238,6 +1246,7 @@ export interface FileRoutesById {
   '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
+  '/solutions/$industry': typeof SolutionsIndustryRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
@@ -1380,6 +1389,7 @@ export interface FileRouteTypes {
     | '/marketplace/developers'
     | '/p/$slug'
     | '/r/$code'
+    | '/solutions/$industry'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
@@ -1517,6 +1527,7 @@ export interface FileRouteTypes {
     | '/marketplace/developers'
     | '/p/$slug'
     | '/r/$code'
+    | '/solutions/$industry'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
@@ -1657,6 +1668,7 @@ export interface FileRouteTypes {
     | '/marketplace/developers'
     | '/p/$slug'
     | '/r/$code'
+    | '/solutions/$industry'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
@@ -2127,6 +2139,13 @@ declare module '@tanstack/react-router' {
       path: '/email-to-sms'
       fullPath: '/solutions/email-to-sms'
       preLoaderRoute: typeof SolutionsEmailToSmsRouteImport
+      parentRoute: typeof SolutionsRoute
+    }
+    '/solutions/$industry': {
+      id: '/solutions/$industry'
+      path: '/$industry'
+      fullPath: '/solutions/$industry'
+      preLoaderRoute: typeof SolutionsIndustryRouteImport
       parentRoute: typeof SolutionsRoute
     }
     '/r/$code': {
@@ -3046,10 +3065,12 @@ const MarketplaceRouteWithChildren = MarketplaceRoute._addFileChildren(
 )
 
 interface SolutionsRouteChildren {
+  SolutionsIndustryRoute: typeof SolutionsIndustryRoute
   SolutionsEmailToSmsRoute: typeof SolutionsEmailToSmsRoute
 }
 
 const SolutionsRouteChildren: SolutionsRouteChildren = {
+  SolutionsIndustryRoute: SolutionsIndustryRoute,
   SolutionsEmailToSmsRoute: SolutionsEmailToSmsRoute,
 }
 
