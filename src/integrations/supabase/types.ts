@@ -1227,6 +1227,8 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          source_template: string | null
+          source_template_version: string | null
           status: string
           updated_at: string
           viewport: Json
@@ -1237,6 +1239,8 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          source_template?: string | null
+          source_template_version?: string | null
           status?: string
           updated_at?: string
           viewport?: Json
@@ -1247,6 +1251,8 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          source_template?: string | null
+          source_template_version?: string | null
           status?: string
           updated_at?: string
           viewport?: Json
@@ -2661,6 +2667,8 @@ export type Database = {
           seo_indexable: boolean
           seo_title: string | null
           slug: string
+          source_template: string | null
+          source_template_version: string | null
           subheadline: string
           submissions: number
           success_message: string
@@ -2696,6 +2704,8 @@ export type Database = {
           seo_indexable?: boolean
           seo_title?: string | null
           slug: string
+          source_template?: string | null
+          source_template_version?: string | null
           subheadline?: string
           submissions?: number
           success_message?: string
@@ -2731,6 +2741,8 @@ export type Database = {
           seo_indexable?: boolean
           seo_title?: string | null
           slug?: string
+          source_template?: string | null
+          source_template_version?: string | null
           subheadline?: string
           submissions?: number
           success_message?: string
@@ -3757,6 +3769,8 @@ export type Database = {
           seo_description: string | null
           seo_title: string | null
           slug: string
+          source_template: string | null
+          source_template_version: string | null
           submissions: number
           success_message: string
           theme: string
@@ -3790,6 +3804,8 @@ export type Database = {
           seo_description?: string | null
           seo_title?: string | null
           slug: string
+          source_template?: string | null
+          source_template_version?: string | null
           submissions?: number
           success_message?: string
           theme?: string
@@ -3823,6 +3839,8 @@ export type Database = {
           seo_description?: string | null
           seo_title?: string | null
           slug?: string
+          source_template?: string | null
+          source_template_version?: string | null
           submissions?: number
           success_message?: string
           theme?: string
@@ -4145,6 +4163,44 @@ export type Database = {
           reference?: string | null
         }
         Relationships: []
+      }
+      template_events: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          event: string
+          id: string
+          referrer: string | null
+          template_slug: string
+          template_type: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          event: string
+          id?: string
+          referrer?: string | null
+          template_slug: string
+          template_type: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          event?: string
+          id?: string
+          referrer?: string | null
+          template_slug?: string
+          template_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tenant_10dlc_registrations: {
         Row: {
