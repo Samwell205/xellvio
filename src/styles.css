@@ -32,6 +32,13 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-lime: var(--lime);
+  --color-lime-foreground: var(--lime-foreground);
+  --color-coral: var(--coral);
+  --color-coral-foreground: var(--coral-foreground);
+  --color-sand: var(--sand);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -73,6 +80,13 @@
   --success-foreground: oklch(0.99 0 0);
   --warning: oklch(0.78 0.17 75);
   --warning-foreground: oklch(0.2 0.03 256);
+  --ink: oklch(0.16 0.01 256);
+  --ink-foreground: oklch(0.99 0 0);
+  --lime: oklch(0.92 0.2 118);
+  --lime-foreground: oklch(0.18 0.03 130);
+  --coral: oklch(0.62 0.22 25);
+  --coral-foreground: oklch(0.99 0 0);
+  --sand: oklch(0.96 0.015 85);
   --border: oklch(0.92 0.01 256);
   --input: oklch(0.92 0.01 256);
   --ring: oklch(0.62 0.21 255);
@@ -118,6 +132,8 @@
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.68 0.2 255);
+  --ink: oklch(0.12 0.01 256);
+  --sand: oklch(0.22 0.02 85);
 }
 
 @layer base {
@@ -159,3 +175,8 @@
 .legal-prose blockquote { border-left: 3px solid var(--color-primary); padding: 0.5rem 1rem; margin: 1rem 0; background: oklch(from var(--color-muted) l c h / 0.5); border-radius: 0.5rem; font-style: italic; color: var(--color-muted-foreground); }
 .legal-prose code { background: var(--color-muted); padding: 0.1rem 0.35rem; border-radius: 0.25rem; font-size: 0.85em; }
 .legal-prose a { color: var(--color-primary); }
+
+/* Marketing marquee (stats ticker) */
+@keyframes marquee-x { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.marquee-track { display: flex; width: max-content; animation: marquee-x 32s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } }

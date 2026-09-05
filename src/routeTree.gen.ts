@@ -14,6 +14,7 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as SmsTermsRouteImport } from './routes/sms-terms'
+import { Route as SmsMarketingRouteImport } from './routes/sms-marketing'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SellersRouteImport } from './routes/sellers'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -24,6 +25,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
+import { Route as EmailMarketingRouteImport } from './routes/email-marketing'
 import { Route as DpaRouteImport } from './routes/dpa'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as CookiesRouteImport } from './routes/cookies'
@@ -170,6 +172,11 @@ const SmsTermsRoute = SmsTermsRouteImport.update({
   path: '/sms-terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SmsMarketingRoute = SmsMarketingRouteImport.update({
+  id: '/sms-marketing',
+  path: '/sms-marketing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -218,6 +225,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const FeaturesRoute = FeaturesRouteImport.update({
   id: '/features',
   path: '/features',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailMarketingRoute = EmailMarketingRouteImport.update({
+  id: '/email-marketing',
+  path: '/email-marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DpaRoute = DpaRouteImport.update({
@@ -898,6 +910,7 @@ export interface FileRoutesByFullPath {
   '/cookies': typeof CookiesRoute
   '/docs': typeof DocsRoute
   '/dpa': typeof DpaRoute
+  '/email-marketing': typeof EmailMarketingRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -908,6 +921,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
   '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
@@ -1032,6 +1046,7 @@ export interface FileRoutesByTo {
   '/cookies': typeof CookiesRoute
   '/docs': typeof DocsRoute
   '/dpa': typeof DpaRoute
+  '/email-marketing': typeof EmailMarketingRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/mcp': typeof McpRoute
@@ -1041,6 +1056,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
   '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
@@ -1165,6 +1181,7 @@ export interface FileRoutesById {
   '/cookies': typeof CookiesRoute
   '/docs': typeof DocsRoute
   '/dpa': typeof DpaRoute
+  '/email-marketing': typeof EmailMarketingRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -1175,6 +1192,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
   '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
@@ -1302,6 +1320,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/docs'
     | '/dpa'
+    | '/email-marketing'
     | '/features'
     | '/forgot-password'
     | '/marketplace'
@@ -1312,6 +1331,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sellers'
     | '/sitemap.xml'
+    | '/sms-marketing'
     | '/sms-terms'
     | '/solutions'
     | '/terms'
@@ -1436,6 +1456,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/docs'
     | '/dpa'
+    | '/email-marketing'
     | '/features'
     | '/forgot-password'
     | '/mcp'
@@ -1445,6 +1466,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sellers'
     | '/sitemap.xml'
+    | '/sms-marketing'
     | '/sms-terms'
     | '/solutions'
     | '/terms'
@@ -1568,6 +1590,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/docs'
     | '/dpa'
+    | '/email-marketing'
     | '/features'
     | '/forgot-password'
     | '/marketplace'
@@ -1578,6 +1601,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sellers'
     | '/sitemap.xml'
+    | '/sms-marketing'
     | '/sms-terms'
     | '/solutions'
     | '/terms'
@@ -1706,6 +1730,7 @@ export interface RootRouteChildren {
   CookiesRoute: typeof CookiesRoute
   DocsRoute: typeof DocsRoute
   DpaRoute: typeof DpaRoute
+  EmailMarketingRoute: typeof EmailMarketingRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
@@ -1716,6 +1741,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SellersRoute: typeof SellersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SmsMarketingRoute: typeof SmsMarketingRoute
   SmsTermsRoute: typeof SmsTermsRoute
   SolutionsRoute: typeof SolutionsRouteWithChildren
   TermsRoute: typeof TermsRoute
@@ -1793,6 +1819,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SmsTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sms-marketing': {
+      id: '/sms-marketing'
+      path: '/sms-marketing'
+      fullPath: '/sms-marketing'
+      preLoaderRoute: typeof SmsMarketingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -1861,6 +1894,13 @@ declare module '@tanstack/react-router' {
       path: '/features'
       fullPath: '/features'
       preLoaderRoute: typeof FeaturesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-marketing': {
+      id: '/email-marketing'
+      path: '/email-marketing'
+      fullPath: '/email-marketing'
+      preLoaderRoute: typeof EmailMarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dpa': {
@@ -3000,6 +3040,7 @@ const rootRouteChildren: RootRouteChildren = {
   CookiesRoute: CookiesRoute,
   DocsRoute: DocsRoute,
   DpaRoute: DpaRoute,
+  EmailMarketingRoute: EmailMarketingRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   MarketplaceRoute: MarketplaceRouteWithChildren,
@@ -3010,6 +3051,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SellersRoute: SellersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SmsMarketingRoute: SmsMarketingRoute,
   SmsTermsRoute: SmsTermsRoute,
   SolutionsRoute: SolutionsRouteWithChildren,
   TermsRoute: TermsRoute,
