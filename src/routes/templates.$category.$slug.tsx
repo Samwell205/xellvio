@@ -1,41 +1,48 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, Check } from "lucide-react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { BlockCanvas } from "@/components/builder/BlockRenderer";
 import { AUTOMATION_TEMPLATES } from "@/lib/automation-templates";
+import { CATEGORY_META, previewFor, isTemplateCategory } from "@/lib/marketing/template-catalog";
 import {
-  CATEGORY_META,
-  findTemplate,
-  isTemplateCategory,
-  previewFor,
-  templatesInCategory,
-} from "@/lib/marketing/template-catalog";
-import { pageHead } from "@/lib/seo";
+  COMPLEXITY_LABEL,
+  GOAL_LABEL,
+  INDUSTRY_LABEL,
+  authPath,
+  findLibraryTemplate,
+  relatedTemplates,
+} from "@/lib/templates/library";
+import { recordTemplateEvent } from "@/lib/template-import.functions";
+import { pageHead, faqSchema } from "@/lib/seo";
 
 export const Route = createFileRoute("/templates/$category/$slug")({
   loader: ({ params }) => {
     if (!isTemplateCategory(params.category)) throw notFound();
-    if (!findTemplate(params.category, params.slug)) throw notFound();
+    if (!findLibraryTemplate(params.category, params.slug)) throw notFound();
   },
   head: ({ params }) => {
-    const template = isTemplateCategory(params.category) ? findTemplate(params.category, params.slug) : undefined;
+    const template = findLibraryTemplate(params.category, params.slug);
     if (!template) {
       return { meta: [{ title: "Template unavailable | Xellvio" }, { name: "robots", content: "noindex" }] };
     }
-    const meta = CATEGORY_META[template.category];
+    const meta = CATEGORY_META[template.category as keyof typeof CATEGORY_META];
     const path = `${meta.path}/${template.slug}`;
-    const noun = template.category === "automations" ? "automation" : template.category === "sign-up-forms" ? "sign-up form" : "landing page";
+    const noun =
+      template.type === "automation" ? "automation" : template.type === "signup-form" ? "sign-up form" : "landing page";
     return pageHead({
       path,
       title: `${template.label} ${noun} template`,
-      description: `${template.blurb} Preview the ${template.label.toLowerCase()} ${noun} template, then edit and publish it in Xellvio.`,
+      description: `${template.blurb} Preview the ${template.label.toLowerCase()} ${noun} template free, then edit and publish it in Xellvio.`,
       breadcrumbs: [
         { name: "Home", path: "/" },
         { name: "Templates", path: "/templates" },
         { name: meta.label, path: meta.path },
         { name: template.label, path },
       ],
+      schema: [faqSchema(template.faq)],
     });
   },
   component: TemplateDetail,
@@ -45,13 +52,32 @@ function TemplateDetail() {
   const params = Route.useParams();
   const category = isTemplateCategory(params.category) ? params.category : "landing-pages";
   const slug = params.slug;
-  const template = findTemplate(category, slug)!;
+  const template = findLibraryTemplate(category, slug)!;
   const meta = CATEGORY_META[category];
   const preview = previewFor(category, slug);
   const automation = category === "automations" ? AUTOMATION_TEMPLATES.find((a) => a.id === slug) : undefined;
-  const others = templatesInCategory(category)
-    .filter((t) => t.slug !== slug)
-    .slice(0, 3);
+  const related = relatedTemplates(template, 3);
+  const track = useServerFn(recordTemplateEvent);
+  const tracked = useRef(false);
+
+  useEffect(() => {
+    if (tracked.current) return;
+    tracked.current = true;
+    void track({ data: { category, slug, event: "view", referrer: document.referrer?.slice(0, 300) || null } }).catch(
+      () => undefined,
+    );
+  }, [category, slug, track]);
+
+  const onUseClick = () => {
+    void track({ data: { category, slug, event: "use_click" } }).catch(() => undefined);
+  };
+
+  const facts = [
+    { label: "Best for", value: template.goals.map((g) => GOAL_LABEL[g]).join(", ") },
+    { label: "Industries", value: template.industries.map((i) => INDUSTRY_LABEL[i]).join(", ") },
+    { label: "Level", value: COMPLEXITY_LABEL[template.complexity] },
+    { label: "Version", value: template.version },
+  ];
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -71,13 +97,15 @@ function TemplateDetail() {
               <h1 className="mt-4 text-4xl md:text-[50px] font-extrabold leading-[1.06] tracking-tight text-foreground">
                 {template.label}
               </h1>
-              <p className="mt-5 text-lg leading-relaxed text-muted-foreground">{template.blurb}</p>
+              <p className="mt-5 text-lg leading-relaxed text-muted-foreground">{template.answer}</p>
               <p className="mt-4 text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">Who it's for:</span> {template.audience}
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
-                  to="/auth"
+                  to={authPath(template).to}
+                  search={authPath(template).search}
+                  onClick={onUseClick}
                   className="inline-flex items-center gap-1.5 rounded-full bg-ink px-6 py-3 font-semibold text-ink-foreground transition-transform hover:-translate-y-0.5"
                 >
                   Use this template <ArrowRight className="size-4" />
@@ -90,8 +118,18 @@ function TemplateDetail() {
                 </Link>
               </div>
               <p className="mt-4 text-xs text-muted-foreground">
-                Create your account, then open the template from {template.useIn.includes("automations") ? "Automations" : template.useIn.includes("landing") ? "Website → Landing pages" : "Website → Sign-up forms"} in Xellvio.
+                Free to use. Sign in or create an account and the template is copied straight into your workspace as an
+                editable draft.
               </p>
+
+              <dl className="mt-8 grid gap-4 sm:grid-cols-2">
+                {facts.map((f) => (
+                  <div key={f.label} className="rounded-2xl border border-border bg-card px-4 py-3">
+                    <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{f.label}</dt>
+                    <dd className="mt-1 text-sm font-medium text-foreground">{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
 
             <div className="rounded-3xl border border-border bg-card p-4">
@@ -145,18 +183,49 @@ function TemplateDetail() {
           </div>
         </section>
 
+        <section className="border-t border-border bg-card/40 py-16">
+          <div className="mx-auto max-w-[1400px] px-5 sm:px-8">
+            <h2 className="text-2xl font-extrabold tracking-tight text-foreground">How this template works</h2>
+            <ol className="mt-8 grid gap-5 md:grid-cols-4">
+              {template.steps.map((s, i) => (
+                <li key={s} className="rounded-2xl border border-border bg-background p-6">
+                  <span className="grid size-7 place-items-center rounded-full bg-ink text-xs font-bold text-ink-foreground">
+                    {i + 1}
+                  </span>
+                  <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{s}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-[900px] px-5 sm:px-8 py-16">
+          <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Questions about this template</h2>
+          <dl className="mt-8 divide-y divide-border border-y border-border">
+            {template.faq.map((f) => (
+              <div key={f.q} className="py-5">
+                <dt className="text-base font-semibold text-foreground">{f.q}</dt>
+                <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.a}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
         <section className="border-t border-border bg-sand py-16">
           <div className="mx-auto max-w-[1400px] px-5 sm:px-8">
-            <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Related templates</h2>
+            <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Templates that pair with this</h2>
             <div className="mt-8 grid gap-5 sm:grid-cols-3">
-              {others.map((t) => (
+              {related.map((t) => (
                 <Link
-                  key={t.slug}
+                  key={`${t.category}-${t.slug}`}
                   to="/templates/$category/$slug"
-                  params={{ category, slug: t.slug }}
+                  params={{ category: t.category, slug: t.slug }}
                   className="group rounded-2xl border border-border bg-card p-6 transition-colors hover:border-foreground/30"
                 >
-                  <h3 className="text-base font-bold text-foreground">{t.label}</h3>
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {CATEGORY_META[t.category as keyof typeof CATEGORY_META].label.replace(" templates", "")}
+                  </span>
+                  <h3 className="mt-2 text-base font-bold text-foreground">{t.label}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t.blurb}</p>
                   <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
                     View <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -165,11 +234,30 @@ function TemplateDetail() {
               ))}
             </div>
             <p className="mt-10 text-sm text-muted-foreground">
-              Pair this with{" "}
-              <Link to={meta.product} className="font-semibold text-foreground underline">
-                {meta.label.replace(" templates", "")}
-              </Link>{" "}
-              and{" "}
+              Browse more{" "}
+              {template.goals[0] ? (
+                <Link
+                  to="/templates/use-case/$goal"
+                  params={{ goal: template.goals[0] }}
+                  className="font-semibold text-foreground underline"
+                >
+                  templates to {GOAL_LABEL[template.goals[0]].toLowerCase()}
+                </Link>
+              ) : null}
+              {template.industries[0] ? (
+                <>
+                  {" "}or see what{" "}
+                  <Link
+                    to="/templates/industry/$industry"
+                    params={{ industry: template.industries[0] }}
+                    className="font-semibold text-foreground underline"
+                  >
+                    {INDUSTRY_LABEL[template.industries[0]].toLowerCase()} teams
+                  </Link>{" "}
+                  start with
+                </>
+              ) : null}
+              , then use{" "}
               <Link to="/reporting" className="font-semibold text-foreground underline">
                 reporting
               </Link>{" "}
@@ -185,10 +273,12 @@ function TemplateDetail() {
                 Use the {template.label.toLowerCase()} template in Xellvio
               </h2>
               <p className="mt-4 max-w-xl text-ink-foreground/70">
-                Create your free account, apply the template, edit the copy and go live.
+                Create your free account and the template lands in your workspace, ready to edit and publish.
               </p>
               <Link
-                to="/auth"
+                to={authPath(template).to}
+                search={authPath(template).search}
+                onClick={onUseClick}
                 className="mt-8 inline-flex items-center gap-1.5 rounded-full bg-lime px-6 py-3 font-semibold text-lime-foreground"
               >
                 Use this template <ArrowRight className="size-4" />
