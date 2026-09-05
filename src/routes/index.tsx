@@ -8,6 +8,7 @@ import {
 import { useState } from "react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { PlatformShowcase } from "@/components/marketing/PlatformShowcase";
 import { StatsMarquee, reveal } from "@/components/marketing/ProductKit";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
