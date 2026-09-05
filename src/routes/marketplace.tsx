@@ -87,9 +87,15 @@ function MarketplaceLayout() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between md:px-6">
           <p>© {new Date().getFullYear()} Xellvio. One ecosystem for your whole business.</p>
           <div className="flex flex-wrap gap-4">
-            <Link to="/marketplace/apps" className="hover:text-foreground">Browse apps</Link>
-            <Link to="/marketplace/categories" className="hover:text-foreground">Categories</Link>
-            <Link to="/marketplace/developers" className="hover:text-foreground">Build for Xellvio</Link>
+            <Link to="/marketplace/apps" className="hover:text-foreground">
+              Browse apps
+            </Link>
+            <Link to="/marketplace/categories" className="hover:text-foreground">
+              Categories
+            </Link>
+            <Link to="/marketplace/developers" className="hover:text-foreground">
+              Build for Xellvio
+            </Link>
           </div>
         </div>
       </footer>

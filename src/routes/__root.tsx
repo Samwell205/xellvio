@@ -14,6 +14,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AiChatWidget } from "../components/AiChatWidget";
 import { CookieBanner } from "../components/CookieBanner";
 import { Toaster } from "../components/ui/sonner";
+import { initAnalytics, trackPageView } from "@/lib/analytics";
+import { BRAND, organizationSchema } from "@/lib/seo";
 
 function NotFoundComponent() {
   return (
@@ -81,16 +83,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Xellvio — Global Bulk SMS Platform" },
-      { name: "description", content: "Send fast, reliable, compliant bulk SMS campaigns worldwide. Scheduling, analytics, sender IDs, and a developer API." },
-      { property: "og:site_name", content: "Xellvio" },
-      { property: "og:title", content: "Xellvio — Global Bulk SMS Platform" },
-      { property: "og:description", content: "Send fast, reliable, compliant bulk SMS campaigns worldwide. Scheduling, analytics, sender IDs, and a developer API." },
+      { name: "description", content: BRAND.short },
+      { property: "og:site_name", content: BRAND.name },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Xellvio — Global Bulk SMS Platform" },
-      { name: "twitter:description", content: "Send fast, reliable, compliant bulk SMS campaigns worldwide. Scheduling, analytics, sender IDs, and a developer API." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/74e5da20-6d22-40e0-9f0a-22e55bedbb4c" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/74e5da20-6d22-40e0-9f0a-22e55bedbb4c" },
       { name: "theme-color", content: "#0f111a" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "mobile-web-app-capable", content: "yes" },
@@ -109,18 +105,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         type: "application/ld+json",
         children: JSON.stringify({
           "@context": "https://schema.org",
-          "@type": "Organization",
-          "@id": "https://xellvio.com/#organization",
-          name: "Xellvio",
-          url: "https://xellvio.com/",
-          logo: "https://xellvio.com/icon-512.png",
-          description:
-            "Xellvio is an SMS marketing platform for bulk texting, automations and delivery analytics in 190+ countries.",
+          ...organizationSchema(),
         }),
       },
     ],
-
-
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -152,11 +140,7 @@ function RootComponent() {
     import("@/integrations/supabase/client").then(({ supabase }) => {
       if (!mounted) return;
       const { data } = supabase.auth.onAuthStateChange((event) => {
-        if (
-          event !== "SIGNED_IN" &&
-          event !== "SIGNED_OUT" &&
-          event !== "USER_UPDATED"
-        ) {
+        if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") {
           return;
         }
         router.invalidate();
@@ -169,6 +153,15 @@ function RootComponent() {
       unsub?.();
     };
   }, [router, queryClient]);
+
+  // Organic-traffic + conversion measurement. No-op unless a measurement ID is set.
+  useEffect(() => {
+    initAnalytics();
+    trackPageView(window.location.pathname + window.location.search);
+    return router.subscribe("onResolved", ({ toLocation }) => {
+      trackPageView(toLocation.href);
+    });
+  }, [router]);
 
   return (
     <QueryClientProvider client={queryClient}>

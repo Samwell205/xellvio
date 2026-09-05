@@ -1,8 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { adminFinanceOverview, adminFinanceTenants, adminMarginAudit, adminPricingPreview } from "@/lib/admin-finance.functions";
-import { adminListRecoveryCases, adminRecoveryCaseCsv, adminSendRecoveryNotice, adminUpdateRecoveryCase } from "@/lib/reconciliation-recovery.functions";
+import {
+  adminFinanceOverview,
+  adminFinanceTenants,
+  adminMarginAudit,
+  adminPricingPreview,
+} from "@/lib/admin-finance.functions";
+import {
+  adminListRecoveryCases,
+  adminRecoveryCaseCsv,
+  adminSendRecoveryNotice,
+  adminUpdateRecoveryCase,
+} from "@/lib/reconciliation-recovery.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,9 +24,15 @@ export const Route = createFileRoute("/_authenticated/admin/finance")({
   head: () => ({
     meta: [
       { title: "Finance analysis · Xellvio Admin" },
-      { name: "description", content: "Money in, credits used, carrier cost and profit across every Xellvio tenant." },
+      {
+        name: "description",
+        content: "Money in, credits used, carrier cost and profit across every Xellvio tenant.",
+      },
       { property: "og:title", content: "Finance analysis · Xellvio Admin" },
-      { property: "og:description", content: "Money in, credits used, carrier cost and profit across every Xellvio tenant." },
+      {
+        property: "og:description",
+        content: "Money in, credits used, carrier cost and profit across every Xellvio tenant.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -24,11 +40,25 @@ export const Route = createFileRoute("/_authenticated/admin/finance")({
 });
 
 const usd = (n: any) =>
-  Number(n ?? 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+  Number(n ?? 0).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  });
 const num = (n: any) => Number(n ?? 0).toLocaleString("en-US");
 const date = (d: any) => (d ? new Date(d).toLocaleString() : "—");
 
-function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "good" | "bad" }) {
+function Stat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  tone?: "good" | "bad";
+}) {
   return (
     <Card>
       <CardContent className="pt-6">
@@ -51,12 +81,21 @@ function FinancePage() {
   const overviewFn = useServerFn(adminFinanceOverview);
   const tenantsFn = useServerFn(adminFinanceTenants);
 
-  const { data, isLoading, error } = useQuery({ queryKey: ["admin-finance"], queryFn: () => overviewFn({}) });
-  const { data: tenants } = useQuery({ queryKey: ["admin-finance-tenants"], queryFn: () => tenantsFn({}) });
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["admin-finance"],
+    queryFn: () => overviewFn({}),
+  });
+  const { data: tenants } = useQuery({
+    queryKey: ["admin-finance-tenants"],
+    queryFn: () => tenantsFn({}),
+  });
 
   const marginFn = useServerFn(adminMarginAudit);
   const pricingFn = useServerFn(adminPricingPreview);
-  const { data: margins } = useQuery({ queryKey: ["admin-margin-audit"], queryFn: () => marginFn({}) });
+  const { data: margins } = useQuery({
+    queryKey: ["admin-margin-audit"],
+    queryFn: () => marginFn({}),
+  });
   const { data: pricing } = useQuery({
     queryKey: ["admin-pricing-preview"],
     queryFn: () => pricingFn({ data: { markupPercent: 100 } }),
@@ -65,10 +104,16 @@ function FinancePage() {
   const updateRecoveryFn = useServerFn(adminUpdateRecoveryCase);
   const csvRecoveryFn = useServerFn(adminRecoveryCaseCsv);
   const noticeRecoveryFn = useServerFn(adminSendRecoveryNotice);
-  const { data: recoveries } = useQuery({ queryKey: ["admin-recovery-cases"], queryFn: () => recoveryFn({}) });
+  const { data: recoveries } = useQuery({
+    queryKey: ["admin-recovery-cases"],
+    queryFn: () => recoveryFn({}),
+  });
   const updateRecovery = useMutation({
     mutationFn: (input: { id: string; status: string }) => updateRecoveryFn({ data: input }),
-    onSuccess: () => { toast.success("Recovery case updated"); queryClient.invalidateQueries({ queryKey: ["admin-recovery-cases"] }); },
+    onSuccess: () => {
+      toast.success("Recovery case updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-recovery-cases"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -110,7 +155,8 @@ function FinancePage() {
   const rec = s.reconciliation ?? {};
   const walletTotal = Number(w.unused_credits ?? 0);
   const grantedCredit = Number(rec.granted_credit ?? 0);
-  const cashBackedCredit = Number(mi.confirmed_credits ?? 0) - Number(led.debits ?? 0) + Number(led.refunds ?? 0);
+  const cashBackedCredit =
+    Number(mi.confirmed_credits ?? 0) - Number(led.debits ?? 0) + Number(led.refunds ?? 0);
   const ledgerDrift = Number(rec.drift ?? 0);
 
   // Live aggregate of the per-tenant rows — used for the table's Totals row so
@@ -129,24 +175,35 @@ function FinancePage() {
       acc.profit += Number(t.profit ?? 0);
       return acc;
     },
-    { count: 0, funded: 0, granted: 0, spent: 0, refunded: 0, balance: 0, drift: 0, messages: 0, carrier_cost: 0, profit: 0 },
+    {
+      count: 0,
+      funded: 0,
+      granted: 0,
+      spent: 0,
+      refunded: 0,
+      balance: 0,
+      drift: 0,
+      messages: 0,
+      carrier_cost: 0,
+      profit: 0,
+    },
   );
-
-
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px]">
       <div>
         <h1 className="text-2xl font-semibold">Finance analysis</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Every figure below is calculated live from payments, tenant wallets and the messages actually sent. Amounts are
-          in USD.
+          Every figure below is calculated live from payments, tenant wallets and the messages
+          actually sent. Amounts are in USD.
         </p>
       </div>
 
       {/* 1. Where the money is */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">1 · Where your money is</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          1 · Where your money is
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat
             label="Carrier account balance"
@@ -154,7 +211,7 @@ function FinancePage() {
             hint={
               data?.providerBalance?.ok
                 ? `Live now · last recorded ${date(data?.lastSnapshot?.checked_at)}`
-                : data?.providerBalance?.error ?? "Could not reach the carrier API"
+                : (data?.providerBalance?.error ?? "Could not reach the carrier API")
             }
           />
           <Stat
@@ -179,7 +236,9 @@ function FinancePage() {
 
       {/* 2. How the money was used */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">2 · How the money was used</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          2 · How the money was used
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat
             label="Credits tenants spent"
@@ -205,19 +264,20 @@ function FinancePage() {
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          Refunds issued: {usd(led.refunds)} · Credits added to wallets in total: {usd(led.topups)} · Tenants in debt
-          (negative balance): {usd(w.negative_balances)} · Inbound carrier cost: {usd(inb.carrier_cost)} (
-          {num(inb.messages)} inbound messages) · Goodwill/adjustment credit granted without a payment:{" "}
-          {usd(grantedCredit)}
+          Refunds issued: {usd(led.refunds)} · Credits added to wallets in total: {usd(led.topups)}{" "}
+          · Tenants in debt (negative balance): {usd(w.negative_balances)} · Inbound carrier cost:{" "}
+          {usd(inb.carrier_cost)} ({num(inb.messages)} inbound messages) · Goodwill/adjustment
+          credit granted without a payment: {usd(grantedCredit)}
         </p>
-        <p className={`text-xs ${Math.abs(ledgerDrift) > 0.01 ? "text-destructive" : "text-muted-foreground"}`}>
-          Reconciliation check: wallet balances {usd(rec.wallet_total)} vs transaction ledger {usd(rec.ledger_total)} ·
-          drift {usd(ledgerDrift)}
+        <p
+          className={`text-xs ${Math.abs(ledgerDrift) > 0.01 ? "text-destructive" : "text-muted-foreground"}`}
+        >
+          Reconciliation check: wallet balances {usd(rec.wallet_total)} vs transaction ledger{" "}
+          {usd(rec.ledger_total)} · drift {usd(ledgerDrift)}
           {Math.abs(ledgerDrift) > 0.01
             ? " — a wallet was changed without a matching transaction row; investigate before trusting the totals."
             : " — every wallet matches its transaction history exactly."}
         </p>
-
       </section>
 
       <Tabs defaultValue="tenants">
@@ -235,10 +295,13 @@ function FinancePage() {
         <TabsContent value="tenants">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Every tenant: funded, granted, spent, balance, profit</CardTitle>
+              <CardTitle className="text-base">
+                Every tenant: funded, granted, spent, balance, profit
+              </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Balance = Funded + Granted − Spent + Refunded. Drift flags any wallet that was changed without a
-                matching transaction row. The Totals row is the live aggregate behind the cards at the top.
+                Balance = Funded + Granted − Spent + Refunded. Drift flags any wallet that was
+                changed without a matching transaction row. The Totals row is the live aggregate
+                behind the cards at the top.
               </p>
             </CardHeader>
             <CardContent className="overflow-x-auto">
@@ -270,7 +333,9 @@ function FinancePage() {
                       <td className="py-2 pr-3 text-right text-xs">{date(t.last_funded_at)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.spent)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.refunded)}</td>
-                      <td className={`py-2 pr-3 text-right ${Number(t.balance) < 0 ? "text-destructive" : ""}`}>
+                      <td
+                        className={`py-2 pr-3 text-right ${Number(t.balance) < 0 ? "text-destructive" : ""}`}
+                      >
                         {usd(t.balance)}
                       </td>
                       <td
@@ -308,17 +373,34 @@ function FinancePage() {
           </Card>
         </TabsContent>
 
-
         <TabsContent value="attempts">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Recorded attempts" value={num(attempts.total_attempts)} hint="Original sends and approved retries recorded after the safety update." />
-            <Stat label="Retry attempts" value={num(attempts.retry_attempts)} hint="Retries now require an explicit confirmation before sending." />
-            <Stat label="Retry charges" value={usd(attempts.retry_charges)} hint="Tenant charges reserved before retry attempts leave the platform." />
+            <Stat
+              label="Recorded attempts"
+              value={num(attempts.total_attempts)}
+              hint="Original sends and approved retries recorded after the safety update."
+            />
+            <Stat
+              label="Retry attempts"
+              value={num(attempts.retry_attempts)}
+              hint="Retries now require an explicit confirmation before sending."
+            />
+            <Stat
+              label="Retry charges"
+              value={usd(attempts.retry_charges)}
+              hint="Tenant charges reserved before retry attempts leave the platform."
+            />
             <Stat
               label="Retry margin"
-              value={usd(Number(attempts.retry_charges ?? 0) - Number(attempts.retry_carrier_cost ?? 0))}
+              value={usd(
+                Number(attempts.retry_charges ?? 0) - Number(attempts.retry_carrier_cost ?? 0),
+              )}
               hint={`${usd(attempts.retry_carrier_cost)} estimated carrier cost`}
-              tone={Number(attempts.retry_charges ?? 0) >= Number(attempts.retry_carrier_cost ?? 0) ? "good" : "bad"}
+              tone={
+                Number(attempts.retry_charges ?? 0) >= Number(attempts.retry_carrier_cost ?? 0)
+                  ? "good"
+                  : "bad"
+              }
             />
           </div>
         </TabsContent>
@@ -326,7 +408,12 @@ function FinancePage() {
         <TabsContent value="recovery">
           <div className="space-y-4">
             {(recoveries ?? []).map((recovery: any) => {
-              const tenant = recovery.accounts?.legal_business_name || recovery.accounts?.company || recovery.accounts?.full_name || recovery.accounts?.email || "—";
+              const tenant =
+                recovery.accounts?.legal_business_name ||
+                recovery.accounts?.company ||
+                recovery.accounts?.full_name ||
+                recovery.accounts?.email ||
+                "—";
               return (
                 <Card key={recovery.id}>
                   <CardHeader className="flex-row items-start justify-between gap-4 space-y-0">
@@ -335,7 +422,9 @@ function FinancePage() {
                       <p className="mt-1 text-sm text-muted-foreground">{tenant}</p>
                     </div>
                     <div className="flex gap-2">
-                      <Badge variant="outline">{String(recovery.evidence_quality).replaceAll("_", " ")}</Badge>
+                      <Badge variant="outline">
+                        {String(recovery.evidence_quality).replaceAll("_", " ")}
+                      </Badge>
                       <Badge>{String(recovery.status).replaceAll("_", " ")}</Badge>
                     </div>
                   </CardHeader>
@@ -343,36 +432,90 @@ function FinancePage() {
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                       <Stat label="Verified funding" value={usd(recovery.verified_funding)} />
                       <Stat label="Verified debits" value={usd(recovery.verified_tenant_debits)} />
-                      <Stat label="Tenant recovery" value={usd(recovery.verified_uncovered_tenant_charge)} hint="Only exact uncovered charges" />
-                      <Stat label="Disputed attempts" value={num(recovery.disputed_provider_attempts)} />
-                      <Stat label="Disputed amount" value={usd(recovery.disputed_provider_amount)} hint="Kept separate from tenant debt" />
+                      <Stat
+                        label="Tenant recovery"
+                        value={usd(recovery.verified_uncovered_tenant_charge)}
+                        hint="Only exact uncovered charges"
+                      />
+                      <Stat
+                        label="Disputed attempts"
+                        value={num(recovery.disputed_provider_attempts)}
+                      />
+                      <Stat
+                        label="Disputed amount"
+                        value={usd(recovery.disputed_provider_amount)}
+                        hint="Kept separate from tenant debt"
+                      />
                     </div>
                     <p className="text-sm text-muted-foreground">{recovery.summary}</p>
                     {recovery.evidence?.limitation && (
-                      <p className="border-l-2 border-border pl-3 text-xs text-muted-foreground">Evidence limitation: {recovery.evidence.limitation}</p>
+                      <p className="border-l-2 border-border pl-3 text-xs text-muted-foreground">
+                        Evidence limitation: {recovery.evidence.limitation}
+                      </p>
                     )}
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => downloadRecovery(recovery.id, recovery.title)}>Download CSV</Button>
-                      <Button size="sm" variant="outline" onClick={async () => {
-                        try { await noticeRecoveryFn({ data: { id: recovery.id } }); toast.success("Tenant notice sent"); }
-                        catch (e) { toast.error(e instanceof Error ? e.message : "Notice failed"); }
-                      }}>Send tenant notice</Button>
-                      <Button size="sm" onClick={() => updateRecovery.mutate({ id: recovery.id, status: "provider_credited" })}>Mark provider credited</Button>
-                      <Button size="sm" variant="secondary" onClick={() => updateRecovery.mutate({ id: recovery.id, status: "provider_rejected" })}>Mark provider rejected</Button>
-                      <Button size="sm" variant="outline" onClick={() => updateRecovery.mutate({ id: recovery.id, status: "closed" })}>Close case</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadRecovery(recovery.id, recovery.title)}
+                      >
+                        Download CSV
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            await noticeRecoveryFn({ data: { id: recovery.id } });
+                            toast.success("Tenant notice sent");
+                          } catch (e) {
+                            toast.error(e instanceof Error ? e.message : "Notice failed");
+                          }
+                        }}
+                      >
+                        Send tenant notice
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          updateRecovery.mutate({ id: recovery.id, status: "provider_credited" })
+                        }
+                      >
+                        Mark provider credited
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          updateRecovery.mutate({ id: recovery.id, status: "provider_rejected" })
+                        }
+                      >
+                        Mark provider rejected
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateRecovery.mutate({ id: recovery.id, status: "closed" })}
+                      >
+                        Close case
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               );
             })}
-            {!recoveries?.length && <p className="text-sm text-muted-foreground">No recovery cases.</p>}
+            {!recoveries?.length && (
+              <p className="text-sm text-muted-foreground">No recovery cases.</p>
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="funding">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Last 100 funding attempts (who paid, how much, when)</CardTitle>
+              <CardTitle className="text-base">
+                Last 100 funding attempts (who paid, how much, when)
+              </CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -392,7 +535,9 @@ function FinancePage() {
                       <td className="py-2 pr-3">{p.account_label}</td>
                       <td className="py-2 pr-3 capitalize">{p.provider}</td>
                       <td className="py-2 pr-3">
-                        <Badge variant={p.status === "paid" ? "default" : "secondary"}>{p.status}</Badge>
+                        <Badge variant={p.status === "paid" ? "default" : "secondary"}>
+                          {p.status}
+                        </Badge>
                       </td>
                       <td className="py-2 pr-3 text-right">
                         {Number(p.amount ?? 0).toLocaleString()} {p.currency}
@@ -432,7 +577,9 @@ function FinancePage() {
                       <td className="py-2 pr-3 text-right">{usd(d.spent)}</td>
                       <td className="py-2 pr-3 text-right">{usd(d.carrier_cost)}</td>
                       <td className="py-2 pr-3 text-right">{num(d.messages)}</td>
-                      <td className="py-2 pr-3 text-right">{usd(Number(d.spent ?? 0) - Number(d.carrier_cost ?? 0))}</td>
+                      <td className="py-2 pr-3 text-right">
+                        {usd(Number(d.spent ?? 0) - Number(d.carrier_cost ?? 0))}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -486,8 +633,9 @@ function FinancePage() {
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <p className="text-xs text-muted-foreground mb-3">
-                Charged = credits actually debited for messages handed to the carrier. True cost includes the base
-                carrier rate plus carrier passthrough fees. A red margin means that tenant's traffic was sent at a loss.
+                Charged = credits actually debited for messages handed to the carrier. True cost
+                includes the base carrier rate plus carrier passthrough fees. A red margin means
+                that tenant's traffic was sent at a loss.
               </p>
               <table className="w-full text-sm">
                 <thead className="text-xs uppercase text-muted-foreground">
@@ -542,8 +690,8 @@ function FinancePage() {
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <p className="text-xs text-muted-foreground mb-3">
-                Suggested price is the true cost (base + passthrough fee) at a 100% markup. Rows highlighted in red are
-                currently selling below what delivery actually costs.
+                Suggested price is the true cost (base + passthrough fee) at a 100% markup. Rows
+                highlighted in red are currently selling below what delivery actually costs.
               </p>
               <table className="w-full text-sm">
                 <thead className="text-xs uppercase text-muted-foreground">
@@ -560,14 +708,22 @@ function FinancePage() {
                 </thead>
                 <tbody>
                   {(pricing ?? []).map((r: any) => (
-                    <tr key={r.country_code} className={`border-t ${r.below_cost ? "bg-destructive/10" : ""}`}>
+                    <tr
+                      key={r.country_code}
+                      className={`border-t ${r.below_cost ? "bg-destructive/10" : ""}`}
+                    >
                       <td className="py-2">
-                        {r.country_name} <span className="text-muted-foreground">({r.country_code})</span>
+                        {r.country_name}{" "}
+                        <span className="text-muted-foreground">({r.country_code})</span>
                       </td>
                       <td className="text-right tabular-nums">${Number(r.base_cost).toFixed(5)}</td>
-                      <td className="text-right tabular-nums">${Number(r.passthrough_fee).toFixed(5)}</td>
+                      <td className="text-right tabular-nums">
+                        ${Number(r.passthrough_fee).toFixed(5)}
+                      </td>
                       <td className="text-right tabular-nums">${Number(r.true_cost).toFixed(5)}</td>
-                      <td className="text-right tabular-nums">${Number(r.current_sell).toFixed(4)}</td>
+                      <td className="text-right tabular-nums">
+                        ${Number(r.current_sell).toFixed(4)}
+                      </td>
                       <td
                         className={`text-right tabular-nums ${
                           r.below_cost ? "text-destructive font-semibold" : "text-emerald-500"
@@ -575,8 +731,12 @@ function FinancePage() {
                       >
                         ${Number(r.current_margin).toFixed(5)}
                       </td>
-                      <td className="text-right tabular-nums">${Number(r.suggested_sell).toFixed(4)}</td>
-                      <td className="text-right tabular-nums">${Number(r.suggested_mms_sell).toFixed(4)}</td>
+                      <td className="text-right tabular-nums">
+                        ${Number(r.suggested_sell).toFixed(4)}
+                      </td>
+                      <td className="text-right tabular-nums">
+                        ${Number(r.suggested_mms_sell).toFixed(4)}
+                      </td>
                     </tr>
                   ))}
                   {!pricing?.length && (

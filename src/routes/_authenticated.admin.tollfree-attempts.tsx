@@ -21,11 +21,15 @@ function AdminTollfreeAttemptsPage() {
         <h1 className="text-2xl font-extrabold flex items-center gap-2">
           <ClipboardList className="size-6" /> Toll-free verification logs
         </h1>
-        <p className="text-sm text-muted-foreground">Most recent 200 toll-free submission attempts across all tenants.</p>
+        <p className="text-sm text-muted-foreground">
+          Most recent 200 toll-free submission attempts across all tenants.
+        </p>
       </div>
 
       {q.isLoading ? (
-        <div className="flex justify-center h-32 items-center"><Loader2 className="size-6 animate-spin" /></div>
+        <div className="flex justify-center h-32 items-center">
+          <Loader2 className="size-6 animate-spin" />
+        </div>
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
@@ -45,39 +49,68 @@ function AdminTollfreeAttemptsPage() {
               <tbody>
                 {(q.data ?? []).map((attempt: any) => (
                   <tr key={attempt.id} className="border-t align-top">
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">{new Date(attempt.created_at).toLocaleString()}</td>
-                    <td className="p-3"><AttemptBadge status={attempt.attempt_status} /></td>
-                    <td className="p-3"><VerificationBadge status={attempt.verification_status} /></td>
+                    <td className="p-3 text-muted-foreground whitespace-nowrap">
+                      {new Date(attempt.created_at).toLocaleString()}
+                    </td>
+                    <td className="p-3">
+                      <AttemptBadge status={attempt.attempt_status} />
+                    </td>
+                    <td className="p-3">
+                      <VerificationBadge status={attempt.verification_status} />
+                    </td>
                     <td className="p-3">
                       <div className="font-medium">{attempt.account_label}</div>
                       <div className="text-xs text-muted-foreground">{attempt.actor_label}</div>
-                      <div className="text-[11px] text-muted-foreground font-mono">{attempt.account_id}</div>
+                      <div className="text-[11px] text-muted-foreground font-mono">
+                        {attempt.account_id}
+                      </div>
                     </td>
                     <td className="p-3 font-mono text-xs">
                       <div>{attempt.phone_number ?? "—"}</div>
                       <div className="text-muted-foreground">{attempt.telnyx_number_id ?? ""}</div>
                     </td>
-                    <td className="p-3 font-mono text-xs">{attempt.telnyx_verification_id ?? "—"}</td>
+                    <td className="p-3 font-mono text-xs">
+                      {attempt.telnyx_verification_id ?? "—"}
+                    </td>
                     <td className="p-3 text-xs">
                       <div>{attempt.provider_status ? `HTTP ${attempt.provider_status}` : "—"}</div>
-                      {attempt.provider_code && <div className="text-muted-foreground">Code {attempt.provider_code}</div>}
-                      {attempt.provider_more_info && <div className="text-muted-foreground max-w-56 truncate">{attempt.provider_more_info}</div>}
+                      {attempt.provider_code && (
+                        <div className="text-muted-foreground">Code {attempt.provider_code}</div>
+                      )}
+                      {attempt.provider_more_info && (
+                        <div className="text-muted-foreground max-w-56 truncate">
+                          {attempt.provider_more_info}
+                        </div>
+                      )}
                     </td>
                     <td className="p-3 max-w-md">
                       {(attempt.friendly_rejection_reason || attempt.rejection_reason) && (
-                        <div className="mb-2 text-destructive font-medium">{attempt.friendly_rejection_reason ?? attempt.rejection_reason}</div>
+                        <div className="mb-2 text-destructive font-medium">
+                          {attempt.friendly_rejection_reason ?? attempt.rejection_reason}
+                        </div>
                       )}
                       {(attempt.friendly_failure_reason || attempt.failure_reason) && (
-                        <div className="mb-2 text-destructive font-medium">{attempt.friendly_failure_reason ?? attempt.failure_reason}</div>
+                        <div className="mb-2 text-destructive font-medium">
+                          {attempt.friendly_failure_reason ?? attempt.failure_reason}
+                        </div>
                       )}
                       <pre className="text-xs whitespace-pre-wrap text-muted-foreground max-h-44 overflow-auto">
-                        {JSON.stringify({ request: attempt.request_summary, response: attempt.provider_response }, null, 2)}
+                        {JSON.stringify(
+                          { request: attempt.request_summary, response: attempt.provider_response },
+                          null,
+                          2,
+                        )}
                       </pre>
                     </td>
                   </tr>
                 ))}
-                {(q.data ?? []).length === 0 && <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No toll-free verification attempts yet.</td></tr>}
-
+                {(q.data ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                      No toll-free verification attempts yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -91,7 +124,10 @@ function AttemptBadge({ status }: { status: string }) {
   const destructive = status === "failed" || status === "no_verification_sid";
   const success = status === "submitted" || status === "already_submitted";
   return (
-    <Badge variant={destructive ? "destructive" : success ? "default" : "outline"} className="whitespace-nowrap">
+    <Badge
+      variant={destructive ? "destructive" : success ? "default" : "outline"}
+      className="whitespace-nowrap"
+    >
       {status.replaceAll("_", " ")}
     </Badge>
   );
@@ -99,12 +135,19 @@ function AttemptBadge({ status }: { status: string }) {
 
 function VerificationBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-xs text-muted-foreground">Pending</span>;
-  const map: Record<string, { variant: "default" | "destructive" | "outline" | "secondary"; label: string }> = {
+  const map: Record<
+    string,
+    { variant: "default" | "destructive" | "outline" | "secondary"; label: string }
+  > = {
     verified: { variant: "default", label: "Approved" },
     rejected: { variant: "destructive", label: "Rejected" },
     in_review: { variant: "secondary", label: "In review" },
     submitted: { variant: "outline", label: "Submitted" },
   };
   const cfg = map[status] ?? { variant: "outline" as const, label: status.replaceAll("_", " ") };
-  return <Badge variant={cfg.variant} className="whitespace-nowrap">{cfg.label}</Badge>;
+  return (
+    <Badge variant={cfg.variant} className="whitespace-nowrap">
+      {cfg.label}
+    </Badge>
+  );
 }

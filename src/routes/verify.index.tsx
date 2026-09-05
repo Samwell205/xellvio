@@ -16,25 +16,16 @@ import {
   TrendingUp,
   HelpCircle,
 } from "lucide-react";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/verify/")({
-  head: () => ({
-    meta: [
-      { title: "Xellvio Verifier Marketplace — Earn by verifying toll-free numbers" },
-      {
-        name: "description",
-        content:
-          "Submit toll-free numbers, we verify them, and you earn every time a business buys one from the Xellvio pool. Cash out in Naira.",
-      },
-      { property: "og:title", content: "Xellvio Verifier Marketplace" },
-      {
-        property: "og:description",
-        content: "Get paid to verify toll-free numbers. Independent verifier portal.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/verify",
+      title: "Xellvio Number Verification Program",
+      description:
+        "Join the Xellvio verification program: verify toll-free numbers, complete assignments and get paid for approved verifications.",
+    }),
   component: VerifyLanding,
 });
 
@@ -65,24 +56,33 @@ function VerifyLanding() {
             Get paid to verify toll-free numbers
           </h1>
           <p className="text-slate-400 max-w-2xl mx-auto text-lg">
-            Submit toll-free numbers, we verify them, and you earn every time a
-            business buys one from the Xellvio pool. Cash out in Naira, straight
-            to your Nigerian bank account.
+            Submit toll-free numbers, we verify them, and you earn every time a business buys one
+            from the Xellvio pool. Cash out in Naira, straight to your Nigerian bank account.
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link to="/verify/auth" search={{ tab: "signup" } as never}>
               <Button size="lg">Create verifier account</Button>
             </Link>
             <Link to="/verify/auth">
-              <Button size="lg" variant="outline" className="border-white bg-white text-slate-950 hover:bg-slate-200 hover:text-slate-950">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white bg-white text-slate-950 hover:bg-slate-200 hover:text-slate-950"
+              >
                 I already have an account
               </Button>
             </Link>
           </div>
           <div className="pt-6 flex items-center justify-center gap-6 text-xs text-slate-500 flex-wrap">
-            <span className="inline-flex items-center gap-1"><CheckCircle2 className="size-3.5 text-emerald-400"/> Free to join</span>
-            <span className="inline-flex items-center gap-1"><CheckCircle2 className="size-3.5 text-emerald-400"/> 75% commission per sale</span>
-            <span className="inline-flex items-center gap-1"><CheckCircle2 className="size-3.5 text-emerald-400"/> Paid in NGN</span>
+            <span className="inline-flex items-center gap-1">
+              <CheckCircle2 className="size-3.5 text-emerald-400" /> Free to join
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <CheckCircle2 className="size-3.5 text-emerald-400" /> 75% commission per sale
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <CheckCircle2 className="size-3.5 text-emerald-400" /> Paid in NGN
+            </span>
           </div>
         </section>
 
@@ -97,7 +97,9 @@ function VerifyLanding() {
               <Card key={s.label} className="bg-slate-900/60 border-slate-800">
                 <CardContent className="pt-6 text-center">
                   <div className="text-3xl font-bold text-primary">{s.value}</div>
-                  <div className="text-xs uppercase tracking-widest text-slate-500 mt-1">{s.label}</div>
+                  <div className="text-xs uppercase tracking-widest text-slate-500 mt-1">
+                    {s.label}
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -133,7 +135,9 @@ function VerifyLanding() {
                 },
               ].map((s) => (
                 <Card key={s.n} className="bg-slate-900 border-slate-800 relative overflow-hidden">
-                  <div className="absolute top-4 right-4 text-6xl font-bold text-slate-800/60">{s.n}</div>
+                  <div className="absolute top-4 right-4 text-6xl font-bold text-slate-800/60">
+                    {s.n}
+                  </div>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-slate-100">
                       <s.icon className="size-5 text-primary" />
@@ -154,14 +158,23 @@ function VerifyLanding() {
               <div className="text-xs uppercase tracking-widest text-primary/80">Earnings</div>
               <h2 className="text-3xl md:text-4xl font-bold">What can you actually make?</h2>
               <p className="text-slate-400">
-                Every verified toll-free number sits in the marketplace ready to
-                be bought by a tenant. When a sale closes, you keep 75% and
-                Xellvio keeps 25% to cover platform, carrier and payout costs.
+                Every verified toll-free number sits in the marketplace ready to be bought by a
+                tenant. When a sale closes, you keep 75% and Xellvio keeps 25% to cover platform,
+                carrier and payout costs.
               </p>
               <ul className="space-y-2 text-slate-300 text-sm">
-                <li className="flex gap-2"><CheckCircle2 className="size-4 text-emerald-400 mt-0.5"/> No cap on how many numbers you submit</li>
-                <li className="flex gap-2"><CheckCircle2 className="size-4 text-emerald-400 mt-0.5"/> Earnings visible in real time on your dashboard</li>
-                <li className="flex gap-2"><CheckCircle2 className="size-4 text-emerald-400 mt-0.5"/> Withdraw to any Nigerian bank</li>
+                <li className="flex gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-400 mt-0.5" /> No cap on how many
+                  numbers you submit
+                </li>
+                <li className="flex gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-400 mt-0.5" /> Earnings visible in
+                  real time on your dashboard
+                </li>
+                <li className="flex gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-400 mt-0.5" /> Withdraw to any
+                  Nigerian bank
+                </li>
               </ul>
               <Link to="/verify/auth" search={{ tab: "signup" } as never}>
                 <Button size="lg">Start earning</Button>
@@ -170,7 +183,7 @@ function VerifyLanding() {
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader>
                 <CardTitle className="text-slate-100 flex items-center gap-2">
-                  <TrendingUp className="size-5 text-primary"/> Example month
+                  <TrendingUp className="size-5 text-primary" /> Example month
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
@@ -180,7 +193,10 @@ function VerifyLanding() {
                   ["Avg. sale price", "₦25,000"],
                   ["Your share (75%)", "₦225,000"],
                 ].map(([k, v]) => (
-                  <div key={k} className="flex items-center justify-between border-b border-slate-800/60 pb-2 last:border-0">
+                  <div
+                    key={k}
+                    className="flex items-center justify-between border-b border-slate-800/60 pb-2 last:border-0"
+                  >
                     <span className="text-slate-400">{k}</span>
                     <span className="font-semibold text-slate-100">{v}</span>
                   </div>
@@ -202,17 +218,41 @@ function VerifyLanding() {
             </div>
             <div className="grid md:grid-cols-3 gap-6">
               {[
-                { icon: Coins, title: "Best-in-class split", body: "75% of every sale is yours. No hidden platform fees." },
-                { icon: Clock, title: "Fast payouts", body: "Request a withdrawal any time you hit ₦5,000. Most payouts land within 24–48 hours." },
-                { icon: Globe2, title: "Global demand", body: "Businesses from around the world buy verified numbers from Xellvio — you tap into that demand." },
-                { icon: ShieldCheck, title: "Zero risk", body: "You never pay to list a number. We only earn when you earn." },
-                { icon: PhoneCall, title: "Bulk friendly", body: "Submit one number or a hundred. Track each one in your dashboard." },
-                { icon: Users, title: "Real support", body: "A real human reviews your submissions and answers your questions." },
+                {
+                  icon: Coins,
+                  title: "Best-in-class split",
+                  body: "75% of every sale is yours. No hidden platform fees.",
+                },
+                {
+                  icon: Clock,
+                  title: "Fast payouts",
+                  body: "Request a withdrawal any time you hit ₦5,000. Most payouts land within 24–48 hours.",
+                },
+                {
+                  icon: Globe2,
+                  title: "Global demand",
+                  body: "Businesses from around the world buy verified numbers from Xellvio — you tap into that demand.",
+                },
+                {
+                  icon: ShieldCheck,
+                  title: "Zero risk",
+                  body: "You never pay to list a number. We only earn when you earn.",
+                },
+                {
+                  icon: PhoneCall,
+                  title: "Bulk friendly",
+                  body: "Submit one number or a hundred. Track each one in your dashboard.",
+                },
+                {
+                  icon: Users,
+                  title: "Real support",
+                  body: "A real human reviews your submissions and answers your questions.",
+                },
               ].map((f) => (
                 <Card key={f.title} className="bg-slate-900 border-slate-800">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-slate-100 text-base">
-                      <f.icon className="size-5 text-primary"/> {f.title}
+                      <f.icon className="size-5 text-primary" /> {f.title}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="text-slate-400 text-sm">{f.body}</CardContent>
@@ -229,8 +269,8 @@ function VerifyLanding() {
               <div className="text-xs uppercase tracking-widest text-primary/80">Requirements</div>
               <h2 className="text-3xl md:text-4xl font-bold">What you need to start</h2>
               <p className="text-slate-400">
-                Getting started as a Xellvio verifier takes less than 5 minutes.
-                No paperwork, no upfront costs.
+                Getting started as a Xellvio verifier takes less than 5 minutes. No paperwork, no
+                upfront costs.
               </p>
             </div>
             <div className="space-y-3">
@@ -240,8 +280,11 @@ function VerifyLanding() {
                 "Access to toll-free numbers you can help get verified",
                 "Willingness to follow our verification guidelines",
               ].map((r) => (
-                <div key={r} className="flex items-start gap-3 rounded-lg bg-slate-900/60 border border-slate-800 p-4">
-                  <CheckCircle2 className="size-5 text-emerald-400 shrink-0 mt-0.5"/>
+                <div
+                  key={r}
+                  className="flex items-start gap-3 rounded-lg bg-slate-900/60 border border-slate-800 p-4"
+                >
+                  <CheckCircle2 className="size-5 text-emerald-400 shrink-0 mt-0.5" />
                   <span className="text-slate-200 text-sm">{r}</span>
                 </div>
               ))}
@@ -254,7 +297,7 @@ function VerifyLanding() {
           <div className="max-w-3xl mx-auto px-6 py-20 space-y-8">
             <div className="text-center space-y-3">
               <div className="text-xs uppercase tracking-widest text-primary/80 inline-flex items-center gap-2 justify-center">
-                <HelpCircle className="size-4"/> FAQ
+                <HelpCircle className="size-4" /> FAQ
               </div>
               <h2 className="text-3xl md:text-4xl font-bold">Frequently asked questions</h2>
             </div>
@@ -300,15 +343,21 @@ function VerifyLanding() {
         <section className="max-w-4xl mx-auto px-6 py-24 text-center space-y-6">
           <h2 className="text-3xl md:text-5xl font-bold">Ready to start earning?</h2>
           <p className="text-slate-400 max-w-xl mx-auto">
-            Create your verifier account in under a minute. Submit your first
-            number today and get paid the moment it sells.
+            Create your verifier account in under a minute. Submit your first number today and get
+            paid the moment it sells.
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link to="/verify/auth" search={{ tab: "signup" } as never}>
               <Button size="lg">Create verifier account</Button>
             </Link>
             <Link to="/verify/auth">
-              <Button size="lg" variant="outline" className="border-white bg-white text-slate-950 hover:bg-slate-200 hover:text-slate-950">Sign in</Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white bg-white text-slate-950 hover:bg-slate-200 hover:text-slate-950"
+              >
+                Sign in
+              </Button>
             </Link>
           </div>
         </section>
@@ -318,9 +367,19 @@ function VerifyLanding() {
         <div className="max-w-5xl mx-auto flex items-center justify-between text-sm text-slate-500 flex-wrap gap-3">
           <div>© {new Date().getFullYear()} Xellvio</div>
           <div className="flex gap-4">
-            <Link to="/" className="hover:text-slate-300">Main site</Link>
-            <Link to="/verify/auth" className="hover:text-slate-300">Sign in</Link>
-            <Link to="/verify/auth" search={{ tab: "signup" } as never} className="hover:text-slate-300">Become a verifier</Link>
+            <Link to="/" className="hover:text-slate-300">
+              Main site
+            </Link>
+            <Link to="/verify/auth" className="hover:text-slate-300">
+              Sign in
+            </Link>
+            <Link
+              to="/verify/auth"
+              search={{ tab: "signup" } as never}
+              className="hover:text-slate-300"
+            >
+              Become a verifier
+            </Link>
           </div>
         </div>
       </footer>

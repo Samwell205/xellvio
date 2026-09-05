@@ -8,14 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, MailCheck } from "lucide-react";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/forgot-password")({
-  head: () => ({
-    meta: [
-      { title: "Forgot password — Xellvio" },
-      { name: "description", content: "Reset your Xellvio password by email." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/forgot-password",
+      title: "Reset your password",
+      description: "Request a password reset link for your Xellvio account.",
+      robots: "noindex",
+    }),
   component: ForgotPasswordPage,
 });
 
@@ -47,7 +49,9 @@ function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <Card className="w-full max-w-md p-8">
-        <div className="mb-6"><Logo /></div>
+        <div className="mb-6">
+          <Logo />
+        </div>
         {sent ? (
           <div className="text-center space-y-4">
             <div className="mx-auto size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
@@ -55,10 +59,14 @@ function ForgotPasswordPage() {
             </div>
             <h1 className="text-2xl font-extrabold">Check your email</h1>
             <p className="text-sm text-muted-foreground">
-              If an account exists for <span className="font-medium text-foreground">{email}</span>, you'll receive a password reset link in the next few minutes. Be sure to check your spam folder.
+              If an account exists for <span className="font-medium text-foreground">{email}</span>,
+              you'll receive a password reset link in the next few minutes. Be sure to check your
+              spam folder.
             </p>
             <Button asChild variant="outline" className="w-full">
-              <Link to="/auth" search={{ mode: "signin", redirect: "/app" }}>Back to sign in</Link>
+              <Link to="/auth" search={{ mode: "signin", redirect: "/app" }}>
+                Back to sign in
+              </Link>
             </Button>
           </div>
         ) : (
@@ -70,7 +78,14 @@ function ForgotPasswordPage() {
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="size-4 animate-spin mr-2" />}
@@ -79,7 +94,11 @@ function ForgotPasswordPage() {
             </form>
             <p className="mt-6 text-center text-sm text-muted-foreground">
               Remembered it?{" "}
-              <Link to="/auth" search={{ mode: "signin", redirect: "/app" }} className="text-primary font-medium hover:underline">
+              <Link
+                to="/auth"
+                search={{ mode: "signin", redirect: "/app" }}
+                className="text-primary font-medium hover:underline"
+              >
                 Sign in
               </Link>
             </p>

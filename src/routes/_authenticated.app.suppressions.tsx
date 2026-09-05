@@ -7,8 +7,23 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ShieldOff, Plus, Trash2 } from "lucide-react";
 
@@ -50,8 +65,13 @@ function SuppressionsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold flex items-center gap-2"><ShieldOff className="size-6" />Suppressions</h1>
-          <p className="text-sm text-muted-foreground">Globally opted-out numbers — never messaged again.</p>
+          <h1 className="text-2xl font-extrabold flex items-center gap-2">
+            <ShieldOff className="size-6" />
+            Suppressions
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Globally opted-out numbers — never messaged again.
+          </p>
         </div>
         <AddSuppressionDialog onDone={() => qc.invalidateQueries({ queryKey: ["suppressions"] })} />
       </div>
@@ -69,16 +89,28 @@ function SuppressionsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {q.isLoading && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Loading…</TableCell></TableRow>}
+              {q.isLoading && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Loading…
+                  </TableCell>
+                </TableRow>
+              )}
               {!q.isLoading && (q.data?.length ?? 0) === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground">No suppressions.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                    No suppressions.
+                  </TableCell>
+                </TableRow>
               )}
               {q.data?.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="font-mono text-sm">{r.phone_e164}</TableCell>
                   <TableCell>{r.reason ?? "—"}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{r.source ?? "—"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {new Date(r.created_at).toLocaleDateString()}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" onClick={() => removeOne.mutate(r.id)}>
                       <Trash2 className="size-4" />
@@ -105,39 +137,71 @@ function AddSuppressionDialog({ onDone }: { onDone: () => void }) {
     setBusy(true);
     try {
       const p = parsePhoneNumberFromString(phone, country as CountryCode);
-      if (!p || !p.isValid()) { toast.error("Invalid phone number"); return; }
+      if (!p || !p.isValid()) {
+        toast.error("Invalid phone number");
+        return;
+      }
       const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("suppressions").upsert(
-        { account_id: u.user!.id, phone_e164: p.number, reason, source: "manual" },
-        { onConflict: "account_id,phone_e164" },
-      );
+      const { error } = await supabase
+        .from("suppressions")
+        .upsert(
+          { account_id: u.user!.id, phone_e164: p.number, reason, source: "manual" },
+          { onConflict: "account_id,phone_e164" },
+        );
       if (error) throw error;
       toast.success("Added to suppression list");
-      setOpen(false); setPhone("");
+      setOpen(false);
+      setPhone("");
       onDone();
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button><Plus className="size-4 mr-1.5" />Add suppression</Button></DialogTrigger>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="size-4 mr-1.5" />
+          Add suppression
+        </Button>
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add to suppression list</DialogTitle>
-          <DialogDescription>This number will never receive messages from any campaign.</DialogDescription>
+          <DialogDescription>
+            This number will never receive messages from any campaign.
+          </DialogDescription>
         </DialogHeader>
         <div className="grid gap-3">
           <div className="grid grid-cols-3 gap-2">
-            <div><Label>Country</Label><Input value={country} onChange={(e) => setCountry(e.target.value.toUpperCase())} maxLength={2} /></div>
-            <div className="col-span-2"><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+            <div>
+              <Label>Country</Label>
+              <Input
+                value={country}
+                onChange={(e) => setCountry(e.target.value.toUpperCase())}
+                maxLength={2}
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Phone</Label>
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
           </div>
-          <div><Label>Reason</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+          <div>
+            <Label>Reason</Label>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} />
+          </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={busy}>{busy ? "Adding…" : "Add"}</Button>
+          <Button variant="ghost" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={busy}>
+            {busy ? "Adding…" : "Add"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

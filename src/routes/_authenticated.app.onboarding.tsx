@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Phone, ShieldCheck } from "lucide-react";
@@ -53,12 +59,14 @@ function OnboardingPage() {
   const account = useQuery({
     queryKey: ["account"],
     queryFn: async () =>
-      (await supabase
-        .from("accounts")
-        .select(
-          "id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,telnyx_phone_number"
-        )
-        .maybeSingle()).data,
+      (
+        await supabase
+          .from("accounts")
+          .select(
+            "id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,telnyx_phone_number",
+          )
+          .maybeSingle()
+      ).data,
   });
 
   const provisioning = useQuery({
@@ -97,7 +105,11 @@ function OnboardingPage() {
   });
 
   if (account.isLoading) {
-    return <div className="flex items-center justify-center h-64"><Loader2 className="size-6 animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="size-6 animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -105,37 +117,89 @@ function OnboardingPage() {
       <div>
         <h1 className="text-2xl font-extrabold">Set up your business</h1>
         <p className="text-sm text-muted-foreground">
-          We need a few details to provision your sending account. This information is required by carriers for SMS compliance.
+          We need a few details to provision your sending account. This information is required by
+          carriers for SMS compliance.
         </p>
       </div>
 
       <div className="flex items-center gap-3 text-sm">
         <StepBadge n={1} active={step === 1} done={status !== "signup"} label="Business profile" />
         <div className="h-px flex-1 bg-border" />
-        <StepBadge n={2} active={step === 2} done={status === "active"} label="Sender provisioning" />
+        <StepBadge
+          n={2}
+          active={step === 2}
+          done={status === "active"}
+          label="Sender provisioning"
+        />
       </div>
 
       {step === 1 && (
         <Card className="p-6 space-y-4">
           <h3 className="font-semibold">Business details</h3>
-          <Field label="Legal business name" required v={form.legal_business_name} on={(v) => setForm({ ...form, legal_business_name: v })} />
+          <Field
+            label="Legal business name"
+            required
+            v={form.legal_business_name}
+            on={(v) => setForm({ ...form, legal_business_name: v })}
+          />
           <div className="space-y-1.5">
             <Label className="flex items-center justify-between gap-3">
               <span>Business address</span>
               <span className="text-xs italic text-muted-foreground">Required</span>
             </Label>
-            <Textarea value={form.business_address} onChange={(e) => setForm({ ...form, business_address: e.target.value })} rows={3} />
+            <Textarea
+              value={form.business_address}
+              onChange={(e) => setForm({ ...form, business_address: e.target.value })}
+              rows={3}
+            />
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Business registration # (EIN / BRN)" required v={form.business_reg_number} on={(v) => setForm({ ...form, business_reg_number: v })} />
-            <Field label="Website URL" required v={form.website_url} on={(v) => setForm({ ...form, website_url: v })} placeholder="https://" />
-            <Field label="Privacy policy URL" required v={form.privacy_policy_url} on={(v) => setForm({ ...form, privacy_policy_url: v })} placeholder="https://" />
-            <Field label="Terms of service URL" required v={form.terms_url} on={(v) => setForm({ ...form, terms_url: v })} placeholder="https://" />
-            <Field label="Contact email" required v={form.contact_email} on={(v) => setForm({ ...form, contact_email: v })} type="email" />
-            <Field label="Business phone" required v={form.phone} on={(v) => setForm({ ...form, phone: v })} placeholder="+15551234567" />
+            <Field
+              label="Business registration # (EIN / BRN)"
+              required
+              v={form.business_reg_number}
+              on={(v) => setForm({ ...form, business_reg_number: v })}
+            />
+            <Field
+              label="Website URL"
+              required
+              v={form.website_url}
+              on={(v) => setForm({ ...form, website_url: v })}
+              placeholder="https://"
+            />
+            <Field
+              label="Privacy policy URL"
+              required
+              v={form.privacy_policy_url}
+              on={(v) => setForm({ ...form, privacy_policy_url: v })}
+              placeholder="https://"
+            />
+            <Field
+              label="Terms of service URL"
+              required
+              v={form.terms_url}
+              on={(v) => setForm({ ...form, terms_url: v })}
+              placeholder="https://"
+            />
+            <Field
+              label="Contact email"
+              required
+              v={form.contact_email}
+              on={(v) => setForm({ ...form, contact_email: v })}
+              type="email"
+            />
+            <Field
+              label="Business phone"
+              required
+              v={form.phone}
+              on={(v) => setForm({ ...form, phone: v })}
+              placeholder="+15551234567"
+            />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => navigate({ to: "/app" })}>Save for later</Button>
+            <Button variant="outline" onClick={() => navigate({ to: "/app" })}>
+              Save for later
+            </Button>
             <Button onClick={() => save.mutate()} disabled={save.isPending}>
               {save.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
               Save and continue
@@ -149,7 +213,13 @@ function OnboardingPage() {
   );
 }
 
-function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; hasNumber: boolean; phoneNumber: string | null } | undefined }) {
+function SenderStep({
+  provisioning,
+}: {
+  provisioning:
+    | { hasSubaccount: boolean; hasNumber: boolean; phoneNumber: string | null }
+    | undefined;
+}) {
   const qc = useQueryClient();
   const provision = useServerFn(provisionSubaccount);
   const search = useServerFn(searchNumbers);
@@ -170,7 +240,10 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
 
   const searchMut = useMutation({
     mutationFn: () => search({ data: { country } }),
-    onSuccess: (r) => { setNumbers(r); if (r.length === 0) toast.message("No numbers available for that country"); },
+    onSuccess: (r) => {
+      setNumbers(r);
+      if (r.length === 0) toast.message("No numbers available for that country");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -191,15 +264,21 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
     <div className="space-y-4">
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2"><ShieldCheck className="size-4" /> SMS subaccount</h3>
+          <h3 className="font-semibold flex items-center gap-2">
+            <ShieldCheck className="size-4" /> SMS subaccount
+          </h3>
           {hasSub && <Badge variant="default">Provisioned</Badge>}
         </div>
         {hasSub ? (
-          <p className="text-sm text-muted-foreground">Your dedicated SMS subaccount is active. Credentials are encrypted at rest and only available to server functions.</p>
+          <p className="text-sm text-muted-foreground">
+            Your dedicated SMS subaccount is active. Credentials are encrypted at rest and only
+            available to server functions.
+          </p>
         ) : (
           <>
             <p className="text-sm text-muted-foreground">
-              We'll create a dedicated SMS subaccount under your business. Your subaccount auth token is encrypted at rest and never exposed to the browser.
+              We'll create a dedicated SMS subaccount under your business. Your subaccount auth
+              token is encrypted at rest and never exposed to the browser.
             </p>
             <Button onClick={() => provisionMut.mutate()} disabled={provisionMut.isPending}>
               {provisionMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
@@ -211,7 +290,9 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
 
       <Card className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2"><Phone className="size-4" /> Sender phone number</h3>
+          <h3 className="font-semibold flex items-center gap-2">
+            <Phone className="size-4" /> Sender phone number
+          </h3>
           {hasNumber && <Badge variant="default">Active</Badge>}
         </div>
         {hasNumber ? (
@@ -226,13 +307,23 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
               <div className="space-y-1.5">
                 <Label>Country</Label>
                 <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {["US","CA","GB","AU","DE","FR","ES","IT","NL","SE"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {["US", "CA", "GB", "AU", "DE", "FR", "ES", "IT", "NL", "SE"].map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" onClick={() => searchMut.mutate()} disabled={searchMut.isPending}>
+              <Button
+                variant="outline"
+                onClick={() => searchMut.mutate()}
+                disabled={searchMut.isPending}
+              >
                 {searchMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
                 Search available numbers
               </Button>
@@ -240,12 +331,21 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
             {numbers.length > 0 && (
               <div className="border rounded-md divide-y">
                 {numbers.map((n) => (
-                  <div key={n.phone_number} className="p-3 flex items-center justify-between text-sm">
+                  <div
+                    key={n.phone_number}
+                    className="p-3 flex items-center justify-between text-sm"
+                  >
                     <div>
                       <div className="font-mono">{n.phone_number}</div>
-                      <div className="text-xs text-muted-foreground">{[n.locality, n.region].filter(Boolean).join(", ")}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {[n.locality, n.region].filter(Boolean).join(", ")}
+                      </div>
                     </div>
-                    <Button size="sm" onClick={() => buyMut.mutate(n.phone_number)} disabled={buyMut.isPending}>
+                    <Button
+                      size="sm"
+                      onClick={() => buyMut.mutate(n.phone_number)}
+                      disabled={buyMut.isPending}
+                    >
                       {buyMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
                       Purchase
                     </Button>
@@ -260,10 +360,24 @@ function SenderStep({ provisioning }: { provisioning: { hasSubaccount: boolean; 
   );
 }
 
-function StepBadge({ n, active, done, label }: { n: number; active: boolean; done: boolean; label: string }) {
+function StepBadge({
+  n,
+  active,
+  done,
+  label,
+}: {
+  n: number;
+  active: boolean;
+  done: boolean;
+  label: string;
+}) {
   return (
-    <div className={`flex items-center gap-2 ${active ? "text-foreground" : "text-muted-foreground"}`}>
-      <div className={`size-7 rounded-full flex items-center justify-center text-xs font-semibold border ${done ? "bg-success text-success-foreground border-success" : active ? "border-primary text-primary" : "border-border"}`}>
+    <div
+      className={`flex items-center gap-2 ${active ? "text-foreground" : "text-muted-foreground"}`}
+    >
+      <div
+        className={`size-7 rounded-full flex items-center justify-center text-xs font-semibold border ${done ? "bg-success text-success-foreground border-success" : active ? "border-primary text-primary" : "border-border"}`}
+      >
         {done ? <CheckCircle2 className="size-4" /> : n}
       </div>
       <span className="text-sm font-medium">{label}</span>
@@ -271,7 +385,21 @@ function StepBadge({ n, active, done, label }: { n: number; active: boolean; don
   );
 }
 
-function Field({ label, required, v, on, placeholder, type }: { label: string; required?: boolean; v: string; on: (v: string) => void; placeholder?: string; type?: string }) {
+function Field({
+  label,
+  required,
+  v,
+  on,
+  placeholder,
+  type,
+}: {
+  label: string;
+  required?: boolean;
+  v: string;
+  on: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+}) {
   return (
     <div className="space-y-1.5">
       <Label className="flex items-center justify-between gap-3">

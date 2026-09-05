@@ -3,10 +3,22 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Bolt, CheckCircle2, ExternalLink, Radio, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Bolt,
+  CheckCircle2,
+  ExternalLink,
+  Radio,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { AUTH_TYPE_LABELS, getApp } from "@/lib/marketplace/catalog";
 import { guideFor } from "@/lib/marketplace/setup-guides";
-import { disconnectApp, listMyInstallations, updateConnection } from "@/lib/marketplace-apps.functions";
+import {
+  disconnectApp,
+  listMyInstallations,
+  updateConnection,
+} from "@/lib/marketplace-apps.functions";
 import { AppLogo } from "@/components/marketplace/AppLogo";
 import { ConnectDialog } from "@/components/marketplace/ConnectDialog";
 import { IntegrationTools, WorkspaceKeysCard } from "@/components/marketplace/IntegrationTools";
@@ -24,9 +36,15 @@ export const Route = createFileRoute("/_authenticated/app/apps/$slug")({
     return {
       meta: [
         { title: `${pretty} — Xellvio App Marketplace` },
-        { name: "description", content: `Connect and manage your ${pretty} integration inside Xellvio.` },
+        {
+          name: "description",
+          content: `Connect and manage your ${pretty} integration inside Xellvio.`,
+        },
         { property: "og:title", content: `${pretty} — Xellvio App Marketplace` },
-        { property: "og:description", content: `Manage permissions, syncing and credentials for ${pretty}.` },
+        {
+          property: "og:description",
+          content: `Manage permissions, syncing and credentials for ${pretty}.`,
+        },
         { property: "og:type", content: "website" },
         { name: "twitter:card", content: "summary_large_image" },
       ],
@@ -77,7 +95,8 @@ function WorkspaceAppDetail() {
   });
 
   const remove = useMutation({
-    mutationFn: () => removeFn({ data: { installationId: installed!.installationId, uninstall: true } }),
+    mutationFn: () =>
+      removeFn({ data: { installationId: installed!.installationId, uninstall: true } }),
     onSuccess: () => {
       toast.success("App disconnected");
       qc.invalidateQueries({ queryKey: ["my-installations"] });
@@ -100,7 +119,10 @@ function WorkspaceAppDetail() {
 
   return (
     <div className="space-y-6">
-      <Link to="/app/apps" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/app/apps"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ArrowLeft className="size-4" /> App Marketplace
       </Link>
 
@@ -152,7 +174,9 @@ function WorkspaceAppDetail() {
                     <Bolt className="size-4 text-primary" /> Actions
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    {a.app_actions?.map((x) => <li key={x.id}>{x.name}</li>)}
+                    {a.app_actions?.map((x) => (
+                      <li key={x.id}>{x.name}</li>
+                    ))}
                     {!a.app_actions?.length && <li>None declared</li>}
                   </ul>
                 </div>
@@ -161,7 +185,9 @@ function WorkspaceAppDetail() {
                     <Radio className="size-4 text-primary" /> Triggers
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    {a.app_triggers?.map((x) => <li key={x.id}>{x.name}</li>)}
+                    {a.app_triggers?.map((x) => (
+                      <li key={x.id}>{x.name}</li>
+                    ))}
                     {!a.app_triggers?.length && <li>None declared</li>}
                   </ul>
                 </div>
@@ -193,7 +219,10 @@ function WorkspaceAppDetail() {
                   <Input id="conn-name" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 {SETTING_ROWS.map((r) => (
-                  <div key={r.key} className="flex items-center justify-between rounded-lg border p-3">
+                  <div
+                    key={r.key}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
                     <span className="text-sm">{r.label}</span>
                     <Switch
                       checked={settings[r.key] !== false}
@@ -225,7 +254,10 @@ function WorkspaceAppDetail() {
               <CardTitle className="text-base">Setup guide</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm text-muted-foreground">
-              <p>{a.setup_guide || `Authorise ${a.name}, then choose what it may sync with this workspace.`}</p>
+              <p>
+                {a.setup_guide ||
+                  `Authorise ${a.name}, then choose what it may sync with this workspace.`}
+              </p>
               <ol className="space-y-2.5">
                 {guideFor(a.slug, a.auth_type).steps.map((s: string, i: number) => (
                   <li key={i} className="flex gap-2.5">
@@ -253,8 +285,8 @@ function WorkspaceAppDetail() {
           <div className="rounded-2xl border bg-muted/40 p-5 text-sm text-muted-foreground">
             <ShieldCheck className="size-5 text-primary" />
             <p className="mt-2">
-              Credentials are encrypted server-side and scoped to this workspace only. Every request is logged under
-              Activity.
+              Credentials are encrypted server-side and scoped to this workspace only. Every request
+              is logged under Activity.
             </p>
           </div>
         </aside>

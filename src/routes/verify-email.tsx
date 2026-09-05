@@ -5,10 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
 import { MailCheck } from "lucide-react";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/verify-email")({
-  head: () => ({ meta: [{ title: "Verify email — Xellvio" }, { name: "robots", content: "noindex, nofollow" }] }),
-  validateSearch: (search: Record<string, unknown>): { email?: string; status?: string } => ({
+  head: () =>
+    pageHead({
+      path: "/verify-email",
+      title: "Verify your email",
+      description: "Confirm your email address to finish creating your Xellvio account.",
+      robots: "noindex",
+    }),
+  validateSearch: (search: Record<string, unknown>): { email: string; status?: string } => ({
     email: typeof search.email === "string" ? search.email : "",
     status: typeof search.status === "string" ? search.status : "unverified",
   }),
@@ -26,15 +33,23 @@ function VerifyEmailPage() {
         <div className="space-y-2">
           <MailCheck className="size-9 text-primary" />
           <h1 className="text-2xl font-extrabold">Verify your email</h1>
-          <p className="text-sm text-muted-foreground">Create your account from the signup page to receive a 6-digit verification code.</p>
+          <p className="text-sm text-muted-foreground">
+            Create your account from the signup page to receive a 6-digit verification code.
+          </p>
         </div>
         <div className="space-y-2">
           <Label>Email</Label>
           <Input value={email} readOnly type="email" placeholder="you@example.com" />
         </div>
         <div className="flex flex-col gap-2">
-          <Link to="/auth" search={{ mode: "signup", redirect: "/app" }}><Button className="w-full">Create account</Button></Link>
-          <Link to="/auth"><Button variant="outline" className="w-full">Back to sign in</Button></Link>
+          <Link to="/auth" search={{ mode: "signup", redirect: "/app" }}>
+            <Button className="w-full">Create account</Button>
+          </Link>
+          <Link to="/auth">
+            <Button variant="outline" className="w-full">
+              Back to sign in
+            </Button>
+          </Link>
         </div>
       </Card>
     </div>

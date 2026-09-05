@@ -3,10 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  adminListReviewQueue,
-  adminResolveReview,
-} from "@/lib/compliance-admin.functions";
+import { adminListReviewQueue, adminResolveReview } from "@/lib/compliance-admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +38,9 @@ function ReviewQueuePage() {
       resolveFn({ data: v }),
     onSuccess: (_r, v) => {
       qc.invalidateQueries({ queryKey: ["review-queue"] });
-      toast.success(v.action === "approve" ? "Approved — send resumed" : "Rejected — campaign blocked");
+      toast.success(
+        v.action === "approve" ? "Approved — send resumed" : "Rejected — campaign blocked",
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -53,12 +52,18 @@ function ReviewQueuePage() {
       <div>
         <h1 className="text-2xl font-extrabold">Compliance review queue</h1>
         <p className="text-sm text-muted-foreground">
-          Flagged messages holding for admin approval. Pending items auto-approve after 15 minutes if untouched.
+          Flagged messages holding for admin approval. Pending items auto-approve after 15 minutes
+          if untouched.
         </p>
       </div>
       <div className="flex gap-2">
         {(["pending", "approved", "rejected", "all"] as const).map((t) => (
-          <Button key={t} size="sm" variant={tab === t ? "default" : "outline"} onClick={() => setTab(t)}>
+          <Button
+            key={t}
+            size="sm"
+            variant={tab === t ? "default" : "outline"}
+            onClick={() => setTab(t)}
+          >
             {t}
           </Button>
         ))}
@@ -86,11 +91,20 @@ function ReviewQueuePage() {
                       </Badge>
                       <Badge variant="outline">
                         {r.status === "pending" ? (
-                          <><Clock className="size-3 mr-1" />Pending</>
+                          <>
+                            <Clock className="size-3 mr-1" />
+                            Pending
+                          </>
                         ) : r.status === "approved" || r.status === "auto_approved" ? (
-                          <><CheckCircle2 className="size-3 mr-1" />{r.status}</>
+                          <>
+                            <CheckCircle2 className="size-3 mr-1" />
+                            {r.status}
+                          </>
                         ) : (
-                          <><XCircle className="size-3 mr-1" />{r.status}</>
+                          <>
+                            <XCircle className="size-3 mr-1" />
+                            {r.status}
+                          </>
                         )}
                       </Badge>
                     </div>
@@ -102,11 +116,15 @@ function ReviewQueuePage() {
                     </div>
                   </div>
                 </div>
-                <div className="rounded-md bg-muted/40 p-3 text-sm whitespace-pre-wrap">{r.message_text}</div>
+                <div className="rounded-md bg-muted/40 p-3 text-sm whitespace-pre-wrap">
+                  {r.message_text}
+                </div>
                 {reasons.length > 0 && (
                   <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-5">
                     {reasons.map((x: any, i: number) => (
-                      <li key={i}><span className="font-mono">{x.code}</span> — {x.message}</li>
+                      <li key={i}>
+                        <span className="font-mono">{x.code}</span> — {x.message}
+                      </li>
                     ))}
                   </ul>
                 )}
@@ -123,22 +141,30 @@ function ReviewQueuePage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => resolve.mutate({ reviewId: r.id, action: "reject", note: notes[r.id] })}
+                        onClick={() =>
+                          resolve.mutate({ reviewId: r.id, action: "reject", note: notes[r.id] })
+                        }
                         disabled={resolve.isPending}
                       >
-                        <XCircle className="size-4 mr-1.5" />Reject & block campaign
+                        <XCircle className="size-4 mr-1.5" />
+                        Reject & block campaign
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => resolve.mutate({ reviewId: r.id, action: "approve", note: notes[r.id] })}
+                        onClick={() =>
+                          resolve.mutate({ reviewId: r.id, action: "approve", note: notes[r.id] })
+                        }
                         disabled={resolve.isPending}
                       >
-                        <CheckCircle2 className="size-4 mr-1.5" />Approve & resume send
+                        <CheckCircle2 className="size-4 mr-1.5" />
+                        Approve & resume send
                       </Button>
                     </div>
                   </div>
                 ) : r.reviewer_note ? (
-                  <div className="text-xs text-muted-foreground italic">Note: {r.reviewer_note}</div>
+                  <div className="text-xs text-muted-foreground italic">
+                    Note: {r.reviewer_note}
+                  </div>
                 ) : null}
               </Card>
             );

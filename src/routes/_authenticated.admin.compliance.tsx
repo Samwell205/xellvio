@@ -29,7 +29,11 @@ function AdminCompliancePage() {
   });
 
   if (q.isLoading) {
-    return <div className="flex justify-center h-32 items-center"><Loader2 className="size-6 animate-spin" /></div>;
+    return (
+      <div className="flex justify-center h-32 items-center">
+        <Loader2 className="size-6 animate-spin" />
+      </div>
+    );
   }
 
   const data = q.data ?? { blockedCampaigns: [], suspendedAccounts: [], events: [] };
@@ -41,13 +45,22 @@ function AdminCompliancePage() {
           <ShieldOff className="size-6 text-destructive" /> Compliance
         </h1>
         <p className="text-sm text-muted-foreground">
-          Campaigns blocked for prohibited content (SHAFT: Sex, Hate, Alcohol, Firearms, Tobacco) and auto-suspended tenant accounts.
+          Campaigns blocked for prohibited content (SHAFT: Sex, Hate, Alcohol, Firearms, Tobacco)
+          and auto-suspended tenant accounts.
         </p>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-3">
-        <StatCard label="Blocked campaigns" value={data.blockedCampaigns.length} tone="destructive" />
-        <StatCard label="Suspended accounts" value={data.suspendedAccounts.length} tone="destructive" />
+        <StatCard
+          label="Blocked campaigns"
+          value={data.blockedCampaigns.length}
+          tone="destructive"
+        />
+        <StatCard
+          label="Suspended accounts"
+          value={data.suspendedAccounts.length}
+          tone="destructive"
+        />
         <StatCard label="Recent compliance events" value={data.events.length} tone="muted" />
       </div>
 
@@ -70,15 +83,25 @@ function AdminCompliancePage() {
               <tbody>
                 {data.blockedCampaigns.map((c: any) => (
                   <tr key={c.id} className="border-t align-top">
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">{new Date(c.created_at).toLocaleString()}</td>
+                    <td className="p-3 text-muted-foreground whitespace-nowrap">
+                      {new Date(c.created_at).toLocaleString()}
+                    </td>
                     <td className="p-3">{c.account_label}</td>
                     <td className="p-3">{c.name}</td>
-                    <td className="p-3"><Badge variant="destructive">{c.paused_reason ?? "blocked_content"}</Badge></td>
-                    <td className="p-3 text-xs text-muted-foreground max-w-md whitespace-pre-wrap">{c.message_body}</td>
+                    <td className="p-3">
+                      <Badge variant="destructive">{c.paused_reason ?? "blocked_content"}</Badge>
+                    </td>
+                    <td className="p-3 text-xs text-muted-foreground max-w-md whitespace-pre-wrap">
+                      {c.message_body}
+                    </td>
                   </tr>
                 ))}
                 {data.blockedCampaigns.length === 0 && (
-                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No blocked campaigns.</td></tr>
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                      No blocked campaigns.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -104,7 +127,9 @@ function AdminCompliancePage() {
               <tbody>
                 {data.suspendedAccounts.map((a: any) => (
                   <tr key={a.id} className="border-t">
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">{a.suspended_at ? new Date(a.suspended_at).toLocaleString() : "—"}</td>
+                    <td className="p-3 text-muted-foreground whitespace-nowrap">
+                      {a.suspended_at ? new Date(a.suspended_at).toLocaleString() : "—"}
+                    </td>
                     <td className="p-3">{a.legal_business_name || a.company || "—"}</td>
                     <td className="p-3 text-muted-foreground">{a.email}</td>
                     <td className="p-3 text-right">
@@ -120,7 +145,11 @@ function AdminCompliancePage() {
                   </tr>
                 ))}
                 {data.suspendedAccounts.length === 0 && (
-                  <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No suspended accounts.</td></tr>
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                      No suspended accounts.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -144,14 +173,26 @@ function AdminCompliancePage() {
               <tbody>
                 {data.events.map((e: any) => (
                   <tr key={e.id} className="border-t align-top">
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</td>
-                    <td className="p-3"><Badge variant="outline">{e.type}</Badge></td>
+                    <td className="p-3 text-muted-foreground whitespace-nowrap">
+                      {new Date(e.created_at).toLocaleString()}
+                    </td>
+                    <td className="p-3">
+                      <Badge variant="outline">{e.type}</Badge>
+                    </td>
                     <td className="p-3">{e.account_label}</td>
-                    <td className="p-3"><pre className="text-xs whitespace-pre-wrap max-w-xl text-muted-foreground">{e.payload ? JSON.stringify(e.payload, null, 2) : ""}</pre></td>
+                    <td className="p-3">
+                      <pre className="text-xs whitespace-pre-wrap max-w-xl text-muted-foreground">
+                        {e.payload ? JSON.stringify(e.payload, null, 2) : ""}
+                      </pre>
+                    </td>
                   </tr>
                 ))}
                 {data.events.length === 0 && (
-                  <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No events.</td></tr>
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                      No events.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -162,11 +203,23 @@ function AdminCompliancePage() {
   );
 }
 
-function StatCard({ label, value, tone }: { label: string; value: number; tone: "destructive" | "muted" }) {
+function StatCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "destructive" | "muted";
+}) {
   return (
     <Card className="p-4">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`text-2xl font-extrabold ${tone === "destructive" ? "text-destructive" : ""}`}>{value}</div>
+      <div
+        className={`text-2xl font-extrabold ${tone === "destructive" ? "text-destructive" : ""}`}
+      >
+        {value}
+      </div>
     </Card>
   );
 }

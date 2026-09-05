@@ -25,8 +25,12 @@ function AdminNumberRequestsPage() {
   const list = useQuery({ queryKey: ["admin-number-requests"], queryFn: () => listFn() });
 
   const review = useMutation({
-    mutationFn: (vars: { id: string; status: "approved" | "rejected" | "provisioned"; admin_notes?: string; assigned_phone_number?: string }) =>
-      reviewFn({ data: vars }),
+    mutationFn: (vars: {
+      id: string;
+      status: "approved" | "rejected" | "provisioned";
+      admin_notes?: string;
+      assigned_phone_number?: string;
+    }) => reviewFn({ data: vars }),
     onSuccess: () => {
       toast.success("Request updated");
       qc.invalidateQueries({ queryKey: ["admin-number-requests"] });
@@ -39,8 +43,12 @@ function AdminNumberRequestsPage() {
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2"><PhoneCall className="size-6" /> US/Canada number requests</h1>
-        <p className="text-sm text-muted-foreground">Review customer requests for toll-free, 10DLC, and short code numbers.</p>
+        <h1 className="text-2xl font-extrabold flex items-center gap-2">
+          <PhoneCall className="size-6" /> US/Canada number requests
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Review customer requests for toll-free, 10DLC, and short code numbers.
+        </p>
       </div>
 
       {list.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
@@ -50,31 +58,59 @@ function AdminNumberRequestsPage() {
 
       <div className="space-y-4">
         {items.map((r: any) => (
-          <RequestRow key={r.id} req={r} onReview={(vars) => review.mutate(vars)} busy={review.isPending} />
+          <RequestRow
+            key={r.id}
+            req={r}
+            onReview={(vars) => review.mutate(vars)}
+            busy={review.isPending}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function RequestRow({ req, onReview, busy }: { req: any; onReview: (v: any) => void; busy: boolean }) {
+function RequestRow({
+  req,
+  onReview,
+  busy,
+}: {
+  req: any;
+  onReview: (v: any) => void;
+  busy: boolean;
+}) {
   const [notes, setNotes] = useState(req.admin_notes ?? "");
   const [phone, setPhone] = useState(req.assigned_phone_number ?? "");
 
   const statusVariant =
-    req.status === "approved" || req.status === "provisioned" ? "default" :
-    req.status === "rejected" ? "destructive" : "secondary";
+    req.status === "approved" || req.status === "provisioned"
+      ? "default"
+      : req.status === "rejected"
+        ? "destructive"
+        : "secondary";
 
   return (
     <Card className="p-5 space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="font-semibold">{req.business_name} <span className="text-muted-foreground font-normal">· {req.country}</span></div>
+          <div className="font-semibold">
+            {req.business_name}{" "}
+            <span className="text-muted-foreground font-normal">· {req.country}</span>
+          </div>
           <div className="text-xs text-muted-foreground">
-            {req.accounts?.contact_email ?? req.accounts?.email} · {req.number_type.replace("_", " ")} · ~{req.expected_monthly_volume.toLocaleString()} msgs/mo
+            {req.accounts?.contact_email ?? req.accounts?.email} ·{" "}
+            {req.number_type.replace("_", " ")} · ~{req.expected_monthly_volume.toLocaleString()}{" "}
+            msgs/mo
           </div>
           {req.business_website && (
-            <a href={req.business_website} target="_blank" rel="noreferrer" className="text-xs text-primary underline">{req.business_website}</a>
+            <a
+              href={req.business_website}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-primary underline"
+            >
+              {req.business_website}
+            </a>
           )}
         </div>
         <Badge variant={statusVariant as any}>{req.status}</Badge>
@@ -83,18 +119,26 @@ function RequestRow({ req, onReview, busy }: { req: any; onReview: (v: any) => v
       <div className="grid md:grid-cols-2 gap-3 text-sm">
         <div>
           <div className="text-xs font-medium text-muted-foreground mb-1">Use case</div>
-          <div className="rounded-md border p-2 bg-muted/30 whitespace-pre-wrap">{req.use_case}</div>
+          <div className="rounded-md border p-2 bg-muted/30 whitespace-pre-wrap">
+            {req.use_case}
+          </div>
         </div>
         <div>
           <div className="text-xs font-medium text-muted-foreground mb-1">Sample message</div>
-          <div className="rounded-md border p-2 bg-muted/30 whitespace-pre-wrap">{req.sample_message}</div>
+          <div className="rounded-md border p-2 bg-muted/30 whitespace-pre-wrap">
+            {req.sample_message}
+          </div>
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-3">
         <div className="grid gap-1.5">
           <Label className="text-xs">Assigned phone number (E.164)</Label>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+18885551234" />
+          <Input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+18885551234"
+          />
         </div>
         <div className="grid gap-1.5">
           <Label className="text-xs">Admin notes (sent to user)</Label>
@@ -103,13 +147,41 @@ function RequestRow({ req, onReview, busy }: { req: any; onReview: (v: any) => v
       </div>
 
       <div className="flex flex-wrap gap-2 justify-end">
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => onReview({ id: req.id, status: "rejected", admin_notes: notes })}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => onReview({ id: req.id, status: "rejected", admin_notes: notes })}
+        >
           Reject
         </Button>
-        <Button size="sm" disabled={busy} onClick={() => onReview({ id: req.id, status: "approved", admin_notes: notes, assigned_phone_number: phone || undefined })}>
+        <Button
+          size="sm"
+          disabled={busy}
+          onClick={() =>
+            onReview({
+              id: req.id,
+              status: "approved",
+              admin_notes: notes,
+              assigned_phone_number: phone || undefined,
+            })
+          }
+        >
           Approve
         </Button>
-        <Button size="sm" variant="default" disabled={busy || !phone} onClick={() => onReview({ id: req.id, status: "provisioned", admin_notes: notes, assigned_phone_number: phone })}>
+        <Button
+          size="sm"
+          variant="default"
+          disabled={busy || !phone}
+          onClick={() =>
+            onReview({
+              id: req.id,
+              status: "provisioned",
+              admin_notes: notes,
+              assigned_phone_number: phone,
+            })
+          }
+        >
           Mark provisioned
         </Button>
       </div>

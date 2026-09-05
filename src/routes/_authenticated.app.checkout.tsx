@@ -8,13 +8,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Wallet, CreditCard, Bitcoin, ArrowLeft, Globe, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
-import { listCreditPacks, initPaystackCheckout, initPaystackCheckoutCustom } from "@/lib/billing-packs.functions";
+import {
+  listCreditPacks,
+  initPaystackCheckout,
+  initPaystackCheckoutCustom,
+} from "@/lib/billing-packs.functions";
 import { CRYPTO_COINS, DEFAULT_CRYPTO_COIN } from "@/lib/crypto-coins";
-import { initNowPaymentsCheckout, initNowPaymentsCheckoutCustom } from "@/lib/nowpayments.functions";
+import {
+  initNowPaymentsCheckout,
+  initNowPaymentsCheckoutCustom,
+} from "@/lib/nowpayments.functions";
 import { getCardEligibility } from "@/lib/stripe-checkout.functions";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
@@ -23,10 +36,12 @@ import { isCardCheckoutConfigured } from "@/lib/stripe";
 export const Route = createFileRoute("/_authenticated/app/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Xellvio" }] }),
   validateSearch: (s: Record<string, unknown>) =>
-    z.object({
-      pack: z.string().uuid().optional(),
-      amount: z.coerce.number().min(5).max(10000).optional(),
-    }).parse(s),
+    z
+      .object({
+        pack: z.string().uuid().optional(),
+        amount: z.coerce.number().min(5).max(10000).optional(),
+      })
+      .parse(s),
   component: CheckoutPage,
 });
 
@@ -41,7 +56,10 @@ function CheckoutPage() {
   const packsQ = useQuery({ queryKey: ["credit-packs"], queryFn: () => loadPacks() });
   const packs = (packsQ.data ?? []).filter((p) => p.currency === "USD");
 
-  const pack = useMemo(() => (packParam ? packs.find((p) => p.id === packParam) : undefined), [packs, packParam]);
+  const pack = useMemo(
+    () => (packParam ? packs.find((p) => p.id === packParam) : undefined),
+    [packs, packParam],
+  );
   const isCustom = !pack && !!amountParam;
   const amount = pack ? Number(pack.price) : Number(amountParam ?? 0);
   const credits = pack ? Number(pack.credits) : Number(amountParam ?? 0);
@@ -90,7 +108,9 @@ function CheckoutPage() {
       const r = await initCryptoCustom({ data: { amount, coin } });
       return { authorization_url: r.invoice_url, reference: r.reference };
     },
-    onSuccess: (r) => { window.location.href = r.authorization_url; },
+    onSuccess: (r) => {
+      window.location.href = r.authorization_url;
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -104,34 +124,48 @@ function CheckoutPage() {
   return (
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
-        <Link to="/app/billing" className="text-sm text-muted-foreground hover:underline flex items-center gap-1">
+        <Link
+          to="/app/billing"
+          className="text-sm text-muted-foreground hover:underline flex items-center gap-1"
+        >
           <ArrowLeft className="size-4" /> Back
         </Link>
       </div>
       <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2"><Wallet className="size-6" /> Checkout</h1>
+        <h1 className="text-2xl font-extrabold flex items-center gap-2">
+          <Wallet className="size-6" /> Checkout
+        </h1>
         <p className="text-sm text-muted-foreground">Choose how you'd like to pay.</p>
       </div>
 
       <Card className="p-5">
         <h3 className="font-semibold mb-3">Order summary</h3>
         <div className="grid grid-cols-2 gap-y-2 text-sm">
-          <div className="text-muted-foreground">Item</div><div className="text-right font-medium">{orderLabel}</div>
-          <div className="text-muted-foreground">Credits</div><div className="text-right tabular-nums">{formatUSD(credits)}</div>
-          <div className="text-muted-foreground">Total</div><div className="text-right text-xl font-extrabold tabular-nums">{formatUSD(amount)}</div>
+          <div className="text-muted-foreground">Item</div>
+          <div className="text-right font-medium">{orderLabel}</div>
+          <div className="text-muted-foreground">Credits</div>
+          <div className="text-right tabular-nums">{formatUSD(credits)}</div>
+          <div className="text-muted-foreground">Total</div>
+          <div className="text-right text-xl font-extrabold tabular-nums">{formatUSD(amount)}</div>
         </div>
       </Card>
 
       <Card className="p-5 space-y-4">
         <h3 className="font-semibold">Payment method</h3>
-        <RadioGroup value={method} onValueChange={(v) => setMethod(v as Method)} className="grid sm:grid-cols-2 gap-3">
+        <RadioGroup
+          value={method}
+          onValueChange={(v) => setMethod(v as Method)}
+          className="grid sm:grid-cols-2 gap-3"
+        >
           {cardConfigured && (
             <label
               className={`rounded-xl border p-4 flex items-start gap-3 ${method === "card" ? "border-primary bg-primary/5" : ""} ${cardAllowed ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}
             >
               <RadioGroupItem value="card" id="m-card" className="mt-1" disabled={!cardAllowed} />
               <div className="flex-1">
-                <div className="font-medium flex items-center gap-2"><Globe className="size-4" /> International card</div>
+                <div className="font-medium flex items-center gap-2">
+                  <Globe className="size-4" /> International card
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Visa, Mastercard, Amex, Apple Pay and Google Pay. Credits land instantly.
                 </p>
@@ -143,18 +177,31 @@ function CheckoutPage() {
               </div>
             </label>
           )}
-          <label className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "paystack" ? "border-primary bg-primary/5" : ""}`}>
+          <label
+            className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "paystack" ? "border-primary bg-primary/5" : ""}`}
+          >
             <RadioGroupItem value="paystack" id="m-paystack" className="mt-1" />
             <div className="flex-1">
-              <div className="font-medium flex items-center gap-2"><CreditCard className="size-4" /> Card / Bank</div>
-              <p className="text-xs text-muted-foreground mt-1">Pay with card, bank transfer, or USSD via Paystack.</p>
+              <div className="font-medium flex items-center gap-2">
+                <CreditCard className="size-4" /> Card / Bank
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Pay with card, bank transfer, or USSD via Paystack.
+              </p>
             </div>
           </label>
-          <label className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "crypto" ? "border-primary bg-primary/5" : ""}`}>
+          <label
+            className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "crypto" ? "border-primary bg-primary/5" : ""}`}
+          >
             <RadioGroupItem value="crypto" id="m-crypto" className="mt-1" />
             <div className="flex-1">
-              <div className="font-medium flex items-center gap-2"><Bitcoin className="size-4" /> Crypto</div>
-              <p className="text-xs text-muted-foreground mt-1">Solana, USDT, USDC, BTC, ETH and 20+ more. Credits land automatically after on-chain confirmation.</p>
+              <div className="font-medium flex items-center gap-2">
+                <Bitcoin className="size-4" /> Crypto
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Solana, USDT, USDC, BTC, ETH and 20+ more. Credits land automatically after on-chain
+                confirmation.
+              </p>
             </div>
           </label>
         </RadioGroup>
@@ -163,12 +210,20 @@ function CheckoutPage() {
           <div>
             <Label>Coin</Label>
             <Select value={coin} onValueChange={setCoin}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent className="max-h-72">
-                {COINS.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                {COINS.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground mt-1.5">USDT/USDC are priced 1:1 with USD. BTC/ETH use the live exchange rate at payment time.</p>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              USDT/USDC are priced 1:1 with USD. BTC/ETH use the live exchange rate at payment time.
+            </p>
           </div>
         )}
 
@@ -193,7 +248,12 @@ function CheckoutPage() {
             )}
           </div>
         ) : (
-          <Button className="w-full" size="lg" onClick={() => pay.mutate()} disabled={pay.isPending || !amount}>
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => pay.mutate()}
+            disabled={pay.isPending || !amount}
+          >
             {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
           </Button>
         )}

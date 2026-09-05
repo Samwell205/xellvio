@@ -6,25 +6,16 @@ import { listApps, listCategories, POPULAR_SEARCHES } from "@/lib/marketplace/ca
 import { AppCard } from "@/components/marketplace/AppCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/marketplace/")({
-  head: () => ({
-    meta: [
-      { title: "Xellvio App Marketplace — Connect your business tools" },
-      {
-        name: "description",
-        content:
-          "Discover integrations that connect your website, CRM, ecommerce, marketing, payments and automation workflows in one intelligent Xellvio ecosystem.",
-      },
-      { property: "og:title", content: "Xellvio App Marketplace" },
-      {
-        property: "og:description",
-        content: "Connect Xellvio to the tools that power your business — CRM, ecommerce, payments, automation and AI.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/marketplace",
+      title: "Xellvio App Marketplace",
+      description:
+        "Browse the Xellvio App Marketplace and connect your store, CRM, forms and analytics tools to your SMS and email programs.",
+    }),
   component: MarketplaceHome,
 });
 
@@ -52,8 +43,8 @@ function MarketplaceHome() {
             Connect Xellvio to the tools that power your business.
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-            Discover powerful integrations that connect your website, CRM, ecommerce, marketing, payments, automation
-            and business workflows in one intelligent ecosystem.
+            Discover powerful integrations that connect your website, CRM, ecommerce, marketing,
+            payments, automation and business workflows in one intelligent ecosystem.
           </p>
 
           <form
@@ -105,9 +96,21 @@ function MarketplaceHome() {
       <section className="border-b bg-muted/30">
         <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-10 md:grid-cols-3 md:px-6">
           {[
-            { icon: Zap, title: "One-click connections", body: "Authorise once and every Xellvio automation can use the app instantly." },
-            { icon: ShieldCheck, title: "Secure by design", body: "Tokens are encrypted server-side, scoped per workspace and fully audited." },
-            { icon: Layers, title: "One data model", body: "Contacts, orders and payments map to a single canonical model across every app." },
+            {
+              icon: Zap,
+              title: "One-click connections",
+              body: "Authorise once and every Xellvio automation can use the app instantly.",
+            },
+            {
+              icon: ShieldCheck,
+              title: "Secure by design",
+              body: "Tokens are encrypted server-side, scoped per workspace and fully audited.",
+            },
+            {
+              icon: Layers,
+              title: "One data model",
+              body: "Contacts, orders and payments map to a single canonical model across every app.",
+            },
           ].map((f) => (
             <div key={f.title} className="flex gap-3">
               <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
@@ -127,21 +130,30 @@ function MarketplaceHome() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">Popular apps</h2>
-            <p className="mt-1 text-sm text-muted-foreground">The integrations Xellvio businesses connect first.</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              The integrations Xellvio businesses connect first.
+            </p>
           </div>
-          <Link to="/marketplace/apps" className="flex items-center gap-1 text-sm font-medium text-primary">
+          <Link
+            to="/marketplace/apps"
+            className="flex items-center gap-1 text-sm font-medium text-primary"
+          >
             View all <ArrowRight className="size-4" />
           </Link>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {popular.isLoading &&
-            Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-2xl" />)}
+            Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-44 rounded-2xl" />
+            ))}
           {popular.data?.map((app) => (
             <AppCard key={app.id} app={app} to="/marketplace/apps/$slug" />
           ))}
           {popular.isError && (
-            <p className="text-sm text-destructive">We couldn't load apps right now. Please refresh.</p>
+            <p className="text-sm text-destructive">
+              We couldn't load apps right now. Please refresh.
+            </p>
           )}
         </div>
       </section>
@@ -151,7 +163,10 @@ function MarketplaceHome() {
         <div className="mx-auto w-full max-w-7xl px-4 py-14 md:px-6">
           <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">Browse by category</h2>
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {cats.isLoading && Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+            {cats.isLoading &&
+              Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 rounded-xl" />
+              ))}
             {cats.data?.map((c) => (
               <Link
                 key={c.id}
@@ -178,7 +193,8 @@ function MarketplaceHome() {
             Build an integration on Xellvio.
           </h2>
           <p className="mt-3 max-w-xl text-muted-foreground">
-            Define actions and triggers, test in a sandbox, submit for review and reach every Xellvio workspace.
+            Define actions and triggers, test in a sandbox, submit for review and reach every
+            Xellvio workspace.
           </p>
           <Button asChild className="mt-6 rounded-full">
             <Link to="/marketplace/developers">Open the developer portal</Link>

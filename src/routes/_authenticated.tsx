@@ -4,6 +4,9 @@ import { ensureMyAccount } from "@/lib/account.functions";
 import { claimPendingInvites } from "@/lib/team.functions";
 
 export const Route = createFileRoute("/_authenticated")({
+  head: () => ({
+    meta: [{ name: "robots", content: "noindex, nofollow" }],
+  }),
   ssr: false,
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
@@ -18,4 +21,3 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: () => <Outlet />,
 });
-

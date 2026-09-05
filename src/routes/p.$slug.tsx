@@ -4,6 +4,7 @@ import { PageRenderer } from "@/components/website/renderers";
 import { blankSection, mergeDesign, parseSections, type Section } from "@/lib/website-design";
 import { BlockCanvas } from "@/components/builder/BlockRenderer";
 import { mergeTheme, normalizeBlocks } from "@/lib/builder/schema";
+import { absoluteUrl, pageHead } from "@/lib/seo";
 
 const DEFAULT_CONSENT =
   "By signing up you agree to receive recurring marketing texts. Message and data rates may apply. Reply STOP to opt out.";
@@ -16,28 +17,24 @@ export const Route = createFileRoute("/p/$slug")({
   },
   head: ({ params, loaderData }) => {
     const d = (loaderData ?? {}) as any;
-    const title = (d.seo_title || d.headline || d.name || "Sign up").slice(0, 70);
-    const description = (d.seo_description || d.subheadline || d.body || "Join our text list.").slice(0, 155);
-    const url = `https://xellvio.com/p/${params.slug}`;
     const rawImage = typeof d.og_image_url === "string" ? d.og_image_url.trim() : "";
-    const image: string | null = rawImage.startsWith("https://")
+    const image = rawImage.startsWith("https://")
       ? rawImage
       : rawImage.startsWith("/")
-        ? `https://xellvio.com${rawImage}`
+        ? absoluteUrl(rawImage)
         : null;
-    return {
-      meta: [
-        { title },
-        { name: "description", content: description },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:type", content: "website" },
-        { property: "og:url", content: url },
-        { name: "twitter:card", content: image ? "summary_large_image" : "summary" },
-        ...(image ? [{ property: "og:image", content: image }, { name: "twitter:image", content: image }] : []),
-      ],
-      links: [{ rel: "canonical", href: url }],
-    };
+    return pageHead({
+      path: `/p/${params.slug}`,
+      title: (d.seo_title || d.headline || d.name || "Sign up").slice(0, 70),
+      description: (d.seo_description || d.subheadline || d.body || "Join our text list.").slice(
+        0,
+        155,
+      ),
+      image,
+      // Tenants can keep a published page out of search; the URL still works.
+      robots: !loaderData || d.seo_indexable === false ? "noindex" : "index",
+      dateModified: typeof d.updated_at === "string" ? d.updated_at : undefined,
+    });
   },
   component: LandingPageView,
 });
@@ -74,7 +71,13 @@ function LandingPageView() {
   if (sections.length === 0) {
     const hero = blankSection("hero");
     sections = [
-      { ...hero, headline: page.headline || page.name, subheadline: page.subheadline || "", body: page.body || "", imageUrl: page.image_url || "" } as Section,
+      {
+        ...hero,
+        headline: page.headline || page.name,
+        subheadline: page.subheadline || "",
+        body: page.body || "",
+        imageUrl: page.image_url || "",
+      } as Section,
     ];
   }
 

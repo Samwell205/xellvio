@@ -1,12 +1,52 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
-const BASE_URL = "https://xellvio.com";
+import { PUBLIC_PAGES, SITE_URL } from "@/lib/seo";
 
 interface SitemapEntry {
   path: string;
-  changefreq?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+  lastmod?: string;
+  changefreq?: string;
   priority?: string;
+}
+
+/**
+ * Published, explicitly indexable tenant landing pages. Only presentation-free
+ * fields are read (slug + timestamp), never contacts or submissions, and drafts
+ * or pages a tenant marked non-indexable are excluded.
+ */
+async function publishedLandingPages(): Promise<SitemapEntry[]> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const entries: SitemapEntry[] = [];
+    const pageSize = 1000;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error } = await supabaseAdmin
+        .from("landing_pages")
+        .select("slug, updated_at, seo_indexable")
+        .eq("published", true)
+        .order("slug")
+        .range(offset, offset + pageSize - 1);
+      if (error || !data) break;
+      for (const row of data as {
+        slug: string;
+        updated_at: string | null;
+        seo_indexable: boolean | null;
+      }[]) {
+        if (row.seo_indexable === false) continue;
+        entries.push({
+          path: `/p/${encodeURIComponent(row.slug)}`,
+          lastmod: row.updated_at ?? undefined,
+          changefreq: "weekly",
+          priority: "0.5",
+        });
+      }
+      if (data.length < pageSize) break;
+    }
+    return entries;
+  } catch {
+    return [];
+  }
 }
 
 export const Route = createFileRoute("/sitemap.xml")({
@@ -14,32 +54,19 @@ export const Route = createFileRoute("/sitemap.xml")({
     handlers: {
       GET: async () => {
         const entries: SitemapEntry[] = [
-          { path: "/", changefreq: "weekly", priority: "1.0" },
-          { path: "/sms-marketing", changefreq: "weekly", priority: "0.9" },
-          { path: "/email-marketing", changefreq: "weekly", priority: "0.9" },
-          { path: "/features", changefreq: "monthly", priority: "0.9" },
-          { path: "/solutions", changefreq: "monthly", priority: "0.8" },
-          { path: "/solutions/email-to-sms", changefreq: "monthly", priority: "0.8" },
-          { path: "/pricing", changefreq: "weekly", priority: "0.9" },
-          { path: "/docs", changefreq: "monthly", priority: "0.7" },
-          { path: "/about", changefreq: "monthly", priority: "0.6" },
-          { path: "/verify", changefreq: "monthly", priority: "0.6" },
-          { path: "/contact", changefreq: "yearly", priority: "0.5" },
-
-          { path: "/terms", changefreq: "yearly", priority: "0.3" },
-          { path: "/privacy", changefreq: "yearly", priority: "0.3" },
-          { path: "/aup", changefreq: "yearly", priority: "0.3" },
-          { path: "/anti-spam", changefreq: "yearly", priority: "0.3" },
-          { path: "/sms-terms", changefreq: "yearly", priority: "0.3" },
-          { path: "/cookies", changefreq: "yearly", priority: "0.3" },
-          { path: "/dpa", changefreq: "yearly", priority: "0.3" },
-          { path: "/prohibited-content", changefreq: "monthly", priority: "0.4" },
+          ...PUBLIC_PAGES.map((p) => ({
+            path: p.path,
+            changefreq: p.changefreq,
+            priority: p.priority,
+          })),
+          ...(await publishedLandingPages()),
         ];
 
         const urls = entries.map((e) =>
           [
             `  <url>`,
-            `    <loc>${BASE_URL}${e.path}</loc>`,
+            `    <loc>${SITE_URL}${e.path}</loc>`,
+            e.lastmod ? `    <lastmod>${e.lastmod}</lastmod>` : null,
             e.changefreq ? `    <changefreq>${e.changefreq}</changefreq>` : null,
             e.priority ? `    <priority>${e.priority}</priority>` : null,
             `  </url>`,

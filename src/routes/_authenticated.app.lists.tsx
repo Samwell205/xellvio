@@ -4,7 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountId } from "@/hooks/useAccountId";
-import { deleteContactList, getAudienceListCounts, listAudienceContactLists } from "@/lib/audience.functions";
+import {
+  deleteContactList,
+  getAudienceListCounts,
+  listAudienceContactLists,
+} from "@/lib/audience.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,12 +16,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from "sonner";
 import { MoreHorizontal, Plus, Search, Star, Trash2, Upload, Users } from "lucide-react";
 
@@ -25,9 +44,15 @@ export const Route = createFileRoute("/_authenticated/app/lists")({
   head: () => ({
     meta: [
       { title: "Lists & segments — Xellvio" },
-      { name: "description", content: "Create and manage the contact lists and segments you send SMS campaigns to." },
+      {
+        name: "description",
+        content: "Create and manage the contact lists and segments you send SMS campaigns to.",
+      },
       { property: "og:title", content: "Lists & segments — Xellvio" },
-      { property: "og:description", content: "Create and manage the contact lists and segments you send SMS campaigns to." },
+      {
+        property: "og:description",
+        content: "Create and manage the contact lists and segments you send SMS campaigns to.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -83,7 +108,8 @@ function ListsPage() {
 
   const segmentsQ = useQuery({
     queryKey: ["lists-page-segments", acctId],
-    queryFn: async () => (await sb.from("segments").select("id,name,description,created_at")).data ?? [],
+    queryFn: async () =>
+      (await sb.from("segments").select("id,name,description,created_at")).data ?? [],
   });
 
   const rows: Row[] = useMemo(() => {
@@ -111,7 +137,9 @@ function ListsPage() {
   const filtered = rows
     .filter((r) => (tab === "all" ? true : r.type === tab))
     .filter((r) => (showFavourites ? r.is_favorite : true))
-    .filter((r) => (search.trim() ? r.name.toLowerCase().includes(search.trim().toLowerCase()) : true))
+    .filter((r) =>
+      search.trim() ? r.name.toLowerCase().includes(search.trim().toLowerCase()) : true,
+    )
     .sort((a, b) => Number(b.is_favorite) - Number(a.is_favorite) || a.name.localeCompare(b.name));
 
   const createList = useMutation({
@@ -137,7 +165,10 @@ function ListsPage() {
 
   const toggleFav = useMutation({
     mutationFn: async (row: Row) => {
-      const { error } = await sb.from("contact_lists").update({ is_favorite: !row.is_favorite }).eq("id", row.id);
+      const { error } = await sb
+        .from("contact_lists")
+        .update({ is_favorite: !row.is_favorite })
+        .eq("id", row.id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lists-page-lists"] }),
@@ -176,15 +207,23 @@ function ListsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" asChild>
-            <Link to="/app/audience"><Upload className="mr-2 size-4" />Import contacts</Link>
+            <Link to="/app/audience">
+              <Upload className="mr-2 size-4" />
+              Import contacts
+            </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button><Plus className="mr-2 size-4" />Create new</Button>
+              <Button>
+                <Plus className="mr-2 size-4" />
+                Create new
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setCreateOpen(true)}>Create list</DropdownMenuItem>
-              <DropdownMenuItem asChild><Link to="/app/segments/new">Create segment</Link></DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/app/segments/new">Create segment</Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -197,7 +236,9 @@ function ListsPage() {
               key={t}
               onClick={() => setTab(t)}
               className={`rounded-full px-3 py-1.5 text-sm transition-colors ${
-                tab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                tab === t
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
               }`}
             >
               {t === "all" ? "All" : t === "List" ? "Lists" : "Segments"}
@@ -205,10 +246,20 @@ function ListsPage() {
           ))}
           <div className="relative ml-auto w-full max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Search by name" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input
+              className="pl-9"
+              placeholder="Search by name"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-          <Button variant={showFavourites ? "default" : "outline"} size="sm" onClick={() => setShowFavourites((v) => !v)}>
-            <Star className="mr-2 size-4" />Favourites
+          <Button
+            variant={showFavourites ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowFavourites((v) => !v)}
+          >
+            <Star className="mr-2 size-4" />
+            Favourites
           </Button>
         </div>
 
@@ -236,15 +287,21 @@ function ListsPage() {
                 <TableCell>
                   {r.type === "List" && (
                     <button onClick={() => toggleFav.mutate(r)} aria-label="Toggle favourite">
-                      <Star className={`size-4 ${r.is_favorite ? "fill-yellow-400 text-yellow-500" : "text-muted-foreground"}`} />
+                      <Star
+                        className={`size-4 ${r.is_favorite ? "fill-yellow-400 text-yellow-500" : "text-muted-foreground"}`}
+                      />
                     </button>
                   )}
                 </TableCell>
                 <TableCell>
                   <div className="font-medium">{r.name}</div>
-                  {r.description && <div className="text-xs text-muted-foreground">{r.description}</div>}
+                  {r.description && (
+                    <div className="text-xs text-muted-foreground">{r.description}</div>
+                  )}
                 </TableCell>
-                <TableCell><Badge variant="outline">{r.type}</Badge></TableCell>
+                <TableCell>
+                  <Badge variant="outline">{r.type}</Badge>
+                </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {r.members == null ? "—" : r.members.toLocaleString()}
                 </TableCell>
@@ -254,17 +311,26 @@ function ListsPage() {
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon"><MoreHorizontal className="size-4" /></Button>
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="size-4" />
+                      </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link to="/app/audience"><Users className="mr-2 size-4" />View contacts</Link>
+                        <Link to="/app/audience">
+                          <Users className="mr-2 size-4" />
+                          View contacts
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link to="/app/campaigns/new">Send a campaign</Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive" onClick={() => setConfirmDelete(r)}>
-                        <Trash2 className="mr-2 size-4" />Delete
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => setConfirmDelete(r)}
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -279,21 +345,36 @@ function ListsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create a list</DialogTitle>
-            <DialogDescription>Give it a clear name so your team knows who is inside.</DialogDescription>
+            <DialogDescription>
+              Give it a clear name so your team knows who is inside.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>List name</Label>
-              <Input value={newList.name} onChange={(e) => setNewList({ ...newList, name: e.target.value })} maxLength={120} />
+              <Input
+                value={newList.name}
+                onChange={(e) => setNewList({ ...newList, name: e.target.value })}
+                maxLength={120}
+              />
             </div>
             <div>
               <Label>Description (optional)</Label>
-              <Textarea value={newList.description} onChange={(e) => setNewList({ ...newList, description: e.target.value })} maxLength={300} />
+              <Textarea
+                value={newList.description}
+                onChange={(e) => setNewList({ ...newList, description: e.target.value })}
+                maxLength={300}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button disabled={!newList.name.trim() || createList.isPending} onClick={() => createList.mutate()}>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!newList.name.trim() || createList.isPending}
+              onClick={() => createList.mutate()}
+            >
               Create list
             </Button>
           </DialogFooter>
@@ -313,7 +394,9 @@ function ListsPage() {
             </label>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setConfirmDelete(null)}>
+              Cancel
+            </Button>
             <Button
               variant="destructive"
               disabled={removeRow.isPending}

@@ -16,7 +16,11 @@ export const Route = createFileRoute("/_authenticated/admin/campaigns/")({
 
 function AdminCampaignsPage() {
   const fn = useServerFn(adminListCampaigns);
-  const q = useQuery({ queryKey: ["admin", "campaigns"], queryFn: () => fn(), refetchInterval: 30_000 });
+  const q = useQuery({
+    queryKey: ["admin", "campaigns"],
+    queryFn: () => fn(),
+    refetchInterval: 30_000,
+  });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -26,26 +30,51 @@ function AdminCampaignsPage() {
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (!search) return true;
       const s = search.toLowerCase();
-      return (r.name ?? "").toLowerCase().includes(s) ||
+      return (
+        (r.name ?? "").toLowerCase().includes(s) ||
         (r.account_label ?? "").toLowerCase().includes(s) ||
-        (r.account_email ?? "").toLowerCase().includes(s);
+        (r.account_email ?? "").toLowerCase().includes(s)
+      );
     });
   }, [q.data, search, statusFilter]);
 
-  const statuses = ["all", "draft", "scheduled", "sending", "sent", "completed", "paused", "blocked_content"];
+  const statuses = [
+    "all",
+    "draft",
+    "scheduled",
+    "sending",
+    "sent",
+    "completed",
+    "paused",
+    "blocked_content",
+  ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2"><Megaphone className="size-6" /> Campaigns</h1>
-        <p className="text-sm text-muted-foreground">Every campaign a tenant sent. Click one to see full delivery report, per-country cost, and failures.</p>
+        <h1 className="text-2xl font-extrabold flex items-center gap-2">
+          <Megaphone className="size-6" /> Campaigns
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Every campaign a tenant sent. Click one to see full delivery report, per-country cost, and
+          failures.
+        </p>
       </div>
 
       <Card className="p-3 flex flex-wrap gap-2 items-center">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search campaign or tenant…" className="max-w-xs" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search campaign or tenant…"
+          className="max-w-xs"
+        />
         <div className="flex gap-1 flex-wrap">
           {statuses.map((s) => (
-            <button key={s} onClick={() => setStatusFilter(s)} className={`text-xs px-3 py-1 rounded-md border ${statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}>
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`text-xs px-3 py-1 rounded-md border ${statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-background hover:bg-muted"}`}
+            >
               {s}
             </button>
           ))}
@@ -53,9 +82,13 @@ function AdminCampaignsPage() {
       </Card>
 
       {q.isError ? (
-        <Card className="p-4 text-sm text-destructive">Failed to load: {(q.error as any)?.message ?? String(q.error)}</Card>
+        <Card className="p-4 text-sm text-destructive">
+          Failed to load: {(q.error as any)?.message ?? String(q.error)}
+        </Card>
       ) : q.isLoading ? (
-        <div className="flex justify-center h-32 items-center"><Loader2 className="size-6 animate-spin" /></div>
+        <div className="flex justify-center h-32 items-center">
+          <Loader2 className="size-6 animate-spin" />
+        </div>
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
@@ -79,42 +112,87 @@ function AdminCampaignsPage() {
               <tbody>
                 {rows.map((c) => (
                   <tr key={c.id} className="border-t align-top">
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">{new Date(c.created_at).toLocaleString()}</td>
+                    <td className="p-3 text-muted-foreground whitespace-nowrap">
+                      {new Date(c.created_at).toLocaleString()}
+                    </td>
                     <td className="p-3">
                       <div className="font-medium">{c.account_label}</div>
                       <div className="text-xs text-muted-foreground">{c.account_email}</div>
                     </td>
                     <td className="p-3 max-w-[280px]">
                       <div className="font-medium truncate flex items-center gap-1.5">
-                        {c.is_mms && <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200 text-[10px] py-0 px-1.5">MMS</Badge>}
+                        {c.is_mms && (
+                          <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200 text-[10px] py-0 px-1.5">
+                            MMS
+                          </Badge>
+                        )}
                         <span className="truncate">{c.name}</span>
                       </div>
                       <div className="text-xs text-muted-foreground truncate">{c.message_body}</div>
                       <div className="text-xs mt-1 flex gap-2 flex-wrap">
-                        <span>Charged: <span className="font-semibold">{formatUSD(Number(c.cost ?? 0))}</span></span>
+                        <span>
+                          Charged:{" "}
+                          <span className="font-semibold">{formatUSD(Number(c.cost ?? 0))}</span>
+                        </span>
                         {Number((c as any).reserved_cost ?? 0) > 0 && (
-                          <span className="text-muted-foreground">Not yet sent: {formatUSD(Number((c as any).reserved_cost))}</span>
+                          <span className="text-muted-foreground">
+                            Not yet sent: {formatUSD(Number((c as any).reserved_cost))}
+                          </span>
                         )}
-                        <span className="text-muted-foreground">Telnyx: {formatUSD(Number(c.carrier_cost ?? 0))}</span>
-                        <span className={Number(c.margin ?? 0) >= 0 ? "text-emerald-600 font-semibold" : "text-destructive font-semibold"}>Profit: {formatUSD(Number(c.margin ?? 0))}</span>
+                        <span className="text-muted-foreground">
+                          Telnyx: {formatUSD(Number(c.carrier_cost ?? 0))}
+                        </span>
+                        <span
+                          className={
+                            Number(c.margin ?? 0) >= 0
+                              ? "text-emerald-600 font-semibold"
+                              : "text-destructive font-semibold"
+                          }
+                        >
+                          Profit: {formatUSD(Number(c.margin ?? 0))}
+                        </span>
                       </div>
                     </td>
-                    <td className="p-3"><Badge variant="outline">{c.status}</Badge></td>
-                    <td className="p-3 text-right tabular-nums">{c.total.toLocaleString()}</td>
-                    <td className="p-3 text-right tabular-nums text-emerald-600">{c.delivered.toLocaleString()}</td>
-                    <td className="p-3 text-right tabular-nums text-destructive">{c.failed.toLocaleString()}</td>
-                    <td className="p-3 text-right tabular-nums">{c.delivery_rate}%</td>
-                    <td className="p-3 text-right tabular-nums">{formatUSD(Number(c.cost ?? 0))}</td>
-                    <td className="p-3 text-right tabular-nums text-muted-foreground">{formatUSD(Number(c.carrier_cost ?? 0))}</td>
-                    <td className={`p-3 text-right tabular-nums ${Number(c.margin ?? 0) >= 0 ? "text-emerald-600" : "text-destructive"}`}>{formatUSD(Number(c.margin ?? 0))}</td>
                     <td className="p-3">
-                      <Link to="/admin/campaigns/$id" params={{ id: c.id }} className="text-primary text-xs inline-flex items-center gap-1 hover:underline">
+                      <Badge variant="outline">{c.status}</Badge>
+                    </td>
+                    <td className="p-3 text-right tabular-nums">{c.total.toLocaleString()}</td>
+                    <td className="p-3 text-right tabular-nums text-emerald-600">
+                      {c.delivered.toLocaleString()}
+                    </td>
+                    <td className="p-3 text-right tabular-nums text-destructive">
+                      {c.failed.toLocaleString()}
+                    </td>
+                    <td className="p-3 text-right tabular-nums">{c.delivery_rate}%</td>
+                    <td className="p-3 text-right tabular-nums">
+                      {formatUSD(Number(c.cost ?? 0))}
+                    </td>
+                    <td className="p-3 text-right tabular-nums text-muted-foreground">
+                      {formatUSD(Number(c.carrier_cost ?? 0))}
+                    </td>
+                    <td
+                      className={`p-3 text-right tabular-nums ${Number(c.margin ?? 0) >= 0 ? "text-emerald-600" : "text-destructive"}`}
+                    >
+                      {formatUSD(Number(c.margin ?? 0))}
+                    </td>
+                    <td className="p-3">
+                      <Link
+                        to="/admin/campaigns/$id"
+                        params={{ id: c.id }}
+                        className="text-primary text-xs inline-flex items-center gap-1 hover:underline"
+                      >
                         Report <ExternalLink className="size-3" />
                       </Link>
                     </td>
                   </tr>
                 ))}
-                {rows.length === 0 && <tr><td colSpan={12} className="p-8 text-center text-muted-foreground">No campaigns match.</td></tr>}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={12} className="p-8 text-center text-muted-foreground">
+                      No campaigns match.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

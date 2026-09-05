@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { LayoutDashboard, PhoneCall, Coins, Wallet, Settings2, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_verifier")({
+  head: () => ({
+    meta: [{ name: "robots", content: "noindex, nofollow" }],
+  }),
   ssr: false,
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();
@@ -22,7 +25,7 @@ const NAV = [
 ];
 
 function VerifierShell() {
-  const pathname = useRouterState({ select: s => s.location.pathname });
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   async function signOut() {
     await supabase.auth.signOut();
     window.location.href = "/verify";
@@ -30,9 +33,11 @@ function VerifierShell() {
   return (
     <div className="dark min-h-screen bg-slate-950 text-slate-100 flex">
       <aside className="w-60 border-r border-slate-800/60 p-4 flex flex-col">
-        <Link to="/verify" className="font-semibold text-lg mb-6">Xellvio Verifier</Link>
+        <Link to="/verify" className="font-semibold text-lg mb-6">
+          Xellvio Verifier
+        </Link>
         <nav className="flex-1 space-y-1">
-          {NAV.map(n => {
+          {NAV.map((n) => {
             const active = n.exact ? pathname === n.to : pathname.startsWith(n.to);
             return (
               <Link
@@ -46,7 +51,10 @@ function VerifierShell() {
             );
           })}
         </nav>
-        <Button variant="ghost" onClick={signOut} className="justify-start text-slate-400"><LogOut className="size-4 mr-2"/>Sign out</Button>
+        <Button variant="ghost" onClick={signOut} className="justify-start text-slate-400">
+          <LogOut className="size-4 mr-2" />
+          Sign out
+        </Button>
       </aside>
       <main className="flex-1 p-6 md:p-8 max-w-5xl">
         <Outlet />

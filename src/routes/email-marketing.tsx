@@ -3,28 +3,25 @@ import { Mail, Workflow, Palette, BarChart3, Check } from "lucide-react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import {
-  ChannelSubNav, ChannelHero, StatsMarquee, PillarGrid, SplitFeature, ProofCards,
-  ChannelFaq, ChannelCta,
+  ChannelSubNav,
+  ChannelHero,
+  StatsMarquee,
+  PillarGrid,
+  SplitFeature,
+  ProofCards,
+  ChannelFaq,
+  ChannelCta,
 } from "@/components/marketing/ProductKit";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/email-marketing")({
-  head: () => ({
-    meta: [
-      { title: "Email Marketing That Pairs With Your Texts — Xellvio" },
-      {
-        name: "description",
-        content:
-          "Design email campaigns, automate follow-ups and measure revenue beside your SMS — one audience, one report, one platform.",
-      },
-      { property: "og:title", content: "Email Marketing That Pairs With Your Texts — Xellvio" },
-      {
-        property: "og:description",
-        content: "Campaigns, automations and reporting for email, sharing the same audience as your SMS.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/email-marketing",
+      title: "Email Marketing Alongside Your SMS",
+      description:
+        "Run email campaigns from the same Xellvio audience as your texts — shared lists, shared consent, shared automations and one report for both channels.",
+    }),
   component: EmailMarketingPage,
 });
 
@@ -65,10 +62,26 @@ function EmailMarketingPage() {
           id="overview"
           heading="Build smarter email campaigns"
           items={[
-            { icon: Palette, title: "Design without a designer", text: "Drag-and-drop blocks, saved brand colours and fonts, and templates that already look like you." },
-            { icon: Workflow, title: "Automate the whole journey", text: "Welcome, browse-abandon and win-back sequences that can switch to SMS when email goes unopened." },
-            { icon: Mail, title: "Land in the inbox", text: "Authenticated sending on your own domain, with bounce and complaint handling built in." },
-            { icon: BarChart3, title: "Report on both channels", text: "Opens, clicks and revenue sit beside your SMS numbers instead of in a separate tool." },
+            {
+              icon: Palette,
+              title: "Design without a designer",
+              text: "Drag-and-drop blocks, saved brand colours and fonts, and templates that already look like you.",
+            },
+            {
+              icon: Workflow,
+              title: "Automate the whole journey",
+              text: "Welcome, browse-abandon and win-back sequences that can switch to SMS when email goes unopened.",
+            },
+            {
+              icon: Mail,
+              title: "Land in the inbox",
+              text: "Authenticated sending on your own domain, with bounce and complaint handling built in.",
+            },
+            {
+              icon: BarChart3,
+              title: "Report on both channels",
+              text: "Opens, clicks and revenue sit beside your SMS numbers instead of in a separate tool.",
+            },
           ]}
         />
         <SplitFeature
@@ -107,18 +120,44 @@ function EmailMarketingPage() {
         />
         <ProofCards
           items={[
-            { stat: "63x", label: "typical email ROI", quote: "Email stays the cheapest way to talk to a warm list — SMS is what makes it urgent." },
-            { stat: "40%", label: "open rate on winning variant", quote: "A/B testing subject lines on every send compounds quickly across a year." },
-            { stat: "2x", label: "reach when channels combine", quote: "Emailing first and texting the non-openers reaches people a single channel misses." },
+            {
+              stat: "63x",
+              label: "typical email ROI",
+              quote:
+                "Email stays the cheapest way to talk to a warm list — SMS is what makes it urgent.",
+            },
+            {
+              stat: "40%",
+              label: "open rate on winning variant",
+              quote: "A/B testing subject lines on every send compounds quickly across a year.",
+            },
+            {
+              stat: "2x",
+              label: "reach when channels combine",
+              quote:
+                "Emailing first and texting the non-openers reaches people a single channel misses.",
+            },
           ]}
         />
         <ChannelFaq
           id="faq"
           items={[
-            { q: "Is email available now?", a: "Email is in early access. Join the list and we'll switch it on for your account as we roll it out — SMS is fully live today." },
-            { q: "Will my SMS contacts carry over?", a: "Yes. Contacts, lists and segments are shared, so an email audience is the same audience you already text." },
-            { q: "Can I send from my own domain?", a: "Yes. You'll add a few DNS records once and we verify authentication before your first send." },
-            { q: "How is email priced?", a: "Email is billed separately from SMS credits. Pricing is published before early access opens to your account." },
+            {
+              q: "Is email available now?",
+              a: "Email is in early access. Join the list and we'll switch it on for your account as we roll it out — SMS is fully live today.",
+            },
+            {
+              q: "Will my SMS contacts carry over?",
+              a: "Yes. Contacts, lists and segments are shared, so an email audience is the same audience you already text.",
+            },
+            {
+              q: "Can I send from my own domain?",
+              a: "Yes. You'll add a few DNS records once and we verify authentication before your first send.",
+            },
+            {
+              q: "How is email priced?",
+              a: "Email is billed separately from SMS credits. Pricing is published before early access opens to your account.",
+            },
           ]}
         />
         <ChannelCta
@@ -147,10 +186,14 @@ function InboxVisual() {
         ].map((t) => (
           <div key={t.v} className="mb-3 rounded-lg border border-border p-4">
             <div className="flex items-start gap-3">
-              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted text-xs font-bold text-foreground">{t.v}</span>
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-muted text-xs font-bold text-foreground">
+                {t.v}
+              </span>
               <div className="min-w-0">
                 <p className="text-sm text-foreground">{t.s}</p>
-                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Open rate</p>
+                <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Open rate
+                </p>
                 <p className="text-2xl font-extrabold tracking-tight text-foreground">{t.r}</p>
               </div>
             </div>
@@ -164,12 +207,16 @@ function InboxVisual() {
 function BuilderVisual() {
   return (
     <div className="mx-auto w-full max-w-sm space-y-3">
-      <div className="rounded-xl border border-border bg-card p-4 text-center text-sm font-bold text-foreground">Your logo</div>
+      <div className="rounded-xl border border-border bg-card p-4 text-center text-sm font-bold text-foreground">
+        Your logo
+      </div>
       <div className="h-28 rounded-xl bg-muted" />
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="h-3 w-2/3 rounded bg-muted" />
         <div className="mt-2 h-3 w-full rounded bg-muted" />
-        <div className="mt-4 inline-block rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">Shop the drop</div>
+        <div className="mt-4 inline-block rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground">
+          Shop the drop
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="h-20 rounded-xl bg-muted" />
@@ -189,8 +236,15 @@ function JourneyVisual() {
   return (
     <div className="mx-auto w-full max-w-sm space-y-3">
       {steps.map((s) => (
-        <div key={s.l} className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-sm text-foreground">
-          {s.c ? <Check className="size-4 shrink-0 text-coral" /> : <Workflow className="size-4 shrink-0 text-coral" />}
+        <div
+          key={s.l}
+          className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-sm text-foreground"
+        >
+          {s.c ? (
+            <Check className="size-4 shrink-0 text-coral" />
+          ) : (
+            <Workflow className="size-4 shrink-0 text-coral" />
+          )}
           {s.l}
         </div>
       ))}

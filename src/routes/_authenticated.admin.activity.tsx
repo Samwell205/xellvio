@@ -18,12 +18,18 @@ function AdminActivityPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2"><Activity className="size-6" /> Activity log</h1>
-        <p className="text-sm text-muted-foreground">Most recent 200 system events across all tenants.</p>
+        <h1 className="text-2xl font-extrabold flex items-center gap-2">
+          <Activity className="size-6" /> Activity log
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Most recent 200 system events across all tenants.
+        </p>
       </div>
 
       {q.isLoading ? (
-        <div className="flex justify-center h-32 items-center"><Loader2 className="size-6 animate-spin" /></div>
+        <div className="flex justify-center h-32 items-center">
+          <Loader2 className="size-6 animate-spin" />
+        </div>
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
@@ -39,13 +45,29 @@ function AdminActivityPage() {
               <tbody>
                 {(q.data ?? []).map((e: any) => (
                   <tr key={e.id} className="border-t align-top">
-                    <td className="p-3 text-muted-foreground whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</td>
-                    <td className="p-3"><Badge variant="outline">{e.type}</Badge></td>
-                    <td className="p-3 text-xs text-muted-foreground font-mono">{e.account_id ?? "—"}</td>
-                    <td className="p-3"><pre className="text-xs whitespace-pre-wrap max-w-2xl text-muted-foreground">{e.payload ? JSON.stringify(e.payload, null, 2) : ""}</pre></td>
+                    <td className="p-3 text-muted-foreground whitespace-nowrap">
+                      {new Date(e.created_at).toLocaleString()}
+                    </td>
+                    <td className="p-3">
+                      <Badge variant="outline">{e.type}</Badge>
+                    </td>
+                    <td className="p-3 text-xs text-muted-foreground font-mono">
+                      {e.account_id ?? "—"}
+                    </td>
+                    <td className="p-3">
+                      <pre className="text-xs whitespace-pre-wrap max-w-2xl text-muted-foreground">
+                        {e.payload ? JSON.stringify(e.payload, null, 2) : ""}
+                      </pre>
+                    </td>
                   </tr>
                 ))}
-                {(q.data ?? []).length === 0 && <tr><td colSpan={4} className="p-8 text-center text-muted-foreground">No events yet.</td></tr>}
+                {(q.data ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                      No events yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

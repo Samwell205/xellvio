@@ -7,16 +7,16 @@ import { PerCountryPricing } from "@/components/PerCountryPricing";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getPublicCountryRates } from "@/lib/public-pricing.functions";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/pricing")({
-  head: () => ({
-    meta: [
-      { title: "Xellvio Pricing | Pay-as-you-go SMS Credits" },
-      { name: "description", content: "Pay-as-you-go SMS credits. Estimate cost per country and per message instantly." },
-      { property: "og:title", content: "Pricing — Xellvio" },
-      { property: "og:description", content: "Buy credits, estimate per-country costs, and see live SMS pricing." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/pricing",
+      title: "Bulk SMS Pricing — Pay As You Go",
+      description:
+        "Xellvio pricing is pay-as-you-go: buy credits, see the live per-message rate for every country before you send, and pay no monthly platform fee.",
+    }),
   component: PricingPage,
 });
 
@@ -30,8 +30,6 @@ function PricingPage() {
   });
   const rates = ratesQ.data;
 
-
-
   return (
     <div className="min-h-screen flex flex-col">
       <MarketingNav />
@@ -43,8 +41,9 @@ function PricingPage() {
               Pay only for what you send
             </h1>
             <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-              SMS are billed per recipient at the country rate × segments. We never debit more than your
-              available balance — any messages your balance can't cover are skipped, not charged.
+              SMS are billed per recipient at the country rate × segments. We never debit more than
+              your available balance — any messages your balance can't cover are skipped, not
+              charged.
             </p>
           </div>
         </section>

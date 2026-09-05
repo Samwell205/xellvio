@@ -16,7 +16,7 @@ function livePresentation(row: Record<string, any>) {
   return { ...rest, blocks, builder_theme: published_theme ?? rest.builder_theme };
 }
 const PAGE_FIELDS =
-  `id,slug,name,headline,subheadline,body,cta_label,success_message,consent_text,theme,accent,image_url,sections,published,views,account_id,list_id,${SEO_FIELDS}`;
+  `id,slug,name,headline,subheadline,body,cta_label,success_message,consent_text,theme,accent,image_url,sections,published,views,account_id,list_id,seo_indexable,${SEO_FIELDS}`;
 const FORM_FIELDS =
   `id,slug,name,headline,description,cta_label,success_message,collect_name,consent_text,theme,accent,image_url,published,views,account_id,list_id,${SEO_FIELDS}`;
 

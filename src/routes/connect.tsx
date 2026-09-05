@@ -8,16 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/connect")({
-  head: () => ({
-    meta: [
-      { title: "Connect an AI assistant — Xellvio" },
-      { name: "description", content: "Connect ChatGPT, Claude, or another AI assistant to your Xellvio account through our MCP server." },
-      { property: "og:title", content: "Connect an AI assistant — Xellvio" },
-      { property: "og:description", content: "Link ChatGPT, Claude, or Claude Code to your Xellvio workspace and manage SMS with natural language." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/connect",
+      title: "Connect an AI Assistant to Xellvio",
+      description:
+        "Connect ChatGPT, Claude or any MCP-compatible AI assistant to your Xellvio workspace and manage contacts, campaigns and reports in natural language.",
+    }),
   component: ConnectPage,
 });
 
@@ -39,12 +39,15 @@ function ConnectPage() {
       <main className="flex-1">
         <section className="hero-gradient border-b">
           <div className="mx-auto max-w-4xl px-4 sm:px-6 py-16 md:py-24 text-center">
-            <Badge variant="outline" className="bg-background/70"><Bot className="mr-1 size-3" /> Agent integrations</Badge>
+            <Badge variant="outline" className="bg-background/70">
+              <Bot className="mr-1 size-3" /> Agent integrations
+            </Badge>
             <h1 className="mt-5 text-3xl md:text-5xl font-extrabold tracking-tight leading-[1.1]">
               Connect an AI assistant to Xellvio
             </h1>
             <p className="mt-5 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Link ChatGPT, Claude, or Claude Code to your Xellvio workspace and manage campaigns, check delivery reports, and review replies with natural language.
+              Link ChatGPT, Claude, or Claude Code to your Xellvio workspace and manage campaigns,
+              check delivery reports, and review replies with natural language.
             </p>
           </div>
         </section>
@@ -66,11 +69,30 @@ function ConnectPage() {
                   <Card className="p-6">
                     <h3 className="font-semibold">Connect ChatGPT</h3>
                     <ol className="mt-4 space-y-3 text-sm text-muted-foreground list-decimal pl-4">
-                      <li>Open <a href="https://chatgpt.com/#settings/Connectors/Advanced" target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">ChatGPT Apps <ExternalLink className="size-3" /></a> and enable Developer mode if prompted.</li>
-                      <li>Click the <strong>Create app</strong> button.</li>
-                      <li>Name the connector (for example, “Xellvio”) and paste the MCP URL above.</li>
-                      <li>Click <strong>Create</strong>.</li>
-                      <li>Enable the app from the chat composer, then ask ChatGPT to use Xellvio.</li>
+                      <li>
+                        Open{" "}
+                        <a
+                          href="https://chatgpt.com/#settings/Connectors/Advanced"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          ChatGPT Apps <ExternalLink className="size-3" />
+                        </a>{" "}
+                        and enable Developer mode if prompted.
+                      </li>
+                      <li>
+                        Click the <strong>Create app</strong> button.
+                      </li>
+                      <li>
+                        Name the connector (for example, “Xellvio”) and paste the MCP URL above.
+                      </li>
+                      <li>
+                        Click <strong>Create</strong>.
+                      </li>
+                      <li>
+                        Enable the app from the chat composer, then ask ChatGPT to use Xellvio.
+                      </li>
                     </ol>
                   </Card>
                 </TabsContent>
@@ -78,12 +100,17 @@ function ConnectPage() {
                   <Card className="p-6">
                     <h3 className="font-semibold">Connect Claude</h3>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Click the button below to open Claude’s custom connector dialog with the name and URL prefilled.
+                      Click the button below to open Claude’s custom connector dialog with the name
+                      and URL prefilled.
                     </p>
                     <div className="mt-4">
                       <Button asChild size="sm">
                         <a
-                          href={mcpUrl ? `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=${encodeURIComponent("Xellvio")}&connectorUrl=${encodeURIComponent(mcpUrl)}` : undefined}
+                          href={
+                            mcpUrl
+                              ? `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=${encodeURIComponent("Xellvio")}&connectorUrl=${encodeURIComponent(mcpUrl)}`
+                              : undefined
+                          }
                           target="_blank"
                           rel="noreferrer"
                         >
@@ -92,9 +119,17 @@ function ConnectPage() {
                       </Button>
                     </div>
                     <ol className="mt-5 space-y-3 text-sm text-muted-foreground list-decimal pl-4">
-                      <li>Review the details in the dialog and click <strong>Add</strong>.</li>
-                      <li>If the prefilled form does not open, go to Claude’s Connectors page, choose <strong>Add custom connector</strong>, name it “Xellvio,” and paste the MCP URL above.</li>
-                      <li>Enable the connector from the chat composer, then ask Claude to use Xellvio.</li>
+                      <li>
+                        Review the details in the dialog and click <strong>Add</strong>.
+                      </li>
+                      <li>
+                        If the prefilled form does not open, go to Claude’s Connectors page, choose{" "}
+                        <strong>Add custom connector</strong>, name it “Xellvio,” and paste the MCP
+                        URL above.
+                      </li>
+                      <li>
+                        Enable the connector from the chat composer, then ask Claude to use Xellvio.
+                      </li>
                     </ol>
                   </Card>
                 </TabsContent>
@@ -102,11 +137,14 @@ function ConnectPage() {
                   <Card className="p-6">
                     <h3 className="font-semibold">Connect Claude Code</h3>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      Run this one-line command in your terminal. It installs the Xellvio MCP server for your user profile.
+                      Run this one-line command in your terminal. It installs the Xellvio MCP server
+                      for your user profile.
                     </p>
                     <div className="mt-4 relative">
                       <pre className="rounded-lg bg-muted p-4 pr-10 text-sm font-mono overflow-x-auto">
-                        {mcpUrl ? `claude mcp add --scope user --transport http ${appNameSlug} '${mcpUrl.replace(/'/g, "'\\''")}'` : "Loading URL…"}
+                        {mcpUrl
+                          ? `claude mcp add --scope user --transport http ${appNameSlug} '${mcpUrl.replace(/'/g, "'\\''")}'`
+                          : "Loading URL…"}
                       </pre>
                       {mcpUrl && (
                         <CopyButton
@@ -117,7 +155,11 @@ function ConnectPage() {
                     </div>
                     <ol className="mt-5 space-y-3 text-sm text-muted-foreground list-decimal pl-4">
                       <li>Paste the command above into a terminal and press Enter.</li>
-                      <li>Start Claude Code and run <code className="bg-muted px-1 py-0.5 rounded">/mcp</code> to confirm Xellvio is connected.</li>
+                      <li>
+                        Start Claude Code and run{" "}
+                        <code className="bg-muted px-1 py-0.5 rounded">/mcp</code> to confirm
+                        Xellvio is connected.
+                      </li>
                       <li>Claude Code will ask you to sign in if you have not already.</li>
                       <li>Ask Claude Code to use Xellvio.</li>
                     </ol>
@@ -139,16 +181,21 @@ function ConnectPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><RefreshCw className="size-5 text-primary" /> Refresh after the app changes</h2>
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <RefreshCw className="size-5 text-primary" /> Refresh after the app changes
+              </h2>
               <p className="text-sm text-muted-foreground mb-4">
-                AI assistants cache the list of available tools. After Xellvio is updated, refresh the connection so the assistant sees the latest tools.
+                AI assistants cache the list of available tools. After Xellvio is updated, refresh
+                the connection so the assistant sees the latest tools.
               </p>
               <div className="grid sm:grid-cols-2 gap-4">
                 <Card className="p-5">
                   <h3 className="font-semibold text-sm">ChatGPT</h3>
                   <ol className="mt-3 space-y-2 text-sm text-muted-foreground list-decimal pl-4">
                     <li>Open ChatGPT’s app preferences and pick Xellvio under Enabled apps.</li>
-                    <li>Next to Information, click <strong>Refresh</strong>.</li>
+                    <li>
+                      Next to Information, click <strong>Refresh</strong>.
+                    </li>
                     <li>If the URL changed, paste the latest URL from above.</li>
                     <li>Start a new chat and ask ChatGPT to use Xellvio.</li>
                   </ol>
@@ -166,7 +213,13 @@ function ConnectPage() {
                   <h3 className="font-semibold text-sm">Claude Code</h3>
                   <ol className="mt-3 space-y-2 text-sm text-muted-foreground list-decimal pl-4">
                     <li>Start a new Claude Code session — it loads the latest tools on connect.</li>
-                    <li>If the URL changed, run <code className="bg-muted px-1 py-0.5 rounded">claude mcp remove {appNameSlug}</code>, then run the install command again with the latest quoted URL.</li>
+                    <li>
+                      If the URL changed, run{" "}
+                      <code className="bg-muted px-1 py-0.5 rounded">
+                        claude mcp remove {appNameSlug}
+                      </code>
+                      , then run the install command again with the latest quoted URL.
+                    </li>
                     <li>Ask Claude Code to use Xellvio.</li>
                   </ol>
                 </Card>
@@ -186,7 +239,9 @@ function ConnectPage() {
             <Card className="p-6 bg-primary-soft">
               <h2 className="font-semibold">What the assistant can do</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Once connected, the assistant can read your account summary, list campaigns, pull delivery reports, view contact lists, and check inbound SMS replies — all acting as your signed-in Xellvio user. It cannot send messages or spend credits.
+                Once connected, the assistant can read your account summary, list campaigns, pull
+                delivery reports, view contact lists, and check inbound SMS replies — all acting as
+                your signed-in Xellvio user. It cannot send messages or spend credits.
               </p>
               <div className="mt-4">
                 <Button asChild variant="outline" size="sm">

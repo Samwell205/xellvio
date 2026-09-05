@@ -11,7 +11,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { MessageSquareText, Send, Search, Inbox, Trash2 } from "lucide-react";
-import { listConversations, getConversation, sendReply, deleteInboxMessages } from "@/lib/inbox.functions";
+import {
+  listConversations,
+  getConversation,
+  sendReply,
+  deleteInboxMessages,
+} from "@/lib/inbox.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/app/inbox")({
@@ -41,13 +46,21 @@ function InboxPage() {
   const [manualPhone, setManualPhone] = useState("");
   const [readMap, setReadMap] = useState<Record<string, string>>(() => {
     if (typeof window === "undefined") return {};
-    try { return JSON.parse(localStorage.getItem("inbox_read_map") ?? "{}"); } catch { return {}; }
+    try {
+      return JSON.parse(localStorage.getItem("inbox_read_map") ?? "{}");
+    } catch {
+      return {};
+    }
   });
   const markRead = (phone: string, at: string) => {
     setReadMap((prev) => {
       if (prev[phone] && prev[phone] >= at) return prev;
       const next = { ...prev, [phone]: at };
-      try { localStorage.setItem("inbox_read_map", JSON.stringify(next)); } catch { /* ignore */ }
+      try {
+        localStorage.setItem("inbox_read_map", JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   };
@@ -79,7 +92,9 @@ function InboxPage() {
       localStorage.setItem("inbox_last_seen_self", stamp);
       lastSeenKeyRef.current = stamp;
       qc.invalidateQueries({ queryKey: ["inbox-unread"] });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [convos.data, qc]);
 
   // Count new inbound replies since page opened.
@@ -152,10 +167,9 @@ function InboxPage() {
     };
   }, [qc]);
 
-  const filtered = (convos.data ?? []).filter((c) =>
-    search ? c.phone.includes(search) : true,
-  );
-  const allFilteredChecked = filtered.length > 0 && filtered.every((c) => checkedPhones.has(c.phone));
+  const filtered = (convos.data ?? []).filter((c) => (search ? c.phone.includes(search) : true));
+  const allFilteredChecked =
+    filtered.length > 0 && filtered.every((c) => checkedPhones.has(c.phone));
 
   function togglePhone(phone: string, checked: boolean) {
     setCheckedPhones((prev) => {
@@ -238,12 +252,17 @@ function InboxPage() {
                     variant="destructive"
                     disabled={deleteMessages.isPending}
                     onClick={() => {
-                      if (confirm(`Delete ${checkedPhones.size} conversation${checkedPhones.size === 1 ? "" : "s"}?`)) {
+                      if (
+                        confirm(
+                          `Delete ${checkedPhones.size} conversation${checkedPhones.size === 1 ? "" : "s"}?`,
+                        )
+                      ) {
                         deleteMessages.mutate({ phones: Array.from(checkedPhones) });
                       }
                     }}
                   >
-                    <Trash2 className="size-3.5 mr-1" />Delete
+                    <Trash2 className="size-3.5 mr-1" />
+                    Delete
                   </Button>
                 )}
               </div>
@@ -294,10 +313,14 @@ function InboxPage() {
                         className="min-w-0 flex-1 text-left"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`text-sm truncate ${unread ? "font-bold text-foreground" : "font-medium"}`}>
+                          <span
+                            className={`text-sm truncate ${unread ? "font-bold text-foreground" : "font-medium"}`}
+                          >
                             {c.phone}
                           </span>
-                          <span className={`text-xs shrink-0 ${unread ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                          <span
+                            className={`text-xs shrink-0 ${unread ? "text-primary font-semibold" : "text-muted-foreground"}`}
+                          >
                             {formatTime(c.lastAt)}
                           </span>
                         </div>
@@ -312,7 +335,9 @@ function InboxPage() {
                           {unread ? "new" : "reply"}
                         </Badge>
                       )}
-                      <p className={`text-xs truncate ${unread ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                      <p
+                        className={`text-xs truncate ${unread ? "text-foreground font-medium" : "text-muted-foreground"}`}
+                      >
                         {c.lastBody}
                       </p>
                     </div>
@@ -346,7 +371,8 @@ function InboxPage() {
                     }
                   }}
                 >
-                  <Trash2 className="size-4 mr-1" />Delete
+                  <Trash2 className="size-4 mr-1" />
+                  Delete
                 </Button>
               </div>
               <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-2">

@@ -57,10 +57,19 @@ function normalizePayload(payload: any): Partial<WizardForm> {
 }
 
 // Best-effort parse of a single-line address like "651 N Broad Street, Middletown, DE 19709, US"
-function parseAddress(s: string | null | undefined): { addressLine1: string; city: string; state: string; zip: string; businessCountry: string } {
+function parseAddress(s: string | null | undefined): {
+  addressLine1: string;
+  city: string;
+  state: string;
+  zip: string;
+  businessCountry: string;
+} {
   const empty = { addressLine1: "", city: "", state: "", zip: "", businessCountry: "" };
   if (!s) return empty;
-  const parts = s.split(",").map((x) => x.trim()).filter(Boolean);
+  const parts = s
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
   if (parts.length < 2) return { ...empty, addressLine1: s.trim() };
   const country = parts.length >= 4 ? parts[parts.length - 1] : "";
   const stateZip = parts.length >= 3 ? parts[parts.length - (country ? 2 : 1)] : "";
@@ -109,22 +118,68 @@ function accountAutofillToForm(a: any | null | undefined): Partial<WizardForm> {
   };
 }
 
-function StatusBadge({ status, needsUpdate = false }: { status: Status | null | undefined; needsUpdate?: boolean }) {
-  if (needsUpdate) return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white"><AlertCircle className="size-3" />Action requested</Badge>;
-  if (!status) return <Badge variant="outline" className="gap-1"><Clock className="size-3" />Not submitted</Badge>;
-  if (status === "verified") return <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" />Verified</Badge>;
-  if (status === "rejected") return <Badge variant="destructive" className="gap-1"><X className="size-3" />Rejected</Badge>;
-  if (status === "in_review") return <Badge className="gap-1 bg-blue-500 hover:bg-blue-500 text-white"><Hourglass className="size-3" />In review</Badge>;
-  return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white"><Clock className="size-3" />Pending review</Badge>;
+function StatusBadge({
+  status,
+  needsUpdate = false,
+}: {
+  status: Status | null | undefined;
+  needsUpdate?: boolean;
+}) {
+  if (needsUpdate)
+    return (
+      <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white">
+        <AlertCircle className="size-3" />
+        Action requested
+      </Badge>
+    );
+  if (!status)
+    return (
+      <Badge variant="outline" className="gap-1">
+        <Clock className="size-3" />
+        Not submitted
+      </Badge>
+    );
+  if (status === "verified")
+    return (
+      <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white">
+        <CheckCircle2 className="size-3" />
+        Verified
+      </Badge>
+    );
+  if (status === "rejected")
+    return (
+      <Badge variant="destructive" className="gap-1">
+        <X className="size-3" />
+        Rejected
+      </Badge>
+    );
+  if (status === "in_review")
+    return (
+      <Badge className="gap-1 bg-blue-500 hover:bg-blue-500 text-white">
+        <Hourglass className="size-3" />
+        In review
+      </Badge>
+    );
+  return (
+    <Badge className="gap-1 bg-amber-500 hover:bg-amber-500 text-white">
+      <Clock className="size-3" />
+      Pending review
+    </Badge>
+  );
 }
 
 function statusBlurb(status: Status | null | undefined) {
   switch (status) {
-    case "verified": return "Your toll-free number is approved and ready to send to US carriers.";
-    case "rejected": return "The carrier rejected this submission. Fix the issue below and click Resubmit.";
-    case "in_review": return "The carrier is actively reviewing your submission. This usually takes 1–3 weeks.";
-    case "submitted": return "Submitted to the carrier. They will move it into review shortly.";
-    default: return "Fill in the wizard below to request approval for a US toll-free number.";
+    case "verified":
+      return "Your toll-free number is approved and ready to send to US carriers.";
+    case "rejected":
+      return "The carrier rejected this submission. Fix the issue below and click Resubmit.";
+    case "in_review":
+      return "The carrier is actively reviewing your submission. This usually takes 1–3 weeks.";
+    case "submitted":
+      return "Submitted to the carrier. They will move it into review shortly.";
+    default:
+      return "Fill in the wizard below to request approval for a US toll-free number.";
   }
 }
 
@@ -156,24 +211,37 @@ function TollfreeVerificationPage() {
   // A verified US/CA local (10DLC) number assigned by an admin also clears sending.
   const isVerified = rawStatus === "verified" || !!altSender;
   const trustsCarrier = rawStatus === "submitted" || rawStatus === "in_review";
-  const status: Status | null =
-    isVerified ? "verified" : rawStatus === "pending" || (trustsCarrier && !asset?.telnyx_verification_id) ? null : rawStatus;
+  const status: Status | null = isVerified
+    ? "verified"
+    : rawStatus === "pending" || (trustsCarrier && !asset?.telnyx_verification_id)
+      ? null
+      : rawStatus;
 
   const payload = (asset?.verification_payload as any) ?? null;
   const submissionStarted = !!asset?.telnyx_verification_id || isVerified;
-  const hasReservedNumber = !isVerified && !!asset && !asset.telnyx_verification_id && (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
+  const hasReservedNumber =
+    !isVerified &&
+    !!asset &&
+    !asset.telnyx_verification_id &&
+    (!!asset.phone_number || !!asset?.telnyx_phone_number_id);
   const localSubmissionFailure = status === "rejected" && !asset?.telnyx_verification_id;
   const carrierFeedback = asset?.friendly_rejection_reason || asset?.rejection_reason;
   const needsCarrierUpdate = !!carrierFeedback && status !== "verified";
-  const isLocked = status === "verified" || ((status === "submitted" || status === "in_review") && !needsCarrierUpdate);
+  const isLocked =
+    status === "verified" ||
+    ((status === "submitted" || status === "in_review") && !needsCarrierUpdate);
 
   const accountAutofill = useQuery({
     queryKey: ["tollfree-autofill-account"],
     queryFn: async () =>
-      (await supabase
-        .from("accounts")
-        .select("legal_business_name,business_address,website_url,contact_email,full_name,phone,use_case_description,sample_message,privacy_policy_url,terms_url,monthly_volume_estimate")
-        .maybeSingle()).data,
+      (
+        await supabase
+          .from("accounts")
+          .select(
+            "legal_business_name,business_address,website_url,contact_email,full_name,phone,use_case_description,sample_message,privacy_policy_url,terms_url,monthly_volume_estimate",
+          )
+          .maybeSingle()
+      ).data,
   });
   const initialForm = useMemo(
     () => ({ ...accountAutofillToForm(accountAutofill.data), ...normalizePayload(payload) }),
@@ -184,9 +252,12 @@ function TollfreeVerificationPage() {
     mutationFn: (input: any) => submit({ data: input }),
     onSuccess: (res) => {
       toast.success(
-        res.status === "verified" ? "Approved by the carrier." :
-        res.status === "rejected" ? (res.friendlyRejectionReason ?? "Submission failed. You can retry now without buying another number.") :
-        "Submitted. The carrier will review shortly.",
+        res.status === "verified"
+          ? "Approved by the carrier."
+          : res.status === "rejected"
+            ? (res.friendlyRejectionReason ??
+              "Submission failed. You can retry now without buying another number.")
+            : "Submitted. The carrier will review shortly.",
       );
       qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
       qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
@@ -218,12 +289,15 @@ function TollfreeVerificationPage() {
     if (!asset?.id) return;
     const channel = supabase
       .channel(`sender-asset-${asset.id}`)
-      .on("postgres_changes",
+      .on(
+        "postgres_changes",
         { event: "UPDATE", schema: "public", table: "sender_assets", filter: `id=eq.${asset.id}` },
         () => qc.invalidateQueries({ queryKey: ["tollfree-verification"] }),
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [asset?.id, qc]);
 
   const feePaid = !!feeQuery.data?.paid;
@@ -257,8 +331,17 @@ function TollfreeVerificationPage() {
           <div className="flex items-center gap-2">
             <StatusBadge status={status} needsUpdate={needsCarrierUpdate} />
             {(asset?.telnyx_verification_id || asset?.telnyx_phone_number_id) && (
-              <Button variant="outline" size="sm" onClick={() => refreshMut.mutate()} disabled={refreshMut.isPending}>
-                {refreshMut.isPending ? <Loader2 className="size-4 mr-1 animate-spin" /> : <RefreshCw className="size-4 mr-1" />}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshMut.mutate()}
+                disabled={refreshMut.isPending}
+              >
+                {refreshMut.isPending ? (
+                  <Loader2 className="size-4 mr-1 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4 mr-1" />
+                )}
                 Refresh
               </Button>
             )}
@@ -278,24 +361,31 @@ function TollfreeVerificationPage() {
               <div>
                 <div className="text-muted-foreground text-xs">Last checked</div>
                 <div className="text-xs">
-                  {asset.last_synced_at ? new Date(asset.last_synced_at as string).toLocaleString() : "—"}
+                  {asset.last_synced_at
+                    ? new Date(asset.last_synced_at as string).toLocaleString()
+                    : "—"}
                 </div>
               </div>
             </div>
             {carrierFeedback && status !== "verified" && (
-              <div className={`rounded-md border p-3 text-sm ${status === "rejected" ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
-                <div className={`flex items-center gap-2 font-medium ${status === "rejected" ? "text-destructive" : "text-amber-600"}`}>
+              <div
+                className={`rounded-md border p-3 text-sm ${status === "rejected" ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}
+              >
+                <div
+                  className={`flex items-center gap-2 font-medium ${status === "rejected" ? "text-destructive" : "text-amber-600"}`}
+                >
                   <AlertCircle className="size-4" />
                   {status === "rejected"
-                    ? (localSubmissionFailure ? "Submission failed — retry available" : "Why it was rejected")
+                    ? localSubmissionFailure
+                      ? "Submission failed — retry available"
+                      : "Why it was rejected"
                     : "Carrier is requesting a change"}
                 </div>
-                <div className="mt-1 text-foreground">
-                  {carrierFeedback}
-                </div>
+                <div className="mt-1 text-foreground">{carrierFeedback}</div>
                 {status !== "rejected" && (
                   <div className="mt-2 text-xs text-muted-foreground">
-                    Update the affected fields below and click <strong>Resubmit</strong>. The carrier picks up the change automatically.
+                    Update the affected fields below and click <strong>Resubmit</strong>. The
+                    carrier picks up the change automatically.
                   </div>
                 )}
               </div>
@@ -312,7 +402,8 @@ function TollfreeVerificationPage() {
 
       {isLocked && !isVerified && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Your submission is locked while the carrier reviews it. Only the carrier can approve or reject this — we cannot approve it manually. This page updates automatically.
+          Your submission is locked while the carrier reviews it. Only the carrier can approve or
+          reject this — we cannot approve it manually. This page updates automatically.
         </div>
       )}
 
@@ -328,9 +419,13 @@ function TollfreeVerificationPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <p>
-              {(asset?.phone_number || altSender?.phone_number)
-                ? <span className="font-mono text-foreground">{asset?.phone_number || altSender?.phone_number}</span>
-                : "Your number"}{" "}
+              {asset?.phone_number || altSender?.phone_number ? (
+                <span className="font-mono text-foreground">
+                  {asset?.phone_number || altSender?.phone_number}
+                </span>
+              ) : (
+                "Your number"
+              )}{" "}
               is approved for US, Canada and Puerto Rico delivery. There is nothing else to submit —
               no new verification request is needed.
             </p>
@@ -341,10 +436,7 @@ function TollfreeVerificationPage() {
           </CardContent>
         </Card>
       ) : !feePaid && !submissionStarted ? (
-        <PayFeeGate
-          fee={feeQuery.data?.fee ?? 5}
-          balance={feeQuery.data?.balance ?? 0}
-        />
+        <PayFeeGate fee={feeQuery.data?.fee ?? 5} balance={feeQuery.data?.balance ?? 0} />
       ) : (
         <TollfreeWizard
           key={submissionStarted ? "locked" : "editable"}
@@ -360,16 +452,19 @@ function TollfreeVerificationPage() {
             needsCarrierUpdate
               ? "Resubmit requested changes"
               : status === "rejected"
-              ? "Resubmit for verification"
-              : hasReservedNumber
-                ? "Continue verification with reserved number"
-                : "Submit registration"
+                ? "Resubmit for verification"
+                : hasReservedNumber
+                  ? "Continue verification with reserved number"
+                  : "Submit registration"
           }
-          onSubmit={async (form) => { await submitMut.mutateAsync({ ...form, agreeToTos: true }); }}
+          onSubmit={async (form) => {
+            await submitMut.mutateAsync({ ...form, agreeToTos: true });
+          }}
           helperBanner={
             !isLocked ? (
               <div className="rounded-md border bg-emerald-500/10 border-emerald-500/40 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
-                <strong>${feeQuery.data?.fee ?? 5} setup fee paid.</strong> You can submit and resubmit this verification as many times as needed at no extra cost.
+                <strong>${feeQuery.data?.fee ?? 5} setup fee paid.</strong> You can submit and
+                resubmit this verification as many times as needed at no extra cost.
               </div>
             ) : null
           }
@@ -387,10 +482,14 @@ function TollfreeVerificationPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <p>
-                US toll-free orders are blocked on accounts that use a freemail address or have not reached the required account level. That is why direct carrier orders failed.
+                US toll-free orders are blocked on accounts that use a freemail address or have not
+                reached the required account level. That is why direct carrier orders failed.
               </p>
               <p>
-                Your tenants should not try to buy numbers directly with a carrier. In Xellvio they submit this wizard and the platform handles number assignment plus carrier verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once, before registration starts.
+                Your tenants should not try to buy numbers directly with a carrier. In Xellvio they
+                submit this wizard and the platform handles number assignment plus carrier
+                verification. The ${feeQuery.data?.fee ?? 5} setup fee is charged from credits once,
+                before registration starts.
               </p>
             </CardContent>
           </Card>
@@ -436,7 +535,9 @@ function MarketplaceBuyCard() {
           qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
           qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
         } else if (r?.refund_pending) {
-          toast.error("Payment received but no number was available. Our team will refund you shortly.");
+          toast.error(
+            "Payment received but no number was available. Our team will refund you shortly.",
+          );
         }
       } catch (e: any) {
         toast.error(e?.message ?? "Could not verify payment");
@@ -447,17 +548,21 @@ function MarketplaceBuyCard() {
         window.history.replaceState({}, "", url.toString());
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const payCard = useMutation({
     mutationFn: () => initCardFn(),
-    onSuccess: (r: any) => { window.location.href = r.authorization_url; },
+    onSuccess: (r: any) => {
+      window.location.href = r.authorization_url;
+    },
     onError: (e: any) => toast.error(e.message),
   });
   const payCrypto = useMutation({
     mutationFn: () => initCryptoFn({ data: {} }),
-    onSuccess: (r: any) => { window.location.href = r.invoice_url; },
+    onSuccess: (r: any) => {
+      window.location.href = r.invoice_url;
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -476,8 +581,8 @@ function MarketplaceBuyCard() {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Get an already-verified toll-free number and start sending immediately. No forms,
-          no carrier review, no waiting. Pay by card or crypto.
+          Get an already-verified toll-free number and start sending immediately. No forms, no
+          carrier review, no waiting. Pay by card or crypto.
         </p>
         <div className="flex flex-wrap items-center gap-4">
           <div className="text-sm">
@@ -489,24 +594,32 @@ function MarketplaceBuyCard() {
             <div className="font-semibold">{offer.available_count}</div>
           </div>
           <div className="ml-auto flex flex-wrap gap-2">
-            <Button variant="outline" disabled={!available || busy} onClick={() => payCard.mutate()}>
+            <Button
+              variant="outline"
+              disabled={!available || busy}
+              onClick={() => payCard.mutate()}
+            >
               {payCard.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
               Pay with card
             </Button>
-            <Button variant="outline" disabled={!available || busy} onClick={() => payCrypto.mutate()}>
+            <Button
+              variant="outline"
+              disabled={!available || busy}
+              onClick={() => payCrypto.mutate()}
+            >
               {payCrypto.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
               Pay with crypto
             </Button>
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          Card and crypto payments are a separate one-time fee and are <strong>not</strong> added to your credit balance.
+          Card and crypto payments are a separate one-time fee and are <strong>not</strong> added to
+          your credit balance.
         </p>
       </CardContent>
     </Card>
   );
 }
-
 
 function PayFeeGate({ fee, balance }: { fee: number; balance: number }) {
   const qc = useQueryClient();
@@ -532,7 +645,9 @@ function PayFeeGate({ fee, balance }: { fee: number; balance: number }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Toll-free verification requires a one-time <strong>${fee}</strong> setup fee. It covers the toll-free number rental and carrier verification. Once paid you can submit — and resubmit as many times as needed if the carrier asks for changes — at no extra cost.
+          Toll-free verification requires a one-time <strong>${fee}</strong> setup fee. It covers
+          the toll-free number rental and carrier verification. Once paid you can submit — and
+          resubmit as many times as needed if the carrier asks for changes — at no extra cost.
         </p>
         <div className="flex flex-wrap items-center gap-4 rounded-md border bg-muted/30 p-3 text-sm">
           <div>
@@ -541,7 +656,9 @@ function PayFeeGate({ fee, balance }: { fee: number; balance: number }) {
           </div>
           <div>
             <div className="text-xs text-muted-foreground">Your credit balance</div>
-            <div className={`font-semibold ${insufficient ? "text-destructive" : ""}`}>${balance.toFixed(2)}</div>
+            <div className={`font-semibold ${insufficient ? "text-destructive" : ""}`}>
+              ${balance.toFixed(2)}
+            </div>
           </div>
           <div className="ml-auto flex gap-2">
             {insufficient && (
@@ -557,7 +674,8 @@ function PayFeeGate({ fee, balance }: { fee: number; balance: number }) {
         </div>
         {insufficient && (
           <p className="text-xs text-muted-foreground">
-            Your balance is below ${fee}. Top up your credit balance, then come back to this page to pay and start the wizard.
+            Your balance is below ${fee}. Top up your credit balance, then come back to this page to
+            pay and start the wizard.
           </p>
         )}
       </CardContent>

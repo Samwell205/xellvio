@@ -3,22 +3,21 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { listCategories } from "@/lib/marketplace/catalog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/marketplace/categories")({
-  head: () => ({
-    meta: [
-      { title: "App categories — Xellvio App Marketplace" },
-      {
-        name: "description",
-        content:
-          "Explore Xellvio integration categories: CRM, ecommerce, payments, email, SMS, analytics, booking, support, AI and automation.",
-      },
-      { property: "og:title", content: "App categories — Xellvio App Marketplace" },
-      { property: "og:description", content: "Every category of integration available in the Xellvio ecosystem." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/marketplace/categories",
+      title: "Marketplace App Categories",
+      description:
+        "Explore Xellvio marketplace categories — ecommerce, CRM, forms, analytics, support and automation — to find the integration you need.",
+      breadcrumbs: [
+        { name: "Home", path: "/" },
+        { name: "Marketplace", path: "/marketplace" },
+        { name: "Categories", path: "/marketplace/categories" },
+      ],
+    }),
   component: CategoriesPage,
 });
 
@@ -29,11 +28,15 @@ function CategoriesPage() {
     <main className="mx-auto w-full max-w-7xl px-4 py-12 md:px-6">
       <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Explore by category</h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Every integration is grouped by the job it does, so you can find the right app for your workflow in seconds.
+        Every integration is grouped by the job it does, so you can find the right app for your
+        workflow in seconds.
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cats.isLoading && Array.from({ length: 9 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-2xl" />)}
+        {cats.isLoading &&
+          Array.from({ length: 9 }).map((_, i) => (
+            <Skeleton key={i} className="h-36 rounded-2xl" />
+          ))}
         {cats.data?.map((c) => (
           <Link
             key={c.id}

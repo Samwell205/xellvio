@@ -17,15 +17,32 @@ import { toast } from "sonner";
 import { VisualBuilder, type BuilderDoc } from "@/components/builder/VisualBuilder";
 import { docFromRow, legacyFieldsFromDoc, useBuilderDoc } from "@/components/builder/useBuilderDoc";
 import { blankDesign } from "@/lib/builder/templates";
-import { Copy, CopyPlus, Download, ExternalLink, LayoutGrid, LayoutTemplate, Sparkles, Trash2 } from "lucide-react";
+import {
+  Copy,
+  CopyPlus,
+  Download,
+  ExternalLink,
+  LayoutGrid,
+  LayoutTemplate,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/landing-pages")({
   head: () => ({
     meta: [
       { title: "Landing pages — Xellvio" },
-      { name: "description", content: "Design hosted landing pages with templates and an AI design assistant that collect phone numbers into your SMS lists." },
+      {
+        name: "description",
+        content:
+          "Design hosted landing pages with templates and an AI design assistant that collect phone numbers into your SMS lists.",
+      },
       { property: "og:title", content: "Landing pages — Xellvio" },
-      { property: "og:description", content: "Design hosted landing pages with templates and an AI design assistant that collect phone numbers into your SMS lists." },
+      {
+        property: "og:description",
+        content:
+          "Design hosted landing pages with templates and an AI design assistant that collect phone numbers into your SMS lists.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -154,13 +171,22 @@ function LandingPagesPage() {
         <div className="min-w-0 space-y-1">
           <h1 className="text-3xl font-semibold tracking-tight">Landing pages</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Build a full page visually, start from a template, or describe it and let the design assistant build it for you.
+            Build a full page visually, start from a template, or describe it and let the design
+            assistant build it for you.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => startNew("scratch")}>Start from scratch</Button>
-          <Button variant="outline" onClick={() => startNew("templates")}><LayoutGrid className="mr-2 size-4" />Templates</Button>
-          <Button onClick={() => startNew("ai")}><Sparkles className="mr-2 size-4" />Design with AI</Button>
+          <Button variant="outline" onClick={() => startNew("scratch")}>
+            Start from scratch
+          </Button>
+          <Button variant="outline" onClick={() => startNew("templates")}>
+            <LayoutGrid className="mr-2 size-4" />
+            Templates
+          </Button>
+          <Button onClick={() => startNew("ai")}>
+            <Sparkles className="mr-2 size-4" />
+            Design with AI
+          </Button>
         </div>
       </div>
 
@@ -170,12 +196,15 @@ function LandingPagesPage() {
           <div className="space-y-1">
             <h2 className="text-xl font-semibold">Launch a page in minutes</h2>
             <p className="mx-auto max-w-md text-sm text-muted-foreground">
-              Every section, word, colour and font stays editable — and every signup lands straight in your list.
+              Every section, word, colour and font stays editable — and every signup lands straight
+              in your list.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-2">
             <Button onClick={() => startNew("templates")}>Browse templates</Button>
-            <Button variant="outline" onClick={() => startNew("ai")}>Describe it to AI</Button>
+            <Button variant="outline" onClick={() => startNew("ai")}>
+              Describe it to AI
+            </Button>
           </div>
         </Card>
       ) : (
@@ -190,7 +219,9 @@ function LandingPagesPage() {
                     <h3 className="truncate font-semibold">{p.name}</h3>
                     <p className="truncate text-xs text-muted-foreground">{p.headline}</p>
                   </div>
-                  <Badge variant={p.published ? "default" : "outline"}>{p.published ? "Live" : "Draft"}</Badge>
+                  <Badge variant={p.published ? "default" : "outline"}>
+                    {p.published ? "Live" : "Draft"}
+                  </Badge>
                 </div>
                 <div className="flex gap-4 text-xs text-muted-foreground">
                   <span>{views} views</span>
@@ -198,20 +229,46 @@ function LandingPagesPage() {
                   <span>{views > 0 ? ((subs / views) * 100).toFixed(1) : "0.0"}% conversion</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(urlFor(p.slug)); toast.success("Link copied"); }}>
-                    <Copy className="mr-1 size-3" />Copy link
-                  </Button>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer"><ExternalLink className="mr-1 size-3" />View</a>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => builder.open(docFromRow(p, blankDesign("page")))}>Edit</Button>
-                  <Button variant="outline" size="sm" onClick={() => dup.mutate(p.id)}><CopyPlus className="mr-1 size-3" />Duplicate</Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={async () => downloadCsv((await exportFn({ data: { sourceId: p.id } })) as any[], `${p.slug}-signups.csv`)}
+                    onClick={() => {
+                      navigator.clipboard.writeText(urlFor(p.slug));
+                      toast.success("Link copied");
+                    }}
                   >
-                    <Download className="mr-1 size-3" />Leads
+                    <Copy className="mr-1 size-3" />
+                    Copy link
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-1 size-3" />
+                      View
+                    </a>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => builder.open(docFromRow(p, blankDesign("page")))}
+                  >
+                    Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => dup.mutate(p.id)}>
+                    <CopyPlus className="mr-1 size-3" />
+                    Duplicate
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () =>
+                      downloadCsv(
+                        (await exportFn({ data: { sourceId: p.id } })) as any[],
+                        `${p.slug}-signups.csv`,
+                      )
+                    }
+                  >
+                    <Download className="mr-1 size-3" />
+                    Leads
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => remove.mutate(p.id)}>
                     <Trash2 className="size-4 text-destructive" />

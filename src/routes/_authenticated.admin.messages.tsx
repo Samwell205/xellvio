@@ -83,7 +83,9 @@ function MessagesPage() {
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
                   <div className="font-semibold">{m.name}</div>
-                  <a className="text-sm text-primary" href={`mailto:${m.email}`}>{m.email}</a>
+                  <a className="text-sm text-primary" href={`mailto:${m.email}`}>
+                    {m.email}
+                  </a>
                   <div className="text-xs text-muted-foreground mt-1">
                     {new Date(m.created_at).toLocaleString()}
                   </div>

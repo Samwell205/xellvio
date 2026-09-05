@@ -30,7 +30,11 @@ function NewSegmentPage() {
   const countryListQ = useQuery({
     queryKey: ["segment-countries"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("country_code").not("country_code", "is", null).limit(1000);
+      const { data } = await supabase
+        .from("profiles")
+        .select("country_code")
+        .not("country_code", "is", null)
+        .limit(1000);
       const set = new Set<string>();
       (data ?? []).forEach((r: any) => r.country_code && set.add(r.country_code));
       return Array.from(set).sort();
@@ -64,31 +68,48 @@ function NewSegmentPage() {
   }
 
   async function save() {
-    if (!name.trim()) { toast.error("Name required"); return; }
+    if (!name.trim()) {
+      toast.error("Name required");
+      return;
+    }
     setSaving(true);
     try {
       const { data: u } = await supabase.auth.getUser();
       const { error } = await supabase.from("segments").insert({
-        account_id: u.user!.id, name: name.trim(), query: query as any,
+        account_id: u.user!.id,
+        name: name.trim(),
+        query: query as any,
       });
       if (error) throw error;
       toast.success("Segment saved");
       navigate({ to: "/app/segments" });
-    } catch (e: any) { toast.error(e.message ?? "Failed"); }
-    finally { setSaving(false); }
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2"><Filter className="size-6" />New segment</h1>
-        <p className="text-sm text-muted-foreground">Define a saved filter. Campaigns target one or more segments.</p>
+        <h1 className="text-2xl font-extrabold flex items-center gap-2">
+          <Filter className="size-6" />
+          New segment
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Define a saved filter. Campaigns target one or more segments.
+        </p>
       </div>
 
       <Card className="p-5 space-y-4">
         <div>
           <Label>Segment name</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. US subscribers" />
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. US subscribers"
+          />
         </div>
 
         <div>
@@ -96,9 +117,12 @@ function NewSegmentPage() {
           <div className="flex flex-wrap gap-3 mt-2">
             {CONSENT_OPTS.map((opt) => (
               <label key={opt} className="flex items-center gap-2 text-sm">
-                <Checkbox checked={consent.includes(opt)} onCheckedChange={(v) => {
-                  setConsent((prev) => v ? [...prev, opt] : prev.filter((x) => x !== opt));
-                }} />
+                <Checkbox
+                  checked={consent.includes(opt)}
+                  onCheckedChange={(v) => {
+                    setConsent((prev) => (v ? [...prev, opt] : prev.filter((x) => x !== opt)));
+                  }}
+                />
                 {opt}
               </label>
             ))}
@@ -108,24 +132,51 @@ function NewSegmentPage() {
         <div>
           <Label>Countries (ISO 2-letter)</Label>
           <div className="flex gap-2 mt-1">
-            <Input value={countryInput} onChange={(e) => setCountryInput(e.target.value)}
-              placeholder="US" maxLength={2}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCountry(); } }} />
-            <Button type="button" variant="outline" onClick={addCountry}>Add</Button>
+            <Input
+              value={countryInput}
+              onChange={(e) => setCountryInput(e.target.value)}
+              placeholder="US"
+              maxLength={2}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addCountry();
+                }
+              }}
+            />
+            <Button type="button" variant="outline" onClick={addCountry}>
+              Add
+            </Button>
           </div>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {countries.map((c) => (
               <Badge key={c} variant="outline" className="gap-1">
                 {c}
-                <button onClick={() => setCountries(countries.filter((x) => x !== c))} className="hover:text-destructive"><X className="size-3" /></button>
+                <button
+                  onClick={() => setCountries(countries.filter((x) => x !== c))}
+                  className="hover:text-destructive"
+                >
+                  <X className="size-3" />
+                </button>
               </Badge>
             ))}
-            {countries.length === 0 && <span className="text-xs text-muted-foreground">No country filter — all countries included.</span>}
+            {countries.length === 0 && (
+              <span className="text-xs text-muted-foreground">
+                No country filter — all countries included.
+              </span>
+            )}
           </div>
           {countryListQ.data && countryListQ.data.length > 0 && (
             <div className="text-xs text-muted-foreground mt-2">
-              Suggestions: {countryListQ.data.slice(0, 8).map((c) => (
-                <button key={c} className="underline mr-2" onClick={() => !countries.includes(c) && setCountries([...countries, c])}>{c}</button>
+              Suggestions:{" "}
+              {countryListQ.data.slice(0, 8).map((c) => (
+                <button
+                  key={c}
+                  className="underline mr-2"
+                  onClick={() => !countries.includes(c) && setCountries([...countries, c])}
+                >
+                  {c}
+                </button>
               ))}
             </div>
           )}
@@ -134,21 +185,35 @@ function NewSegmentPage() {
 
       <Card className="p-5 flex items-center justify-between bg-primary/5 border-primary/30">
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-primary/15 text-primary grid place-items-center"><Users className="size-5" /></div>
+          <div className="size-10 rounded-lg bg-primary/15 text-primary grid place-items-center">
+            <Users className="size-5" />
+          </div>
           <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">Estimated audience</div>
-            <div className="text-2xl font-extrabold">{estimateQ.isFetching ? "…" : (estimateQ.data ?? 0)}</div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+              Estimated audience
+            </div>
+            <div className="text-2xl font-extrabold">
+              {estimateQ.isFetching ? "…" : (estimateQ.data ?? 0)}
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="ghost" onClick={() => history.back()}>Cancel</Button>
-          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save segment"}</Button>
+          <Button variant="ghost" onClick={() => history.back()}>
+            Cancel
+          </Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? "Saving…" : "Save segment"}
+          </Button>
         </div>
       </Card>
 
       <Card className="p-4">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Filter (JSON)</div>
-        <pre className="text-xs bg-muted/40 p-3 rounded-md overflow-x-auto">{JSON.stringify(query, null, 2)}</pre>
+        <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
+          Filter (JSON)
+        </div>
+        <pre className="text-xs bg-muted/40 p-3 rounded-md overflow-x-auto">
+          {JSON.stringify(query, null, 2)}
+        </pre>
       </Card>
     </div>
   );

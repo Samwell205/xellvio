@@ -51,12 +51,15 @@ function AdminUsersPage() {
           <UserCog className="size-6" /> User management
         </h1>
         <p className="text-sm text-muted-foreground">
-          Grant or revoke admin access. Only you (as owner) and other admins you appoint can access the Admin section.
+          Grant or revoke admin access. Only you (as owner) and other admins you appoint can access
+          the Admin section.
         </p>
       </div>
 
       {users.isLoading ? (
-        <div className="flex items-center justify-center h-32"><Loader2 className="size-6 animate-spin" /></div>
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="size-6 animate-spin" />
+        </div>
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
@@ -83,25 +86,33 @@ function AdminUsersPage() {
                           {u.roles.includes("user") && <Badge variant="secondary">user</Badge>}
                         </div>
                       </td>
-                      <td className="p-3 text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
+                      <td className="p-3 text-muted-foreground">
+                        {new Date(u.created_at).toLocaleDateString()}
+                      </td>
                       <td className="p-3 text-right">
                         {u.is_admin ? (
                           <Button
                             size="sm"
                             variant="outline"
                             disabled={isSelf || setRole.isPending}
-                            onClick={() => setRole.mutate({ user_id: u.id, role: "admin", grant: false })}
+                            onClick={() =>
+                              setRole.mutate({ user_id: u.id, role: "admin", grant: false })
+                            }
                             title={isSelf ? "You cannot revoke your own admin role" : ""}
                           >
-                            <ShieldOff className="size-3.5 mr-1.5" />Revoke admin
+                            <ShieldOff className="size-3.5 mr-1.5" />
+                            Revoke admin
                           </Button>
                         ) : (
                           <Button
                             size="sm"
                             disabled={setRole.isPending}
-                            onClick={() => setRole.mutate({ user_id: u.id, role: "admin", grant: true })}
+                            onClick={() =>
+                              setRole.mutate({ user_id: u.id, role: "admin", grant: true })
+                            }
                           >
-                            <Shield className="size-3.5 mr-1.5" />Make admin
+                            <Shield className="size-3.5 mr-1.5" />
+                            Make admin
                           </Button>
                         )}
                       </td>
@@ -109,7 +120,11 @@ function AdminUsersPage() {
                   );
                 })}
                 {(users.data ?? []).length === 0 && (
-                  <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">No users yet.</td></tr>
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                      No users yet.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

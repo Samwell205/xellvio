@@ -11,9 +11,15 @@ export const Route = createFileRoute("/_authenticated/app/automations/$id")({
   head: () => ({
     meta: [
       { title: "Automation builder — Xellvio" },
-      { name: "description", content: "Drag, connect and configure every step of your automation on an infinite canvas." },
+      {
+        name: "description",
+        content: "Drag, connect and configure every step of your automation on an infinite canvas.",
+      },
       { property: "og:title", content: "Automation builder — Xellvio" },
-      { property: "og:description", content: "Drag, connect and configure every step of your automation on an infinite canvas." },
+      {
+        property: "og:description",
+        content: "Drag, connect and configure every step of your automation on an infinite canvas.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -33,8 +39,16 @@ function BuilderPage() {
     queryFn: () => get({ data: { id } }),
     refetchOnWindowFocus: false,
   });
-  const listsQuery = useQuery({ queryKey: ["audience-lists"], queryFn: () => getLists(), staleTime: 60_000 });
-  const sendersQuery = useQuery({ queryKey: ["my-senders"], queryFn: () => getSenders(), staleTime: 60_000 });
+  const listsQuery = useQuery({
+    queryKey: ["audience-lists"],
+    queryFn: () => getLists(),
+    staleTime: 60_000,
+  });
+  const sendersQuery = useQuery({
+    queryKey: ["my-senders"],
+    queryFn: () => getSenders(),
+    staleTime: 60_000,
+  });
   const contactsQuery = useQuery({
     queryKey: ["audience-profiles", "builder"],
     queryFn: () => getProfiles({ data: {} }),
@@ -59,15 +73,31 @@ function BuilderPage() {
     );
   }
 
-  const lists = ((listsQuery.data ?? []) as { id: string; name: string }[]).map((l) => ({ id: l.id, name: l.name }));
-  const senders = ((sendersQuery.data ?? []) as { phone_number: string | null; country_code: string }[])
+  const lists = ((listsQuery.data ?? []) as { id: string; name: string }[]).map((l) => ({
+    id: l.id,
+    name: l.name,
+  }));
+  const senders = (
+    (sendersQuery.data ?? []) as { phone_number: string | null; country_code: string }[]
+  )
     .filter((s) => !!s.phone_number)
-    .map((s) => ({ value: s.phone_number as string, label: `${s.phone_number} (${s.country_code})` }));
+    .map((s) => ({
+      value: s.phone_number as string,
+      label: `${s.phone_number} (${s.country_code})`,
+    }));
   const contacts = ((contactsQuery.data ?? []) as any[]).slice(0, 100).map((p) => ({
     id: String(p.id),
     phone: String(p.phone_e164 ?? ""),
-    label: [p.first_name, p.last_name].filter(Boolean).join(" ") || String(p.phone_e164 ?? "Contact"),
+    label:
+      [p.first_name, p.last_name].filter(Boolean).join(" ") || String(p.phone_e164 ?? "Contact"),
   }));
 
-  return <AutomationBuilder automation={automationQuery.data} lists={lists} senders={senders} contacts={contacts} />;
+  return (
+    <AutomationBuilder
+      automation={automationQuery.data}
+      lists={lists}
+      senders={senders}
+      contacts={contacts}
+    />
+  );
 }

@@ -12,16 +12,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/contact")({
-  head: () => ({
-    meta: [
-      { title: "Contact Xellvio | Sales & Support" },
-      { name: "description", content: "Reach the Xellvio team for sales, technical support, billing, or sender ID approvals." },
-      { property: "og:title", content: "Contact Support — Xellvio" },
-      { property: "og:description", content: "Get in touch with our team for help with SMS, contacts, billing, or your account." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+      path: "/contact",
+      title: "Contact Xellvio Sales and Support",
+      description:
+        "Contact the Xellvio team about sales, technical support, billing, sender ID approvals or compliance questions.",
+    }),
   component: ContactPage,
 });
 
@@ -70,12 +70,15 @@ function ContactPage() {
       <main className="flex-1">
         <section className="hero-gradient border-b">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-24">
-            <Badge variant="outline" className="bg-background/70"><MessageSquare className="mr-1 size-3" /> Contact</Badge>
+            <Badge variant="outline" className="bg-background/70">
+              <MessageSquare className="mr-1 size-3" /> Contact
+            </Badge>
             <h1 className="mt-5 max-w-3xl text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.05]">
               We're here to help you send better SMS
             </h1>
             <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
-              Questions about pricing, sender approvals, deliverability, or your account? Send us a message and a real human will get back to you.
+              Questions about pricing, sender approvals, deliverability, or your account? Send us a
+              message and a real human will get back to you.
             </p>
           </div>
         </section>
@@ -83,26 +86,54 @@ function ContactPage() {
         <section className="py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 grid gap-8 lg:grid-cols-[1fr_1.2fr]">
             <div className="space-y-4">
-              <InfoCard icon={Mail} title="Email" value={SUPPORT_EMAIL} href={`mailto:${SUPPORT_EMAIL}`} hint="We reply within one business day." />
-              <InfoCard icon={MapPin} title="Office" value="Global remote team" hint="Serving customers in 180+ countries." />
+              <InfoCard
+                icon={Mail}
+                title="Email"
+                value={SUPPORT_EMAIL}
+                href={`mailto:${SUPPORT_EMAIL}`}
+                hint="We reply within one business day."
+              />
+              <InfoCard
+                icon={MapPin}
+                title="Office"
+                value="Global remote team"
+                hint="Serving customers in 180+ countries."
+              />
               <Card className="p-6 bg-secondary text-secondary-foreground">
                 <h3 className="text-base font-semibold">Need an instant answer?</h3>
                 <p className="mt-2 text-sm opacity-80">
-                  Click the chat bubble in the bottom-right corner to talk to our AI assistant — it can walk you through signup, contacts, sender verification, and sending your first SMS.
+                  Click the chat bubble in the bottom-right corner to talk to our AI assistant — it
+                  can walk you through signup, contacts, sender verification, and sending your first
+                  SMS.
                 </p>
               </Card>
             </div>
 
             <Card className="p-6 md:p-8">
               <h2 className="text-xl font-semibold">Send us a message</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Tell us a bit about what you need and we'll route you to the right team.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Tell us a bit about what you need and we'll route you to the right team.
+              </p>
               <form onSubmit={submit} className="mt-6 grid gap-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Your name" id="name">
-                    <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Doe" autoComplete="name" />
+                    <Input
+                      id="name"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="Jane Doe"
+                      autoComplete="name"
+                    />
                   </Field>
                   <Field label="Email" id="email">
-                    <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@company.com" autoComplete="email" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      placeholder="jane@company.com"
+                      autoComplete="email"
+                    />
                   </Field>
                 </div>
                 <Field label="Topic" id="topic">
@@ -121,12 +152,24 @@ function ContactPage() {
                   </select>
                 </Field>
                 <Field label="Message" id="message">
-                  <Textarea id="message" rows={6} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="How can we help?" />
+                  <Textarea
+                    id="message"
+                    rows={6}
+                    value={form.message}
+                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    placeholder="How can we help?"
+                  />
                 </Field>
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                  <p className="text-xs text-muted-foreground">By contacting us you agree to our privacy policy.</p>
+                  <p className="text-xs text-muted-foreground">
+                    By contacting us you agree to our privacy policy.
+                  </p>
                   <Button type="submit" disabled={sending}>
-                    {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                    {sending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
                     Send message
                   </Button>
                 </div>
@@ -149,11 +192,25 @@ function Field({ label, id, children }: { label: string; id: string; children: R
   );
 }
 
-function InfoCard({ icon: Icon, title, value, href, hint }: { icon: typeof Mail; title: string; value: string; href?: string; hint?: string }) {
+function InfoCard({
+  icon: Icon,
+  title,
+  value,
+  href,
+  hint,
+}: {
+  icon: typeof Mail;
+  title: string;
+  value: string;
+  href?: string;
+  hint?: string;
+}) {
   const content = (
     <Card className="p-5 transition hover:border-primary/40">
       <div className="flex items-start gap-3">
-        <div className="size-10 rounded-lg bg-primary/10 text-primary grid place-items-center"><Icon className="size-5" /></div>
+        <div className="size-10 rounded-lg bg-primary/10 text-primary grid place-items-center">
+          <Icon className="size-5" />
+        </div>
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">{title}</div>
           <div className="text-sm font-semibold">{value}</div>

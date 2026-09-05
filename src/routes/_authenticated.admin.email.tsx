@@ -12,7 +12,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
   adminListEmailRecipients,
@@ -96,7 +101,9 @@ function AdminEmailPage() {
       }),
     onSuccess: (res) => {
       toast.success(`Queued ${res.queued} email${res.queued === 1 ? "" : "s"}`, {
-        description: res.failed ? `${res.failed} could not be queued.` : "Delivery starts within a minute.",
+        description: res.failed
+          ? `${res.failed} could not be queued.`
+          : "Delivery starts within a minute.",
       });
       qc.invalidateQueries({ queryKey: ["admin-email-log"] });
     },
