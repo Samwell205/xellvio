@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
+import { INDUSTRIES } from "@/components/marketing/industries";
+import { CATEGORY_META, PUBLIC_TEMPLATES, type TemplateCategory } from "@/lib/marketing/template-catalog";
 import { PUBLIC_PAGES, SITE_URL } from "@/lib/seo";
 
 interface SitemapEntry {
