@@ -55,6 +55,14 @@ const items: Entry[] = [
       { title: "Landing pages", url: "/app/landing-pages", icon: LayoutTemplate, perm: "audience" },
     ],
   },
+  {
+    title: "Apps",
+    icon: Blocks,
+    children: [
+      { title: "App Marketplace", url: "/app/apps", icon: Blocks, exact: true },
+      { title: "Developer portal", url: "/app/developer", icon: Code2, ownerOnly: true },
+    ],
+  },
 ];
 
 const advancedItems: Entry[] = [
