@@ -13,22 +13,35 @@ export function MarketingFooter() {
             messaging in 190+ countries.
           </p>
         </div>
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
           <FooterCol title="Channels" items={[
             { label: "SMS marketing", to: "/sms-marketing" },
             { label: "Email marketing", to: "/email-marketing" },
             { label: "Email to SMS", to: "/solutions/email-to-sms" },
+            { label: "Global delivery", to: "/global-delivery" },
           ]} />
           <FooterCol title="Platform" items={[
             { label: "All features", to: "/features" },
-            { label: "Automations", to: "/features" },
-            { label: "Landing pages & forms", to: "/features" },
-            { label: "Reporting", to: "/features" },
+            { label: "Automations", to: "/automations" },
+            { label: "Landing pages", to: "/landing-pages" },
+            { label: "Sign-up forms", to: "/signup-forms" },
+            { label: "Audiences & segments", to: "/audiences" },
+            { label: "Reporting", to: "/reporting" },
+            { label: "Compliance", to: "/compliance" },
             { label: "Pricing", to: "/pricing" },
           ]} />
+          <FooterCol title="Templates" items={[
+            { label: "All templates", to: "/templates" },
+            { label: "Landing page templates", to: "/templates/landing-pages" },
+            { label: "Sign-up form templates", to: "/templates/sign-up-forms" },
+            { label: "Automation templates", to: "/templates/automations" },
+          ]} />
           <FooterCol title="Resources" items={[
+            { label: "Resource hub", to: "/resources" },
             { label: "Documentation", to: "/docs" },
             { label: "Solutions by industry", to: "/solutions" },
+            { label: "SMS for ecommerce", to: "/solutions/ecommerce" },
+            { label: "SMS for retail", to: "/solutions/retail" },
             { label: "Earn as a verifier", to: "/verify" },
           ]} />
           <FooterCol title="Company" items={[
