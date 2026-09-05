@@ -1,6 +1,6 @@
 import {
-  MessageSquare, Mail, Workflow, LayoutTemplate, FormInput, BarChart3, Users,
-  Globe2, ShieldCheck, Code2, GraduationCap, BookOpen, Boxes, Sparkles, Wallet,
+  MessageSquare, Workflow, LayoutTemplate, FormInput, BarChart3, Users,
+  Globe2, ShieldCheck, Sparkles, Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -18,7 +18,6 @@ export const NAV: NavEntry[] = [
         heading: "Channels",
         items: [
           { to: "/sms-marketing", label: "SMS marketing", blurb: "Two-way texting in 190+ countries", icon: MessageSquare },
-          { to: "/email-marketing", label: "Email marketing", blurb: "Campaigns, flows and A/B testing", icon: Mail },
           { to: "/solutions/email-to-sms", label: "Email to SMS", blurb: "Send a text from your inbox", icon: Sparkles },
         ],
       },
@@ -43,33 +42,11 @@ export const NAV: NavEntry[] = [
     footer: { label: "See every feature", to: "/features" },
   },
   {
-    label: "Apps & Integrations",
-    groups: [
-      {
-        heading: "Marketplace",
-        items: [
-          { to: "/marketplace", label: "Browse apps", blurb: "Connect the tools you already use", icon: Boxes },
-          { to: "/marketplace/categories", label: "Categories", blurb: "Commerce, CRM, support and more", icon: LayoutTemplate },
-          { to: "/marketplace/developers", label: "For developers", blurb: "Publish your own app", icon: Code2 },
-        ],
-      },
-      {
-        heading: "Developers",
-        items: [
-          { to: "/docs", label: "API documentation", blurb: "Send your first message in minutes", icon: BookOpen },
-          { to: "/connect", label: "AI assistant connection", blurb: "Let an assistant run your account", icon: Sparkles },
-        ],
-      },
-    ],
-    footer: { label: "Open the marketplace", to: "/marketplace" },
-  },
-  {
     label: "Resources",
     groups: [
       {
         heading: "Learn",
         items: [
-          { to: "/academy", label: "Xellvio Academy", blurb: "Courses on messaging that works", icon: GraduationCap },
           { to: "/solutions", label: "Solutions by industry", blurb: "Retail, services, events and more", icon: LayoutTemplate },
           { to: "/about", label: "About Xellvio", blurb: "Who we are and why we build", icon: Users },
         ],
@@ -82,7 +59,7 @@ export const NAV: NavEntry[] = [
         ],
       },
     ],
-    footer: { label: "Visit the Academy", to: "/academy" },
+    footer: { label: "Talk to us", to: "/contact" },
   },
   { label: "Pricing", to: "/pricing" },
 ];
