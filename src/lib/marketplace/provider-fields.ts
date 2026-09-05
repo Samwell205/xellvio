@@ -234,7 +234,103 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
   },
   intercom: { capabilities: caps(true, true), syncLabel: "Import Intercom contacts", fields: [{ key: "access_token", label: "Access token", secret: true }] },
   notion: { capabilities: caps(true), fields: [{ key: "access_token", label: "Internal integration token", placeholder: "ntn_…", secret: true }] },
+
+  // ── Forms & scheduling ────────────────────────────────────────────────────
+  typeform: {
+    capabilities: caps(true),
+    hint: "Typeform → Settings → Personal tokens → generate a token.",
+    fields: [{ key: "access_token", label: "Personal access token", secret: true }],
+  },
+  jotform: {
+    capabilities: caps(true),
+    hint: "Jotform → Account → API → create a key.",
+    fields: [
+      { key: "api_key", label: "API key", secret: true },
+      { key: "region", label: "Region (eu if your account is EU-hosted)", placeholder: "us", optional: true },
+    ],
+  },
+  calendly: {
+    capabilities: caps(true),
+    hint: "Calendly → Integrations → API & webhooks → personal access token.",
+    fields: [{ key: "access_token", label: "Personal access token", secret: true }],
+  },
+
+  // ── Enterprise CRM ────────────────────────────────────────────────────────
+  salesforce: {
+    capabilities: caps(true),
+    hint: "Paste your Salesforce instance URL and a valid access token.",
+    fields: [
+      { key: "instance_url", label: "Instance URL", placeholder: "https://yourorg.my.salesforce.com", pattern: "url" },
+      { key: "access_token", label: "Access token", secret: true },
+    ],
+  },
+  "zoho-crm": {
+    capabilities: caps(true),
+    fields: [
+      { key: "access_token", label: "OAuth access token", secret: true },
+      { key: "api_domain", label: "API domain", placeholder: "www.zohoapis.com", optional: true, pattern: "domain" },
+    ],
+  },
+
+  // ── Google ────────────────────────────────────────────────────────────────
+  "google-sheets": googleSpec("Google Sheets"),
+  "google-calendar": googleSpec("Google Calendar"),
+  "google-analytics": googleSpec("Google Analytics"),
+  "google-ads": googleSpec("Google Ads"),
+
+  // ── Meta ──────────────────────────────────────────────────────────────────
+  instagram: {
+    capabilities: caps(true),
+    hint: "Use a long-lived Instagram/Facebook access token from your Meta app.",
+    fields: [{ key: "access_token", label: "Access token", secret: true }],
+  },
+  whatsapp: {
+    capabilities: caps(true, false, true),
+    hint: "From Meta → WhatsApp → API setup: copy the phone number ID and an access token.",
+    fields: [
+      { key: "phone_number_id", label: "Phone number ID", placeholder: "123456789012345" },
+      { key: "access_token", label: "Access token", secret: true },
+    ],
+  },
+
+  // ── Website / storefront ─────────────────────────────────────────────────
+  wix: {
+    capabilities: caps(true),
+    hint: "Wix → Settings → API keys → create a key, then copy your site ID.",
+    fields: [
+      { key: "api_key", label: "API key", secret: true },
+      { key: "site_id", label: "Site ID", placeholder: "00000000-0000-0000-0000-000000000000" },
+    ],
+  },
+
+  // ── Tracking snippets ─────────────────────────────────────────────────────
+  "meta-pixel": {
+    capabilities: caps(true),
+    hint: "Copy the Pixel ID from Meta Events Manager.",
+    fields: [{ key: "pixel_id", label: "Pixel ID", placeholder: "123456789012345" }],
+  },
+  hotjar: {
+    capabilities: caps(true),
+    hint: "Copy the Site ID from your Hotjar dashboard.",
+    fields: [{ key: "site_id", label: "Site ID", placeholder: "1234567" }],
+  },
+
+  // ── First-party ───────────────────────────────────────────────────────────
+  "xellvio-website-leads": {
+    capabilities: caps(true),
+    hint: "Nothing to paste — this turns on lead capture from your Xellvio pages and forms.",
+    fields: [],
+  },
 };
+
+function googleSpec(name: string): ProviderSpec {
+  return {
+    capabilities: caps(true),
+    hint: `Paste a valid Google OAuth access token with ${name} access.`,
+    fields: [{ key: "access_token", label: "OAuth access token", secret: true }],
+  };
+}
+
 
 /** Fallback fields for apps without a bespoke connector yet. */
 export function fallbackFields(authType: string, appName: string): ProviderField[] {

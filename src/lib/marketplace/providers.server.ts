@@ -755,7 +755,165 @@ export const RUNTIMES: Record<string, ProviderRuntime> = {
       return { ok: true as const };
     },
   },
+
+  // ── Forms & scheduling ───────────────────────────────────────────────────
+  typeform: {
+    verify: async (creds) => {
+      need(creds, ["access_token"]);
+      const r = await http("https://api.typeform.com/me", {
+        headers: { authorization: `Bearer ${creds["access_token"]}` },
+      });
+      if (r.status >= 400) fail("Typeform", r);
+      return { accountId: r.body?.user_id ?? null, accountLabel: r.body?.alias ?? r.body?.email ?? "Typeform" };
+    },
+  },
+  jotform: {
+    verify: async (creds) => {
+      need(creds, ["api_key"]);
+      const base = (creds["region"] ?? "").trim().toLowerCase() === "eu" ? "eu-api.jotform.com" : "api.jotform.com";
+      const r = await http(`https://${base}/user?apiKey=${encodeURIComponent(creds["api_key"]!)}`);
+      if (r.status >= 400 || !r.body?.content) fail("Jotform", r);
+      return { accountId: r.body.content.username ?? null, accountLabel: r.body.content.username ?? "Jotform" };
+    },
+  },
+  calendly: {
+    verify: async (creds) => {
+      need(creds, ["access_token"]);
+      const r = await http("https://api.calendly.com/users/me", {
+        headers: { authorization: `Bearer ${creds["access_token"]}` },
+      });
+      if (r.status >= 400 || !r.body?.resource) fail("Calendly", r);
+      return { accountId: r.body.resource.uri ?? null, accountLabel: r.body.resource.name ?? "Calendly" };
+    },
+  },
+
+  // ── CRM (enterprise) ─────────────────────────────────────────────────────
+  salesforce: {
+    verify: async (creds) => {
+      need(creds, ["instance_url", "access_token"]);
+      const base = httpsUrl(creds["instance_url"]!);
+      const r = await http(`${base}/services/oauth2/userinfo`, {
+        headers: { authorization: `Bearer ${creds["access_token"]}` },
+      });
+      if (r.status >= 400) fail("Salesforce", r);
+      return {
+        accountId: r.body?.organization_id ?? null,
+        accountLabel: r.body?.name ?? r.body?.preferred_username ?? "Salesforce",
+      };
+    },
+  },
+  "zoho-crm": {
+    verify: async (creds) => {
+      need(creds, ["access_token"]);
+      const domain = cleanHost(creds["api_domain"] ?? "www.zohoapis.com");
+      const r = await http(`https://${domain}/crm/v3/users?type=CurrentUser`, {
+        headers: { authorization: `Zoho-oauthtoken ${creds["access_token"]}` },
+      });
+      if (r.status >= 400 || !r.body?.users?.length) fail("Zoho CRM", r);
+      return { accountId: String(r.body.users[0]?.id ?? ""), accountLabel: r.body.users[0]?.full_name ?? "Zoho CRM" };
+    },
+  },
+
+  // ── Google family (one OAuth access token, checked against Google) ────────
+  "google-sheets": googleRuntime("Google Sheets"),
+  "google-calendar": googleRuntime("Google Calendar"),
+  "google-analytics": googleRuntime("Google Analytics"),
+  "google-ads": googleRuntime("Google Ads"),
+
+  // ── Meta family ──────────────────────────────────────────────────────────
+  instagram: {
+    verify: async (creds) => {
+      need(creds, ["access_token"]);
+      const r = await http(
+        `https://graph.facebook.com/v20.0/me?fields=id,name,username&access_token=${encodeURIComponent(creds["access_token"]!)}`,
+      );
+      if (r.status >= 400 || !r.body?.id) fail("Instagram", r);
+      return { accountId: String(r.body.id), accountLabel: r.body.username ?? r.body.name ?? "Instagram" };
+    },
+  },
+  whatsapp: {
+    verify: async (creds) => {
+      need(creds, ["phone_number_id", "access_token"]);
+      const r = await http(
+        `https://graph.facebook.com/v20.0/${encodeURIComponent(creds["phone_number_id"]!)}?fields=display_phone_number,verified_name`,
+        { headers: { authorization: `Bearer ${creds["access_token"]}` } },
+      );
+      if (r.status >= 400 || !r.body?.display_phone_number) fail("WhatsApp", r);
+      return {
+        accountId: creds["phone_number_id"]!,
+        accountLabel: `${r.body.verified_name ?? "WhatsApp"} (${r.body.display_phone_number})`,
+      };
+    },
+    send: async (creds, _ctx, payload) => {
+      if (!payload.to) throw new Error("A recipient number is required.");
+      const r = await http(`https://graph.facebook.com/v20.0/${encodeURIComponent(creds["phone_number_id"]!)}/messages`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${creds["access_token"]}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: payload.to,
+          type: "text",
+          text: { body: payload.text },
+        }),
+      });
+      if (r.status >= 400) fail("WhatsApp", r);
+      return { ok: true as const };
+    },
+  },
+
+  // ── Website / storefront ─────────────────────────────────────────────────
+  wix: {
+    verify: async (creds) => {
+      need(creds, ["api_key", "site_id"]);
+      const r = await http("https://www.wixapis.com/site-properties/v4/properties", {
+        headers: { authorization: creds["api_key"]!, "wix-site-id": creds["site_id"]! },
+      });
+      if (r.status >= 400) fail("Wix", r);
+      return {
+        accountId: creds["site_id"]!,
+        accountLabel: r.body?.properties?.siteDisplayName ?? "Wix site",
+      };
+    },
+  },
+
+  // ── Tracking snippets: no server API, so the id itself is validated ───────
+  "meta-pixel": trackingRuntime("Meta Pixel", "pixel_id", /^\d{8,20}$/, "A Meta Pixel ID is 8-20 digits."),
+  hotjar: trackingRuntime("Hotjar", "site_id", /^\d{5,12}$/, "A Hotjar Site ID is 5-12 digits."),
+
+  // ── First-party, nothing to authorise ────────────────────────────────────
+  "xellvio-website-leads": {
+    verify: async () => ({ accountLabel: "This workspace", note: "Website lead capture enabled." }),
+  },
 };
+
+/** Google connectors all validate the same OAuth access token against Google. */
+function googleRuntime(name: string): ProviderRuntime {
+  return {
+    verify: async (creds) => {
+      need(creds, ["access_token"]);
+      const r = await http("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { authorization: `Bearer ${creds["access_token"]}` },
+      });
+      if (r.status >= 400 || !r.body?.sub) fail(name, r);
+      return { accountId: String(r.body.sub), accountLabel: r.body.email ?? name };
+    },
+  };
+}
+
+/**
+ * Client-side tracking tools have no server API to call, so the connection is
+ * only accepted when the pasted identifier has the provider's real shape.
+ */
+function trackingRuntime(name: string, key: string, shape: RegExp, message: string): ProviderRuntime {
+  return {
+    verify: async (creds) => {
+      need(creds, [key]);
+      const value = creds[key]!.trim();
+      if (!shape.test(value)) throw new Error(message);
+      return { accountId: value, accountLabel: `${name} ${value}`, note: `${name} ID saved.` };
+    },
+  };
+}
 
 function safeJson(text: string): any {
   try {
