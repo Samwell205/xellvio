@@ -14,6 +14,7 @@ import { connectApp } from "@/lib/marketplace-apps.functions";
 import { listSenderOptions } from "@/lib/marketplace-integrations.functions";
 import { AUTH_TYPE_LABELS } from "@/lib/marketplace/catalog";
 import { fieldError, specFor } from "@/lib/marketplace/provider-fields";
+import { guideFor } from "@/lib/marketplace/setup-guides";
 import { useQuery } from "@tanstack/react-query";
 
 export type ConnectTarget = {
