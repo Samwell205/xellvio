@@ -93,7 +93,7 @@ function Chip({
 
 function TemplatesHub() {
   const search = Route.useSearch();
-  const navigate = useNavigate({ from: "/templates" });
+  const navigate = useNavigate({ from: "/templates/" });
   const set = (patch: Partial<Search>) =>
     navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true, resetScroll: false });
 
