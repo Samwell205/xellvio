@@ -15,7 +15,7 @@ export const Route = createFileRoute("/verify-email")({
     description: "Confirm your email address to finish creating your Xellvio account.",
     robots: "noindex",
     }),
-  validateSearch: (search: Record<string, unknown>): { email: string; status: string } => ({
+  validateSearch: (search: Record<string, unknown>): { email: string; status?: string } => ({
     email: typeof search.email === "string" ? search.email : "",
     status: typeof search.status === "string" ? search.status : "unverified",
   }),
