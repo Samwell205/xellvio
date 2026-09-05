@@ -168,6 +168,19 @@ function RootComponent() {
     trackPageView(path + window.location.search);
     trackView(path);
     const removeCta = installCtaTracking();
+    let stopVitals: (() => void) | undefined;
+    let onStart: (() => void) | undefined;
+    let onEnd: (() => void) | undefined;
+    // Real-user performance measurement (Core Web Vitals + route transition time).
+    import("@/lib/perf").then(({ initWebVitals, markNavigationStart, markNavigationEnd }) => {
+      initWebVitals();
+      onStart = router.subscribe("onBeforeNavigate", ({ toLocation }) =>
+        markNavigationStart(toLocation.pathname),
+      );
+      onEnd = router.subscribe("onResolved", ({ toLocation }) =>
+        markNavigationEnd(toLocation.pathname),
+      );
+    });
     const unsub = router.subscribe("onResolved", ({ toLocation }) => {
       trackPageView(toLocation.href);
       trackView(toLocation.pathname);
@@ -175,6 +188,9 @@ function RootComponent() {
     return () => {
       removeCta();
       unsub();
+      onStart?.();
+      onEnd?.();
+      stopVitals?.();
     };
   }, [router]);
 
