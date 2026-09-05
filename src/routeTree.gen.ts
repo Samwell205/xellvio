@@ -136,6 +136,7 @@ import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
 import { Route as AuthenticatedAppAutomationsIdRouteImport } from './routes/_authenticated.app.automations.$id'
+import { Route as AuthenticatedAppAppsSlugRouteImport } from './routes/_authenticated.app.apps.$slug'
 import { Route as AuthenticatedAdminTelnyxTfnRouteImport } from './routes/_authenticated.admin.telnyx.tfn'
 import { Route as AuthenticatedAdminTelnyxAuditRouteImport } from './routes/_authenticated.admin.telnyx.audit'
 import { Route as AuthenticatedAdminCampaignsIdRouteImport } from './routes/_authenticated.admin.campaigns.$id'
@@ -835,6 +836,12 @@ const AuthenticatedAppAutomationsIdRoute =
     path: '/automations/$id',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAppsSlugRoute =
+  AuthenticatedAppAppsSlugRouteImport.update({
+    id: '/apps/$slug',
+    path: '/apps/$slug',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAdminTelnyxTfnRoute =
   AuthenticatedAdminTelnyxTfnRouteImport.update({
     id: '/tfn',
@@ -971,6 +978,7 @@ export interface FileRoutesByFullPath {
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
+  '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1097,6 +1105,7 @@ export interface FileRoutesByTo {
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
+  '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1232,6 +1241,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/_authenticated/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
+  '/_authenticated/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
   '/_authenticated/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1366,6 +1376,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns/$id'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
+    | '/app/apps/$slug'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -1492,6 +1503,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns/$id'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
+    | '/app/apps/$slug'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -1626,6 +1638,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/campaigns/$id'
     | '/_authenticated/admin/telnyx/audit'
     | '/_authenticated/admin/telnyx/tfn'
+    | '/_authenticated/app/apps/$slug'
     | '/_authenticated/app/automations/$id'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
@@ -2609,6 +2622,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAutomationsIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/apps/$slug': {
+      id: '/_authenticated/app/apps/$slug'
+      path: '/apps/$slug'
+      fullPath: '/app/apps/$slug'
+      preLoaderRoute: typeof AuthenticatedAppAppsSlugRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/admin/telnyx/tfn': {
       id: '/_authenticated/admin/telnyx/tfn'
       path: '/tfn'
@@ -2789,6 +2809,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppTeamRoute: typeof AuthenticatedAppTeamRoute
   AuthenticatedAppTollFreeVerificationRoute: typeof AuthenticatedAppTollFreeVerificationRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppAppsSlugRoute: typeof AuthenticatedAppAppsSlugRoute
   AuthenticatedAppAutomationsIdRoute: typeof AuthenticatedAppAutomationsIdRoute
   AuthenticatedAppAppsIndexRoute: typeof AuthenticatedAppAppsIndexRoute
   AuthenticatedAppAutomationsIndexRoute: typeof AuthenticatedAppAutomationsIndexRoute
@@ -2817,6 +2838,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppTollFreeVerificationRoute:
     AuthenticatedAppTollFreeVerificationRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppAppsSlugRoute: AuthenticatedAppAppsSlugRoute,
   AuthenticatedAppAutomationsIdRoute: AuthenticatedAppAutomationsIdRoute,
   AuthenticatedAppAppsIndexRoute: AuthenticatedAppAppsIndexRoute,
   AuthenticatedAppAutomationsIndexRoute: AuthenticatedAppAutomationsIndexRoute,
