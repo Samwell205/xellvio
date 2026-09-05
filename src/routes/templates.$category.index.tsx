@@ -67,40 +67,13 @@ function CategoryPage() {
         </section>
 
         <section className="mx-auto max-w-[1400px] px-5 sm:px-8 py-16">
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map((t) => (
-              <Link
-                key={t.slug}
-                to="/templates/$category/$slug"
-                params={{ category, slug: t.slug }}
-                className="group flex flex-col rounded-2xl border border-border bg-card p-6 transition-colors hover:border-foreground/30"
-              >
-                <span className="w-fit rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t.tag}
-                </span>
-                <h2 className="mt-4 text-lg font-bold text-foreground">{t.label}</h2>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{t.blurb}</p>
-                <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                  View template <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </Link>
-            ))}
-          </div>
+          <TemplateGrid items={templatesByType(CATEGORY_TO_TYPE[category]!)} />
 
-          <div className="mt-14 flex flex-wrap gap-3">
-            {(Object.keys(CATEGORY_META) as (keyof typeof CATEGORY_META)[])
-              .filter((c) => c !== category)
-              .map((c) => (
-                <Link
-                  key={c}
-                  to={CATEGORY_META[c].path}
-                  className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-muted"
-                >
-                  {CATEGORY_META[c].label}
-                </Link>
-              ))}
+          <div className="mt-14">
+            <CategoryLinks exclude={category} />
           </div>
         </section>
+
 
         <ChannelCta
           title="Make one of these yours"
