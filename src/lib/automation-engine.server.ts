@@ -410,11 +410,11 @@ async function runNode(run: Json, node: GraphNode, contact: Json | null): Promis
       const since = new Date(Date.now() - days * 86_400_000).toISOString();
       const { data } = await db
         .from("events")
-        .select("id, messages!inner(phone_e164, account_id)")
+        .select("id, messages!inner(phone_e164, campaigns!inner(account_id))")
         .eq("type", "clicked")
         .gte("created_at", since)
         .eq("messages.phone_e164", run.phone_e164)
-        .eq("messages.account_id", run.account_id)
+        .eq("messages.campaigns.account_id", run.account_id)
         .limit(1);
       return { kind: "next", handle: data?.length ? "yes" : "no" };
     }
