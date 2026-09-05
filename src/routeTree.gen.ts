@@ -38,6 +38,7 @@ import { Route as VerifierRouteImport } from './routes/_verifier'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VerifyIndexRouteImport } from './routes/verify.index'
+import { Route as MarketplaceIndexRouteImport } from './routes/marketplace.index'
 import { Route as AcademyIndexRouteImport } from './routes/academy.index'
 import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
@@ -278,6 +279,11 @@ const VerifyIndexRoute = VerifyIndexRouteImport.update({
   id: '/verify/',
   path: '/verify/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceIndexRoute = MarketplaceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MarketplaceRoute,
 } as any)
 const AcademyIndexRoute = AcademyIndexRouteImport.update({
   id: '/',
@@ -843,7 +849,7 @@ export interface FileRoutesByFullPath {
   '/dpa': typeof DpaRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/marketplace': typeof MarketplaceRoute
+  '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -872,6 +878,7 @@ export interface FileRoutesByFullPath {
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/academy/': typeof AcademyIndexRoute
+  '/marketplace/': typeof MarketplaceIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -968,7 +975,6 @@ export interface FileRoutesByTo {
   '/dpa': typeof DpaRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/marketplace': typeof MarketplaceRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -995,6 +1001,7 @@ export interface FileRoutesByTo {
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/academy': typeof AcademyIndexRoute
+  '/marketplace': typeof MarketplaceIndexRoute
   '/verify': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1093,7 +1100,7 @@ export interface FileRoutesById {
   '/dpa': typeof DpaRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/marketplace': typeof MarketplaceRoute
+  '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -1122,6 +1129,7 @@ export interface FileRoutesById {
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/academy/': typeof AcademyIndexRoute
+  '/marketplace/': typeof MarketplaceIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1250,6 +1258,7 @@ export interface FileRouteTypes {
     | '/verify/auth'
     | '/verify/reset-password'
     | '/academy/'
+    | '/marketplace/'
     | '/verify/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1346,7 +1355,6 @@ export interface FileRouteTypes {
     | '/dpa'
     | '/features'
     | '/forgot-password'
-    | '/marketplace'
     | '/mcp'
     | '/pricing'
     | '/privacy'
@@ -1373,6 +1381,7 @@ export interface FileRouteTypes {
     | '/verify/auth'
     | '/verify/reset-password'
     | '/academy'
+    | '/marketplace'
     | '/verify'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1499,6 +1508,7 @@ export interface FileRouteTypes {
     | '/verify/auth'
     | '/verify/reset-password'
     | '/academy/'
+    | '/marketplace/'
     | '/verify/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1599,7 +1609,7 @@ export interface RootRouteChildren {
   DpaRoute: typeof DpaRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
-  MarketplaceRoute: typeof MarketplaceRoute
+  MarketplaceRoute: typeof MarketplaceRouteWithChildren
   McpRoute: typeof McpRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -1851,6 +1861,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/verify/'
       preLoaderRoute: typeof VerifyIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/marketplace/': {
+      id: '/marketplace/'
+      path: '/'
+      fullPath: '/marketplace/'
+      preLoaderRoute: typeof MarketplaceIndexRouteImport
+      parentRoute: typeof MarketplaceRoute
     }
     '/academy/': {
       id: '/academy/'
@@ -2774,6 +2791,18 @@ const AcademyRouteChildren: AcademyRouteChildren = {
 const AcademyRouteWithChildren =
   AcademyRoute._addFileChildren(AcademyRouteChildren)
 
+interface MarketplaceRouteChildren {
+  MarketplaceIndexRoute: typeof MarketplaceIndexRoute
+}
+
+const MarketplaceRouteChildren: MarketplaceRouteChildren = {
+  MarketplaceIndexRoute: MarketplaceIndexRoute,
+}
+
+const MarketplaceRouteWithChildren = MarketplaceRoute._addFileChildren(
+  MarketplaceRouteChildren,
+)
+
 interface SolutionsRouteChildren {
   SolutionsEmailToSmsRoute: typeof SolutionsEmailToSmsRoute
 }
@@ -2802,7 +2831,7 @@ const rootRouteChildren: RootRouteChildren = {
   DpaRoute: DpaRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
-  MarketplaceRoute: MarketplaceRoute,
+  MarketplaceRoute: MarketplaceRouteWithChildren,
   McpRoute: McpRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
