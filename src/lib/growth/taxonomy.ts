@@ -40,6 +40,8 @@ export const TRACKED_EVENTS = [
   "onboarding_started",
   "onboarding_step_completed",
   "onboarding_completed",
+  "onboarding_goal_selected",
+  "onboarding_recommendation_clicked",
   // product
   "workspace_created",
   "contact_imported",
