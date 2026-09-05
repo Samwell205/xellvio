@@ -507,6 +507,487 @@ export type Database = {
         }
         Relationships: []
       }
+      app_actions: {
+        Row: {
+          app_id: string
+          canonical_entity: string | null
+          description: string | null
+          id: string
+          input_schema: Json
+          name: string
+          output_schema: Json
+          slug: string
+        }
+        Insert: {
+          app_id: string
+          canonical_entity?: string | null
+          description?: string | null
+          id?: string
+          input_schema?: Json
+          name: string
+          output_schema?: Json
+          slug: string
+        }
+        Update: {
+          app_id?: string
+          canonical_entity?: string | null
+          description?: string | null
+          id?: string
+          input_schema?: Json
+          name?: string
+          output_schema?: Json
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_actions_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      app_connections: {
+        Row: {
+          connection_name: string | null
+          created_at: string
+          credentials_encrypted: string | null
+          external_account_id: string | null
+          external_account_label: string | null
+          id: string
+          installation_id: string
+          last_error: string | null
+          last_synced_at: string | null
+          scopes: string[]
+          settings: Json
+          status: string
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          connection_name?: string | null
+          created_at?: string
+          credentials_encrypted?: string | null
+          external_account_id?: string | null
+          external_account_label?: string | null
+          id?: string
+          installation_id: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          scopes?: string[]
+          settings?: Json
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          connection_name?: string | null
+          created_at?: string
+          credentials_encrypted?: string | null
+          external_account_id?: string | null
+          external_account_label?: string | null
+          id?: string
+          installation_id?: string
+          last_error?: string | null
+          last_synced_at?: string | null
+          scopes?: string[]
+          settings?: Json
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_connections_installation_id_fkey"
+            columns: ["installation_id"]
+            isOneToOne: false
+            referencedRelation: "app_installations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_features: {
+        Row: {
+          app_id: string
+          description: string | null
+          icon: string | null
+          id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          app_id: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          app_id?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_features_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_installations: {
+        Row: {
+          app_id: string
+          created_at: string
+          id: string
+          installed_at: string
+          settings: Json
+          status: string
+          uninstalled_at: string | null
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string
+          id?: string
+          installed_at?: string
+          settings?: Json
+          status?: string
+          uninstalled_at?: string | null
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string
+          id?: string
+          installed_at?: string
+          settings?: Json
+          status?: string
+          uninstalled_at?: string | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_installations_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_oauth_states: {
+        Row: {
+          app_id: string
+          code_verifier: string | null
+          created_at: string
+          redirect_to: string | null
+          state: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          app_id: string
+          code_verifier?: string | null
+          created_at?: string
+          redirect_to?: string | null
+          state: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          app_id?: string
+          code_verifier?: string | null
+          created_at?: string
+          redirect_to?: string | null
+          state?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_oauth_states_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_reviews: {
+        Row: {
+          app_id: string
+          author_name: string | null
+          created_at: string
+          id: string
+          rating: number
+          review: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          app_id: string
+          author_name?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          review?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          app_id?: string
+          author_name?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          review?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_reviews_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_triggers: {
+        Row: {
+          app_id: string
+          canonical_entity: string | null
+          description: string | null
+          id: string
+          name: string
+          payload_schema: Json
+          slug: string
+        }
+        Insert: {
+          app_id: string
+          canonical_entity?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          payload_schema?: Json
+          slug: string
+        }
+        Update: {
+          app_id?: string
+          canonical_entity?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          payload_schema?: Json
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_triggers_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_versions: {
+        Row: {
+          app_id: string
+          changelog: string | null
+          created_at: string
+          id: string
+          status: string
+          version: string
+        }
+        Insert: {
+          app_id: string
+          changelog?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          version: string
+        }
+        Update: {
+          app_id?: string
+          changelog?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_versions_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      apps: {
+        Row: {
+          accent_color: string | null
+          auth_config: Json
+          auth_type: string
+          banner_url: string | null
+          category_id: string | null
+          created_at: string
+          developer_id: string
+          documentation_url: string | null
+          id: string
+          install_count: number
+          is_featured: boolean
+          keywords: string[]
+          logo_url: string | null
+          long_description: string | null
+          name: string
+          pricing_type: string
+          privacy_url: string | null
+          published_at: string | null
+          rating: number
+          review_notes: string | null
+          setup_guide: string | null
+          short_description: string | null
+          slug: string
+          status: string
+          submitted_at: string | null
+          tagline: string | null
+          terms_url: string | null
+          updated_at: string
+          version: string
+          visibility: string
+          website_url: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          auth_config?: Json
+          auth_type?: string
+          banner_url?: string | null
+          category_id?: string | null
+          created_at?: string
+          developer_id: string
+          documentation_url?: string | null
+          id?: string
+          install_count?: number
+          is_featured?: boolean
+          keywords?: string[]
+          logo_url?: string | null
+          long_description?: string | null
+          name: string
+          pricing_type?: string
+          privacy_url?: string | null
+          published_at?: string | null
+          rating?: number
+          review_notes?: string | null
+          setup_guide?: string | null
+          short_description?: string | null
+          slug: string
+          status?: string
+          submitted_at?: string | null
+          tagline?: string | null
+          terms_url?: string | null
+          updated_at?: string
+          version?: string
+          visibility?: string
+          website_url?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          auth_config?: Json
+          auth_type?: string
+          banner_url?: string | null
+          category_id?: string | null
+          created_at?: string
+          developer_id?: string
+          documentation_url?: string | null
+          id?: string
+          install_count?: number
+          is_featured?: boolean
+          keywords?: string[]
+          logo_url?: string | null
+          long_description?: string | null
+          name?: string
+          pricing_type?: string
+          privacy_url?: string | null
+          published_at?: string | null
+          rating?: number
+          review_notes?: string | null
+          setup_guide?: string | null
+          short_description?: string | null
+          slug?: string
+          status?: string
+          submitted_at?: string | null
+          tagline?: string | null
+          terms_url?: string | null
+          updated_at?: string
+          version?: string
+          visibility?: string
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apps_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "app_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apps_developer_id_fkey"
+            columns: ["developer_id"]
+            isOneToOne: false
+            referencedRelation: "developers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_connections: {
         Row: {
           account_id: string
@@ -1357,6 +1838,92 @@ export type Database = {
           },
         ]
       }
+      developer_api_keys: {
+        Row: {
+          created_at: string
+          developer_id: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          developer_id: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          developer_id?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "developer_api_keys_developer_id_fkey"
+            columns: ["developer_id"]
+            isOneToOne: false
+            referencedRelation: "developers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      developers: {
+        Row: {
+          company_name: string
+          created_at: string
+          description: string | null
+          developer_status: string
+          id: string
+          is_first_party: boolean
+          logo_url: string | null
+          support_email: string | null
+          updated_at: string
+          user_id: string | null
+          verification_status: string
+          website: string | null
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          description?: string | null
+          developer_status?: string
+          id?: string
+          is_first_party?: boolean
+          logo_url?: string | null
+          support_email?: string | null
+          updated_at?: string
+          user_id?: string | null
+          verification_status?: string
+          website?: string | null
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          description?: string | null
+          developer_status?: string
+          id?: string
+          is_first_party?: boolean
+          logo_url?: string | null
+          support_email?: string | null
+          updated_at?: string
+          user_id?: string | null
+          verification_status?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       dispatch_locks: {
         Row: {
           acquired_at: string
@@ -1612,6 +2179,63 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integration_logs: {
+        Row: {
+          action: string | null
+          app_id: string | null
+          connection_id: string | null
+          created_at: string
+          error_message: string | null
+          event_type: string | null
+          id: string
+          request_data: Json | null
+          response_data: Json | null
+          status: string
+          workspace_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          app_id?: string | null
+          connection_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string | null
+          id?: string
+          request_data?: Json | null
+          response_data?: Json | null
+          status?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          app_id?: string | null
+          connection_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string | null
+          id?: string
+          request_data?: Json | null
+          response_data?: Json | null
+          status?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_logs_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_logs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "app_connections"
             referencedColumns: ["id"]
           },
         ]
@@ -3751,6 +4375,57 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_events: {
+        Row: {
+          app_id: string | null
+          attempt_count: number
+          connection_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          status: string
+        }
+        Insert: {
+          app_id?: string | null
+          attempt_count?: number
+          connection_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          status?: string
+        }
+        Update: {
+          app_id?: string | null
+          attempt_count?: number
+          connection_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_events_app_id_fkey"
+            columns: ["app_id"]
+            isOneToOne: false
+            referencedRelation: "apps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_events_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "app_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       website_versions: {
         Row: {
           account_id: string
@@ -3914,6 +4589,8 @@ export type Database = {
         }[]
       }
       campaign_report_summary: { Args: { _campaign_id: string }; Returns: Json }
+      can_read_app: { Args: { _app_id: string }; Returns: boolean }
+      can_write_app: { Args: { _app_id: string }; Returns: boolean }
       claim_account_invites: { Args: never; Returns: number }
       claim_and_sell_verified_tfn: {
         Args: {
