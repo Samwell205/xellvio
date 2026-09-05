@@ -239,7 +239,7 @@ export const RUNTIMES: Record<string, ProviderRuntime> = {
     verify: async (creds) => {
       need(creds, ["shop_domain", "access_token"]);
       const host = cleanHost(creds["shop_domain"]!);
-      if (!/^[a-z0-9-]+\.myshopify\.com$/i.test(host) && !host.includes(".")) {
+      if (!/^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(host)) {
         throw new Error("Enter your store domain, for example example.myshopify.com");
       }
       const r = await http(`https://${host}/admin/api/2024-07/shop.json`, {
