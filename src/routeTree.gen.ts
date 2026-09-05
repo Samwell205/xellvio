@@ -59,6 +59,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as MarketplaceAppsIndexRouteImport } from './routes/marketplace.apps.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
+import { Route as MarketplaceAppsSlugRouteImport } from './routes/marketplace.apps.$slug'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.telnyx-status'
 import { Route as ApiPublicTelnyxInboundRouteImport } from './routes/api.public.telnyx-inbound'
@@ -388,6 +389,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const MarketplaceAppsSlugRoute = MarketplaceAppsSlugRouteImport.update({
+  id: '/apps/$slug',
+  path: '/apps/$slug',
+  getParentRoute: () => MarketplaceRoute,
 } as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
@@ -943,6 +949,7 @@ export interface FileRoutesByFullPath {
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
@@ -1066,6 +1073,7 @@ export interface FileRoutesByTo {
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps': typeof MarketplaceAppsIndexRoute
@@ -1198,6 +1206,7 @@ export interface FileRoutesById {
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
@@ -1329,6 +1338,7 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
+    | '/marketplace/apps/$slug'
     | '/admin/'
     | '/app/'
     | '/marketplace/apps/'
@@ -1452,6 +1462,7 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
+    | '/marketplace/apps/$slug'
     | '/admin'
     | '/app'
     | '/marketplace/apps'
@@ -1583,6 +1594,7 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
+    | '/marketplace/apps/$slug'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/marketplace/apps/'
@@ -2032,6 +2044,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/marketplace/apps/$slug': {
+      id: '/marketplace/apps/$slug'
+      path: '/apps/$slug'
+      fullPath: '/marketplace/apps/$slug'
+      preLoaderRoute: typeof MarketplaceAppsSlugRouteImport
+      parentRoute: typeof MarketplaceRoute
     }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
@@ -2832,12 +2851,14 @@ const AcademyRouteWithChildren =
 interface MarketplaceRouteChildren {
   MarketplaceCategoriesRoute: typeof MarketplaceCategoriesRoute
   MarketplaceIndexRoute: typeof MarketplaceIndexRoute
+  MarketplaceAppsSlugRoute: typeof MarketplaceAppsSlugRoute
   MarketplaceAppsIndexRoute: typeof MarketplaceAppsIndexRoute
 }
 
 const MarketplaceRouteChildren: MarketplaceRouteChildren = {
   MarketplaceCategoriesRoute: MarketplaceCategoriesRoute,
   MarketplaceIndexRoute: MarketplaceIndexRoute,
+  MarketplaceAppsSlugRoute: MarketplaceAppsSlugRoute,
   MarketplaceAppsIndexRoute: MarketplaceAppsIndexRoute,
 }
 
