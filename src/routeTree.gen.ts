@@ -21,6 +21,7 @@ import { Route as ProhibitedContentRouteImport } from './routes/prohibited-conte
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as DpaRouteImport } from './routes/dpa'
@@ -37,12 +38,15 @@ import { Route as VerifierRouteImport } from './routes/_verifier'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VerifyIndexRouteImport } from './routes/verify.index'
+import { Route as MarketplaceIndexRouteImport } from './routes/marketplace.index'
 import { Route as AcademyIndexRouteImport } from './routes/academy.index'
 import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as MarketplaceDevelopersRouteImport } from './routes/marketplace.developers'
+import { Route as MarketplaceCategoriesRouteImport } from './routes/marketplace.categories'
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
@@ -53,8 +57,10 @@ import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.ap
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as MarketplaceAppsIndexRouteImport } from './routes/marketplace.apps.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
+import { Route as MarketplaceAppsSlugRouteImport } from './routes/marketplace.apps.$slug'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.telnyx-status'
 import { Route as ApiPublicTelnyxInboundRouteImport } from './routes/api.public.telnyx-inbound'
@@ -82,6 +88,7 @@ import { Route as AuthenticatedAppListsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppLandingPagesRouteImport } from './routes/_authenticated.app.landing-pages'
 import { Route as AuthenticatedAppInboxRouteImport } from './routes/_authenticated.app.inbox'
 import { Route as AuthenticatedAppFlowsRouteImport } from './routes/_authenticated.app.flows'
+import { Route as AuthenticatedAppDeveloperRouteImport } from './routes/_authenticated.app.developer'
 import { Route as AuthenticatedAppCheckoutRouteImport } from './routes/_authenticated.app.checkout'
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authenticated.app.billing'
@@ -101,6 +108,7 @@ import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminEmailRouteImport } from './routes/_authenticated.admin.email'
 import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_authenticated.admin.compliance'
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
+import { Route as AuthenticatedAdminAppsRouteImport } from './routes/_authenticated.admin.apps'
 import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated.admin.accounts'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -109,6 +117,7 @@ import { Route as VerifierVerifyDashboardIndexRouteImport } from './routes/_veri
 import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
 import { Route as AuthenticatedAppAutomationsIndexRouteImport } from './routes/_authenticated.app.automations.index'
+import { Route as AuthenticatedAppAppsIndexRouteImport } from './routes/_authenticated.app.apps.index'
 import { Route as AuthenticatedAdminCampaignsIndexRouteImport } from './routes/_authenticated.admin.campaigns.index'
 import { Route as AuthenticatedAdminAcademyIndexRouteImport } from './routes/_authenticated.admin.academy.index'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
@@ -129,6 +138,7 @@ import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
 import { Route as AuthenticatedAppAutomationsIdRouteImport } from './routes/_authenticated.app.automations.$id'
+import { Route as AuthenticatedAppAppsSlugRouteImport } from './routes/_authenticated.app.apps.$slug'
 import { Route as AuthenticatedAdminTelnyxTfnRouteImport } from './routes/_authenticated.admin.telnyx.tfn'
 import { Route as AuthenticatedAdminTelnyxAuditRouteImport } from './routes/_authenticated.admin.telnyx.audit'
 import { Route as AuthenticatedAdminCampaignsIdRouteImport } from './routes/_authenticated.admin.campaigns.$id'
@@ -193,6 +203,11 @@ const PricingRoute = PricingRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -273,6 +288,11 @@ const VerifyIndexRoute = VerifyIndexRouteImport.update({
   path: '/verify/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarketplaceIndexRoute = MarketplaceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MarketplaceRoute,
+} as any)
 const AcademyIndexRoute = AcademyIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -302,6 +322,16 @@ const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceDevelopersRoute = MarketplaceDevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
+  getParentRoute: () => MarketplaceRoute,
+} as any)
+const MarketplaceCategoriesRoute = MarketplaceCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => MarketplaceRoute,
 } as any)
 const MMessageIdRoute = MMessageIdRouteImport.update({
   id: '/m/$messageId',
@@ -355,6 +385,11 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const MarketplaceAppsIndexRoute = MarketplaceAppsIndexRouteImport.update({
+  id: '/apps/',
+  path: '/apps/',
+  getParentRoute: () => MarketplaceRoute,
+} as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -364,6 +399,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const MarketplaceAppsSlugRoute = MarketplaceAppsSlugRouteImport.update({
+  id: '/apps/$slug',
+  path: '/apps/$slug',
+  getParentRoute: () => MarketplaceRoute,
 } as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
@@ -518,6 +558,12 @@ const AuthenticatedAppFlowsRoute = AuthenticatedAppFlowsRouteImport.update({
   path: '/flows',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
+const AuthenticatedAppDeveloperRoute =
+  AuthenticatedAppDeveloperRouteImport.update({
+    id: '/developer',
+    path: '/developer',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppCheckoutRoute =
   AuthenticatedAppCheckoutRouteImport.update({
     id: '/checkout',
@@ -628,6 +674,11 @@ const AuthenticatedAdminBillingRoute =
     path: '/billing',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminAppsRoute = AuthenticatedAdminAppsRouteImport.update({
+  id: '/apps',
+  path: '/apps',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminActivityRoute =
   AuthenticatedAdminActivityRouteImport.update({
     id: '/activity',
@@ -673,6 +724,12 @@ const AuthenticatedAppAutomationsIndexRoute =
   AuthenticatedAppAutomationsIndexRouteImport.update({
     id: '/automations/',
     path: '/automations/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppAppsIndexRoute =
+  AuthenticatedAppAppsIndexRouteImport.update({
+    id: '/apps/',
+    path: '/apps/',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAdminCampaignsIndexRoute =
@@ -792,6 +849,12 @@ const AuthenticatedAppAutomationsIdRoute =
     path: '/automations/$id',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAppsSlugRoute =
+  AuthenticatedAppAppsSlugRouteImport.update({
+    id: '/apps/$slug',
+    path: '/apps/$slug',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAdminTelnyxTfnRoute =
   AuthenticatedAdminTelnyxTfnRouteImport.update({
     id: '/tfn',
@@ -837,6 +900,7 @@ export interface FileRoutesByFullPath {
   '/dpa': typeof DpaRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -859,17 +923,21 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/marketplace/categories': typeof MarketplaceCategoriesRoute
+  '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/academy/': typeof AcademyIndexRoute
+  '/marketplace/': typeof MarketplaceIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/admin/apps': typeof AuthenticatedAdminAppsRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/email': typeof AuthenticatedAdminEmailRoute
@@ -889,6 +957,7 @@ export interface FileRoutesByFullPath {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/app/developer': typeof AuthenticatedAppDeveloperRoute
   '/app/flows': typeof AuthenticatedAppFlowsRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
   '/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
@@ -916,12 +985,15 @@ export interface FileRoutesByFullPath {
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
+  '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -942,6 +1014,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/academy/': typeof AuthenticatedAdminAcademyIndexRoute
   '/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
+  '/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
@@ -981,17 +1054,21 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/marketplace/categories': typeof MarketplaceCategoriesRoute
+  '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/academy': typeof AcademyIndexRoute
+  '/marketplace': typeof MarketplaceIndexRoute
   '/verify': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/admin/apps': typeof AuthenticatedAdminAppsRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/email': typeof AuthenticatedAdminEmailRoute
@@ -1010,6 +1087,7 @@ export interface FileRoutesByTo {
   '/app/audience': typeof AuthenticatedAppAudienceRoute
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/app/developer': typeof AuthenticatedAppDeveloperRoute
   '/app/flows': typeof AuthenticatedAppFlowsRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
   '/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
@@ -1036,12 +1114,15 @@ export interface FileRoutesByTo {
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/marketplace/apps': typeof MarketplaceAppsIndexRoute
   '/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
+  '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1062,6 +1143,7 @@ export interface FileRoutesByTo {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/academy': typeof AuthenticatedAdminAcademyIndexRoute
   '/admin/campaigns': typeof AuthenticatedAdminCampaignsIndexRoute
+  '/app/apps': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
@@ -1085,6 +1167,7 @@ export interface FileRoutesById {
   '/dpa': typeof DpaRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -1107,17 +1190,21 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/marketplace/categories': typeof MarketplaceCategoriesRoute
+  '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/academy/': typeof AcademyIndexRoute
+  '/marketplace/': typeof MarketplaceIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/_authenticated/admin/apps': typeof AuthenticatedAdminAppsRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/_authenticated/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/_authenticated/admin/email': typeof AuthenticatedAdminEmailRoute
@@ -1137,6 +1224,7 @@ export interface FileRoutesById {
   '/_authenticated/app/billing': typeof AuthenticatedAppBillingRoute
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/_authenticated/app/checkout': typeof AuthenticatedAppCheckoutRoute
+  '/_authenticated/app/developer': typeof AuthenticatedAppDeveloperRoute
   '/_authenticated/app/flows': typeof AuthenticatedAppFlowsRoute
   '/_authenticated/app/inbox': typeof AuthenticatedAppInboxRoute
   '/_authenticated/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
@@ -1164,12 +1252,15 @@ export interface FileRoutesById {
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/_authenticated/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/_authenticated/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/_authenticated/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
+  '/_authenticated/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
   '/_authenticated/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1190,6 +1281,7 @@ export interface FileRoutesById {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/_authenticated/admin/academy/': typeof AuthenticatedAdminAcademyIndexRoute
   '/_authenticated/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
+  '/_authenticated/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/_authenticated/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
@@ -1212,6 +1304,7 @@ export interface FileRouteTypes {
     | '/dpa'
     | '/features'
     | '/forgot-password'
+    | '/marketplace'
     | '/mcp'
     | '/pricing'
     | '/privacy'
@@ -1234,17 +1327,21 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
+    | '/marketplace/categories'
+    | '/marketplace/developers'
     | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
     | '/academy/'
+    | '/marketplace/'
     | '/verify/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/accounts'
     | '/admin/activity'
+    | '/admin/apps'
     | '/admin/billing'
     | '/admin/compliance'
     | '/admin/email'
@@ -1264,6 +1361,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/campaigns'
     | '/app/checkout'
+    | '/app/developer'
     | '/app/flows'
     | '/app/inbox'
     | '/app/landing-pages'
@@ -1291,12 +1389,15 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
+    | '/marketplace/apps/$slug'
     | '/admin/'
     | '/app/'
+    | '/marketplace/apps/'
     | '/admin/academy/$courseId'
     | '/admin/campaigns/$id'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
+    | '/app/apps/$slug'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -1317,6 +1418,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/admin/academy/'
     | '/admin/campaigns/'
+    | '/app/apps/'
     | '/app/automations/'
     | '/app/campaigns/'
     | '/app/segments/'
@@ -1356,17 +1458,21 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
+    | '/marketplace/categories'
+    | '/marketplace/developers'
     | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
     | '/academy'
+    | '/marketplace'
     | '/verify'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/admin/accounts'
     | '/admin/activity'
+    | '/admin/apps'
     | '/admin/billing'
     | '/admin/compliance'
     | '/admin/email'
@@ -1385,6 +1491,7 @@ export interface FileRouteTypes {
     | '/app/audience'
     | '/app/billing'
     | '/app/checkout'
+    | '/app/developer'
     | '/app/flows'
     | '/app/inbox'
     | '/app/landing-pages'
@@ -1411,12 +1518,15 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
+    | '/marketplace/apps/$slug'
     | '/admin'
     | '/app'
+    | '/marketplace/apps'
     | '/admin/academy/$courseId'
     | '/admin/campaigns/$id'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
+    | '/app/apps/$slug'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -1437,6 +1547,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/admin/academy'
     | '/admin/campaigns'
+    | '/app/apps'
     | '/app/automations'
     | '/app/campaigns'
     | '/app/segments'
@@ -1459,6 +1570,7 @@ export interface FileRouteTypes {
     | '/dpa'
     | '/features'
     | '/forgot-password'
+    | '/marketplace'
     | '/mcp'
     | '/pricing'
     | '/privacy'
@@ -1481,17 +1593,21 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
+    | '/marketplace/categories'
+    | '/marketplace/developers'
     | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
     | '/academy/'
+    | '/marketplace/'
     | '/verify/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/activity'
+    | '/_authenticated/admin/apps'
     | '/_authenticated/admin/billing'
     | '/_authenticated/admin/compliance'
     | '/_authenticated/admin/email'
@@ -1511,6 +1627,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/billing'
     | '/_authenticated/app/campaigns'
     | '/_authenticated/app/checkout'
+    | '/_authenticated/app/developer'
     | '/_authenticated/app/flows'
     | '/_authenticated/app/inbox'
     | '/_authenticated/app/landing-pages'
@@ -1538,12 +1655,15 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
+    | '/marketplace/apps/$slug'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
+    | '/marketplace/apps/'
     | '/_authenticated/admin/academy/$courseId'
     | '/_authenticated/admin/campaigns/$id'
     | '/_authenticated/admin/telnyx/audit'
     | '/_authenticated/admin/telnyx/tfn'
+    | '/_authenticated/app/apps/$slug'
     | '/_authenticated/app/automations/$id'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
@@ -1564,6 +1684,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/_authenticated/admin/academy/'
     | '/_authenticated/admin/campaigns/'
+    | '/_authenticated/app/apps/'
     | '/_authenticated/app/automations/'
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/segments/'
@@ -1587,6 +1708,7 @@ export interface RootRouteChildren {
   DpaRoute: typeof DpaRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  MarketplaceRoute: typeof MarketplaceRouteWithChildren
   McpRoute: typeof McpRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -1720,6 +1842,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
@@ -1832,6 +1961,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/marketplace/': {
+      id: '/marketplace/'
+      path: '/'
+      fullPath: '/marketplace/'
+      preLoaderRoute: typeof MarketplaceIndexRouteImport
+      parentRoute: typeof MarketplaceRoute
+    }
     '/academy/': {
       id: '/academy/'
       path: '/'
@@ -1873,6 +2009,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/p/$slug'
       preLoaderRoute: typeof PSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/marketplace/developers': {
+      id: '/marketplace/developers'
+      path: '/developers'
+      fullPath: '/marketplace/developers'
+      preLoaderRoute: typeof MarketplaceDevelopersRouteImport
+      parentRoute: typeof MarketplaceRoute
+    }
+    '/marketplace/categories': {
+      id: '/marketplace/categories'
+      path: '/categories'
+      fullPath: '/marketplace/categories'
+      preLoaderRoute: typeof MarketplaceCategoriesRouteImport
+      parentRoute: typeof MarketplaceRoute
     }
     '/m/$messageId': {
       id: '/m/$messageId'
@@ -1944,6 +2094,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/marketplace/apps/': {
+      id: '/marketplace/apps/'
+      path: '/apps'
+      fullPath: '/marketplace/apps/'
+      preLoaderRoute: typeof MarketplaceAppsIndexRouteImport
+      parentRoute: typeof MarketplaceRoute
+    }
     '/_authenticated/app/': {
       id: '/_authenticated/app/'
       path: '/'
@@ -1957,6 +2114,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/marketplace/apps/$slug': {
+      id: '/marketplace/apps/$slug'
+      path: '/apps/$slug'
+      fullPath: '/marketplace/apps/$slug'
+      preLoaderRoute: typeof MarketplaceAppsSlugRouteImport
+      parentRoute: typeof MarketplaceRoute
     }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
@@ -2147,6 +2311,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppFlowsRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/developer': {
+      id: '/_authenticated/app/developer'
+      path: '/developer'
+      fullPath: '/app/developer'
+      preLoaderRoute: typeof AuthenticatedAppDeveloperRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/checkout': {
       id: '/_authenticated/app/checkout'
       path: '/checkout'
@@ -2280,6 +2451,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBillingRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/apps': {
+      id: '/_authenticated/admin/apps'
+      path: '/apps'
+      fullPath: '/admin/apps'
+      preLoaderRoute: typeof AuthenticatedAdminAppsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/activity': {
       id: '/_authenticated/admin/activity'
       path: '/activity'
@@ -2334,6 +2512,13 @@ declare module '@tanstack/react-router' {
       path: '/automations'
       fullPath: '/app/automations/'
       preLoaderRoute: typeof AuthenticatedAppAutomationsIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/apps/': {
+      id: '/_authenticated/app/apps/'
+      path: '/apps'
+      fullPath: '/app/apps/'
+      preLoaderRoute: typeof AuthenticatedAppAppsIndexRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/admin/campaigns/': {
@@ -2476,6 +2661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAutomationsIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/apps/$slug': {
+      id: '/_authenticated/app/apps/$slug'
+      path: '/apps/$slug'
+      fullPath: '/app/apps/$slug'
+      preLoaderRoute: typeof AuthenticatedAppAppsSlugRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/admin/telnyx/tfn': {
       id: '/_authenticated/admin/telnyx/tfn'
       path: '/tfn'
@@ -2533,6 +2725,7 @@ const AuthenticatedAdminTelnyxRouteWithChildren =
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAccountsRoute: typeof AuthenticatedAdminAccountsRoute
   AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
+  AuthenticatedAdminAppsRoute: typeof AuthenticatedAdminAppsRoute
   AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
   AuthenticatedAdminComplianceRoute: typeof AuthenticatedAdminComplianceRoute
   AuthenticatedAdminEmailRoute: typeof AuthenticatedAdminEmailRoute
@@ -2558,6 +2751,7 @@ interface AuthenticatedAdminRouteChildren {
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAccountsRoute: AuthenticatedAdminAccountsRoute,
   AuthenticatedAdminActivityRoute: AuthenticatedAdminActivityRoute,
+  AuthenticatedAdminAppsRoute: AuthenticatedAdminAppsRoute,
   AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
   AuthenticatedAdminComplianceRoute: AuthenticatedAdminComplianceRoute,
   AuthenticatedAdminEmailRoute: AuthenticatedAdminEmailRoute,
@@ -2640,6 +2834,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppBillingRoute: typeof AuthenticatedAppBillingRoute
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
   AuthenticatedAppCheckoutRoute: typeof AuthenticatedAppCheckoutRoute
+  AuthenticatedAppDeveloperRoute: typeof AuthenticatedAppDeveloperRoute
   AuthenticatedAppFlowsRoute: typeof AuthenticatedAppFlowsRoute
   AuthenticatedAppInboxRoute: typeof AuthenticatedAppInboxRoute
   AuthenticatedAppLandingPagesRoute: typeof AuthenticatedAppLandingPagesRoute
@@ -2656,7 +2851,9 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppTeamRoute: typeof AuthenticatedAppTeamRoute
   AuthenticatedAppTollFreeVerificationRoute: typeof AuthenticatedAppTollFreeVerificationRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
+  AuthenticatedAppAppsSlugRoute: typeof AuthenticatedAppAppsSlugRoute
   AuthenticatedAppAutomationsIdRoute: typeof AuthenticatedAppAutomationsIdRoute
+  AuthenticatedAppAppsIndexRoute: typeof AuthenticatedAppAppsIndexRoute
   AuthenticatedAppAutomationsIndexRoute: typeof AuthenticatedAppAutomationsIndexRoute
 }
 
@@ -2665,6 +2862,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppBillingRoute: AuthenticatedAppBillingRoute,
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
   AuthenticatedAppCheckoutRoute: AuthenticatedAppCheckoutRoute,
+  AuthenticatedAppDeveloperRoute: AuthenticatedAppDeveloperRoute,
   AuthenticatedAppFlowsRoute: AuthenticatedAppFlowsRoute,
   AuthenticatedAppInboxRoute: AuthenticatedAppInboxRoute,
   AuthenticatedAppLandingPagesRoute: AuthenticatedAppLandingPagesRoute,
@@ -2683,7 +2881,9 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppTollFreeVerificationRoute:
     AuthenticatedAppTollFreeVerificationRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
+  AuthenticatedAppAppsSlugRoute: AuthenticatedAppAppsSlugRoute,
   AuthenticatedAppAutomationsIdRoute: AuthenticatedAppAutomationsIdRoute,
+  AuthenticatedAppAppsIndexRoute: AuthenticatedAppAppsIndexRoute,
   AuthenticatedAppAutomationsIndexRoute: AuthenticatedAppAutomationsIndexRoute,
 }
 
@@ -2754,6 +2954,26 @@ const AcademyRouteChildren: AcademyRouteChildren = {
 const AcademyRouteWithChildren =
   AcademyRoute._addFileChildren(AcademyRouteChildren)
 
+interface MarketplaceRouteChildren {
+  MarketplaceCategoriesRoute: typeof MarketplaceCategoriesRoute
+  MarketplaceDevelopersRoute: typeof MarketplaceDevelopersRoute
+  MarketplaceIndexRoute: typeof MarketplaceIndexRoute
+  MarketplaceAppsSlugRoute: typeof MarketplaceAppsSlugRoute
+  MarketplaceAppsIndexRoute: typeof MarketplaceAppsIndexRoute
+}
+
+const MarketplaceRouteChildren: MarketplaceRouteChildren = {
+  MarketplaceCategoriesRoute: MarketplaceCategoriesRoute,
+  MarketplaceDevelopersRoute: MarketplaceDevelopersRoute,
+  MarketplaceIndexRoute: MarketplaceIndexRoute,
+  MarketplaceAppsSlugRoute: MarketplaceAppsSlugRoute,
+  MarketplaceAppsIndexRoute: MarketplaceAppsIndexRoute,
+}
+
+const MarketplaceRouteWithChildren = MarketplaceRoute._addFileChildren(
+  MarketplaceRouteChildren,
+)
+
 interface SolutionsRouteChildren {
   SolutionsEmailToSmsRoute: typeof SolutionsEmailToSmsRoute
 }
@@ -2782,6 +3002,7 @@ const rootRouteChildren: RootRouteChildren = {
   DpaRoute: DpaRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  MarketplaceRoute: MarketplaceRouteWithChildren,
   McpRoute: McpRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
