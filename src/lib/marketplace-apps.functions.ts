@@ -113,6 +113,34 @@ export const connectApp = createServerFn({ method: "POST" })
     if (appErr) throw new Error(appErr.message);
     if (!app || app.status !== "published") throw new Error("This app is not available.");
 
+    // ── Prove the credentials really work before anything is stored. ────────
+    const { runtimeFor } = await import("@/lib/marketplace/providers.server");
+    const runtime = runtimeFor(app.slug);
+    const settings: Record<string, unknown> = { ...data.settings };
+    let verified: { accountId?: string | null; accountLabel?: string | null; note?: string } | null = null;
+    if (runtime?.verify) {
+      try {
+        verified = await runtime.verify(data.credentials, {
+          db,
+          accountId: acting.accountId,
+          settings,
+        });
+      } catch (e: any) {
+        await db.from("integration_logs").insert({
+          app_id: app.id,
+          workspace_id: acting.accountId,
+          event_type: "connection",
+          action: "verify_failed",
+          status: "error",
+          error_message: String(e?.message ?? e).slice(0, 500),
+        });
+        throw new Error(String(e?.message ?? e));
+      }
+      if (app.slug === "xellvio-connect" && verified?.accountId) {
+        settings["linked_account_id"] = verified.accountId;
+      }
+    }
+
     const { data: install, error: insErr } = await db
       .from("app_installations")
       .upsert(
@@ -141,14 +169,16 @@ export const connectApp = createServerFn({ method: "POST" })
     const payload = {
       installation_id: install.id,
       connection_name: data.connectionName ?? app.name,
-      external_account_label: data.accountLabel ?? null,
+      external_account_id: verified?.accountId ?? null,
+      external_account_label: verified?.accountLabel ?? data.accountLabel ?? null,
       scopes: data.scopes,
-      settings: data.settings as never,
+      settings: settings as never,
       status: "connected",
       last_error: null,
       last_synced_at: new Date().toISOString(),
       ...(encrypted ? { credentials_encrypted: encrypted } : {}),
     };
+
 
     let connectionId: string;
     if (existing) {
@@ -180,7 +210,14 @@ export const connectApp = createServerFn({ method: "POST" })
       request_data: { fields: Object.keys(data.credentials) } as never,
     });
 
-    return { installationId: install.id, connectionId, appName: app.name };
+    return {
+      installationId: install.id,
+      connectionId,
+      appName: app.name,
+      accountLabel: verified?.accountLabel ?? null,
+      note: verified?.note ?? null,
+    };
+
   });
 
 async function nextInstallCount(db: any, appId: string): Promise<number> {

@@ -11,7 +11,10 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { AppLogo } from "./AppLogo";
 import { connectApp } from "@/lib/marketplace-apps.functions";
+import { listSenderOptions } from "@/lib/marketplace-integrations.functions";
 import { AUTH_TYPE_LABELS } from "@/lib/marketplace/catalog";
+import { specFor } from "@/lib/marketplace/provider-fields";
+import { useQuery } from "@tanstack/react-query";
 
 export type ConnectTarget = {
   id: string;
@@ -22,34 +25,6 @@ export type ConnectTarget = {
   auth_type: string;
   setup_guide?: string | null;
 };
-
-type Field = { key: string; label: string; placeholder?: string; secret?: boolean };
-
-function fieldsFor(authType: string, appName: string): Field[] {
-  switch (authType) {
-    case "api_key":
-      return [
-        { key: "api_key", label: `${appName} API key`, placeholder: "Paste your API key", secret: true },
-        { key: "account_id", label: "Account or store reference (optional)", placeholder: "e.g. example.myshopify.com" },
-      ];
-    case "bearer_token":
-      return [
-        { key: "access_token", label: "Access token", placeholder: "Paste your token", secret: true },
-        { key: "base_url", label: "Base URL (optional)", placeholder: "https://your-instance.example.com" },
-      ];
-    case "oauth2":
-      return [
-        { key: "client_id", label: "Client ID", placeholder: "From your app settings" },
-        { key: "client_secret", label: "Client secret", placeholder: "Kept encrypted server-side", secret: true },
-        { key: "account_id", label: "Account reference (optional)", placeholder: "Workspace, store or location id" },
-      ];
-    default:
-      return [
-        { key: "endpoint", label: "Endpoint URL", placeholder: "https://api.example.com" },
-        { key: "secret", label: "Signing secret", placeholder: "Used to sign outgoing payloads", secret: true },
-      ];
-  }
-}
 
 const STEPS = ["Authorise", "Configure", "Done"] as const;
 
@@ -73,7 +48,16 @@ export function ConnectDialog({
   const qc = useQueryClient();
   const run = useServerFn(connectApp);
 
-  const fields = useMemo(() => (app ? fieldsFor(app.auth_type, app.name) : []), [app]);
+  const spec = useMemo(() => (app ? specFor(app.slug, app.auth_type, app.name) : null), [app]);
+  const fields = spec?.fields ?? [];
+  const isSmsApp = spec?.connectMode === "xellvio_sms";
+  const [senderNumber, setSenderNumber] = useState("");
+  const sendersFn = useServerFn(listSenderOptions);
+  const senders = useQuery({
+    queryKey: ["sender-options"],
+    queryFn: () => sendersFn(),
+    enabled: open && isSmsApp,
+  });
 
   const save = useMutation({
     mutationFn: async () => {
@@ -89,6 +73,7 @@ export function ConnectDialog({
           credentials,
           scopes: [],
           settings: {
+            ...(isSmsApp ? { sender_number: senderNumber } : {}),
             sync_contacts: syncContacts,
             sync_orders: syncOrders,
             webhooks_enabled: webhooks,
@@ -97,7 +82,8 @@ export function ConnectDialog({
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
+      if (res?.note) toast.success(res.note);
       qc.invalidateQueries({ queryKey: ["my-installations"] });
       qc.invalidateQueries({ queryKey: ["recommended-apps"] });
       setStep(2);
@@ -110,13 +96,16 @@ export function ConnectDialog({
     if (!v) {
       setStep(0);
       setValues({});
+      setSenderNumber("");
       save.reset();
     }
   }
 
   if (!app) return null;
-  const required = fields[0];
-  const canContinue = !!values[required?.key ?? ""]?.trim();
+  const requiredKeys = fields.filter((f) => !f.optional).map((f) => f.key);
+  const canContinue = isSmsApp
+    ? !!senderNumber
+    : requiredKeys.length === 0 || requiredKeys.every((k) => !!values[k]?.trim());
 
   return (
     <Dialog open={open} onOpenChange={close}>
@@ -151,7 +140,36 @@ export function ConnectDialog({
 
         {step === 0 && (
           <div className="space-y-4">
-            {app.setup_guide && <p className="text-sm text-muted-foreground">{app.setup_guide}</p>}
+            <p className="text-sm text-muted-foreground">{spec?.hint || app.setup_guide}</p>
+            {isSmsApp && (
+              <div className="space-y-2">
+                <Label>Sending number</Label>
+                {senders.isLoading && <p className="text-sm text-muted-foreground">Loading your numbers…</p>}
+                {!senders.isLoading && (senders.data ?? []).length === 0 && (
+                  <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+                    You do not have a verified sending number yet. Finish SMS setup first, then come back here.
+                  </p>
+                )}
+                <div className="space-y-2">
+                  {(senders.data ?? []).map((s: { phone: string; kind: string; country: string }) => (
+                    <button
+                      key={s.phone}
+                      type="button"
+                      onClick={() => setSenderNumber(s.phone)}
+                      className={`flex w-full items-center justify-between rounded-lg border p-3 text-left text-sm transition ${
+                        senderNumber === s.phone ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <span className="font-medium">{s.phone}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {s.kind}
+                        {s.country ? ` · ${s.country}` : ""}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {fields.map((f) => (
               <div key={f.key} className="space-y-1.5">
                 <Label htmlFor={f.key} className="flex items-center gap-1.5">
@@ -166,6 +184,7 @@ export function ConnectDialog({
                   value={values[f.key] ?? ""}
                   onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
                 />
+                {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}
               </div>
             ))}
             <div className="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -199,7 +218,7 @@ export function ConnectDialog({
               </Button>
               <Button className="flex-1" onClick={() => save.mutate()} disabled={save.isPending}>
                 {save.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-                Authorise & connect
+                {spec?.capabilities.verified ? "Verify & connect" : "Authorise & connect"}
               </Button>
             </div>
           </div>
