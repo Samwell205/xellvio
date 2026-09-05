@@ -85,8 +85,11 @@ export function AiDesignPanel({
       const nextBlocks = normalizeBlocks(r.blocks);
       if (!nextBlocks.length) throw new Error("The AI design could not be read. Try again.");
       const nextTheme = r.theme ? mergeTheme({ ...theme, ...r.theme }) : theme;
-      setPending({ blocks: nextBlocks, theme: nextTheme, summary: r.summary });
-      setTurns([...nextTurns, { role: "assistant", text: r.summary.join(" · "), summary: r.summary }]);
+      const summary = [...r.summary];
+      if (r.seo?.title) summary.push(`Suggested page title: ${r.seo.title}`);
+      if (r.seo?.description) summary.push(`Suggested description: ${r.seo.description}`);
+      setPending({ blocks: nextBlocks, theme: nextTheme, summary });
+      setTurns([...nextTurns, { role: "assistant", text: summary.join(" · "), summary }]);
       requestAnimationFrame(() => scroller.current?.scrollTo({ top: 9e9 }));
     } catch (e: any) {
       setTurns([...nextTurns, { role: "assistant", text: e?.message ?? "That did not work. Please try again." }]);
