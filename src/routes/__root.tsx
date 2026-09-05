@@ -15,6 +15,7 @@ import { AiChatWidget } from "../components/AiChatWidget";
 import { CookieBanner } from "../components/CookieBanner";
 import { Toaster } from "../components/ui/sonner";
 import { initAnalytics, trackPageView } from "@/lib/analytics";
+import { trackView } from "@/lib/growth/track";
 import { BRAND, organizationSchema } from "@/lib/seo";
 
 function NotFoundComponent() {
