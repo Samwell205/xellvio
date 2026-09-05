@@ -60,6 +60,34 @@ async function publishedLandingPages(): Promise<SitemapEntry[]> {
   }
 }
 
+/**
+ * Published partner profiles. Only verified, published rows exist publicly, and
+ * `/partners` itself is only listed once at least one profile is live so search
+ * engines never see an empty hub page.
+ */
+async function partnerPages(): Promise<SitemapEntry[]> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await (supabaseAdmin as any)
+      .from("authority_partners")
+      .select("slug, updated_at")
+      .eq("published", true)
+      .order("slug");
+    if (error || !data?.length) return [];
+    return [
+      { path: "/partners", changefreq: "monthly", priority: "0.6" },
+      ...data.map((row: { slug: string; updated_at: string | null }) => ({
+        path: `/partners/${encodeURIComponent(row.slug)}`,
+        lastmod: row.updated_at ?? undefined,
+        changefreq: "monthly",
+        priority: "0.5",
+      })),
+    ];
+  } catch {
+    return [];
+  }
+}
+
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
@@ -93,6 +121,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           ...(Object.keys(GOAL_LABEL) as Goal[])
             .filter((g) => templatesByGoal(g).length >= MIN_COLLECTION_SIZE)
             .map((g) => ({ path: `/templates/use-case/${g}`, changefreq: "monthly", priority: "0.6" })),
+          ...(await partnerPages()),
           ...(await publishedLandingPages()),
 
         ];
