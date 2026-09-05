@@ -104,6 +104,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
       { rel: "icon", type: "image/png", sizes: "512x512", href: "/icon-512.png" },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "@id": "https://xellvio.com/#organization",
+          name: "Xellvio",
+          url: "https://xellvio.com/",
+          logo: "https://xellvio.com/icon-512.png",
+          description:
+            "Xellvio is an SMS marketing platform for bulk texting, automations and delivery analytics in 190+ countries.",
+        }),
+      },
+    ],
+
 
   }),
   shellComponent: RootShell,
