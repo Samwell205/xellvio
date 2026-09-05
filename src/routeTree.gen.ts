@@ -45,6 +45,7 @@ import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as MarketplaceDevelopersRouteImport } from './routes/marketplace.developers'
 import { Route as MarketplaceCategoriesRouteImport } from './routes/marketplace.categories'
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
@@ -317,6 +318,11 @@ const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceDevelopersRoute = MarketplaceDevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
+  getParentRoute: () => MarketplaceRoute,
 } as any)
 const MarketplaceCategoriesRoute = MarketplaceCategoriesRouteImport.update({
   id: '/categories',
@@ -891,6 +897,7 @@ export interface FileRoutesByFullPath {
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
   '/marketplace/categories': typeof MarketplaceCategoriesRoute
+  '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
@@ -1017,6 +1024,7 @@ export interface FileRoutesByTo {
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
   '/marketplace/categories': typeof MarketplaceCategoriesRoute
+  '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
@@ -1148,6 +1156,7 @@ export interface FileRoutesById {
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
   '/marketplace/categories': typeof MarketplaceCategoriesRoute
+  '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
@@ -1280,6 +1289,7 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/m/$messageId'
     | '/marketplace/categories'
+    | '/marketplace/developers'
     | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
@@ -1406,6 +1416,7 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/m/$messageId'
     | '/marketplace/categories'
+    | '/marketplace/developers'
     | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
@@ -1536,6 +1547,7 @@ export interface FileRouteTypes {
     | '/f/$slug'
     | '/m/$messageId'
     | '/marketplace/categories'
+    | '/marketplace/developers'
     | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
@@ -1946,6 +1958,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/p/$slug'
       preLoaderRoute: typeof PSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/marketplace/developers': {
+      id: '/marketplace/developers'
+      path: '/developers'
+      fullPath: '/marketplace/developers'
+      preLoaderRoute: typeof MarketplaceDevelopersRouteImport
+      parentRoute: typeof MarketplaceRoute
     }
     '/marketplace/categories': {
       id: '/marketplace/categories'
@@ -2850,6 +2869,7 @@ const AcademyRouteWithChildren =
 
 interface MarketplaceRouteChildren {
   MarketplaceCategoriesRoute: typeof MarketplaceCategoriesRoute
+  MarketplaceDevelopersRoute: typeof MarketplaceDevelopersRoute
   MarketplaceIndexRoute: typeof MarketplaceIndexRoute
   MarketplaceAppsSlugRoute: typeof MarketplaceAppsSlugRoute
   MarketplaceAppsIndexRoute: typeof MarketplaceAppsIndexRoute
@@ -2857,6 +2877,7 @@ interface MarketplaceRouteChildren {
 
 const MarketplaceRouteChildren: MarketplaceRouteChildren = {
   MarketplaceCategoriesRoute: MarketplaceCategoriesRoute,
+  MarketplaceDevelopersRoute: MarketplaceDevelopersRoute,
   MarketplaceIndexRoute: MarketplaceIndexRoute,
   MarketplaceAppsSlugRoute: MarketplaceAppsSlugRoute,
   MarketplaceAppsIndexRoute: MarketplaceAppsIndexRoute,
