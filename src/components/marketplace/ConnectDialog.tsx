@@ -50,6 +50,11 @@ export function ConnectDialog({
   const run = useServerFn(connectApp);
 
   const spec = useMemo(() => (app ? specFor(app.slug, app.auth_type, app.name) : null), [app]);
+  const guide = useMemo(
+    () => (app ? guideFor(app.slug, app.auth_type) : { steps: [] as string[] }),
+    [app],
+  );
+
   const fields = spec?.fields ?? [];
   const isSmsApp = spec?.connectMode === "xellvio_sms";
   const [senderNumber, setSenderNumber] = useState("");
