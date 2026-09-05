@@ -67,6 +67,7 @@ import { Route as TemplatesCategoryIndexRouteImport } from './routes/templates.$
 import { Route as MarketplaceAppsIndexRouteImport } from './routes/marketplace.apps.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
+import { Route as TemplatesCategorySlugRouteImport } from './routes/templates.$category.$slug'
 import { Route as MarketplaceAppsSlugRouteImport } from './routes/marketplace.apps.$slug'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.telnyx-status'
@@ -437,6 +438,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const TemplatesCategorySlugRoute = TemplatesCategorySlugRouteImport.update({
+  id: '/templates/$category/$slug',
+  path: '/templates/$category/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const MarketplaceAppsSlugRoute = MarketplaceAppsSlugRouteImport.update({
   id: '/apps/$slug',
@@ -1005,6 +1011,7 @@ export interface FileRoutesByFullPath {
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
+  '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
@@ -1138,6 +1145,7 @@ export interface FileRoutesByTo {
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
+  '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps': typeof MarketplaceAppsIndexRoute
@@ -1279,6 +1287,7 @@ export interface FileRoutesById {
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
+  '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
@@ -1419,6 +1428,7 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
+    | '/templates/$category/$slug'
     | '/admin/'
     | '/app/'
     | '/marketplace/apps/'
@@ -1552,6 +1562,7 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
+    | '/templates/$category/$slug'
     | '/admin'
     | '/app'
     | '/marketplace/apps'
@@ -1692,6 +1703,7 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
+    | '/templates/$category/$slug'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/marketplace/apps/'
@@ -1788,6 +1800,7 @@ export interface RootRouteChildren {
   ApiPublicTelnyxInboundRoute: typeof ApiPublicTelnyxInboundRoute
   ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  TemplatesCategorySlugRoute: typeof TemplatesCategorySlugRoute
   TemplatesCategoryIndexRoute: typeof TemplatesCategoryIndexRoute
   ApiPublicCampaignMediaSplatRoute: typeof ApiPublicCampaignMediaSplatRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
@@ -2207,6 +2220,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/templates/$category/$slug': {
+      id: '/templates/$category/$slug'
+      path: '/templates/$category/$slug'
+      fullPath: '/templates/$category/$slug'
+      preLoaderRoute: typeof TemplatesCategorySlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/marketplace/apps/$slug': {
       id: '/marketplace/apps/$slug'
@@ -3080,6 +3100,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTelnyxInboundRoute: ApiPublicTelnyxInboundRoute,
   ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  TemplatesCategorySlugRoute: TemplatesCategorySlugRoute,
   TemplatesCategoryIndexRoute: TemplatesCategoryIndexRoute,
   ApiPublicCampaignMediaSplatRoute: ApiPublicCampaignMediaSplatRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
