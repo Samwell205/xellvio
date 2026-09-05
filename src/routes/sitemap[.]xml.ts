@@ -3,6 +3,15 @@ import type {} from "@tanstack/react-start";
 
 import { INDUSTRIES } from "@/components/marketing/industries";
 import { CATEGORY_META, PUBLIC_TEMPLATES, type TemplateCategory } from "@/lib/marketing/template-catalog";
+import {
+  GOAL_LABEL,
+  INDUSTRY_LABEL,
+  MIN_COLLECTION_SIZE,
+  templatesByGoal,
+  templatesByIndustry,
+  type Goal,
+  type Industry,
+} from "@/lib/templates/library";
 import { PUBLIC_PAGES, SITE_URL } from "@/lib/seo";
 
 interface SitemapEntry {
