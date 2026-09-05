@@ -36,6 +36,15 @@ function HomePage() {
       <MarketingNav />
       <main className="flex-1">
         <Hero />
+        <StatsMarquee
+          stats={[
+            { value: "190+", label: "countries reached" },
+            { value: "5,000", label: "messages per minute" },
+            { value: "98%", label: "average delivery rate" },
+            { value: "24/7", label: "delivery monitoring" },
+          ]}
+        />
+        <Channels />
         <FeatureGrid />
         <EditorialActivity />
         <EditorialAttribution />
@@ -45,6 +54,7 @@ function HomePage() {
         <FAQ />
         <CTA />
       </main>
+
       <MarketingFooter />
     </div>
   );
