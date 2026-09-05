@@ -25,6 +25,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
+import { Route as EmailMarketingRouteImport } from './routes/email-marketing'
 import { Route as DpaRouteImport } from './routes/dpa'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as CookiesRouteImport } from './routes/cookies'
@@ -224,6 +225,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const FeaturesRoute = FeaturesRouteImport.update({
   id: '/features',
   path: '/features',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailMarketingRoute = EmailMarketingRouteImport.update({
+  id: '/email-marketing',
+  path: '/email-marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DpaRoute = DpaRouteImport.update({
@@ -904,6 +910,7 @@ export interface FileRoutesByFullPath {
   '/cookies': typeof CookiesRoute
   '/docs': typeof DocsRoute
   '/dpa': typeof DpaRoute
+  '/email-marketing': typeof EmailMarketingRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -1039,6 +1046,7 @@ export interface FileRoutesByTo {
   '/cookies': typeof CookiesRoute
   '/docs': typeof DocsRoute
   '/dpa': typeof DpaRoute
+  '/email-marketing': typeof EmailMarketingRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/mcp': typeof McpRoute
@@ -1173,6 +1181,7 @@ export interface FileRoutesById {
   '/cookies': typeof CookiesRoute
   '/docs': typeof DocsRoute
   '/dpa': typeof DpaRoute
+  '/email-marketing': typeof EmailMarketingRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -1311,6 +1320,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/docs'
     | '/dpa'
+    | '/email-marketing'
     | '/features'
     | '/forgot-password'
     | '/marketplace'
@@ -1446,6 +1456,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/docs'
     | '/dpa'
+    | '/email-marketing'
     | '/features'
     | '/forgot-password'
     | '/mcp'
@@ -1579,6 +1590,7 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/docs'
     | '/dpa'
+    | '/email-marketing'
     | '/features'
     | '/forgot-password'
     | '/marketplace'
@@ -1718,6 +1730,7 @@ export interface RootRouteChildren {
   CookiesRoute: typeof CookiesRoute
   DocsRoute: typeof DocsRoute
   DpaRoute: typeof DpaRoute
+  EmailMarketingRoute: typeof EmailMarketingRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
@@ -1881,6 +1894,13 @@ declare module '@tanstack/react-router' {
       path: '/features'
       fullPath: '/features'
       preLoaderRoute: typeof FeaturesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-marketing': {
+      id: '/email-marketing'
+      path: '/email-marketing'
+      fullPath: '/email-marketing'
+      preLoaderRoute: typeof EmailMarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dpa': {
@@ -3020,6 +3040,7 @@ const rootRouteChildren: RootRouteChildren = {
   CookiesRoute: CookiesRoute,
   DocsRoute: DocsRoute,
   DpaRoute: DpaRoute,
+  EmailMarketingRoute: EmailMarketingRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   MarketplaceRoute: MarketplaceRouteWithChildren,
