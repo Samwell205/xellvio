@@ -3,11 +3,9 @@ import { ArrowRight } from "lucide-react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { ChannelCta } from "@/components/marketing/ProductKit";
-import {
-  CATEGORY_META,
-  isTemplateCategory,
-  templatesInCategory,
-} from "@/lib/marketing/template-catalog";
+import { CategoryLinks, TemplateGrid } from "@/components/marketing/TemplateLibraryGrid";
+import { CATEGORY_META, isTemplateCategory } from "@/lib/marketing/template-catalog";
+import { CATEGORY_TO_TYPE, templatesByType } from "@/lib/templates/library";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/templates/$category/")({
