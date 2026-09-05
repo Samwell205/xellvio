@@ -136,6 +136,7 @@ export const importTemplate = createServerFn({ method: "POST" })
     const automationId = (created as any).id as string;
 
     const nodes = built.nodes.map((n, i) => ({
+      account_id: accountId,
       automation_id: automationId,
       node_key: `n${i + 1}`,
       type: n.type,
@@ -149,6 +150,7 @@ export const importTemplate = createServerFn({ method: "POST" })
       const source = built.nodes.find((n) => n.key === e.source)!;
       const handles = outputsFor(source.type, (source.config ?? defaultConfig(source.type)) as NodeConfig);
       return {
+        account_id: accountId,
         automation_id: automationId,
         edge_key: `e${i + 1}`,
         source_node_key: keyOf.get(e.source)!,
