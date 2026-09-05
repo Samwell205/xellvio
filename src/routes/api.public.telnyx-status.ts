@@ -161,12 +161,13 @@ export const Route = createFileRoute("/api/public/telnyx-status")({
         const ts = request.headers.get("telnyx-timestamp");
         const pub = process.env.TELNYX_PUBLIC_KEY;
 
-        if (pub) {
-          if (!verifyTelnyxSignature(raw, sig, ts, pub)) {
-            return new Response("Invalid signature", { status: 401 });
-          }
-        } else {
-          console.warn("[telnyx-webhook] TELNYX_PUBLIC_KEY not set — skipping signature check");
+        // Fail closed: without the signing key every request is unauthenticated.
+        if (!pub) {
+          console.error("[telnyx-webhook] TELNYX_PUBLIC_KEY not set — rejecting webhook");
+          return new Response("Webhook verification unavailable", { status: 401 });
+        }
+        if (!verifyTelnyxSignature(raw, sig, ts, pub)) {
+          return new Response("Invalid signature", { status: 401 });
         }
 
         let payload: any = {};

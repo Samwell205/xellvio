@@ -1,6 +1,31 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/**
+ * Campaign control actions (cancel / stop / pause / resume / retry / resend) are
+ * write operations. Viewing a campaign is not enough: the caller must have the
+ * `campaigns` permission AND an editor-level role in the workspace that owns it.
+ * Everything below mutates through the service-role client, so this check is the
+ * only gate — it must run before any mutation.
+ */
+async function assertCampaignControl(userId: string, campaignId: string) {
+  const { resolveActingAccount, assertPermission } = await import("@/lib/acting-account.server");
+  const acting = await resolveActingAccount(userId);
+  assertPermission(acting, "campaigns");
+  if (!acting.isOwner && !["admin", "editor"].includes(acting.role)) {
+    throw new Error("Read-only team members cannot change campaigns. Ask the workspace owner for edit access.");
+  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: owned } = await supabaseAdmin
+    .from("campaigns")
+    .select("id")
+    .eq("id", campaignId)
+    .eq("account_id", acting.accountId)
+    .maybeSingle();
+  if (!owned) throw new Error("Campaign not found");
+  return acting;
+}
+
 // Cancel a campaign safely: prevent any further dispatch by flipping the
 // campaign status to `cancelled`, and mark any still-queued messages as
 // failed with reason `cancelled_by_user`. Messages that have already been
@@ -9,7 +34,8 @@ export const cancelCampaign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { campaignId: string }) => d)
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { supabase } = context;
+    await assertCampaignControl(context.userId, data.campaignId);
 
     const { data: campaign, error: cErr } = await supabase
       .from("campaigns")
@@ -18,10 +44,6 @@ export const cancelCampaign = createServerFn({ method: "POST" })
       .maybeSingle();
     if (cErr) throw new Error(cErr.message);
     if (!campaign) throw new Error("Campaign not found");
-    if (campaign.account_id !== userId) {
-      // Team members with editor+ access may also cancel — RLS on the update
-      // below is the final gate; we only short-circuit obvious cross-tenant.
-    }
     if (["sent", "cancelled", "failed"].includes(campaign.status)) {
       return { ok: true, alreadyStopped: true, cancelledMessages: 0 };
     }
@@ -73,6 +95,7 @@ export const stopCampaignAsSent = createServerFn({ method: "POST" })
   .inputValidator((d: { campaignId: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    await assertCampaignControl(context.userId, data.campaignId);
     const { STOPPED_AS_SENT } = await import("@/lib/campaign-stop");
 
     // RLS gate: the caller must be able to see (and update) this campaign.
@@ -150,6 +173,7 @@ export const pauseCampaign = createServerFn({ method: "POST" })
   .inputValidator((d: { campaignId: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    await assertCampaignControl(context.userId, data.campaignId);
 
     const { data: campaign, error: cErr } = await supabase
       .from("campaigns")
@@ -191,6 +215,7 @@ export const resumeCampaign = createServerFn({ method: "POST" })
   .inputValidator((d: { campaignId: string }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    await assertCampaignControl(context.userId, data.campaignId);
 
     const { data: campaign, error: cErr } = await supabase
       .from("campaigns")
@@ -250,6 +275,7 @@ export const retryMessage = createServerFn({ method: "POST" })
     if (campaign.status === "cancelled") {
       throw new Error("Campaign is cancelled — resume it first");
     }
+    await assertCampaignControl(context.userId, campaign.id);
 
     // Re-price from the live rate card before the row goes back out.
     const { priceRetryRows, applyRetryPricing } = await import("@/lib/campaign-retry-pricing.server");
@@ -318,6 +344,7 @@ export const retryFailedMessages = createServerFn({ method: "POST" })
   .inputValidator((d: { campaignId: string; errorCode?: string | null; dryRun?: boolean; confirmed?: boolean }) => d)
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    await assertCampaignControl(context.userId, data.campaignId);
 
     const { data: campaign, error: cErr } = await supabase
       .from("campaigns")
@@ -410,6 +437,7 @@ export const resendUnconfirmed = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const hours = Math.max(1, Math.min(72, data.hoursBack ?? 24));
     const { supabase } = context;
+    await assertCampaignControl(context.userId, data.campaignId);
     const { data: campaign, error: cErr } = await supabase
       .from("campaigns")
       .select("id, status")

@@ -23,12 +23,21 @@ export const Route = createFileRoute("/api/public/media/$")({
         const { data: file, error } = await supabaseAdmin.storage.from("tenant-media").download(path);
         if (error || !file) return new Response("Not found", { status: 404 });
 
+        // SVG (and anything not a known-safe raster/video type) can carry
+        // script that would run on our own origin, so it is never rendered
+        // inline: it is forced to download instead.
+        const type = asset.content_type || "application/octet-stream";
+        const inlineSafe = /^(image\/(png|jpeg|jpg|gif|webp|avif)|video\/(mp4|webm|quicktime))$/i.test(type);
         return new Response(await file.arrayBuffer(), {
           headers: {
-            "content-type": asset.content_type || "application/octet-stream",
+            "content-type": inlineSafe ? type : "application/octet-stream",
+            "content-disposition": inlineSafe ? "inline" : "attachment",
+            "x-content-type-options": "nosniff",
+            "content-security-policy": "default-src 'none'; sandbox",
             "cache-control": "public, max-age=31536000, immutable",
           },
         });
+
       },
     },
   },
