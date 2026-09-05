@@ -54,11 +54,7 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
   // Don't render page content until permissions are known (avoids a flash of
   // restricted pages on refresh).
   if (isLoading || !session) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
-        Loading…
-      </div>
-    );
+    return skeletonFor(pathname);
   }
 
   if (allowed) return <>{children}</>;
