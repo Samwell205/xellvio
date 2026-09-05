@@ -71,9 +71,9 @@ export function AppCard({
       </p>
 
       <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           {app.app_categories?.name && (
-            <Badge variant="secondary" className="rounded-full font-normal">
+            <Badge variant="secondary" className="max-w-[9rem] truncate rounded-full font-normal">
               {app.app_categories.name}
             </Badge>
           )}
@@ -90,7 +90,7 @@ export function AppCard({
             </span>
           )}
         </div>
-        <span className="flex items-center gap-1 text-sm font-medium text-primary opacity-70 transition-all group-hover:gap-2 group-hover:opacity-100">
+        <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary opacity-70 transition-all group-hover:gap-2 group-hover:opacity-100">
           Connect <ArrowRight className="size-4" />
         </span>
       </div>
