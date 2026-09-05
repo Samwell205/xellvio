@@ -478,26 +478,58 @@ function HowItWorks() {
 
 function FAQ() {
   const faqs = [
-    { q: "What is SMS marketing?", a: "SMS marketing is the practice of sending customers and prospects marketing messages, promotions, reminders, and more by text message." },
-    { q: "Why is SMS marketing important?", a: "Text messages have 98% open rates and reach customers instantly — making SMS the most direct channel for engagement." },
-    { q: "Is SMS marketing effective?", a: "Yes — brands using SMS see significant lifts in conversion when combined with personalized segmentation and timing." },
-    { q: "What are some SMS best practices?", a: "Get explicit consent, keep messages short, identify your brand, and include a clear opt-out." },
-    { q: "How does Xellvio charge for SMS?", a: "Pay-as-you-go credits priced per segment per destination country. Live rates inside your dashboard." },
-    { q: "Which countries is SMS available in?", a: "We deliver to 190+ countries via tier-1 carriers with automatic routing and failover." },
+    {
+      q: "What is Xellvio?",
+      a: "Xellvio is a customer messaging platform for growing businesses. It brings SMS and email campaigns, automations, a two-way inbox, sign-up forms, landing pages and reporting into one place, so every message can react to what a customer actually does.",
+    },
+    {
+      q: "How much does Xellvio cost? Is there a free plan?",
+      a: "Xellvio is pay-as-you-go: you buy credits and each message is priced per segment for the destination country, with live rates shown before you send. New accounts start with 50 free credits and no card is required.",
+    },
+    {
+      q: "Which channels does Xellvio support?",
+      a: "SMS and MMS today, with two-way replies and keyword automations. Email campaigns and flows run beside your texts from the same audience.",
+    },
+    {
+      q: "Which countries can I send to?",
+      a: "Over 190 countries through tier-1 carriers, with automatic routing, failover and each country's sender rules handled for you — including toll-free, 10DLC and sender ID registration where it's required.",
+    },
+    {
+      q: "Does Xellvio handle consent and opt-outs?",
+      a: "Yes. Consent, opt-out keywords and suppressions are tracked on every contact, so anyone who unsubscribes is excluded from future sends automatically.",
+    },
+    {
+      q: "Can I automate messages?",
+      a: "Yes. Build flows that trigger on sign-ups, replies, keywords, abandoned carts or your own events, with waits, branches, conditions and goals you can follow end to end.",
+    },
+    {
+      q: "How do I see what a campaign earned?",
+      a: "Every send reports delivery, clicks, replies, spend and revenue — per country, per carrier and per campaign — with exportable reports.",
+    },
+    {
+      q: "Can I connect Xellvio to my other tools?",
+      a: "Yes. Connect your store, forms and CRM, or build directly on the Xellvio API and webhooks.",
+    },
   ];
   const [open, setOpen] = useState<number | null>(0);
   return (
     <section className="bg-background py-24 border-t border-border">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6">
-        <motion.h2 {...fade} className="text-3xl sm:text-4xl font-extrabold text-foreground">SMS marketing FAQ</motion.h2>
-        <div className="mt-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 grid gap-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <motion.h2 {...fade} className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+          Frequently asked questions
+        </motion.h2>
+        <div>
           {faqs.map((f, i) => (
-            <div key={i} className="border-b border-neutral-300">
-              <button onClick={() => setOpen(open === i ? null : i)} className="w-full flex items-center justify-between py-6 text-left font-semibold text-foreground">
+            <div key={i} className="border-b border-border">
+              <button
+                onClick={() => setOpen(open === i ? null : i)}
+                aria-expanded={open === i}
+                className="w-full flex items-start justify-between gap-6 py-6 text-left text-lg sm:text-xl font-bold text-foreground"
+              >
                 {f.q}
-                <ChevronDown className={`size-5 transition-transform ${open === i ? "rotate-180" : ""}`} />
+                <ChevronDown className={`mt-1 size-5 shrink-0 transition-transform ${open === i ? "rotate-180" : ""}`} />
               </button>
-              {open === i && <p className="pb-6 text-muted-foreground leading-relaxed">{f.a}</p>}
+              {open === i && <p className="pb-7 max-w-2xl text-muted-foreground leading-relaxed">{f.a}</p>}
             </div>
           ))}
         </div>
