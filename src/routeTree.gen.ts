@@ -45,6 +45,7 @@ import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as RCodeRouteImport } from './routes/r.$code'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as MarketplaceCategoriesRouteImport } from './routes/marketplace.categories'
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
@@ -315,6 +316,11 @@ const PSlugRoute = PSlugRouteImport.update({
   id: '/p/$slug',
   path: '/p/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceCategoriesRoute = MarketplaceCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => MarketplaceRoute,
 } as any)
 const MMessageIdRoute = MMessageIdRouteImport.update({
   id: '/m/$messageId',
@@ -878,6 +884,7 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/marketplace/categories': typeof MarketplaceCategoriesRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
@@ -1002,6 +1009,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/marketplace/categories': typeof MarketplaceCategoriesRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
@@ -1131,6 +1139,7 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
+  '/marketplace/categories': typeof MarketplaceCategoriesRoute
   '/p/$slug': typeof PSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
@@ -1261,6 +1270,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
+    | '/marketplace/categories'
     | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
@@ -1385,6 +1395,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
+    | '/marketplace/categories'
     | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
@@ -1513,6 +1524,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
+    | '/marketplace/categories'
     | '/p/$slug'
     | '/r/$code'
     | '/solutions/email-to-sms'
@@ -1922,6 +1934,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/p/$slug'
       preLoaderRoute: typeof PSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/marketplace/categories': {
+      id: '/marketplace/categories'
+      path: '/categories'
+      fullPath: '/marketplace/categories'
+      preLoaderRoute: typeof MarketplaceCategoriesRouteImport
+      parentRoute: typeof MarketplaceRoute
     }
     '/m/$messageId': {
       id: '/m/$messageId'
@@ -2811,11 +2830,13 @@ const AcademyRouteWithChildren =
   AcademyRoute._addFileChildren(AcademyRouteChildren)
 
 interface MarketplaceRouteChildren {
+  MarketplaceCategoriesRoute: typeof MarketplaceCategoriesRoute
   MarketplaceIndexRoute: typeof MarketplaceIndexRoute
   MarketplaceAppsIndexRoute: typeof MarketplaceAppsIndexRoute
 }
 
 const MarketplaceRouteChildren: MarketplaceRouteChildren = {
+  MarketplaceCategoriesRoute: MarketplaceCategoriesRoute,
   MarketplaceIndexRoute: MarketplaceIndexRoute,
   MarketplaceAppsIndexRoute: MarketplaceAppsIndexRoute,
 }
