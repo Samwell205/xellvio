@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/unsubscribe")({
-  head: () => ({ meta: [{ title: "Unsubscribe — Xellvio" }] }),
+  head: () => ({ meta: [{ title: "Unsubscribe — Xellvio" }, { name: "robots", content: "noindex, nofollow" }] }),
   component: UnsubscribePage,
 });
 

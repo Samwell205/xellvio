@@ -65,17 +65,89 @@ function Channels() {
 }
 
 
+const HOME_TITLE = "Xellvio: Global SMS Marketing & Bulk SMS Platform";
+const HOME_DESCRIPTION =
+  "Xellvio is the SMS marketing platform for sending bulk texts worldwide — campaigns, automations, two-way inbox, link tracking and real-time delivery analytics in 190+ countries.";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Xellvio — Reach Customers Worldwide" },
-      { name: "description", content: "Send global SMS campaigns with confidence. Bulk messaging, automation, analytics and APIs trusted by modern businesses." },
-      { property: "og:title", content: "Xellvio — Reach Customers Worldwide" },
-      { property: "og:description", content: "Fast. Reliable. Compliant global SMS for businesses." },
+      { title: HOME_TITLE },
+      { name: "description", content: HOME_DESCRIPTION },
+      { property: "og:title", content: HOME_TITLE },
+      { property: "og:description", content: HOME_DESCRIPTION },
+      { property: "og:url", content: "https://xellvio.com/" },
+    ],
+    links: [{ rel: "canonical", href: "https://xellvio.com/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "WebSite",
+              "@id": "https://xellvio.com/#website",
+              url: "https://xellvio.com/",
+              name: "Xellvio",
+              description: HOME_DESCRIPTION,
+              inLanguage: "en",
+              publisher: { "@id": "https://xellvio.com/#organization" },
+            },
+            {
+              "@type": "SoftwareApplication",
+              name: "Xellvio",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web",
+              url: "https://xellvio.com/",
+              description: HOME_DESCRIPTION,
+              featureList: [
+                "Bulk SMS campaigns",
+                "SMS automations and flows",
+                "Two-way messaging inbox",
+                "Audience lists and segments",
+                "Link tracking and delivery analytics",
+                "Landing pages and sign-up forms",
+                "Email marketing",
+                "Developer API and webhooks",
+              ],
+              offers: {
+                "@type": "Offer",
+                url: "https://xellvio.com/pricing",
+                priceCurrency: "USD",
+                availability: "https://schema.org/InStock",
+              },
+              publisher: { "@id": "https://xellvio.com/#organization" },
+            },
+            {
+              "@type": "SiteNavigationElement",
+              name: [
+                "SMS marketing",
+                "Email marketing",
+                "Features",
+                "Pricing",
+                "Solutions",
+                "Documentation",
+                "Contact",
+              ],
+              url: [
+                "https://xellvio.com/sms-marketing",
+                "https://xellvio.com/email-marketing",
+                "https://xellvio.com/features",
+                "https://xellvio.com/pricing",
+                "https://xellvio.com/solutions",
+                "https://xellvio.com/docs",
+                "https://xellvio.com/contact",
+              ],
+            },
+          ],
+        }),
+      },
     ],
   }),
   component: HomePage,
 });
+
 
 const fade = {
   initial: { opacity: 0, y: 20 },

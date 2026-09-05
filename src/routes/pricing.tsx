@@ -11,7 +11,7 @@ import { getPublicCountryRates } from "@/lib/public-pricing.functions";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing — Xellvio" },
+      { title: "Xellvio Pricing | Pay-as-you-go SMS Credits" },
       { name: "description", content: "Pay-as-you-go SMS credits. Estimate cost per country and per message instantly." },
       { property: "og:title", content: "Pricing — Xellvio" },
       { property: "og:description", content: "Buy credits, estimate per-country costs, and see live SMS pricing." },
