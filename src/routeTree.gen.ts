@@ -48,12 +48,14 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VerifyIndexRouteImport } from './routes/verify.index'
 import { Route as TemplatesIndexRouteImport } from './routes/templates.index'
+import { Route as PartnersIndexRouteImport } from './routes/partners.index'
 import { Route as MarketplaceIndexRouteImport } from './routes/marketplace.index'
 import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as SolutionsIndustryRouteImport } from './routes/solutions.$industry'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as PartnersSlugRouteImport } from './routes/partners.$slug'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as MarketplaceDevelopersRouteImport } from './routes/marketplace.developers'
 import { Route as MarketplaceCategoriesRouteImport } from './routes/marketplace.categories'
@@ -119,6 +121,7 @@ import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminEmailRouteImport } from './routes/_authenticated.admin.email'
 import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_authenticated.admin.compliance'
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
+import { Route as AuthenticatedAdminAuthorityRouteImport } from './routes/_authenticated.admin.authority'
 import { Route as AuthenticatedAdminAppsRouteImport } from './routes/_authenticated.admin.apps'
 import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated.admin.accounts'
@@ -347,6 +350,11 @@ const TemplatesIndexRoute = TemplatesIndexRouteImport.update({
   path: '/templates/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PartnersIndexRoute = PartnersIndexRouteImport.update({
+  id: '/partners/',
+  path: '/partners/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MarketplaceIndexRoute = MarketplaceIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -375,6 +383,11 @@ const SolutionsIndustryRoute = SolutionsIndustryRouteImport.update({
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnersSlugRoute = PartnersSlugRouteImport.update({
+  id: '/partners/$slug',
+  path: '/partners/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PSlugRoute = PSlugRouteImport.update({
@@ -738,6 +751,12 @@ const AuthenticatedAdminBillingRoute =
     path: '/billing',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminAuthorityRoute =
+  AuthenticatedAdminAuthorityRouteImport.update({
+    id: '/authority',
+    path: '/authority',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAppsRoute = AuthenticatedAdminAppsRouteImport.update({
   id: '/apps',
   path: '/apps',
@@ -985,12 +1004,14 @@ export interface FileRoutesByFullPath {
   '/marketplace/categories': typeof MarketplaceCategoriesRoute
   '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
+  '/partners/$slug': typeof PartnersSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/$industry': typeof SolutionsIndustryRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/marketplace/': typeof MarketplaceIndexRoute
+  '/partners/': typeof PartnersIndexRoute
   '/templates/': typeof TemplatesIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -998,6 +1019,7 @@ export interface FileRoutesByFullPath {
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/apps': typeof AuthenticatedAdminAppsRoute
+  '/admin/authority': typeof AuthenticatedAdminAuthorityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/email': typeof AuthenticatedAdminEmailRoute
@@ -1126,12 +1148,14 @@ export interface FileRoutesByTo {
   '/marketplace/categories': typeof MarketplaceCategoriesRoute
   '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
+  '/partners/$slug': typeof PartnersSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/$industry': typeof SolutionsIndustryRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/marketplace': typeof MarketplaceIndexRoute
+  '/partners': typeof PartnersIndexRoute
   '/templates': typeof TemplatesIndexRoute
   '/verify': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -1139,6 +1163,7 @@ export interface FileRoutesByTo {
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/admin/apps': typeof AuthenticatedAdminAppsRoute
+  '/admin/authority': typeof AuthenticatedAdminAuthorityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/email': typeof AuthenticatedAdminEmailRoute
@@ -1271,12 +1296,14 @@ export interface FileRoutesById {
   '/marketplace/categories': typeof MarketplaceCategoriesRoute
   '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
+  '/partners/$slug': typeof PartnersSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/$industry': typeof SolutionsIndustryRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/marketplace/': typeof MarketplaceIndexRoute
+  '/partners/': typeof PartnersIndexRoute
   '/templates/': typeof TemplatesIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -1284,6 +1311,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
   '/_authenticated/admin/apps': typeof AuthenticatedAdminAppsRoute
+  '/_authenticated/admin/authority': typeof AuthenticatedAdminAuthorityRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
   '/_authenticated/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/_authenticated/admin/email': typeof AuthenticatedAdminEmailRoute
@@ -1417,12 +1445,14 @@ export interface FileRouteTypes {
     | '/marketplace/categories'
     | '/marketplace/developers'
     | '/p/$slug'
+    | '/partners/$slug'
     | '/r/$code'
     | '/solutions/$industry'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
     | '/marketplace/'
+    | '/partners/'
     | '/templates/'
     | '/verify/'
     | '/.lovable/oauth/consent'
@@ -1430,6 +1460,7 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/activity'
     | '/admin/apps'
+    | '/admin/authority'
     | '/admin/billing'
     | '/admin/compliance'
     | '/admin/email'
@@ -1558,12 +1589,14 @@ export interface FileRouteTypes {
     | '/marketplace/categories'
     | '/marketplace/developers'
     | '/p/$slug'
+    | '/partners/$slug'
     | '/r/$code'
     | '/solutions/$industry'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
     | '/marketplace'
+    | '/partners'
     | '/templates'
     | '/verify'
     | '/.lovable/oauth/consent'
@@ -1571,6 +1604,7 @@ export interface FileRouteTypes {
     | '/admin/accounts'
     | '/admin/activity'
     | '/admin/apps'
+    | '/admin/authority'
     | '/admin/billing'
     | '/admin/compliance'
     | '/admin/email'
@@ -1702,12 +1736,14 @@ export interface FileRouteTypes {
     | '/marketplace/categories'
     | '/marketplace/developers'
     | '/p/$slug'
+    | '/partners/$slug'
     | '/r/$code'
     | '/solutions/$industry'
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
     | '/marketplace/'
+    | '/partners/'
     | '/templates/'
     | '/verify/'
     | '/.lovable/oauth/consent'
@@ -1715,6 +1751,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/activity'
     | '/_authenticated/admin/apps'
+    | '/_authenticated/admin/authority'
     | '/_authenticated/admin/billing'
     | '/_authenticated/admin/compliance'
     | '/_authenticated/admin/email'
@@ -1845,9 +1882,11 @@ export interface RootRouteChildren {
   FSlugRoute: typeof FSlugRoute
   MMessageIdRoute: typeof MMessageIdRoute
   PSlugRoute: typeof PSlugRoute
+  PartnersSlugRoute: typeof PartnersSlugRoute
   RCodeRoute: typeof RCodeRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
+  PartnersIndexRoute: typeof PartnersIndexRoute
   TemplatesIndexRoute: typeof TemplatesIndexRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -2153,6 +2192,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemplatesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/partners/': {
+      id: '/partners/'
+      path: '/partners'
+      fullPath: '/partners/'
+      preLoaderRoute: typeof PartnersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/marketplace/': {
       id: '/marketplace/'
       path: '/'
@@ -2193,6 +2239,13 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partners/$slug': {
+      id: '/partners/$slug'
+      path: '/partners/$slug'
+      fullPath: '/partners/$slug'
+      preLoaderRoute: typeof PartnersSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/p/$slug': {
@@ -2650,6 +2703,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBillingRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/authority': {
+      id: '/_authenticated/admin/authority'
+      path: '/authority'
+      fullPath: '/admin/authority'
+      preLoaderRoute: typeof AuthenticatedAdminAuthorityRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/apps': {
       id: '/_authenticated/admin/apps'
       path: '/apps'
@@ -2911,6 +2971,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAccountsRoute: typeof AuthenticatedAdminAccountsRoute
   AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
   AuthenticatedAdminAppsRoute: typeof AuthenticatedAdminAppsRoute
+  AuthenticatedAdminAuthorityRoute: typeof AuthenticatedAdminAuthorityRoute
   AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
   AuthenticatedAdminComplianceRoute: typeof AuthenticatedAdminComplianceRoute
   AuthenticatedAdminEmailRoute: typeof AuthenticatedAdminEmailRoute
@@ -2935,6 +2996,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAccountsRoute: AuthenticatedAdminAccountsRoute,
   AuthenticatedAdminActivityRoute: AuthenticatedAdminActivityRoute,
   AuthenticatedAdminAppsRoute: AuthenticatedAdminAppsRoute,
+  AuthenticatedAdminAuthorityRoute: AuthenticatedAdminAuthorityRoute,
   AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
   AuthenticatedAdminComplianceRoute: AuthenticatedAdminComplianceRoute,
   AuthenticatedAdminEmailRoute: AuthenticatedAdminEmailRoute,
@@ -3188,9 +3250,11 @@ const rootRouteChildren: RootRouteChildren = {
   FSlugRoute: FSlugRoute,
   MMessageIdRoute: MMessageIdRoute,
   PSlugRoute: PSlugRoute,
+  PartnersSlugRoute: PartnersSlugRoute,
   RCodeRoute: RCodeRoute,
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
+  PartnersIndexRoute: PartnersIndexRoute,
   TemplatesIndexRoute: TemplatesIndexRoute,
   VerifyIndexRoute: VerifyIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,

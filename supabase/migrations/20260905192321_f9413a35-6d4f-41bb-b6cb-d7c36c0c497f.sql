@@ -1,0 +1,3 @@
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.authority_opportunities, public.authority_outreach_log, public.authority_mentions, public.authority_directories, public.authority_assets, public.authority_distribution, public.authority_partners, public.authority_brand_profile, public.authority_referrals TO authenticated;
+GRANT ALL ON public.authority_opportunities, public.authority_outreach_log, public.authority_mentions, public.authority_directories, public.authority_assets, public.authority_distribution, public.authority_partners, public.authority_brand_profile, public.authority_referrals TO service_role;
+GRANT SELECT ON public.authority_partners TO anon;

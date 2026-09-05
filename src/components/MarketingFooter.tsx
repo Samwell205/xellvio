@@ -46,9 +46,11 @@ export function MarketingFooter() {
           ]} />
           <FooterCol title="Company" items={[
             { label: "About Xellvio", to: "/about" },
+            { label: "Partners", to: "/partners" },
             { label: "Contact us", to: "/contact" },
             { label: "Log in", to: "/auth" },
           ]} />
+
           <FooterCol title="Legal" items={[
             { label: "Privacy Policy", to: "/privacy" },
             { label: "Terms of Service", to: "/terms" },

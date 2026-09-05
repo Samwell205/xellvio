@@ -1,0 +1,1 @@
+ALTER TABLE public.authority_opportunities ADD COLUMN IF NOT EXISTS quality_answers jsonb NOT NULL DEFAULT '{}'::jsonb;

@@ -988,6 +988,539 @@ export type Database = {
           },
         ]
       }
+      authority_assets: {
+        Row: {
+          asset_type: string
+          created_at: string
+          data_source: string | null
+          date_range: string | null
+          distribution_plan: string | null
+          id: string
+          is_research: boolean
+          limitations: string | null
+          methodology: string | null
+          name: string
+          notes: string | null
+          outreach_angle: string | null
+          page_path: string | null
+          potential_audience: string | null
+          problem_solved: string | null
+          related_product: string | null
+          sample_size: string | null
+          status: Database["public"]["Enums"]["authority_asset_status"]
+          target_audience: string | null
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          asset_type?: string
+          created_at?: string
+          data_source?: string | null
+          date_range?: string | null
+          distribution_plan?: string | null
+          id?: string
+          is_research?: boolean
+          limitations?: string | null
+          methodology?: string | null
+          name: string
+          notes?: string | null
+          outreach_angle?: string | null
+          page_path?: string | null
+          potential_audience?: string | null
+          problem_solved?: string | null
+          related_product?: string | null
+          sample_size?: string | null
+          status?: Database["public"]["Enums"]["authority_asset_status"]
+          target_audience?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asset_type?: string
+          created_at?: string
+          data_source?: string | null
+          date_range?: string | null
+          distribution_plan?: string | null
+          id?: string
+          is_research?: boolean
+          limitations?: string | null
+          methodology?: string | null
+          name?: string
+          notes?: string | null
+          outreach_angle?: string | null
+          page_path?: string | null
+          potential_audience?: string | null
+          problem_solved?: string | null
+          related_product?: string | null
+          sample_size?: string | null
+          status?: Database["public"]["Enums"]["authority_asset_status"]
+          target_audience?: string | null
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      authority_brand_profile: {
+        Row: {
+          brand_name: string
+          company_info: string | null
+          created_at: string
+          id: string
+          key_features: Json
+          logo_url: string | null
+          long_description: string | null
+          medium_description: string | null
+          primary_categories: Json
+          screenshots: Json
+          short_description: string | null
+          singleton: boolean
+          social_profiles: Json
+          tagline: string | null
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          brand_name?: string
+          company_info?: string | null
+          created_at?: string
+          id?: string
+          key_features?: Json
+          logo_url?: string | null
+          long_description?: string | null
+          medium_description?: string | null
+          primary_categories?: Json
+          screenshots?: Json
+          short_description?: string | null
+          singleton?: boolean
+          social_profiles?: Json
+          tagline?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          brand_name?: string
+          company_info?: string | null
+          created_at?: string
+          id?: string
+          key_features?: Json
+          logo_url?: string | null
+          long_description?: string | null
+          medium_description?: string | null
+          primary_categories?: Json
+          screenshots?: Json
+          short_description?: string | null
+          singleton?: boolean
+          social_profiles?: Json
+          tagline?: string | null
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      authority_directories: {
+        Row: {
+          account_owner: string | null
+          category: string | null
+          created_at: string
+          description_used: string | null
+          id: string
+          last_updated_at: string | null
+          listing_url: string | null
+          logo_uploaded: boolean
+          notes: string | null
+          platform: string
+          platform_url: string | null
+          quality: Database["public"]["Enums"]["authority_quality"]
+          screenshots_uploaded: boolean
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_owner?: string | null
+          category?: string | null
+          created_at?: string
+          description_used?: string | null
+          id?: string
+          last_updated_at?: string | null
+          listing_url?: string | null
+          logo_uploaded?: boolean
+          notes?: string | null
+          platform: string
+          platform_url?: string | null
+          quality?: Database["public"]["Enums"]["authority_quality"]
+          screenshots_uploaded?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_owner?: string | null
+          category?: string | null
+          created_at?: string
+          description_used?: string | null
+          id?: string
+          last_updated_at?: string | null
+          listing_url?: string | null
+          logo_uploaded?: boolean
+          notes?: string | null
+          platform?: string
+          platform_url?: string | null
+          quality?: Database["public"]["Enums"]["authority_quality"]
+          screenshots_uploaded?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      authority_distribution: {
+        Row: {
+          adapted_copy: string | null
+          asset_id: string | null
+          channel: string
+          content_piece: string
+          created_at: string
+          id: string
+          performance_notes: string | null
+          post_format: string | null
+          scheduled_for: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          adapted_copy?: string | null
+          asset_id?: string | null
+          channel: string
+          content_piece: string
+          created_at?: string
+          id?: string
+          performance_notes?: string | null
+          post_format?: string | null
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          adapted_copy?: string | null
+          asset_id?: string | null
+          channel?: string
+          content_piece?: string
+          created_at?: string
+          id?: string
+          performance_notes?: string | null
+          post_format?: string | null
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "authority_distribution_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "authority_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      authority_mentions: {
+        Row: {
+          created_at: string
+          found_at: string
+          id: string
+          link_state: Database["public"]["Enums"]["authority_mention_link"]
+          notes: string | null
+          opportunity_id: string | null
+          relevant: boolean | null
+          review_status: string
+          sentiment: Database["public"]["Enums"]["authority_sentiment"]
+          source_name: string
+          source_url: string
+          suggested_target_page: string | null
+          term: string
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          found_at?: string
+          id?: string
+          link_state?: Database["public"]["Enums"]["authority_mention_link"]
+          notes?: string | null
+          opportunity_id?: string | null
+          relevant?: boolean | null
+          review_status?: string
+          sentiment?: Database["public"]["Enums"]["authority_sentiment"]
+          source_name: string
+          source_url: string
+          suggested_target_page?: string | null
+          term?: string
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          found_at?: string
+          id?: string
+          link_state?: Database["public"]["Enums"]["authority_mention_link"]
+          notes?: string | null
+          opportunity_id?: string | null
+          relevant?: boolean | null
+          review_status?: string
+          sentiment?: Database["public"]["Enums"]["authority_sentiment"]
+          source_name?: string
+          source_url?: string
+          suggested_target_page?: string | null
+          term?: string
+          updated_at?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "authority_mentions_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "authority_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      authority_opportunities: {
+        Row: {
+          contact_method: string | null
+          contact_person: string | null
+          created_at: string
+          created_by: string | null
+          domain_relevance: string | null
+          id: string
+          last_contact_at: string | null
+          notes: string | null
+          opportunity_type: Database["public"]["Enums"]["authority_opp_type"]
+          pitch_draft: string | null
+          priority_score: number
+          proposed_value: string | null
+          quality: Database["public"]["Enums"]["authority_quality"]
+          quality_answers: Json
+          quality_notes: Json
+          stage: Database["public"]["Enums"]["authority_stage"]
+          target_page: string | null
+          topic: string | null
+          updated_at: string
+          website_name: string
+          website_type: string | null
+          website_url: string
+        }
+        Insert: {
+          contact_method?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          domain_relevance?: string | null
+          id?: string
+          last_contact_at?: string | null
+          notes?: string | null
+          opportunity_type?: Database["public"]["Enums"]["authority_opp_type"]
+          pitch_draft?: string | null
+          priority_score?: number
+          proposed_value?: string | null
+          quality?: Database["public"]["Enums"]["authority_quality"]
+          quality_answers?: Json
+          quality_notes?: Json
+          stage?: Database["public"]["Enums"]["authority_stage"]
+          target_page?: string | null
+          topic?: string | null
+          updated_at?: string
+          website_name: string
+          website_type?: string | null
+          website_url: string
+        }
+        Update: {
+          contact_method?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          domain_relevance?: string | null
+          id?: string
+          last_contact_at?: string | null
+          notes?: string | null
+          opportunity_type?: Database["public"]["Enums"]["authority_opp_type"]
+          pitch_draft?: string | null
+          priority_score?: number
+          proposed_value?: string | null
+          quality?: Database["public"]["Enums"]["authority_quality"]
+          quality_answers?: Json
+          quality_notes?: Json
+          stage?: Database["public"]["Enums"]["authority_stage"]
+          target_page?: string | null
+          topic?: string | null
+          updated_at?: string
+          website_name?: string
+          website_type?: string | null
+          website_url?: string
+        }
+        Relationships: []
+      }
+      authority_outreach_log: {
+        Row: {
+          channel: string | null
+          created_at: string
+          created_by: string | null
+          direction: string
+          id: string
+          occurred_at: string
+          opportunity_id: string
+          summary: string
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          id?: string
+          occurred_at?: string
+          opportunity_id: string
+          summary: string
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          created_by?: string | null
+          direction?: string
+          id?: string
+          occurred_at?: string
+          opportunity_id?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "authority_outreach_log_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "authority_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      authority_partners: {
+        Row: {
+          benefits: Json
+          created_at: string
+          description: string | null
+          id: string
+          integration_app_slug: string | null
+          integration_summary: string | null
+          logo_url: string | null
+          name: string
+          published: boolean
+          related_links: Json
+          relationship: string | null
+          short_description: string | null
+          slug: string
+          updated_at: string
+          use_cases: Json
+          verified: boolean
+          website_url: string | null
+        }
+        Insert: {
+          benefits?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          integration_app_slug?: string | null
+          integration_summary?: string | null
+          logo_url?: string | null
+          name: string
+          published?: boolean
+          related_links?: Json
+          relationship?: string | null
+          short_description?: string | null
+          slug: string
+          updated_at?: string
+          use_cases?: Json
+          verified?: boolean
+          website_url?: string | null
+        }
+        Update: {
+          benefits?: Json
+          created_at?: string
+          description?: string | null
+          id?: string
+          integration_app_slug?: string | null
+          integration_summary?: string | null
+          logo_url?: string | null
+          name?: string
+          published?: boolean
+          related_links?: Json
+          relationship?: string | null
+          short_description?: string | null
+          slug?: string
+          updated_at?: string
+          use_cases?: Json
+          verified?: boolean
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      authority_referrals: {
+        Row: {
+          created_at: string
+          engaged_visitors: number
+          id: string
+          landing_page: string | null
+          notes: string | null
+          opportunity_id: string | null
+          period_end: string | null
+          period_start: string | null
+          product_views: number
+          signups: number
+          source_name: string
+          source_type: string
+          source_url: string | null
+          updated_at: string
+          visitors: number
+        }
+        Insert: {
+          created_at?: string
+          engaged_visitors?: number
+          id?: string
+          landing_page?: string | null
+          notes?: string | null
+          opportunity_id?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          product_views?: number
+          signups?: number
+          source_name: string
+          source_type?: string
+          source_url?: string | null
+          updated_at?: string
+          visitors?: number
+        }
+        Update: {
+          created_at?: string
+          engaged_visitors?: number
+          id?: string
+          landing_page?: string | null
+          notes?: string | null
+          opportunity_id?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          product_views?: number
+          signups?: number
+          source_name?: string
+          source_type?: string
+          source_url?: string | null
+          updated_at?: string
+          visitors?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "authority_referrals_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "authority_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_connections: {
         Row: {
           account_id: string
@@ -5322,6 +5855,49 @@ export type Database = {
     Enums: {
       account_member_role: "viewer" | "editor" | "admin"
       app_role: "admin" | "user"
+      authority_asset_status:
+        | "idea"
+        | "research"
+        | "creation"
+        | "review"
+        | "published"
+        | "distribution"
+        | "promotion"
+        | "performance_review"
+      authority_mention_link: "linked" | "unlinked" | "unknown"
+      authority_opp_type:
+        | "resource_mention"
+        | "guest_article"
+        | "product_listing"
+        | "integration_listing"
+        | "partnership"
+        | "template_resource"
+        | "tool_recommendation"
+        | "expert_contribution"
+        | "podcast"
+        | "interview"
+        | "digital_pr"
+        | "community"
+        | "competitor_mention"
+        | "link_reclamation"
+      authority_quality:
+        | "high_value"
+        | "relevant"
+        | "low_priority"
+        | "avoid"
+        | "unrated"
+      authority_sentiment: "positive" | "neutral" | "negative" | "unknown"
+      authority_stage:
+        | "identified"
+        | "researched"
+        | "qualified"
+        | "pitch_ready"
+        | "contacted"
+        | "follow_up"
+        | "responded"
+        | "link_earned"
+        | "not_a_fit"
+        | "archived"
       content_kind:
         | "article"
         | "guide"
@@ -5508,6 +6084,53 @@ export const Constants = {
     Enums: {
       account_member_role: ["viewer", "editor", "admin"],
       app_role: ["admin", "user"],
+      authority_asset_status: [
+        "idea",
+        "research",
+        "creation",
+        "review",
+        "published",
+        "distribution",
+        "promotion",
+        "performance_review",
+      ],
+      authority_mention_link: ["linked", "unlinked", "unknown"],
+      authority_opp_type: [
+        "resource_mention",
+        "guest_article",
+        "product_listing",
+        "integration_listing",
+        "partnership",
+        "template_resource",
+        "tool_recommendation",
+        "expert_contribution",
+        "podcast",
+        "interview",
+        "digital_pr",
+        "community",
+        "competitor_mention",
+        "link_reclamation",
+      ],
+      authority_quality: [
+        "high_value",
+        "relevant",
+        "low_priority",
+        "avoid",
+        "unrated",
+      ],
+      authority_sentiment: ["positive", "neutral", "negative", "unknown"],
+      authority_stage: [
+        "identified",
+        "researched",
+        "qualified",
+        "pitch_ready",
+        "contacted",
+        "follow_up",
+        "responded",
+        "link_earned",
+        "not_a_fit",
+        "archived",
+      ],
       content_kind: [
         "article",
         "guide",
