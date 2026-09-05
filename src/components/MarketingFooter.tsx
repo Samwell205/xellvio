@@ -14,6 +14,7 @@ export function MarketingFooter() {
         </div>
         <FooterCol title="Product" items={[
           { label: "SMS marketing", to: "/sms-marketing" },
+          { label: "Email marketing", to: "/email-marketing" },
           { label: "Features", to: "/features" },
           { label: "Pricing", to: "/pricing" },
         ]} />

@@ -1,5 +1,5 @@
 import {
-  MessageSquare, Workflow, LayoutTemplate, FormInput, BarChart3, Users,
+  MessageSquare, Mail, Workflow, LayoutTemplate, FormInput, BarChart3, Users,
   Globe2, ShieldCheck, Sparkles, Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -18,6 +18,7 @@ export const NAV: NavEntry[] = [
         heading: "Channels",
         items: [
           { to: "/sms-marketing", label: "SMS marketing", blurb: "Two-way texting in 190+ countries", icon: MessageSquare },
+          { to: "/email-marketing", label: "Email marketing", blurb: "Campaigns, flows and A/B testing", icon: Mail },
           { to: "/solutions/email-to-sms", label: "Email to SMS", blurb: "Send a text from your inbox", icon: Sparkles },
         ],
       },
