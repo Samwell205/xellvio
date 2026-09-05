@@ -13,11 +13,15 @@ export function MarketingFooter() {
           </p>
         </div>
         <FooterCol title="Product" items={[
+          { label: "SMS marketing", to: "/sms-marketing" },
+          { label: "Email marketing", to: "/email-marketing" },
           { label: "Features", to: "/features" },
           { label: "Pricing", to: "/pricing" },
+          { label: "App marketplace", to: "/marketplace" },
           { label: "API Docs", to: "/docs" },
           { label: "AI assistant connection", to: "/connect" },
         ]} />
+
         <FooterCol title="Company" items={[
           { label: "About", to: "/about" },
           { label: "Contact", to: "/contact" },
