@@ -112,7 +112,9 @@ async function loadWorkspaceFacts(db: any, sinceDays: number): Promise<Map<strin
     }
   };
 
-  const sentStatuses = new Set(["sent", "sending", "completed", "partial", "delivered"]);
+  // Only statuses that mean messages actually left the platform count as "sent".
+  // A campaign still in "sending" has not produced value yet.
+  const sentStatuses = new Set(["sent", "completed", "partial", "delivered"]);
   for (const c of campaigns.data ?? []) {
     firstStamp(milestones, c.account_id, "campaign_created", c.created_at);
     note(c.account_id, c.created_at, "sms");
@@ -122,6 +124,7 @@ async function loadWorkspaceFacts(db: any, sinceDays: number): Promise<Map<strin
       note(c.account_id, c.updated_at ?? c.created_at, "sms", true);
     }
   }
+
   for (const a of automations.data ?? []) {
     firstStamp(milestones, a.account_id, "automation_created", a.created_at);
     note(a.account_id, a.created_at, "automation");
