@@ -46,6 +46,7 @@ import { Route as VerifierRouteImport } from './routes/_verifier'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as VerifyIndexRouteImport } from './routes/verify.index'
+import { Route as TemplatesIndexRouteImport } from './routes/templates.index'
 import { Route as MarketplaceIndexRouteImport } from './routes/marketplace.index'
 import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
@@ -327,6 +328,11 @@ const IndexRoute = IndexRouteImport.update({
 const VerifyIndexRoute = VerifyIndexRouteImport.update({
   id: '/verify/',
   path: '/verify/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemplatesIndexRoute = TemplatesIndexRouteImport.update({
+  id: '/templates/',
+  path: '/templates/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarketplaceIndexRoute = MarketplaceIndexRouteImport.update({
@@ -939,6 +945,7 @@ export interface FileRoutesByFullPath {
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/marketplace/': typeof MarketplaceIndexRoute
+  '/templates/': typeof TemplatesIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1072,6 +1079,7 @@ export interface FileRoutesByTo {
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/marketplace': typeof MarketplaceIndexRoute
+  '/templates': typeof TemplatesIndexRoute
   '/verify': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1209,6 +1217,7 @@ export interface FileRoutesById {
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
   '/marketplace/': typeof MarketplaceIndexRoute
+  '/templates/': typeof TemplatesIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1347,6 +1356,7 @@ export interface FileRouteTypes {
     | '/verify/auth'
     | '/verify/reset-password'
     | '/marketplace/'
+    | '/templates/'
     | '/verify/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1480,6 +1490,7 @@ export interface FileRouteTypes {
     | '/verify/auth'
     | '/verify/reset-password'
     | '/marketplace'
+    | '/templates'
     | '/verify'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1616,6 +1627,7 @@ export interface FileRouteTypes {
     | '/verify/auth'
     | '/verify/reset-password'
     | '/marketplace/'
+    | '/templates/'
     | '/verify/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1749,6 +1761,7 @@ export interface RootRouteChildren {
   RCodeRoute: typeof RCodeRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
+  TemplatesIndexRoute: typeof TemplatesIndexRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -2033,6 +2046,13 @@ declare module '@tanstack/react-router' {
       path: '/verify'
       fullPath: '/verify/'
       preLoaderRoute: typeof VerifyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/templates/': {
+      id: '/templates/'
+      path: '/templates'
+      fullPath: '/templates/'
+      preLoaderRoute: typeof TemplatesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketplace/': {
@@ -3025,6 +3045,7 @@ const rootRouteChildren: RootRouteChildren = {
   RCodeRoute: RCodeRoute,
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
+  TemplatesIndexRoute: TemplatesIndexRoute,
   VerifyIndexRoute: VerifyIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
