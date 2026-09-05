@@ -151,7 +151,7 @@ export function ConnectDialog({
                   </p>
                 )}
                 <div className="space-y-2">
-                  {(senders.data ?? []).map((s) => (
+                  {(senders.data ?? []).map((s: { phone: string; kind: string; country: string }) => (
                     <button
                       key={s.phone}
                       type="button"

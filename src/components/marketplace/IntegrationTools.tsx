@@ -213,7 +213,7 @@ export function WorkspaceKeysCard() {
         )}
 
         <div className="space-y-2">
-          {(keys.data ?? []).map((k) => (
+          {(keys.data ?? []).map((k: any) => (
             <div key={k.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
               <div className="min-w-0">
                 <p className="truncate font-medium">{k.name}</p>
