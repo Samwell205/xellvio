@@ -23,7 +23,7 @@ export function Shimmer({ className }: { className?: string }) {
 
 function Frame({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <div className="animate-in fade-in duration-150" role="status" aria-label={label}>
+    <div className="xv-page-enter" role="status" aria-label={label}>
       <span className="sr-only">{label}</span>
       {children}
     </div>
