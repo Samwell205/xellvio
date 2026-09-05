@@ -65,9 +65,9 @@ function Channels() {
 }
 
 
-const HOME_TITLE = "Xellvio: Global SMS Marketing & Bulk SMS Platform";
+const HOME_TITLE = "Xellvio: SMS Marketing & Customer Messaging Platform";
 const HOME_DESCRIPTION =
-  "Xellvio is the SMS marketing platform for sending bulk texts worldwide — campaigns, automations, two-way inbox, link tracking and real-time delivery analytics in 190+ countries.";
+  "Xellvio is the customer messaging platform that unifies SMS, email, automations, AI and reporting — send bulk campaigns to 190+ countries, reply in a shared inbox and track every click and conversion.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
