@@ -1,4 +1,11 @@
-import { createFileRoute, Outlet, redirect, Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  Link,
+  useRouterState,
+  useNavigate,
+} from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -73,9 +80,10 @@ function AppShell() {
   useEffect(() => {
     if (provisioned.current) return;
     provisioned.current = true;
-    provisionCurrentAccount().catch(() => { /* non-fatal */ });
+    provisionCurrentAccount().catch(() => {
+      /* non-fatal */
+    });
   }, []);
-
 
   const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
 
@@ -100,20 +108,25 @@ function AppShell() {
               </button>
             </div>
             <div className="flex items-center gap-2">
-              <button className="size-9 grid place-items-center rounded-md hover:bg-accent" aria-label="Notifications">
+              <button
+                className="size-9 grid place-items-center rounded-md hover:bg-accent"
+                aria-label="Notifications"
+              >
                 <Bell className="size-4" />
               </button>
-              <Link to="/app/settings" aria-label="Account settings" className="size-8 rounded-full bg-gradient-to-br from-primary to-primary/60 hover:ring-2 hover:ring-primary/40 transition" />
+              <Link
+                to="/app/settings"
+                aria-label="Account settings"
+                className="size-8 rounded-full bg-gradient-to-br from-primary to-primary/60 hover:ring-2 hover:ring-primary/40 transition"
+              />
             </div>
           </header>
           <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
           <main className="flex-1 p-4 md:p-6 max-w-[1400px] w-full mx-auto">
-
             <PermissionGuard>
               <Outlet />
             </PermissionGuard>
           </main>
-
         </div>
         <TosReAcceptModal />
       </div>

@@ -1,7 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listMyTfns, submitTfn, claimTfnFromPool, submitAssignedTfn, refreshMyTfn } from "@/lib/verifier.functions";
+import {
+  listMyTfns,
+  submitTfn,
+  claimTfnFromPool,
+  submitAssignedTfn,
+  refreshMyTfn,
+} from "@/lib/verifier.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,15 +50,20 @@ function NumbersPage() {
   useEffect(() => {
     const channel = supabase
       .channel("verifier-tfns-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "verifier_tfns" },
-        () => qc.invalidateQueries({ queryKey: ["verifier", "tfns"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "verifier_tfns" }, () =>
+        qc.invalidateQueries({ queryKey: ["verifier", "tfns"] }),
+      )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [qc]);
 
   // Poll Telnyx directly for any pending rows so status reflects carrier state.
   useEffect(() => {
-    const pendingIds = (rows ?? []).filter((r: any) => r.status === "pending_verification").map((r: any) => r.id);
+    const pendingIds = (rows ?? [])
+      .filter((r: any) => r.status === "pending_verification")
+      .map((r: any) => r.id);
     if (pendingIds.length === 0) return;
     const timer = setInterval(() => {
       pendingIds.forEach((id) => refresh({ data: { id } }).catch(() => {}));
@@ -73,7 +84,8 @@ function NumbersPage() {
     mutationFn: () => submit({ data: { phone_number: phone, country: "US", notes } }),
     onSuccess: () => {
       toast.success("Number submitted for verification");
-      setPhone(""); setNotes("");
+      setPhone("");
+      setNotes("");
       qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -84,9 +96,11 @@ function NumbersPage() {
       submitAssigned({ data: { id: v.id, notes: JSON.stringify(v.payload), payload: v.payload } }),
     onSuccess: (r: any) => {
       toast.success(
-        r?.status === "verified" ? "Approved by the carrier." :
-        r?.status === "rejected" ? "Carrier rejected the submission." :
-        "Submitted to the carrier — status will update automatically.",
+        r?.status === "verified"
+          ? "Approved by the carrier."
+          : r?.status === "rejected"
+            ? "Carrier rejected the submission."
+            : "Submitted to the carrier — status will update automatically.",
       );
       qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
     },
@@ -108,7 +122,9 @@ function NumbersPage() {
 
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /> Claim a number to verify</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="size-4 text-primary" /> Claim a number to verify
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-slate-400">
@@ -117,14 +133,26 @@ function NumbersPage() {
             assign it to you automatically.
           </p>
           <p className="text-xs text-slate-400">
-            Marketplace slots used: <span className={atCap ? "text-red-400 font-medium" : "text-slate-200 font-medium"}>{activeCount}/3</span>. Sell one to free a slot.
+            Marketplace slots used:{" "}
+            <span className={atCap ? "text-red-400 font-medium" : "text-slate-200 font-medium"}>
+              {activeCount}/3
+            </span>
+            . Sell one to free a slot.
           </p>
           <Button disabled={claimMut.isPending || atCap} onClick={() => claimMut.mutate()}>
-            {claimMut.isPending ? "Assigning a number…" : atCap ? "Limit reached (3/3)" : "Claim a number"}
+            {claimMut.isPending
+              ? "Assigning a number…"
+              : atCap
+                ? "Limit reached (3/3)"
+                : "Claim a number"}
           </Button>
 
           <div>
-            <button type="button" className="text-xs text-slate-400 hover:text-slate-200 underline" onClick={() => setShowManual((s) => !s)}>
+            <button
+              type="button"
+              className="text-xs text-slate-400 hover:text-slate-200 underline"
+              onClick={() => setShowManual((s) => !s)}
+            >
               {showManual ? "Hide manual entry" : "I already have a number to submit"}
             </button>
           </div>
@@ -133,17 +161,37 @@ function NumbersPage() {
 
       {showManual && (
         <Card className="bg-slate-900 border-slate-800">
-          <CardHeader><CardTitle>Submit an existing toll-free number</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Submit an existing toll-free number</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-3">
-            <div><Label>Phone number (E.164)</Label><Input placeholder="+18885551234" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-            <div><Label>Notes (optional)</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any context our team should know" /></div>
-            <Button disabled={submitMut.isPending || !phone} onClick={() => submitMut.mutate()}>Submit for verification</Button>
+            <div>
+              <Label>Phone number (E.164)</Label>
+              <Input
+                placeholder="+18885551234"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Notes (optional)</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any context our team should know"
+              />
+            </div>
+            <Button disabled={submitMut.isPending || !phone} onClick={() => submitMut.mutate()}>
+              Submit for verification
+            </Button>
           </CardContent>
         </Card>
       )}
 
       <Card className="bg-slate-900 border-slate-800">
-        <CardHeader><CardTitle>Submitted numbers</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Submitted numbers</CardTitle>
+        </CardHeader>
         <CardContent>
           {(rows ?? []).length === 0 ? (
             <div className="text-sm text-slate-400">No numbers submitted yet.</div>
@@ -154,21 +202,37 @@ function NumbersPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-mono">{r.phone_number}</div>
-                      <div className="text-xs text-slate-400">{new Date(r.created_at).toLocaleString()}</div>
-                      {r.rejection_reason && <div className="text-xs text-red-400 mt-1">Reason: {r.rejection_reason}</div>}
+                      <div className="text-xs text-slate-400">
+                        {new Date(r.created_at).toLocaleString()}
+                      </div>
+                      {r.rejection_reason && (
+                        <div className="text-xs text-red-400 mt-1">
+                          Reason: {r.rejection_reason}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
-                      <Badge variant={
-                        r.status === "verified" ? "default" :
-                        r.status === "sold" ? "secondary" :
-                        r.status === "rejected" ? "destructive" : "outline"
-                      }>
+                      <Badge
+                        variant={
+                          r.status === "verified"
+                            ? "default"
+                            : r.status === "sold"
+                              ? "secondary"
+                              : r.status === "rejected"
+                                ? "destructive"
+                                : "outline"
+                        }
+                      >
                         {r.rejection_reason && r.status === "pending_verification"
                           ? "action requested"
-                          : r.status === "assigned" ? "awaiting your submission" : r.status.replace("_", " ")}
+                          : r.status === "assigned"
+                            ? "awaiting your submission"
+                            : r.status.replace("_", " ")}
                       </Badge>
                       {r.status === "sold" && (
-                        <div className="text-xs text-green-400 mt-1">+₦{Number(r.payout_ngn ?? 0).toLocaleString()}</div>
+                        <div className="text-xs text-green-400 mt-1">
+                          +₦{Number(r.payout_ngn ?? 0).toLocaleString()}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -187,7 +251,9 @@ function NumbersPage() {
                   {r.status === "pending_verification" && (
                     <div className="border-t border-slate-800 pt-3 flex items-center justify-between">
                       <span className="text-xs text-slate-400">
-                        {r.rejection_reason ? "Carrier requested changes — fix and resubmit." : "Carrier review in progress — updates automatically."}
+                        {r.rejection_reason
+                          ? "Carrier requested changes — fix and resubmit."
+                          : "Carrier review in progress — updates automatically."}
                       </span>
                       <div className="flex items-center gap-2">
                         {r.rejection_reason && (
@@ -195,7 +261,12 @@ function NumbersPage() {
                             Fix &amp; resubmit
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" disabled={refreshMut.isPending} onClick={() => refreshMut.mutate(r.id)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={refreshMut.isPending}
+                          onClick={() => refreshMut.mutate(r.id)}
+                        >
                           <RefreshCw className="size-3 mr-1" /> Refresh
                         </Button>
                       </div>
@@ -215,7 +286,6 @@ function NumbersPage() {
         </CardContent>
       </Card>
 
-
       <Dialog open={!!wizardTfnId} onOpenChange={(o) => !o && setWizardTfnId(null)}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -226,7 +296,11 @@ function NumbersPage() {
               initial={parseWizardInitial(wizardRow?.notes)}
               submitting={submitAssignedMut.isPending}
               onClose={() => setWizardTfnId(null)}
-              submitLabel={wizardRow?.telnyx_verification_id ? "Resubmit requested changes" : "Submit for verification"}
+              submitLabel={
+                wizardRow?.telnyx_verification_id
+                  ? "Resubmit requested changes"
+                  : "Submit for verification"
+              }
               onSubmit={async (form: WizardForm) => {
                 await submitAssignedMut.mutateAsync({
                   id: wizardTfnId,
@@ -258,8 +332,9 @@ function StatusTimeline({ row }: { row: any }) {
     { key: "in_review", label: "In review", at: row.in_review_at ?? null },
     { key: "verified", label: "Verified", at: row.verified_at ?? null },
     { key: "rejected", label: "Rejected", at: row.rejected_at ?? null },
-  ].filter((s) => (s.key === "rejected" ? !!row.rejected_at : s.key !== "rejected"))
-   .concat(row.rejected_at ? [{ key: "rejected", label: "Rejected", at: row.rejected_at }] : []);
+  ]
+    .filter((s) => (s.key === "rejected" ? !!row.rejected_at : s.key !== "rejected"))
+    .concat(row.rejected_at ? [{ key: "rejected", label: "Rejected", at: row.rejected_at }] : []);
 
   return (
     <div className="border-t border-slate-800 pt-3">
@@ -273,8 +348,8 @@ function StatusTimeline({ row }: { row: any }) {
                   ? s.key === "rejected"
                     ? "bg-red-500"
                     : s.key === "verified"
-                    ? "bg-green-500"
-                    : "bg-blue-500"
+                      ? "bg-green-500"
+                      : "bg-blue-500"
                   : "bg-slate-700"
               }`}
             />
@@ -288,4 +363,3 @@ function StatusTimeline({ row }: { row: any }) {
     </div>
   );
 }
-

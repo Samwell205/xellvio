@@ -8,11 +8,15 @@ import { pageHead } from "@/lib/seo";
 export const Route = createFileRoute("/marketplace/categories")({
   head: () =>
     pageHead({
-    path: "/marketplace/categories",
-    title: "Marketplace App Categories",
-    description:
-      "Explore Xellvio marketplace categories — ecommerce, CRM, forms, analytics, support and automation — to find the integration you need.",
-    breadcrumbs: [{ name: "Home", path: "/" }, { name: "Marketplace", path: "/marketplace" }, { name: "Categories", path: "/marketplace/categories" }],
+      path: "/marketplace/categories",
+      title: "Marketplace App Categories",
+      description:
+        "Explore Xellvio marketplace categories — ecommerce, CRM, forms, analytics, support and automation — to find the integration you need.",
+      breadcrumbs: [
+        { name: "Home", path: "/" },
+        { name: "Marketplace", path: "/marketplace" },
+        { name: "Categories", path: "/marketplace/categories" },
+      ],
     }),
   component: CategoriesPage,
 });
@@ -24,11 +28,15 @@ function CategoriesPage() {
     <main className="mx-auto w-full max-w-7xl px-4 py-12 md:px-6">
       <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">Explore by category</h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Every integration is grouped by the job it does, so you can find the right app for your workflow in seconds.
+        Every integration is grouped by the job it does, so you can find the right app for your
+        workflow in seconds.
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cats.isLoading && Array.from({ length: 9 }).map((_, i) => <Skeleton key={i} className="h-36 rounded-2xl" />)}
+        {cats.isLoading &&
+          Array.from({ length: 9 }).map((_, i) => (
+            <Skeleton key={i} className="h-36 rounded-2xl" />
+          ))}
         {cats.data?.map((c) => (
           <Link
             key={c.id}

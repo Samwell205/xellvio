@@ -30,7 +30,15 @@ function SignupFormView() {
   const design = mergeDesign(form.design);
   const blocks = normalizeBlocks(form.blocks);
 
-  const submit = async ({ phone, firstName, lastName }: { phone: string; firstName?: string; lastName?: string }) => {
+  const submit = async ({
+    phone,
+    firstName,
+    lastName,
+  }: {
+    phone: string;
+    firstName?: string;
+    lastName?: string;
+  }) => {
     const r = await submitSubscribe({
       data: {
         sourceType: "signup_form",
@@ -46,7 +54,12 @@ function SignupFormView() {
   if (blocks.length > 0) {
     return (
       <main style={{ minHeight: "100vh" }}>
-        <BlockCanvas blocks={blocks} theme={mergeTheme(form.builder_theme)} interactive onSubmit={submit} />
+        <BlockCanvas
+          blocks={blocks}
+          theme={mergeTheme(form.builder_theme)}
+          interactive
+          onSubmit={submit}
+        />
       </main>
     );
   }

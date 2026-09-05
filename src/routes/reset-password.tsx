@@ -14,10 +14,10 @@ import { pageHead } from "@/lib/seo";
 export const Route = createFileRoute("/reset-password")({
   head: () =>
     pageHead({
-    path: "/reset-password",
-    title: "Choose a new password",
-    description: "Set a new password for your Xellvio account.",
-    robots: "noindex",
+      path: "/reset-password",
+      title: "Choose a new password",
+      description: "Set a new password for your Xellvio account.",
+      robots: "noindex",
     }),
   component: ResetPasswordPage,
 });
@@ -43,7 +43,11 @@ function ResetPasswordPage() {
     });
     // If the hash has no recovery token at all, mark invalid after a short delay.
     const t = window.setTimeout(() => {
-      if (!ready && !window.location.hash.includes("access_token") && !window.location.hash.includes("type=recovery")) {
+      if (
+        !ready &&
+        !window.location.hash.includes("access_token") &&
+        !window.location.hash.includes("type=recovery")
+      ) {
         supabase.auth.getSession().then(({ data }) => {
           if (!data.session) setInvalidLink(true);
         });
@@ -84,9 +88,13 @@ function ResetPasswordPage() {
     } catch (err) {
       const rawMessage = err instanceof Error ? err.message : "Failed to update password";
       const lower = rawMessage.toLowerCase();
-      const message = lower.includes("weak") || lower.includes("pwned") || lower.includes("breach") || lower.includes("compromis")
-        ? "This password has appeared in a known data breach. Please pick a different, unique password (12+ characters with numbers and symbols)."
-        : rawMessage;
+      const message =
+        lower.includes("weak") ||
+        lower.includes("pwned") ||
+        lower.includes("breach") ||
+        lower.includes("compromis")
+          ? "This password has appeared in a known data breach. Please pick a different, unique password (12+ characters with numbers and symbols)."
+          : rawMessage;
       setErrorMsg(message);
       toast.error(message);
     } finally {
@@ -97,7 +105,9 @@ function ResetPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <Card className="w-full max-w-md p-8">
-        <div className="mb-6"><Logo /></div>
+        <div className="mb-6">
+          <Logo />
+        </div>
         <h1 className="text-2xl font-extrabold">Set a new password</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Choose a strong password you haven't used before.
@@ -143,7 +153,9 @@ function ResetPasswordPage() {
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">Use 12+ characters with numbers and symbols.</p>
+              <p className="text-xs text-muted-foreground">
+                Use 12+ characters with numbers and symbols.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confirmPassword">Confirm new password</Label>
@@ -156,12 +168,20 @@ function ResetPasswordPage() {
                 minLength={8}
                 autoComplete="new-password"
                 aria-invalid={passwordMismatch}
-                className={passwordMismatch ? "border-destructive focus-visible:ring-destructive" : ""}
+                className={
+                  passwordMismatch ? "border-destructive focus-visible:ring-destructive" : ""
+                }
                 disabled={!ready}
               />
-              {passwordMismatch && <p className="text-xs text-destructive">Passwords do not match.</p>}
+              {passwordMismatch && (
+                <p className="text-xs text-destructive">Passwords do not match.</p>
+              )}
             </div>
-            <Button type="submit" className="w-full" disabled={loading || !ready || passwordMismatch}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading || !ready || passwordMismatch}
+            >
               {(loading || !ready) && <Loader2 className="size-4 animate-spin mr-2" />}
               {ready ? "Update password" : "Verifying link…"}
             </Button>

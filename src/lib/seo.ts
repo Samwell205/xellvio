@@ -21,8 +21,7 @@ export const BRAND = {
   short:
     "Xellvio is a customer messaging platform for SMS campaigns, automations, sign-up forms and landing pages.",
   /** Full factual description used for Organization / SoftwareApplication schema. */
-  long:
-    "Xellvio is a customer messaging platform that helps businesses send bulk SMS and MMS campaigns to 190+ countries, automate customer journeys, collect leads through sign-up forms and landing pages, reply in a shared two-way inbox, and measure delivery, clicks and revenue from one place.",
+  long: "Xellvio is a customer messaging platform that helps businesses send bulk SMS and MMS campaigns to 190+ countries, automate customer journeys, collect leads through sign-up forms and landing pages, reply in a shared two-way inbox, and measure delivery, clicks and revenue from one place.",
   logo: `${SITE_URL}/icon-512.png`,
   /** Only officially owned profiles belong here. Empty until verified. */
   sameAs: [] as string[],
@@ -102,7 +101,14 @@ export function pageHead(seo: PageSeo) {
   const nodes: Record<string, unknown>[] = [];
   if (!noindex) {
     if (seo.webPage !== false) {
-      nodes.push(webPageSchema({ name: title, description: seo.description, path: seo.path, dateModified: seo.dateModified }));
+      nodes.push(
+        webPageSchema({
+          name: title,
+          description: seo.description,
+          path: seo.path,
+          dateModified: seo.dateModified,
+        }),
+      );
     }
     if (seo.breadcrumbs?.length) nodes.push(breadcrumbSchema(seo.breadcrumbs));
     if (seo.schema?.length) nodes.push(...seo.schema);
@@ -219,7 +225,10 @@ export function articleSchema(opts: {
     mainEntityOfPage: url,
     datePublished: opts.datePublished,
     dateModified: opts.dateModified ?? opts.datePublished,
-    author: { "@type": opts.authorName ? "Person" : "Organization", name: opts.authorName ?? BRAND.name },
+    author: {
+      "@type": opts.authorName ? "Person" : "Organization",
+      name: opts.authorName ?? BRAND.name,
+    },
     publisher: { "@id": ORG_ID },
     ...(opts.image ? { image: opts.image } : {}),
   };

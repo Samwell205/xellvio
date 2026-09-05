@@ -61,7 +61,9 @@ function AppDetailPage() {
     return (
       <main className="mx-auto w-full max-w-2xl px-4 py-24 text-center md:px-6">
         <h1 className="text-2xl font-semibold">App not found</h1>
-        <p className="mt-2 text-muted-foreground">This integration may have been renamed or unpublished.</p>
+        <p className="mt-2 text-muted-foreground">
+          This integration may have been renamed or unpublished.
+        </p>
         <Button asChild className="mt-6 rounded-full">
           <Link to="/marketplace/apps">Browse all apps</Link>
         </Button>
@@ -90,7 +92,13 @@ function AppDetailPage() {
           }}
         />
         <div className="flex flex-col gap-5 p-6 md:flex-row md:items-end md:p-8">
-          <AppLogo name={a.name} logoUrl={a.logo_url} accentColor={a.accent_color} size="lg" className="-mt-14" />
+          <AppLogo
+            name={a.name}
+            logoUrl={a.logo_url}
+            accentColor={a.accent_color}
+            size="lg"
+            className="-mt-14"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{a.name}</h1>
@@ -180,7 +188,9 @@ function AppDetailPage() {
                     <p className="text-muted-foreground">{x.description}</p>
                   </li>
                 ))}
-                {!a.app_actions?.length && <li className="text-sm text-muted-foreground">No actions declared yet.</li>}
+                {!a.app_actions?.length && (
+                  <li className="text-sm text-muted-foreground">No actions declared yet.</li>
+                )}
               </ul>
             </div>
             <div>
@@ -194,14 +204,17 @@ function AppDetailPage() {
                     <p className="text-muted-foreground">{x.description}</p>
                   </li>
                 ))}
-                {!a.app_triggers?.length && <li className="text-sm text-muted-foreground">No triggers declared yet.</li>}
+                {!a.app_triggers?.length && (
+                  <li className="text-sm text-muted-foreground">No triggers declared yet.</li>
+                )}
               </ul>
             </div>
           </TabsContent>
 
           <TabsContent value="setup" className="mt-5 space-y-4">
             <p className="whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
-              {a.setup_guide || `Connect ${a.name} from your workspace, authorise access, then choose what it may sync.`}
+              {a.setup_guide ||
+                `Connect ${a.name} from your workspace, authorise access, then choose what it may sync.`}
             </p>
             <div className="flex flex-wrap gap-3">
               {a.documentation_url && (
@@ -237,7 +250,9 @@ function AppDetailPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">No reviews yet — be the first to share your experience.</p>
+              <p className="text-sm text-muted-foreground">
+                No reviews yet — be the first to share your experience.
+              </p>
             )}
           </TabsContent>
 
@@ -246,7 +261,9 @@ function AppDetailPage() {
               a.app_versions.map((v) => (
                 <div key={v.id} className="rounded-xl border p-4">
                   <p className="font-medium">v{v.version}</p>
-                  <p className="text-sm text-muted-foreground">{v.changelog ?? "Initial release."}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {v.changelog ?? "Initial release."}
+                  </p>
                 </div>
               ))
             ) : (
@@ -280,7 +297,8 @@ function AppDetailPage() {
           <div className="rounded-2xl border bg-muted/40 p-5 text-sm text-muted-foreground">
             <ShieldCheck className="size-5 text-primary" />
             <p className="mt-2">
-              Xellvio encrypts every credential, scopes access to one workspace and logs every request this app makes.
+              Xellvio encrypts every credential, scopes access to one workspace and logs every
+              request this app makes.
             </p>
           </div>
         </aside>

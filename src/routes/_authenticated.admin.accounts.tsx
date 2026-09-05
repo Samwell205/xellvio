@@ -8,7 +8,10 @@ import { toast } from "sonner";
 import { Loader2, ShieldOff, ShieldCheck, Ban, PlayCircle, Wand2, Link2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { adminSetSuspension } from "@/lib/account.functions";
-import { adminSuspendTenantSending, adminResumeTenantSending } from "@/lib/compliance-admin.functions";
+import {
+  adminSuspendTenantSending,
+  adminResumeTenantSending,
+} from "@/lib/compliance-admin.functions";
 import { adminBackfillProvisioning } from "@/lib/provision-account.functions";
 import { adminSetClickDomain } from "@/lib/click-domain.functions";
 
@@ -28,7 +31,9 @@ function AdminAccountsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,sending_suspended_at,sending_suspended_reason,created_at,signup_country,signup_region,signup_city,signup_ip,click_domain,last_seen_country,last_seen_city,last_seen_at")
+        .select(
+          "id,email,legal_business_name,company,onboarding_status,credit_balance,suspended_at,sending_suspended_at,sending_suspended_reason,created_at,signup_country,signup_region,signup_city,signup_ip,click_domain,last_seen_country,last_seen_city,last_seen_at",
+        )
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -54,7 +59,11 @@ function AdminAccountsPage() {
       killFn({ data: { accountId: id, reason } }),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
-      toast.success(r.telnyxOk ? "Sending paused (Telnyx profile disabled)" : `Sending paused locally — Telnyx: ${r.telnyxError ?? "err"}`);
+      toast.success(
+        r.telnyxOk
+          ? "Sending paused (Telnyx profile disabled)"
+          : `Sending paused locally — Telnyx: ${r.telnyxError ?? "err"}`,
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -73,7 +82,9 @@ function AdminAccountsPage() {
       clickDomainFn({ data: { accountId: id, domain } }),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
-      toast.success(r.branded ? `Tracked links now use ${r.clickBase}` : "Reverted to the shared link domain");
+      toast.success(
+        r.branded ? `Tracked links now use ${r.clickBase}` : "Reverted to the shared link domain",
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -83,7 +94,9 @@ function AdminAccountsPage() {
     mutationFn: () => backfillFn({ data: {} }),
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
-      toast.success(`Provisioned ${r.provisioned}/${r.scanned} dormant accounts${r.failed ? ` · ${r.failed} failed` : ""}`);
+      toast.success(
+        `Provisioned ${r.provisioned}/${r.scanned} dormant accounts${r.failed ? ` · ${r.failed} failed` : ""}`,
+      );
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -101,13 +114,19 @@ function AdminAccountsPage() {
           disabled={backfill.isPending}
           title="Create Telnyx Messaging Profiles for any accounts that don't have one yet"
         >
-          {backfill.isPending ? <Loader2 className="size-4 animate-spin mr-2" /> : <Wand2 className="size-4 mr-2" />}
+          {backfill.isPending ? (
+            <Loader2 className="size-4 animate-spin mr-2" />
+          ) : (
+            <Wand2 className="size-4 mr-2" />
+          )}
           Backfill provisioning
         </Button>
       </div>
 
       {accounts.isLoading ? (
-        <div className="flex items-center justify-center h-32"><Loader2 className="size-6 animate-spin" /></div>
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="size-6 animate-spin" />
+        </div>
       ) : (
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
@@ -131,16 +150,27 @@ function AdminAccountsPage() {
                   const sendingPaused = !!(a as any).sending_suspended_at;
                   return (
                     <tr key={a.id} className="border-t">
-                      <td className="p-3 font-medium">{a.legal_business_name || a.company || "—"}</td>
+                      <td className="p-3 font-medium">
+                        {a.legal_business_name || a.company || "—"}
+                      </td>
                       <td className="p-3 text-muted-foreground">{a.email}</td>
                       <td className="p-3">
                         <div className="flex flex-col gap-1">
-                          <Badge variant={suspended ? "destructive" : a.onboarding_status === "active" ? "default" : "secondary"}>
+                          <Badge
+                            variant={
+                              suspended
+                                ? "destructive"
+                                : a.onboarding_status === "active"
+                                  ? "default"
+                                  : "secondary"
+                            }
+                          >
                             {a.onboarding_status}
                           </Badge>
                           {sendingPaused && (
                             <Badge variant="destructive" className="w-fit">
-                              <Ban className="size-3 mr-1" />Sending paused
+                              <Ban className="size-3 mr-1" />
+                              Sending paused
                             </Badge>
                           )}
                         </div>
@@ -148,12 +178,17 @@ function AdminAccountsPage() {
                       <td className="p-3 text-muted-foreground">
                         {(() => {
                           const r = a as any;
-                          const parts = [r.signup_city, r.signup_region, r.signup_country].filter(Boolean);
+                          const parts = [r.signup_city, r.signup_region, r.signup_country].filter(
+                            Boolean,
+                          );
                           const lastParts = [r.last_seen_city, r.last_seen_country].filter(Boolean);
-                          if (parts.length === 0 && lastParts.length === 0) return <span title="Captured on next sign-in">Unknown</span>;
+                          if (parts.length === 0 && lastParts.length === 0)
+                            return <span title="Captured on next sign-in">Unknown</span>;
                           return (
                             <div className="flex flex-col leading-tight">
-                              <span className="text-foreground">{parts.join(", ") || "Unknown"}</span>
+                              <span className="text-foreground">
+                                {parts.join(", ") || "Unknown"}
+                              </span>
                               {r.signup_ip && <span className="text-xs">{r.signup_ip}</span>}
                               {lastParts.length > 0 && (
                                 <span className="text-xs">Last seen: {lastParts.join(", ")}</span>
@@ -169,28 +204,40 @@ function AdminAccountsPage() {
                         </span>
                       </td>
 
-                      <td className="p-3 text-right tabular-nums">${Number(a.credit_balance).toFixed(2)}</td>
-                      <td className="p-3 text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</td>
+                      <td className="p-3 text-right tabular-nums">
+                        ${Number(a.credit_balance).toFixed(2)}
+                      </td>
+                      <td className="p-3 text-muted-foreground">
+                        {new Date(a.created_at).toLocaleDateString()}
+                      </td>
                       <td className="p-3 text-right">
                         <div className="flex gap-2 justify-end flex-wrap">
                           {sendingPaused ? (
-                            <Button size="sm" variant="outline"
+                            <Button
+                              size="sm"
+                              variant="outline"
                               onClick={() => resumeSending.mutate(a.id)}
                               disabled={resumeSending.isPending}
                             >
-                              <PlayCircle className="size-3.5 mr-1.5" />Resume sending
+                              <PlayCircle className="size-3.5 mr-1.5" />
+                              Resume sending
                             </Button>
                           ) : (
-                            <Button size="sm" variant="destructive"
+                            <Button
+                              size="sm"
+                              variant="destructive"
                               onClick={() => {
-                                const reason = window.prompt("Reason for pausing sending? (visible in audit + tenant panel)");
+                                const reason = window.prompt(
+                                  "Reason for pausing sending? (visible in audit + tenant panel)",
+                                );
                                 if (!reason || reason.trim().length < 3) return;
                                 killSwitch.mutate({ id: a.id, reason: reason.trim() });
                               }}
                               disabled={killSwitch.isPending}
                               title="Immediately disable this tenant's Telnyx Messaging Profile"
                             >
-                              <Ban className="size-3.5 mr-1.5" />Kill sending
+                              <Ban className="size-3.5 mr-1.5" />
+                              Kill sending
                             </Button>
                           )}
                           <Button
@@ -207,7 +254,8 @@ function AdminAccountsPage() {
                             disabled={setClickDomain.isPending}
                             title="Give this tenant its own short-link domain so carrier reputation is not shared"
                           >
-                            <Link2 className="size-3.5 mr-1.5" />Link domain
+                            <Link2 className="size-3.5 mr-1.5" />
+                            Link domain
                           </Button>
                           <Button
                             size="sm"
@@ -215,7 +263,17 @@ function AdminAccountsPage() {
                             onClick={() => setStatus.mutate({ id: a.id, suspend: !suspended })}
                             disabled={setStatus.isPending}
                           >
-                            {suspended ? <><ShieldCheck className="size-3.5 mr-1.5" />Reinstate</> : <><ShieldOff className="size-3.5 mr-1.5" />Suspend account</>}
+                            {suspended ? (
+                              <>
+                                <ShieldCheck className="size-3.5 mr-1.5" />
+                                Reinstate
+                              </>
+                            ) : (
+                              <>
+                                <ShieldOff className="size-3.5 mr-1.5" />
+                                Suspend account
+                              </>
+                            )}
                           </Button>
                         </div>
                       </td>
@@ -223,7 +281,11 @@ function AdminAccountsPage() {
                   );
                 })}
                 {(accounts.data ?? []).length === 0 && (
-                  <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">No accounts yet.</td></tr>
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                      No accounts yet.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

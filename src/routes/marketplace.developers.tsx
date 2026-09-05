@@ -6,20 +6,40 @@ import { pageHead } from "@/lib/seo";
 export const Route = createFileRoute("/marketplace/developers")({
   head: () =>
     pageHead({
-    path: "/marketplace/developers",
-    title: "Build an App for Xellvio",
-    description:
-      "Developer guide for building and submitting an app to the Xellvio App Marketplace, including credentials, review requirements and supported actions.",
-    breadcrumbs: [{ name: "Home", path: "/" }, { name: "Marketplace", path: "/marketplace" }, { name: "Developers", path: "/marketplace/developers" }],
+      path: "/marketplace/developers",
+      title: "Build an App for Xellvio",
+      description:
+        "Developer guide for building and submitting an app to the Xellvio App Marketplace, including credentials, review requirements and supported actions.",
+      breadcrumbs: [
+        { name: "Home", path: "/" },
+        { name: "Marketplace", path: "/marketplace" },
+        { name: "Developers", path: "/marketplace/developers" },
+      ],
     }),
   component: DevelopersPage,
 });
 
 const STEPS = [
-  { icon: Code2, title: "Create your developer profile", body: "Tell us who you are, your support contact and where your docs live." },
-  { icon: GitBranch, title: "Declare actions and triggers", body: "Map your API onto Xellvio's canonical contacts, orders, payments and events." },
-  { icon: Webhook, title: "Test in the sandbox", body: "Verify your endpoints and webhooks respond before anyone installs." },
-  { icon: Rocket, title: "Submit and publish", body: "Our team reviews your app, then it appears for every Xellvio workspace." },
+  {
+    icon: Code2,
+    title: "Create your developer profile",
+    body: "Tell us who you are, your support contact and where your docs live.",
+  },
+  {
+    icon: GitBranch,
+    title: "Declare actions and triggers",
+    body: "Map your API onto Xellvio's canonical contacts, orders, payments and events.",
+  },
+  {
+    icon: Webhook,
+    title: "Test in the sandbox",
+    body: "Verify your endpoints and webhooks respond before anyone installs.",
+  },
+  {
+    icon: Rocket,
+    title: "Submit and publish",
+    body: "Our team reviews your app, then it appears for every Xellvio workspace.",
+  },
 ];
 
 function DevelopersPage() {
@@ -35,8 +55,9 @@ function DevelopersPage() {
             Build an integration once. Reach every Xellvio workspace.
           </h1>
           <p className="mt-5 max-w-2xl text-muted-foreground md:text-lg">
-            Xellvio maps every app onto one canonical data model — contacts, orders, payments, bookings and events. Wire
-            your API in once and it works inside campaigns, automations, flows and landing pages.
+            Xellvio maps every app onto one canonical data model — contacts, orders, payments,
+            bookings and events. Wire your API in once and it works inside campaigns, automations,
+            flows and landing pages.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="rounded-full">
@@ -120,7 +141,8 @@ function DevelopersPage() {
       <section className="mx-auto w-full max-w-5xl px-4 py-16 text-center md:px-6">
         <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">Ready to ship?</h2>
         <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-          Create your developer profile, define your first action and submit for review — usually within a day.
+          Create your developer profile, define your first action and submit for review — usually
+          within a day.
         </p>
         <Button asChild size="lg" className="mt-6 rounded-full">
           <Link to="/app/developer">Start building</Link>

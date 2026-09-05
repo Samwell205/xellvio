@@ -67,5 +67,8 @@ export function trackEvent(event: AnalyticsEvent, props: Props = {}) {
 
 /** Page view for client-side route changes. */
 export function trackPageView(path: string, title?: string) {
-  trackEvent("page_view", { page_path: path, page_title: title ?? (typeof document !== "undefined" ? document.title : "") });
+  trackEvent("page_view", {
+    page_path: path,
+    page_title: title ?? (typeof document !== "undefined" ? document.title : ""),
+  });
 }

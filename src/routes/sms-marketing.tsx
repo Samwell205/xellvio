@@ -1,22 +1,35 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  MessageSquare, Globe2, Sparkles, BarChart3, Send, Flag, Check, MousePointerClick,
+  MessageSquare,
+  Globe2,
+  Sparkles,
+  BarChart3,
+  Send,
+  Flag,
+  Check,
+  MousePointerClick,
 } from "lucide-react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import {
-  ChannelSubNav, ChannelHero, StatsMarquee, PillarGrid, SplitFeature, ProofCards,
-  ChannelFaq, ChannelCta,
+  ChannelSubNav,
+  ChannelHero,
+  StatsMarquee,
+  PillarGrid,
+  SplitFeature,
+  ProofCards,
+  ChannelFaq,
+  ChannelCta,
 } from "@/components/marketing/ProductKit";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/sms-marketing")({
   head: () =>
     pageHead({
-    path: "/sms-marketing",
-    title: "SMS Marketing Platform",
-    description:
-      "Xellvio SMS marketing: build segments, send bulk text campaigns to 190+ countries, automate replies and keywords, and measure delivery, clicks and revenue per campaign.",
+      path: "/sms-marketing",
+      title: "SMS Marketing Platform",
+      description:
+        "Xellvio SMS marketing: build segments, send bulk text campaigns to 190+ countries, automate replies and keywords, and measure delivery, clicks and revenue per campaign.",
     }),
   component: SmsMarketingPage,
 });
@@ -57,10 +70,26 @@ function SmsMarketingPage() {
           id="overview"
           heading="Text your way to better results"
           items={[
-            { icon: MessageSquare, title: "Personal at any scale", text: "Merge names, orders and custom fields into every message, then reply from a shared inbox." },
-            { icon: Globe2, title: "Meet people where they are", text: "Tier-1 carrier routes in 190+ countries, with each country's sender rules handled for you." },
-            { icon: Sparkles, title: "Automate the follow-up", text: "Keyword replies, welcome series and win-backs that run without you lifting a finger." },
-            { icon: BarChart3, title: "See what actually worked", text: "Delivery, clicks and spend per campaign, per country, per message." },
+            {
+              icon: MessageSquare,
+              title: "Personal at any scale",
+              text: "Merge names, orders and custom fields into every message, then reply from a shared inbox.",
+            },
+            {
+              icon: Globe2,
+              title: "Meet people where they are",
+              text: "Tier-1 carrier routes in 190+ countries, with each country's sender rules handled for you.",
+            },
+            {
+              icon: Sparkles,
+              title: "Automate the follow-up",
+              text: "Keyword replies, welcome series and win-backs that run without you lifting a finger.",
+            },
+            {
+              icon: BarChart3,
+              title: "See what actually worked",
+              text: "Delivery, clicks and spend per campaign, per country, per message.",
+            },
           ]}
         />
         <SplitFeature
@@ -99,18 +128,44 @@ function SmsMarketingPage() {
         />
         <ProofCards
           items={[
-            { stat: "36%", label: "SMS subscriber growth", quote: "Sign-up forms and keyword opt-ins turned casual browsers into a list that keeps compounding." },
-            { stat: "3.4x", label: "return on campaign spend", quote: "Segmented drops beat one-size-fits-all blasts on every metric that matters." },
-            { stat: "19 min", label: "to send 20,000 texts", quote: "Large launches clear fast, with live delivery counts while the send is still running." },
+            {
+              stat: "36%",
+              label: "SMS subscriber growth",
+              quote:
+                "Sign-up forms and keyword opt-ins turned casual browsers into a list that keeps compounding.",
+            },
+            {
+              stat: "3.4x",
+              label: "return on campaign spend",
+              quote: "Segmented drops beat one-size-fits-all blasts on every metric that matters.",
+            },
+            {
+              stat: "19 min",
+              label: "to send 20,000 texts",
+              quote:
+                "Large launches clear fast, with live delivery counts while the send is still running.",
+            },
           ]}
         />
         <ChannelFaq
           id="faq"
           items={[
-            { q: "Do I need my own phone number?", a: "No. Xellvio provisions a sender for you — a sender ID, a toll-free number or a local number, depending on where you're texting." },
-            { q: "How is SMS priced?", a: "You top up credits and pay per message part, at the rate for the destination country. Pricing is shown before you send." },
-            { q: "Can people reply?", a: "Yes. Replies land in your inbox and can trigger automations or keyword responses instantly." },
-            { q: "How do opt-outs work?", a: "STOP and its local equivalents are handled automatically and suppressed forever across every campaign." },
+            {
+              q: "Do I need my own phone number?",
+              a: "No. Xellvio provisions a sender for you — a sender ID, a toll-free number or a local number, depending on where you're texting.",
+            },
+            {
+              q: "How is SMS priced?",
+              a: "You top up credits and pay per message part, at the rate for the destination country. Pricing is shown before you send.",
+            },
+            {
+              q: "Can people reply?",
+              a: "Yes. Replies land in your inbox and can trigger automations or keyword responses instantly.",
+            },
+            {
+              q: "How do opt-outs work?",
+              a: "STOP and its local equivalents are handled automatically and suppressed forever across every campaign.",
+            },
           ]}
         />
         <ChannelCta
@@ -156,10 +211,16 @@ function FlowVisual() {
         <Flag className="size-4 text-coral" />
         <span className="text-sm font-semibold text-foreground">Trigger · keyword JOIN</span>
       </div>
-      <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">Consented to marketing?</div>
+      <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
+        Consented to marketing?
+      </div>
       <div className="flex gap-2">
-        <div className="rounded-xl border border-transparent bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">Yes</div>
-        <div className="rounded-xl border border-border bg-card px-4 py-2 text-sm text-muted-foreground">No</div>
+        <div className="rounded-xl border border-transparent bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+          Yes
+        </div>
+        <div className="rounded-xl border border-border bg-card px-4 py-2 text-sm text-muted-foreground">
+          No
+        </div>
       </div>
       <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-4">
         <Send className="size-4 text-coral" />

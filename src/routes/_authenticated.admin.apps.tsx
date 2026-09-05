@@ -41,8 +41,11 @@ function AdminApps() {
   });
 
   const setDev = useMutation({
-    mutationFn: (v: { developerId: string; verificationStatus?: "unverified" | "pending" | "verified"; developerStatus?: "active" | "suspended" }) =>
-      devStatusFn({ data: v }),
+    mutationFn: (v: {
+      developerId: string;
+      verificationStatus?: "unverified" | "pending" | "verified";
+      developerStatus?: "active" | "suspended";
+    }) => devStatusFn({ data: v }),
     onSuccess: () => {
       toast.success("Developer updated");
       qc.invalidateQueries({ queryKey: ["admin-marketplace-devs"] });
@@ -59,7 +62,9 @@ function AdminApps() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">App Marketplace</h1>
-        <p className="text-sm text-muted-foreground">Review submissions, publish apps and monitor ecosystem health.</p>
+        <p className="text-sm text-muted-foreground">
+          Review submissions, publish apps and monitor ecosystem health.
+        </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
@@ -98,10 +103,17 @@ function AdminApps() {
                 </span>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => review.mutate({ appId: a.id, decision: "publish" })}>
+                <Button
+                  size="sm"
+                  onClick={() => review.mutate({ appId: a.id, decision: "publish" })}
+                >
                   Approve & publish
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => review.mutate({ appId: a.id, decision: "approve" })}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => review.mutate({ appId: a.id, decision: "approve" })}
+                >
                   Approve only
                 </Button>
                 <Button
@@ -121,7 +133,11 @@ function AdminApps() {
                   size="sm"
                   variant="destructive"
                   onClick={() =>
-                    review.mutate({ appId: a.id, decision: "reject", notes: prompt("Reason for rejection?") ?? "" })
+                    review.mutate({
+                      appId: a.id,
+                      decision: "reject",
+                      notes: prompt("Reason for rejection?") ?? "",
+                    })
                   }
                 >
                   Reject
@@ -129,7 +145,9 @@ function AdminApps() {
               </div>
             </div>
           ))}
-          {!pending.length && <p className="text-sm text-muted-foreground">Nothing waiting for review.</p>}
+          {!pending.length && (
+            <p className="text-sm text-muted-foreground">Nothing waiting for review.</p>
+          )}
         </TabsContent>
 
         <TabsContent value="all" className="mt-4">
@@ -145,19 +163,32 @@ function AdminApps() {
                       {String(a.status).replace("_", " ")}
                     </Badge>
                     <span className="text-muted-foreground">{a.categoryName ?? "—"}</span>
-                    <span className="tabular-nums text-muted-foreground">{a.installCount} installs</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {a.installCount} installs
+                    </span>
                     <div className="ml-auto flex gap-2">
                       {a.status === "published" ? (
                         <>
-                          <Button size="sm" variant="outline" onClick={() => review.mutate({ appId: a.id, decision: "unpublish" })}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => review.mutate({ appId: a.id, decision: "unpublish" })}
+                          >
                             Unpublish
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => review.mutate({ appId: a.id, decision: "suspend" })}>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => review.mutate({ appId: a.id, decision: "suspend" })}
+                          >
                             Suspend
                           </Button>
                         </>
                       ) : (
-                        <Button size="sm" onClick={() => review.mutate({ appId: a.id, decision: "publish" })}>
+                        <Button
+                          size="sm"
+                          onClick={() => review.mutate({ appId: a.id, decision: "publish" })}
+                        >
                           Publish
                         </Button>
                       )}
@@ -185,7 +216,13 @@ function AdminApps() {
                     <span className="text-muted-foreground">{d.website ?? "—"}</span>
                     <div className="ml-auto flex gap-2">
                       {d.verification_status !== "verified" && (
-                        <Button size="sm" variant="outline" onClick={() => setDev.mutate({ developerId: d.id, verificationStatus: "verified" })}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setDev.mutate({ developerId: d.id, verificationStatus: "verified" })
+                          }
+                        >
                           <BadgeCheck className="mr-1.5 size-4" /> Verify
                         </Button>
                       )}
@@ -195,7 +232,8 @@ function AdminApps() {
                         onClick={() =>
                           setDev.mutate({
                             developerId: d.id,
-                            developerStatus: d.developer_status === "active" ? "suspended" : "active",
+                            developerStatus:
+                              d.developer_status === "active" ? "suspended" : "active",
                           })
                         }
                       >
@@ -205,7 +243,9 @@ function AdminApps() {
                     </div>
                   </div>
                 ))}
-                {!devs.data?.length && <div className="p-4 text-sm text-muted-foreground">No developers yet.</div>}
+                {!devs.data?.length && (
+                  <div className="p-4 text-sm text-muted-foreground">No developers yet.</div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -218,17 +258,24 @@ function AdminApps() {
             </CardHeader>
             <CardContent className="space-y-2">
               {(data.data?.errors ?? []).map((e) => (
-                <div key={e.id} className="flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
+                <div
+                  key={e.id}
+                  className="flex flex-wrap items-center gap-2 rounded-lg border p-3 text-sm"
+                >
                   <AlertCircle className="size-4 text-destructive" />
                   <span className="font-medium">{e.appName}</span>
                   <span className="text-muted-foreground">
                     {e.eventType} · {e.action}
                   </span>
                   <span className="text-destructive">{e.error}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">{new Date(e.createdAt).toLocaleString()}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {new Date(e.createdAt).toLocaleString()}
+                  </span>
                 </div>
               ))}
-              {!data.data?.errors?.length && <p className="text-sm text-muted-foreground">No errors recorded.</p>}
+              {!data.data?.errors?.length && (
+                <p className="text-sm text-muted-foreground">No errors recorded.</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,5 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +45,11 @@ import {
 } from "@/components/ui/select";
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 import { sendTestSms } from "@/lib/sms.functions";
-import { submitNumberRequest, listMyNumberRequests, cancelMyNumberRequest } from "@/lib/number-requests.functions";
+import {
+  submitNumberRequest,
+  listMyNumberRequests,
+  cancelMyNumberRequest,
+} from "@/lib/number-requests.functions";
 import { saveBusinessProfile } from "@/lib/account.functions";
 import { Send } from "lucide-react";
 
@@ -47,7 +58,11 @@ export const Route = createFileRoute("/_authenticated/app/setup-sms")({
   component: SetupSmsPage,
 });
 
-import { COUNTRIES as ALL_COUNTRIES, ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } from "@/lib/countries";
+import {
+  COUNTRIES as ALL_COUNTRIES,
+  ALPHA_SENDER_REQUIRES_REGISTRATION_SET,
+  ALPHA_SENDER_UNSUPPORTED_SET,
+} from "@/lib/countries";
 
 const COUNTRIES = ALL_COUNTRIES.map((c) => ({ code: c.iso, name: c.name }));
 
@@ -64,10 +79,14 @@ function SetupSmsPage() {
   const account = useQuery({
     queryKey: ["account"],
     queryFn: async () =>
-      (await supabase
-        .from("accounts")
-        .select("id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,telnyx_phone_number,monthly_volume_estimate,use_case_description,sample_message,opt_in_description,opt_in_screenshot_url,sms_target_countries,sms_consent_disclosures_confirmed_at")
-        .maybeSingle()).data,
+      (
+        await supabase
+          .from("accounts")
+          .select(
+            "id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,telnyx_phone_number,monthly_volume_estimate,use_case_description,sample_message,opt_in_description,opt_in_screenshot_url,sms_target_countries,sms_consent_disclosures_confirmed_at",
+          )
+          .maybeSingle()
+      ).data,
   });
   const assetsFn = useServerFn(getMySenderAssets);
   const assets = useQuery({
@@ -102,9 +121,10 @@ function SetupSmsPage() {
         </p>
       </div>
 
-      <TollfreeSetupStep assets={assets.data ?? []} targetCountries={a?.sms_target_countries ?? []} />
-
-
+      <TollfreeSetupStep
+        assets={assets.data ?? []}
+        targetCountries={a?.sms_target_countries ?? []}
+      />
 
       <SenderStatusList
         assets={assets.data ?? []}
@@ -116,7 +136,6 @@ function SetupSmsPage() {
           qc.invalidateQueries({ queryKey: ["account"] });
         }}
       />
-
     </div>
   );
 }
@@ -157,7 +176,8 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
   for (const r of reqs.data ?? []) {
     const prev = reqByCountry.get(r.country);
     // Prefer provisioned > approved > others, else newest
-    const rank = (s: string) => (s === "provisioned" ? 3 : s === "approved" ? 2 : s === "pending" ? 1 : 0);
+    const rank = (s: string) =>
+      s === "provisioned" ? 3 : s === "approved" ? 2 : s === "pending" ? 1 : 0;
     if (!prev || rank(r.status) > rank(prev.status)) reqByCountry.set(r.country, r);
   }
   const senderCountries = COUNTRIES;
@@ -174,7 +194,6 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
   const [infoCountry, setInfoCountry] = useState<string | null>(null);
   const [regCountry, setRegCountry] = useState<string | null>(null);
 
-
   function toggleCountry(cc: string) {
     setCountries((current) =>
       current.includes(cc) ? current.filter((x) => x !== cc) : [...current, cc],
@@ -183,7 +202,9 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
 
   async function save() {
     if (!senderId.match(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/)) {
-      toast.error("Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter");
+      toast.error(
+        "Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter",
+      );
       return;
     }
     if (countries.length === 0) {
@@ -245,13 +266,16 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           const a = assetByCC.get(code) as any;
           const s = a?.verification_status as string | undefined;
           if (s === "verified") return { label: "Registered", tone: "success" as const };
-          if (s === "submitted" || s === "in_review") return { label: "In review", tone: "amber" as const };
+          if (s === "submitted" || s === "in_review")
+            return { label: "In review", tone: "amber" as const };
           if (s === "rejected") return { label: "Rejected", tone: "destructive" as const };
           return { label: "Registration required", tone: "amber" as const };
         };
         const statusFor = (code: string) => {
           const isAlphaUnsupported = ALPHA_SENDER_UNSUPPORTED_SET.has(code);
-          const usTfAsset = assets.find((a) => a.country_code === "US" && a.sender_kind === "toll_free");
+          const usTfAsset = assets.find(
+            (a) => a.country_code === "US" && a.sender_kind === "toll_free",
+          );
           const usReq = reqByCountry.get("US");
           const ownTfAsset = isAlphaUnsupported
             ? assets.find((a) => a.country_code === code && a.sender_kind === "toll_free")
@@ -260,32 +284,53 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           const coveredByUs = code === "CA" && !ownTfAsset && !ownReq && (!!usTfAsset || !!usReq);
           const tfAsset = ownTfAsset ?? (coveredByUs ? usTfAsset : null);
           const req = ownReq ?? (coveredByUs ? usReq : null);
-          const vStatus: string | undefined = tfAsset?.telnyx_verification_id ? (tfAsset?.verification_status ?? undefined) : undefined;
+          const vStatus: string | undefined = tfAsset?.telnyx_verification_id
+            ? (tfAsset?.verification_status ?? undefined)
+            : undefined;
           const isVerified = vStatus === "verified";
           const isInReview =
-            vStatus === "in_review" || vStatus === "submitted" || (!!tfAsset && !vStatus) ||
-            req?.status === "approved" || req?.status === "provisioned" || req?.status === "pending";
+            vStatus === "in_review" ||
+            vStatus === "submitted" ||
+            (!!tfAsset && !vStatus) ||
+            req?.status === "approved" ||
+            req?.status === "provisioned" ||
+            req?.status === "pending";
           const isTfRejected = vStatus === "rejected" || req?.status === "rejected";
           let label = "Not started";
           if (isVerified) label = "Verified";
           else if (isTfRejected) label = "Rejected";
           else if (isInReview) label = coveredByUs ? "Covered by US" : "In review";
-          return { isAlphaUnsupported, coveredByUs, isVerified, isInReview, isTfRejected, label, phone: tfAsset?.phone_number as string | undefined };
+          return {
+            isAlphaUnsupported,
+            coveredByUs,
+            isVerified,
+            isInReview,
+            isTfRejected,
+            label,
+            phone: tfAsset?.phone_number as string | undefined,
+          };
         };
         const toneClass = (tone: "success" | "amber" | "destructive") =>
-          tone === "success" ? "bg-success/20 text-success"
-          : tone === "destructive" ? "bg-destructive/20 text-destructive"
-          : "bg-amber-500/20 text-amber-700 dark:text-amber-400";
+          tone === "success"
+            ? "bg-success/20 text-success"
+            : tone === "destructive"
+              ? "bg-destructive/20 text-destructive"
+              : "bg-amber-500/20 text-amber-700 dark:text-amber-400";
         return (
           <div className="space-y-3">
             <Label>Countries</Label>
             <Select
               value=""
               onValueChange={(cc) => {
-                if (ALPHA_SENDER_UNSUPPORTED_SET.has(cc)) { setInfoCountry(cc); return; }
+                if (ALPHA_SENDER_UNSUPPORTED_SET.has(cc)) {
+                  setInfoCountry(cc);
+                  return;
+                }
                 if (ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(cc)) {
                   if (!senderId.match(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/)) {
-                    toast.error("Enter a Sender ID above first, then pick the country to register it.");
+                    toast.error(
+                      "Enter a Sender ID above first, then pick the country to register it.",
+                    );
                     return;
                   }
                   setRegCountry(cc);
@@ -307,15 +352,27 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
                       <span className="flex items-center gap-2">
                         <span>{c.name}</span>
                         {reg ? (
-                          <span className={`text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 ${toneClass(reg.tone)}`}>{reg.label}</span>
+                          <span
+                            className={`text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 ${toneClass(reg.tone)}`}
+                          >
+                            {reg.label}
+                          </span>
                         ) : s.isAlphaUnsupported ? (
-                          <span className={`text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 ${
-                            s.isVerified ? "bg-success/20 text-success" :
-                            s.isTfRejected ? "bg-destructive/20 text-destructive" :
-                            "bg-amber-500/20 text-amber-700 dark:text-amber-400"
-                          }`}>{s.label}</span>
+                          <span
+                            className={`text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 ${
+                              s.isVerified
+                                ? "bg-success/20 text-success"
+                                : s.isTfRejected
+                                  ? "bg-destructive/20 text-destructive"
+                                  : "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                            }`}
+                          >
+                            {s.label}
+                          </span>
                         ) : on ? (
-                          <span className="text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 bg-primary/20 text-primary">Selected</span>
+                          <span className="text-[10px] font-semibold uppercase rounded-full px-1.5 py-0.5 bg-primary/20 text-primary">
+                            Selected
+                          </span>
                         ) : null}
                       </span>
                     </SelectItem>
@@ -324,7 +381,13 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Countries marked <span className="font-semibold text-amber-700 dark:text-amber-400">Registration required</span> (Kuwait, UAE, Saudi Arabia, Nigeria, India, etc.) need a one-time carrier registration. Save your Sender ID above, then pick the country here — we file the registration for you. Approval typically takes 3–10 business days.
+              Countries marked{" "}
+              <span className="font-semibold text-amber-700 dark:text-amber-400">
+                Registration required
+              </span>{" "}
+              (Kuwait, UAE, Saudi Arabia, Nigeria, India, etc.) need a one-time carrier
+              registration. Save your Sender ID above, then pick the country here — we file the
+              registration for you. Approval typically takes 3–10 business days.
             </p>
             {countries.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -332,9 +395,17 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
                   const c = visible.find((x) => x.code === cc);
                   if (!c) return null;
                   return (
-                    <span key={cc} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary bg-primary/10 text-primary text-xs">
+                    <span
+                      key={cc}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary bg-primary/10 text-primary text-xs"
+                    >
                       {c.name}
-                      <button type="button" onClick={() => toggleCountry(cc)} className="hover:bg-primary/20 rounded-full p-0.5" aria-label={`Remove ${c.name}`}>
+                      <button
+                        type="button"
+                        onClick={() => toggleCountry(cc)}
+                        className="hover:bg-primary/20 rounded-full p-0.5"
+                        aria-label={`Remove ${c.name}`}
+                      >
                         <X className="size-3" />
                       </button>
                     </span>
@@ -346,13 +417,14 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
         );
       })()}
 
-
       <UsCanadaInfoDialog code={infoCountry} assets={assets} onClose={() => setInfoCountry(null)} />
       <RegistrationRequiredDialog
         code={regCountry}
         countryName={COUNTRIES.find((c) => c.code === regCountry)?.name ?? ""}
         senderId={senderId}
-        asset={assets.find((a) => a.country_code === regCountry && a.sender_kind === "sender_id") ?? null}
+        asset={
+          assets.find((a) => a.country_code === regCountry && a.sender_kind === "sender_id") ?? null
+        }
         onClose={() => setRegCountry(null)}
       />
     </Card>
@@ -360,8 +432,14 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
 }
 
 function RegistrationCountryDropdown({
-  assets, senderId, onOpen,
-}: { assets: any[]; senderId: string; onOpen: (cc: string) => void }) {
+  assets,
+  senderId,
+  onOpen,
+}: {
+  assets: any[];
+  senderId: string;
+  onOpen: (cc: string) => void;
+}) {
   const regCountries = COUNTRIES.filter((c) => ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(c.code));
   const [pick, setPick] = useState<string>("");
   const statusFor = (cc: string) => {
@@ -377,7 +455,11 @@ function RegistrationCountryDropdown({
     <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 space-y-2">
       <div className="text-sm">
         <strong>Countries that require carrier registration.</strong>
-        <span className="text-muted-foreground"> Pick a country to submit your business details here — we file the registration for you, no external portal needed.</span>
+        <span className="text-muted-foreground">
+          {" "}
+          Pick a country to submit your business details here — we file the registration for you, no
+          external portal needed.
+        </span>
       </div>
       <div className="flex flex-col sm:flex-row gap-2">
         <Select value={pick} onValueChange={setPick}>
@@ -392,11 +474,7 @@ function RegistrationCountryDropdown({
             ))}
           </SelectContent>
         </Select>
-        <Button
-          type="button"
-          disabled={!pick || !senderId}
-          onClick={() => pick && onOpen(pick)}
-        >
+        <Button type="button" disabled={!pick || !senderId} onClick={() => pick && onOpen(pick)}>
           {senderId ? "Register sender ID" : "Save Sender ID first"}
         </Button>
       </div>
@@ -405,7 +483,11 @@ function RegistrationCountryDropdown({
 }
 
 function RegistrationRequiredDialog({
-  code, countryName, senderId, asset, onClose,
+  code,
+  countryName,
+  senderId,
+  asset,
+  onClose,
 }: {
   code: string | null;
   countryName: string;
@@ -424,10 +506,14 @@ function RegistrationRequiredDialog({
     queryKey: ["account-registration-prefill"],
     enabled: !!code && !isRegistered,
     queryFn: async () =>
-      (await supabase
-        .from("accounts")
-        .select("legal_business_name,website_url,use_case_description,sample_message,opt_in_description,monthly_volume_estimate")
-        .maybeSingle()).data,
+      (
+        await supabase
+          .from("accounts")
+          .select(
+            "legal_business_name,website_url,use_case_description,sample_message,opt_in_description,monthly_volume_estimate",
+          )
+          .maybeSingle()
+      ).data,
   });
 
   const [businessName, setBusinessName] = useState("");
@@ -445,7 +531,9 @@ function RegistrationRequiredDialog({
     setUseCase((v) => v || a.use_case_description || "");
     setSampleMessage((v) => v || a.sample_message || "");
     setOptInDescription((v) => v || a.opt_in_description || "");
-    setMonthlyVolume((v) => (v === "" && a.monthly_volume_estimate ? Number(a.monthly_volume_estimate) : v));
+    setMonthlyVolume((v) =>
+      v === "" && a.monthly_volume_estimate ? Number(a.monthly_volume_estimate) : v,
+    );
   }, [acct.data]);
 
   const canSubmit =
@@ -455,7 +543,8 @@ function RegistrationRequiredDialog({
     useCase.trim().length >= 3 &&
     sampleMessage.trim().length >= 10 &&
     optInDescription.trim().length >= 10 &&
-    typeof monthlyVolume === "number" && monthlyVolume > 0;
+    typeof monthlyVolume === "number" &&
+    monthlyVolume > 0;
 
   const mut = useMutation({
     mutationFn: () =>
@@ -472,7 +561,9 @@ function RegistrationRequiredDialog({
         },
       }),
     onSuccess: () => {
-      toast.success(`Registration submitted for ${countryName}. Carrier approval typically takes 3–10 business days — you'll be notified when it goes live.`);
+      toast.success(
+        `Registration submitted for ${countryName}. Carrier approval typically takes 3–10 business days — you'll be notified when it goes live.`,
+      );
       qc.invalidateQueries({ queryKey: ["sender-assets"] });
       qc.invalidateQueries({ queryKey: ["account"] });
       onClose();
@@ -481,19 +572,28 @@ function RegistrationRequiredDialog({
   });
 
   return (
-    <Dialog open={!!code} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={!!code}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Register sender ID — {countryName}</DialogTitle>
           <DialogDescription>
-            Local carriers in {countryName} require your business details before they'll approve an alphanumeric sender. Fill this once — we'll reuse it for other registration-required countries.
+            Local carriers in {countryName} require your business details before they'll approve an
+            alphanumeric sender. Fill this once — we'll reuse it for other registration-required
+            countries.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 text-sm">
           <div className="rounded-md border p-3 bg-muted/40 flex items-center justify-between">
             <div>
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Sender ID</div>
-              <div className="font-mono font-semibold">{senderId || asset?.phone_number || "—"}</div>
+              <div className="font-mono font-semibold">
+                {senderId || asset?.phone_number || "—"}
+              </div>
             </div>
             <Badge variant={isRegistered ? "default" : isSubmitted ? "secondary" : "outline"}>
               {isRegistered ? "Registered" : isSubmitted ? "In review" : "Not started"}
@@ -502,33 +602,57 @@ function RegistrationRequiredDialog({
 
           {isRegistered ? (
             <div className="rounded-md border border-success/30 bg-success/5 p-3 text-sm">
-              Already registered for {countryName}. You can start sending campaigns to this country now.
+              Already registered for {countryName}. You can start sending campaigns to this country
+              now.
             </div>
           ) : isSubmitted ? (
             <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
-              Your registration is already in carrier review for {countryName}. No further action needed — approvals typically take 3–10 business days.
+              Your registration is already in carrier review for {countryName}. No further action
+              needed — approvals typically take 3–10 business days.
             </div>
           ) : (
             <>
               <div className="space-y-1.5">
                 <Label>Legal business name *</Label>
-                <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Acme Marketing LLC" />
+                <Input
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="Acme Marketing LLC"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Business website *</Label>
-                <Input value={businessWebsite} onChange={(e) => setBusinessWebsite(e.target.value)} placeholder="https://your-company.com" />
+                <Input
+                  value={businessWebsite}
+                  onChange={(e) => setBusinessWebsite(e.target.value)}
+                  placeholder="https://your-company.com"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Use case *</Label>
-                <Input value={useCase} onChange={(e) => setUseCase(e.target.value)} placeholder="Marketing promotions, appointment reminders, OTPs…" />
+                <Input
+                  value={useCase}
+                  onChange={(e) => setUseCase(e.target.value)}
+                  placeholder="Marketing promotions, appointment reminders, OTPs…"
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Sample message customers will receive *</Label>
-                <Textarea value={sampleMessage} onChange={(e) => setSampleMessage(e.target.value)} rows={3} placeholder="Hi {{first_name}}, your order #1234 has shipped. Track: https://…  Reply STOP to opt out." />
+                <Textarea
+                  value={sampleMessage}
+                  onChange={(e) => setSampleMessage(e.target.value)}
+                  rows={3}
+                  placeholder="Hi {{first_name}}, your order #1234 has shipped. Track: https://…  Reply STOP to opt out."
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>How customers opted in *</Label>
-                <Textarea value={optInDescription} onChange={(e) => setOptInDescription(e.target.value)} rows={3} placeholder="Customers check a consent box at checkout on our website agreeing to receive SMS updates from {business name}." />
+                <Textarea
+                  value={optInDescription}
+                  onChange={(e) => setOptInDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Customers check a consent box at checkout on our website agreeing to receive SMS updates from {business name}."
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Estimated monthly volume *</Label>
@@ -537,18 +661,25 @@ function RegistrationRequiredDialog({
                   inputMode="numeric"
                   min={1}
                   value={monthlyVolume}
-                  onChange={(e) => setMonthlyVolume(e.target.value === "" ? "" : Math.max(0, Number(e.target.value)))}
+                  onChange={(e) =>
+                    setMonthlyVolume(
+                      e.target.value === "" ? "" : Math.max(0, Number(e.target.value)),
+                    )
+                  }
                   placeholder="e.g. 10000"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                These details are shared with the local carrier for compliance review. They must match your real business — fake or mismatched info gets rejected.
+                These details are shared with the local carrier for compliance review. They must
+                match your real business — fake or mismatched info gets rejected.
               </p>
             </>
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose} disabled={mut.isPending}>Close</Button>
+          <Button variant="ghost" onClick={onClose} disabled={mut.isPending}>
+            Close
+          </Button>
           {!isRegistered && !isSubmitted && (
             <Button onClick={() => mut.mutate()} disabled={mut.isPending || !canSubmit}>
               {mut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
@@ -561,7 +692,15 @@ function RegistrationRequiredDialog({
   );
 }
 
-function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; assets: any[]; onClose: () => void }) {
+function UsCanadaInfoDialog({
+  code,
+  assets,
+  onClose,
+}: {
+  code: string | null;
+  assets: any[];
+  onClose: () => void;
+}) {
   const qc = useQueryClient();
   const name = code === "US" ? "United States" : code === "CA" ? "Canada" : "";
   const listFn = useServerFn(listMyNumberRequests);
@@ -585,17 +724,24 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
   const effectiveTfAsset = ownTfAsset ?? (coveredByUs ? usTfAsset : null);
   // If a toll-free number is already provisioned (e.g. via admin) but there's no number_request row,
   // synthesize a pseudo-request so the dialog shows the carrier-review status instead of the "request a number" CTA.
-  const existing: any = realExisting ?? (effectiveTfAsset
-    ? {
-        id: effectiveTfAsset.id,
-        country: effectiveTfAsset.country_code,
-        status: effectiveTfAsset.verification_status === "verified" ? "provisioned" : effectiveTfAsset.verification_status === "rejected" ? "rejected" : "approved",
-        number_type: "toll_free",
-        business_name: "—",
-        assigned_phone_number: effectiveTfAsset.phone_number,
-        admin_notes: null,
-      }
-    : null);
+  const existing: any =
+    realExisting ??
+    (effectiveTfAsset
+      ? {
+          id: effectiveTfAsset.id,
+          country: effectiveTfAsset.country_code,
+          status:
+            effectiveTfAsset.verification_status === "verified"
+              ? "provisioned"
+              : effectiveTfAsset.verification_status === "rejected"
+                ? "rejected"
+                : "approved",
+          number_type: "toll_free",
+          business_name: "—",
+          assigned_phone_number: effectiveTfAsset.phone_number,
+          admin_notes: null,
+        }
+      : null);
 
   // Translate the internal request status + our SMS provider verification status into a single
   // carrier-aware label and badge. "approved" from an admin only means the number was
@@ -626,7 +772,6 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
 
   // Submission has moved to the dedicated Toll-free Verification wizard route.
 
-
   const cancel = useMutation({
     mutationFn: (id: string) => cancelFn({ data: { id } }),
     onSuccess: () => {
@@ -636,7 +781,12 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
   });
 
   return (
-    <Dialog open={!!code} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={!!code}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>How sending to {name} works</DialogTitle>
@@ -649,7 +799,8 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
 
         {coveredByUs && existing && (
           <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
-            <strong>No separate Canada request needed.</strong> Your US toll-free verification covers Canadian carriers too. Status below reflects your US request.
+            <strong>No separate Canada request needed.</strong> Your US toll-free verification
+            covers Canadian carriers too. Status below reflects your US request.
           </div>
         )}
 
@@ -663,18 +814,43 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
                 <Badge variant={carrierVariant}>{carrierLabel}</Badge>
               </div>
               <div className="mt-2 text-muted-foreground space-y-1">
-                <div>Type: <span className="text-foreground">{existing.number_type.replace("_", " ")}</span></div>
-                <div>Business: <span className="text-foreground">{existing.business_name}</span></div>
-                {existing.assigned_phone_number && <div>Number: <span className="text-foreground font-mono">{existing.assigned_phone_number}</span></div>}
-                {existing.admin_notes && <div>Admin note: <span className="text-foreground">{existing.admin_notes}</span></div>}
+                <div>
+                  Type:{" "}
+                  <span className="text-foreground">{existing.number_type.replace("_", " ")}</span>
+                </div>
+                <div>
+                  Business: <span className="text-foreground">{existing.business_name}</span>
+                </div>
+                {existing.assigned_phone_number && (
+                  <div>
+                    Number:{" "}
+                    <span className="text-foreground font-mono">
+                      {existing.assigned_phone_number}
+                    </span>
+                  </div>
+                )}
+                {existing.admin_notes && (
+                  <div>
+                    Admin note: <span className="text-foreground">{existing.admin_notes}</span>
+                  </div>
+                )}
               </div>
               {carrierLabel === "In carrier review" && (
                 <p className="mt-2 text-xs text-muted-foreground">
-                  The number is provisioned, but The mobile carriers (AT&amp;T, T-Mobile, Verizon, plus Canadian carriers) are still reviewing your business details. This usually takes 1–3 weeks. Only the carrier can approve this — we cannot approve it manually.
+                  The number is provisioned, but The mobile carriers (AT&amp;T, T-Mobile, Verizon,
+                  plus Canadian carriers) are still reviewing your business details. This usually
+                  takes 1–3 weeks. Only the carrier can approve this — we cannot approve it
+                  manually.
                 </p>
               )}
               {existing.status === "pending" && !coveredByUs && (
-                <Button size="sm" variant="ghost" className="mt-2" onClick={() => cancel.mutate(existing.id)} disabled={cancel.isPending}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="mt-2"
+                  onClick={() => cancel.mutate(existing.id)}
+                  disabled={cancel.isPending}
+                >
                   Cancel request
                 </Button>
               )}
@@ -690,19 +866,31 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
             <div className="rounded-md border p-3 bg-muted/40 space-y-2">
               <p className="font-medium">How {name} sending works:</p>
               <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                <li>We provision a <strong>toll-free number</strong> for you automatically.</li>
-                <li>You submit a one-time <strong>toll-free verification</strong> with your business details — we file it with the carriers for you.</li>
-                <li>Approval typically takes <strong>1–3 weeks</strong>. The same approval covers both US and Canada.</li>
+                <li>
+                  We provision a <strong>toll-free number</strong> for you automatically.
+                </li>
+                <li>
+                  You submit a one-time <strong>toll-free verification</strong> with your business
+                  details — we file it with the carriers for you.
+                </li>
+                <li>
+                  Approval typically takes <strong>1–3 weeks</strong>. The same approval covers both
+                  US and Canada.
+                </li>
               </ul>
             </div>
             <div className="rounded-md border border-amber-300/50 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs">
-              A one-time <strong>$5</strong> fee will be deducted from your credit balance to cover the phone-number provisioning &amp; carrier verification. You won't be re-charged if you retry the same submission.
+              A one-time <strong>$5</strong> fee will be deducted from your credit balance to cover
+              the phone-number provisioning &amp; carrier verification. You won't be re-charged if
+              you retry the same submission.
             </div>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Close</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Close
+          </Button>
           {!existing && !coveredByUs && (
             <Button asChild>
               <Link to="/app/toll-free-verification">Start toll-free verification</Link>
@@ -718,8 +906,6 @@ function UsCanadaInfoDialog({ code, assets, onClose }: { code: string | null; as
     </Dialog>
   );
 }
-
-
 
 function senderKindLabel(kind: string) {
   if (kind === "toll_free") return "Toll-free number";
@@ -762,7 +948,14 @@ function StatusCard({ asset, accountPhone }: { asset: any; accountPhone?: string
             <div className="text-sm text-muted-foreground mt-1">
               {asset.friendly_rejection_reason ?? "Please update your details and try again."}
             </div>
-            <Link to={asset.sender_kind === "toll_free" && (asset.country_code === "US" || asset.country_code === "CA") ? "/app/toll-free-verification" : "/app/setup-sms"}>
+            <Link
+              to={
+                asset.sender_kind === "toll_free" &&
+                (asset.country_code === "US" || asset.country_code === "CA")
+                  ? "/app/toll-free-verification"
+                  : "/app/setup-sms"
+              }
+            >
               <Button size="sm" className="mt-3">
                 Update and resubmit
               </Button>
@@ -882,7 +1075,9 @@ type WizardForm = {
 function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   const saveBusinessProfileFn = useServerFn(saveBusinessProfile);
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [consentConfirmed, setConsentConfirmed] = useState<boolean>(!!account?.sms_consent_disclosures_confirmed_at);
+  const [consentConfirmed, setConsentConfirmed] = useState<boolean>(
+    !!account?.sms_consent_disclosures_confirmed_at,
+  );
   const [uploading, setUploading] = useState(false);
   const [setupMessage, setSetupMessage] = useState<{
     type: "success" | "error";
@@ -932,7 +1127,8 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
 
   const needsCarrierDetails = form.targetCountries.some((cc) => cc === "US" || cc === "CA");
   const hasSenderIdCountry = form.targetCountries.some((cc) => cc !== "US" && cc !== "CA");
-  const senderIdReady = !hasSenderIdCountry || /^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/.test(form.customSenderId);
+  const senderIdReady =
+    !hasSenderIdCountry || /^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/.test(form.customSenderId);
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -954,16 +1150,19 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   }
 
   const saveProfile = useMutation({
-    mutationFn: () => saveBusinessProfileFn({ data: {
-      legal_business_name: form.legal_business_name,
-      business_address: form.business_address,
-      business_reg_number: form.business_reg_number,
-      website_url: form.website_url,
-      privacy_policy_url: form.privacy_policy_url || undefined,
-      terms_url: form.terms_url || undefined,
-      contact_email: form.contact_email,
-      phone: form.phone,
-    } }),
+    mutationFn: () =>
+      saveBusinessProfileFn({
+        data: {
+          legal_business_name: form.legal_business_name,
+          business_address: form.business_address,
+          business_reg_number: form.business_reg_number,
+          website_url: form.website_url,
+          privacy_policy_url: form.privacy_policy_url || undefined,
+          terms_url: form.terms_url || undefined,
+          contact_email: form.contact_email,
+          phone: form.phone,
+        },
+      }),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -1077,7 +1276,8 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 maxLength={11}
               />
               <p className="text-xs text-muted-foreground">
-                Use 1–11 letters, numbers, or spaces with at least one letter. UK alphanumeric sender IDs may be available without registration.
+                Use 1–11 letters, numbers, or spaces with at least one letter. UK alphanumeric
+                sender IDs may be available without registration.
               </p>
             </div>
           )}
@@ -1102,7 +1302,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
 
           <Field
             label="Legal business name"
-              required
+            required
             v={form.legal_business_name}
             on={(v) => setForm({ ...form, legal_business_name: v })}
           />
@@ -1244,12 +1444,24 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
           <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-3">
             <div className="text-sm font-semibold">Required disclosures in your opt-in flow</div>
             <p className="text-xs text-muted-foreground">
-              Carriers require your sign-up form to clearly state your business identity, message purpose and frequency, "message and data rates may apply," links to your Privacy Policy and Terms, and how to opt out (Reply STOP) and get help (Reply HELP). See the full{" "}
-              <Link to="/sms-terms" target="_blank" className="text-primary hover:underline">SMS Terms & Consent</Link>.
+              Carriers require your sign-up form to clearly state your business identity, message
+              purpose and frequency, "message and data rates may apply," links to your Privacy
+              Policy and Terms, and how to opt out (Reply STOP) and get help (Reply HELP). See the
+              full{" "}
+              <Link to="/sms-terms" target="_blank" className="text-primary hover:underline">
+                SMS Terms & Consent
+              </Link>
+              .
             </p>
             <div className="rounded-md bg-background border border-border p-3 text-xs leading-relaxed text-foreground">
-              <div className="font-semibold mb-1 text-muted-foreground uppercase tracking-wide text-[10px]">Sample consent language</div>
-              "By providing your phone number and checking this box, you agree to receive recurring automated marketing and informational text messages from <em>[Your Business]</em> at the number provided. Consent is not a condition of purchase. Message frequency varies. Message and data rates may apply. Reply STOP to unsubscribe or HELP for help. See our Privacy Policy [link] and Terms [link]."
+              <div className="font-semibold mb-1 text-muted-foreground uppercase tracking-wide text-[10px]">
+                Sample consent language
+              </div>
+              "By providing your phone number and checking this box, you agree to receive recurring
+              automated marketing and informational text messages from <em>[Your Business]</em> at
+              the number provided. Consent is not a condition of purchase. Message frequency varies.
+              Message and data rates may apply. Reply STOP to unsubscribe or HELP for help. See our
+              Privacy Policy [link] and Terms [link]."
             </div>
             <label className="flex items-start gap-2 text-sm">
               <input
@@ -1259,7 +1471,8 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 className="mt-0.5 size-4 rounded border-border accent-primary"
               />
               <span className="text-foreground">
-                I confirm my opt-in flow includes all the disclosures above and that I retain records of consent for every recipient.
+                I confirm my opt-in flow includes all the disclosures above and that I retain
+                records of consent for every recipient.
               </span>
             </label>
           </div>
@@ -1275,10 +1488,13 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                   const { data: u } = await supabase.auth.getUser();
                   if (u.user) {
                     const { LEGAL_VERSION } = await import("@/content/legal");
-                    await supabase.from("accounts").update({
-                      sms_consent_disclosures_confirmed_at: new Date().toISOString(),
-                      sms_consent_disclosures_version: LEGAL_VERSION,
-                    }).eq("id", u.user.id);
+                    await supabase
+                      .from("accounts")
+                      .update({
+                        sms_consent_disclosures_confirmed_at: new Date().toISOString(),
+                        sms_consent_disclosures_version: LEGAL_VERSION,
+                      })
+                      .eq("id", u.user.id);
                   }
                 } catch {
                   // best-effort: continue even if persistence fails
@@ -1396,7 +1612,13 @@ function Field({
   );
 }
 
-function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetCountries: string[] }) {
+function TollfreeSetupStep({
+  assets,
+  targetCountries,
+}: {
+  assets: any[];
+  targetCountries: string[];
+}) {
   const loadTf = useServerFn(getMyTollfreeVerification);
   const tf = useQuery({ queryKey: ["tollfree-verification"], queryFn: () => loadTf() });
   const asset = (tf.data as any)?.asset ?? null;
@@ -1413,7 +1635,9 @@ function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetC
 
   const needsUsCa =
     (targetCountries ?? []).some((c) => c === "US" || c === "CA") ||
-    assets.some((a) => (a.country_code === "US" || a.country_code === "CA") && a.sender_kind === "toll_free");
+    assets.some(
+      (a) => (a.country_code === "US" || a.country_code === "CA") && a.sender_kind === "toll_free",
+    );
 
   const [skipped, setSkipped] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -1421,27 +1645,47 @@ function TollfreeSetupStep({ assets, targetCountries }: { assets: any[]; targetC
   });
 
   // Auto-show when verified or in review — status is useful info even if skipped.
-  const showAnyway = status === "verified" || status === "in_review" || status === "submitted" || status === "rejected";
+  const showAnyway =
+    status === "verified" ||
+    status === "in_review" ||
+    status === "submitted" ||
+    status === "rejected";
 
   if (!showAnyway && !needsUsCa) return null;
 
   let badge = (
-    <Badge variant="outline" className="gap-1"><Clock className="size-3" /> Not started</Badge>
+    <Badge variant="outline" className="gap-1">
+      <Clock className="size-3" /> Not started
+    </Badge>
   );
   let blurb = needsUsCa
     ? "You're targeting US or Canada. US carriers (AT&T, T-Mobile, Verizon) require toll-free verification before they will deliver your messages."
     : "Only required to send SMS to US or Canada. Skip if you don't plan to send there.";
   if (status === "verified") {
-    badge = <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white"><CheckCircle2 className="size-3" /> Approved</Badge>;
-    const num = asset?.verification_status === "verified" ? asset?.phone_number : altSender?.phone_number;
+    badge = (
+      <Badge className="gap-1 bg-emerald-500 hover:bg-emerald-500 text-white">
+        <CheckCircle2 className="size-3" /> Approved
+      </Badge>
+    );
+    const num =
+      asset?.verification_status === "verified" ? asset?.phone_number : altSender?.phone_number;
     blurb = `Your number ${num ?? ""} is approved for US/Canada delivery — nothing else to submit.`;
   } else if (status === "rejected") {
-
-    blurb = asset?.friendly_rejection_reason ?? "Carrier rejected the submission — open to resubmit.";
-    badge = <Badge variant="destructive" className="gap-1"><X className="size-3" /> Rejected</Badge>;
+    blurb =
+      asset?.friendly_rejection_reason ?? "Carrier rejected the submission — open to resubmit.";
+    badge = (
+      <Badge variant="destructive" className="gap-1">
+        <X className="size-3" /> Rejected
+      </Badge>
+    );
   } else if (status === "in_review" || status === "submitted") {
-    badge = <Badge className="gap-1 bg-blue-500 hover:bg-blue-500 text-white"><Clock className="size-3" /> In review</Badge>;
-    blurb = "Carrier is reviewing your submission (typically 1–3 weeks). You can keep using the rest of the app.";
+    badge = (
+      <Badge className="gap-1 bg-blue-500 hover:bg-blue-500 text-white">
+        <Clock className="size-3" /> In review
+      </Badge>
+    );
+    blurb =
+      "Carrier is reviewing your submission (typically 1–3 weeks). You can keep using the rest of the app.";
   }
 
   return (

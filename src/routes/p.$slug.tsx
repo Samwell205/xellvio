@@ -26,7 +26,10 @@ export const Route = createFileRoute("/p/$slug")({
     return pageHead({
       path: `/p/${params.slug}`,
       title: (d.seo_title || d.headline || d.name || "Sign up").slice(0, 70),
-      description: (d.seo_description || d.subheadline || d.body || "Join our text list.").slice(0, 155),
+      description: (d.seo_description || d.subheadline || d.body || "Join our text list.").slice(
+        0,
+        155,
+      ),
       image,
       // Tenants can keep a published page out of search; the URL still works.
       robots: !loaderData || d.seo_indexable === false ? "noindex" : "index",
@@ -68,7 +71,13 @@ function LandingPageView() {
   if (sections.length === 0) {
     const hero = blankSection("hero");
     sections = [
-      { ...hero, headline: page.headline || page.name, subheadline: page.subheadline || "", body: page.body || "", imageUrl: page.image_url || "" } as Section,
+      {
+        ...hero,
+        headline: page.headline || page.name,
+        subheadline: page.subheadline || "",
+        body: page.body || "",
+        imageUrl: page.image_url || "",
+      } as Section,
     ];
   }
 

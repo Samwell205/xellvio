@@ -28,7 +28,11 @@ async function publishedLandingPages(): Promise<SitemapEntry[]> {
         .order("slug")
         .range(offset, offset + pageSize - 1);
       if (error || !data) break;
-      for (const row of data as { slug: string; updated_at: string | null; seo_indexable: boolean | null }[]) {
+      for (const row of data as {
+        slug: string;
+        updated_at: string | null;
+        seo_indexable: boolean | null;
+      }[]) {
         if (row.seo_indexable === false) continue;
         entries.push({
           path: `/p/${encodeURIComponent(row.slug)}`,

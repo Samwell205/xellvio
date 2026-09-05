@@ -6,7 +6,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { getActiveCountryRatesRaw } from "@/lib/public-pricing.functions";
 import { createPreviewShortlink } from "@/lib/shortlinks.functions";
-import { getCampaignAudienceCountryCounts, listAudienceContactLists } from "@/lib/audience.functions";
+import {
+  getCampaignAudienceCountryCounts,
+  listAudienceContactLists,
+} from "@/lib/audience.functions";
 
 import { scanCampaignContent } from "@/lib/content-scanner.functions";
 import { calculateSegments } from "@/lib/sms-segments";
@@ -27,8 +30,19 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
-  Megaphone, Users, MessageSquare, CalendarClock, CheckCircle2,
-  ChevronLeft, ChevronRight, Send, AlertTriangle, ShieldCheck, Smartphone, DollarSign, Phone,
+  Megaphone,
+  Users,
+  MessageSquare,
+  CalendarClock,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Send,
+  AlertTriangle,
+  ShieldCheck,
+  Smartphone,
+  DollarSign,
+  Phone,
 } from "lucide-react";
 
 // A tracked short link may live on the shared platform domain or on a
@@ -60,12 +74,20 @@ type State = {
   testSent: boolean;
   excludedCountries: string[];
   trackLinks: boolean;
-
 };
 
 const STOP_LINE = "\nReply STOP to unsubscribe.";
 
-function senderDisplayName(sender: { sender_kind?: string | null; phone_number?: string | null; telnyx_messaging_profile_id?: string | null } | null | undefined) {
+function senderDisplayName(
+  sender:
+    | {
+        sender_kind?: string | null;
+        phone_number?: string | null;
+        telnyx_messaging_profile_id?: string | null;
+      }
+    | null
+    | undefined,
+) {
   if (!sender) return "No verified sender";
   if (sender.phone_number) return sender.phone_number;
   if (sender.sender_kind === "sender_id") return "Alphanumeric Sender ID";
@@ -82,7 +104,13 @@ function renderPreviewWithLinks(text: string): ReactNode {
   while ((m = URL_RE.exec(text)) !== null) {
     if (m.index > last) nodes.push(<span key={`t${i}`}>{text.slice(last, m.index)}</span>);
     nodes.push(
-      <a key={`a${i}`} href={m[0]} target="_blank" rel="noopener noreferrer" className="text-primary underline break-all">
+      <a
+        key={`a${i}`}
+        href={m[0]}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary underline break-all"
+      >
         {m[0]}
       </a>,
     );
@@ -100,14 +128,23 @@ function NewCampaignPage() {
   const [step, setStep] = useState<StepIdx>(0);
   const [campaignId, setCampaignId] = useState<string | null>(editingCampaignId);
   const [s, setS] = useState<State>({
-    name: "", include: [], exclude: [], profileIds: [], listIds: [], body: "", mediaUrl: "",
-    sendMode: "now", scheduleAt: "", smartSkipHours: 8, testTo: "", testSent: false,
+    name: "",
+    include: [],
+    exclude: [],
+    profileIds: [],
+    listIds: [],
+    body: "",
+    mediaUrl: "",
+    sendMode: "now",
+    scheduleAt: "",
+    smartSkipHours: 8,
+    testTo: "",
+    testSent: false,
     // Link shortening is opt-in: nobody's URLs get rewritten unless the tenant
     // switches it on for this campaign.
-    excludedCountries: [], trackLinks: false,
-
+    excludedCountries: [],
+    trackLinks: false,
   });
-
 
   // Load existing draft when editing
   useQuery({
@@ -115,7 +152,11 @@ function NewCampaignPage() {
     enabled: !!editingCampaignId,
     queryFn: async () => {
       if (!editingCampaignId) return null;
-      const { data } = await supabase.from("campaigns").select("*").eq("id", editingCampaignId).maybeSingle();
+      const { data } = await supabase
+        .from("campaigns")
+        .select("*")
+        .eq("id", editingCampaignId)
+        .maybeSingle();
       if (data) {
         const aud: any = data.audience ?? {};
         setS((prev) => ({
@@ -132,7 +173,6 @@ function NewCampaignPage() {
           smartSkipHours: data.smart_skip_hours ?? 8,
           excludedCountries: Array.isArray(aud.excluded_countries) ? aud.excluded_countries : [],
           trackLinks: (data as any).track_links === true,
-
         }));
       }
       return data;
@@ -141,7 +181,8 @@ function NewCampaignPage() {
 
   const segmentsQ = useQuery({
     queryKey: ["segments-pick"],
-    queryFn: async () => (await supabase.from("segments").select("id,name,query").order("name")).data ?? [],
+    queryFn: async () =>
+      (await supabase.from("segments").select("id,name,query").order("name")).data ?? [],
   });
 
   const loadContactLists = useServerFn(listAudienceContactLists);
@@ -164,23 +205,28 @@ function NewCampaignPage() {
   });
   const rates = ratesQ.data ?? [];
 
-
   const accountQ = useQuery({
     queryKey: ["account-balance"],
-    queryFn: async () => (await supabase.from("accounts").select("id,credit_balance").maybeSingle()).data,
+    queryFn: async () =>
+      (await supabase.from("accounts").select("id,credit_balance").maybeSingle()).data,
   });
 
   const senderQ = useQuery({
     queryKey: ["sender-assets-pending"],
     queryFn: async () =>
-      (await supabase
-        .from("sender_assets")
-        .select("verification_status,country_code,sender_kind,phone_number,telnyx_messaging_profile_id,friendly_rejection_reason")
+      (
+        await supabase
+          .from("sender_assets")
+          .select(
+            "verification_status,country_code,sender_kind,phone_number,telnyx_messaging_profile_id,friendly_rejection_reason",
+          )
       ).data ?? [],
   });
   const senderList = senderQ.data ?? [];
   const hasVerified = senderList.some((x) => x.verification_status === "verified");
-  const hasPending = senderList.some((x) => x.verification_status === "submitted" || x.verification_status === "in_review");
+  const hasPending = senderList.some(
+    (x) => x.verification_status === "submitted" || x.verification_status === "in_review",
+  );
   const hasRejected = senderList.some((x) => x.verification_status === "rejected");
   const verifiedSenderSummary = senderList
     .filter((x) => x.verification_status === "verified")
@@ -210,7 +256,12 @@ function NewCampaignPage() {
   }, [senderList]);
 
   const audience = useMemo(
-    () => ({ include: s.include, exclude: s.exclude, profile_ids: s.profileIds, list_ids: s.listIds }),
+    () => ({
+      include: s.include,
+      exclude: s.exclude,
+      profile_ids: s.profileIds,
+      list_ids: s.listIds,
+    }),
     [s.include, s.exclude, s.profileIds, s.listIds],
   );
 
@@ -232,7 +283,10 @@ function NewCampaignPage() {
     },
   });
   const countryCounts = countsQ.data ?? [];
-  const audienceTotal = useMemo(() => countryCounts.reduce((a, b) => a + b.recipients, 0), [countryCounts]);
+  const audienceTotal = useMemo(
+    () => countryCounts.reduce((a, b) => a + b.recipients, 0),
+    [countryCounts],
+  );
 
   const [exportingAudience, setExportingAudience] = useState(false);
   // Export pulls the full recipient list on demand only (paged), so building a
@@ -244,7 +298,9 @@ function NewCampaignPage() {
       const rows: any[] = [];
       for (let offset = 0; ; offset += PAGE) {
         const { data, error } = await (supabase.rpc as any)("my_eligible_profile_ids_page", {
-          _audience: audience, _limit: PAGE, _offset: offset,
+          _audience: audience,
+          _limit: PAGE,
+          _offset: offset,
         });
         if (error) throw error;
         const batch = (data as any[]) ?? [];
@@ -252,14 +308,25 @@ function NewCampaignPage() {
         if (batch.length < PAGE) break;
       }
       const header = "profile_id,phone_e164,first_name,last_name,country_code\n";
-      const body = rows.map((a: any) =>
-        [a.profile_id, a.phone_e164, (a.first_name ?? "").replace(/[,"\n]/g, " "), (a.last_name ?? "").replace(/[,"\n]/g, " "), a.country_code ?? ""].join(","),
-      ).join("\n");
+      const body = rows
+        .map((a: any) =>
+          [
+            a.profile_id,
+            a.phone_e164,
+            (a.first_name ?? "").replace(/[,"\n]/g, " "),
+            (a.last_name ?? "").replace(/[,"\n]/g, " "),
+            a.country_code ?? "",
+          ].join(","),
+        )
+        .join("\n");
       const blob = new Blob([header + body], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = `eligible-audience-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a); a.click(); a.remove();
+      a.href = url;
+      a.download = `eligible-audience-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       URL.revokeObjectURL(url);
     } catch (e: any) {
       toast.error(e?.message ?? "Could not export audience");
@@ -285,8 +352,9 @@ function NewCampaignPage() {
       return;
     }
     const shortUrlPattern = TRACKED_SHORT_URL;
-    const urls = Array.from(new Set(bodyWithStop.match(/https?:\/\/[^\s<>()[\]"']+/gi) ?? []))
-      .filter((url) => !shortUrlPattern.test(url) && !previewShortUrls[url]);
+    const urls = Array.from(
+      new Set(bodyWithStop.match(/https?:\/\/[^\s<>()[\]"']+/gi) ?? []),
+    ).filter((url) => !shortUrlPattern.test(url) && !previewShortUrls[url]);
     if (urls.length === 0) {
       setPreviewLinksPending(false);
       return;
@@ -329,17 +397,16 @@ function NewCampaignPage() {
   }, [bodyWithStop, previewShortUrls, s.trackLinks]);
   const seg = calculateSegments(previewBody);
 
-
   // Detect non-GSM-7 characters that force Unicode encoding (70/67-char segments
   // instead of 160/153). Common culprits: • “ ” ‘ ’ — – … and non-breaking space.
   const UNICODE_REPLACEMENTS: Array<[RegExp, string]> = [
-    [/[\u2022\u00B7]/g, "-"],          // • ·
+    [/[\u2022\u00B7]/g, "-"], // • ·
     [/[\u201C\u201D\u201E\u201F]/g, '"'], // “ ” „ ‟
     [/[\u2018\u2019\u201A\u201B]/g, "'"], // ‘ ’ ‚ ‛
-    [/[\u2013\u2014\u2015]/g, "-"],    // – — ―
-    [/\u2026/g, "..."],                 // …
-    [/\u00A0/g, " "],                   // non-breaking space
-    [/\u200B/g, ""],                    // zero-width space
+    [/[\u2013\u2014\u2015]/g, "-"], // – — ―
+    [/\u2026/g, "..."], // …
+    [/\u00A0/g, " "], // non-breaking space
+    [/\u200B/g, ""], // zero-width space
   ];
   const unicodeOffenders = useMemo(() => {
     if (seg.encoding !== "Unicode") return [] as string[];
@@ -364,31 +431,34 @@ function NewCampaignPage() {
   const fullBreakdown = useMemo(() => {
     if (rates.length === 0 || countryCounts.length === 0) return [];
     const counts: Record<string, number> = {};
-    for (const c of countryCounts) counts[c.country_code] = (counts[c.country_code] ?? 0) + c.recipients;
+    for (const c of countryCounts)
+      counts[c.country_code] = (counts[c.country_code] ?? 0) + c.recipients;
     const hasMedia = !!s.mediaUrl;
     // MMS (US/CA) = one billable message with an attachment, priced at
     // rate x MMS multiplier — never multiplied by SMS segments. Elsewhere the
     // image falls back to a link, so it is billed as normal SMS segments.
     const mmsCountry = (cc: string) => cc === "US" || cc === "CA";
-    return Object.entries(counts).map(([cc, n]) => {
-      const r = rates.find((x) => x.country_code === cc);
-      const unit = r ? Number(r.sell_price) : 0;
-      const isMms = hasMedia && !!r && mmsCountry(cc);
-      const mult = isMms ? Number(r!.mms_multiplier) : 1;
-      const segments = isMms ? 1 : seg.segments;
-      const subtotal = +(n * segments * unit * mult).toFixed(4);
-      return {
-        country_code: cc,
-        country_name: r?.country_name ?? cc,
-        recipients: n,
-        unit, mult,
-        segments,
-        subtotal,
-        priced: !!r,
-        excluded: excludedSet.has(cc),
-      };
-    }).sort((a, b) => b.subtotal - a.subtotal);
-
+    return Object.entries(counts)
+      .map(([cc, n]) => {
+        const r = rates.find((x) => x.country_code === cc);
+        const unit = r ? Number(r.sell_price) : 0;
+        const isMms = hasMedia && !!r && mmsCountry(cc);
+        const mult = isMms ? Number(r!.mms_multiplier) : 1;
+        const segments = isMms ? 1 : seg.segments;
+        const subtotal = +(n * segments * unit * mult).toFixed(4);
+        return {
+          country_code: cc,
+          country_name: r?.country_name ?? cc,
+          recipients: n,
+          unit,
+          mult,
+          segments,
+          subtotal,
+          priced: !!r,
+          excluded: excludedSet.has(cc),
+        };
+      })
+      .sort((a, b) => b.subtotal - a.subtotal);
   }, [countryCounts, rates, seg.segments, s.mediaUrl, excludedSet]);
 
   // Active rows = countries actually being sent to
@@ -448,7 +518,9 @@ function NewCampaignPage() {
   async function addShortLink(url: string, el?: HTMLInputElement | null) {
     let candidate = url;
     if (!/^https?:\/\//i.test(candidate)) candidate = `https://${candidate}`;
-    try { new URL(candidate); } catch {
+    try {
+      new URL(candidate);
+    } catch {
       toast.error("That doesn't look like a valid URL");
       return;
     }
@@ -459,7 +531,9 @@ function NewCampaignPage() {
     }
     setShorteningLink(true);
     try {
-      const { shortUrl } = await callShortlink({ data: { url: candidate, campaignId: campaignId ?? null } });
+      const { shortUrl } = await callShortlink({
+        data: { url: candidate, campaignId: campaignId ?? null },
+      });
       setS((prev) => ({ ...prev, body: (prev.body ? prev.body.trimEnd() + " " : "") + shortUrl }));
       if (el) el.value = "";
     } catch (err: any) {
@@ -475,21 +549,30 @@ function NewCampaignPage() {
   const testSender = testCountry ? sendersByCountry[testCountry] : null;
 
   async function runTestSend() {
-    if (!s.testTo) { toast.error("Enter a phone number to test"); return; }
-    if (testLimitReached) { toast.error(`Daily test limit reached (${testUsage.limit}/day).`); return; }
+    if (!s.testTo) {
+      toast.error("Enter a phone number to test");
+      return;
+    }
+    if (testLimitReached) {
+      toast.error(`Daily test limit reached (${testUsage.limit}/day).`);
+      return;
+    }
     setSending(true);
     try {
       const testBody = await shortenMessageUrls(bodyWithStop);
-      const res = await callTestSend({ data: { to: s.testTo, body: testBody, country: testCountry ?? undefined } });
+      const res = await callTestSend({
+        data: { to: s.testTo, body: testBody, country: testCountry ?? undefined },
+      });
       toast.success(`Test sent (sid ${res.sid.slice(0, 10)}…)`);
       setS({ ...s, testSent: true });
       testUsageQ.refetch();
     } catch (e: any) {
       toast.error(e.message ?? "Test send failed");
       testUsageQ.refetch();
-    } finally { setSending(false); }
+    } finally {
+      setSending(false);
+    }
   }
-
 
   const canNext = (() => {
     if (step === 0) return s.name.trim().length > 0 && hasAudience;
@@ -519,21 +602,25 @@ function NewCampaignPage() {
       message_body: messageBody,
       media_url: s.mediaUrl || null,
       send_mode: s.sendMode,
-      schedule_at: s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
+      schedule_at:
+        s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
       smart_skip_hours: s.smartSkipHours,
       track_links: s.trackLinks,
 
-      sender_map: breakdown.reduce((acc, b) => {
-        const sender = sendersByCountry[b.country_code];
-        acc[b.country_code] = sender
-          ? {
-              sender_kind: sender.sender_kind,
-              phone_number: sender.phone_number,
-              telnyx_messaging_profile_id: sender.telnyx_messaging_profile_id,
-            }
-          : null;
-        return acc;
-      }, {} as Record<string, any>),
+      sender_map: breakdown.reduce(
+        (acc, b) => {
+          const sender = sendersByCountry[b.country_code];
+          acc[b.country_code] = sender
+            ? {
+                sender_kind: sender.sender_kind,
+                phone_number: sender.phone_number,
+                telnyx_messaging_profile_id: sender.telnyx_messaging_profile_id,
+              }
+            : null;
+          return acc;
+        },
+        {} as Record<string, any>,
+      ),
       status: targetStatus,
     };
     if (campaignId) {
@@ -561,16 +648,35 @@ function NewCampaignPage() {
         // silent — manual save still available
       }
     }, 1200);
-    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [s.name, s.body, s.mediaUrl, s.sendMode, s.scheduleAt, s.smartSkipHours, s.trackLinks, JSON.stringify(audience), JSON.stringify(s.excludedCountries)]);
+  }, [
+    s.name,
+    s.body,
+    s.mediaUrl,
+    s.sendMode,
+    s.scheduleAt,
+    s.smartSkipHours,
+    s.trackLinks,
+    JSON.stringify(audience),
+    JSON.stringify(s.excludedCountries),
+  ]);
 
   const [complianceAccepted, setComplianceAccepted] = useState(false);
 
   async function saveCampaign(launch: boolean) {
-    if (launch && insufficient) { toast.error(`Insufficient balance — top up before launching. Contact support if you need help.`); return; }
+    if (launch && insufficient) {
+      toast.error(
+        `Insufficient balance — top up before launching. Contact support if you need help.`,
+      );
+      return;
+    }
     if (launch && hasMissingSender) {
-      toast.error(`No verified sender for: ${missingSenderCountries.join(", ")}. Set up SMS or remove those recipients.`);
+      toast.error(
+        `No verified sender for: ${missingSenderCountries.join(", ")}. Set up SMS or remove those recipients.`,
+      );
       return;
     }
     if (launch && !complianceAccepted) {
@@ -583,12 +689,13 @@ function NewCampaignPage() {
       // dispatcher also rewrites URLs as a backstop, but storing the resolved
       // body here makes the review screen and report show exactly what will be
       // sent instead of the tenant's original long URL.
-      const outgoingBody = launch && s.trackLinks
-        ? await shortenMessageUrls(bodyWithStop)
-        : bodyWithStop;
+      const outgoingBody =
+        launch && s.trackLinks ? await shortenMessageUrls(bodyWithStop) : bodyWithStop;
       // Layer 1+2: Content safety scan before any launch
       if (launch) {
-        const scan = await callContentScan({ data: { messageBody: outgoingBody, mediaUrl: s.mediaUrl || undefined } });
+        const scan = await callContentScan({
+          data: { messageBody: outgoingBody, mediaUrl: s.mediaUrl || undefined },
+        });
         if (!scan.allowed) {
           // Save as blocked so user sees it in their list, then stop
           await persistCampaign("blocked_content", outgoingBody);
@@ -608,27 +715,36 @@ function NewCampaignPage() {
           data: { campaignId: savedId, userAgent: navigator.userAgent.slice(0, 500) },
         });
         const { error: statusErr } = await supabase
-          .from("campaigns").update({ status }).eq("id", savedId);
+          .from("campaigns")
+          .update({ status })
+          .eq("id", savedId);
         if (statusErr) throw statusErr;
       }
       toast.success(launch ? "Campaign launched" : "Saved as draft");
       navigate({ to: "/app/campaigns" });
     } catch (e: any) {
       toast.error(e.message ?? "Failed");
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   }
-
 
   return (
     <div className="space-y-6 max-w-5xl">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold flex items-center gap-2"><Megaphone className="size-6" />{campaignId ? "Edit campaign" : "New campaign"}</h1>
-          <p className="text-sm text-muted-foreground">5-step builder. Drafts autosave as you go.</p>
+          <h1 className="text-2xl font-extrabold flex items-center gap-2">
+            <Megaphone className="size-6" />
+            {campaignId ? "Edit campaign" : "New campaign"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            5-step builder. Drafts autosave as you go.
+          </p>
         </div>
         {autoSaved && (
           <div className="text-xs text-muted-foreground flex items-center gap-1 pt-2">
-            <CheckCircle2 className="size-3.5 text-success" /> Draft saved {autoSaved.toLocaleTimeString()}
+            <CheckCircle2 className="size-3.5 text-success" /> Draft saved{" "}
+            {autoSaved.toLocaleTimeString()}
           </div>
         )}
       </div>
@@ -640,33 +756,49 @@ function NewCampaignPage() {
             <div className="font-semibold">Approved sender ready</div>
             <div className="text-muted-foreground">{verifiedSenderSummary}</div>
           </div>
-          <Link to="/app/setup-sms"><Button size="sm" variant="outline">View status</Button></Link>
+          <Link to="/app/setup-sms">
+            <Button size="sm" variant="outline">
+              View status
+            </Button>
+          </Link>
         </Card>
       )}
 
       {!hasVerified && senderList.length > 0 && (
-        <Card className={`p-4 flex items-center gap-3 ${hasRejected ? "border-destructive/40 bg-destructive/5" : "border-primary/40 bg-primary/5"}`}>
+        <Card
+          className={`p-4 flex items-center gap-3 ${hasRejected ? "border-destructive/40 bg-destructive/5" : "border-primary/40 bg-primary/5"}`}
+        >
           <ShieldCheck className={`size-5 ${hasRejected ? "text-destructive" : "text-primary"}`} />
           <div className="flex-1 text-sm">
-            <div className="font-semibold">{hasRejected ? "We need a bit more info" : "Setting up your SMS number"}</div>
+            <div className="font-semibold">
+              {hasRejected ? "We need a bit more info" : "Setting up your SMS number"}
+            </div>
             <div className="text-muted-foreground">
               {hasRejected
-                ? (senderList.find((x) => x.verification_status === "rejected")?.friendly_rejection_reason ?? "Please update your details.")
+                ? (senderList.find((x) => x.verification_status === "rejected")
+                    ?.friendly_rejection_reason ?? "Please update your details.")
                 : "Usually 7–10 business days. You can build campaigns now — they'll send the moment your number is ready."}
             </div>
           </div>
-          <Link to="/app/setup-sms"><Button size="sm" variant={hasRejected ? "default" : "outline"}>{hasRejected ? "Fix" : "View status"}</Button></Link>
+          <Link to="/app/setup-sms">
+            <Button size="sm" variant={hasRejected ? "default" : "outline"}>
+              {hasRejected ? "Fix" : "View status"}
+            </Button>
+          </Link>
         </Card>
       )}
 
       <Stepper step={step} />
 
-
       {step === 0 && (
         <Card className="p-5 space-y-4">
           <div>
             <Label>Campaign name</Label>
-            <Input value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} placeholder="e.g. Black Friday — US" />
+            <Input
+              value={s.name}
+              onChange={(e) => setS({ ...s, name: e.target.value })}
+              placeholder="e.g. Black Friday — US"
+            />
           </div>
           <ListPicker
             lists={listsQ.data ?? []}
@@ -679,15 +811,30 @@ function NewCampaignPage() {
             selected={s.include}
             onChange={(ids) => setS({ ...s, include: ids })}
           />
-          <ContactPicker selected={s.profileIds} onChange={(ids) => setS({ ...s, profileIds: ids })} />
+          <ContactPicker
+            selected={s.profileIds}
+            onChange={(ids) => setS({ ...s, profileIds: ids })}
+          />
           <Card className="p-4 flex items-center justify-between bg-primary/5 border-primary/30">
             <div className="flex items-center gap-3">
-              <div className="size-10 rounded-lg bg-primary/15 text-primary grid place-items-center"><Users className="size-5" /></div>
+              <div className="size-10 rounded-lg bg-primary/15 text-primary grid place-items-center">
+                <Users className="size-5" />
+              </div>
               <div>
-                <div className="text-xs uppercase text-muted-foreground tracking-wide">Eligible audience</div>
-                <div className="text-2xl font-extrabold">{!hasAudience ? "—" : (countsQ.isFetching ? "…" : audienceTotal.toLocaleString())}</div>
-                <div className="text-xs text-muted-foreground">subscribed, not on suppression list</div>
-                {countsQ.isError && <div className="text-xs text-destructive">Could not read this audience. Please retry.</div>}
+                <div className="text-xs uppercase text-muted-foreground tracking-wide">
+                  Eligible audience
+                </div>
+                <div className="text-2xl font-extrabold">
+                  {!hasAudience ? "—" : countsQ.isFetching ? "…" : audienceTotal.toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  subscribed, not on suppression list
+                </div>
+                {countsQ.isError && (
+                  <div className="text-xs text-destructive">
+                    Could not read this audience. Please retry.
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -698,10 +845,15 @@ function NewCampaignPage() {
                   disabled={exportingAudience}
                   onClick={exportEligibleAudience}
                 >
-                  <Send className="size-4 mr-1.5 rotate-90" />{exportingAudience ? "Preparing…" : "Export CSV"}
+                  <Send className="size-4 mr-1.5 rotate-90" />
+                  {exportingAudience ? "Preparing…" : "Export CSV"}
                 </Button>
               )}
-              {!hasAudience && <span className="text-xs text-muted-foreground">Pick contacts above to see the eligible audience.</span>}
+              {!hasAudience && (
+                <span className="text-xs text-muted-foreground">
+                  Pick contacts above to see the eligible audience.
+                </span>
+              )}
             </div>
           </Card>
         </Card>
@@ -712,21 +864,41 @@ function NewCampaignPage() {
           <Card className="p-5 space-y-4 lg:col-span-2">
             <div>
               <Label>Message body</Label>
-              <Textarea value={s.body} onChange={(e) => setS({ ...s, body: e.target.value })} rows={6} placeholder="Hi {{first_name}}, our sale starts now…" />
+              <Textarea
+                value={s.body}
+                onChange={(e) => setS({ ...s, body: e.target.value })}
+                rows={6}
+                placeholder="Hi {{first_name}}, our sale starts now…"
+              />
               <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
-                <span>{seg.encoding} · {seg.charCount} chars · {seg.segments} SMS segment{seg.segments !== 1 ? "s" : ""}</span>
-                <span>Personalization: <code>{"{{first_name}}"}</code> <code>{"{{last_name}}"}</code> <code>{"{{country}}"}</code> · any custom CSV field: <code>{"{{your_field}}"}</code></span>
+                <span>
+                  {seg.encoding} · {seg.charCount} chars · {seg.segments} SMS segment
+                  {seg.segments !== 1 ? "s" : ""}
+                </span>
+                <span>
+                  Personalization: <code>{"{{first_name}}"}</code> <code>{"{{last_name}}"}</code>{" "}
+                  <code>{"{{country}}"}</code> · any custom CSV field:{" "}
+                  <code>{"{{your_field}}"}</code>
+                </span>
               </div>
               {seg.encoding === "Unicode" && unicodeOffenders.length > 0 && (
                 <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-xs">
                   <div className="font-medium text-amber-900 dark:text-amber-200">
-                    Unicode characters detected — segments shrink from 160 to 70 chars, so cost goes up.
+                    Unicode characters detected — segments shrink from 160 to 70 chars, so cost goes
+                    up.
                   </div>
                   <div className="mt-1 text-amber-800 dark:text-amber-300">
-                    Non-GSM characters in your message: <code className="font-mono">{unicodeOffenders.join(" ")}</code>
+                    Non-GSM characters in your message:{" "}
+                    <code className="font-mono">{unicodeOffenders.join(" ")}</code>
                   </div>
                   {canFixUnicode && (
-                    <Button type="button" size="sm" variant="outline" className="mt-2" onClick={fixUnicode}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-2"
+                      onClick={fixUnicode}
+                    >
                       Auto-replace with GSM-safe equivalents
                     </Button>
                   )}
@@ -758,7 +930,9 @@ function NewCampaignPage() {
                     if (!url) return;
                     void addShortLink(url, el);
                   }}
-                >{shorteningLink ? "Shortening…" : "Add to message"}</Button>
+                >
+                  {shorteningLink ? "Shortening…" : "Add to message"}
+                </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {s.trackLinks
@@ -769,7 +943,9 @@ function NewCampaignPage() {
 
             <div className="rounded-md border p-3 flex items-start justify-between gap-4">
               <div className="space-y-1">
-                <Label className="cursor-pointer" htmlFor="track-links-toggle">Shorten links &amp; track clicks</Label>
+                <Label className="cursor-pointer" htmlFor="track-links-toggle">
+                  Shorten links &amp; track clicks
+                </Label>
                 <p className="text-xs text-muted-foreground max-w-md">
                   {s.trackLinks
                     ? "On — every URL in your message is replaced with a tracked short link so clicks are counted. See per-link stats on the report's Links tab."
@@ -783,7 +959,6 @@ function NewCampaignPage() {
               />
             </div>
 
-
             <div>
               <Label>MMS image (optional)</Label>
               <MmsImagePicker
@@ -791,9 +966,13 @@ function NewCampaignPage() {
                 onChange={(url) => setS({ ...s, mediaUrl: url })}
               />
               {s.mediaUrl ? (
-                <p className="text-xs text-muted-foreground mt-1">MMS multiplier applied per-country (see cost estimate).</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  MMS multiplier applied per-country (see cost estimate).
+                </p>
               ) : (
-                <p className="text-xs text-muted-foreground mt-1">Upload a JPG, PNG, or GIF (max 5 MB) — or paste a public image URL.</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Upload a JPG, PNG, or GIF (max 5 MB) — or paste a public image URL.
+                </p>
               )}
               <Input
                 className="mt-2"
@@ -804,10 +983,14 @@ function NewCampaignPage() {
             </div>
             <div className="flex items-start gap-2 text-xs text-muted-foreground bg-success/5 border border-success/30 rounded-md p-3">
               <ShieldCheck className="size-4 text-success mt-0.5" />
-              <div>Opt-out line is auto-appended if missing: <i>"Reply STOP to unsubscribe."</i></div>
+              <div>
+                Opt-out line is auto-appended if missing: <i>"Reply STOP to unsubscribe."</i>
+              </div>
             </div>
             <div>
-              <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2 flex items-center gap-1"><Smartphone className="size-4" /> Phone preview</div>
+              <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2 flex items-center gap-1">
+                <Smartphone className="size-4" /> Phone preview
+              </div>
               <div className="mx-auto w-full max-w-[280px] rounded-[2rem] border bg-card p-3 shadow-sm">
                 <div className="rounded-2xl bg-muted/40 p-3 min-h-[140px] text-sm whitespace-pre-wrap space-y-2">
                   {s.mediaUrl && /\.(jpe?g|png|gif|webp)(\?|$)/i.test(s.mediaUrl) && (
@@ -817,9 +1000,15 @@ function NewCampaignPage() {
                       className="w-full max-h-64 rounded-lg object-cover border"
                     />
                   )}
-                  {previewBody ? renderPreviewWithLinks(previewBody) : <span className="text-muted-foreground">Your message will appear here…</span>}
+                  {previewBody ? (
+                    renderPreviewWithLinks(previewBody)
+                  ) : (
+                    <span className="text-muted-foreground">Your message will appear here…</span>
+                  )}
                   {previewLinksPending && (
-                    <span className="block text-xs text-muted-foreground">Creating verified short link…</span>
+                    <span className="block text-xs text-muted-foreground">
+                      Creating verified short link…
+                    </span>
                   )}
                 </div>
               </div>
@@ -828,12 +1017,15 @@ function NewCampaignPage() {
                   ? "Exactly how your contact sees it — every displayed short link is active and verified."
                   : "Exactly how your contact sees it — links are sent as typed."}
               </p>
-
             </div>
           </Card>
 
           <div className="space-y-5">
-            <SenderRoutingCard breakdown={fullBreakdown} sendersByCountry={sendersByCountry} onToggleCountry={toggleCountry} />
+            <SenderRoutingCard
+              breakdown={fullBreakdown}
+              sendersByCountry={sendersByCountry}
+              onToggleCountry={toggleCountry}
+            />
 
             <CostPanel
               insufficient={insufficient}
@@ -842,8 +1034,16 @@ function NewCampaignPage() {
               totalCost={totalCost}
               breakdown={breakdown}
               audienceCount={activeRecipientCount}
-              loading={hasAudience && countryCounts.length === 0 && (countsQ.isPending || countsQ.isFetching || ratesQ.isPending)}
-              error={countsQ.isError ? ((countsQ.error as any)?.message ?? "Could not calculate cost") : null}
+              loading={
+                hasAudience &&
+                countryCounts.length === 0 &&
+                (countsQ.isPending || countsQ.isFetching || ratesQ.isPending)
+              }
+              error={
+                countsQ.isError
+                  ? ((countsQ.error as any)?.message ?? "Could not calculate cost")
+                  : null
+              }
             />
           </div>
         </div>
@@ -852,26 +1052,55 @@ function NewCampaignPage() {
       {step === 2 && (
         <Card className="p-5 space-y-4">
           <Label>When to send</Label>
-          <RadioGroup value={s.sendMode} onValueChange={(v) => setS({ ...s, sendMode: v as State["sendMode"] })} className="space-y-2">
+          <RadioGroup
+            value={s.sendMode}
+            onValueChange={(v) => setS({ ...s, sendMode: v as State["sendMode"] })}
+            className="space-y-2"
+          >
             {[
               { v: "now", label: "Send now", desc: "Dispatch immediately after launch." },
               { v: "scheduled", label: "Schedule for later", desc: "Pick an exact date and time." },
-              { v: "smart", label: "Smart send time", desc: "Skip quiet hours per recipient timezone." },
+              {
+                v: "smart",
+                label: "Smart send time",
+                desc: "Skip quiet hours per recipient timezone.",
+              },
             ].map((opt) => (
-              <label key={opt.v} className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${s.sendMode === opt.v ? "border-primary bg-primary/5" : ""}`}>
+              <label
+                key={opt.v}
+                className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer ${s.sendMode === opt.v ? "border-primary bg-primary/5" : ""}`}
+              >
                 <RadioGroupItem value={opt.v} className="mt-0.5" />
-                <div><div className="font-medium">{opt.label}</div><div className="text-xs text-muted-foreground">{opt.desc}</div></div>
+                <div>
+                  <div className="font-medium">{opt.label}</div>
+                  <div className="text-xs text-muted-foreground">{opt.desc}</div>
+                </div>
               </label>
             ))}
           </RadioGroup>
           {s.sendMode === "scheduled" && (
-            <div><Label>Date and time</Label><Input type="datetime-local" value={s.scheduleAt} onChange={(e) => setS({ ...s, scheduleAt: e.target.value })} /></div>
+            <div>
+              <Label>Date and time</Label>
+              <Input
+                type="datetime-local"
+                value={s.scheduleAt}
+                onChange={(e) => setS({ ...s, scheduleAt: e.target.value })}
+              />
+            </div>
           )}
           {s.sendMode === "smart" && (
             <div>
               <Label>Skip hours (quiet window)</Label>
-              <Input type="number" min={0} max={12} value={s.smartSkipHours} onChange={(e) => setS({ ...s, smartSkipHours: Number(e.target.value) })} />
-              <p className="text-xs text-muted-foreground mt-1">Avoid sending in the recipient's late-night / early-morning hours.</p>
+              <Input
+                type="number"
+                min={0}
+                max={12}
+                value={s.smartSkipHours}
+                onChange={(e) => setS({ ...s, smartSkipHours: Number(e.target.value) })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Avoid sending in the recipient's late-night / early-morning hours.
+              </p>
             </div>
           )}
         </Card>
@@ -883,9 +1112,14 @@ function NewCampaignPage() {
             <AlertTriangle className="size-4 text-warning mt-0.5" />
             <div className="flex-1 flex items-center justify-between gap-3">
               <div>
-                {testLimitReached
-                  ? <>Daily test limit reached. You can proceed without another test today.</>
-                  : <>A test send is <b>required</b> before launch. Large campaigns also start with a 25-recipient carrier check before the remaining audience is released.</>}
+                {testLimitReached ? (
+                  <>Daily test limit reached. You can proceed without another test today.</>
+                ) : (
+                  <>
+                    A test send is <b>required</b> before launch. Large campaigns also start with a
+                    25-recipient carrier check before the remaining audience is released.
+                  </>
+                )}
               </div>
               <span className="text-xs font-medium whitespace-nowrap">
                 {testUsage.used}/{testUsage.limit} used today
@@ -898,16 +1132,30 @@ function NewCampaignPage() {
               <div className="mt-1 mb-2 text-xs rounded-md border bg-muted/30 px-3 py-2 flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Test route: {testCountry}</span>
                 {testSender ? (
-                  <span className="font-mono font-semibold">From {senderDisplayName(testSender)}</span>
+                  <span className="font-mono font-semibold">
+                    From {senderDisplayName(testSender)}
+                  </span>
                 ) : (
-                  <span className="text-destructive font-medium">No verified sender for {testCountry}</span>
+                  <span className="text-destructive font-medium">
+                    No verified sender for {testCountry}
+                  </span>
                 )}
               </div>
             )}
             <div className="flex gap-2 mt-1">
-              <Input value={s.testTo} onChange={(e) => setS({ ...s, testTo: e.target.value })} placeholder="+15551234567" />
-              <Button onClick={runTestSend} disabled={sending || testLimitReached || !s.body.trim() || (!!testCountry && !testSender)}>
-                <Send className="size-4 mr-1.5" />{sending ? "Sending…" : testLimitReached ? "Daily limit reached" : "Send test"}
+              <Input
+                value={s.testTo}
+                onChange={(e) => setS({ ...s, testTo: e.target.value })}
+                placeholder="+15551234567"
+              />
+              <Button
+                onClick={runTestSend}
+                disabled={
+                  sending || testLimitReached || !s.body.trim() || (!!testCountry && !testSender)
+                }
+              >
+                <Send className="size-4 mr-1.5" />
+                {sending ? "Sending…" : testLimitReached ? "Daily limit reached" : "Send test"}
               </Button>
             </div>
             {testCountry && !testSender && (
@@ -915,10 +1163,15 @@ function NewCampaignPage() {
                 Add or approve a sender for {testCountry} before sending this test.
               </div>
             )}
-            {s.testSent && <div className="text-sm text-success mt-2 flex items-center gap-1"><CheckCircle2 className="size-4" /> Test sent. You can proceed.</div>}
+            {s.testSent && (
+              <div className="text-sm text-success mt-2 flex items-center gap-1">
+                <CheckCircle2 className="size-4" /> Test sent. You can proceed.
+              </div>
+            )}
             {testLimitReached && !s.testSent && (
               <div className="text-xs text-muted-foreground mt-2">
-                You've used all {testUsage.limit} test sends for today. The limit resets at 00:00 UTC — you can continue to schedule or launch without another test.
+                You've used all {testUsage.limit} test sends for today. The limit resets at 00:00
+                UTC — you can continue to schedule or launch without another test.
               </div>
             )}
           </div>
@@ -929,9 +1182,19 @@ function NewCampaignPage() {
         <Card className="p-5 space-y-4">
           <div className="grid md:grid-cols-2 gap-4 text-sm">
             <ReviewItem label="Name" value={s.name} />
-            <ReviewItem label="Eligible audience" value={s.excludedCountries.length > 0 ? `${activeRecipientCount} (of ${audienceTotal}; ${s.excludedCountries.length} country skipped)` : String(audienceTotal)} />
+            <ReviewItem
+              label="Eligible audience"
+              value={
+                s.excludedCountries.length > 0
+                  ? `${activeRecipientCount} (of ${audienceTotal}; ${s.excludedCountries.length} country skipped)`
+                  : String(audienceTotal)
+              }
+            />
             <ReviewItem label="Send mode" value={s.sendMode} />
-            <ReviewItem label="Schedule" value={s.sendMode === "scheduled" ? new Date(s.scheduleAt).toLocaleString() : "—"} />
+            <ReviewItem
+              label="Schedule"
+              value={s.sendMode === "scheduled" ? new Date(s.scheduleAt).toLocaleString() : "—"}
+            />
             <ReviewItem label="Segments / message" value={`${seg.segments} × ${seg.encoding}`} />
             <ReviewItem label="Media" value={s.mediaUrl || "—"} />
             <ReviewItem label="Estimated cost" value={formatUSD(totalCost)} />
@@ -941,8 +1204,15 @@ function NewCampaignPage() {
             <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-md p-3 text-sm text-destructive">
               <AlertTriangle className="size-4 mt-0.5" />
               <div>
-                Insufficient balance. <Link to="/app/billing" className="underline font-medium">Add funds</Link> to launch, or contact{" "}
-                <a href="/contact" className="underline font-medium">support</a>.
+                Insufficient balance.{" "}
+                <Link to="/app/billing" className="underline font-medium">
+                  Add funds
+                </Link>{" "}
+                to launch, or contact{" "}
+                <a href="/contact" className="underline font-medium">
+                  support
+                </a>
+                .
               </div>
             </div>
           )}
@@ -950,13 +1220,24 @@ function NewCampaignPage() {
             <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-md p-3 text-sm text-destructive">
               <AlertTriangle className="size-4 mt-0.5" />
               <div>
-                No verified sender for: <b>{missingSenderCountries.join(", ")}</b>. Launch is blocked until you{" "}
-                <Link to="/app/setup-sms" className="underline font-medium">set up SMS</Link> or{" "}
-                <Link to="/app/setup-sms" className="underline font-medium">request a number</Link> for these countries — or remove those recipients.
+                No verified sender for: <b>{missingSenderCountries.join(", ")}</b>. Launch is
+                blocked until you{" "}
+                <Link to="/app/setup-sms" className="underline font-medium">
+                  set up SMS
+                </Link>{" "}
+                or{" "}
+                <Link to="/app/setup-sms" className="underline font-medium">
+                  request a number
+                </Link>{" "}
+                for these countries — or remove those recipients.
               </div>
             </div>
           )}
-          <SenderRoutingCard breakdown={fullBreakdown} sendersByCountry={sendersByCountry} onToggleCountry={toggleCountry} />
+          <SenderRoutingCard
+            breakdown={fullBreakdown}
+            sendersByCountry={sendersByCountry}
+            onToggleCountry={toggleCountry}
+          />
           <div>
             <Label>Final message</Label>
             <Card className="p-3 mt-1 bg-muted/30 whitespace-pre-wrap text-sm">{previewBody}</Card>
@@ -973,24 +1254,34 @@ function NewCampaignPage() {
               className="mt-0.5"
             />
             <span className="leading-snug">
-              <strong>Required before launch —</strong> I confirm that every recipient in this campaign has
-              opted in to receive SMS from me, that the message content complies with the Xellvio Acceptable
-              Use Policy and carrier SHAFT rules, and that I accept full liability for any carrier penalties,
-              fines, or number suspensions that arise from this send.
+              <strong>Required before launch —</strong> I confirm that every recipient in this
+              campaign has opted in to receive SMS from me, that the message content complies with
+              the Xellvio Acceptable Use Policy and carrier SHAFT rules, and that I accept full
+              liability for any carrier penalties, fines, or number suspensions that arise from this
+              send.
             </span>
           </label>
         </Card>
       )}
 
       <div className="flex justify-between">
-        <Button variant="ghost" disabled={step === 0} onClick={() => setStep((step - 1) as StepIdx)}>
+        <Button
+          variant="ghost"
+          disabled={step === 0}
+          onClick={() => setStep((step - 1) as StepIdx)}
+        >
           <ChevronLeft className="size-4 mr-1" /> Back
         </Button>
         <div className="flex gap-2">
           {step === 4 ? (
             <>
-              <Button variant="outline" onClick={() => saveCampaign(false)} disabled={saving}>Save as draft</Button>
-              <Button onClick={() => saveCampaign(true)} disabled={saving || insufficient || hasMissingSender || !complianceAccepted}>
+              <Button variant="outline" onClick={() => saveCampaign(false)} disabled={saving}>
+                Save as draft
+              </Button>
+              <Button
+                onClick={() => saveCampaign(true)}
+                disabled={saving || insufficient || hasMissingSender || !complianceAccepted}
+              >
                 {s.sendMode === "now" ? "Launch now" : "Schedule"}
               </Button>
             </>
@@ -1005,15 +1296,40 @@ function NewCampaignPage() {
   );
 }
 
-function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, audienceCount, loading, error }: {
-  insufficient: boolean; balance: number; balanceAfter: number; totalCost: number;
-  breakdown: Array<{ country_code: string; country_name: string; recipients: number; unit: number; mult: number; segments: number; subtotal: number; priced: boolean }>;
-  audienceCount: number; loading: boolean; error?: string | null;
+function CostPanel({
+  insufficient,
+  balance,
+  balanceAfter,
+  totalCost,
+  breakdown,
+  audienceCount,
+  loading,
+  error,
+}: {
+  insufficient: boolean;
+  balance: number;
+  balanceAfter: number;
+  totalCost: number;
+  breakdown: Array<{
+    country_code: string;
+    country_name: string;
+    recipients: number;
+    unit: number;
+    mult: number;
+    segments: number;
+    subtotal: number;
+    priced: boolean;
+  }>;
+  audienceCount: number;
+  loading: boolean;
+  error?: string | null;
 }) {
   return (
     <Card className="p-5 space-y-4 self-start sticky top-4">
       <div className="flex items-center gap-2">
-        <div className="size-9 rounded-lg bg-primary/15 text-primary grid place-items-center"><DollarSign className="size-4" /></div>
+        <div className="size-9 rounded-lg bg-primary/15 text-primary grid place-items-center">
+          <DollarSign className="size-4" />
+        </div>
         <div>
           <h3 className="font-semibold leading-tight">Cost estimate</h3>
           <p className="text-xs text-muted-foreground">Live, by recipient country</p>
@@ -1024,8 +1340,15 @@ function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, 
         <div className="flex items-start gap-2 bg-destructive/10 border border-destructive/30 rounded-md p-3 text-xs text-destructive">
           <AlertTriangle className="size-4 mt-0.5" />
           <div>
-            Estimated cost exceeds your balance. Sending will be blocked. <Link to="/app/billing" className="underline font-medium">Add funds →</Link>{" "}
-            or contact <a href="/contact" className="underline font-medium">support</a>.
+            Estimated cost exceeds your balance. Sending will be blocked.{" "}
+            <Link to="/app/billing" className="underline font-medium">
+              Add funds →
+            </Link>{" "}
+            or contact{" "}
+            <a href="/contact" className="underline font-medium">
+              support
+            </a>
+            .
           </div>
         </div>
       )}
@@ -1041,35 +1364,56 @@ function CostPanel({ insufficient, balance, balanceAfter, totalCost, breakdown, 
         </div>
         <div className="rounded-md border p-2 col-span-2">
           <div className="text-xs text-muted-foreground">After this send</div>
-          <div className={`font-extrabold text-lg ${insufficient ? "text-destructive" : ""}`}>{formatUSD(balanceAfter)}</div>
+          <div className={`font-extrabold text-lg ${insufficient ? "text-destructive" : ""}`}>
+            {formatUSD(balanceAfter)}
+          </div>
         </div>
       </div>
 
       <div>
-        <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">By country ({audienceCount} recipients)</div>
+        <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
+          By country ({audienceCount} recipients)
+        </div>
         {error ? (
           <div className="text-xs text-destructive">{error}</div>
         ) : loading ? (
           <div className="text-xs text-muted-foreground">Calculating…</div>
         ) : breakdown.length === 0 ? (
-          <div className="text-xs text-muted-foreground">Pick an audience in step 1 to see per-country pricing.</div>
+          <div className="text-xs text-muted-foreground">
+            Pick an audience in step 1 to see per-country pricing.
+          </div>
         ) : (
           <div className="border rounded-md overflow-hidden">
             <table className="w-full text-xs">
               <thead className="bg-muted/40 text-muted-foreground">
-                <tr><th className="text-left p-2">Country</th><th className="text-right p-2">#</th><th className="text-right p-2">Rate</th><th className="text-right p-2">Subtotal</th></tr>
+                <tr>
+                  <th className="text-left p-2">Country</th>
+                  <th className="text-right p-2">#</th>
+                  <th className="text-right p-2">Rate</th>
+                  <th className="text-right p-2">Subtotal</th>
+                </tr>
               </thead>
               <tbody>
                 {breakdown.map((b) => (
                   <tr key={b.country_code} className="border-t">
                     <td className="p-2">
                       <div className="font-medium">{b.country_name}</div>
-                      {!b.priced && <Badge variant="destructive" className="text-[10px] mt-0.5">No rate</Badge>}
-                      {b.mult > 1 && <Badge variant="outline" className="text-[10px] ml-1">×{b.mult} MMS</Badge>}
+                      {!b.priced && (
+                        <Badge variant="destructive" className="text-[10px] mt-0.5">
+                          No rate
+                        </Badge>
+                      )}
+                      {b.mult > 1 && (
+                        <Badge variant="outline" className="text-[10px] ml-1">
+                          ×{b.mult} MMS
+                        </Badge>
+                      )}
                     </td>
                     <td className="p-2 text-right">{b.recipients}</td>
                     <td className="p-2 text-right tabular-nums">{formatRate(b.unit)}</td>
-                    <td className="p-2 text-right font-medium tabular-nums">{formatUSD(b.subtotal)}</td>
+                    <td className="p-2 text-right font-medium tabular-nums">
+                      {formatUSD(b.subtotal)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1091,8 +1435,11 @@ function Stepper({ step }: { step: number }) {
         const done = i < step;
         return (
           <div key={label} className="flex items-center gap-2">
-            <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm border ${active ? "bg-primary text-primary-foreground border-primary" : done ? "bg-success/15 text-success border-success/30" : "bg-card border-border text-muted-foreground"}`}>
-              <Icon className="size-4" />{label}
+            <div
+              className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-sm border ${active ? "bg-primary text-primary-foreground border-primary" : done ? "bg-success/15 text-success border-success/30" : "bg-card border-border text-muted-foreground"}`}
+            >
+              <Icon className="size-4" />
+              {label}
             </div>
             {i < STEPS.length - 1 && <div className="h-px w-6 bg-border" />}
           </div>
@@ -1102,23 +1449,46 @@ function Stepper({ step }: { step: number }) {
   );
 }
 
-function SegmentPicker({ title, segments, selected, onChange }: {
-  title: string; segments: { id: string; name: string; query: any }[]; selected: string[]; onChange: (ids: string[]) => void;
+function SegmentPicker({
+  title,
+  segments,
+  selected,
+  onChange,
+}: {
+  title: string;
+  segments: { id: string; name: string; query: any }[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
 }) {
   return (
     <div>
       <Label>{title}</Label>
       <div className="grid sm:grid-cols-2 gap-2 mt-1">
-        {segments.length === 0 && <div className="text-xs text-muted-foreground">No segments available.</div>}
+        {segments.length === 0 && (
+          <div className="text-xs text-muted-foreground">No segments available.</div>
+        )}
         {segments.map((seg) => {
           const on = selected.includes(seg.id);
           return (
-            <label key={seg.id} className={`flex items-start gap-2 rounded-lg border p-3 cursor-pointer ${on ? "border-primary bg-primary/5" : ""}`}>
-              <Checkbox checked={on} onCheckedChange={(v) => onChange(v ? [...selected, seg.id] : selected.filter((x) => x !== seg.id))} className="mt-0.5" />
+            <label
+              key={seg.id}
+              className={`flex items-start gap-2 rounded-lg border p-3 cursor-pointer ${on ? "border-primary bg-primary/5" : ""}`}
+            >
+              <Checkbox
+                checked={on}
+                onCheckedChange={(v) =>
+                  onChange(v ? [...selected, seg.id] : selected.filter((x) => x !== seg.id))
+                }
+                className="mt-0.5"
+              />
               <div className="flex-1">
                 <div className="font-medium text-sm">{seg.name}</div>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {(seg.query?.country_in ?? []).map((c: string) => <Badge key={c} variant="outline" className="text-xs">{c}</Badge>)}
+                  {(seg.query?.country_in ?? []).map((c: string) => (
+                    <Badge key={c} variant="outline" className="text-xs">
+                      {c}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             </label>
@@ -1138,7 +1508,13 @@ function ReviewItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ContactPicker({ selected, onChange }: { selected: string[]; onChange: (ids: string[]) => void }) {
+function ContactPicker({
+  selected,
+  onChange,
+}: {
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
   const [q, setQ] = useState("");
   const search = q.trim();
   const contactsQ = useQuery({
@@ -1150,7 +1526,9 @@ function ContactPicker({ selected, onChange }: { selected: string[]; onChange: (
         .select("id, phone_e164, first_name, last_name, consents(status, channel)")
         .order("created_at", { ascending: false })
         .limit(200);
-      query = query.or(`phone_e164.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`);
+      query = query.or(
+        `phone_e164.ilike.%${search}%,first_name.ilike.%${search}%,last_name.ilike.%${search}%`,
+      );
       const { data, error } = await query;
       if (error) throw error;
       return (data ?? []).map((p: any) => {
@@ -1169,30 +1547,63 @@ function ContactPicker({ selected, onChange }: { selected: string[]; onChange: (
         <Label>Or pick specific contacts</Label>
         <span className="text-xs text-muted-foreground">{selected.length} selected</span>
       </div>
-      <Input placeholder="Search by name or phone…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <Input
+        placeholder="Search by name or phone…"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
       <div className="max-h-56 overflow-y-auto rounded-md border divide-y">
-        {search.length < 2 && <div className="p-3 text-sm text-muted-foreground">Type at least 2 characters to find a specific contact.</div>}
+        {search.length < 2 && (
+          <div className="p-3 text-sm text-muted-foreground">
+            Type at least 2 characters to find a specific contact.
+          </div>
+        )}
         {contactsQ.isLoading && <div className="p-3 text-sm text-muted-foreground">Loading…</div>}
         {search.length >= 2 && !contactsQ.isLoading && rows.length === 0 && (
-          <div className="p-3 text-sm text-muted-foreground">No contacts match. <Link to="/app/audience" className="text-primary underline">Add contacts</Link>.</div>
+          <div className="p-3 text-sm text-muted-foreground">
+            No contacts match.{" "}
+            <Link to="/app/audience" className="text-primary underline">
+              Add contacts
+            </Link>
+            .
+          </div>
         )}
         {rows.map((r: any) => (
-          <label key={r.id} className={`flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50 ${!r.subscribed ? "opacity-60" : ""}`}>
+          <label
+            key={r.id}
+            className={`flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50 ${!r.subscribed ? "opacity-60" : ""}`}
+          >
             <Checkbox checked={selected.includes(r.id)} onCheckedChange={() => toggle(r.id)} />
             <div className="flex-1">
               <div className="font-mono text-xs">{r.phone_e164}</div>
-              <div className="text-xs text-muted-foreground">{[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}</div>
+              <div className="text-xs text-muted-foreground">
+                {[r.first_name, r.last_name].filter(Boolean).join(" ") || "—"}
+              </div>
             </div>
-            {!r.subscribed && <Badge variant="outline" className="text-xs">not subscribed</Badge>}
+            {!r.subscribed && (
+              <Badge variant="outline" className="text-xs">
+                not subscribed
+              </Badge>
+            )}
           </label>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">Only subscribed, non-suppressed contacts will receive the message.</p>
+      <p className="text-xs text-muted-foreground">
+        Only subscribed, non-suppressed contacts will receive the message.
+      </p>
     </div>
   );
 }
 
-function ListPicker({ lists, selected, onChange }: { lists: { id: string; name: string }[]; selected: string[]; onChange: (ids: string[]) => void }) {
+function ListPicker({
+  lists,
+  selected,
+  onChange,
+}: {
+  lists: { id: string; name: string }[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
   function toggle(id: string) {
     onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);
   }
@@ -1202,13 +1613,20 @@ function ListPicker({ lists, selected, onChange }: { lists: { id: string; name: 
       <div className="grid sm:grid-cols-2 gap-2 mt-1">
         {lists.length === 0 && (
           <div className="text-xs text-muted-foreground">
-            No lists yet. <Link to="/app/audience" className="text-primary underline">Create a list</Link>.
+            No lists yet.{" "}
+            <Link to="/app/audience" className="text-primary underline">
+              Create a list
+            </Link>
+            .
           </div>
         )}
         {lists.map((l) => {
           const on = selected.includes(l.id);
           return (
-            <label key={l.id} className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer ${on ? "border-primary bg-primary/5" : ""}`}>
+            <label
+              key={l.id}
+              className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer ${on ? "border-primary bg-primary/5" : ""}`}
+            >
               <Checkbox checked={on} onCheckedChange={() => toggle(l.id)} />
               <div className="font-medium text-sm">{l.name}</div>
             </label>
@@ -1224,24 +1642,38 @@ function SenderRoutingCard({
   sendersByCountry,
   onToggleCountry,
 }: {
-  breakdown: Array<{ country_code: string; country_name: string; recipients: number; excluded?: boolean }>;
-  sendersByCountry: Record<string, { sender_kind: string; phone_number: string | null; telnyx_messaging_profile_id: string | null }>;
+  breakdown: Array<{
+    country_code: string;
+    country_name: string;
+    recipients: number;
+    excluded?: boolean;
+  }>;
+  sendersByCountry: Record<
+    string,
+    { sender_kind: string; phone_number: string | null; telnyx_messaging_profile_id: string | null }
+  >;
   onToggleCountry?: (cc: string) => void;
 }) {
   const excludedCount = breakdown.filter((b) => b.excluded).length;
   return (
     <Card className="p-5 space-y-3">
       <div className="flex items-center gap-2">
-        <div className="size-9 rounded-lg bg-primary/15 text-primary grid place-items-center"><Phone className="size-4" /></div>
+        <div className="size-9 rounded-lg bg-primary/15 text-primary grid place-items-center">
+          <Phone className="size-4" />
+        </div>
         <div>
           <h3 className="font-semibold leading-tight">Sender routing</h3>
           <p className="text-xs text-muted-foreground">
-            {onToggleCountry ? "Untick a country to skip it in this campaign" : "Auto-selected per recipient country"}
+            {onToggleCountry
+              ? "Untick a country to skip it in this campaign"
+              : "Auto-selected per recipient country"}
           </p>
         </div>
       </div>
       {breakdown.length === 0 ? (
-        <div className="text-xs text-muted-foreground">Pick an audience to see which sender will be used.</div>
+        <div className="text-xs text-muted-foreground">
+          Pick an audience to see which sender will be used.
+        </div>
       ) : (
         <div className="border rounded-md overflow-hidden">
           <table className="w-full text-xs">
@@ -1268,12 +1700,16 @@ function SenderRoutingCard({
                         />
                       </td>
                     )}
-                    <td className={`p-2 font-medium ${b.excluded ? "line-through" : ""}`}>{b.country_name}</td>
+                    <td className={`p-2 font-medium ${b.excluded ? "line-through" : ""}`}>
+                      {b.country_name}
+                    </td>
                     <td className="p-2">
                       {sender ? (
                         <span className="font-mono text-[11px]">{senderDisplayName(sender)}</span>
                       ) : (
-                        <Badge variant="destructive" className="text-[10px]">No verified sender</Badge>
+                        <Badge variant="destructive" className="text-[10px]">
+                          No verified sender
+                        </Badge>
                       )}
                     </td>
                     <td className="p-2 text-right">{b.recipients}</td>
@@ -1286,22 +1722,43 @@ function SenderRoutingCard({
       )}
       {excludedCount > 0 && (
         <p className="text-[11px] text-muted-foreground">
-          {excludedCount} {excludedCount === 1 ? "country" : "countries"} skipped — those recipients won't receive this campaign.
+          {excludedCount} {excludedCount === 1 ? "country" : "countries"} skipped — those recipients
+          won't receive this campaign.
         </p>
       )}
       <p className="text-[11px] text-muted-foreground">
-        Need a sender for another country? <Link to="/app/setup-sms" className="text-primary underline">Set up SMS</Link> or <Link to="/app/setup-sms" className="text-primary underline">request a number</Link>.
+        Need a sender for another country?{" "}
+        <Link to="/app/setup-sms" className="text-primary underline">
+          Set up SMS
+        </Link>{" "}
+        or{" "}
+        <Link to="/app/setup-sms" className="text-primary underline">
+          request a number
+        </Link>
+        .
       </p>
     </Card>
   );
 }
 
-function MmsImagePicker({ mediaUrl, onChange }: { mediaUrl: string; onChange: (url: string) => void }) {
+function MmsImagePicker({
+  mediaUrl,
+  onChange,
+}: {
+  mediaUrl: string;
+  onChange: (url: string) => void;
+}) {
   const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   async function handleFile(file: File) {
-    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be 5 MB or smaller."); return; }
-    if (!/^image\/(jpeg|jpg|png|gif)$/.test(file.type)) { toast.error("Only JPG, PNG, or GIF images are allowed."); return; }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5 MB or smaller.");
+      return;
+    }
+    if (!/^image\/(jpeg|jpg|png|gif)$/.test(file.type)) {
+      toast.error("Only JPG, PNG, or GIF images are allowed.");
+      return;
+    }
     setUploading(true);
     try {
       const { data: u } = await supabase.auth.getUser();
@@ -1311,23 +1768,29 @@ function MmsImagePicker({ mediaUrl, onChange }: { mediaUrl: string; onChange: (u
       // is why some recipients see only the text. Normalise to a carrier-safe
       // JPEG (animated GIFs are left alone so they keep animating).
       const prepared = await prepareMmsImage(file);
-      const ext = prepared.type === "image/gif" ? "gif" : prepared.type === "image/png" ? "png" : "jpg";
+      const ext =
+        prepared.type === "image/gif" ? "gif" : prepared.type === "image/png" ? "png" : "jpg";
       const path = `${uid}/${crypto.randomUUID()}.${ext}`;
       const up = await supabase.storage.from("campaign-media").upload(path, prepared, {
-        contentType: prepared.type, upsert: false,
+        contentType: prepared.type,
+        upsert: false,
       });
       if (up.error) throw up.error;
       // Short, token-free, non-expiring delivery URL served by our own route.
       // Signed storage links carry a huge query token and an expiry, and both
       // can make the carrier's media fetch fail (text delivered, image missing).
-      onChange(publicCampaignMediaUrl(
-        `/storage/v1/object/sign/campaign-media/${path}`,
-        window.location.origin,
-      ));
+      onChange(
+        publicCampaignMediaUrl(
+          `/storage/v1/object/sign/campaign-media/${path}`,
+          window.location.origin,
+        ),
+      );
       toast.success("Image uploaded");
     } catch (e: any) {
       toast.error(e.message ?? "Upload failed");
-    } finally { setUploading(false); }
+    } finally {
+      setUploading(false);
+    }
   }
   const isImg = !!mediaUrl && /\.(jpe?g|png|gif)(\?|$)/i.test(mediaUrl);
 
@@ -1342,13 +1805,24 @@ function MmsImagePicker({ mediaUrl, onChange }: { mediaUrl: string; onChange: (u
           type="file"
           accept="image/jpeg,image/png,image/gif"
           className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
         />
-        <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={uploading}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+        >
           {uploading ? "Uploading…" : mediaUrl ? "Replace image" : "Upload image"}
         </Button>
         {mediaUrl && (
-          <Button type="button" variant="ghost" onClick={() => onChange("")}>Remove</Button>
+          <Button type="button" variant="ghost" onClick={() => onChange("")}>
+            Remove
+          </Button>
         )}
       </div>
     </div>

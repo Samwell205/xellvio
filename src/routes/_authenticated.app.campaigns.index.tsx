@@ -32,7 +32,12 @@ function CampaignsPage() {
     queryKey: ["campaigns"],
     refetchInterval: 8_000,
     queryFn: async () =>
-      (await supabase.from("campaigns").select("id,name,status,send_mode,schedule_at,created_at").order("created_at", { ascending: false })).data ?? [],
+      (
+        await supabase
+          .from("campaigns")
+          .select("id,name,status,send_mode,schedule_at,created_at")
+          .order("created_at", { ascending: false })
+      ).data ?? [],
   });
 
   async function handleDelete() {
@@ -61,9 +66,12 @@ function CampaignsPage() {
             </span>
           </p>
         </div>
-        <Link to="/app/campaigns/new"><Button>
-          <Plus className="size-4 mr-1.5" />New campaign
-        </Button></Link>
+        <Link to="/app/campaigns/new">
+          <Button>
+            <Plus className="size-4 mr-1.5" />
+            New campaign
+          </Button>
+        </Link>
       </div>
 
       <Card className="p-0 overflow-hidden">
@@ -95,19 +103,39 @@ function CampaignsPage() {
                 <tr key={c.id} className="border-t hover:bg-muted/20">
                   <td className="py-3 px-4 font-semibold">
                     {c.status === "draft" ? (
-                      <Link to="/app/campaigns/new" search={{ id: c.id }} className="hover:underline">{c.name}</Link>
+                      <Link
+                        to="/app/campaigns/new"
+                        search={{ id: c.id }}
+                        className="hover:underline"
+                      >
+                        {c.name}
+                      </Link>
                     ) : (
-                      <Link to="/app/campaigns/$id" params={{ id: c.id }} className="hover:underline">{c.name}</Link>
+                      <Link
+                        to="/app/campaigns/$id"
+                        params={{ id: c.id }}
+                        className="hover:underline"
+                      >
+                        {c.name}
+                      </Link>
                     )}
                   </td>
-                  <td className="py-3 px-4"><StatusBadge status={c.status} /></td>
+                  <td className="py-3 px-4">
+                    <StatusBadge status={c.status} />
+                  </td>
                   <td className="py-3 px-4 capitalize">{c.send_mode}</td>
-                  <td className="py-3 px-4 text-muted-foreground">{c.schedule_at ? new Date(c.schedule_at).toLocaleString() : "—"}</td>
-                  <td className="py-3 px-4 text-muted-foreground">{new Date(c.created_at).toLocaleString()}</td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    {c.schedule_at ? new Date(c.schedule_at).toLocaleString() : "—"}
+                  </td>
+                  <td className="py-3 px-4 text-muted-foreground">
+                    {new Date(c.created_at).toLocaleString()}
+                  </td>
                   <td className="py-3 px-4 text-right">
                     {c.status !== "draft" && (
                       <Link to="/app/campaigns/$id/report" params={{ id: c.id }}>
-                        <Button variant="ghost" size="sm" className="mr-1">Report</Button>
+                        <Button variant="ghost" size="sm" className="mr-1">
+                          Report
+                        </Button>
                       </Link>
                     )}
                     <Button
@@ -120,7 +148,6 @@ function CampaignsPage() {
                       <Trash2 className="size-4" />
                     </Button>
                   </td>
-
                 </tr>
               ))}
             </tbody>
@@ -133,13 +160,17 @@ function CampaignsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
             <AlertDialogDescription>
-              "{toDelete?.name}" and all of its message records will be permanently removed. This can't be undone.
+              "{toDelete?.name}" and all of its message records will be permanently removed. This
+              can't be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); handleDelete(); }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

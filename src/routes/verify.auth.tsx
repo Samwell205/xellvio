@@ -102,14 +102,17 @@ function VerifierAuth() {
     }
   }
 
-
   return (
     <div className="dark grid min-h-screen place-items-center bg-slate-950 px-6 py-12 text-slate-100">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <Link to="/verify" className="text-sm text-slate-400 hover:text-slate-200">← Verifier portal</Link>
+          <Link to="/verify" className="text-sm text-slate-400 hover:text-slate-200">
+            ← Verifier portal
+          </Link>
           <h1 className="mt-2 text-2xl font-semibold">Xellvio Verifier</h1>
-          <p className="mt-1 text-sm text-slate-400">Sign in with email and password. New accounts confirm by code once.</p>
+          <p className="mt-1 text-sm text-slate-400">
+            Sign in with email and password. New accounts confirm by code once.
+          </p>
         </div>
         <Card className="border-slate-800 bg-slate-900">
           <CardContent className="pt-6">
@@ -122,32 +125,65 @@ function VerifierAuth() {
               <TabsContent value="signin" className="space-y-3 pt-4">
                 <div>
                   <Label>Email</Label>
-                  <Input type="email" autoComplete="email" value={signinEmail} onChange={(e) => setSigninEmail(e.target.value)} placeholder="you@example.com" />
+                  <Input
+                    type="email"
+                    autoComplete="email"
+                    value={signinEmail}
+                    onChange={(e) => setSigninEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
                 </div>
                 <div>
                   <Label>Password</Label>
-                  <Input type="password" autoComplete="current-password" value={signinPassword} onChange={(e) => setSigninPassword(e.target.value)} placeholder="Enter your password" />
+                  <Input
+                    type="password"
+                    autoComplete="current-password"
+                    value={signinPassword}
+                    onChange={(e) => setSigninPassword(e.target.value)}
+                    placeholder="Enter your password"
+                  />
                 </div>
-                <Button className="w-full" disabled={busy || !signinEmail || !signinPassword} onClick={signInWithPassword}>
+                <Button
+                  className="w-full"
+                  disabled={busy || !signinEmail || !signinPassword}
+                  onClick={signInWithPassword}
+                >
                   {busy ? "Signing in…" : "Sign in"}
                 </Button>
                 {!forgotOpen ? (
                   <button
                     type="button"
                     className="text-xs text-slate-400 underline hover:text-slate-200"
-                    onClick={() => { setForgotOpen(true); setForgotEmail(signinEmail); }}
+                    onClick={() => {
+                      setForgotOpen(true);
+                      setForgotEmail(signinEmail);
+                    }}
                   >
                     Forgot password?
                   </button>
                 ) : (
                   <div className="space-y-2 rounded-md border border-slate-800 bg-slate-950/60 p-3">
-                    <Label className="text-xs text-slate-300">Reset password — enter your email</Label>
-                    <Input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="you@example.com" />
+                    <Label className="text-xs text-slate-300">
+                      Reset password — enter your email
+                    </Label>
+                    <Input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="you@example.com"
+                    />
                     <div className="flex gap-2">
-                      <Button size="sm" className="flex-1" disabled={busy || !forgotEmail} onClick={sendResetEmail}>
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        disabled={busy || !forgotEmail}
+                        onClick={sendResetEmail}
+                      >
                         {busy ? "Sending…" : "Send reset link"}
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setForgotOpen(false)}>Cancel</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setForgotOpen(false)}>
+                        Cancel
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -156,25 +192,52 @@ function VerifierAuth() {
               <TabsContent value="signup" className="space-y-3 pt-4">
                 <div>
                   <Label>Full name</Label>
-                  <Input value={signupName} onChange={(e) => setSignupName(e.target.value)} placeholder="Jane Doe" />
+                  <Input
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="Jane Doe"
+                  />
                 </div>
                 <div>
                   <Label>Email</Label>
-                  <Input type="email" autoComplete="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} placeholder="you@example.com" />
+                  <Input
+                    type="email"
+                    autoComplete="email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="you@example.com"
+                  />
                 </div>
                 <div>
                   <Label>Password</Label>
-                  <Input type="password" autoComplete="new-password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} placeholder="Minimum 8 characters" />
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="Minimum 8 characters"
+                  />
                 </div>
                 <div>
                   <Label>Confirm password</Label>
-                  <Input type="password" autoComplete="new-password" value={signupPasswordConfirm} onChange={(e) => setSignupPasswordConfirm(e.target.value)} placeholder="Repeat password" />
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    value={signupPasswordConfirm}
+                    onChange={(e) => setSignupPasswordConfirm(e.target.value)}
+                    placeholder="Repeat password"
+                  />
                 </div>
-                <Button className="w-full" disabled={busy || !signupName || !signupEmail || !signupPassword || !signupPasswordConfirm} onClick={signUp}>
+                <Button
+                  className="w-full"
+                  disabled={
+                    busy || !signupName || !signupEmail || !signupPassword || !signupPasswordConfirm
+                  }
+                  onClick={signUp}
+                >
                   {busy ? "Creating account…" : "Create account"}
                 </Button>
               </TabsContent>
-
             </Tabs>
           </CardContent>
         </Card>

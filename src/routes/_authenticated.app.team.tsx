@@ -196,10 +196,7 @@ function TeamPage() {
             </div>
             <div className="grid sm:grid-cols-2 gap-2">
               {PERMISSION_KEYS.map((k) => (
-                <label
-                  key={k}
-                  className="flex items-center gap-2 text-sm cursor-pointer"
-                >
+                <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
                   <Checkbox
                     checked={!!perms[k]}
                     onCheckedChange={(v) => togglePerm(k, v === true)}
@@ -369,9 +366,7 @@ function MemberRow({
               <label key={k} className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox
                   checked={!!perms[k]}
-                  onCheckedChange={(v) =>
-                    setPerms((p) => ({ ...p, [k]: v === true }))
-                  }
+                  onCheckedChange={(v) => setPerms((p) => ({ ...p, [k]: v === true }))}
                 />
                 {PERMISSION_LABELS[k]}
               </label>

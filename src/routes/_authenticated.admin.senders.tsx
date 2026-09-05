@@ -6,20 +6,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, RefreshCw, Check, Trash2, Radio, Gift, Users, Plus, Unlink } from "lucide-react";
 import {
-  listAllSenders, adminRefreshSender, adminMarkSenderVerified, adminDeleteSender, adminGrantVerifiedTollfree,
-  adminListSharedTollfree, adminCreateSharedTollfree, adminAttachSharedTollfree,
-  adminDetachSharedTollfree, adminDeleteSharedTollfree,
-  adminGetTfnAdvertisedAvailable, adminSetTfnAdvertisedAvailable,
-  adminListLocalNumbers, adminAttachLocalNumber, adminDetachLocalNumber,
+  listAllSenders,
+  adminRefreshSender,
+  adminMarkSenderVerified,
+  adminDeleteSender,
+  adminGrantVerifiedTollfree,
+  adminListSharedTollfree,
+  adminCreateSharedTollfree,
+  adminAttachSharedTollfree,
+  adminDetachSharedTollfree,
+  adminDeleteSharedTollfree,
+  adminGetTfnAdvertisedAvailable,
+  adminSetTfnAdvertisedAvailable,
+  adminListLocalNumbers,
+  adminAttachLocalNumber,
+  adminDetachLocalNumber,
 } from "@/lib/admin-senders.functions";
 
-
 import { adminListAccountsLite } from "@/lib/admin-verifiers.functions";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/admin/senders")({
@@ -68,41 +90,63 @@ function AdminSendersPage() {
 
   const refreshMut = useMutation({
     mutationFn: (senderId: string) => refreshFn({ data: { senderId } }),
-    onSuccess: (r: any) => { toast.success(`Refreshed: ${r.status ?? "n/a"}`); qc.invalidateQueries({ queryKey: ["admin-senders"] }); },
+    onSuccess: (r: any) => {
+      toast.success(`Refreshed: ${r.status ?? "n/a"}`);
+      qc.invalidateQueries({ queryKey: ["admin-senders"] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
   const markMut = useMutation({
     mutationFn: (senderId: string) => markFn({ data: { senderId } }),
-    onSuccess: () => { toast.success("Marked verified"); qc.invalidateQueries({ queryKey: ["admin-senders"] }); },
+    onSuccess: () => {
+      toast.success("Marked verified");
+      qc.invalidateQueries({ queryKey: ["admin-senders"] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
   const deleteMut = useMutation({
     mutationFn: (senderId: string) => deleteFn({ data: { senderId } }),
-    onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-senders"] }); },
+    onSuccess: () => {
+      toast.success("Deleted");
+      qc.invalidateQueries({ queryKey: ["admin-senders"] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
   const grantMut = useMutation({
-    mutationFn: () => grantFn({ data: {
-      account_id: grantAccountId,
-      country: grantCountry,
-      phone_number: grantPhone.trim() || undefined,
-    } }),
+    mutationFn: () =>
+      grantFn({
+        data: {
+          account_id: grantAccountId,
+          country: grantCountry,
+          phone_number: grantPhone.trim() || undefined,
+        },
+      }),
     onSuccess: (r: any) => {
       toast.success(`Granted ${r.phone_number} — tenant can send immediately.`);
       qc.invalidateQueries({ queryKey: ["admin-senders"] });
-      setGrantOpen(false); setGrantAccountId(""); setGrantPhone(""); setGrantCountry("US");
+      setGrantOpen(false);
+      setGrantAccountId("");
+      setGrantPhone("");
+      setGrantCountry("US");
     },
     onError: (e: any) => toast.error(e.message),
   });
 
   const filteredAccounts = useMemo(() => {
     const q = accountSearch.trim().toLowerCase();
-    const list = (accounts ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>;
+    const list = (accounts ?? []) as Array<{
+      id: string;
+      email: string | null;
+      full_name: string | null;
+    }>;
     if (!q) return list.slice(0, 50);
-    return list.filter(a =>
-      (a.email ?? "").toLowerCase().includes(q) ||
-      (a.full_name ?? "").toLowerCase().includes(q),
-    ).slice(0, 50);
+    return list
+      .filter(
+        (a) =>
+          (a.email ?? "").toLowerCase().includes(q) ||
+          (a.full_name ?? "").toLowerCase().includes(q),
+      )
+      .slice(0, 50);
   }, [accounts, accountSearch]);
 
   const rows = useMemo(() => {
@@ -126,14 +170,22 @@ function AdminSendersPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold flex items-center gap-2"><Radio className="size-5 text-primary" /> Tenant senders</h1>
-          <p className="text-sm text-muted-foreground">Every sender ID, toll-free, and local number across all tenants.</p>
+          <h1 className="text-xl font-semibold flex items-center gap-2">
+            <Radio className="size-5 text-primary" /> Tenant senders
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Every sender ID, toll-free, and local number across all tenants.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => setGrantOpen(true)}>
             <Gift className="size-4 mr-1" /> Grant verified toll-free
           </Button>
-          <Button variant="outline" size="sm" onClick={() => qc.invalidateQueries({ queryKey: ["admin-senders"] })}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => qc.invalidateQueries({ queryKey: ["admin-senders"] })}
+          >
             <RefreshCw className="size-4 mr-1" /> Reload
           </Button>
         </div>
@@ -143,18 +195,21 @@ function AdminSendersPage() {
 
       <LocalTenDlcPanel />
 
-
-
-
-
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">Filters</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Input placeholder="Search tenant, number, country…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+          <Input
+            placeholder="Search tenant, number, country…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-xs"
+          />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="verified">Verified</SelectItem>
@@ -166,7 +221,9 @@ function AdminSendersPage() {
             </SelectContent>
           </Select>
           <Select value={kindFilter} onValueChange={setKindFilter}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Kind" /></SelectTrigger>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Kind" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All kinds</SelectItem>
               <SelectItem value="toll_free">Toll-free</SelectItem>
@@ -194,10 +251,18 @@ function AdminSendersPage() {
             </thead>
             <tbody>
               {isLoading && (
-                <tr><td colSpan={8} className="p-6 text-center text-muted-foreground"><Loader2 className="size-4 mr-2 inline animate-spin" /> Loading…</td></tr>
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-muted-foreground">
+                    <Loader2 className="size-4 mr-2 inline animate-spin" /> Loading…
+                  </td>
+                </tr>
               )}
               {!isLoading && rows.length === 0 && (
-                <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No senders match.</td></tr>
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-muted-foreground">
+                    No senders match.
+                  </td>
+                </tr>
               )}
               {rows.map((r) => (
                 <tr key={r.id} className="border-t hover:bg-muted/30">
@@ -221,16 +286,34 @@ function AdminSendersPage() {
                   </td>
                   <td className="p-2 text-right whitespace-nowrap">
                     {r.sender_kind === "toll_free" && r.telnyx_verification_id && (
-                      <Button size="sm" variant="ghost" onClick={() => refreshMut.mutate(r.id)} disabled={refreshMut.isPending}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => refreshMut.mutate(r.id)}
+                        disabled={refreshMut.isPending}
+                      >
                         <RefreshCw className="size-3" />
                       </Button>
                     )}
                     {r.verification_status !== "verified" && (
-                      <Button size="sm" variant="ghost" onClick={() => markMut.mutate(r.id)} disabled={markMut.isPending} title="Mark verified (admin override)">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => markMut.mutate(r.id)}
+                        disabled={markMut.isPending}
+                        title="Mark verified (admin override)"
+                      >
                         <Check className="size-3 text-emerald-600" />
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => { if (confirm("Delete this sender?")) deleteMut.mutate(r.id); }} disabled={deleteMut.isPending}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        if (confirm("Delete this sender?")) deleteMut.mutate(r.id);
+                      }}
+                      disabled={deleteMut.isPending}
+                    >
                       <Trash2 className="size-3 text-destructive" />
                     </Button>
                   </td>
@@ -246,14 +329,17 @@ function AdminSendersPage() {
           <DialogHeader>
             <DialogTitle>Grant verified toll-free number</DialogTitle>
             <DialogDescription>
-              Give a tenant a ready-to-send toll-free number. The number is marked verified and the tenant can start sending SMS to the US immediately — no carrier verification required.
+              Give a tenant a ready-to-send toll-free number. The number is marked verified and the
+              tenant can start sending SMS to the US immediately — no carrier verification required.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
               <Label>Country</Label>
               <Select value={grantCountry} onValueChange={setGrantCountry}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="US">United States</SelectItem>
                   <SelectItem value="CA">Canada</SelectItem>
@@ -263,7 +349,11 @@ function AdminSendersPage() {
             </div>
             <div className="space-y-1">
               <Label>Tenant</Label>
-              <Input placeholder="Search by email or name…" value={accountSearch} onChange={(e) => setAccountSearch(e.target.value)} />
+              <Input
+                placeholder="Search by email or name…"
+                value={accountSearch}
+                onChange={(e) => setAccountSearch(e.target.value)}
+              />
               <div className="max-h-40 overflow-y-auto border rounded-md divide-y mt-1">
                 {filteredAccounts.map((a) => (
                   <button
@@ -273,7 +363,9 @@ function AdminSendersPage() {
                     className={`w-full text-left px-2 py-1.5 text-xs hover:bg-muted ${grantAccountId === a.id ? "bg-muted" : ""}`}
                   >
                     <div className="font-medium">{a.email ?? "—"}</div>
-                    <div className="text-muted-foreground">{a.full_name ?? ""} · {a.id.slice(0, 8)}</div>
+                    <div className="text-muted-foreground">
+                      {a.full_name ?? ""} · {a.id.slice(0, 8)}
+                    </div>
                   </button>
                 ))}
                 {filteredAccounts.length === 0 && (
@@ -283,12 +375,20 @@ function AdminSendersPage() {
             </div>
             <div className="space-y-1">
               <Label>Phone number (optional)</Label>
-              <Input placeholder="+18005550123 — leave empty to buy a new one on Telnyx" value={grantPhone} onChange={(e) => setGrantPhone(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Leave blank to search Telnyx and provision a new toll-free number automatically.</p>
+              <Input
+                placeholder="+18005550123 — leave empty to buy a new one on Telnyx"
+                value={grantPhone}
+                onChange={(e) => setGrantPhone(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to search Telnyx and provision a new toll-free number automatically.
+              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setGrantOpen(false)}>Cancel</Button>
+            <Button variant="ghost" onClick={() => setGrantOpen(false)}>
+              Cancel
+            </Button>
             <Button
               onClick={() => grantMut.mutate()}
               disabled={!grantAccountId || grantMut.isPending}
@@ -355,42 +455,66 @@ function SharedTollfreePoolPanel() {
   };
 
   const createMut = useMutation({
-    mutationFn: () => createFn({ data: {
-      phone_number: regPhone.trim(),
-      country: regCountry,
-      notes: regNotes.trim() || undefined,
-    } }),
+    mutationFn: () =>
+      createFn({
+        data: {
+          phone_number: regPhone.trim(),
+          country: regCountry,
+          notes: regNotes.trim() || undefined,
+        },
+      }),
     onSuccess: () => {
       toast.success("Number added to shared pool.");
-      setRegisterOpen(false); setRegPhone(""); setRegNotes(""); setRegCountry("US");
+      setRegisterOpen(false);
+      setRegPhone("");
+      setRegNotes("");
+      setRegCountry("US");
       invalidate();
     },
     onError: (e: any) => toast.error(e.message),
   });
   const attachMut = useMutation({
     mutationFn: (v: { phone_number: string; account_id: string }) => attachFn({ data: v }),
-    onSuccess: () => { toast.success("Tenant attached — can send immediately."); setAttachPhone(null); setAttachSearch(""); invalidate(); },
+    onSuccess: () => {
+      toast.success("Tenant attached — can send immediately.");
+      setAttachPhone(null);
+      setAttachSearch("");
+      invalidate();
+    },
     onError: (e: any) => toast.error(e.message),
   });
   const detachMut = useMutation({
     mutationFn: (v: { phone_number: string; account_id: string }) => detachFn({ data: v }),
-    onSuccess: () => { toast.success("Tenant detached."); invalidate(); },
+    onSuccess: () => {
+      toast.success("Tenant detached.");
+      invalidate();
+    },
     onError: (e: any) => toast.error(e.message),
   });
   const deleteMut = useMutation({
     mutationFn: (phone_number: string) => deleteFn({ data: { phone_number } }),
-    onSuccess: () => { toast.success("Shared number removed."); invalidate(); },
+    onSuccess: () => {
+      toast.success("Shared number removed.");
+      invalidate();
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
   const filteredAccounts = useMemo(() => {
     const q = attachSearch.trim().toLowerCase();
-    const list = (accounts ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>;
+    const list = (accounts ?? []) as Array<{
+      id: string;
+      email: string | null;
+      full_name: string | null;
+    }>;
     if (!q) return list.slice(0, 50);
-    return list.filter(a =>
-      (a.email ?? "").toLowerCase().includes(q) ||
-      (a.full_name ?? "").toLowerCase().includes(q),
-    ).slice(0, 50);
+    return list
+      .filter(
+        (a) =>
+          (a.email ?? "").toLowerCase().includes(q) ||
+          (a.full_name ?? "").toLowerCase().includes(q),
+      )
+      .slice(0, 50);
   }, [accounts, attachSearch]);
 
   return (
@@ -401,16 +525,21 @@ function SharedTollfreePoolPanel() {
             <Users className="size-4 text-primary" /> Shared toll-free pool
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Auto-synced from Telnyx every minute — only toll-free numbers with an approved Toll-Free Verification
-            show up here automatically. Attach tenants below and they can send immediately.
-            Inbound STOP/replies land on the shared Messaging Profile and fan out to all attached tenants; per-profile
-            Telnyx reports won't separate tenants (Xellvio's per-campaign reports still do).
+            Auto-synced from Telnyx every minute — only toll-free numbers with an approved Toll-Free
+            Verification show up here automatically. Attach tenants below and they can send
+            immediately. Inbound STOP/replies land on the shared Messaging Profile and fan out to
+            all attached tenants; per-profile Telnyx reports won't separate tenants (Xellvio's
+            per-campaign reports still do).
           </p>
           {syncInfo?.error && (
             <p className="text-xs text-destructive mt-2">Telnyx sync failed: {syncInfo.error}</p>
           )}
         </div>
-        <Button size="sm" variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ["admin-shared-tfn"] })}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => qc.invalidateQueries({ queryKey: ["admin-shared-tfn"] })}
+        >
           <RefreshCw className="size-4 mr-1" /> Sync now
         </Button>
       </CardHeader>
@@ -436,7 +565,10 @@ function SharedTollfreePoolPanel() {
           size="sm"
           onClick={() => {
             const n = Number(advInput);
-            if (!Number.isFinite(n) || n < 0) { toast.error("Enter a non-negative number"); return; }
+            if (!Number.isFinite(n) || n < 0) {
+              toast.error("Enter a non-negative number");
+              return;
+            }
             advSetMut.mutate(Math.floor(n));
             setAdvInput("");
           }}
@@ -447,7 +579,10 @@ function SharedTollfreePoolPanel() {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => { advSetMut.mutate(null); setAdvInput(""); }}
+          onClick={() => {
+            advSetMut.mutate(null);
+            setAdvInput("");
+          }}
           disabled={advSetMut.isPending || advertised == null}
         >
           Use real count
@@ -465,16 +600,27 @@ function SharedTollfreePoolPanel() {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={4} className="p-6 text-center text-muted-foreground"><Loader2 className="size-4 mr-2 inline animate-spin" /> Loading…</td></tr>
+              <tr>
+                <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                  <Loader2 className="size-4 mr-2 inline animate-spin" /> Loading…
+                </td>
+              </tr>
             )}
             {!isLoading && (pool ?? []).length === 0 && (
-              <tr><td colSpan={4} className="p-6 text-center text-muted-foreground">No approved toll-free verification found yet. Use Sync now after Telnyx shows a request as Verified.</td></tr>
+              <tr>
+                <td colSpan={4} className="p-6 text-center text-muted-foreground">
+                  No approved toll-free verification found yet. Use Sync now after Telnyx shows a
+                  request as Verified.
+                </td>
+              </tr>
             )}
             {(pool ?? []).map((p: any) => (
               <tr key={p.phone_number} className="border-t align-top">
                 <td className="p-2 font-mono text-xs">
                   {p.phone_number}
-                  {p.notes && <div className="text-[10px] text-muted-foreground font-sans">{p.notes}</div>}
+                  {p.notes && (
+                    <div className="text-[10px] text-muted-foreground font-sans">{p.notes}</div>
+                  )}
                 </td>
                 <td className="p-2 font-mono text-xs">{p.country_code}</td>
                 <td className="p-2">
@@ -483,14 +629,32 @@ function SharedTollfreePoolPanel() {
                   ) : (
                     <div className="space-y-1">
                       {p.attachments.map((a: any) => (
-                        <div key={a.account_id} className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded px-2 py-1">
+                        <div
+                          key={a.account_id}
+                          className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded px-2 py-1"
+                        >
                           <div>
-                            <div className="font-medium">{a.tenant_business || a.tenant_email || a.account_id.slice(0, 8)}</div>
+                            <div className="font-medium">
+                              {a.tenant_business || a.tenant_email || a.account_id.slice(0, 8)}
+                            </div>
                             <div className="text-muted-foreground">{a.tenant_email ?? ""}</div>
                           </div>
-                          <Button size="sm" variant="ghost"
-                            onClick={() => { if (confirm(`Detach ${a.tenant_email ?? "tenant"} from ${p.phone_number}?`)) detachMut.mutate({ phone_number: p.phone_number, account_id: a.account_id }); }}
-                            disabled={detachMut.isPending}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Detach ${a.tenant_email ?? "tenant"} from ${p.phone_number}?`,
+                                )
+                              )
+                                detachMut.mutate({
+                                  phone_number: p.phone_number,
+                                  account_id: a.account_id,
+                                });
+                            }}
+                            disabled={detachMut.isPending}
+                          >
                             <Unlink className="size-3 text-destructive" />
                           </Button>
                         </div>
@@ -499,12 +663,22 @@ function SharedTollfreePoolPanel() {
                   )}
                 </td>
                 <td className="p-2 text-right whitespace-nowrap">
-                  <Button size="sm" variant="outline" onClick={() => setAttachPhone(p.phone_number)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setAttachPhone(p.phone_number)}
+                  >
                     <Plus className="size-3 mr-1" /> Attach tenant
                   </Button>
-                  <Button size="sm" variant="ghost"
-                    onClick={() => { if (confirm(`Remove ${p.phone_number} from the shared pool?`)) deleteMut.mutate(p.phone_number); }}
-                    disabled={deleteMut.isPending}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      if (confirm(`Remove ${p.phone_number} from the shared pool?`))
+                        deleteMut.mutate(p.phone_number);
+                    }}
+                    disabled={deleteMut.isPending}
+                  >
                     <Trash2 className="size-3 text-destructive" />
                   </Button>
                 </td>
@@ -519,19 +693,25 @@ function SharedTollfreePoolPanel() {
           <DialogHeader>
             <DialogTitle>Register shared toll-free number</DialogTitle>
             <DialogDescription>
-              The number must already exist on your Telnyx account and be assigned to a Messaging Profile.
-              We'll reuse that Messaging Profile for every attached tenant.
+              The number must already exist on your Telnyx account and be assigned to a Messaging
+              Profile. We'll reuse that Messaging Profile for every attached tenant.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1">
               <Label>Phone number</Label>
-              <Input placeholder="+18885550123" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} />
+              <Input
+                placeholder="+18885550123"
+                value={regPhone}
+                onChange={(e) => setRegPhone(e.target.value)}
+              />
             </div>
             <div className="space-y-1">
               <Label>Country</Label>
               <Select value={regCountry} onValueChange={setRegCountry}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="US">United States (also covers CA & PR)</SelectItem>
                   <SelectItem value="CA">Canada</SelectItem>
@@ -541,12 +721,21 @@ function SharedTollfreePoolPanel() {
             </div>
             <div className="space-y-1">
               <Label>Notes (optional)</Label>
-              <Input placeholder="Internal label, e.g. Main shared pool" value={regNotes} onChange={(e) => setRegNotes(e.target.value)} />
+              <Input
+                placeholder="Internal label, e.g. Main shared pool"
+                value={regNotes}
+                onChange={(e) => setRegNotes(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setRegisterOpen(false)}>Cancel</Button>
-            <Button onClick={() => createMut.mutate()} disabled={!regPhone.trim() || createMut.isPending}>
+            <Button variant="ghost" onClick={() => setRegisterOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createMut.mutate()}
+              disabled={!regPhone.trim() || createMut.isPending}
+            >
               {createMut.isPending && <Loader2 className="size-3 mr-1 animate-spin" />}
               Register
             </Button>
@@ -554,7 +743,15 @@ function SharedTollfreePoolPanel() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!attachPhone} onOpenChange={(o) => { if (!o) { setAttachPhone(null); setAttachSearch(""); } }}>
+      <Dialog
+        open={!!attachPhone}
+        onOpenChange={(o) => {
+          if (!o) {
+            setAttachPhone(null);
+            setAttachSearch("");
+          }
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Attach tenant to {attachPhone}</DialogTitle>
@@ -563,18 +760,26 @@ function SharedTollfreePoolPanel() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Input placeholder="Search by email or name…" value={attachSearch} onChange={(e) => setAttachSearch(e.target.value)} />
+            <Input
+              placeholder="Search by email or name…"
+              value={attachSearch}
+              onChange={(e) => setAttachSearch(e.target.value)}
+            />
             <div className="max-h-60 overflow-y-auto border rounded-md divide-y">
               {filteredAccounts.map((a) => (
                 <button
                   key={a.id}
                   type="button"
-                  onClick={() => attachPhone && attachMut.mutate({ phone_number: attachPhone, account_id: a.id })}
+                  onClick={() =>
+                    attachPhone && attachMut.mutate({ phone_number: attachPhone, account_id: a.id })
+                  }
                   disabled={attachMut.isPending}
                   className="w-full text-left px-2 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
                 >
                   <div className="font-medium">{a.email ?? "—"}</div>
-                  <div className="text-muted-foreground">{a.full_name ?? ""} · {a.id.slice(0, 8)}</div>
+                  <div className="text-muted-foreground">
+                    {a.full_name ?? ""} · {a.id.slice(0, 8)}
+                  </div>
                 </button>
               ))}
               {filteredAccounts.length === 0 && (
@@ -587,7 +792,6 @@ function SharedTollfreePoolPanel() {
     </Card>
   );
 }
-
 
 function LocalTenDlcPanel() {
   const qc = useQueryClient();
@@ -618,24 +822,40 @@ function LocalTenDlcPanel() {
   };
 
   const attachMut = useMutation({
-    mutationFn: (v: { phone_number: string; account_id: string; country: string }) => attachFn({ data: v }),
-    onSuccess: () => { toast.success("Tenant attached — they can send with this number now."); setAttachTarget(null); setAttachSearch(""); invalidate(); },
+    mutationFn: (v: { phone_number: string; account_id: string; country: string }) =>
+      attachFn({ data: v }),
+    onSuccess: () => {
+      toast.success("Tenant attached — they can send with this number now.");
+      setAttachTarget(null);
+      setAttachSearch("");
+      invalidate();
+    },
     onError: (e: any) => toast.error(e.message),
   });
   const detachMut = useMutation({
     mutationFn: (v: { phone_number: string; account_id: string }) => detachFn({ data: v }),
-    onSuccess: () => { toast.success("Tenant detached."); invalidate(); },
+    onSuccess: () => {
+      toast.success("Tenant detached.");
+      invalidate();
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
   const filteredAccounts = useMemo(() => {
     const q = attachSearch.trim().toLowerCase();
-    const list = (accounts ?? []) as Array<{ id: string; email: string | null; full_name: string | null }>;
+    const list = (accounts ?? []) as Array<{
+      id: string;
+      email: string | null;
+      full_name: string | null;
+    }>;
     if (!q) return list.slice(0, 50);
-    return list.filter(a =>
-      (a.email ?? "").toLowerCase().includes(q) ||
-      (a.full_name ?? "").toLowerCase().includes(q),
-    ).slice(0, 50);
+    return list
+      .filter(
+        (a) =>
+          (a.email ?? "").toLowerCase().includes(q) ||
+          (a.full_name ?? "").toLowerCase().includes(q),
+      )
+      .slice(0, 50);
   }, [accounts, attachSearch]);
 
   return (
@@ -646,13 +866,20 @@ function LocalTenDlcPanel() {
             <Radio className="size-4 text-primary" /> Local numbers (10DLC)
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Local numbers on your carrier account. Once a number is registered to an approved 10DLC brand and
-            campaign and sits on a Messaging Profile, attach any tenant here and they can send US SMS with it
-            immediately. We keep the number on its existing Messaging Profile so the 10DLC campaign link stays intact.
+            Local numbers on your carrier account. Once a number is registered to an approved 10DLC
+            brand and campaign and sits on a Messaging Profile, attach any tenant here and they can
+            send US SMS with it immediately. We keep the number on its existing Messaging Profile so
+            the 10DLC campaign link stays intact.
           </p>
-          {loadError && <p className="text-xs text-destructive mt-2">Carrier lookup failed: {loadError}</p>}
+          {loadError && (
+            <p className="text-xs text-destructive mt-2">Carrier lookup failed: {loadError}</p>
+          )}
         </div>
-        <Button size="sm" variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ["admin-local-numbers"] })}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => qc.invalidateQueries({ queryKey: ["admin-local-numbers"] })}
+        >
           <RefreshCw className="size-4 mr-1" /> Reload
         </Button>
       </CardHeader>
@@ -669,19 +896,31 @@ function LocalTenDlcPanel() {
           </thead>
           <tbody>
             {isLoading && (
-              <tr><td colSpan={5} className="p-6 text-center text-muted-foreground"><Loader2 className="size-4 mr-2 inline animate-spin" /> Loading…</td></tr>
+              <tr>
+                <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                  <Loader2 className="size-4 mr-2 inline animate-spin" /> Loading…
+                </td>
+              </tr>
             )}
             {!isLoading && items.length === 0 && (
-              <tr><td colSpan={5} className="p-6 text-center text-muted-foreground">No local numbers found on your carrier account.</td></tr>
+              <tr>
+                <td colSpan={5} className="p-6 text-center text-muted-foreground">
+                  No local numbers found on your carrier account.
+                </td>
+              </tr>
             )}
             {items.map((p) => (
               <tr key={p.phone_number} className="border-t align-top">
                 <td className="p-2 font-mono text-xs">{p.phone_number}</td>
                 <td className="p-2 font-mono text-xs">{p.country_code}</td>
                 <td className="p-2 text-xs">
-                  {p.telnyx_messaging_profile_id
-                    ? <Badge variant="outline" className={STATUS_COLORS.verified}>Linked</Badge>
-                    : <span className="text-amber-600">Not on a Messaging Profile</span>}
+                  {p.telnyx_messaging_profile_id ? (
+                    <Badge variant="outline" className={STATUS_COLORS.verified}>
+                      Linked
+                    </Badge>
+                  ) : (
+                    <span className="text-amber-600">Not on a Messaging Profile</span>
+                  )}
                 </td>
                 <td className="p-2">
                   {(p.attachments ?? []).length === 0 ? (
@@ -689,14 +928,32 @@ function LocalTenDlcPanel() {
                   ) : (
                     <div className="space-y-1">
                       {p.attachments.map((a: any) => (
-                        <div key={a.account_id} className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded px-2 py-1">
+                        <div
+                          key={a.account_id}
+                          className="flex items-center justify-between gap-2 text-xs bg-muted/40 rounded px-2 py-1"
+                        >
                           <div>
-                            <div className="font-medium">{a.tenant_business || a.tenant_email || a.account_id.slice(0, 8)}</div>
+                            <div className="font-medium">
+                              {a.tenant_business || a.tenant_email || a.account_id.slice(0, 8)}
+                            </div>
                             <div className="text-muted-foreground">{a.tenant_email ?? ""}</div>
                           </div>
-                          <Button size="sm" variant="ghost"
-                            onClick={() => { if (confirm(`Detach ${a.tenant_email ?? "tenant"} from ${p.phone_number}?`)) detachMut.mutate({ phone_number: p.phone_number, account_id: a.account_id }); }}
-                            disabled={detachMut.isPending}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Detach ${a.tenant_email ?? "tenant"} from ${p.phone_number}?`,
+                                )
+                              )
+                                detachMut.mutate({
+                                  phone_number: p.phone_number,
+                                  account_id: a.account_id,
+                                });
+                            }}
+                            disabled={detachMut.isPending}
+                          >
                             <Unlink className="size-3 text-destructive" />
                           </Button>
                         </div>
@@ -705,9 +962,14 @@ function LocalTenDlcPanel() {
                   )}
                 </td>
                 <td className="p-2 text-right whitespace-nowrap">
-                  <Button size="sm" variant="outline"
+                  <Button
+                    size="sm"
+                    variant="outline"
                     disabled={!p.telnyx_messaging_profile_id}
-                    onClick={() => setAttachTarget({ phone: p.phone_number, country: p.country_code || "US" })}>
+                    onClick={() =>
+                      setAttachTarget({ phone: p.phone_number, country: p.country_code || "US" })
+                    }
+                  >
                     <Plus className="size-3 mr-1" /> Assign tenant
                   </Button>
                 </td>
@@ -717,27 +979,49 @@ function LocalTenDlcPanel() {
         </table>
       </CardContent>
 
-      <Dialog open={!!attachTarget} onOpenChange={(o) => { if (!o) { setAttachTarget(null); setAttachSearch(""); } }}>
+      <Dialog
+        open={!!attachTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setAttachTarget(null);
+            setAttachSearch("");
+          }
+        }}
+      >
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Assign {attachTarget?.phone} to a tenant</DialogTitle>
             <DialogDescription>
-              The tenant gets a verified local sender for {attachTarget?.country} and can send campaigns straight away.
+              The tenant gets a verified local sender for {attachTarget?.country} and can send
+              campaigns straight away.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Input placeholder="Search by email or name…" value={attachSearch} onChange={(e) => setAttachSearch(e.target.value)} />
+            <Input
+              placeholder="Search by email or name…"
+              value={attachSearch}
+              onChange={(e) => setAttachSearch(e.target.value)}
+            />
             <div className="max-h-60 overflow-y-auto border rounded-md divide-y">
               {filteredAccounts.map((a) => (
                 <button
                   key={a.id}
                   type="button"
-                  onClick={() => attachTarget && attachMut.mutate({ phone_number: attachTarget.phone, account_id: a.id, country: attachTarget.country })}
+                  onClick={() =>
+                    attachTarget &&
+                    attachMut.mutate({
+                      phone_number: attachTarget.phone,
+                      account_id: a.id,
+                      country: attachTarget.country,
+                    })
+                  }
                   disabled={attachMut.isPending}
                   className="w-full text-left px-2 py-1.5 text-xs hover:bg-muted disabled:opacity-50"
                 >
                   <div className="font-medium">{a.email ?? "—"}</div>
-                  <div className="text-muted-foreground">{a.full_name ?? ""} · {a.id.slice(0, 8)}</div>
+                  <div className="text-muted-foreground">
+                    {a.full_name ?? ""} · {a.id.slice(0, 8)}
+                  </div>
                 </button>
               ))}
               {filteredAccounts.length === 0 && (

@@ -64,27 +64,48 @@ function ResetPassword() {
     <div className="dark grid min-h-screen place-items-center bg-slate-950 px-6 py-12 text-slate-100">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <Link to="/verify/auth" className="text-sm text-slate-400 hover:text-slate-200">← Back to sign in</Link>
+          <Link to="/verify/auth" className="text-sm text-slate-400 hover:text-slate-200">
+            ← Back to sign in
+          </Link>
           <h1 className="mt-2 text-2xl font-semibold">Reset your password</h1>
-          <p className="mt-1 text-sm text-slate-400">Choose a new password for your Xellvio account.</p>
+          <p className="mt-1 text-sm text-slate-400">
+            Choose a new password for your Xellvio account.
+          </p>
         </div>
         <Card className="border-slate-800 bg-slate-900">
           <CardContent className="space-y-3 pt-6">
             {!ready ? (
               <p className="text-sm text-slate-400">
-                Waiting for reset link… If you landed here directly, please use the link from your email.
+                Waiting for reset link… If you landed here directly, please use the link from your
+                email.
               </p>
             ) : (
               <>
                 <div>
                   <Label>New password</Label>
-                  <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 8 characters" />
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Minimum 8 characters"
+                  />
                 </div>
                 <div>
                   <Label>Confirm new password</Label>
-                  <Input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Repeat password" />
+                  <Input
+                    type="password"
+                    autoComplete="new-password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    placeholder="Repeat password"
+                  />
                 </div>
-                <Button className="w-full" disabled={busy || !password || !confirm} onClick={updatePassword}>
+                <Button
+                  className="w-full"
+                  disabled={busy || !password || !confirm}
+                  onClick={updatePassword}
+                >
                   {busy ? "Updating…" : "Update password"}
                 </Button>
               </>

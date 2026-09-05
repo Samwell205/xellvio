@@ -2,18 +2,46 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCampaignReport, type CampaignReport } from "@/lib/reports.functions";
-import { getCampaignRecipientsExport, type RecipientRow } from "@/lib/tenant-report-export.functions";
+import {
+  getCampaignRecipientsExport,
+  type RecipientRow,
+} from "@/lib/tenant-report-export.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { formatUSD } from "@/lib/money";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  Legend,
 } from "recharts";
-import { ArrowLeft, Download, FileDown, CheckCircle2, XCircle, Clock, DollarSign, Send, HelpCircle, ChevronDown, MousePointerClick, MessageSquare } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  FileDown,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  DollarSign,
+  Send,
+  HelpCircle,
+  ChevronDown,
+  MousePointerClick,
+  MessageSquare,
+} from "lucide-react";
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -22,7 +50,10 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/$id/report")
   head: () => ({ meta: [{ title: "Campaign report — Xellvio" }] }),
   component: ReportPage,
   errorComponent: ({ error }) => (
-    <div className="p-8"><div className="text-destructive font-semibold">Report failed to load</div><div className="text-sm text-muted-foreground mt-2">{error.message}</div></div>
+    <div className="p-8">
+      <div className="text-destructive font-semibold">Report failed to load</div>
+      <div className="text-sm text-muted-foreground mt-2">{error.message}</div>
+    </div>
   ),
   notFoundComponent: () => <div className="p-8">Campaign not found.</div>,
 });
@@ -40,7 +71,9 @@ function ReportPage() {
       const status = (query.state.data as CampaignReport | undefined)?.campaign?.status;
       const live =
         !status ||
-        ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(status);
+        ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(
+          status,
+        );
       return live && typeof document !== "undefined" && !document.hidden ? 30_000 : false;
     },
     refetchIntervalInBackground: false,
@@ -55,7 +88,13 @@ function ReportPage() {
     downloadCsv(
       `campaign-${id}-failures.csv`,
       ["phone_e164", "country_code", "error_code", "failure_reason", "created_at"],
-      r.failures.map((f) => [f.phone_e164, f.country_code ?? "", f.error_code ?? "", f.failure_reason ?? "", f.created_at]),
+      r.failures.map((f) => [
+        f.phone_e164,
+        f.country_code ?? "",
+        f.error_code ?? "",
+        f.failure_reason ?? "",
+        f.created_at,
+      ]),
     );
   }
 
@@ -67,17 +106,36 @@ function ReportPage() {
     return s;
   };
 
-  type FilterKey = "all" | "delivered" | "failed" | "not_delivered" | "sent_awaiting" | "clicked" | "replied";
+  type FilterKey =
+    | "all"
+    | "delivered"
+    | "failed"
+    | "not_delivered"
+    | "sent_awaiting"
+    | "clicked"
+    | "replied";
 
   function filterRows(rows: RecipientRow[], key: FilterKey): RecipientRow[] {
     switch (key) {
-      case "all": return rows;
-      case "delivered": return rows.filter((x) => x.status === "delivered");
-      case "failed": return rows.filter((x) => x.status === "failed" || x.status === "undelivered" || x.status === "delivery_unconfirmed");
-      case "not_delivered": return rows.filter((x) => x.status === "delivery_unconfirmed");
-      case "sent_awaiting": return rows.filter((x) => x.status === "sent");
-      case "clicked": return rows.filter((x) => x.clicks > 0);
-      case "replied": return rows.filter((x) => x.replied);
+      case "all":
+        return rows;
+      case "delivered":
+        return rows.filter((x) => x.status === "delivered");
+      case "failed":
+        return rows.filter(
+          (x) =>
+            x.status === "failed" ||
+            x.status === "undelivered" ||
+            x.status === "delivery_unconfirmed",
+        );
+      case "not_delivered":
+        return rows.filter((x) => x.status === "delivery_unconfirmed");
+      case "sent_awaiting":
+        return rows.filter((x) => x.status === "sent");
+      case "clicked":
+        return rows.filter((x) => x.clicks > 0);
+      case "replied":
+        return rows.filter((x) => x.replied);
     }
   }
 
@@ -92,17 +150,41 @@ function ReportPage() {
       }
       downloadCsv(
         `${campaign.name.replace(/[^a-z0-9]+/gi, "_")}-${label}.csv`,
-        ["phone", "country", "status", "error_code", "failure_reason", "sent_at", "delivered_at", "replied", "reply_count", "clicks", "first_click_at", "last_click_at"],
+        [
+          "phone",
+          "country",
+          "status",
+          "error_code",
+          "failure_reason",
+          "sent_at",
+          "delivered_at",
+          "replied",
+          "reply_count",
+          "clicks",
+          "first_click_at",
+          "last_click_at",
+        ],
         filtered.map((r) => [
-          r.phone_e164, r.country_code ?? "", filterStatus(r.status), r.error_code ?? "", r.failure_reason ?? "",
-          r.sent_at ?? "", r.delivered_at ?? "", r.replied ? "yes" : "no", r.reply_count, r.clicks,
-          r.first_click_at ?? "", r.last_click_at ?? "",
+          r.phone_e164,
+          r.country_code ?? "",
+          filterStatus(r.status),
+          r.error_code ?? "",
+          r.failure_reason ?? "",
+          r.sent_at ?? "",
+          r.delivered_at ?? "",
+          r.replied ? "yes" : "no",
+          r.reply_count,
+          r.clicks,
+          r.first_click_at ?? "",
+          r.last_click_at ?? "",
         ]),
       );
       toast.success(`Exported ${filtered.length.toLocaleString()} ${label}`);
     } catch (e: any) {
       toast.error(e?.message ?? "Export failed");
-    } finally { setExporting(null); }
+    } finally {
+      setExporting(null);
+    }
   }
 
   async function exportPhoneNumbersOnly(key: FilterKey, label: string) {
@@ -122,7 +204,9 @@ function ReportPage() {
       toast.success(`Exported ${filtered.length.toLocaleString()} phone numbers (${label})`);
     } catch (e: any) {
       toast.error(e?.message ?? "Export failed");
-    } finally { setExporting(null); }
+    } finally {
+      setExporting(null);
+    }
   }
 
   async function exportSummaryPdf() {
@@ -138,48 +222,80 @@ function ReportPage() {
         title: campaign.name,
         subtitle: `Campaign report • Sent ${new Date(campaign.created_at).toLocaleString()}`,
         sections: [
-          { type: "kv", title: "Overview", items: [
-            ["Recipients", r.totals.total.toLocaleString()],
-            ["Sent to carrier", r.totals.sent.toLocaleString()],
-            ["Delivered", `${r.totals.delivered.toLocaleString()} (${r.totals.delivery_rate}%)`],
-            ["Failed", r.totals.failed.toLocaleString()],
-            ["Awaiting carrier", r.totals.awaiting_delivery.toLocaleString()],
-            ["Replies received", replies.toLocaleString()],
-            ["Link clicks (total)", totalClicks.toLocaleString()],
-            ["Unique clickers", uniqueClickers.toLocaleString()],
-          ] },
-          { type: "table", title: "By country", head: ["Country", "Recipients", "Delivered", "Failed"],
-            rows: r.byCountry.map((c) => [c.country_code, c.recipients, c.delivered, c.failed]) },
-          ...(r.failures.length > 0 ? [{
-            type: "table" as const, title: `Failures (first ${Math.min(r.failures.length, 50)})`,
-            head: ["Phone", "Country", "Code", "Reason"],
-            rows: r.failures.slice(0, 50).map((f) => [f.phone_e164, f.country_code ?? "—", f.error_code ?? "—", (f.failure_reason ?? "").slice(0, 60)]),
-          }] : []),
+          {
+            type: "kv",
+            title: "Overview",
+            items: [
+              ["Recipients", r.totals.total.toLocaleString()],
+              ["Sent to carrier", r.totals.sent.toLocaleString()],
+              ["Delivered", `${r.totals.delivered.toLocaleString()} (${r.totals.delivery_rate}%)`],
+              ["Failed", r.totals.failed.toLocaleString()],
+              ["Awaiting carrier", r.totals.awaiting_delivery.toLocaleString()],
+              ["Replies received", replies.toLocaleString()],
+              ["Link clicks (total)", totalClicks.toLocaleString()],
+              ["Unique clickers", uniqueClickers.toLocaleString()],
+            ],
+          },
+          {
+            type: "table",
+            title: "By country",
+            head: ["Country", "Recipients", "Delivered", "Failed"],
+            rows: r.byCountry.map((c) => [c.country_code, c.recipients, c.delivered, c.failed]),
+          },
+          ...(r.failures.length > 0
+            ? [
+                {
+                  type: "table" as const,
+                  title: `Failures (first ${Math.min(r.failures.length, 50)})`,
+                  head: ["Phone", "Country", "Code", "Reason"],
+                  rows: r.failures
+                    .slice(0, 50)
+                    .map((f) => [
+                      f.phone_e164,
+                      f.country_code ?? "—",
+                      f.error_code ?? "—",
+                      (f.failure_reason ?? "").slice(0, 60),
+                    ]),
+                },
+              ]
+            : []),
         ],
       });
       toast.success("PDF downloaded");
     } catch (e: any) {
       toast.error(e?.message ?? "Export failed");
-    } finally { setExporting(null); }
+    } finally {
+      setExporting(null);
+    }
   }
 
   if (q.isLoading) return <div className="p-8 text-muted-foreground">Loading report…</div>;
   if (!r) return <div className="p-8 text-muted-foreground">No data.</div>;
 
-
   return (
     <div className="p-6 space-y-6 max-w-7xl">
       <div className="flex items-center gap-3">
-        <Link to="/app/campaigns"><Button variant="ghost" size="sm"><ArrowLeft className="size-4 mr-1" />Back</Button></Link>
+        <Link to="/app/campaigns">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="size-4 mr-1" />
+            Back
+          </Button>
+        </Link>
         <div className="flex-1">
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            {r.totals.is_mms && <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200 text-xs">MMS</Badge>}
+            {r.totals.is_mms && (
+              <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200 text-xs">
+                MMS
+              </Badge>
+            )}
             {r.campaign?.name ?? "Campaign"}
           </h1>
           <div className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
             <Badge variant="outline">{r.campaign?.status}</Badge>
             <span>Sent {r.campaign ? new Date(r.campaign.created_at).toLocaleString() : ""}</span>
-            {r.totals.is_mms && <span className="text-fuchsia-700">· MMS pricing (image attached, ~3× SMS rate)</span>}
+            {r.totals.is_mms && (
+              <span className="text-fuchsia-700">· MMS pricing (image attached, ~3× SMS rate)</span>
+            )}
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -195,15 +311,21 @@ function ReportPage() {
               <DropdownMenuLabel className="text-xs">Phone numbers only</DropdownMenuLabel>
               <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("delivered", "delivered")}>
                 <CheckCircle2 className="size-4 mr-2 text-green-600" /> Delivered
-                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.delivered.toLocaleString()}</span>
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                  {r.totals.delivered.toLocaleString()}
+                </span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("failed", "failed")}>
                 <XCircle className="size-4 mr-2 text-destructive" /> Failed
-                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.failed.toLocaleString()}</span>
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                  {r.totals.failed.toLocaleString()}
+                </span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("sent_awaiting", "awaiting")}>
                 <Clock className="size-4 mr-2 text-amber-600" /> Awaiting carrier
-                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.awaiting_delivery.toLocaleString()}</span>
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                  {r.totals.awaiting_delivery.toLocaleString()}
+                </span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("clicked", "link-clickers")}>
                 <MousePointerClick className="size-4 mr-2 text-primary" /> Clicked a link
@@ -213,7 +335,9 @@ function ReportPage() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportPhoneNumbersOnly("all", "all")}>
                 <Send className="size-4 mr-2" /> All recipients
-                <span className="ml-auto text-xs text-muted-foreground tabular-nums">{r.totals.total.toLocaleString()}</span>
+                <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                  {r.totals.total.toLocaleString()}
+                </span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-xs">Full details (all columns)</DropdownMenuLabel>
@@ -234,8 +358,14 @@ function ReportPage() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm" onClick={exportSummaryPdf} disabled={exporting !== null}>
-            <Download className="size-4 mr-1" />{exporting === "pdf" ? "Building…" : "PDF summary"}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportSummaryPdf}
+            disabled={exporting !== null}
+          >
+            <Download className="size-4 mr-1" />
+            {exporting === "pdf" ? "Building…" : "PDF summary"}
           </Button>
         </div>
       </div>
@@ -247,14 +377,21 @@ function ReportPage() {
             <div className="text-sm whitespace-pre-wrap">{r.campaign?.message_body}</div>
             {r.totals.is_mms && (
               <div className="text-xs text-muted-foreground mt-2">
-                MMS · {r.totals.mms_count.toLocaleString()} messages with image (billed once per message, not per SMS segment)
+                MMS · {r.totals.mms_count.toLocaleString()} messages with image (billed once per
+                message, not per SMS segment)
               </div>
             )}
           </div>
           {r.campaign?.media_url && (
             <a href={r.campaign.media_url} target="_blank" rel="noreferrer" className="shrink-0">
-              <img src={r.campaign.media_url} alt="Image attached to this campaign" className="w-28 h-28 object-cover rounded-md border" />
-              <div className="text-[11px] text-muted-foreground mt-1 text-center">Attached image</div>
+              <img
+                src={r.campaign.media_url}
+                alt="Image attached to this campaign"
+                className="w-28 h-28 object-cover rounded-md border"
+              />
+              <div className="text-[11px] text-muted-foreground mt-1 text-center">
+                Attached image
+              </div>
             </a>
           )}
         </div>
@@ -264,31 +401,70 @@ function ReportPage() {
         <Card className="p-4 space-y-1 border-amber-200 bg-amber-50">
           {r.totals.not_sent_insufficient > 0 && (
             <div className="text-sm text-amber-900">
-              {r.totals.not_sent_insufficient.toLocaleString()} recipients were not sent because your credit ran out during this campaign. You were not charged for them — top up and resend to reach them.
+              {r.totals.not_sent_insufficient.toLocaleString()} recipients were not sent because
+              your credit ran out during this campaign. You were not charged for them — top up and
+              resend to reach them.
             </div>
           )}
           {r.totals.carrier_rejected > 0 && (
             <div className="text-sm text-amber-900">
-              {r.totals.carrier_rejected.toLocaleString()} messages were rejected by the recipient carriers. This usually happens with a large {r.totals.is_mms ? "MMS" : "SMS"} burst from a new number — send in smaller warm-up batches over a few days to improve acceptance.
+              {r.totals.carrier_rejected.toLocaleString()} messages were rejected by the recipient
+              carriers. This usually happens with a large {r.totals.is_mms ? "MMS" : "SMS"} burst
+              from a new number — send in smaller warm-up batches over a few days to improve
+              acceptance.
             </div>
           )}
         </Card>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <Stat icon={<Send className="size-4" />} label="Sent to carrier" value={r.totals.sent.toLocaleString()} />
-        <Stat icon={<Clock className="size-4 text-amber-600" />} label="Awaiting carrier" value={r.totals.awaiting_delivery.toLocaleString()} />
-        <Stat icon={<CheckCircle2 className="size-4 text-green-600" />} label="Delivered" value={r.totals.delivered.toLocaleString()} sub={`${r.totals.delivery_rate}%`} />
-        <Stat icon={<XCircle className="size-4 text-destructive" />} label="Failed" value={r.totals.failed.toLocaleString()} />
-        <Stat icon={<Clock className="size-4 text-amber-600" />} label="Queued" value={r.totals.queued.toLocaleString()} />
-        <Stat icon={<DollarSign className="size-4" />} label="Charged" value={formatUSD(r.totals.cost)} />
+        <Stat
+          icon={<Send className="size-4" />}
+          label="Sent to carrier"
+          value={r.totals.sent.toLocaleString()}
+        />
+        <Stat
+          icon={<Clock className="size-4 text-amber-600" />}
+          label="Awaiting carrier"
+          value={r.totals.awaiting_delivery.toLocaleString()}
+        />
+        <Stat
+          icon={<CheckCircle2 className="size-4 text-green-600" />}
+          label="Delivered"
+          value={r.totals.delivered.toLocaleString()}
+          sub={`${r.totals.delivery_rate}%`}
+        />
+        <Stat
+          icon={<XCircle className="size-4 text-destructive" />}
+          label="Failed"
+          value={r.totals.failed.toLocaleString()}
+        />
+        <Stat
+          icon={<Clock className="size-4 text-amber-600" />}
+          label="Queued"
+          value={r.totals.queued.toLocaleString()}
+        />
+        <Stat
+          icon={<DollarSign className="size-4" />}
+          label="Charged"
+          value={formatUSD(r.totals.cost)}
+        />
       </div>
 
       {r.timeline.length > 0 && (
         <Card className="p-4">
           <div className="font-semibold mb-3">Delivery over time</div>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={r.timeline.map((t) => ({ ...t, hour: new Date(t.hour).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit" }) }))}>
+            <BarChart
+              data={r.timeline.map((t) => ({
+                ...t,
+                hour: new Date(t.hour).toLocaleString([], {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                }),
+              }))}
+            >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="hour" fontSize={11} />
               <YAxis fontSize={11} />
@@ -306,7 +482,13 @@ function ReportPage() {
           <div className="font-semibold mb-3">By country</div>
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground uppercase">
-              <tr><th className="text-left py-1.5">Country</th><th className="text-right">Recipients</th><th className="text-right">Delivered</th><th className="text-right">Failed</th><th className="text-right">Cost</th></tr>
+              <tr>
+                <th className="text-left py-1.5">Country</th>
+                <th className="text-right">Recipients</th>
+                <th className="text-right">Delivered</th>
+                <th className="text-right">Failed</th>
+                <th className="text-right">Cost</th>
+              </tr>
             </thead>
             <tbody>
               {r.byCountry.map((c) => (
@@ -325,11 +507,20 @@ function ReportPage() {
           <div className="font-semibold mb-3">By sender kind</div>
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground uppercase">
-              <tr><th className="text-left py-1.5">Kind</th><th className="text-right">Used</th><th className="text-right">Delivered</th><th className="text-right">Failed</th></tr>
+              <tr>
+                <th className="text-left py-1.5">Kind</th>
+                <th className="text-right">Used</th>
+                <th className="text-right">Delivered</th>
+                <th className="text-right">Failed</th>
+              </tr>
             </thead>
             <tbody>
               {r.bySenderKind.length === 0 && (
-                <tr><td colSpan={4} className="py-4 text-center text-muted-foreground">No sender data yet</td></tr>
+                <tr>
+                  <td colSpan={4} className="py-4 text-center text-muted-foreground">
+                    No sender data yet
+                  </td>
+                </tr>
               )}
               {r.bySenderKind.map((k) => (
                 <tr key={k.sender_kind} className="border-t">
@@ -350,20 +541,27 @@ function ReportPage() {
             <div className="font-semibold mb-2">Why messages failed</div>
             <div className="grid gap-2 md:grid-cols-2">
               {r.failureBreakdown.map((item) => (
-                <div key={item.code} className="flex items-center justify-between gap-3 border rounded-md px-3 py-2">
+                <div
+                  key={item.code}
+                  className="flex items-center justify-between gap-3 border rounded-md px-3 py-2"
+                >
                   <div>
                     <div className="text-sm font-medium">{item.label}</div>
                     <div className="text-xs text-muted-foreground">
-                      {item.retryable ? "Not accepted by the provider; credit refunded. Retry requires approval." : `Code ${item.code}`}
+                      {item.retryable
+                        ? "Not accepted by the provider; credit refunded. Retry requires approval."
+                        : `Code ${item.code}`}
                     </div>
                   </div>
-                  <Badge variant={item.retryable ? "secondary" : "outline"}>{item.count.toLocaleString()}</Badge>
+                  <Badge variant={item.retryable ? "secondary" : "outline"}>
+                    {item.count.toLocaleString()}
+                  </Badge>
                 </div>
               ))}
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Numbers reported as landline, non-routable or invalid are now remembered automatically and skipped in
-              future campaigns, so you are never charged for them again.
+              Numbers reported as landline, non-routable or invalid are now remembered automatically
+              and skipped in future campaigns, so you are never charged for them again.
             </p>
           </div>
         )}
@@ -371,17 +569,29 @@ function ReportPage() {
         <div className="flex items-center justify-between mb-3">
           <div className="font-semibold">Failed numbers ({r.failures.length})</div>
           {r.failures.length > 0 && (
-            <Button size="sm" variant="outline" onClick={exportFailuresCsv}><Download className="size-4 mr-1" />Export CSV</Button>
+            <Button size="sm" variant="outline" onClick={exportFailuresCsv}>
+              <Download className="size-4 mr-1" />
+              Export CSV
+            </Button>
           )}
         </div>
         <div className="overflow-x-auto max-h-96 overflow-y-auto">
           <table className="w-full text-sm">
             <thead className="text-xs text-muted-foreground uppercase sticky top-0 bg-background">
-              <tr><th className="text-left py-1.5">Phone</th><th className="text-left">Country</th><th className="text-left">Code</th><th className="text-left">Reason</th></tr>
+              <tr>
+                <th className="text-left py-1.5">Phone</th>
+                <th className="text-left">Country</th>
+                <th className="text-left">Code</th>
+                <th className="text-left">Reason</th>
+              </tr>
             </thead>
             <tbody>
               {r.failures.length === 0 && (
-                <tr><td colSpan={4} className="py-6 text-center text-muted-foreground">No failures — 🎉</td></tr>
+                <tr>
+                  <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                    No failures — 🎉
+                  </td>
+                </tr>
               )}
               {r.failures.map((f, i) => (
                 <tr key={i} className="border-t">
@@ -399,10 +609,23 @@ function ReportPage() {
   );
 }
 
-function Stat({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
+function Stat({
+  icon,
+  label,
+  value,
+  sub,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  sub?: string;
+}) {
   return (
     <Card className="p-4">
-      <div className="text-xs text-muted-foreground flex items-center gap-1.5">{icon}{label}</div>
+      <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+        {icon}
+        {label}
+      </div>
       <div className="text-2xl font-bold mt-1">{value}</div>
       {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
     </Card>

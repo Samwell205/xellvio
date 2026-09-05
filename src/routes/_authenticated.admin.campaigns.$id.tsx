@@ -14,8 +14,25 @@ export const Route = createFileRoute("/_authenticated/admin/campaigns/$id")({
   component: AdminCampaignReportPage,
 });
 
-function Stat({ label, value, tone, hint }: { label: string; value: string | number; tone?: "ok" | "warn" | "bad"; hint?: string }) {
-  const color = tone === "ok" ? "text-emerald-600" : tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600" : "";
+function Stat({
+  label,
+  value,
+  tone,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  tone?: "ok" | "warn" | "bad";
+  hint?: string;
+}) {
+  const color =
+    tone === "ok"
+      ? "text-emerald-600"
+      : tone === "bad"
+        ? "text-destructive"
+        : tone === "warn"
+          ? "text-amber-600"
+          : "";
   return (
     <Card className="p-4">
       <div className="text-xs uppercase text-muted-foreground">{label}</div>
@@ -24,7 +41,6 @@ function Stat({ label, value, tone, hint }: { label: string; value: string | num
     </Card>
   );
 }
-
 
 function AdminCampaignReportPage() {
   const { id } = Route.useParams();
@@ -37,18 +53,27 @@ function AdminCampaignReportPage() {
       const status = (query.state.data as any)?.campaign?.status as string | undefined;
       const live =
         !status ||
-        ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(status);
+        ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(
+          status,
+        );
       return live && typeof document !== "undefined" && !document.hidden ? 30_000 : false;
     },
     refetchIntervalInBackground: false,
   });
 
-
   if (q.isLoading) {
-    return <div className="flex h-64 items-center justify-center"><Loader2 className="size-6 animate-spin" /></div>;
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="size-6 animate-spin" />
+      </div>
+    );
   }
   if (q.error || !q.data) {
-    return <div className="p-6 text-destructive">Failed to load report: {(q.error as any)?.message ?? "unknown"}</div>;
+    return (
+      <div className="p-6 text-destructive">
+        Failed to load report: {(q.error as any)?.message ?? "unknown"}
+      </div>
+    );
   }
 
   const r = q.data;
@@ -58,8 +83,26 @@ function AdminCampaignReportPage() {
   function exportCsv() {
     downloadCsv(
       `admin-${c.name.replace(/[^a-z0-9]+/gi, "_")}-breakdown.csv`,
-      ["country", "recipients", "segments", "delivered", "failed", "tenant_spend_usd", "telnyx_cost_usd", "margin_usd"],
-      r.byCountry.map((row) => [row.country_code, row.recipients, row.segments, row.delivered, row.failed, row.cost, row.carrier_cost, row.margin]),
+      [
+        "country",
+        "recipients",
+        "segments",
+        "delivered",
+        "failed",
+        "tenant_spend_usd",
+        "telnyx_cost_usd",
+        "margin_usd",
+      ],
+      r.byCountry.map((row) => [
+        row.country_code,
+        row.recipients,
+        row.segments,
+        row.delivered,
+        row.failed,
+        row.cost,
+        row.carrier_cost,
+        row.margin,
+      ]),
     );
   }
   function exportPdf() {
@@ -68,21 +111,47 @@ function AdminCampaignReportPage() {
       title: c.name,
       subtitle: `Tenant: ${r.account.label} • ${new Date(c.created_at).toLocaleString()}`,
       sections: [
-        { type: "kv", title: "Financial breakdown", items: [
-          ["Recipients", t.total.toLocaleString()],
-          ["Segments", t.segments.toLocaleString()],
-          ["Delivered", `${t.delivered.toLocaleString()} (${t.delivery_rate}%)`],
-          ["Failed", t.failed.toLocaleString()],
-          ["Charged to tenant", formatUSD(t.cost)],
-          ["Not yet sent (estimate)", formatUSD(Number(t.reserved_cost ?? 0))],
-          ["Telnyx (MDR) cost", formatUSD(t.carrier_cost)],
-          ["Profit / margin", formatUSD(t.margin)],
-           ["Recorded send attempts", Number(r.attemptAudit?.total ?? 0).toLocaleString()],
-           ["Approved retries", Number(r.attemptAudit?.retries ?? 0).toLocaleString()],
-           ["Retry charges", formatUSD(Number(r.attemptAudit?.retry_charged ?? 0))],
-        ] },
-        { type: "table", title: "By country", head: ["Country", "Recipients", "Segments", "Delivered", "Failed", "Tenant $", "Telnyx $", "Margin"],
-          rows: r.byCountry.map((row) => [row.country_code, row.recipients, row.segments, row.delivered, row.failed, formatUSD(row.cost), formatUSD(row.carrier_cost), formatUSD(row.margin)]) },
+        {
+          type: "kv",
+          title: "Financial breakdown",
+          items: [
+            ["Recipients", t.total.toLocaleString()],
+            ["Segments", t.segments.toLocaleString()],
+            ["Delivered", `${t.delivered.toLocaleString()} (${t.delivery_rate}%)`],
+            ["Failed", t.failed.toLocaleString()],
+            ["Charged to tenant", formatUSD(t.cost)],
+            ["Not yet sent (estimate)", formatUSD(Number(t.reserved_cost ?? 0))],
+            ["Telnyx (MDR) cost", formatUSD(t.carrier_cost)],
+            ["Profit / margin", formatUSD(t.margin)],
+            ["Recorded send attempts", Number(r.attemptAudit?.total ?? 0).toLocaleString()],
+            ["Approved retries", Number(r.attemptAudit?.retries ?? 0).toLocaleString()],
+            ["Retry charges", formatUSD(Number(r.attemptAudit?.retry_charged ?? 0))],
+          ],
+        },
+        {
+          type: "table",
+          title: "By country",
+          head: [
+            "Country",
+            "Recipients",
+            "Segments",
+            "Delivered",
+            "Failed",
+            "Tenant $",
+            "Telnyx $",
+            "Margin",
+          ],
+          rows: r.byCountry.map((row) => [
+            row.country_code,
+            row.recipients,
+            row.segments,
+            row.delivered,
+            row.failed,
+            formatUSD(row.cost),
+            formatUSD(row.carrier_cost),
+            formatUSD(row.margin),
+          ]),
+        },
       ],
     });
   }
@@ -91,15 +160,24 @@ function AdminCampaignReportPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <Link to="/admin/campaigns" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:underline">
+          <Link
+            to="/admin/campaigns"
+            className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:underline"
+          >
             <ArrowLeft className="size-3" /> All campaigns
           </Link>
           <h1 className="text-2xl font-extrabold mt-2 flex items-center gap-2">
-            {t.is_mms && <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200 text-xs">MMS · {t.mms_count?.toLocaleString?.() ?? ""}</Badge>}
+            {t.is_mms && (
+              <Badge className="bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-100 border-fuchsia-200 text-xs">
+                MMS · {t.mms_count?.toLocaleString?.() ?? ""}
+              </Badge>
+            )}
             {c.name}
           </h1>
           <div className="text-sm text-muted-foreground flex flex-wrap gap-2 items-center mt-1">
-            <span>Tenant: <span className="font-medium text-foreground">{r.account.label}</span></span>
+            <span>
+              Tenant: <span className="font-medium text-foreground">{r.account.label}</span>
+            </span>
             <span>•</span>
             <span>{r.account.email}</span>
             <span>•</span>
@@ -109,8 +187,14 @@ function AdminCampaignReportPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportCsv}><FileDown className="size-4 mr-1" />CSV</Button>
-          <Button variant="outline" size="sm" onClick={exportPdf}><Download className="size-4 mr-1" />PDF</Button>
+          <Button variant="outline" size="sm" onClick={exportCsv}>
+            <FileDown className="size-4 mr-1" />
+            CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportPdf}>
+            <Download className="size-4 mr-1" />
+            PDF
+          </Button>
         </div>
       </div>
 
@@ -127,7 +211,9 @@ function AdminCampaignReportPage() {
                 alt="Attached MMS image"
                 className="w-28 h-28 object-cover rounded-md border"
               />
-              <div className="text-[11px] text-muted-foreground mt-1 text-center">Attached image</div>
+              <div className="text-[11px] text-muted-foreground mt-1 text-center">
+                Attached image
+              </div>
             </a>
           )}
         </div>
@@ -137,12 +223,17 @@ function AdminCampaignReportPage() {
         <Card className="p-4 space-y-1 border-amber-200 bg-amber-50">
           {t.not_sent_insufficient > 0 && (
             <div className="text-sm text-amber-900">
-              {t.not_sent_insufficient.toLocaleString()} recipients were never sent — the tenant wallet ran out mid-campaign. They were not charged.
+              {t.not_sent_insufficient.toLocaleString()} recipients were never sent — the tenant
+              wallet ran out mid-campaign. They were not charged.
             </div>
           )}
           {t.carrier_rejected > 0 && (
             <div className="text-sm text-amber-900">
-              {t.carrier_rejected.toLocaleString()} reached the recipient carrier but were rejected before delivery (code 40008). The carrier did not provide a more specific reason.{t.is_mms ? " Retrying without the image may improve acceptance, but does not guarantee delivery." : ""}
+              {t.carrier_rejected.toLocaleString()} reached the recipient carrier but were rejected
+              before delivery (code 40008). The carrier did not provide a more specific reason.
+              {t.is_mms
+                ? " Retrying without the image may improve acceptance, but does not guarantee delivery."
+                : ""}
             </div>
           )}
         </Card>
@@ -150,15 +241,30 @@ function AdminCampaignReportPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <Stat label="Recipients" value={t.total.toLocaleString()} />
-        <Stat label={t.is_mms ? "MMS messages" : "Segments"} value={(t.is_mms ? t.mms_count : t.segments).toLocaleString()} />
+        <Stat
+          label={t.is_mms ? "MMS messages" : "Segments"}
+          value={(t.is_mms ? t.mms_count : t.segments).toLocaleString()}
+        />
         <Stat label="Delivered" value={t.delivered.toLocaleString()} tone="ok" />
         <Stat label="Failed" value={t.failed.toLocaleString()} tone="bad" />
         <Stat label="Awaiting" value={(t.awaiting_delivery + t.queued).toLocaleString()} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat label="Delivery rate" value={`${t.delivery_rate}%`} tone={t.delivery_rate >= 80 ? "ok" : t.delivery_rate >= 50 ? "warn" : "bad"} />
-        <Stat label="Charged to tenant" value={formatUSD(t.cost)} hint={Number(t.reserved_cost ?? 0) > 0 ? `${formatUSD(Number(t.reserved_cost))} not yet sent` : undefined} />
+        <Stat
+          label="Delivery rate"
+          value={`${t.delivery_rate}%`}
+          tone={t.delivery_rate >= 80 ? "ok" : t.delivery_rate >= 50 ? "warn" : "bad"}
+        />
+        <Stat
+          label="Charged to tenant"
+          value={formatUSD(t.cost)}
+          hint={
+            Number(t.reserved_cost ?? 0) > 0
+              ? `${formatUSD(Number(t.reserved_cost))} not yet sent`
+              : undefined
+          }
+        />
         <Stat label="Carrier cost" value={formatUSD(t.carrier_cost)} />
         <Stat label="Margin" value={formatUSD(t.margin)} tone={t.margin >= 0 ? "ok" : "bad"} />
       </div>
@@ -166,7 +272,11 @@ function AdminCampaignReportPage() {
       {(r as any).clicks?.links > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <Stat label="Links tracked" value={(r as any).clicks.links.toLocaleString()} />
-          <Stat label="Total clicks" value={(r as any).clicks.total_clicks.toLocaleString()} tone="ok" />
+          <Stat
+            label="Total clicks"
+            value={(r as any).clicks.total_clicks.toLocaleString()}
+            tone="ok"
+          />
           <Stat label="Click rate" value={`${(r as any).clicks.click_rate}%`} />
         </div>
       )}
@@ -174,10 +284,33 @@ function AdminCampaignReportPage() {
       <Card className="p-4">
         <div className="font-semibold text-sm mb-3">Send attempt audit</div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div><div className="text-xs text-muted-foreground">Recorded attempts</div><div className="text-lg font-semibold">{Number(r.attemptAudit?.total ?? 0).toLocaleString()}</div></div>
-          <div><div className="text-xs text-muted-foreground">Approved retries</div><div className="text-lg font-semibold">{Number(r.attemptAudit?.retries ?? 0).toLocaleString()}</div></div>
-          <div><div className="text-xs text-muted-foreground">Retry charges</div><div className="text-lg font-semibold">{formatUSD(Number(r.attemptAudit?.retry_charged ?? 0))}</div></div>
-          <div><div className="text-xs text-muted-foreground">Retry margin</div><div className="text-lg font-semibold">{formatUSD(Number(r.attemptAudit?.retry_charged ?? 0) - Number(r.attemptAudit?.retry_carrier_cost ?? 0))}</div></div>
+          <div>
+            <div className="text-xs text-muted-foreground">Recorded attempts</div>
+            <div className="text-lg font-semibold">
+              {Number(r.attemptAudit?.total ?? 0).toLocaleString()}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Approved retries</div>
+            <div className="text-lg font-semibold">
+              {Number(r.attemptAudit?.retries ?? 0).toLocaleString()}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Retry charges</div>
+            <div className="text-lg font-semibold">
+              {formatUSD(Number(r.attemptAudit?.retry_charged ?? 0))}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Retry margin</div>
+            <div className="text-lg font-semibold">
+              {formatUSD(
+                Number(r.attemptAudit?.retry_charged ?? 0) -
+                  Number(r.attemptAudit?.retry_carrier_cost ?? 0),
+              )}
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -203,14 +336,24 @@ function AdminCampaignReportPage() {
                   <td className="p-3 font-mono">{row.country_code}</td>
                   <td className="p-3 text-right tabular-nums">{row.recipients.toLocaleString()}</td>
                   <td className="p-3 text-right tabular-nums">{row.segments.toLocaleString()}</td>
-                  <td className="p-3 text-right tabular-nums text-emerald-600">{row.delivered.toLocaleString()}</td>
-                  <td className="p-3 text-right tabular-nums text-destructive">{row.failed.toLocaleString()}</td>
+                  <td className="p-3 text-right tabular-nums text-emerald-600">
+                    {row.delivered.toLocaleString()}
+                  </td>
+                  <td className="p-3 text-right tabular-nums text-destructive">
+                    {row.failed.toLocaleString()}
+                  </td>
                   <td className="p-3 text-right tabular-nums">{formatUSD(row.cost)}</td>
                   <td className="p-3 text-right tabular-nums">{formatUSD(row.carrier_cost)}</td>
                   <td className="p-3 text-right tabular-nums">{formatUSD(row.margin)}</td>
                 </tr>
               ))}
-              {r.byCountry.length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">No data.</td></tr>}
+              {r.byCountry.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-muted-foreground">
+                    No data.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -234,8 +377,12 @@ function AdminCampaignReportPage() {
                   <tr key={s.sender_kind} className="border-t">
                     <td className="p-3">{s.sender_kind}</td>
                     <td className="p-3 text-right tabular-nums">{s.used.toLocaleString()}</td>
-                    <td className="p-3 text-right tabular-nums text-emerald-600">{s.delivered.toLocaleString()}</td>
-                    <td className="p-3 text-right tabular-nums text-destructive">{s.failed.toLocaleString()}</td>
+                    <td className="p-3 text-right tabular-nums text-emerald-600">
+                      {s.delivered.toLocaleString()}
+                    </td>
+                    <td className="p-3 text-right tabular-nums text-destructive">
+                      {s.failed.toLocaleString()}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -246,7 +393,9 @@ function AdminCampaignReportPage() {
 
       {r.failures.length > 0 && (
         <Card className="overflow-hidden">
-          <div className="p-3 border-b bg-muted/40 font-semibold text-sm">Failures ({r.failures.length})</div>
+          <div className="p-3 border-b bg-muted/40 font-semibold text-sm">
+            Failures ({r.failures.length})
+          </div>
           <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/30 text-left sticky top-0">
@@ -261,7 +410,9 @@ function AdminCampaignReportPage() {
               <tbody>
                 {r.failures.map((f, i) => (
                   <tr key={i} className="border-t">
-                    <td className="p-3 whitespace-nowrap text-muted-foreground">{new Date(f.created_at).toLocaleString()}</td>
+                    <td className="p-3 whitespace-nowrap text-muted-foreground">
+                      {new Date(f.created_at).toLocaleString()}
+                    </td>
                     <td className="p-3 tabular-nums">{f.phone_e164}</td>
                     <td className="p-3">{f.country_code ?? "—"}</td>
                     <td className="p-3 text-xs">{f.error_code ?? "—"}</td>
@@ -276,8 +427,13 @@ function AdminCampaignReportPage() {
 
       <Card className="p-4 text-xs text-muted-foreground">
         <div className="font-semibold text-foreground mb-1">Where to see this on Telnyx</div>
-        Log into the Telnyx portal → <span className="font-medium">Reporting → Messaging Detail Records (MDR)</span>. Filter by date range around{" "}
-        <span className="font-medium">{new Date(c.created_at).toLocaleString()}</span> and by the messaging profile used for this tenant. Telnyx MDRs show carrier price per message; Xellvio&apos;s "Carrier cost" column above is calculated from your configured country rates and matches what Telnyx bills.
+        Log into the Telnyx portal →{" "}
+        <span className="font-medium">Reporting → Messaging Detail Records (MDR)</span>. Filter by
+        date range around{" "}
+        <span className="font-medium">{new Date(c.created_at).toLocaleString()}</span> and by the
+        messaging profile used for this tenant. Telnyx MDRs show carrier price per message;
+        Xellvio&apos;s "Carrier cost" column above is calculated from your configured country rates
+        and matches what Telnyx bills.
       </Card>
     </div>
   );

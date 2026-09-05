@@ -19,36 +19,71 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
 } from "@/components/ui/chart";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
-} from "recharts";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getCampaignRecipientsExport } from "@/lib/tenant-report-export.functions";
 import { downloadCsv } from "@/lib/report-export";
 
 import {
-  ArrowLeft, RefreshCw, Send, CheckCircle2, AlertTriangle, ShieldOff, Globe,
-  Clock, SkipForward, MousePointerClick, Users, Sparkles, TrendingUp, Smartphone,
-  DollarSign, Wallet, Activity, XCircle, Download, RotateCw, ExternalLink,
-  Pause, Play,
+  ArrowLeft,
+  RefreshCw,
+  Send,
+  CheckCircle2,
+  AlertTriangle,
+  ShieldOff,
+  Globe,
+  Clock,
+  SkipForward,
+  MousePointerClick,
+  Users,
+  Sparkles,
+  TrendingUp,
+  Smartphone,
+  DollarSign,
+  Wallet,
+  Activity,
+  XCircle,
+  Download,
+  RotateCw,
+  ExternalLink,
+  Pause,
+  Play,
 } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
 import { formatUSD } from "@/lib/money";
-
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign report — Xellvio" }] }),
@@ -88,18 +123,37 @@ function CampaignReport() {
       const { rows, campaign } = await callExport({ data: { campaignId: id } });
       const filtered = rows.filter((r: any) => {
         switch (key) {
-          case "delivered": return r.status === "delivered";
-          case "failed": return r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed";
-          case "not_delivered": return r.status === "delivery_unconfirmed";
-          case "sent_awaiting": return r.status === "sent";
-          case "clicked": return (r.click_count ?? 0) > 0;
-          case "replied": return (r.reply_count ?? 0) > 0;
-          case "all": default: return true;
+          case "delivered":
+            return r.status === "delivered";
+          case "failed":
+            return (
+              r.status === "failed" ||
+              r.status === "undelivered" ||
+              r.status === "delivery_unconfirmed"
+            );
+          case "not_delivered":
+            return r.status === "delivery_unconfirmed";
+          case "sent_awaiting":
+            return r.status === "sent";
+          case "clicked":
+            return (r.click_count ?? 0) > 0;
+          case "replied":
+            return (r.reply_count ?? 0) > 0;
+          case "all":
+          default:
+            return true;
         }
       });
-      if (!filtered.length) { toast.info(`No ${label} to export.`); return; }
+      if (!filtered.length) {
+        toast.info(`No ${label} to export.`);
+        return;
+      }
       const safe = (campaign?.name ?? "campaign").replace(/[^a-z0-9-_]+/gi, "_");
-      downloadCsv(`${safe}_${label}_phone_numbers.csv`, ["phone_number"], filtered.map((r: any) => [r.phone_number]));
+      downloadCsv(
+        `${safe}_${label}_phone_numbers.csv`,
+        ["phone_number"],
+        filtered.map((r: any) => [r.phone_number]),
+      );
 
       toast.success(`Exported ${filtered.length.toLocaleString()} phone numbers (${label})`);
     } catch (e: any) {
@@ -108,7 +162,6 @@ function CampaignReport() {
       setExportingPhones(false);
     }
   }
-
 
   const campaignQ = useQuery({
     queryKey: ["campaign", id],
@@ -129,7 +182,9 @@ function CampaignReport() {
   const campaignStatus = campaignQ.data?.status as string | undefined;
   const isLive =
     !campaignStatus ||
-    ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(campaignStatus);
+    ["draft", "scheduled", "queued", "sending", "processing", "paused_low_balance"].includes(
+      campaignStatus,
+    );
   const poll = (ms: number) => (isLive && tabVisible ? ms : (false as const));
 
   // ── Aggregate summary (single indexed server-side pass) ──────────
@@ -137,7 +192,9 @@ function CampaignReport() {
     queryKey: ["campaign-summary", id],
     refetchInterval: poll(20_000),
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("campaign_report_summary" as any, { _campaign_id: id });
+      const { data, error } = await supabase.rpc("campaign_report_summary" as any, {
+        _campaign_id: id,
+      });
       if (error) throw error;
       return data as any;
     },
@@ -153,7 +210,10 @@ function CampaignReport() {
       sent: Number(s.sent ?? 0),
       delivered: Number(s.delivered ?? 0),
       deliveryUnconfirmed: Number(s.delivery_unconfirmed ?? 0),
-      failed: Number(s.failed ?? 0) + Number(s.delivery_unconfirmed ?? 0) + Number(s.sent_with_error ?? 0),
+      failed:
+        Number(s.failed ?? 0) +
+        Number(s.delivery_unconfirmed ?? 0) +
+        Number(s.sent_with_error ?? 0),
     };
   }, [summaryQ.data]);
 
@@ -175,7 +235,9 @@ function CampaignReport() {
   const RECIPIENTS_PAGE_SIZE = 100;
   const [recipientFilter, setRecipientFilter] = useState<string>("all");
   const [recipientPage, setRecipientPage] = useState(0);
-  useEffect(() => { setRecipientPage(0); }, [recipientFilter]);
+  useEffect(() => {
+    setRecipientPage(0);
+  }, [recipientFilter]);
 
   const messagesQ = useQuery({
     queryKey: ["campaign-messages", id, recipientFilter, recipientPage],
@@ -199,7 +261,10 @@ function CampaignReport() {
         )
         .eq("campaign_id", id)
         .order("created_at", { ascending: false })
-        .range(recipientPage * RECIPIENTS_PAGE_SIZE, recipientPage * RECIPIENTS_PAGE_SIZE + RECIPIENTS_PAGE_SIZE - 1);
+        .range(
+          recipientPage * RECIPIENTS_PAGE_SIZE,
+          recipientPage * RECIPIENTS_PAGE_SIZE + RECIPIENTS_PAGE_SIZE - 1,
+        );
       const f = statusFilter[recipientFilter];
       if (f) q = q.in("status", f);
       const { data, error, count } = await q;
@@ -224,7 +289,6 @@ function CampaignReport() {
         .limit(5000);
       return (data ?? []) as any[];
     },
-
   });
 
   // Authoritative click counters live on link_clicks (works for both
@@ -251,7 +315,6 @@ function CampaignReport() {
     },
   });
 
-
   // Lightweight two-column pull purely for the engagement chart.
   const seriesQ = useQuery({
     queryKey: ["campaign-series", id],
@@ -267,7 +330,6 @@ function CampaignReport() {
       return data ?? [];
     },
   });
-
 
   // Realtime: subscribe to message + campaign changes and invalidate the
   // relevant queries. Invalidations are throttled to once every 10s — a large
@@ -302,7 +364,6 @@ function CampaignReport() {
       supabase.removeChannel(channel);
     };
   }, [id, queryClient]);
-
 
   const cancelFn = useServerFn(cancelCampaign);
   const cancelM = useMutation({
@@ -362,15 +423,25 @@ function CampaignReport() {
 
   const retryOneFn = useServerFn(retryMessage);
   const retryOneM = useMutation({
-    mutationFn: async ({ messageId, forceSms = false }: { messageId: string; forceSms?: boolean }) => {
+    mutationFn: async ({
+      messageId,
+      forceSms = false,
+    }: {
+      messageId: string;
+      forceSms?: boolean;
+    }) => {
       const preview: any = await retryOneFn({ data: { messageId, forceSms, dryRun: true } });
       if (Number(preview.shortfall ?? 0) > 0) {
-        throw new Error(`Not enough credit: this retry costs ${formatUSD(preview.estimatedCost)} but your balance is ${formatUSD(preview.balance ?? 0)}.`);
+        throw new Error(
+          `Not enough credit: this retry costs ${formatUSD(preview.estimatedCost)} but your balance is ${formatUSD(preview.balance ?? 0)}.`,
+        );
       }
       const description = forceSms
         ? "Retry this failed MMS as a text-only SMS without the image? This may improve acceptance, but delivery is not guaranteed."
         : "Send this message again in its original format?";
-      if (!window.confirm(`${description}\n\nEstimated charge: ${formatUSD(preview.estimatedCost)}.`)) {
+      if (
+        !window.confirm(`${description}\n\nEstimated charge: ${formatUSD(preview.estimatedCost)}.`)
+      ) {
         throw new Error("Retry cancelled");
       }
       return retryOneFn({ data: { messageId, forceSms, confirmed: true } });
@@ -387,7 +458,9 @@ function CampaignReport() {
   const retryAllFn = useServerFn(retryFailedMessages);
   const retryAllM = useMutation({
     mutationFn: async (errorCode?: string | null) => {
-      const preview: any = await retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null, dryRun: true } });
+      const preview: any = await retryAllFn({
+        data: { campaignId: id, errorCode: errorCode ?? null, dryRun: true },
+      });
       const count = Number(preview.count ?? 0);
       if (count === 0) return preview;
       const shortfall = Number(preview.shortfall ?? 0);
@@ -404,10 +477,14 @@ function CampaignReport() {
       );
       if (!approved) throw new Error("Retry cancelled");
 
-      return retryAllFn({ data: { campaignId: id, errorCode: errorCode ?? null, confirmed: true } });
+      return retryAllFn({
+        data: { campaignId: id, errorCode: errorCode ?? null, confirmed: true },
+      });
     },
     onSuccess: (r) => {
-      toast.success(`Re-queued ${r.retried.toLocaleString()} failed message${r.retried === 1 ? "" : "s"}.`);
+      toast.success(
+        `Re-queued ${r.retried.toLocaleString()} failed message${r.retried === 1 ? "" : "s"}.`,
+      );
       queryClient.invalidateQueries({ queryKey: ["campaign-messages", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-summary", id] });
       queryClient.invalidateQueries({ queryKey: ["campaign-failures", id] });
@@ -415,8 +492,6 @@ function CampaignReport() {
     },
     onError: (e: any) => toast.error(e?.message ?? "Retry failed"),
   });
-
-
 
   const eligibleQ = useQuery({
     queryKey: ["campaign-eligible", id, campaignQ.data?.audience],
@@ -432,7 +507,6 @@ function CampaignReport() {
     },
   });
 
-
   const listsQ = useQuery({
     queryKey: ["campaign-lists", id, campaignQ.data?.audience],
     enabled: !!campaignQ.data,
@@ -443,8 +517,14 @@ function CampaignReport() {
       const { data } = await supabase.from("contact_lists").select("id,name").in("id", ids);
       const byId = new Map((data ?? []).map((l: any) => [l.id, l.name]));
       return {
-        include: (aud.include ?? []).map((i: string) => ({ id: i, name: byId.get(i) ?? "Unknown list" })),
-        exclude: (aud.exclude ?? []).map((i: string) => ({ id: i, name: byId.get(i) ?? "Unknown list" })),
+        include: (aud.include ?? []).map((i: string) => ({
+          id: i,
+          name: byId.get(i) ?? "Unknown list",
+        })),
+        exclude: (aud.exclude ?? []).map((i: string) => ({
+          id: i,
+          name: byId.get(i) ?? "Unknown list",
+        })),
       };
     },
   });
@@ -467,16 +547,16 @@ function CampaignReport() {
     },
   });
 
-
-
   const optOutsQ = useQuery({
     queryKey: ["campaign-optouts", id, campaignQ.data?.created_at],
     enabled: !!campaignQ.data,
     queryFn: async () => {
       const since = campaignQ.data!.created_at;
       const { count } = await supabase
-        .from("suppressions").select("*", { count: "exact", head: true })
-        .eq("reason", "inbound_stop").gte("created_at", since);
+        .from("suppressions")
+        .select("*", { count: "exact", head: true })
+        .eq("reason", "inbound_stop")
+        .gte("created_at", since);
       return count ?? 0;
     },
   });
@@ -506,7 +586,6 @@ function CampaignReport() {
       ? linkStats.clickedLinks
       : Math.min(clicked, Math.max(delivered, clicked));
 
-
     const totalCost = Number(s?.billed_cost ?? 0);
     const reservedCost = Number(s?.reserved_cost ?? 0);
     const totalSegments = Number(s?.segments ?? 0);
@@ -514,7 +593,10 @@ function CampaignReport() {
     const clickRate = delivered > 0 ? Math.min(100, (uniqueClickers / delivered) * 100) : 0;
     const costPerDelivered = delivered > 0 ? totalCost / delivered : 0;
 
-    const byCountry: Record<string, { total: number; delivered: number; unconfirmed: number; failed: number }> = {};
+    const byCountry: Record<
+      string,
+      { total: number; delivered: number; unconfirmed: number; failed: number }
+    > = {};
     for (const r of (s?.by_country ?? []) as any[]) {
       byCountry[r.country ?? "—"] = {
         total: Number(r.messages ?? 0),
@@ -526,42 +608,75 @@ function CampaignReport() {
 
     // Time series — cumulative by hour so the chart never appears to "drop"
     // completed deliveries back to zero after the last webhook hour.
-    const points = new Map<number, { t: number; sent: number; delivered: number; clicked: number }>();
+    const points = new Map<
+      number,
+      { t: number; sent: number; delivered: number; clicked: number }
+    >();
     const bucket = (iso: string | null) => {
       if (!iso) return null;
-      const d = new Date(iso); d.setMinutes(0, 0, 0); return d.getTime();
+      const d = new Date(iso);
+      d.setMinutes(0, 0, 0);
+      return d.getTime();
     };
     for (const m of (seriesQ.data ?? []) as any[]) {
       const ts = bucket(m.sent_at);
-      if (ts) { points.set(ts, points.get(ts) ?? { t: ts, sent: 0, delivered: 0, clicked: 0 }); points.get(ts)!.sent++; }
+      if (ts) {
+        points.set(ts, points.get(ts) ?? { t: ts, sent: 0, delivered: 0, clicked: 0 });
+        points.get(ts)!.sent++;
+      }
       const td = bucket(m.delivered_at);
-      if (td) { points.set(td, points.get(td) ?? { t: td, sent: 0, delivered: 0, clicked: 0 }); points.get(td)!.delivered++; }
+      if (td) {
+        points.set(td, points.get(td) ?? { t: td, sent: 0, delivered: 0, clicked: 0 });
+        points.get(td)!.delivered++;
+      }
     }
     for (const e of events as any[]) {
       if (e.type !== "clicked") continue;
       const tc = bucket(e.created_at);
-      if (tc) { points.set(tc, points.get(tc) ?? { t: tc, sent: 0, delivered: 0, clicked: 0 }); points.get(tc)!.clicked++; }
+      if (tc) {
+        points.set(tc, points.get(tc) ?? { t: tc, sent: 0, delivered: 0, clicked: 0 });
+        points.get(tc)!.clicked++;
+      }
     }
     let sentRunning = 0;
     let deliveredRunning = 0;
     let clickedRunning = 0;
-    const series = [...points.values()].sort((a, b) => a.t - b.t).map((p) => {
-      sentRunning += p.sent;
-      deliveredRunning += p.delivered;
-      clickedRunning += p.clicked;
-      return {
-      t: p.t,
-      sent: sentRunning,
-      delivered: deliveredRunning,
-      clicked: clickedRunning,
-      label: new Date(p.t).toLocaleTimeString([], { hour: "numeric", hour12: true }),
-    };
-    });
+    const series = [...points.values()]
+      .sort((a, b) => a.t - b.t)
+      .map((p) => {
+        sentRunning += p.sent;
+        deliveredRunning += p.delivered;
+        clickedRunning += p.clicked;
+        return {
+          t: p.t,
+          sent: sentRunning,
+          delivered: deliveredRunning,
+          clicked: clickedRunning,
+          label: new Date(p.t).toLocaleTimeString([], { hour: "numeric", hour12: true }),
+        };
+      });
 
     return {
-      attempted, queued, sent, awaitingDelivery, delivered, deliveryUnconfirmed, failed, skipped, pendingPlanning, clicked, uniqueClickers,
-      totalCost, reservedCost, totalSegments, deliveryRate, clickRate, costPerDelivered,
-      byCountry, failures: failures?.byReason ?? {}, series,
+      attempted,
+      queued,
+      sent,
+      awaitingDelivery,
+      delivered,
+      deliveryUnconfirmed,
+      failed,
+      skipped,
+      pendingPlanning,
+      clicked,
+      uniqueClickers,
+      totalCost,
+      reservedCost,
+      totalSegments,
+      deliveryRate,
+      clickRate,
+      costPerDelivered,
+      byCountry,
+      failures: failures?.byReason ?? {},
+      series,
     };
   }, [summaryQ.data, progress, failures, seriesQ.data, eventsQ.data, clicksQ.data, eligibleQ.data]);
 
@@ -569,18 +684,22 @@ function CampaignReport() {
   const c = campaignQ.data;
   const sentAt = (summaryQ.data?.first_created_at as string | undefined) ?? c.updated_at;
 
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <Link to="/app/campaigns" className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground">
+        <Link
+          to="/app/campaigns"
+          className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground"
+        >
           <ArrowLeft className="size-3" /> Campaigns
         </Link>
         <div className="flex flex-wrap items-end justify-between gap-3 mt-1">
           <div>
             <h1 className="text-2xl font-extrabold">{c.name}</h1>
-            <div className="text-sm text-muted-foreground mt-0.5">Text Message · {new Date(sentAt).toLocaleString()}</div>
+            <div className="text-sm text-muted-foreground mt-0.5">
+              Text Message · {new Date(sentAt).toLocaleString()}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge status={c.status} />
@@ -607,7 +726,6 @@ function CampaignReport() {
                   failures,
                   messages: messagesQ.data?.rows ?? [],
                 })
-
               }
               title="Download queued / sending / delivered / failed metrics as CSV."
             >
@@ -623,15 +741,29 @@ function CampaignReport() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
                 <DropdownMenuLabel>Phone numbers only</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => exportPhoneNumbers("delivered", "delivered")}>Delivered</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportPhoneNumbers("failed", "failed")}>Failed</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportPhoneNumbers("sent_awaiting", "awaiting-carrier")}>Awaiting carrier</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("delivered", "delivered")}>
+                  Delivered
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("failed", "failed")}>
+                  Failed
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => exportPhoneNumbers("sent_awaiting", "awaiting-carrier")}
+                >
+                  Awaiting carrier
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>Engagement</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => exportPhoneNumbers("clicked", "link-clickers")}>Clicked the link</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => exportPhoneNumbers("replied", "responders")}>Replied</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("clicked", "link-clickers")}>
+                  Clicked the link
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("replied", "responders")}>
+                  Replied
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => exportPhoneNumbers("all", "all")}>All recipients</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportPhoneNumbers("all", "all")}>
+                  All recipients
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             {["queued", "sending", "processing", "scheduled"].includes(c.status) && (
@@ -674,10 +806,9 @@ function CampaignReport() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Cancel this campaign?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      No further messages will be sent. Messages that have already been
-                      handed to the carrier will still be delivered — those cannot be
-                      recalled. You will not be charged for any queued messages that are
-                      cancelled.
+                      No further messages will be sent. Messages that have already been handed to
+                      the carrier will still be delivered — those cannot be recalled. You will not
+                      be charged for any queued messages that are cancelled.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -709,9 +840,9 @@ function CampaignReport() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Stop sending and mark as sent?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      No further recipients will be queued or sent. The report keeps every
-                      current number — delivered, sent, not delivered and failed — along
-                      with the cost already incurred, and the campaign will show as Sent.
+                      No further recipients will be queued or sent. The report keeps every current
+                      number — delivered, sent, not delivered and failed — along with the cost
+                      already incurred, and the campaign will show as Sent.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -725,9 +856,10 @@ function CampaignReport() {
             )}
             {/* Provider portal link removed — tenants shouldn't see upstream provider */}
             <Button asChild variant="outline" size="sm">
-              <Link to="/app/campaigns/new" search={{ from: id } as any}>View campaign</Link>
+              <Link to="/app/campaigns/new" search={{ from: id } as any}>
+                View campaign
+              </Link>
             </Button>
-
           </div>
         </div>
       </div>
@@ -753,15 +885,14 @@ function CampaignReport() {
       )}
 
       {c.status === "paused_by_user" && (
-
         <div className="rounded-md border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
           <Pause className="size-5 text-warning-foreground shrink-0 mt-0.5" />
           <div className="text-sm">
             <div className="font-semibold mb-0.5">Campaign paused</div>
             <div className="text-muted-foreground">
-              The remaining messages are on hold and you are not charged for them. Click
-              “Resume campaign” to continue sending. Messages already handed to the carrier
-              keep being delivered.
+              The remaining messages are on hold and you are not charged for them. Click “Resume
+              campaign” to continue sending. Messages already handed to the carrier keep being
+              delivered.
             </div>
           </div>
         </div>
@@ -777,7 +908,8 @@ function CampaignReport() {
                 "We're temporarily waiting for platform capacity — your messages will start sending automatically within a few minutes."}
             </div>
             <div className="text-xs mt-1 opacity-80">
-              You haven't been charged for any un-sent messages. If this is a low-balance issue, contact our support team.
+              You haven't been charged for any un-sent messages. If this is a low-balance issue,
+              contact our support team.
             </div>
           </div>
         </div>
@@ -800,17 +932,12 @@ function CampaignReport() {
         status={c.status}
         isFetching={summaryQ.isFetching}
         failures={failures}
-
         onRetryReason={(code) => retryAllM.mutate(code)}
         onRetryAll={() => retryAllM.mutate(null)}
         isRetrying={retryAllM.isPending}
       />
 
-
-
-
       <Tabs defaultValue="overview">
-
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="recipients">Recipient activity</TabsTrigger>
@@ -825,8 +952,13 @@ function CampaignReport() {
             <div className="space-y-5">
               <Card className="p-5">
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide">Text Message</div>
-                  <Badge variant={sentSampleQ.data?.rendered_body ? "secondary" : "outline"} className="text-[10px]">
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide">
+                    Text Message
+                  </div>
+                  <Badge
+                    variant={sentSampleQ.data?.rendered_body ? "secondary" : "outline"}
+                    className="text-[10px]"
+                  >
                     {sentSampleQ.data?.rendered_body ? "Exactly as sent" : "Draft template"}
                   </Badge>
                 </div>
@@ -841,27 +973,38 @@ function CampaignReport() {
                 </div>
               </Card>
 
-
               <Card className="p-5 space-y-4">
                 <div>
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">Included lists & segments</div>
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
+                    Included lists & segments
+                  </div>
                   {listsQ.data?.include?.length ? (
                     <div className="flex flex-wrap gap-1.5">
                       {listsQ.data.include.map((l: any) => (
-                        <Badge key={l.id} variant="secondary">{l.name} · {stats.attempted}</Badge>
+                        <Badge key={l.id} variant="secondary">
+                          {l.name} · {stats.attempted}
+                        </Badge>
                       ))}
                     </div>
-                  ) : <div className="text-sm text-muted-foreground">No included lists</div>}
+                  ) : (
+                    <div className="text-sm text-muted-foreground">No included lists</div>
+                  )}
                 </div>
                 <div>
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">Excluded</div>
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
+                    Excluded
+                  </div>
                   {listsQ.data?.exclude?.length ? (
                     <div className="flex flex-wrap gap-1.5">
                       {listsQ.data.exclude.map((l: any) => (
-                        <Badge key={l.id} variant="outline">{l.name}</Badge>
+                        <Badge key={l.id} variant="outline">
+                          {l.name}
+                        </Badge>
                       ))}
                     </div>
-                  ) : <div className="text-sm text-muted-foreground">No exclusions</div>}
+                  ) : (
+                    <div className="text-sm text-muted-foreground">No exclusions</div>
+                  )}
                 </div>
               </Card>
             </div>
@@ -870,24 +1013,53 @@ function CampaignReport() {
             <div className="space-y-5">
               {/* KPI hero */}
               <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                <Kpi icon={CheckCircle2} label="Delivery rate" value={`${stats.deliveryRate.toFixed(1)}%`}
-                  sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`} tone="success" />
-                <Kpi icon={Clock} label="Awaiting carrier" value={stats.awaitingDelivery.toLocaleString()}
-                  sub="accepted, no final receipt yet" tone="muted" />
-                <Kpi icon={MousePointerClick} label="Click rate" value={`${stats.clickRate.toFixed(1)}%`}
-                  sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`} tone="primary" />
-                <Kpi icon={ShieldOff} label="Opt-outs" value={(optOutsQ.data ?? 0).toLocaleString()}
-                  sub="since campaign send" tone="danger" />
-                <Kpi icon={Wallet} label="Spend" value={formatUSD(stats.totalCost)}
-                  sub={`${stats.totalSegments.toLocaleString()} segments`} tone="muted" />
+                <Kpi
+                  icon={CheckCircle2}
+                  label="Delivery rate"
+                  value={`${stats.deliveryRate.toFixed(1)}%`}
+                  sub={`${stats.delivered.toLocaleString()} of ${stats.sent.toLocaleString()} handed to carrier`}
+                  tone="success"
+                />
+                <Kpi
+                  icon={Clock}
+                  label="Awaiting carrier"
+                  value={stats.awaitingDelivery.toLocaleString()}
+                  sub="accepted, no final receipt yet"
+                  tone="muted"
+                />
+                <Kpi
+                  icon={MousePointerClick}
+                  label="Click rate"
+                  value={`${stats.clickRate.toFixed(1)}%`}
+                  sub={`${stats.uniqueClickers} unique clicker${stats.uniqueClickers === 1 ? "" : "s"}`}
+                  tone="primary"
+                />
+                <Kpi
+                  icon={ShieldOff}
+                  label="Opt-outs"
+                  value={(optOutsQ.data ?? 0).toLocaleString()}
+                  sub="since campaign send"
+                  tone="danger"
+                />
+                <Kpi
+                  icon={Wallet}
+                  label="Spend"
+                  value={formatUSD(stats.totalCost)}
+                  sub={`${stats.totalSegments.toLocaleString()} segments`}
+                  tone="muted"
+                />
               </div>
 
               {/* Engagement over time */}
               <Card className="p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <div className="font-semibold flex items-center gap-2"><Activity className="size-4 text-primary" /> Engagement over time</div>
-                    <div className="text-xs text-muted-foreground">Sent, delivered and clicked, cumulative by hour</div>
+                    <div className="font-semibold flex items-center gap-2">
+                      <Activity className="size-4 text-primary" /> Engagement over time
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Sent, delivered and clicked, cumulative by hour
+                    </div>
                   </div>
                 </div>
                 {stats.series.length === 0 ? (
@@ -895,14 +1067,17 @@ function CampaignReport() {
                 ) : (
                   <ChartContainer
                     config={{
-                      sent:      { label: "Sent",      color: "hsl(217 91% 60%)" },
+                      sent: { label: "Sent", color: "hsl(217 91% 60%)" },
                       delivered: { label: "Delivered", color: "hsl(142 71% 45%)" },
-                      clicked:   { label: "Clicked",   color: "hsl(38 92% 50%)" },
+                      clicked: { label: "Clicked", color: "hsl(38 92% 50%)" },
                     }}
                     className="h-[260px] w-full"
                   >
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={stats.series} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
+                      <AreaChart
+                        data={stats.series}
+                        margin={{ left: 4, right: 8, top: 8, bottom: 0 }}
+                      >
                         <defs>
                           <linearGradient id="g-sent" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="hsl(217 91% 60%)" stopOpacity={0.35} />
@@ -917,14 +1092,47 @@ function CampaignReport() {
                             <stop offset="100%" stopColor="hsl(38 92% 50%)" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border" />
-                        <XAxis dataKey="label" tickLine={false} axisLine={false} className="text-xs" />
-                        <YAxis allowDecimals={false} tickLine={false} axisLine={false} className="text-xs" width={28} />
+                        <CartesianGrid
+                          vertical={false}
+                          strokeDasharray="3 3"
+                          className="stroke-border"
+                        />
+                        <XAxis
+                          dataKey="label"
+                          tickLine={false}
+                          axisLine={false}
+                          className="text-xs"
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          tickLine={false}
+                          axisLine={false}
+                          className="text-xs"
+                          width={28}
+                        />
                         <ChartTooltip content={<ChartTooltipContent />} />
                         <ChartLegend content={<ChartLegendContent />} />
-                        <Area type="monotone" dataKey="sent"      stroke="hsl(217 91% 60%)" fill="url(#g-sent)" strokeWidth={2} />
-                        <Area type="monotone" dataKey="delivered" stroke="hsl(142 71% 45%)" fill="url(#g-del)"  strokeWidth={2} />
-                        <Area type="monotone" dataKey="clicked"   stroke="hsl(38 92% 50%)"  fill="url(#g-clk)"  strokeWidth={2} />
+                        <Area
+                          type="monotone"
+                          dataKey="sent"
+                          stroke="hsl(217 91% 60%)"
+                          fill="url(#g-sent)"
+                          strokeWidth={2}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="delivered"
+                          stroke="hsl(142 71% 45%)"
+                          fill="url(#g-del)"
+                          strokeWidth={2}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="clicked"
+                          stroke="hsl(38 92% 50%)"
+                          fill="url(#g-clk)"
+                          strokeWidth={2}
+                        />
                       </AreaChart>
                     </ResponsiveContainer>
                   </ChartContainer>
@@ -939,24 +1147,78 @@ function CampaignReport() {
                 <ol className="relative space-y-5 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-px before:bg-border">
                   <FunnelRow icon={Users} label="attempted" value={stats.attempted} tone="muted" />
                   {stats.pendingPlanning > 0 && (
-                    <FunnelRow icon={Clock} label="preparing to send" value={stats.pendingPlanning}
-                      sub={stats.attempted ? `${pct(stats.pendingPlanning / stats.attempted * 100)} of audience` : undefined} tone="muted" />
+                    <FunnelRow
+                      icon={Clock}
+                      label="preparing to send"
+                      value={stats.pendingPlanning}
+                      sub={
+                        stats.attempted
+                          ? `${pct((stats.pendingPlanning / stats.attempted) * 100)} of audience`
+                          : undefined
+                      }
+                      tone="muted"
+                    />
                   )}
-                  <FunnelRow icon={Send} label="sent to carrier" value={stats.sent}
-                    sub={stats.attempted ? `${pct(stats.sent / stats.attempted * 100)} of attempted` : undefined} tone="primary" />
+                  <FunnelRow
+                    icon={Send}
+                    label="sent to carrier"
+                    value={stats.sent}
+                    sub={
+                      stats.attempted
+                        ? `${pct((stats.sent / stats.attempted) * 100)} of attempted`
+                        : undefined
+                    }
+                    tone="primary"
+                  />
                   {stats.awaitingDelivery > 0 && (
-                    <FunnelRow icon={Clock} label="awaiting carrier report" value={stats.awaitingDelivery}
-                      sub={stats.sent ? `${pct(stats.awaitingDelivery / stats.sent * 100)} of sent` : undefined} tone="muted" />
+                    <FunnelRow
+                      icon={Clock}
+                      label="awaiting carrier report"
+                      value={stats.awaitingDelivery}
+                      sub={
+                        stats.sent
+                          ? `${pct((stats.awaitingDelivery / stats.sent) * 100)} of sent`
+                          : undefined
+                      }
+                      tone="muted"
+                    />
                   )}
-                  <FunnelRow icon={AlertTriangle} label="failed" value={stats.failed}
-                    sub={stats.sent ? `${pct(stats.failed / stats.sent * 100)} of sent` : undefined} tone="danger" />
-                  <FunnelRow icon={CheckCircle2} label="delivered" value={stats.delivered}
-                    sub={stats.sent ? `${pct(stats.deliveryRate)} of sent` : undefined} tone="success" />
-                  <FunnelRow icon={MousePointerClick} label="clicked" value={stats.uniqueClickers}
-                    sub={stats.delivered ? `${pct(stats.clickRate)} of delivered` : undefined} tone="primary" />
-                  <FunnelRow icon={ShieldOff} label="opt-outs (since send)" value={optOutsQ.data ?? 0} tone="danger" />
+                  <FunnelRow
+                    icon={AlertTriangle}
+                    label="failed"
+                    value={stats.failed}
+                    sub={
+                      stats.sent ? `${pct((stats.failed / stats.sent) * 100)} of sent` : undefined
+                    }
+                    tone="danger"
+                  />
+                  <FunnelRow
+                    icon={CheckCircle2}
+                    label="delivered"
+                    value={stats.delivered}
+                    sub={stats.sent ? `${pct(stats.deliveryRate)} of sent` : undefined}
+                    tone="success"
+                  />
+                  <FunnelRow
+                    icon={MousePointerClick}
+                    label="clicked"
+                    value={stats.uniqueClickers}
+                    sub={stats.delivered ? `${pct(stats.clickRate)} of delivered` : undefined}
+                    tone="primary"
+                  />
+                  <FunnelRow
+                    icon={ShieldOff}
+                    label="opt-outs (since send)"
+                    value={optOutsQ.data ?? 0}
+                    tone="danger"
+                  />
                   {stats.queued > 0 && (
-                    <FunnelRow icon={Clock} label="queued (in-flight)" value={stats.queued} tone="muted" />
+                    <FunnelRow
+                      icon={Clock}
+                      label="queued (in-flight)"
+                      value={stats.queued}
+                      tone="muted"
+                    />
                   )}
                 </ol>
               </Card>
@@ -982,8 +1244,6 @@ function CampaignReport() {
             retryingId={retryOneM.isPending ? retryOneM.variables?.messageId : undefined}
             canRetry={c.status !== "cancelled"}
           />
-
-
         </TabsContent>
 
         {/* ───────────── LINKS ───────────── */}
@@ -996,7 +1256,6 @@ function CampaignReport() {
             clicks={(eventsQ.data ?? []).filter((e: any) => e.type === "clicked")}
           />
         </TabsContent>
-
 
         {/* ───────────── COST & DELIVERABILITY ───────────── */}
         <TabsContent value="cost" className="mt-5">
@@ -1012,7 +1271,10 @@ function CampaignReport() {
                 )}
                 <Stat label="Segments sent" value={stats.totalSegments.toLocaleString()} />
                 <Stat label="Cost / delivered" value={formatUSD(stats.costPerDelivered)} />
-                <Stat label="Cost / message" value={formatUSD(stats.sent > 0 ? stats.totalCost / stats.sent : 0)} />
+                <Stat
+                  label="Cost / message"
+                  value={formatUSD(stats.sent > 0 ? stats.totalCost / stats.sent : 0)}
+                />
               </div>
             </Card>
 
@@ -1024,25 +1286,37 @@ function CampaignReport() {
                 <div className="text-sm text-muted-foreground">No deliveries yet.</div>
               ) : (
                 <ul className="space-y-3">
-                  {Object.entries(stats.byCountry).sort((a, b) => b[1].total - a[1].total).map(([cc, v]) => {
-                    const rate = v.total ? (v.delivered / v.total) * 100 : 0;
-                    const failRate = v.total ? (v.failed / v.total) * 100 : 0;
-                    return (
-                      <li key={cc} className="text-sm">
-                        <div className="flex justify-between mb-1">
-                          <span className="font-medium">{cc} · {v.total.toLocaleString()}</span>
-                          <span className="text-muted-foreground tabular-nums">{rate.toFixed(0)}% delivered</span>
-                        </div>
-                        <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
-                          <div className="h-full bg-success" style={{ width: `${rate}%` }} />
-                          <div className="h-full bg-destructive" style={{ width: `${failRate}%` }} />
-                        </div>
-                        {v.failed > 0 && <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">{v.failed.toLocaleString()} failed</div>}
-                      </li>
-                    );
-                  })}
+                  {Object.entries(stats.byCountry)
+                    .sort((a, b) => b[1].total - a[1].total)
+                    .map(([cc, v]) => {
+                      const rate = v.total ? (v.delivered / v.total) * 100 : 0;
+                      const failRate = v.total ? (v.failed / v.total) * 100 : 0;
+                      return (
+                        <li key={cc} className="text-sm">
+                          <div className="flex justify-between mb-1">
+                            <span className="font-medium">
+                              {cc} · {v.total.toLocaleString()}
+                            </span>
+                            <span className="text-muted-foreground tabular-nums">
+                              {rate.toFixed(0)}% delivered
+                            </span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden flex">
+                            <div className="h-full bg-success" style={{ width: `${rate}%` }} />
+                            <div
+                              className="h-full bg-destructive"
+                              style={{ width: `${failRate}%` }}
+                            />
+                          </div>
+                          {v.failed > 0 && (
+                            <div className="text-[11px] text-muted-foreground mt-1 tabular-nums">
+                              {v.failed.toLocaleString()} failed
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
                 </ul>
-
               )}
             </Card>
 
@@ -1054,12 +1328,16 @@ function CampaignReport() {
                 <div className="text-sm text-muted-foreground">No failures recorded.</div>
               ) : (
                 <ul className="space-y-2 text-sm">
-                  {Object.entries(stats.failures).sort((a, b) => b[1] - a[1]).map(([code, n]) => (
-                    <li key={code} className="flex items-center justify-between border-b pb-1.5">
-                      <span className="font-mono text-xs">{code}</span>
-                      <Badge variant="outline" className="text-destructive border-destructive/30">{n}</Badge>
-                    </li>
-                  ))}
+                  {Object.entries(stats.failures)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([code, n]) => (
+                      <li key={code} className="flex items-center justify-between border-b pb-1.5">
+                        <span className="font-mono text-xs">{code}</span>
+                        <Badge variant="outline" className="text-destructive border-destructive/30">
+                          {n}
+                        </Badge>
+                      </li>
+                    ))}
                 </ul>
               )}
             </Card>
@@ -1067,12 +1345,16 @@ function CampaignReport() {
 
           <Card className="p-5 mt-5 bg-gradient-to-br from-primary/5 to-transparent">
             <div className="flex items-start gap-3">
-              <div className="size-9 rounded-full bg-primary/10 text-primary grid place-items-center"><Sparkles className="size-4" /></div>
+              <div className="size-9 rounded-full bg-primary/10 text-primary grid place-items-center">
+                <Sparkles className="size-4" />
+              </div>
               <div className="text-sm">
                 <div className="font-semibold mb-1">Deliverability tip</div>
                 <p className="text-muted-foreground">
-                  Carriers throttle traffic with low engagement. Keep delivery {">"} 95%, click rate {">"} 3%, and opt-outs {"<"} 1% to stay in the good-sender lane.
-                  Messages skipped for insufficient balance are <strong>never charged</strong> — top up to retry, or contact support.
+                  Carriers throttle traffic with low engagement. Keep delivery {">"} 95%, click rate{" "}
+                  {">"} 3%, and opt-outs {"<"} 1% to stay in the good-sender lane. Messages skipped
+                  for insufficient balance are <strong>never charged</strong> — top up to retry, or
+                  contact support.
                 </p>
               </div>
             </div>
@@ -1118,19 +1400,18 @@ function RecipientActivity({
 }) {
   // Counts come from the aggregate summary, not from the current page.
   const items = [
-    { key: "all",       label: "All",       count: stats.attempted },
-    { key: "sent",      label: "Accepted",  count: stats.awaitingDelivery },
+    { key: "all", label: "All", count: stats.attempted },
+    { key: "sent", label: "Accepted", count: stats.awaitingDelivery },
     { key: "delivered", label: "Delivered", count: stats.delivered },
-    { key: "failed",    label: "Failed",    count: stats.failed },
+    { key: "failed", label: "Failed", count: stats.failed },
     ...(stats.pendingPlanning > 0
       ? [{ key: "skipped", label: "Preparing", count: stats.pendingPlanning }]
       : []),
-    { key: "queued",    label: "Queued",    count: stats.queued },
+    { key: "queued", label: "Queued", count: stats.queued },
   ];
 
   const shown = rows;
   const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
-
 
   return (
     <div className="space-y-5">
@@ -1138,17 +1419,43 @@ function RecipientActivity({
       <Card className="p-5">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <SummaryStat label="Total" value={stats.attempted} />
-          <SummaryStat label="Delivered" value={stats.delivered}
-            sub={stats.attempted ? `${((stats.delivered / stats.attempted) * 100).toFixed(1)}%` : "—"} tone="success" />
-          <SummaryStat label="Failed" value={stats.failed}
-            sub={stats.sent ? `${((stats.failed / stats.sent) * 100).toFixed(1)}%` : "—"} tone="danger" />
-          <SummaryStat label="Preparing" value={stats.pendingPlanning}
-            sub={stats.pendingPlanning > 0 ? "will be queued next" : undefined} tone="muted" />
-          <SummaryStat label="Clicked" value={stats.uniqueClickers}
-            sub={stats.delivered ? `${((stats.uniqueClickers / stats.delivered) * 100).toFixed(1)}%` : "—"} tone="primary" />
+          <SummaryStat
+            label="Delivered"
+            value={stats.delivered}
+            sub={
+              stats.attempted ? `${((stats.delivered / stats.attempted) * 100).toFixed(1)}%` : "—"
+            }
+            tone="success"
+          />
+          <SummaryStat
+            label="Failed"
+            value={stats.failed}
+            sub={stats.sent ? `${((stats.failed / stats.sent) * 100).toFixed(1)}%` : "—"}
+            tone="danger"
+          />
+          <SummaryStat
+            label="Preparing"
+            value={stats.pendingPlanning}
+            sub={stats.pendingPlanning > 0 ? "will be queued next" : undefined}
+            tone="muted"
+          />
+          <SummaryStat
+            label="Clicked"
+            value={stats.uniqueClickers}
+            sub={
+              stats.delivered
+                ? `${((stats.uniqueClickers / stats.delivered) * 100).toFixed(1)}%`
+                : "—"
+            }
+            tone="primary"
+          />
           <SummaryStat label="Opt-outs" value={optOuts} tone="danger" />
           <SummaryStat label="Spend" value={formatUSD(stats.totalCost)} tone="muted" />
-          <SummaryStat label="Cost / msg" value={formatUSD(stats.sent ? stats.totalCost / stats.sent : 0)} tone="muted" />
+          <SummaryStat
+            label="Cost / msg"
+            value={formatUSD(stats.sent ? stats.totalCost / stats.sent : 0)}
+            tone="muted"
+          />
         </div>
       </Card>
 
@@ -1191,28 +1498,47 @@ function RecipientActivity({
               </TableHeader>
               <TableBody>
                 {shown.map((m: any) => {
-                  const name = [m.profile?.first_name, m.profile?.last_name].filter(Boolean).join(" ");
+                  const name = [m.profile?.first_name, m.profile?.last_name]
+                    .filter(Boolean)
+                    .join(" ");
                   const isFailed = ["failed", "undelivered"].includes(m.status);
-                  const retryable =
-                    isFailed && canRetry && m.error_code !== "cancelled_by_user";
+                  const retryable = isFailed && canRetry && m.error_code !== "cancelled_by_user";
                   return (
                     <TableRow key={m.id}>
                       <TableCell>
                         <div className="font-medium text-sm">{name || "—"}</div>
-                        <div className="font-mono text-xs text-muted-foreground">{m.phone_e164}</div>
+                        <div className="font-mono text-xs text-muted-foreground">
+                          {m.phone_e164}
+                        </div>
                       </TableCell>
                       <TableCell>{m.country_code ?? m.profile?.country_code ?? "—"}</TableCell>
                       <TableCell className="max-w-[260px]">
                         <StatusBadge status={m.status} />
-                        {m.error_code && <div className="text-[10px] text-destructive mt-0.5 font-mono">{m.error_code}</div>}
+                        {m.error_code && (
+                          <div className="text-[10px] text-destructive mt-0.5 font-mono">
+                            {m.error_code}
+                          </div>
+                        )}
                         {m.error_code === "40008" && (
                           <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
-                            Recipient carrier rejected this message. It reached the carrier, but was not accepted for delivery.
+                            Recipient carrier rejected this message. It reached the carrier, but was
+                            not accepted for delivery.
                           </div>
                         )}
                         {m.failure_reason && (
-                          <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug" title={m.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : m.failure_reason}>
-                            {m.status === "delivery_unconfirmed" ? "Delivery could not be confirmed by the recipient carrier." : (m.failure_reason.length > 120 ? m.failure_reason.slice(0, 120) + "…" : m.failure_reason)}
+                          <div
+                            className="text-[11px] text-muted-foreground mt-0.5 leading-snug"
+                            title={
+                              m.status === "delivery_unconfirmed"
+                                ? "Delivery could not be confirmed by the recipient carrier."
+                                : m.failure_reason
+                            }
+                          >
+                            {m.status === "delivery_unconfirmed"
+                              ? "Delivery could not be confirmed by the recipient carrier."
+                              : m.failure_reason.length > 120
+                                ? m.failure_reason.slice(0, 120) + "…"
+                                : m.failure_reason}
                           </div>
                         )}
                         {!m.failure_reason && m.status === "delivery_unconfirmed" && (
@@ -1223,7 +1549,9 @@ function RecipientActivity({
                       </TableCell>
 
                       <TableCell className="tabular-nums">{m.segments_count ?? 1}</TableCell>
-                      <TableCell className="tabular-nums">{formatUSD(Number(m.cost ?? 0))}</TableCell>
+                      <TableCell className="tabular-nums">
+                        {formatUSD(Number(m.cost ?? 0))}
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {m.sent_at ? new Date(m.sent_at).toLocaleString() : "—"}
                       </TableCell>
@@ -1231,13 +1559,26 @@ function RecipientActivity({
                         {retryable && (
                           <div className="flex justify-end gap-1">
                             {m.is_mms && onRetryAsSms && (
-                              <Button variant="outline" size="sm" onClick={() => onRetryAsSms(m.id)} disabled={retryingId === m.id}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onRetryAsSms(m.id)}
+                                disabled={retryingId === m.id}
+                              >
                                 <Send className="size-3 mr-1" /> Retry as SMS
                               </Button>
                             )}
                             {onRetry && (
-                              <Button variant="ghost" size="sm" onClick={() => onRetry(m.id)} disabled={retryingId === m.id} title="Retry in the original format.">
-                                <RotateCw className={`size-3 ${retryingId === m.id ? "animate-spin" : ""}`} />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onRetry(m.id)}
+                                disabled={retryingId === m.id}
+                                title="Retry in the original format."
+                              >
+                                <RotateCw
+                                  className={`size-3 ${retryingId === m.id ? "animate-spin" : ""}`}
+                                />
                               </Button>
                             )}
                           </div>
@@ -1258,10 +1599,17 @@ function RecipientActivity({
               {isFetching ? " · updating…" : ""}
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={page === 0} onClick={() => onPageChange(Math.max(0, page - 1))}>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => onPageChange(Math.max(0, page - 1))}
+              >
                 Previous
               </Button>
-              <span className="tabular-nums">Page {page + 1} of {totalPages}</span>
+              <span className="tabular-nums">
+                Page {page + 1} of {totalPages}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
@@ -1273,14 +1621,23 @@ function RecipientActivity({
             </div>
           </div>
         </Card>
-
       </div>
     </div>
   );
 }
 
-function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clicks }: {
-  campaignId: string; uniqueClickers: number; totalClicks: number; delivered: number; clicks: any[];
+function LinkActivity({
+  campaignId,
+  uniqueClickers,
+  totalClicks,
+  delivered,
+  clicks,
+}: {
+  campaignId: string;
+  uniqueClickers: number;
+  totalClicks: number;
+  delivered: number;
+  clicks: any[];
 }) {
   const clickRate = delivered ? (uniqueClickers / delivered) * 100 : 0;
   const cpp = uniqueClickers ? totalClicks / uniqueClickers : 0;
@@ -1301,9 +1658,26 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
   });
 
   const perUrl = useMemo(() => {
-    const map = new Map<string, { url: string; total: number; unique: number; sent: number; messagesClicked: Set<string>; codes: Set<string> }>();
+    const map = new Map<
+      string,
+      {
+        url: string;
+        total: number;
+        unique: number;
+        sent: number;
+        messagesClicked: Set<string>;
+        codes: Set<string>;
+      }
+    >();
     for (const r of linksQ.data ?? []) {
-      const cur = map.get(r.url) ?? { url: r.url, total: 0, unique: 0, sent: 0, messagesClicked: new Set<string>(), codes: new Set<string>() };
+      const cur = map.get(r.url) ?? {
+        url: r.url,
+        total: 0,
+        unique: 0,
+        sent: 0,
+        messagesClicked: new Set<string>(),
+        codes: new Set<string>(),
+      };
       cur.sent += 1;
       cur.total += Number(r.clicks ?? 0);
       if (r.short_code) cur.codes.add(r.short_code as string);
@@ -1315,12 +1689,15 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
       .sort((a, b) => b.total - a.total);
   }, [linksQ.data]);
 
-
   return (
     <div className="space-y-5">
       <Card className="p-5">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <LinkStat n={uniqueClickers} label="people clicked" sub={`${clickRate.toFixed(1)}% click rate`} />
+          <LinkStat
+            n={uniqueClickers}
+            label="people clicked"
+            sub={`${clickRate.toFixed(1)}% click rate`}
+          />
           <LinkStat n={totalClicks} label="total clicks" sub={`made by ${uniqueClickers} people`} />
           <LinkStat n={cpp.toFixed(1)} label="clicks per person" sub="among those who clicked" />
           <LinkStat n={didnt} label="didn't click" sub={`${didntPct.toFixed(1)}% of recipients`} />
@@ -1329,14 +1706,18 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
 
       <Card className="p-0 overflow-hidden">
         <div className="p-5 border-b">
-          <div className="font-semibold flex items-center gap-2"><MousePointerClick className="size-4 text-primary" /> Links in this campaign</div>
+          <div className="font-semibold flex items-center gap-2">
+            <MousePointerClick className="size-4 text-primary" /> Links in this campaign
+          </div>
           <p className="text-xs text-muted-foreground">
-            Every URL in your message is automatically shortened and tracked. Click-through rate = recipients who clicked ÷ recipients the link was sent to.
+            Every URL in your message is automatically shortened and tracked. Click-through rate =
+            recipients who clicked ÷ recipients the link was sent to.
           </p>
         </div>
         {perUrl.length === 0 ? (
           <div className="p-10 text-center text-sm text-muted-foreground">
-            No tracked links in this campaign. Include any http(s):// URL in your message body and it will be tracked automatically.
+            No tracked links in this campaign. Include any http(s):// URL in your message body and
+            it will be tracked automatically.
           </div>
         ) : (
           <Table>
@@ -1354,43 +1735,57 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
               {perUrl.map((r) => {
                 const codes = [...r.codes];
                 return (
-                <TableRow key={r.url}>
-                  <TableCell className="max-w-[360px]">
-                    <a href={r.url} target="_blank" rel="noreferrer noopener" className="text-primary hover:underline break-all text-sm">{r.url}</a>
-                  </TableCell>
-                  <TableCell className="max-w-[220px] text-sm">
-                    {codes.length === 0 ? (
-                      <span className="text-muted-foreground">Sent unshortened</span>
-                    ) : codes.length === 1 ? (
-                      <span className="font-mono text-xs break-all">/r/{codes[0]}</span>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">
-                        {codes.length.toLocaleString()} unique short links (one per recipient)
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{r.sent.toLocaleString()}</TableCell>
-                  <TableCell className="text-right tabular-nums">{r.unique.toLocaleString()}</TableCell>
-                  <TableCell className="text-right tabular-nums">{r.total.toLocaleString()}</TableCell>
-                  <TableCell className="text-right tabular-nums">{r.sent ? ((r.unique / r.sent) * 100).toFixed(1) + "%" : "—"}</TableCell>
-                </TableRow>
+                  <TableRow key={r.url}>
+                    <TableCell className="max-w-[360px]">
+                      <a
+                        href={r.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-primary hover:underline break-all text-sm"
+                      >
+                        {r.url}
+                      </a>
+                    </TableCell>
+                    <TableCell className="max-w-[220px] text-sm">
+                      {codes.length === 0 ? (
+                        <span className="text-muted-foreground">Sent unshortened</span>
+                      ) : codes.length === 1 ? (
+                        <span className="font-mono text-xs break-all">/r/{codes[0]}</span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          {codes.length.toLocaleString()} unique short links (one per recipient)
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {r.sent.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {r.unique.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {r.total.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {r.sent ? ((r.unique / r.sent) * 100).toFixed(1) + "%" : "—"}
+                    </TableCell>
+                  </TableRow>
                 );
               })}
             </TableBody>
-
           </Table>
         )}
       </Card>
 
       <Card className="p-0 overflow-hidden">
         <div className="p-5 border-b">
-          <div className="font-semibold flex items-center gap-2"><MousePointerClick className="size-4 text-primary" /> Click timeline</div>
+          <div className="font-semibold flex items-center gap-2">
+            <MousePointerClick className="size-4 text-primary" /> Click timeline
+          </div>
           <p className="text-xs text-muted-foreground">Most recent clicks first</p>
         </div>
         {clicks.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            No link clicks yet.
-          </div>
+          <div className="p-10 text-center text-sm text-muted-foreground">No link clicks yet.</div>
         ) : (
           <Table>
             <TableHeader>
@@ -1402,7 +1797,9 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
             <TableBody>
               {clicks.slice(0, 100).map((e: any) => (
                 <TableRow key={e.id}>
-                  <TableCell className="text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString()}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {new Date(e.created_at).toLocaleString()}
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{e.message_id}</TableCell>
                 </TableRow>
               ))}
@@ -1414,19 +1811,33 @@ function LinkActivity({ campaignId, uniqueClickers, totalClicks, delivered, clic
   );
 }
 
-
-function Kpi({ icon: Icon, label, value, sub, tone }: {
-  icon: any; label: string; value: string; sub?: string; tone: "success" | "danger" | "primary" | "muted";
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  icon: any;
+  label: string;
+  value: string;
+  sub?: string;
+  tone: "success" | "danger" | "primary" | "muted";
 }) {
   const ring =
-    tone === "success" ? "bg-success/10 text-success" :
-    tone === "danger" ? "bg-destructive/10 text-destructive" :
-    tone === "primary" ? "bg-primary/10 text-primary" :
-    "bg-muted text-muted-foreground";
+    tone === "success"
+      ? "bg-success/10 text-success"
+      : tone === "danger"
+        ? "bg-destructive/10 text-destructive"
+        : tone === "primary"
+          ? "bg-primary/10 text-primary"
+          : "bg-muted text-muted-foreground";
   return (
     <Card className="p-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className={`size-6 rounded-md grid place-items-center ${ring}`}><Icon className="size-3.5" /></span>
+        <span className={`size-6 rounded-md grid place-items-center ${ring}`}>
+          <Icon className="size-3.5" />
+        </span>
         {label}
       </div>
       <div className="text-2xl font-extrabold mt-2 tabular-nums">{value}</div>
@@ -1435,15 +1846,31 @@ function Kpi({ icon: Icon, label, value, sub, tone }: {
   );
 }
 
-function SummaryStat({ label, value, sub, tone }: { label: string; value: number | string; sub?: string; tone?: "success" | "danger" | "primary" | "muted" }) {
+function SummaryStat({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: number | string;
+  sub?: string;
+  tone?: "success" | "danger" | "primary" | "muted";
+}) {
   const color =
-    tone === "success" ? "text-success" :
-    tone === "danger" ? "text-destructive" :
-    tone === "primary" ? "text-primary" : "";
+    tone === "success"
+      ? "text-success"
+      : tone === "danger"
+        ? "text-destructive"
+        : tone === "primary"
+          ? "text-primary"
+          : "";
   return (
     <div>
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`text-2xl font-bold tabular-nums ${color}`}>{typeof value === "number" ? value.toLocaleString() : value}</div>
+      <div className={`text-2xl font-bold tabular-nums ${color}`}>
+        {typeof value === "number" ? value.toLocaleString() : value}
+      </div>
       {sub && <div className="text-[11px] text-muted-foreground">{sub}</div>}
     </div>
   );
@@ -1452,7 +1879,9 @@ function SummaryStat({ label, value, sub, tone }: { label: string; value: number
 function LinkStat({ n, label, sub }: { n: number | string; label: string; sub: string }) {
   return (
     <div className="flex gap-3">
-      <div className="size-12 rounded-lg bg-primary/10 text-primary grid place-items-center text-lg font-extrabold tabular-nums">{n}</div>
+      <div className="size-12 rounded-lg bg-primary/10 text-primary grid place-items-center text-lg font-extrabold tabular-nums">
+        {n}
+      </div>
       <div>
         <div className="font-semibold">{label}</div>
         <div className="text-xs text-muted-foreground">{sub}</div>
@@ -1483,22 +1912,34 @@ function pct(n: number) {
 }
 
 function FunnelRow({
-  icon: Icon, label, value, sub, tone,
+  icon: Icon,
+  label,
+  value,
+  sub,
+  tone,
 }: {
-  icon: any; label: string; value: number; sub?: string;
+  icon: any;
+  label: string;
+  value: number;
+  sub?: string;
   tone: "success" | "danger" | "primary" | "muted";
 }) {
   const ring =
-    tone === "success" ? "bg-success/10 text-success" :
-    tone === "danger" ? "bg-destructive/10 text-destructive" :
-    tone === "primary" ? "bg-primary/10 text-primary" :
-    "bg-muted text-muted-foreground";
+    tone === "success"
+      ? "bg-success/10 text-success"
+      : tone === "danger"
+        ? "bg-destructive/10 text-destructive"
+        : tone === "primary"
+          ? "bg-primary/10 text-primary"
+          : "bg-muted text-muted-foreground";
   return (
     <li className="relative pl-10">
       <span className={`absolute left-0 top-0 size-8 rounded-full grid place-items-center ${ring}`}>
         <Icon className="size-4" />
       </span>
-      <div className="font-semibold text-lg leading-tight">{value.toLocaleString()} {label}</div>
+      <div className="font-semibold text-lg leading-tight">
+        {value.toLocaleString()} {label}
+      </div>
       {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
     </li>
   );
@@ -1558,7 +1999,15 @@ function ProgressPanel({
   onRetryAll,
   isRetrying,
 }: {
-  data?: { total: number; queued: number; sending: number; sent: number; delivered: number; deliveryUnconfirmed?: number; failed: number };
+  data?: {
+    total: number;
+    queued: number;
+    sending: number;
+    sent: number;
+    delivered: number;
+    deliveryUnconfirmed?: number;
+    failed: number;
+  };
   status?: string;
   isFetching?: boolean;
   failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
@@ -1585,8 +2034,8 @@ function ProgressPanel({
     etaMinutes === 0
       ? ""
       : etaMinutes < 60
-      ? `~${etaMinutes} min remaining`
-      : `~${Math.floor(etaMinutes / 60)}h ${etaMinutes % 60}m remaining`;
+        ? `~${etaMinutes} min remaining`
+        : `~${Math.floor(etaMinutes / 60)}h ${etaMinutes % 60}m remaining`;
 
   return (
     <Card className="p-5">
@@ -1596,7 +2045,8 @@ function ProgressPanel({
             <Activity className="size-4 text-primary" /> Campaign progress
           </div>
           <span className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
-            <span className="inline-block size-1.5 rounded-full bg-emerald-500 animate-pulse" /> live
+            <span className="inline-block size-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
+            live
           </span>
           {isDraining && (
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
@@ -1670,7 +2120,10 @@ function ProgressPanel({
                   </span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <Badge variant="outline" className="text-destructive border-destructive/30 tabular-nums">
+                  <Badge
+                    variant="outline"
+                    className="text-destructive border-destructive/30 tabular-nums"
+                  >
                     {n.toLocaleString()}
                   </Badge>
                   {onRetryReason && status !== "cancelled" && code !== "cancelled_by_user" && (
@@ -1696,10 +2149,10 @@ function ProgressPanel({
           : isPausedForCapacity
             ? `Paused after checking provider capacity. ${inFlight.toLocaleString()} message${inFlight === 1 ? "" : "s"} remain queued and will resume automatically after top-up.`
             : inFlight === 0 && sent > 0
-            ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
-            : inFlight === 0
-            ? "All messages have a final carrier status."
-            : `${processedPct}% complete.`}
+              ? `${sent.toLocaleString()} message${sent === 1 ? " is" : "s are"} accepted by the carrier and still waiting for a final delivery receipt.`
+              : inFlight === 0
+                ? "All messages have a final carrier status."
+                : `${processedPct}% complete.`}
       </div>
     </Card>
   );
@@ -1718,8 +2171,10 @@ const REASON_LABELS: Record<string, string> = {
   "30034": "Blocked — 10DLC not registered (US)",
   "21610": "Recipient replied STOP — number opted out",
   "21614": "Not a valid mobile number",
-  "40008": "Recipient carrier rejected this message. It reached the carrier, but was not accepted for delivery.",
-  "40002": "Blocked by the carrier's spam filter — the wording or the link in this message is being filtered. Change the message text/link or use a different registered sender, then resend.",
+  "40008":
+    "Recipient carrier rejected this message. It reached the carrier, but was not accepted for delivery.",
+  "40002":
+    "Blocked by the carrier's spam filter — the wording or the link in this message is being filtered. Change the message text/link or use a different registered sender, then resend.",
   "40001": "Destination is a landline or cannot receive text messages",
   "40012": "Invalid or non-routable destination number",
   "10002": "Invalid destination number",
@@ -1741,7 +2196,15 @@ function exportProgressCsv({
   messages,
 }: {
   campaign: any;
-  progress?: { total: number; queued: number; sending: number; sent: number; delivered: number; deliveryUnconfirmed?: number; failed: number };
+  progress?: {
+    total: number;
+    queued: number;
+    sending: number;
+    sent: number;
+    delivered: number;
+    deliveryUnconfirmed?: number;
+    failed: number;
+  };
   failures?: { byReason: Record<string, number>; byCountry: Record<string, number>; total: number };
   messages: any[];
 }) {
@@ -1767,7 +2230,10 @@ function exportProgressCsv({
   lines.push("");
   lines.push("Delivery by hour");
   lines.push("hour_iso,sent,delivered,delivery_unconfirmed,failed");
-  const buckets = new Map<number, { sent: number; delivered: number; deliveryUnconfirmed: number; failed: number }>();
+  const buckets = new Map<
+    number,
+    { sent: number; delivered: number; deliveryUnconfirmed: number; failed: number }
+  >();
   const bucket = (iso: string | null) => {
     if (!iso) return null;
     const d = new Date(iso);
@@ -1806,7 +2272,9 @@ function exportProgressCsv({
   }
   const sorted = [...buckets.entries()].sort((a, b) => a[0] - b[0]);
   for (const [t, v] of sorted) {
-    lines.push(`${new Date(t).toISOString()},${v.sent},${v.delivered},${v.deliveryUnconfirmed},${v.failed}`);
+    lines.push(
+      `${new Date(t).toISOString()},${v.sent},${v.delivered},${v.deliveryUnconfirmed},${v.failed}`,
+    );
   }
   lines.push("");
   lines.push("Failures by reason");
@@ -1841,7 +2309,6 @@ function csv(v: string): string {
   return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
 }
 
-
 function Seg({ pct, className }: { pct: number; className: string }) {
   const w = Math.max(0, Math.min(100, pct));
   if (w === 0) return null;
@@ -1862,11 +2329,12 @@ function ProgTile({
   return (
     <div className="rounded-lg border bg-card p-3">
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span className={`inline-block size-2 rounded-full ${dotClass} ${pulse ? "animate-pulse" : ""}`} />
+        <span
+          className={`inline-block size-2 rounded-full ${dotClass} ${pulse ? "animate-pulse" : ""}`}
+        />
         {label}
       </div>
       <div className="text-xl font-bold mt-1 tabular-nums">{value.toLocaleString()}</div>
     </div>
   );
 }
-

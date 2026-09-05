@@ -9,19 +9,35 @@ import { pageHead } from "@/lib/seo";
 export const Route = createFileRoute("/solutions/email-to-sms")({
   head: () =>
     pageHead({
-    path: "/solutions/email-to-sms",
-    title: "Email to SMS Gateway",
-    description:
-      "Send SMS straight from your email client or any system that can send email. Xellvio converts the message, applies consent rules and reports delivery back to you.",
-    breadcrumbs: [{ name: "Home", path: "/" }, { name: "Solutions", path: "/solutions" }, { name: "Email to SMS", path: "/solutions/email-to-sms" }],
+      path: "/solutions/email-to-sms",
+      title: "Email to SMS Gateway",
+      description:
+        "Send SMS straight from your email client or any system that can send email. Xellvio converts the message, applies consent rules and reports delivery back to you.",
+      breadcrumbs: [
+        { name: "Home", path: "/" },
+        { name: "Solutions", path: "/solutions" },
+        { name: "Email to SMS", path: "/solutions/email-to-sms" },
+      ],
     }),
   component: EmailToSmsPage,
 });
 
 const benefits = [
-  { icon: Zap, title: "Zero code", text: "Send your first SMS by composing a regular email — no integration required." },
-  { icon: Globe2, title: "Global reach", text: "Deliver to 200+ countries with local routes and country-aware pricing." },
-  { icon: ShieldCheck, title: "Compliant by default", text: "Built-in opt-out handling, sender ID rules, and audit logs." },
+  {
+    icon: Zap,
+    title: "Zero code",
+    text: "Send your first SMS by composing a regular email — no integration required.",
+  },
+  {
+    icon: Globe2,
+    title: "Global reach",
+    text: "Deliver to 200+ countries with local routes and country-aware pricing.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Compliant by default",
+    text: "Built-in opt-out handling, sender ID rules, and audit logs.",
+  },
 ];
 
 function EmailToSmsPage() {
@@ -38,9 +54,9 @@ function EmailToSmsPage() {
               Send SMS straight from your email
             </h1>
             <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-              Xellvio's Email to SMS gateway turns any outgoing email into a text message
-              delivered worldwide — perfect for alerts, notifications, and ad-hoc campaigns
-              from tools you already use.
+              Xellvio's Email to SMS gateway turns any outgoing email into a text message delivered
+              worldwide — perfect for alerts, notifications, and ad-hoc campaigns from tools you
+              already use.
             </p>
             <div className="mt-6 flex justify-center gap-3">
               <Link to="/auth" search={{ mode: "signup", redirect: "/app" }}>
@@ -75,10 +91,10 @@ function EmailToSmsPage() {
           <div className="mx-auto max-w-3xl px-4 sm:px-6">
             <h2 className="text-3xl font-extrabold tracking-tight">How Email to SMS works</h2>
             <p className="mt-3 text-muted-foreground">
-              Email to SMS (sometimes called an SMS gateway) lets you send a text by
-              addressing an email to a special recipient address. Xellvio receives the
-              email, converts it into an SMS, and delivers it to the recipient's phone via
-              local carriers — no developer setup, no third-party gateway.
+              Email to SMS (sometimes called an SMS gateway) lets you send a text by addressing an
+              email to a special recipient address. Xellvio receives the email, converts it into an
+              SMS, and delivers it to the recipient's phone via local carriers — no developer setup,
+              no third-party gateway.
             </p>
 
             <ol className="mt-8 space-y-6">
@@ -89,8 +105,8 @@ function EmailToSmsPage() {
                 <div>
                   <h3 className="font-semibold">Connect your sending domain</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Add your domain in Xellvio and verify it. Only emails from your
-                    verified addresses can trigger an SMS.
+                    Add your domain in Xellvio and verify it. Only emails from your verified
+                    addresses can trigger an SMS.
                   </p>
                 </div>
               </li>
@@ -116,8 +132,8 @@ function EmailToSmsPage() {
                 <div>
                   <h3 className="font-semibold">We deliver and track</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Xellvio routes the message via the best local carrier and reports
-                    delivery back to your dashboard.
+                    Xellvio routes the message via the best local carrier and reports delivery back
+                    to your dashboard.
                   </p>
                 </div>
               </li>
@@ -141,8 +157,8 @@ function EmailToSmsPage() {
               <Link to="/docs" className="text-primary hover:underline">
                 Xellvio API
               </Link>
-              . Email to SMS is best for low-volume, transactional messages where speed of
-              setup matters more than control.
+              . Email to SMS is best for low-volume, transactional messages where speed of setup
+              matters more than control.
             </p>
           </div>
         </section>
@@ -155,10 +171,12 @@ function EmailToSmsPage() {
               <MessageSquare className="size-5" />
             </div>
             <h2 className="mt-3 text-3xl font-extrabold">Start sending in minutes</h2>
-            <p className="mt-2 text-muted-foreground">
-              50 free credits, no card required.
-            </p>
-            <Link to="/auth" search={{ mode: "signup", redirect: "/app" }} className="inline-block mt-6">
+            <p className="mt-2 text-muted-foreground">50 free credits, no card required.</p>
+            <Link
+              to="/auth"
+              search={{ mode: "signup", redirect: "/app" }}
+              className="inline-block mt-6"
+            >
               <Button size="lg">
                 Create free account <ArrowRight className="size-4 ml-1" />
               </Button>

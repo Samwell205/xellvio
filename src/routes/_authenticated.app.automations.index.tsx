@@ -22,7 +22,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createAutomation, deleteAutomation, duplicateAutomation, listAutomations } from "@/lib/automations.functions";
+import {
+  createAutomation,
+  deleteAutomation,
+  duplicateAutomation,
+  listAutomations,
+} from "@/lib/automations.functions";
 import { stepDef } from "@/lib/automation-catalog";
 import { cn } from "@/lib/utils";
 
@@ -32,12 +37,14 @@ export const Route = createFileRoute("/_authenticated/app/automations/")({
       { title: "Automations — visual flow builder — Xellvio" },
       {
         name: "description",
-        content: "Build automations on a drag-and-drop canvas: triggers, messages, waits, conditions and split tests.",
+        content:
+          "Build automations on a drag-and-drop canvas: triggers, messages, waits, conditions and split tests.",
       },
       { property: "og:title", content: "Automations — visual flow builder — Xellvio" },
       {
         property: "og:description",
-        content: "Build automations on a drag-and-drop canvas: triggers, messages, waits, conditions and split tests.",
+        content:
+          "Build automations on a drag-and-drop canvas: triggers, messages, waits, conditions and split tests.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -90,7 +97,9 @@ function AutomationsPage() {
       </div>
 
       <div className="mt-6 space-y-2">
-        {isLoading && <Card className="p-6 text-sm text-muted-foreground">Loading your automations…</Card>}
+        {isLoading && (
+          <Card className="p-6 text-sm text-muted-foreground">Loading your automations…</Card>
+        )}
         {!isLoading && !rows.length && (
           <Card className="flex flex-col items-center gap-3 p-12 text-center">
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -116,8 +125,8 @@ function AutomationsPage() {
               <p className="truncate text-sm font-semibold">{a.name}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {a.step_count} step{a.step_count === 1 ? "" : "s"}
-                {a.trigger ? ` · starts on ${stepDef(a.trigger).label}` : " · no trigger yet"} · updated{" "}
-                {new Date(a.updated_at).toLocaleString()}
+                {a.trigger ? ` · starts on ${stepDef(a.trigger).label}` : " · no trigger yet"} ·
+                updated {new Date(a.updated_at).toLocaleString()}
               </p>
             </Link>
             <span
@@ -168,17 +177,27 @@ function AutomationsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create an automation</DialogTitle>
-            <DialogDescription>Give it a name — you can change this later in the builder.</DialogDescription>
+            <DialogDescription>
+              Give it a name — you can change this later in the builder.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Welcome sequence" autoFocus />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Welcome sequence"
+              autoFocus
+            />
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setNewOpen(false)}>
               Cancel
             </Button>
-            <Button disabled={!name.trim() || createMutation.isPending} onClick={() => createMutation.mutate(name.trim())}>
+            <Button
+              disabled={!name.trim() || createMutation.isPending}
+              onClick={() => createMutation.mutate(name.trim())}
+            >
               Create and open builder
             </Button>
           </DialogFooter>

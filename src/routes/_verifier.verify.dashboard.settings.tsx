@@ -12,7 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -29,8 +35,15 @@ function SettingsPage() {
   const save = useServerFn(saveVerifierBank);
   const qc = useQueryClient();
 
-  const { data: profile, isLoading } = useQuery({ queryKey: ["verifier","me"], queryFn: () => getV() });
-  const { data: banks } = useQuery({ queryKey: ["verifier","banks"], queryFn: () => listBanks(), staleTime: 3600_000 });
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["verifier", "me"],
+    queryFn: () => getV(),
+  });
+  const { data: banks } = useQuery({
+    queryKey: ["verifier", "banks"],
+    queryFn: () => listBanks(),
+    staleTime: 3600_000,
+  });
 
   const [fullName, setFullName] = useState("");
   const [bankCode, setBankCode] = useState("");
@@ -51,7 +64,7 @@ function SettingsPage() {
       setResolving(true);
       setResolvedName(null);
       resolve({ data: { account_number: accountNumber, bank_code: bankCode } })
-        .then(r => setResolvedName(r.account_name))
+        .then((r) => setResolvedName(r.account_name))
         .catch((e: any) => toast.error(e.message))
         .finally(() => setResolving(false));
     }
@@ -59,16 +72,24 @@ function SettingsPage() {
 
   const profileMut = useMutation({
     mutationFn: () => createProfile({ data: { full_name: fullName } }),
-    onSuccess: () => { toast.success("Profile created"); qc.invalidateQueries({ queryKey: ["verifier","me"] }); },
+    onSuccess: () => {
+      toast.success("Profile created");
+      qc.invalidateQueries({ queryKey: ["verifier", "me"] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
   const bankMut = useMutation({
     mutationFn: () => {
-      const b = (banks ?? []).find(x => x.code === bankCode);
-      return save({ data: { bank_code: bankCode, bank_name: b?.name ?? "Bank", account_number: accountNumber } });
+      const b = (banks ?? []).find((x) => x.code === bankCode);
+      return save({
+        data: { bank_code: bankCode, bank_name: b?.name ?? "Bank", account_number: accountNumber },
+      });
     },
-    onSuccess: () => { toast.success("Bank details saved"); qc.invalidateQueries({ queryKey: ["verifier","me"] }); },
+    onSuccess: () => {
+      toast.success("Bank details saved");
+      qc.invalidateQueries({ queryKey: ["verifier", "me"] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -80,8 +101,16 @@ function SettingsPage() {
         <h1 className="text-2xl font-semibold">Complete your verifier profile</h1>
         <Card className="bg-slate-900 border-slate-800">
           <CardContent className="pt-6 space-y-3">
-            <div><Label>Full name</Label><Input value={fullName} onChange={e=>setFullName(e.target.value)} /></div>
-            <Button disabled={profileMut.isPending || !fullName} onClick={()=>profileMut.mutate()}>Create profile</Button>
+            <div>
+              <Label>Full name</Label>
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+            </div>
+            <Button
+              disabled={profileMut.isPending || !fullName}
+              onClick={() => profileMut.mutate()}
+            >
+              Create profile
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -92,26 +121,49 @@ function SettingsPage() {
     <div className="space-y-6 max-w-lg">
       <h1 className="text-2xl font-semibold">Bank details</h1>
       <Card className="bg-slate-900 border-slate-800">
-        <CardHeader><CardTitle>Payout account</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Payout account</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-3">
           <div>
             <Label>Bank</Label>
             <Select value={bankCode} onValueChange={setBankCode}>
-              <SelectTrigger><SelectValue placeholder="Select bank"/></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Select bank" />
+              </SelectTrigger>
               <SelectContent className="max-h-72">
-                {(banks ?? []).map(b => <SelectItem key={b.code} value={b.code}>{b.name}</SelectItem>)}
+                {(banks ?? []).map((b) => (
+                  <SelectItem key={b.code} value={b.code}>
+                    {b.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label>Account number (10 digits)</Label>
-            <Input value={accountNumber} onChange={e=>setAccountNumber(e.target.value.replace(/\D/g,"").slice(0,10))} />
+            <Input
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+            />
           </div>
           <div className="min-h-6 text-sm">
-            {resolving && <span className="flex items-center gap-2 text-slate-400"><Loader2 className="size-3 animate-spin"/>Resolving…</span>}
-            {resolvedName && <span className="flex items-center gap-2 text-green-400"><CheckCircle2 className="size-4"/>{resolvedName}</span>}
+            {resolving && (
+              <span className="flex items-center gap-2 text-slate-400">
+                <Loader2 className="size-3 animate-spin" />
+                Resolving…
+              </span>
+            )}
+            {resolvedName && (
+              <span className="flex items-center gap-2 text-green-400">
+                <CheckCircle2 className="size-4" />
+                {resolvedName}
+              </span>
+            )}
           </div>
-          <Button disabled={bankMut.isPending || !resolvedName} onClick={()=>bankMut.mutate()}>Save bank details</Button>
+          <Button disabled={bankMut.isPending || !resolvedName} onClick={() => bankMut.mutate()}>
+            Save bank details
+          </Button>
         </CardContent>
       </Card>
     </div>

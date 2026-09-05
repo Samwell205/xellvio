@@ -4,7 +4,13 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { listApps, listCategories, type BrowseParams } from "@/lib/marketplace/catalog";
 import { AppCard } from "@/components/marketplace/AppCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { pageHead } from "@/lib/seo";
 
 type SearchParams = { q?: string; category?: string; sort?: BrowseParams["sort"] };
@@ -19,11 +25,15 @@ export const Route = createFileRoute("/marketplace/apps/")({
   }),
   head: () =>
     pageHead({
-    path: "/marketplace/apps",
-    title: "Browse Marketplace Apps",
-    description:
-      "Search every app and integration available for Xellvio, from ecommerce platforms and CRMs to forms, analytics and automation tools.",
-    breadcrumbs: [{ name: "Home", path: "/" }, { name: "Marketplace", path: "/marketplace" }, { name: "Apps", path: "/marketplace/apps" }],
+      path: "/marketplace/apps",
+      title: "Browse Marketplace Apps",
+      description:
+        "Search every app and integration available for Xellvio, from ecommerce platforms and CRMs to forms, analytics and automation tools.",
+      breadcrumbs: [
+        { name: "Home", path: "/" },
+        { name: "Marketplace", path: "/marketplace" },
+        { name: "Apps", path: "/marketplace/apps" },
+      ],
     }),
   component: BrowseApps,
 });
@@ -58,7 +68,10 @@ function BrowseApps() {
             className="h-full flex-1 bg-transparent text-sm outline-none"
           />
         </div>
-        <Select value={sort ?? "popular"} onValueChange={(v) => setSearch({ sort: v as BrowseParams["sort"] })}>
+        <Select
+          value={sort ?? "popular"}
+          onValueChange={(v) => setSearch({ sort: v as BrowseParams["sort"] })}
+        >
           <SelectTrigger className="h-11 w-full md:w-48">
             <SlidersHorizontal className="mr-2 size-4 text-muted-foreground" />
             <SelectValue />
@@ -77,7 +90,9 @@ function BrowseApps() {
           type="button"
           onClick={() => setSearch({ category: undefined })}
           className={`rounded-full border px-3 py-1.5 text-sm transition ${
-            !category ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+            !category
+              ? "border-primary bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           All categories
@@ -99,7 +114,10 @@ function BrowseApps() {
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {apps.isLoading && Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-2xl" />)}
+        {apps.isLoading &&
+          Array.from({ length: 12 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 rounded-2xl" />
+          ))}
         {apps.data?.map((app) => (
           <AppCard key={app.id} app={app} to="/marketplace/apps/$slug" />
         ))}

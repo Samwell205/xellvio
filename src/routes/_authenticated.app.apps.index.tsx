@@ -25,9 +25,15 @@ export const Route = createFileRoute("/_authenticated/app/apps/")({
   head: () => ({
     meta: [
       { title: "App Marketplace — Xellvio" },
-      { name: "description", content: "Discover, connect and manage the integrations powering your Xellvio workspace." },
+      {
+        name: "description",
+        content: "Discover, connect and manage the integrations powering your Xellvio workspace.",
+      },
       { property: "og:title", content: "App Marketplace — Xellvio" },
-      { property: "og:description", content: "Connect your CRM, store, payments and automation tools to Xellvio." },
+      {
+        property: "og:description",
+        content: "Connect your CRM, store, payments and automation tools to Xellvio.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -64,7 +70,8 @@ function WorkspaceApps() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">App Marketplace</h1>
           <p className="text-sm text-muted-foreground">
-            Connect the tools your business already runs on — and use them inside campaigns and automations.
+            Connect the tools your business already runs on — and use them inside campaigns and
+            automations.
           </p>
         </div>
         <Button asChild variant="outline">
@@ -139,7 +146,9 @@ function WorkspaceApps() {
                 type="button"
                 onClick={() => setCategory(c.slug)}
                 className={`rounded-full border px-3 py-1.5 text-sm ${
-                  category === c.slug ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"
+                  category === c.slug
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "text-muted-foreground"
                 }`}
               >
                 {c.name}
@@ -148,7 +157,10 @@ function WorkspaceApps() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {apps.isLoading && Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-2xl" />)}
+            {apps.isLoading &&
+              Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-44 rounded-2xl" />
+              ))}
             {apps.data?.map((app) => (
               <div key={app.id} className="relative">
                 {connectedIds.has(app.id) && (
@@ -183,7 +195,9 @@ function WorkspaceApps() {
           <Card>
             <CardContent className="p-0">
               <div className="divide-y">
-                {logs.isLoading && <div className="p-6 text-sm text-muted-foreground">Loading activity…</div>}
+                {logs.isLoading && (
+                  <div className="p-6 text-sm text-muted-foreground">Loading activity…</div>
+                )}
                 {logs.data?.map((l) => (
                   <div key={l.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
                     {l.status === "ok" ? (
@@ -202,7 +216,9 @@ function WorkspaceApps() {
                   </div>
                 ))}
                 {logs.data && logs.data.length === 0 && (
-                  <div className="p-6 text-sm text-muted-foreground">No integration activity yet.</div>
+                  <div className="p-6 text-sm text-muted-foreground">
+                    No integration activity yet.
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -210,7 +226,12 @@ function WorkspaceApps() {
         </TabsContent>
       </Tabs>
 
-      <ConnectDialog app={target} open={!!target} onOpenChange={(v) => !v && setTarget(null)} mode="reconnect" />
+      <ConnectDialog
+        app={target}
+        open={!!target}
+        onOpenChange={(v) => !v && setTarget(null)}
+        mode="reconnect"
+      />
     </div>
   );
 }
@@ -253,12 +274,18 @@ function InstalledList({
   return (
     <div className="space-y-3">
       {rows.map((row) => (
-        <div key={row.installationId} className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-4">
+        <div
+          key={row.installationId}
+          className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-4"
+        >
           <AppLogo name={row.name} logoUrl={row.logoUrl} accentColor={row.accentColor} size="sm" />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-medium">{row.name}</p>
-              <Badge variant={row.connection?.status === "active" ? "default" : "secondary"} className="rounded-full">
+              <Badge
+                variant={row.connection?.status === "active" ? "default" : "secondary"}
+                className="rounded-full"
+              >
                 {row.connection?.status ?? row.status}
               </Badge>
             </div>

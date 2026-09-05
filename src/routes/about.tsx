@@ -9,10 +9,10 @@ import { pageHead } from "@/lib/seo";
 export const Route = createFileRoute("/about")({
   head: () =>
     pageHead({
-    path: "/about",
-    title: "About Xellvio",
-    description:
-      "Xellvio is a customer messaging platform for businesses that need reliable global SMS delivery, transparent per-country pricing and carrier-grade compliance.",
+      path: "/about",
+      title: "About Xellvio",
+      description:
+        "Xellvio is a customer messaging platform for businesses that need reliable global SMS delivery, transparent per-country pricing and carrier-grade compliance.",
     }),
   component: AboutPage,
 });
@@ -27,9 +27,8 @@ function AboutPage() {
             Reach the world. One message at a time.
           </h1>
           <p className="mt-5 text-lg text-muted-foreground max-w-2xl mx-auto">
-            Xellvio is a global SMS platform built for businesses that need
-            reliable delivery, transparent pricing, and carrier-grade
-            compliance — without the enterprise overhead.
+            Xellvio is a global SMS platform built for businesses that need reliable delivery,
+            transparent pricing, and carrier-grade compliance — without the enterprise overhead.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg">
@@ -47,19 +46,17 @@ function AboutPage() {
               <Sparkles className="size-6 text-primary mb-3" />
               <h2 className="font-semibold text-lg">Our mission</h2>
               <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                Make business messaging accessible everywhere — so a startup
-                in Lagos and a retailer in Toronto can both reach their
-                customers with the same trusted infrastructure used by
-                global brands.
+                Make business messaging accessible everywhere — so a startup in Lagos and a retailer
+                in Toronto can both reach their customers with the same trusted infrastructure used
+                by global brands.
               </p>
             </Card>
             <Card className="p-6">
               <Users className="size-6 text-primary mb-3" />
               <h2 className="font-semibold text-lg">Who we serve</h2>
               <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                Marketing teams running campaigns, support teams answering
-                customers, and developers building messaging into their own
-                products. One platform, every use case.
+                Marketing teams running campaigns, support teams answering customers, and developers
+                building messaging into their own products. One platform, every use case.
               </p>
             </Card>
           </div>
@@ -106,15 +103,7 @@ function AboutPage() {
   );
 }
 
-function Feature({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-}) {
+function Feature({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <Card className="p-6">
       <div className="mb-3">{icon}</div>

@@ -12,9 +12,15 @@ type AuthorizationDetails = {
   redirect_to?: string | null;
 };
 type OAuthApi = {
-  getAuthorizationDetails: (id: string) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
-  approveAuthorization: (id: string) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
-  denyAuthorization: (id: string) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
+  getAuthorizationDetails: (
+    id: string,
+  ) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
+  approveAuthorization: (
+    id: string,
+  ) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
+  denyAuthorization: (
+    id: string,
+  ) => Promise<{ data: AuthorizationDetails | null; error: Error | null }>;
 };
 const oauth = () => (supabase.auth as unknown as { oauth: OAuthApi }).oauth;
 
@@ -28,7 +34,10 @@ export const Route = createFileRoute("/.lovable/oauth/consent")({
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
       const next = location.pathname + location.searchStr;
-      throw redirect({ to: "/auth", search: { mode: "signin", redirect: next, invite: undefined } });
+      throw redirect({
+        to: "/auth",
+        search: { mode: "signin", redirect: next, invite: undefined },
+      });
     }
   },
   loader: async ({ location }) => {
@@ -62,9 +71,17 @@ function Consent() {
     const { data, error: err } = approve
       ? await oauth().approveAuthorization(authorization_id)
       : await oauth().denyAuthorization(authorization_id);
-    if (err) { setBusy(false); setError(err.message); return; }
+    if (err) {
+      setBusy(false);
+      setError(err.message);
+      return;
+    }
     const target = data?.redirect_url ?? data?.redirect_to;
-    if (!target) { setBusy(false); setError("No redirect returned by the authorization server."); return; }
+    if (!target) {
+      setBusy(false);
+      setError("No redirect returned by the authorization server.");
+      return;
+    }
     window.location.href = target;
   }
 
@@ -75,14 +92,22 @@ function Consent() {
         <div>
           <h1 className="text-xl font-extrabold">Connect {clientName} to your Xellvio account</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {clientName} will be able to read your account balance, campaigns, delivery reports, contact lists and
-            inbound replies — acting as you. You can revoke access at any time.
+            {clientName} will be able to read your account balance, campaigns, delivery reports,
+            contact lists and inbound replies — acting as you. You can revoke access at any time.
           </p>
         </div>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <div className="flex gap-3">
-          <Button disabled={busy} onClick={() => decide(true)}>Approve</Button>
-          <Button disabled={busy} variant="outline" onClick={() => decide(false)}>Deny</Button>
+          <Button disabled={busy} onClick={() => decide(true)}>
+            Approve
+          </Button>
+          <Button disabled={busy} variant="outline" onClick={() => decide(false)}>
+            Deny
+          </Button>
         </div>
       </Card>
     </main>

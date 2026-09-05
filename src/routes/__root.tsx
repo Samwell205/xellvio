@@ -140,11 +140,7 @@ function RootComponent() {
     import("@/integrations/supabase/client").then(({ supabase }) => {
       if (!mounted) return;
       const { data } = supabase.auth.onAuthStateChange((event) => {
-        if (
-          event !== "SIGNED_IN" &&
-          event !== "SIGNED_OUT" &&
-          event !== "USER_UPDATED"
-        ) {
+        if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") {
           return;
         }
         router.invalidate();
@@ -166,7 +162,6 @@ function RootComponent() {
       trackPageView(toLocation.href);
     });
   }, [router]);
-
 
   return (
     <QueryClientProvider client={queryClient}>

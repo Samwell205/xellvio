@@ -5,10 +5,10 @@ import { pageHead } from "@/lib/seo";
 export const Route = createFileRoute("/unsubscribe")({
   head: () =>
     pageHead({
-    path: "/unsubscribe",
-    title: "Unsubscribe",
-    description: "Manage your message preferences.",
-    robots: "noindex",
+      path: "/unsubscribe",
+      title: "Unsubscribe",
+      description: "Manage your message preferences.",
+      robots: "noindex",
     }),
   component: UnsubscribePage,
 });
@@ -25,9 +25,7 @@ type State =
 function UnsubscribePage() {
   const [state, setState] = useState<State>({ kind: "loading" });
   const token =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("token")
-      : null;
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("token") : null;
 
   useEffect(() => {
     if (!token) {
@@ -72,9 +70,7 @@ function UnsubscribePage() {
         <h1 className="text-2xl font-bold text-foreground">Xellvio email preferences</h1>
         <div className="mt-4 text-sm text-muted-foreground">
           {state.kind === "loading" && <p>Checking your link…</p>}
-          {state.kind === "invalid" && (
-            <p>This unsubscribe link is invalid or has expired.</p>
-          )}
+          {state.kind === "invalid" && <p>This unsubscribe link is invalid or has expired.</p>}
           {state.kind === "already" && (
             <p>You're already unsubscribed. We won't email you again.</p>
           )}
