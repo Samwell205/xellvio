@@ -17,10 +17,11 @@ export const Route = createFileRoute("/_authenticated")({
     if (!user.email_confirmed_at) {
       throw redirect({ to: "/verify-email", search: { email: user.email ?? "" } });
     }
-    // Account provisioning + invite claiming only need to happen once per
-    // session, and must never block a route transition.
+    // Account provisioning happens once per session (awaited that first time so
+    // pages can rely on the workspace row existing); afterwards route changes
+    // never pay for it. Invite claiming is always best-effort in the background.
     if (claimAccountEnsure()) {
-      ensureMyAccount().catch(() => {});
+      await ensureMyAccount().catch(() => {});
       claimPendingInvites().catch(() => {});
     }
     return { user };
