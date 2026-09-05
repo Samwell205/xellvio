@@ -55,6 +55,7 @@ import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as SolutionsIndustryRouteImport } from './routes/solutions.$industry'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as PartnersSlugRouteImport } from './routes/partners.$slug'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as MarketplaceDevelopersRouteImport } from './routes/marketplace.developers'
 import { Route as MarketplaceCategoriesRouteImport } from './routes/marketplace.categories'
@@ -382,6 +383,11 @@ const SolutionsIndustryRoute = SolutionsIndustryRouteImport.update({
 const RCodeRoute = RCodeRouteImport.update({
   id: '/r/$code',
   path: '/r/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnersSlugRoute = PartnersSlugRouteImport.update({
+  id: '/partners/$slug',
+  path: '/partners/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PSlugRoute = PSlugRouteImport.update({
@@ -998,6 +1004,7 @@ export interface FileRoutesByFullPath {
   '/marketplace/categories': typeof MarketplaceCategoriesRoute
   '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
+  '/partners/$slug': typeof PartnersSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/$industry': typeof SolutionsIndustryRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
@@ -1141,6 +1148,7 @@ export interface FileRoutesByTo {
   '/marketplace/categories': typeof MarketplaceCategoriesRoute
   '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
+  '/partners/$slug': typeof PartnersSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/$industry': typeof SolutionsIndustryRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
@@ -1288,6 +1296,7 @@ export interface FileRoutesById {
   '/marketplace/categories': typeof MarketplaceCategoriesRoute
   '/marketplace/developers': typeof MarketplaceDevelopersRoute
   '/p/$slug': typeof PSlugRoute
+  '/partners/$slug': typeof PartnersSlugRoute
   '/r/$code': typeof RCodeRoute
   '/solutions/$industry': typeof SolutionsIndustryRoute
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
@@ -1436,6 +1445,7 @@ export interface FileRouteTypes {
     | '/marketplace/categories'
     | '/marketplace/developers'
     | '/p/$slug'
+    | '/partners/$slug'
     | '/r/$code'
     | '/solutions/$industry'
     | '/solutions/email-to-sms'
@@ -1579,6 +1589,7 @@ export interface FileRouteTypes {
     | '/marketplace/categories'
     | '/marketplace/developers'
     | '/p/$slug'
+    | '/partners/$slug'
     | '/r/$code'
     | '/solutions/$industry'
     | '/solutions/email-to-sms'
@@ -1725,6 +1736,7 @@ export interface FileRouteTypes {
     | '/marketplace/categories'
     | '/marketplace/developers'
     | '/p/$slug'
+    | '/partners/$slug'
     | '/r/$code'
     | '/solutions/$industry'
     | '/solutions/email-to-sms'
@@ -1870,6 +1882,7 @@ export interface RootRouteChildren {
   FSlugRoute: typeof FSlugRoute
   MMessageIdRoute: typeof MMessageIdRoute
   PSlugRoute: typeof PSlugRoute
+  PartnersSlugRoute: typeof PartnersSlugRoute
   RCodeRoute: typeof RCodeRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
@@ -2226,6 +2239,13 @@ declare module '@tanstack/react-router' {
       path: '/r/$code'
       fullPath: '/r/$code'
       preLoaderRoute: typeof RCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partners/$slug': {
+      id: '/partners/$slug'
+      path: '/partners/$slug'
+      fullPath: '/partners/$slug'
+      preLoaderRoute: typeof PartnersSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/p/$slug': {
@@ -3230,6 +3250,7 @@ const rootRouteChildren: RootRouteChildren = {
   FSlugRoute: FSlugRoute,
   MMessageIdRoute: MMessageIdRoute,
   PSlugRoute: PSlugRoute,
+  PartnersSlugRoute: PartnersSlugRoute,
   RCodeRoute: RCodeRoute,
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
