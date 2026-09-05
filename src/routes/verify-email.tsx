@@ -7,7 +7,7 @@ import { Logo } from "@/components/Logo";
 import { MailCheck } from "lucide-react";
 
 export const Route = createFileRoute("/verify-email")({
-  head: () => ({ meta: [{ title: "Verify email — Xellvio" }] }),
+  head: () => ({ meta: [{ title: "Verify email — Xellvio" }, { name: "robots", content: "noindex, nofollow" }] }),
   validateSearch: (search: Record<string, unknown>): { email?: string; status?: string } => ({
     email: typeof search.email === "string" ? search.email : "",
     status: typeof search.status === "string" ? search.status : "unverified",
