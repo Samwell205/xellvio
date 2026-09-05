@@ -21,6 +21,7 @@ import { Route as ProhibitedContentRouteImport } from './routes/prohibited-conte
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as DpaRouteImport } from './routes/dpa'
@@ -193,6 +194,11 @@ const PricingRoute = PricingRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -837,6 +843,7 @@ export interface FileRoutesByFullPath {
   '/dpa': typeof DpaRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/marketplace': typeof MarketplaceRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -961,6 +968,7 @@ export interface FileRoutesByTo {
   '/dpa': typeof DpaRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/marketplace': typeof MarketplaceRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -1085,6 +1093,7 @@ export interface FileRoutesById {
   '/dpa': typeof DpaRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/marketplace': typeof MarketplaceRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -1212,6 +1221,7 @@ export interface FileRouteTypes {
     | '/dpa'
     | '/features'
     | '/forgot-password'
+    | '/marketplace'
     | '/mcp'
     | '/pricing'
     | '/privacy'
@@ -1336,6 +1346,7 @@ export interface FileRouteTypes {
     | '/dpa'
     | '/features'
     | '/forgot-password'
+    | '/marketplace'
     | '/mcp'
     | '/pricing'
     | '/privacy'
@@ -1459,6 +1470,7 @@ export interface FileRouteTypes {
     | '/dpa'
     | '/features'
     | '/forgot-password'
+    | '/marketplace'
     | '/mcp'
     | '/pricing'
     | '/privacy'
@@ -1587,6 +1599,7 @@ export interface RootRouteChildren {
   DpaRoute: typeof DpaRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  MarketplaceRoute: typeof MarketplaceRoute
   McpRoute: typeof McpRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -1718,6 +1731,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -2782,6 +2802,7 @@ const rootRouteChildren: RootRouteChildren = {
   DpaRoute: DpaRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  MarketplaceRoute: MarketplaceRoute,
   McpRoute: McpRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
