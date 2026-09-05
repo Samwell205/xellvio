@@ -14,6 +14,7 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as SmsTermsRouteImport } from './routes/sms-terms'
+import { Route as SmsMarketingRouteImport } from './routes/sms-marketing'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SellersRouteImport } from './routes/sellers'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
@@ -168,6 +169,11 @@ const SolutionsRoute = SolutionsRouteImport.update({
 const SmsTermsRoute = SmsTermsRouteImport.update({
   id: '/sms-terms',
   path: '/sms-terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SmsMarketingRoute = SmsMarketingRouteImport.update({
+  id: '/sms-marketing',
+  path: '/sms-marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -908,6 +914,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
   '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
@@ -1041,6 +1048,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
   '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
@@ -1175,6 +1183,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
   '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
@@ -1312,6 +1321,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sellers'
     | '/sitemap.xml'
+    | '/sms-marketing'
     | '/sms-terms'
     | '/solutions'
     | '/terms'
@@ -1445,6 +1455,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sellers'
     | '/sitemap.xml'
+    | '/sms-marketing'
     | '/sms-terms'
     | '/solutions'
     | '/terms'
@@ -1578,6 +1589,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/sellers'
     | '/sitemap.xml'
+    | '/sms-marketing'
     | '/sms-terms'
     | '/solutions'
     | '/terms'
@@ -1716,6 +1728,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SellersRoute: typeof SellersRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SmsMarketingRoute: typeof SmsMarketingRoute
   SmsTermsRoute: typeof SmsTermsRoute
   SolutionsRoute: typeof SolutionsRouteWithChildren
   TermsRoute: typeof TermsRoute
@@ -1791,6 +1804,13 @@ declare module '@tanstack/react-router' {
       path: '/sms-terms'
       fullPath: '/sms-terms'
       preLoaderRoute: typeof SmsTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sms-marketing': {
+      id: '/sms-marketing'
+      path: '/sms-marketing'
+      fullPath: '/sms-marketing'
+      preLoaderRoute: typeof SmsMarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -3010,6 +3030,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SellersRoute: SellersRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SmsMarketingRoute: SmsMarketingRoute,
   SmsTermsRoute: SmsTermsRoute,
   SolutionsRoute: SolutionsRouteWithChildren,
   TermsRoute: TermsRoute,
