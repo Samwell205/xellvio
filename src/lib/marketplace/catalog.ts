@@ -70,7 +70,7 @@ export async function listApps(params: BrowseParams = {}): Promise<AppSummary[]>
     .eq("visibility", "public");
 
   if (featuredOnly) query = query.eq("is_featured", true);
-  if (category) query = query.eq("app_categories.slug", category);
+  // Category is filtered in memory below (embedded relations can't be filtered without an inner join hint).
   if (q && q.trim()) {
     const term = q.trim().replace(/[%,]/g, " ");
     query = query.or(
