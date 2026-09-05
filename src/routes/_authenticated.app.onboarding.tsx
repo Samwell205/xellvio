@@ -133,6 +133,8 @@ function OnboardingPage() {
         />
       </div>
 
+      <GoalPicker />
+
       {step === 1 && (
         <Card className="p-6 space-y-4">
           <h3 className="font-semibold">Business details</h3>
