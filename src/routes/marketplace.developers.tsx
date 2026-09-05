@@ -7,6 +7,7 @@ export const Route = createFileRoute("/marketplace/developers")({
   head: () =>
     pageHead({
       path: "/marketplace/developers",
+      robots: "noindex",
       title: "Build an App for Xellvio",
       description:
         "Developer guide for building and submitting an app to the Xellvio App Marketplace, including credentials, review requirements and supported actions.",

@@ -9,6 +9,7 @@ export const Route = createFileRoute("/marketplace/categories")({
   head: () =>
     pageHead({
       path: "/marketplace/categories",
+      robots: "noindex",
       title: "Marketplace App Categories",
       description:
         "Explore Xellvio marketplace categories — ecommerce, CRM, forms, analytics, support and automation — to find the integration you need.",
