@@ -15,7 +15,7 @@ import { AiChatWidget } from "../components/AiChatWidget";
 import { CookieBanner } from "../components/CookieBanner";
 import { Toaster } from "../components/ui/sonner";
 import { initAnalytics, trackPageView } from "@/lib/analytics";
-import { trackView } from "@/lib/growth/track";
+import { installCtaTracking, trackView } from "@/lib/growth/track";
 import { BRAND, organizationSchema } from "@/lib/seo";
 
 function NotFoundComponent() {
@@ -162,10 +162,15 @@ function RootComponent() {
     const path = window.location.pathname;
     trackPageView(path + window.location.search);
     trackView(path);
-    return router.subscribe("onResolved", ({ toLocation }) => {
+    const removeCta = installCtaTracking();
+    const unsub = router.subscribe("onResolved", ({ toLocation }) => {
       trackPageView(toLocation.href);
       trackView(toLocation.pathname);
     });
+    return () => {
+      removeCta();
+      unsub();
+    };
   }, [router]);
 
 

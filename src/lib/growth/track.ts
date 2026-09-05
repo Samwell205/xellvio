@@ -219,3 +219,53 @@ export function trackCta(name: string, placement: string, extra: Omit<GrowthEven
 export function trackProduct(event: TrackedEvent, props: Props = {}) {
   track({ event, props });
 }
+
+/**
+ * Site-wide call-to-action tracking without touching every button.
+ *
+ * Any click on a link or button that leads to sign-up/login, or that carries an
+ * explicit data-cta attribute, is recorded with its label and the page section
+ * it sits in — so the dashboard can compare placements fairly.
+ */
+export function installCtaTracking(): () => void {
+  if (typeof document === "undefined") return () => {};
+
+  const placementOf = (el: Element): string => {
+    const explicit = el.closest("[data-cta-placement]")?.getAttribute("data-cta-placement");
+    if (explicit) return explicit.slice(0, 40);
+    if (el.closest("header, nav")) return "nav";
+    if (el.closest("footer")) return "footer";
+    if (el.closest("[role=dialog]")) return "modal";
+    const section = el.closest("section, article, main");
+    if (!section) return "page";
+    const main = section.closest("main");
+    if (main) {
+      const sections = Array.from(main.querySelectorAll(":scope > section, :scope > div > section"));
+      const idx = sections.indexOf(section as HTMLElement);
+      if (idx === 0) return "hero";
+      if (idx > 0 && idx === sections.length - 1) return "final_cta";
+      if (idx > 0) return `section_${idx + 1}`;
+    }
+    return "page";
+  };
+
+  const onClick = (ev: MouseEvent) => {
+    try {
+      const target = ev.target as Element | null;
+      const el = target?.closest?.("a,button,[data-cta]") as HTMLElement | null;
+      if (!el) return;
+      const explicit = el.getAttribute("data-cta");
+      const href = el.getAttribute("href") ?? "";
+      const authish = /^\/(auth|signup|register)(\?|$|\/)/.test(href);
+      if (!explicit && !authish) return;
+      const label = (explicit || el.textContent || "").trim().replace(/\s+/g, " ");
+      if (!label) return;
+      trackCta(label, placementOf(el), { path: window.location.pathname });
+    } catch {
+      /* measurement never interferes with the click itself */
+    }
+  };
+
+  document.addEventListener("click", onClick, { capture: true });
+  return () => document.removeEventListener("click", onClick, { capture: true } as never);
+}
