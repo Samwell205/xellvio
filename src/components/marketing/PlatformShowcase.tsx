@@ -44,11 +44,12 @@ function MessagingVisual() {
         </div>
         <div className="ml-8 rounded-2xl border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <Mail className="size-3.5" /> Email · follow-up
+            <Smartphone className="size-3.5" /> SMS · follow-up
           </div>
           <p className="mt-3 text-sm text-foreground">30+ new pieces just landed in your size.</p>
           <span className="mt-3 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Queued</span>
         </div>
+
       </div>
     </Frame>
   );
