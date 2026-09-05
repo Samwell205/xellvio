@@ -5,6 +5,7 @@ import { listApps, listCategories, type BrowseParams } from "@/lib/marketplace/c
 import { AppCard } from "@/components/marketplace/AppCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { pageHead } from "@/lib/seo";
 
 type SearchParams = { q?: string; category?: string; sort?: BrowseParams["sort"] };
 
@@ -16,20 +17,14 @@ export const Route = createFileRoute("/marketplace/apps/")({
       ? (search.sort as BrowseParams["sort"])
       : undefined,
   }),
-  head: () => ({
-    meta: [
-      { title: "Browse apps — Xellvio App Marketplace" },
-      {
-        name: "description",
-        content:
-          "Search every Xellvio integration by category: CRM, ecommerce, payments, email, analytics, booking, AI and automation.",
-      },
-      { property: "og:title", content: "Browse apps — Xellvio App Marketplace" },
-      { property: "og:description", content: "Search and filter every integration available for Xellvio workspaces." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/marketplace/apps",
+    title: "Browse Marketplace Apps",
+    description:
+      "Search every app and integration available for Xellvio, from ecommerce platforms and CRMs to forms, analytics and automation tools.",
+    breadcrumbs: [{ name: "Home", path: "/" }, { name: "Marketplace", path: "/marketplace" }, { name: "Apps", path: "/marketplace/apps" }],
+    }),
   component: BrowseApps,
 });
 

@@ -8,8 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/verify/auth")({
+  head: () =>
+    pageHead({
+      path: "/verify/auth",
+      title: "Verifier sign in",
+      description: "Sign in to the Xellvio verification program.",
+      robots: "noindex",
+    }),
   validateSearch: (s: Record<string, unknown>) =>
     z.object({ tab: z.enum(["signin", "signup"]).optional() }).parse(s),
   component: VerifierAuth,

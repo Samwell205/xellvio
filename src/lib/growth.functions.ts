@@ -38,6 +38,8 @@ const PageSchema = z.object({
   builder_theme: jsonObject.nullable().optional(),
   sections: z.array(z.any()).max(30).nullable().optional(),
   ...SeoFields,
+  /** Landing pages only: tenants can keep a published page out of search. */
+  seo_indexable: z.boolean().optional(),
   list_id: z.string().uuid().nullable().optional(),
   published: z.boolean().default(false),
 });

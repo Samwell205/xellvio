@@ -16,25 +16,16 @@ import {
   TrendingUp,
   HelpCircle,
 } from "lucide-react";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/verify/")({
-  head: () => ({
-    meta: [
-      { title: "Xellvio Verifier Marketplace — Earn by verifying toll-free numbers" },
-      {
-        name: "description",
-        content:
-          "Submit toll-free numbers, we verify them, and you earn every time a business buys one from the Xellvio pool. Cash out in Naira.",
-      },
-      { property: "og:title", content: "Xellvio Verifier Marketplace" },
-      {
-        property: "og:description",
-        content: "Get paid to verify toll-free numbers. Independent verifier portal.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/verify",
+    title: "Xellvio Number Verification Program",
+    description:
+      "Join the Xellvio verification program: verify toll-free numbers, complete assignments and get paid for approved verifications.",
+    }),
   component: VerifyLanding,
 });
 

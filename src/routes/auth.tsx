@@ -9,15 +9,17 @@ import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { withAuthRetry, friendlyAuthError, clearStaleSession } from "@/lib/auth-retry";
+import { pageHead } from "@/lib/seo";
 
 
 export const Route = createFileRoute("/auth")({
-  head: () => ({ meta: [{ title: "Sign in — Xellvio" }, { name: "description", content: "Sign in or create your Xellvio account." }, { name: "robots", content: "noindex, nofollow" }] }),
-  validateSearch: (search: Record<string, unknown>): { mode?: "signin" | "signup"; redirect?: string; invite?: string } => ({
-    mode: search.mode === "signup" ? "signup" : "signin",
-    redirect: typeof search.redirect === "string" ? search.redirect : "/app",
-    invite: typeof search.invite === "string" ? search.invite : undefined,
-  }),
+  head: () =>
+    pageHead({
+    path: "/auth",
+    title: "Sign in",
+    description: "Sign in or create your Xellvio account.",
+    robots: "noindex",
+    }),
   component: AuthPage,
 });
 

@@ -7,16 +7,17 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/features")({
-  head: () => ({
-    meta: [
-      { title: "SMS Marketing Features | Xellvio" },
-      { name: "description", content: "Bulk messaging, scheduling, analytics, contact management, API and automation built for global SMS." },
-      { property: "og:title", content: "Features — Xellvio" },
-      { property: "og:description", content: "Everything you need for global SMS at scale." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/features",
+    title: "SMS Marketing Software Features",
+    description:
+      "See every Xellvio feature: bulk SMS and MMS campaigns, scheduling, sender IDs, contact segments, delivery analytics, automations and a developer API.",
+    ogTitle: "SMS marketing features — Xellvio",
+    }),
   component: FeaturesPage,
 });
 

@@ -3,22 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { listCategories } from "@/lib/marketplace/catalog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/marketplace/categories")({
-  head: () => ({
-    meta: [
-      { title: "App categories — Xellvio App Marketplace" },
-      {
-        name: "description",
-        content:
-          "Explore Xellvio integration categories: CRM, ecommerce, payments, email, SMS, analytics, booking, support, AI and automation.",
-      },
-      { property: "og:title", content: "App categories — Xellvio App Marketplace" },
-      { property: "og:description", content: "Every category of integration available in the Xellvio ecosystem." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/marketplace/categories",
+    title: "Marketplace App Categories",
+    description:
+      "Explore Xellvio marketplace categories — ecommerce, CRM, forms, analytics, support and automation — to find the integration you need.",
+    breadcrumbs: [{ name: "Home", path: "/" }, { name: "Marketplace", path: "/marketplace" }, { name: "Categories", path: "/marketplace/categories" }],
+    }),
   component: CategoriesPage,
 });
 

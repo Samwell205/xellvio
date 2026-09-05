@@ -6,8 +6,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/verify/reset-password")({
+  head: () =>
+    pageHead({
+      path: "/verify/reset-password",
+      title: "Reset verifier password",
+      description: "Set a new password for your Xellvio verifier account.",
+      robots: "noindex",
+    }),
   component: ResetPassword,
 });
 

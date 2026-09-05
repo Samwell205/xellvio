@@ -9,14 +9,16 @@ import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { invalidateAllSessions } from "@/lib/auth-security.functions";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/reset-password")({
-  head: () => ({
-    meta: [
-      { title: "Reset password — Xellvio" },
-      { name: "description", content: "Set a new password for your Xellvio account." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/reset-password",
+    title: "Choose a new password",
+    description: "Set a new password for your Xellvio account.",
+    robots: "noindex",
+    }),
   component: ResetPasswordPage,
 });
 

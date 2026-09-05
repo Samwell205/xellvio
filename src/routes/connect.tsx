@@ -8,16 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/connect")({
-  head: () => ({
-    meta: [
-      { title: "Connect an AI assistant — Xellvio" },
-      { name: "description", content: "Connect ChatGPT, Claude, or another AI assistant to your Xellvio account through our MCP server." },
-      { property: "og:title", content: "Connect an AI assistant — Xellvio" },
-      { property: "og:description", content: "Link ChatGPT, Claude, or Claude Code to your Xellvio workspace and manage SMS with natural language." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/connect",
+    title: "Connect an AI Assistant to Xellvio",
+    description:
+      "Connect ChatGPT, Claude or any MCP-compatible AI assistant to your Xellvio workspace and manage contacts, campaigns and reports in natural language.",
+    }),
   component: ConnectPage,
 });
 

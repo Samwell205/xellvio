@@ -4,24 +4,16 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/about")({
-  head: () => ({
-    meta: [
-      { title: "About Xellvio — Global SMS for modern businesses" },
-      {
-        name: "description",
-        content:
-          "Xellvio helps businesses reach customers worldwide with fast, reliable, compliant bulk SMS — built for marketers, support teams, and developers.",
-      },
-      { property: "og:title", content: "About Xellvio" },
-      {
-        property: "og:description",
-        content:
-          "Learn about Xellvio's mission to make global, compliant SMS effortless for businesses of every size.",
-      },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/about",
+    title: "About Xellvio",
+    description:
+      "Xellvio is a customer messaging platform for businesses that need reliable global SMS delivery, transparent per-country pricing and carrier-grade compliance.",
+    }),
   component: AboutPage,
 });
 

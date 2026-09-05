@@ -30,6 +30,7 @@ export type PageDraft = {
   seo_title: string;
   seo_description: string;
   og_image_url: string;
+  seo_indexable?: boolean;
   list_id: string | null;
   published: boolean;
 };
@@ -120,6 +121,20 @@ export function PageEditor({
                   value={draft.og_image_url}
                   onChange={(og_image_url) => set({ og_image_url })}
                 />
+                <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+                  <div>
+                    <Label className="text-xs">Show this page in search engines</Label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Turn off for private or one-off pages. The link keeps working — it just
+                      stays out of Google and out of your sitemap.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={draft.seo_indexable !== false}
+                    onCheckedChange={(seo_indexable) => set({ seo_indexable })}
+                  />
+                </div>
+
                 <div className="rounded-lg border p-3">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Preview</p>
                   {draft.og_image_url ? <img src={draft.og_image_url} alt="" className="mt-2 aspect-[1200/630] w-full rounded object-cover" /> : null}

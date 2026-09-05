@@ -7,16 +7,16 @@ import { PerCountryPricing } from "@/components/PerCountryPricing";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getPublicCountryRates } from "@/lib/public-pricing.functions";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/pricing")({
-  head: () => ({
-    meta: [
-      { title: "Xellvio Pricing | Pay-as-you-go SMS Credits" },
-      { name: "description", content: "Pay-as-you-go SMS credits. Estimate cost per country and per message instantly." },
-      { property: "og:title", content: "Pricing — Xellvio" },
-      { property: "og:description", content: "Buy credits, estimate per-country costs, and see live SMS pricing." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/pricing",
+    title: "Bulk SMS Pricing — Pay As You Go",
+    description:
+      "Xellvio pricing is pay-as-you-go: buy credits, see the live per-message rate for every country before you send, and pay no monthly platform fee.",
+    }),
   component: PricingPage,
 });
 

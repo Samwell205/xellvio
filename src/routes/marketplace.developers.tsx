@@ -1,25 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, Code2, GitBranch, Rocket, ShieldCheck, Webhook } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/marketplace/developers")({
-  head: () => ({
-    meta: [
-      { title: "Build for Xellvio — Developer Marketplace" },
-      {
-        name: "description",
-        content:
-          "Publish an integration on the Xellvio App Marketplace: declare actions and triggers, test in a sandbox, submit for review and reach every workspace.",
-      },
-      { property: "og:title", content: "Build for Xellvio — Developer Marketplace" },
-      {
-        property: "og:description",
-        content: "Ship an integration to every Xellvio workspace with actions, triggers, webhooks and API keys.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/marketplace/developers",
+    title: "Build an App for Xellvio",
+    description:
+      "Developer guide for building and submitting an app to the Xellvio App Marketplace, including credentials, review requirements and supported actions.",
+    breadcrumbs: [{ name: "Home", path: "/" }, { name: "Marketplace", path: "/marketplace" }, { name: "Developers", path: "/marketplace/developers" }],
+    }),
   component: DevelopersPage,
 });
 

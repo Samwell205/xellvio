@@ -5,13 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
 import { MailCheck } from "lucide-react";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/verify-email")({
-  head: () => ({ meta: [{ title: "Verify email — Xellvio" }, { name: "robots", content: "noindex, nofollow" }] }),
-  validateSearch: (search: Record<string, unknown>): { email?: string; status?: string } => ({
-    email: typeof search.email === "string" ? search.email : "",
-    status: typeof search.status === "string" ? search.status : "unverified",
-  }),
+  head: () =>
+    pageHead({
+    path: "/verify-email",
+    title: "Verify your email",
+    description: "Confirm your email address to finish creating your Xellvio account.",
+    robots: "noindex",
+    }),
   component: VerifyEmailPage,
 });
 

@@ -1,0 +1,1 @@
+ALTER TABLE public.landing_pages ADD COLUMN IF NOT EXISTS seo_indexable boolean NOT NULL DEFAULT true;

@@ -4,6 +4,7 @@ import { FormRenderer } from "@/components/website/renderers";
 import { mergeDesign } from "@/lib/website-design";
 import { BlockCanvas } from "@/components/builder/BlockRenderer";
 import { mergeTheme, normalizeBlocks } from "@/lib/builder/schema";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/f/$slug")({
   loader: async ({ params }) => {
@@ -13,28 +14,13 @@ export const Route = createFileRoute("/f/$slug")({
   },
   head: ({ params, loaderData }) => {
     const d = (loaderData ?? {}) as any;
-    const title = (d.seo_title || d.headline || d.name || "Sign up").slice(0, 70);
-    const description = (d.seo_description || d.description || "Join our text list.").slice(0, 155);
-    const url = `https://xellvio.com/f/${params.slug}`;
-    const rawImage = typeof d.og_image_url === "string" ? d.og_image_url.trim() : "";
-    const image: string | null = rawImage.startsWith("https://")
-      ? rawImage
-      : rawImage.startsWith("/")
-        ? `https://xellvio.com${rawImage}`
-        : null;
-    return {
-      meta: [
-        { title },
-        { name: "description", content: description },
-        { property: "og:title", content: title },
-        { property: "og:description", content: description },
-        { property: "og:type", content: "website" },
-        { property: "og:url", content: url },
-        { name: "twitter:card", content: image ? "summary_large_image" : "summary" },
-        ...(image ? [{ property: "og:image", content: image }, { name: "twitter:image", content: image }] : []),
-      ],
-      links: [{ rel: "canonical", href: url }],
-    };
+    return pageHead({
+      path: `/f/${params.slug}`,
+      title: (d.seo_title || d.headline || d.name || "Sign up").slice(0, 70),
+      description: (d.seo_description || d.description || "Join our text list.").slice(0, 155),
+      // Hosted sign-up forms are thin lead-capture pages: never indexed.
+      robots: "noindex",
+    });
   },
   component: SignupFormView,
 });

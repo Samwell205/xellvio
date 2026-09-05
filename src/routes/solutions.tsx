@@ -6,16 +6,16 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/solutions")({
-  head: () => ({
-    meta: [
-      { title: "SMS Solutions by Industry | Xellvio" },
-      { name: "description", content: "SMS marketing, transactional messaging, automations, compliance, sender identity, and developer APIs for global teams." },
-      { property: "og:title", content: "SMS Solutions — Xellvio" },
-      { property: "og:description", content: "Customer messaging workflows inspired by the best SMS platforms." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/solutions",
+    title: "SMS Solutions by Industry and Use Case",
+    description:
+      "Xellvio solutions for commerce campaigns, transactional alerts, lifecycle automation and developer messaging — with the sender identity and consent rules handled for each country.",
+    }),
   component: SolutionsPage,
 });
 

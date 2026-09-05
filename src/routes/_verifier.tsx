@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { LayoutDashboard, PhoneCall, Coins, Wallet, Settings2, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_verifier")({
+  head: () => ({
+    meta: [{ name: "robots", content: "noindex, nofollow" }],
+  }),
   ssr: false,
   beforeLoad: async () => {
     const { data, error } = await supabase.auth.getUser();

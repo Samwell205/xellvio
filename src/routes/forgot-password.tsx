@@ -8,14 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, MailCheck } from "lucide-react";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/forgot-password")({
-  head: () => ({
-    meta: [
-      { title: "Forgot password — Xellvio" },
-      { name: "description", content: "Reset your Xellvio password by email." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/forgot-password",
+    title: "Reset your password",
+    description: "Request a password reset link for your Xellvio account.",
+    robots: "noindex",
+    }),
   component: ForgotPasswordPage,
 });
 

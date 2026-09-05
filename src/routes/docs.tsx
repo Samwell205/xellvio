@@ -6,16 +6,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/docs")({
-  head: () => ({
-    meta: [
-      { title: "Xellvio Documentation | SMS API & Setup Guides" },
-      { name: "description", content: "Documentation for signup, sender verification, SMS sending, campaigns, wallet credits, and API access." },
-      { property: "og:title", content: "SMS Documentation — Xellvio" },
-      { property: "og:description", content: "Guides for sending compliant SMS from verified identities." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/docs",
+    title: "Documentation — SMS API and Setup Guides",
+    description:
+      "Xellvio documentation: create an account, verify a sender identity, import contacts, send campaigns, manage wallet credits and call the SMS API.",
+    }),
   component: DocsPage,
 });
 

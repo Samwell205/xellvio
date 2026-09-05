@@ -6,25 +6,16 @@ import {
   ChannelSubNav, ChannelHero, StatsMarquee, PillarGrid, SplitFeature, ProofCards,
   ChannelFaq, ChannelCta,
 } from "@/components/marketing/ProductKit";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/email-marketing")({
-  head: () => ({
-    meta: [
-      { title: "Email Marketing That Pairs With Your Texts — Xellvio" },
-      {
-        name: "description",
-        content:
-          "Design email campaigns, automate follow-ups and measure revenue beside your SMS — one audience, one report, one platform.",
-      },
-      { property: "og:title", content: "Email Marketing That Pairs With Your Texts — Xellvio" },
-      {
-        property: "og:description",
-        content: "Campaigns, automations and reporting for email, sharing the same audience as your SMS.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/email-marketing",
+    title: "Email Marketing Alongside Your SMS",
+    description:
+      "Run email campaigns from the same Xellvio audience as your texts — shared lists, shared consent, shared automations and one report for both channels.",
+    }),
   component: EmailMarketingPage,
 });
 

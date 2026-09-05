@@ -12,16 +12,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/contact")({
-  head: () => ({
-    meta: [
-      { title: "Contact Xellvio | Sales & Support" },
-      { name: "description", content: "Reach the Xellvio team for sales, technical support, billing, or sender ID approvals." },
-      { property: "og:title", content: "Contact Support — Xellvio" },
-      { property: "og:description", content: "Get in touch with our team for help with SMS, contacts, billing, or your account." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/contact",
+    title: "Contact Xellvio Sales and Support",
+    description:
+      "Contact the Xellvio team about sales, technical support, billing, sender ID approvals or compliance questions.",
+    }),
   component: ContactPage,
 });
 

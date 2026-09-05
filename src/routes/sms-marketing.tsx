@@ -8,25 +8,16 @@ import {
   ChannelSubNav, ChannelHero, StatsMarquee, PillarGrid, SplitFeature, ProofCards,
   ChannelFaq, ChannelCta,
 } from "@/components/marketing/ProductKit";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/sms-marketing")({
-  head: () => ({
-    meta: [
-      { title: "SMS Marketing Built for Smarter Sends — Xellvio" },
-      {
-        name: "description",
-        content:
-          "Run SMS marketing that converts: two-way texting in 190+ countries, automations, segments, link tracking and compliance handled for you.",
-      },
-      { property: "og:title", content: "SMS Marketing Built for Smarter Sends — Xellvio" },
-      {
-        property: "og:description",
-        content: "Two-way texting in 190+ countries with automations, segments, link tracking and built-in compliance.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/sms-marketing",
+    title: "SMS Marketing Platform",
+    description:
+      "Xellvio SMS marketing: build segments, send bulk text campaigns to 190+ countries, automate replies and keywords, and measure delivery, clicks and revenue per campaign.",
+    }),
   component: SmsMarketingPage,
 });
 

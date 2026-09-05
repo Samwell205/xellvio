@@ -2266,6 +2266,7 @@ export type Database = {
           published_version: number | null
           sections: Json
           seo_description: string | null
+          seo_indexable: boolean
           seo_title: string | null
           slug: string
           subheadline: string
@@ -2300,6 +2301,7 @@ export type Database = {
           published_version?: number | null
           sections?: Json
           seo_description?: string | null
+          seo_indexable?: boolean
           seo_title?: string | null
           slug: string
           subheadline?: string
@@ -2334,6 +2336,7 @@ export type Database = {
           published_version?: number | null
           sections?: Json
           seo_description?: string | null
+          seo_indexable?: boolean
           seo_title?: string | null
           slug?: string
           subheadline?: string

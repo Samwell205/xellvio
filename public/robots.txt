@@ -1,4 +1,21 @@
 User-agent: *
 Allow: /
 
+# Private application areas — never useful in search, and protected by auth.
+Disallow: /app/
+Disallow: /admin/
+Disallow: /verify/dashboard
+Disallow: /verify/auth
+Disallow: /auth
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /unsubscribe
+Disallow: /checkout
+Disallow: /api/
+Disallow: /lovable/
+Disallow: /mcp
+Disallow: /f/
+Disallow: /*?*
+
 Sitemap: https://xellvio.com/sitemap.xml

@@ -4,39 +4,17 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, MessageSquare, ArrowRight, ShieldCheck, Globe2, Zap } from "lucide-react";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/solutions/email-to-sms")({
-  head: () => ({
-    meta: [
-      { title: "Email to SMS Gateway — Send SMS from Email | Xellvio" },
-      {
-        name: "description",
-        content:
-          "Send SMS messages directly from any email client using Xellvio's Email to SMS gateway. Global delivery, simple setup, no code required.",
-      },
-      { property: "og:title", content: "Email to SMS Gateway — Send SMS from Email | Xellvio" },
-      {
-        property: "og:description",
-        content: "Turn any email into a global SMS with Xellvio's Email to SMS gateway.",
-      },
-      { property: "og:url", content: "https://xellvio.com/solutions/email-to-sms" },
-      { property: "og:type", content: "article" },
-    ],
-    links: [{ rel: "canonical", href: "https://xellvio.com/solutions/email-to-sms" }],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Article",
-          headline: "Email to SMS Gateway — Send SMS from Email",
-          description:
-            "Guide to sending SMS directly from email using Xellvio's Email to SMS gateway.",
-          author: { "@type": "Organization", name: "Xellvio" },
-        }),
-      },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/solutions/email-to-sms",
+    title: "Email to SMS Gateway",
+    description:
+      "Send SMS straight from your email client or any system that can send email. Xellvio converts the message, applies consent rules and reports delivery back to you.",
+    breadcrumbs: [{ name: "Home", path: "/" }, { name: "Solutions", path: "/solutions" }, { name: "Email to SMS", path: "/solutions/email-to-sms" }],
+    }),
   component: EmailToSmsPage,
 });
 

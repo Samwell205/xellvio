@@ -12,6 +12,7 @@ import { PlatformShowcase } from "@/components/marketing/PlatformShowcase";
 import { StatsMarquee, reveal } from "@/components/marketing/ProductKit";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { faqSchema, pageHead, softwareApplicationSchema, websiteSchema } from "@/lib/seo";
 
 const CHANNELS = [
   {
@@ -69,82 +70,66 @@ const HOME_TITLE = "Xellvio: SMS Marketing & Customer Messaging Platform";
 const HOME_DESCRIPTION =
   "Xellvio is the customer messaging platform that unifies SMS, email, automations, AI and reporting — send bulk campaigns to 190+ countries, reply in a shared inbox and track every click and conversion.";
 
+/** Rendered by <FAQ /> below and mirrored into FAQPage structured data. */
+const HOME_FAQS = [
+  {
+    q: "What is Xellvio?",
+    a: "Xellvio is a customer messaging platform for growing businesses. It brings SMS and email campaigns, automations, a two-way inbox, sign-up forms, landing pages and reporting into one place, so every message can react to what a customer actually does.",
+  },
+  {
+    q: "How much does Xellvio cost? Is there a free plan?",
+    a: "Xellvio is pay-as-you-go: you buy credits and each message is priced per segment for the destination country, with live rates shown before you send. New accounts start with 50 free credits and no card is required.",
+  },
+  {
+    q: "Which channels does Xellvio support?",
+    a: "SMS and MMS today, with two-way replies and keyword automations. Email campaigns and flows run beside your texts from the same audience.",
+  },
+  {
+    q: "Which countries can I send to?",
+    a: "Over 190 countries through tier-1 carriers, with automatic routing, failover and each country's sender rules handled for you — including toll-free, 10DLC and sender ID registration where it's required.",
+  },
+  {
+    q: "Does Xellvio handle consent and opt-outs?",
+    a: "Yes. Consent, opt-out keywords and suppressions are tracked on every contact, so anyone who unsubscribes is excluded from future sends automatically.",
+  },
+  {
+    q: "Can I automate messages?",
+    a: "Yes. Build flows that trigger on sign-ups, replies, keywords, abandoned carts or your own events, with waits, branches, conditions and goals you can follow end to end.",
+  },
+  {
+    q: "How do I see what a campaign earned?",
+    a: "Every send reports delivery, clicks, replies, spend and revenue — per country, per carrier and per campaign — with exportable reports.",
+  },
+  {
+    q: "Can I connect Xellvio to my other tools?",
+    a: "Yes. Connect your store, forms and CRM, or build directly on the Xellvio API and webhooks.",
+  },
+];
+
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: HOME_TITLE },
-      { name: "description", content: HOME_DESCRIPTION },
-      { property: "og:title", content: HOME_TITLE },
-      { property: "og:description", content: HOME_DESCRIPTION },
-      { property: "og:url", content: "https://xellvio.com/" },
-    ],
-    links: [{ rel: "canonical", href: "https://xellvio.com/" }],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@graph": [
-            {
-              "@type": "WebSite",
-              "@id": "https://xellvio.com/#website",
-              url: "https://xellvio.com/",
-              name: "Xellvio",
-              description: HOME_DESCRIPTION,
-              inLanguage: "en",
-              publisher: { "@id": "https://xellvio.com/#organization" },
-            },
-            {
-              "@type": "SoftwareApplication",
-              name: "Xellvio",
-              applicationCategory: "BusinessApplication",
-              operatingSystem: "Web",
-              url: "https://xellvio.com/",
-              description: HOME_DESCRIPTION,
-              featureList: [
-                "Bulk SMS campaigns",
-                "SMS automations and flows",
-                "Two-way messaging inbox",
-                "Audience lists and segments",
-                "Link tracking and delivery analytics",
-                "Landing pages and sign-up forms",
-                "Email marketing",
-                "Developer API and webhooks",
-              ],
-              offers: {
-                "@type": "Offer",
-                url: "https://xellvio.com/pricing",
-                priceCurrency: "USD",
-                availability: "https://schema.org/InStock",
-              },
-              publisher: { "@id": "https://xellvio.com/#organization" },
-            },
-            {
-              "@type": "SiteNavigationElement",
-              name: [
-                "SMS marketing",
-                "Email marketing",
-                "Features",
-                "Pricing",
-                "Solutions",
-                "Documentation",
-                "Contact",
-              ],
-              url: [
-                "https://xellvio.com/sms-marketing",
-                "https://xellvio.com/email-marketing",
-                "https://xellvio.com/features",
-                "https://xellvio.com/pricing",
-                "https://xellvio.com/solutions",
-                "https://xellvio.com/docs",
-                "https://xellvio.com/contact",
-              ],
-            },
+  head: () =>
+    pageHead({
+      path: "/",
+      title: HOME_TITLE,
+      description: HOME_DESCRIPTION,
+      schema: [
+        websiteSchema(),
+        softwareApplicationSchema({
+          description: HOME_DESCRIPTION,
+          featureList: [
+            "Bulk SMS campaigns",
+            "SMS automations and flows",
+            "Two-way messaging inbox",
+            "Audience lists and segments",
+            "Link tracking and delivery analytics",
+            "Landing pages and sign-up forms",
+            "Email marketing",
+            "Developer API and webhooks",
           ],
         }),
-      },
-    ],
-  }),
+        faqSchema(HOME_FAQS),
+      ],
+    }),
   component: HomePage,
 });
 
@@ -477,40 +462,7 @@ function HowItWorks() {
 
 
 function FAQ() {
-  const faqs = [
-    {
-      q: "What is Xellvio?",
-      a: "Xellvio is a customer messaging platform for growing businesses. It brings SMS and email campaigns, automations, a two-way inbox, sign-up forms, landing pages and reporting into one place, so every message can react to what a customer actually does.",
-    },
-    {
-      q: "How much does Xellvio cost? Is there a free plan?",
-      a: "Xellvio is pay-as-you-go: you buy credits and each message is priced per segment for the destination country, with live rates shown before you send. New accounts start with 50 free credits and no card is required.",
-    },
-    {
-      q: "Which channels does Xellvio support?",
-      a: "SMS and MMS today, with two-way replies and keyword automations. Email campaigns and flows run beside your texts from the same audience.",
-    },
-    {
-      q: "Which countries can I send to?",
-      a: "Over 190 countries through tier-1 carriers, with automatic routing, failover and each country's sender rules handled for you — including toll-free, 10DLC and sender ID registration where it's required.",
-    },
-    {
-      q: "Does Xellvio handle consent and opt-outs?",
-      a: "Yes. Consent, opt-out keywords and suppressions are tracked on every contact, so anyone who unsubscribes is excluded from future sends automatically.",
-    },
-    {
-      q: "Can I automate messages?",
-      a: "Yes. Build flows that trigger on sign-ups, replies, keywords, abandoned carts or your own events, with waits, branches, conditions and goals you can follow end to end.",
-    },
-    {
-      q: "How do I see what a campaign earned?",
-      a: "Every send reports delivery, clicks, replies, spend and revenue — per country, per carrier and per campaign — with exportable reports.",
-    },
-    {
-      q: "Can I connect Xellvio to my other tools?",
-      a: "Yes. Connect your store, forms and CRM, or build directly on the Xellvio API and webhooks.",
-    },
-  ];
+  const faqs = HOME_FAQS;
   const [open, setOpen] = useState<number | null>(0);
   return (
     <section className="bg-background py-24 border-t border-border">

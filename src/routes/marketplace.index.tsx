@@ -6,25 +6,16 @@ import { listApps, listCategories, POPULAR_SEARCHES } from "@/lib/marketplace/ca
 import { AppCard } from "@/components/marketplace/AppCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/marketplace/")({
-  head: () => ({
-    meta: [
-      { title: "Xellvio App Marketplace — Connect your business tools" },
-      {
-        name: "description",
-        content:
-          "Discover integrations that connect your website, CRM, ecommerce, marketing, payments and automation workflows in one intelligent Xellvio ecosystem.",
-      },
-      { property: "og:title", content: "Xellvio App Marketplace" },
-      {
-        property: "og:description",
-        content: "Connect Xellvio to the tools that power your business — CRM, ecommerce, payments, automation and AI.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/marketplace",
+    title: "Xellvio App Marketplace",
+    description:
+      "Browse the Xellvio App Marketplace and connect your store, CRM, forms and analytics tools to your SMS and email programs.",
+    }),
   component: MarketplaceHome,
 });
 

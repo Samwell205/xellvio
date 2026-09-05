@@ -3,16 +3,16 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check, DollarSign, ShieldCheck, Wallet } from "lucide-react";
+import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/sellers")({
-  head: () => ({
-    meta: [
-      { title: "Earn from verified toll-free numbers — Xellvio Sellers" },
-      { name: "description", content: "Verify toll-free numbers and get paid when businesses buy them. Instant marketplace payouts to your Nigerian bank account." },
-      { property: "og:title", content: "Xellvio Sellers — Get paid for verified toll-free numbers" },
-      { property: "og:description", content: "Turn approved toll-free numbers into recurring income." },
-    ],
-  }),
+  head: () =>
+    pageHead({
+    path: "/sellers",
+    title: "Earn From Verified Toll-Free Numbers",
+    description:
+      "Verify toll-free numbers on Xellvio and get paid when businesses buy them, with marketplace payouts straight to your bank account.",
+    }),
   component: SellersLanding,
 });
 
