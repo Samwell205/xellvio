@@ -16,6 +16,5 @@ Disallow: /api/
 Disallow: /lovable/
 Disallow: /mcp
 Disallow: /f/
-Disallow: /*?*
 
 Sitemap: https://xellvio.com/sitemap.xml
