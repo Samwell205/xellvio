@@ -8,6 +8,7 @@ import { AUTH_TYPE_LABELS, getApp } from "@/lib/marketplace/catalog";
 import { disconnectApp, listMyInstallations, updateConnection } from "@/lib/marketplace-apps.functions";
 import { AppLogo } from "@/components/marketplace/AppLogo";
 import { ConnectDialog } from "@/components/marketplace/ConnectDialog";
+import { IntegrationTools, WorkspaceKeysCard } from "@/components/marketplace/IntegrationTools";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -166,6 +167,19 @@ function WorkspaceAppDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {installed?.connection && (
+            <IntegrationTools
+              installationId={installed.installationId}
+              slug={a.slug}
+              authType={a.auth_type}
+              appName={a.name}
+              lastSyncedAt={installed.connection.lastSyncedAt}
+              lastError={installed.connection.lastError}
+            />
+          )}
+
+          {a.slug === "xellvio-connect" && <WorkspaceKeysCard />}
 
           {installed?.connection && (
             <Card>
