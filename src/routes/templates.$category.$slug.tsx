@@ -16,9 +16,7 @@ import { pageHead } from "@/lib/seo";
 export const Route = createFileRoute("/templates/$category/$slug")({
   loader: ({ params }) => {
     if (!isTemplateCategory(params.category)) throw notFound();
-    const template = findTemplate(params.category, params.slug);
-    if (!template) throw notFound();
-    return { category: params.category, slug: params.slug };
+    if (!findTemplate(params.category, params.slug)) throw notFound();
   },
   head: ({ params }) => {
     const template = isTemplateCategory(params.category) ? findTemplate(params.category, params.slug) : undefined;
@@ -44,7 +42,9 @@ export const Route = createFileRoute("/templates/$category/$slug")({
 });
 
 function TemplateDetail() {
-  const { category, slug } = Route.useLoaderData();
+  const params = Route.useParams();
+  const category = isTemplateCategory(params.category) ? params.category : "landing-pages";
+  const slug = params.slug;
   const template = findTemplate(category, slug)!;
   const meta = CATEGORY_META[category];
   const preview = previewFor(category, slug);

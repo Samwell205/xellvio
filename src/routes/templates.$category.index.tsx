@@ -35,7 +35,8 @@ export const Route = createFileRoute("/templates/$category/")({
 });
 
 function CategoryPage() {
-  const { category } = Route.useLoaderData();
+  const params = Route.useParams();
+  const category = isTemplateCategory(params.category) ? params.category : "landing-pages";
   const meta = CATEGORY_META[category];
   const items = templatesInCategory(category);
 

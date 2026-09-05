@@ -10,7 +10,6 @@ import { pageHead, faqSchema } from "@/lib/seo";
 export const Route = createFileRoute("/solutions/$industry")({
   loader: ({ params }) => {
     if (!industryBySlug(params.industry)) throw notFound();
-    return { slug: params.industry };
   },
   head: ({ params }) => {
     const ind = industryBySlug(params.industry);
@@ -34,7 +33,7 @@ export const Route = createFileRoute("/solutions/$industry")({
 });
 
 function IndustryPage() {
-  const { slug } = Route.useLoaderData();
+  const { industry: slug } = Route.useParams();
   const ind = industryBySlug(slug)!;
   const others = INDUSTRIES.filter((i) => i.slug !== slug);
 
