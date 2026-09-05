@@ -118,7 +118,12 @@ export const connectApp = createServerFn({ method: "POST" })
     const runtime = runtimeFor(app.slug);
     const settings: Record<string, unknown> = { ...data.settings };
     let verified: { accountId?: string | null; accountLabel?: string | null; note?: string } | null = null;
-    if (runtime?.verify) {
+    // No connector runtime means we cannot prove the account is real, so we
+    // refuse rather than showing a connection that does not exist.
+    if (!runtime?.verify) {
+      throw new Error(`${app.name} is not ready to connect yet. We will let you know as soon as it is available.`);
+    }
+    {
       try {
         verified = await runtime.verify(data.credentials, {
           db,
