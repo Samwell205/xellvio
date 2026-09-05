@@ -17,7 +17,6 @@ export const ALLOWED_MEDIA_TYPES = [
   "image/webp",
   "image/gif",
   "image/avif",
-  "image/svg+xml",
   "video/mp4",
   "video/webm",
   "video/quicktime",
@@ -88,7 +87,7 @@ export const createMediaUpload = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!ALLOWED_MEDIA_TYPES.includes(data.contentType as any)) {
-      throw new Error("That file type is not supported. Use PNG, JPG, WEBP, GIF, SVG, MP4 or WebM.");
+      throw new Error("That file type is not supported. Use PNG, JPG, WEBP, GIF, MP4 or WebM.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const accountId = await acct(context.userId);
