@@ -30,7 +30,6 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { z } from "zod";
 import {
-import { trackProduct } from "@/lib/growth/track";
   Megaphone,
   Users,
   MessageSquare,
@@ -45,6 +44,7 @@ import { trackProduct } from "@/lib/growth/track";
   DollarSign,
   Phone,
 } from "lucide-react";
+import { trackProduct } from "@/lib/growth/track";
 
 // A tracked short link may live on the shared platform domain or on a
 // tenant's branded click domain, so match any host with a /r/<code> path.
