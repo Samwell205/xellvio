@@ -16,13 +16,17 @@ import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as SmsTermsRouteImport } from './routes/sms-terms'
 import { Route as SmsMarketingRouteImport } from './routes/sms-marketing'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SignupFormsRouteImport } from './routes/signup-forms'
 import { Route as SellersRouteImport } from './routes/sellers'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ReportingRouteImport } from './routes/reporting'
 import { Route as ProhibitedContentRouteImport } from './routes/prohibited-content'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
+import { Route as LandingPagesRouteImport } from './routes/landing-pages'
+import { Route as GlobalDeliveryRouteImport } from './routes/global-delivery'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as EmailMarketingRouteImport } from './routes/email-marketing'
@@ -31,8 +35,11 @@ import { Route as DocsRouteImport } from './routes/docs'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as ConnectRouteImport } from './routes/connect'
+import { Route as ComplianceRouteImport } from './routes/compliance'
+import { Route as AutomationsRouteImport } from './routes/automations'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AupRouteImport } from './routes/aup'
+import { Route as AudiencesRouteImport } from './routes/audiences'
 import { Route as AntiSpamRouteImport } from './routes/anti-spam'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as VerifierRouteImport } from './routes/_verifier'
@@ -174,6 +181,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupFormsRoute = SignupFormsRouteImport.update({
+  id: '/signup-forms',
+  path: '/signup-forms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SellersRoute = SellersRouteImport.update({
   id: '/sellers',
   path: '/sellers',
@@ -182,6 +194,11 @@ const SellersRoute = SellersRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportingRoute = ReportingRouteImport.update({
+  id: '/reporting',
+  path: '/reporting',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProhibitedContentRoute = ProhibitedContentRouteImport.update({
@@ -207,6 +224,16 @@ const McpRoute = McpRouteImport.update({
 const MarketplaceRoute = MarketplaceRouteImport.update({
   id: '/marketplace',
   path: '/marketplace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LandingPagesRoute = LandingPagesRouteImport.update({
+  id: '/landing-pages',
+  path: '/landing-pages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GlobalDeliveryRoute = GlobalDeliveryRouteImport.update({
+  id: '/global-delivery',
+  path: '/global-delivery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -249,6 +276,16 @@ const ConnectRoute = ConnectRouteImport.update({
   path: '/connect',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ComplianceRoute = ComplianceRouteImport.update({
+  id: '/compliance',
+  path: '/compliance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AutomationsRoute = AutomationsRouteImport.update({
+  id: '/automations',
+  path: '/automations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -257,6 +294,11 @@ const AuthRoute = AuthRouteImport.update({
 const AupRoute = AupRouteImport.update({
   id: '/aup',
   path: '/aup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AudiencesRoute = AudiencesRouteImport.update({
+  id: '/audiences',
+  path: '/audiences',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AntiSpamRoute = AntiSpamRouteImport.update({
@@ -850,8 +892,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/anti-spam': typeof AntiSpamRoute
+  '/audiences': typeof AudiencesRoute
   '/aup': typeof AupRoute
   '/auth': typeof AuthRoute
+  '/automations': typeof AutomationsRoute
+  '/compliance': typeof ComplianceRoute
   '/connect': typeof ConnectRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
@@ -860,13 +905,17 @@ export interface FileRoutesByFullPath {
   '/email-marketing': typeof EmailMarketingRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/global-delivery': typeof GlobalDeliveryRoute
+  '/landing-pages': typeof LandingPagesRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/prohibited-content': typeof ProhibitedContentRoute
+  '/reporting': typeof ReportingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
+  '/signup-forms': typeof SignupFormsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
@@ -979,8 +1028,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/anti-spam': typeof AntiSpamRoute
+  '/audiences': typeof AudiencesRoute
   '/aup': typeof AupRoute
   '/auth': typeof AuthRoute
+  '/automations': typeof AutomationsRoute
+  '/compliance': typeof ComplianceRoute
   '/connect': typeof ConnectRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
@@ -989,12 +1041,16 @@ export interface FileRoutesByTo {
   '/email-marketing': typeof EmailMarketingRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/global-delivery': typeof GlobalDeliveryRoute
+  '/landing-pages': typeof LandingPagesRoute
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/prohibited-content': typeof ProhibitedContentRoute
+  '/reporting': typeof ReportingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
+  '/signup-forms': typeof SignupFormsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
@@ -1106,8 +1162,11 @@ export interface FileRoutesById {
   '/_verifier': typeof VerifierRouteWithChildren
   '/about': typeof AboutRoute
   '/anti-spam': typeof AntiSpamRoute
+  '/audiences': typeof AudiencesRoute
   '/aup': typeof AupRoute
   '/auth': typeof AuthRoute
+  '/automations': typeof AutomationsRoute
+  '/compliance': typeof ComplianceRoute
   '/connect': typeof ConnectRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
@@ -1116,13 +1175,17 @@ export interface FileRoutesById {
   '/email-marketing': typeof EmailMarketingRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/global-delivery': typeof GlobalDeliveryRoute
+  '/landing-pages': typeof LandingPagesRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/prohibited-content': typeof ProhibitedContentRoute
+  '/reporting': typeof ReportingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sellers': typeof SellersRoute
+  '/signup-forms': typeof SignupFormsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
@@ -1237,8 +1300,11 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/anti-spam'
+    | '/audiences'
     | '/aup'
     | '/auth'
+    | '/automations'
+    | '/compliance'
     | '/connect'
     | '/contact'
     | '/cookies'
@@ -1247,13 +1313,17 @@ export interface FileRouteTypes {
     | '/email-marketing'
     | '/features'
     | '/forgot-password'
+    | '/global-delivery'
+    | '/landing-pages'
     | '/marketplace'
     | '/mcp'
     | '/pricing'
     | '/privacy'
     | '/prohibited-content'
+    | '/reporting'
     | '/reset-password'
     | '/sellers'
+    | '/signup-forms'
     | '/sitemap.xml'
     | '/sms-marketing'
     | '/sms-terms'
@@ -1366,8 +1436,11 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/anti-spam'
+    | '/audiences'
     | '/aup'
     | '/auth'
+    | '/automations'
+    | '/compliance'
     | '/connect'
     | '/contact'
     | '/cookies'
@@ -1376,12 +1449,16 @@ export interface FileRouteTypes {
     | '/email-marketing'
     | '/features'
     | '/forgot-password'
+    | '/global-delivery'
+    | '/landing-pages'
     | '/mcp'
     | '/pricing'
     | '/privacy'
     | '/prohibited-content'
+    | '/reporting'
     | '/reset-password'
     | '/sellers'
+    | '/signup-forms'
     | '/sitemap.xml'
     | '/sms-marketing'
     | '/sms-terms'
@@ -1492,8 +1569,11 @@ export interface FileRouteTypes {
     | '/_verifier'
     | '/about'
     | '/anti-spam'
+    | '/audiences'
     | '/aup'
     | '/auth'
+    | '/automations'
+    | '/compliance'
     | '/connect'
     | '/contact'
     | '/cookies'
@@ -1502,13 +1582,17 @@ export interface FileRouteTypes {
     | '/email-marketing'
     | '/features'
     | '/forgot-password'
+    | '/global-delivery'
+    | '/landing-pages'
     | '/marketplace'
     | '/mcp'
     | '/pricing'
     | '/privacy'
     | '/prohibited-content'
+    | '/reporting'
     | '/reset-password'
     | '/sellers'
+    | '/signup-forms'
     | '/sitemap.xml'
     | '/sms-marketing'
     | '/sms-terms'
@@ -1624,8 +1708,11 @@ export interface RootRouteChildren {
   VerifierRoute: typeof VerifierRouteWithChildren
   AboutRoute: typeof AboutRoute
   AntiSpamRoute: typeof AntiSpamRoute
+  AudiencesRoute: typeof AudiencesRoute
   AupRoute: typeof AupRoute
   AuthRoute: typeof AuthRoute
+  AutomationsRoute: typeof AutomationsRoute
+  ComplianceRoute: typeof ComplianceRoute
   ConnectRoute: typeof ConnectRoute
   ContactRoute: typeof ContactRoute
   CookiesRoute: typeof CookiesRoute
@@ -1634,13 +1721,17 @@ export interface RootRouteChildren {
   EmailMarketingRoute: typeof EmailMarketingRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  GlobalDeliveryRoute: typeof GlobalDeliveryRoute
+  LandingPagesRoute: typeof LandingPagesRoute
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
   McpRoute: typeof McpRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProhibitedContentRoute: typeof ProhibitedContentRoute
+  ReportingRoute: typeof ReportingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SellersRoute: typeof SellersRoute
+  SignupFormsRoute: typeof SignupFormsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SmsMarketingRoute: typeof SmsMarketingRoute
   SmsTermsRoute: typeof SmsTermsRoute
@@ -1734,6 +1825,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signup-forms': {
+      id: '/signup-forms'
+      path: '/signup-forms'
+      fullPath: '/signup-forms'
+      preLoaderRoute: typeof SignupFormsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sellers': {
       id: '/sellers'
       path: '/sellers'
@@ -1746,6 +1844,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reporting': {
+      id: '/reporting'
+      path: '/reporting'
+      fullPath: '/reporting'
+      preLoaderRoute: typeof ReportingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prohibited-content': {
@@ -1781,6 +1886,20 @@ declare module '@tanstack/react-router' {
       path: '/marketplace'
       fullPath: '/marketplace'
       preLoaderRoute: typeof MarketplaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/landing-pages': {
+      id: '/landing-pages'
+      path: '/landing-pages'
+      fullPath: '/landing-pages'
+      preLoaderRoute: typeof LandingPagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/global-delivery': {
+      id: '/global-delivery'
+      path: '/global-delivery'
+      fullPath: '/global-delivery'
+      preLoaderRoute: typeof GlobalDeliveryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -1839,6 +1958,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compliance': {
+      id: '/compliance'
+      path: '/compliance'
+      fullPath: '/compliance'
+      preLoaderRoute: typeof ComplianceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/automations': {
+      id: '/automations'
+      path: '/automations'
+      fullPath: '/automations'
+      preLoaderRoute: typeof AutomationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -1851,6 +1984,13 @@ declare module '@tanstack/react-router' {
       path: '/aup'
       fullPath: '/aup'
       preLoaderRoute: typeof AupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audiences': {
+      id: '/audiences'
+      path: '/audiences'
+      fullPath: '/audiences'
+      preLoaderRoute: typeof AudiencesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/anti-spam': {
@@ -2843,8 +2983,11 @@ const rootRouteChildren: RootRouteChildren = {
   VerifierRoute: VerifierRouteWithChildren,
   AboutRoute: AboutRoute,
   AntiSpamRoute: AntiSpamRoute,
+  AudiencesRoute: AudiencesRoute,
   AupRoute: AupRoute,
   AuthRoute: AuthRoute,
+  AutomationsRoute: AutomationsRoute,
+  ComplianceRoute: ComplianceRoute,
   ConnectRoute: ConnectRoute,
   ContactRoute: ContactRoute,
   CookiesRoute: CookiesRoute,
@@ -2853,13 +2996,17 @@ const rootRouteChildren: RootRouteChildren = {
   EmailMarketingRoute: EmailMarketingRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  GlobalDeliveryRoute: GlobalDeliveryRoute,
+  LandingPagesRoute: LandingPagesRoute,
   MarketplaceRoute: MarketplaceRouteWithChildren,
   McpRoute: McpRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProhibitedContentRoute: ProhibitedContentRoute,
+  ReportingRoute: ReportingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SellersRoute: SellersRoute,
+  SignupFormsRoute: SignupFormsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SmsMarketingRoute: SmsMarketingRoute,
   SmsTermsRoute: SmsTermsRoute,
