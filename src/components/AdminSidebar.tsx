@@ -50,6 +50,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
       { title: "Toll-free logs", url: "/admin/tollfree-attempts", icon: ClipboardList },
       { title: "Authority & links", url: "/admin/authority", icon: Handshake },
       { title: "Growth intelligence", url: "/admin/growth", icon: LineChart },
+      { title: "Speed & experience", url: "/admin/performance", icon: Gauge },
       { title: "Marketplace", url: "/admin/marketplace", icon: CreditCard },
       { title: "App Marketplace", url: "/admin/apps", icon: Blocks },
       { title: "Verifier marketplace", url: "/admin/verifiers", icon: ShieldCheck },
