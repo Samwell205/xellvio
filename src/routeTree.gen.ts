@@ -55,6 +55,7 @@ import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.ap
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as MarketplaceAppsIndexRouteImport } from './routes/marketplace.apps.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
@@ -367,6 +368,11 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const MarketplaceAppsIndexRoute = MarketplaceAppsIndexRouteImport.update({
+  id: '/apps/',
+  path: '/apps/',
+  getParentRoute: () => MarketplaceRoute,
+} as any)
 const AuthenticatedAppIndexRoute = AuthenticatedAppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -932,6 +938,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
+  '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
@@ -1053,6 +1060,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
+  '/marketplace/apps': typeof MarketplaceAppsIndexRoute
   '/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
@@ -1183,6 +1191,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
+  '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/_authenticated/admin/academy/$courseId': typeof AuthenticatedAdminAcademyCourseIdRoute
   '/_authenticated/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
@@ -1312,6 +1321,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin/'
     | '/app/'
+    | '/marketplace/apps/'
     | '/admin/academy/$courseId'
     | '/admin/campaigns/$id'
     | '/admin/telnyx/audit'
@@ -1433,6 +1443,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/admin'
     | '/app'
+    | '/marketplace/apps'
     | '/admin/academy/$courseId'
     | '/admin/campaigns/$id'
     | '/admin/telnyx/audit'
@@ -1562,6 +1573,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
+    | '/marketplace/apps/'
     | '/_authenticated/admin/academy/$courseId'
     | '/_authenticated/admin/campaigns/$id'
     | '/_authenticated/admin/telnyx/audit'
@@ -1980,6 +1992,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/.mcp/list-tools'
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/marketplace/apps/': {
+      id: '/marketplace/apps/'
+      path: '/apps'
+      fullPath: '/marketplace/apps/'
+      preLoaderRoute: typeof MarketplaceAppsIndexRouteImport
+      parentRoute: typeof MarketplaceRoute
     }
     '/_authenticated/app/': {
       id: '/_authenticated/app/'
@@ -2793,10 +2812,12 @@ const AcademyRouteWithChildren =
 
 interface MarketplaceRouteChildren {
   MarketplaceIndexRoute: typeof MarketplaceIndexRoute
+  MarketplaceAppsIndexRoute: typeof MarketplaceAppsIndexRoute
 }
 
 const MarketplaceRouteChildren: MarketplaceRouteChildren = {
   MarketplaceIndexRoute: MarketplaceIndexRoute,
+  MarketplaceAppsIndexRoute: MarketplaceAppsIndexRoute,
 }
 
 const MarketplaceRouteWithChildren = MarketplaceRoute._addFileChildren(
