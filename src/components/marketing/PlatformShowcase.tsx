@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
-  ArrowUpRight, Check, Sparkles, Smartphone, BarChart3, Users, Workflow,
+  ArrowUpRight, Check, Sparkles, Smartphone, Mail, BarChart3, Users, Workflow,
 } from "lucide-react";
 import { reveal } from "@/components/marketing/ProductKit";
 
@@ -44,12 +44,11 @@ function MessagingVisual() {
         </div>
         <div className="ml-8 rounded-2xl border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <Smartphone className="size-3.5" /> SMS · follow-up
+            <Mail className="size-3.5" /> Email · follow-up
           </div>
           <p className="mt-3 text-sm text-foreground">30+ new pieces just landed in your size.</p>
           <span className="mt-3 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Queued</span>
         </div>
-
       </div>
     </Frame>
   );
@@ -108,7 +107,7 @@ function AnalyticsVisual() {
   return (
     <Frame>
       <div className="rounded-2xl border bg-card p-5 shadow-sm">
-        <div className="text-sm font-bold text-foreground">Revenue by campaign</div>
+        <div className="text-sm font-bold text-foreground">Revenue by channel</div>
         <div className="mt-6 flex h-32 items-end gap-2.5">
           {bars.map((h, i) => (
             <div key={i} className="flex-1 space-y-1">
@@ -119,7 +118,7 @@ function AnalyticsVisual() {
         </div>
         <div className="mt-4 flex gap-4 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-primary" /> SMS</span>
-          <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-coral/40" /> Clicks</span>
+          <span className="flex items-center gap-1.5"><span className="size-2 rounded-sm bg-coral/40" /> Email</span>
         </div>
       </div>
     </Frame>
@@ -142,7 +141,7 @@ function AudienceVisual() {
             ["Lifetime value", "$4,583.09"],
             ["Replies sent", "12"],
             ["Last click", "2 days ago"],
-            ["Consent", "SMS opted in"],
+            ["Consent", "SMS + email"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between gap-3">
               <dt className="text-muted-foreground">{k}</dt>
@@ -159,9 +158,9 @@ const PILLARS: Pillar[] = [
   {
     eyebrow: "Messaging",
     title: "Marketing that keeps the conversation going",
-    body: "Run every text from one audience, one calendar and one set of numbers — every message reacts to what people actually do.",
+    body: "Run SMS and email from one audience, one calendar and one set of numbers — every message reacts to what people actually do.",
     cta: { label: "Explore messaging", to: "/sms-marketing" },
-    tags: ["SMS campaigns", "Two-way inbox", "Link tracking"],
+    tags: ["SMS campaigns", "Email campaigns", "Two-way inbox"],
     visual: <MessagingVisual />,
   },
   {
@@ -211,7 +210,7 @@ export function PlatformShowcase() {
           Everything you need to talk to customers — not just texting
         </motion.h2>
         <motion.p {...reveal} className="mt-5 max-w-2xl text-lg text-muted-foreground">
-          Messaging, AI, automations, reporting and audience data in a single platform, so your team stops stitching tools together.
+          Messaging, AI, automations, reporting, audience data in a single platform, so your team stops stitching tools together.
         </motion.p>
 
         <div className="mt-16 grid gap-x-10 gap-y-16 md:grid-cols-2">
