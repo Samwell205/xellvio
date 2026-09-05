@@ -13,56 +13,8 @@ import { StatsMarquee, reveal } from "@/components/marketing/ProductKit";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-const CHANNELS = [
-  {
-    to: "/sms-marketing",
-    label: "SMS marketing",
-    tag: "Live today",
-    body: "Two-way texting in 190+ countries, with automations, link tracking and every country's sender rules handled for you.",
-    icon: Smartphone,
-  },
-  {
-    to: "/email-marketing",
-    label: "Email marketing",
-    tag: "Early access",
-    body: "Design campaigns, automate follow-ups and report on email beside your texts — one shared audience, one set of numbers.",
-    icon: Mail,
-  },
-] as const;
 
-function Channels() {
-  return (
-    <section className="bg-background py-20">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <motion.h2 {...reveal} className="max-w-2xl text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-          Pick a channel. Or run both from one place.
-        </motion.h2>
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          {CHANNELS.map((c, i) => (
-            <motion.div key={c.to} {...reveal} transition={{ ...reveal.transition, delay: i * 0.06 }}>
-              <Link
-                to={c.to}
-                className="group flex h-full flex-col rounded-[28px] border border-border bg-card p-8 transition-all hover:-translate-y-1 hover:shadow-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <c.icon className="size-6 text-coral" strokeWidth={1.7} />
-                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                    {c.tag}
-                  </span>
-                </div>
-                <h3 className="mt-6 text-2xl font-extrabold tracking-tight text-foreground">{c.label}</h3>
-                <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{c.body}</p>
-                <span className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground transition-all group-hover:gap-3">
-                  Explore {c.label.split(" ")[0]} <ArrowRight className="size-4" />
-                </span>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
+
 
 
 export const Route = createFileRoute("/")({
