@@ -44,6 +44,7 @@ import {
   DollarSign,
   Phone,
 } from "lucide-react";
+import { trackProduct } from "@/lib/growth/track";
 
 // A tracked short link may live on the shared platform domain or on a
 // tenant's branded click domain, so match any host with a /r/<code> path.
@@ -720,6 +721,7 @@ function NewCampaignPage() {
           .eq("id", savedId);
         if (statusErr) throw statusErr;
       }
+      trackProduct(launch ? "campaign_sent" : "campaign_created");
       toast.success(launch ? "Campaign launched" : "Saved as draft");
       navigate({ to: "/app/campaigns" });
     } catch (e: any) {

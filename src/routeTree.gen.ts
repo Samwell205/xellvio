@@ -85,6 +85,7 @@ import { Route as ApiPublicPollCarrierBalanceRouteImport } from './routes/api.pu
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api.public.paystack-webhook'
 import { Route as ApiPublicNowpaymentsPollRouteImport } from './routes/api/public/nowpayments-poll'
 import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public/nowpayments-ipn'
+import { Route as ApiPublicGrowthEventsRouteImport } from './routes/api/public/growth-events'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
 import { Route as AuthenticatedSellersDashboardRouteImport } from './routes/_authenticated.sellers.dashboard'
 import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './routes/_authenticated.app.toll-free-verification'
@@ -117,6 +118,7 @@ import { Route as AuthenticatedAdminNumberRequestsRouteImport } from './routes/_
 import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authenticated.admin.messaging'
 import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated.admin.messages'
 import { Route as AuthenticatedAdminMarketplaceRouteImport } from './routes/_authenticated.admin.marketplace'
+import { Route as AuthenticatedAdminGrowthRouteImport } from './routes/_authenticated.admin.growth'
 import { Route as AuthenticatedAdminFinanceRouteImport } from './routes/_authenticated.admin.finance'
 import { Route as AuthenticatedAdminEmailRouteImport } from './routes/_authenticated.admin.email'
 import { Route as AuthenticatedAdminComplianceRouteImport } from './routes/_authenticated.admin.compliance'
@@ -543,6 +545,11 @@ const ApiPublicNowpaymentsIpnRoute = ApiPublicNowpaymentsIpnRouteImport.update({
   path: '/api/public/nowpayments-ipn',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicGrowthEventsRoute = ApiPublicGrowthEventsRouteImport.update({
+  id: '/api/public/growth-events',
+  path: '/api/public/growth-events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicDispatchCampaignRoute =
   ApiPublicDispatchCampaignRouteImport.update({
     id: '/api/public/dispatch-campaign',
@@ -726,6 +733,12 @@ const AuthenticatedAdminMarketplaceRoute =
   AuthenticatedAdminMarketplaceRouteImport.update({
     id: '/marketplace',
     path: '/marketplace',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminGrowthRoute =
+  AuthenticatedAdminGrowthRouteImport.update({
+    id: '/growth',
+    path: '/growth',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminFinanceRoute =
@@ -1024,6 +1037,7 @@ export interface FileRoutesByFullPath {
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/email': typeof AuthenticatedAdminEmailRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
+  '/admin/growth': typeof AuthenticatedAdminGrowthRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
@@ -1056,6 +1070,7 @@ export interface FileRoutesByFullPath {
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/growth-events': typeof ApiPublicGrowthEventsRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -1168,6 +1183,7 @@ export interface FileRoutesByTo {
   '/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/admin/email': typeof AuthenticatedAdminEmailRoute
   '/admin/finance': typeof AuthenticatedAdminFinanceRoute
+  '/admin/growth': typeof AuthenticatedAdminGrowthRoute
   '/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/messaging': typeof AuthenticatedAdminMessagingRoute
@@ -1198,6 +1214,7 @@ export interface FileRoutesByTo {
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/growth-events': typeof ApiPublicGrowthEventsRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -1316,6 +1333,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/compliance': typeof AuthenticatedAdminComplianceRoute
   '/_authenticated/admin/email': typeof AuthenticatedAdminEmailRoute
   '/_authenticated/admin/finance': typeof AuthenticatedAdminFinanceRoute
+  '/_authenticated/admin/growth': typeof AuthenticatedAdminGrowthRoute
   '/_authenticated/admin/marketplace': typeof AuthenticatedAdminMarketplaceRoute
   '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/_authenticated/admin/messaging': typeof AuthenticatedAdminMessagingRoute
@@ -1348,6 +1366,7 @@ export interface FileRoutesById {
   '/_authenticated/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/_authenticated/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
+  '/api/public/growth-events': typeof ApiPublicGrowthEventsRoute
   '/api/public/nowpayments-ipn': typeof ApiPublicNowpaymentsIpnRoute
   '/api/public/nowpayments-poll': typeof ApiPublicNowpaymentsPollRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
@@ -1465,6 +1484,7 @@ export interface FileRouteTypes {
     | '/admin/compliance'
     | '/admin/email'
     | '/admin/finance'
+    | '/admin/growth'
     | '/admin/marketplace'
     | '/admin/messages'
     | '/admin/messaging'
@@ -1497,6 +1517,7 @@ export interface FileRouteTypes {
     | '/app/toll-free-verification'
     | '/sellers/dashboard'
     | '/api/public/dispatch-campaign'
+    | '/api/public/growth-events'
     | '/api/public/nowpayments-ipn'
     | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
@@ -1609,6 +1630,7 @@ export interface FileRouteTypes {
     | '/admin/compliance'
     | '/admin/email'
     | '/admin/finance'
+    | '/admin/growth'
     | '/admin/marketplace'
     | '/admin/messages'
     | '/admin/messaging'
@@ -1639,6 +1661,7 @@ export interface FileRouteTypes {
     | '/app/toll-free-verification'
     | '/sellers/dashboard'
     | '/api/public/dispatch-campaign'
+    | '/api/public/growth-events'
     | '/api/public/nowpayments-ipn'
     | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
@@ -1756,6 +1779,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/compliance'
     | '/_authenticated/admin/email'
     | '/_authenticated/admin/finance'
+    | '/_authenticated/admin/growth'
     | '/_authenticated/admin/marketplace'
     | '/_authenticated/admin/messages'
     | '/_authenticated/admin/messaging'
@@ -1788,6 +1812,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/toll-free-verification'
     | '/_authenticated/sellers/dashboard'
     | '/api/public/dispatch-campaign'
+    | '/api/public/growth-events'
     | '/api/public/nowpayments-ipn'
     | '/api/public/nowpayments-poll'
     | '/api/public/paystack-webhook'
@@ -1892,6 +1917,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
+  ApiPublicGrowthEventsRoute: typeof ApiPublicGrowthEventsRoute
   ApiPublicNowpaymentsIpnRoute: typeof ApiPublicNowpaymentsIpnRoute
   ApiPublicNowpaymentsPollRoute: typeof ApiPublicNowpaymentsPollRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
@@ -2451,6 +2477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicNowpaymentsIpnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/growth-events': {
+      id: '/api/public/growth-events'
+      path: '/api/public/growth-events'
+      fullPath: '/api/public/growth-events'
+      preLoaderRoute: typeof ApiPublicGrowthEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/dispatch-campaign': {
       id: '/api/public/dispatch-campaign'
       path: '/api/public/dispatch-campaign'
@@ -2673,6 +2706,13 @@ declare module '@tanstack/react-router' {
       path: '/marketplace'
       fullPath: '/admin/marketplace'
       preLoaderRoute: typeof AuthenticatedAdminMarketplaceRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/growth': {
+      id: '/_authenticated/admin/growth'
+      path: '/growth'
+      fullPath: '/admin/growth'
+      preLoaderRoute: typeof AuthenticatedAdminGrowthRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/finance': {
@@ -2976,6 +3016,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminComplianceRoute: typeof AuthenticatedAdminComplianceRoute
   AuthenticatedAdminEmailRoute: typeof AuthenticatedAdminEmailRoute
   AuthenticatedAdminFinanceRoute: typeof AuthenticatedAdminFinanceRoute
+  AuthenticatedAdminGrowthRoute: typeof AuthenticatedAdminGrowthRoute
   AuthenticatedAdminMarketplaceRoute: typeof AuthenticatedAdminMarketplaceRoute
   AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
   AuthenticatedAdminMessagingRoute: typeof AuthenticatedAdminMessagingRoute
@@ -3001,6 +3042,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminComplianceRoute: AuthenticatedAdminComplianceRoute,
   AuthenticatedAdminEmailRoute: AuthenticatedAdminEmailRoute,
   AuthenticatedAdminFinanceRoute: AuthenticatedAdminFinanceRoute,
+  AuthenticatedAdminGrowthRoute: AuthenticatedAdminGrowthRoute,
   AuthenticatedAdminMarketplaceRoute: AuthenticatedAdminMarketplaceRoute,
   AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
   AuthenticatedAdminMessagingRoute: AuthenticatedAdminMessagingRoute,
@@ -3260,6 +3302,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
+  ApiPublicGrowthEventsRoute: ApiPublicGrowthEventsRoute,
   ApiPublicNowpaymentsIpnRoute: ApiPublicNowpaymentsIpnRoute,
   ApiPublicNowpaymentsPollRoute: ApiPublicNowpaymentsPollRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,

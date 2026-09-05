@@ -10,6 +10,7 @@ import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { withAuthRetry, friendlyAuthError, clearStaleSession } from "@/lib/auth-retry";
 import { pageHead } from "@/lib/seo";
+import { trackProduct } from "@/lib/growth/track";
 
 export const Route = createFileRoute("/auth")({
   head: () =>
@@ -105,6 +106,8 @@ function AuthPage() {
         } catch {
           /* modal will re-prompt if it failed */
         }
+        trackProduct("signup_completed");
+        trackProduct("workspace_created");
         toast.success("Account created — welcome!");
         navigate({ href: destination });
       } else {

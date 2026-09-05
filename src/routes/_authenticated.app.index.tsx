@@ -18,6 +18,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { ActivityLogFeed, AttributionCard, AIInsightsCard } from "@/components/DashboardWidgets";
+import { FeatureDiscovery } from "@/components/growth/FeatureDiscovery";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Dashboard — Xellvio" }] }),
@@ -186,6 +187,9 @@ function Overview() {
       </div>
 
       <DeliveryAlerts />
+
+      <FeatureDiscovery />
+
 
       <div className="grid lg:grid-cols-3 gap-4">
         <ActivityLogFeed />

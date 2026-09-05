@@ -20,6 +20,9 @@ import { toast } from "sonner";
 import { CheckCircle2, Loader2, Phone, ShieldCheck } from "lucide-react";
 import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant-twilio.functions";
 import { getProvisioningStatus, saveBusinessProfile } from "@/lib/account.functions";
+import { getGrowthGoal, saveGrowthGoal } from "@/lib/growth-tenant.functions";
+import { ONBOARDING_GOALS, type OnboardingGoalKey } from "@/lib/growth/taxonomy";
+import { firstTouch, sessionId, track } from "@/lib/growth/track";
 
 export const Route = createFileRoute("/_authenticated/app/onboarding")({
   head: () => ({ meta: [{ title: "Set up your business — Xellvio" }] }),
@@ -99,6 +102,7 @@ function OnboardingPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account"] });
       qc.invalidateQueries({ queryKey: ["provisioning-status"] });
+      track({ event: "onboarding_step_completed", props: { step: "business_profile" } });
       toast.success("Business profile saved");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -132,6 +136,8 @@ function OnboardingPage() {
           label="Sender provisioning"
         />
       </div>
+
+      <GoalPicker />
 
       {step === 1 && (
         <Card className="p-6 space-y-4">
@@ -408,5 +414,83 @@ function Field({
       </Label>
       <Input value={v} onChange={(e) => on(e.target.value)} placeholder={placeholder} type={type} />
     </div>
+  );
+}
+
+
+/**
+ * Asks what the workspace wants to achieve, then points at the shortest path to
+ * that outcome. The answer also records how they first found Xellvio, so the
+ * growth dashboard can tell which channels bring in real customers.
+ */
+function GoalPicker() {
+  const qc = useQueryClient();
+  const loadGoal = useServerFn(getGrowthGoal);
+  const saveGoal = useServerFn(saveGrowthGoal);
+
+  const goal = useQuery({ queryKey: ["growth-goal"], queryFn: () => loadGoal() });
+
+  const pick = useMutation({
+    mutationFn: (key: OnboardingGoalKey) => {
+      const t = firstTouch();
+      return saveGoal({
+        data: {
+          goal: key,
+          session_id: sessionId(),
+          source: t?.source ?? null,
+          medium: t?.medium ?? null,
+          campaign: t?.campaign ?? null,
+        },
+      });
+    },
+    onSuccess: () => {
+      track({ event: "onboarding_goal_selected" });
+      qc.invalidateQueries({ queryKey: ["growth-goal"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const selected = goal.data?.goal ?? null;
+  const match = ONBOARDING_GOALS.find((g) => g.key === selected) ?? null;
+
+  return (
+    <Card className="p-6 space-y-3">
+      <div>
+        <h3 className="font-semibold">What would you like to do first?</h3>
+        <p className="text-sm text-muted-foreground">
+          We'll point you at the quickest way to get there. You can change this any time.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {ONBOARDING_GOALS.map((g) => (
+          <Button
+            key={g.key}
+            size="sm"
+            variant={selected === g.key ? "default" : "outline"}
+            disabled={pick.isPending}
+            onClick={() => pick.mutate(g.key as OnboardingGoalKey)}
+          >
+            {g.label}
+          </Button>
+        ))}
+      </div>
+      {match && (
+        <div className="rounded-lg border border-border p-3 text-sm">
+          <div className="font-medium mb-1">Recommended for you</div>
+          <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-1">
+            {match.recommend.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+          {match.href && (
+            <Button asChild size="sm" variant="secondary" className="mt-2">
+              <a href={match.href} onClick={() => track({ event: "onboarding_recommendation_clicked" })}>
+                Start here
+              </a>
+            </Button>
+          )}
+        </div>
+      )}
+    </Card>
   );
 }

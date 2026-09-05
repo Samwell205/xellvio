@@ -15,6 +15,7 @@ import { AiChatWidget } from "../components/AiChatWidget";
 import { CookieBanner } from "../components/CookieBanner";
 import { Toaster } from "../components/ui/sonner";
 import { initAnalytics, trackPageView } from "@/lib/analytics";
+import { installCtaTracking, trackView } from "@/lib/growth/track";
 import { BRAND, organizationSchema } from "@/lib/seo";
 
 function NotFoundComponent() {
@@ -155,13 +156,23 @@ function RootComponent() {
   }, [router, queryClient]);
 
   // Organic-traffic + conversion measurement. No-op unless a measurement ID is set.
+  // First-party growth measurement always runs (no cookies, no personal data).
   useEffect(() => {
     initAnalytics();
-    trackPageView(window.location.pathname + window.location.search);
-    return router.subscribe("onResolved", ({ toLocation }) => {
+    const path = window.location.pathname;
+    trackPageView(path + window.location.search);
+    trackView(path);
+    const removeCta = installCtaTracking();
+    const unsub = router.subscribe("onResolved", ({ toLocation }) => {
       trackPageView(toLocation.href);
+      trackView(toLocation.pathname);
     });
+    return () => {
+      removeCta();
+      unsub();
+    };
   }, [router]);
+
 
   return (
     <QueryClientProvider client={queryClient}>

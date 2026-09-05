@@ -310,6 +310,7 @@ export type Database = {
           gorgias_domain: string | null
           gorgias_email: string | null
           gorgias_enabled: boolean
+          growth_goal: string | null
           id: string
           is_seller: boolean
           last_seen_at: string | null
@@ -331,10 +332,14 @@ export type Database = {
           seller_lifetime_earnings: number
           sending_suspended_at: string | null
           sending_suspended_reason: string | null
+          signup_campaign: string | null
           signup_city: string | null
           signup_country: string | null
           signup_ip: string | null
+          signup_medium: string | null
           signup_region: string | null
+          signup_session_id: string | null
+          signup_source: string | null
           sms_consent_disclosures_confirmed_at: string | null
           sms_consent_disclosures_version: string | null
           sms_target_countries: string[] | null
@@ -370,6 +375,7 @@ export type Database = {
           gorgias_domain?: string | null
           gorgias_email?: string | null
           gorgias_enabled?: boolean
+          growth_goal?: string | null
           id: string
           is_seller?: boolean
           last_seen_at?: string | null
@@ -391,10 +397,14 @@ export type Database = {
           seller_lifetime_earnings?: number
           sending_suspended_at?: string | null
           sending_suspended_reason?: string | null
+          signup_campaign?: string | null
           signup_city?: string | null
           signup_country?: string | null
           signup_ip?: string | null
+          signup_medium?: string | null
           signup_region?: string | null
+          signup_session_id?: string | null
+          signup_source?: string | null
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
@@ -430,6 +440,7 @@ export type Database = {
           gorgias_domain?: string | null
           gorgias_email?: string | null
           gorgias_enabled?: boolean
+          growth_goal?: string | null
           id?: string
           is_seller?: boolean
           last_seen_at?: string | null
@@ -451,10 +462,14 @@ export type Database = {
           seller_lifetime_earnings?: number
           sending_suspended_at?: string | null
           sending_suspended_reason?: string | null
+          signup_campaign?: string | null
           signup_city?: string | null
           signup_country?: string | null
           signup_ip?: string | null
+          signup_medium?: string | null
           signup_region?: string | null
+          signup_session_id?: string | null
+          signup_source?: string | null
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
@@ -3107,6 +3122,277 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "gorgias_ticket_map_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_alerts: {
+        Row: {
+          created_at: string
+          direction: string
+          enabled: boolean
+          id: string
+          last_triggered_at: string | null
+          metric: string
+          name: string
+          note: string | null
+          threshold_pct: number
+          updated_at: string
+          window_days: number
+        }
+        Insert: {
+          created_at?: string
+          direction?: string
+          enabled?: boolean
+          id?: string
+          last_triggered_at?: string | null
+          metric: string
+          name: string
+          note?: string | null
+          threshold_pct?: number
+          updated_at?: string
+          window_days?: number
+        }
+        Update: {
+          created_at?: string
+          direction?: string
+          enabled?: boolean
+          id?: string
+          last_triggered_at?: string | null
+          metric?: string
+          name?: string
+          note?: string | null
+          threshold_pct?: number
+          updated_at?: string
+          window_days?: number
+        }
+        Relationships: []
+      }
+      growth_config: {
+        Row: {
+          activation_events: string[]
+          id: boolean
+          min_sample: number
+          north_star_events: string[]
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          activation_events?: string[]
+          id?: boolean
+          min_sample?: number
+          north_star_events?: string[]
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          activation_events?: string[]
+          id?: boolean
+          min_sample?: number
+          north_star_events?: string[]
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      growth_events: {
+        Row: {
+          account_id: string | null
+          campaign: string | null
+          country: string | null
+          created_at: string
+          cta_name: string | null
+          cta_placement: string | null
+          entity_slug: string | null
+          entity_type: string | null
+          event: string
+          experiment: string | null
+          id: string
+          medium: string | null
+          page_type: string | null
+          path: string | null
+          props: Json
+          referrer_host: string | null
+          session_id: string | null
+          source: string | null
+          variant: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          campaign?: string | null
+          country?: string | null
+          created_at?: string
+          cta_name?: string | null
+          cta_placement?: string | null
+          entity_slug?: string | null
+          entity_type?: string | null
+          event: string
+          experiment?: string | null
+          id?: string
+          medium?: string | null
+          page_type?: string | null
+          path?: string | null
+          props?: Json
+          referrer_host?: string | null
+          session_id?: string | null
+          source?: string | null
+          variant?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          campaign?: string | null
+          country?: string | null
+          created_at?: string
+          cta_name?: string | null
+          cta_placement?: string | null
+          entity_slug?: string | null
+          entity_type?: string | null
+          event?: string
+          experiment?: string | null
+          id?: string
+          medium?: string | null
+          page_type?: string | null
+          path?: string | null
+          props?: Json
+          referrer_host?: string | null
+          session_id?: string | null
+          source?: string | null
+          variant?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      growth_experiments: {
+        Row: {
+          area: string
+          created_at: string
+          end_date: string | null
+          hypothesis: string | null
+          id: string
+          min_sample: number
+          name: string
+          notes: string | null
+          primary_metric: string | null
+          result_summary: string | null
+          start_date: string | null
+          status: string
+          target_page: string | null
+          updated_at: string
+          variant_a: string | null
+          variant_b: string | null
+        }
+        Insert: {
+          area?: string
+          created_at?: string
+          end_date?: string | null
+          hypothesis?: string | null
+          id?: string
+          min_sample?: number
+          name: string
+          notes?: string | null
+          primary_metric?: string | null
+          result_summary?: string | null
+          start_date?: string | null
+          status?: string
+          target_page?: string | null
+          updated_at?: string
+          variant_a?: string | null
+          variant_b?: string | null
+        }
+        Update: {
+          area?: string
+          created_at?: string
+          end_date?: string | null
+          hypothesis?: string | null
+          id?: string
+          min_sample?: number
+          name?: string
+          notes?: string | null
+          primary_metric?: string | null
+          result_summary?: string | null
+          start_date?: string | null
+          status?: string
+          target_page?: string | null
+          updated_at?: string
+          variant_a?: string | null
+          variant_b?: string | null
+        }
+        Relationships: []
+      }
+      growth_sessions: {
+        Row: {
+          account_id: string | null
+          campaign: string | null
+          country: string | null
+          cta_clicks: number
+          engaged: boolean
+          first_path: string | null
+          first_seen: string
+          last_path: string | null
+          last_seen: string
+          medium: string | null
+          page_views: number
+          product_views: number
+          referrer_host: string | null
+          session_id: string
+          signup_completed: boolean
+          signup_started: boolean
+          source: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          campaign?: string | null
+          country?: string | null
+          cta_clicks?: number
+          engaged?: boolean
+          first_path?: string | null
+          first_seen?: string
+          last_path?: string | null
+          last_seen?: string
+          medium?: string | null
+          page_views?: number
+          product_views?: number
+          referrer_host?: string | null
+          session_id: string
+          signup_completed?: boolean
+          signup_started?: boolean
+          source?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          campaign?: string | null
+          country?: string | null
+          cta_clicks?: number
+          engaged?: boolean
+          first_path?: string | null
+          first_seen?: string
+          last_path?: string | null
+          last_seen?: string
+          medium?: string | null
+          page_views?: number
+          product_views?: number
+          referrer_host?: string | null
+          session_id?: string
+          signup_completed?: boolean
+          signup_started?: boolean
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_sessions_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
