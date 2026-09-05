@@ -878,10 +878,8 @@ export const growthAsk = createServerFn({ method: "POST" })
     await ensureAdmin(context.supabase);
     const db = await admin();
 
-    // Rebuild a compact snapshot from the same read model the dashboard uses.
-    const full = await (growthOverview as any).__executeHandler?.({ data: { days: data.days }, context });
-    void db;
-    const snapshot = full ?? null;
+    // Same read model the dashboard uses — the analyst never sees anything else.
+    const snapshot = await computeOverview(db, { days: data.days });
 
     const { getChatModel } = await import("./ai-provider.server");
     const { generateText } = await import("ai");
