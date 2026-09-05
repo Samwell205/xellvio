@@ -20,6 +20,11 @@ export const Route = createFileRoute("/auth")({
     description: "Sign in or create your Xellvio account.",
     robots: "noindex",
     }),
+  validateSearch: (search: Record<string, unknown>): { mode?: "signin" | "signup"; redirect?: string; invite?: string } => ({
+    mode: search.mode === "signup" ? "signup" : "signin",
+    redirect: typeof search.redirect === "string" ? search.redirect : "/app",
+    invite: typeof search.invite === "string" ? search.invite : undefined,
+  }),
   component: AuthPage,
 });
 
