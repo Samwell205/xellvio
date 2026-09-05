@@ -1018,16 +1018,16 @@ async function carrierPreflight(
   }
 
   const firstSentAt = firstSubmitted?.sent_at ? new Date(firstSubmitted.sent_at).getTime() : Date.now();
+  // Delivery receipts can simply be slow. Never pause a healthy campaign for
+  // that: once the wait window is over, release the rest of the audience. Real
+  // carrier filtering is still caught by the 40002 checks above and by
+  // carrierSpamBlockRate() as receipts keep arriving.
   const waitExpired = Date.now() - firstSentAt >= PREFLIGHT_WAIT_MS;
   if (waitExpired) {
-    await supabaseAdmin.from("campaigns").update({
-      status: "paused",
-      paused_at: new Date().toISOString(),
-      paused_reason:
-        `Paused by carrier preflight: only ${done} of the initial ${sent} test messages received a final carrier result within 10 minutes. ` +
-        `The remaining audience was not sent or charged. Review the test results before resuming.`,
-    }).eq("id", campaignId).in("status", ["sending", "queued"]);
-    return { allowance: 0, waiting: false, blocked: true };
+    console.warn(
+      `[dispatch] campaign ${campaignId}: only ${done} of ${sent} preflight receipts finalized in 10min — releasing remaining audience`,
+    );
+    return { allowance: null, waiting: false, blocked: false };
   }
   return { allowance: 0, waiting: true, blocked: false };
 }
