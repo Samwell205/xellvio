@@ -59,7 +59,7 @@ function PartnerPage() {
             <header className="space-y-4">
               <div className="flex items-center gap-4">
                 {p.logo_url ? (
-                  <img src={p.logo_url} alt={`${p.name} logo`} className="size-12 rounded-lg object-contain" />
+                  <img src={p.logo_url} alt={`${p.name} logo`} loading="lazy" decoding="async" className="size-12 rounded-lg object-contain" />
                 ) : null}
                 <div>
                   <h1 className="text-3xl font-semibold tracking-tight">{p.name}</h1>

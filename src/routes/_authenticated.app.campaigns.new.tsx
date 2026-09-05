@@ -1799,7 +1799,7 @@ function MmsImagePicker({
   return (
     <div className="mt-1 flex items-start gap-3">
       {isImg && (
-        <img src={mediaUrl} alt="MMS preview" className="size-20 rounded-md border object-cover" />
+        <img src={mediaUrl} alt="MMS preview" loading="lazy" decoding="async" className="size-20 rounded-md border object-cover" />
       )}
       <div className="flex-1 flex flex-wrap gap-2">
         <input

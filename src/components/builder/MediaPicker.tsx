@@ -127,7 +127,7 @@ export function MediaLibraryDialog({
                       }}
                     >
                       {a.kind === "image" ? (
-                        <img src={a.url} alt={a.name} className="h-24 w-full bg-muted object-cover" />
+                        <img src={a.url} alt={a.name} loading="lazy" decoding="async" className="h-24 w-full bg-muted object-cover" />
                       ) : (
                         <div className="flex h-24 w-full items-center justify-center bg-muted text-xs text-muted-foreground">
                           {a.kind}
