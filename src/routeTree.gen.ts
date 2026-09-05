@@ -69,6 +69,7 @@ import { Route as TemplatesCategoryIndexRouteImport } from './routes/templates.$
 import { Route as MarketplaceAppsIndexRouteImport } from './routes/marketplace.apps.index'
 import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticated.app.index'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
+import { Route as TemplatesUseCaseGoalRouteImport } from './routes/templates.use-case.$goal'
 import { Route as TemplatesIndustryIndustryRouteImport } from './routes/templates.industry.$industry'
 import { Route as TemplatesCategorySlugRouteImport } from './routes/templates.$category.$slug'
 import { Route as MarketplaceAppsSlugRouteImport } from './routes/marketplace.apps.$slug'
@@ -452,6 +453,11 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const TemplatesUseCaseGoalRoute = TemplatesUseCaseGoalRouteImport.update({
+  id: '/templates/use-case/$goal',
+  path: '/templates/use-case/$goal',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const TemplatesIndustryIndustryRoute =
   TemplatesIndustryIndustryRouteImport.update({
@@ -1041,6 +1047,7 @@ export interface FileRoutesByFullPath {
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
   '/templates/industry/$industry': typeof TemplatesIndustryIndustryRoute
+  '/templates/use-case/$goal': typeof TemplatesUseCaseGoalRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
@@ -1179,6 +1186,7 @@ export interface FileRoutesByTo {
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
   '/templates/industry/$industry': typeof TemplatesIndustryIndustryRoute
+  '/templates/use-case/$goal': typeof TemplatesUseCaseGoalRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/app': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps': typeof MarketplaceAppsIndexRoute
@@ -1325,6 +1333,7 @@ export interface FileRoutesById {
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
   '/templates/industry/$industry': typeof TemplatesIndustryIndustryRoute
+  '/templates/use-case/$goal': typeof TemplatesUseCaseGoalRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
@@ -1470,6 +1479,7 @@ export interface FileRouteTypes {
     | '/marketplace/apps/$slug'
     | '/templates/$category/$slug'
     | '/templates/industry/$industry'
+    | '/templates/use-case/$goal'
     | '/admin/'
     | '/app/'
     | '/marketplace/apps/'
@@ -1608,6 +1618,7 @@ export interface FileRouteTypes {
     | '/marketplace/apps/$slug'
     | '/templates/$category/$slug'
     | '/templates/industry/$industry'
+    | '/templates/use-case/$goal'
     | '/admin'
     | '/app'
     | '/marketplace/apps'
@@ -1753,6 +1764,7 @@ export interface FileRouteTypes {
     | '/marketplace/apps/$slug'
     | '/templates/$category/$slug'
     | '/templates/industry/$industry'
+    | '/templates/use-case/$goal'
     | '/_authenticated/admin/'
     | '/_authenticated/app/'
     | '/marketplace/apps/'
@@ -1853,6 +1865,7 @@ export interface RootRouteChildren {
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   TemplatesCategorySlugRoute: typeof TemplatesCategorySlugRoute
   TemplatesIndustryIndustryRoute: typeof TemplatesIndustryIndustryRoute
+  TemplatesUseCaseGoalRoute: typeof TemplatesUseCaseGoalRoute
   TemplatesCategoryIndexRoute: typeof TemplatesCategoryIndexRoute
   ApiPublicCampaignMediaSplatRoute: typeof ApiPublicCampaignMediaSplatRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
@@ -2286,6 +2299,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/templates/use-case/$goal': {
+      id: '/templates/use-case/$goal'
+      path: '/templates/use-case/$goal'
+      fullPath: '/templates/use-case/$goal'
+      preLoaderRoute: typeof TemplatesUseCaseGoalRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/templates/industry/$industry': {
       id: '/templates/industry/$industry'
@@ -3188,6 +3208,7 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   TemplatesCategorySlugRoute: TemplatesCategorySlugRoute,
   TemplatesIndustryIndustryRoute: TemplatesIndustryIndustryRoute,
+  TemplatesUseCaseGoalRoute: TemplatesUseCaseGoalRoute,
   TemplatesCategoryIndexRoute: TemplatesCategoryIndexRoute,
   ApiPublicCampaignMediaSplatRoute: ApiPublicCampaignMediaSplatRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
