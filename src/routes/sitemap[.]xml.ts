@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
 import { INDUSTRIES } from "@/components/marketing/industries";
+import { COMPARISONS } from "@/lib/marketing/compare";
 import { CATEGORY_META, PUBLIC_TEMPLATES, type TemplateCategory } from "@/lib/marketing/template-catalog";
 import {
   GOAL_LABEL,
@@ -121,6 +122,11 @@ export const Route = createFileRoute("/sitemap.xml")({
           ...(Object.keys(GOAL_LABEL) as Goal[])
             .filter((g) => templatesByGoal(g).length >= MIN_COLLECTION_SIZE)
             .map((g) => ({ path: `/templates/use-case/${g}`, changefreq: "monthly", priority: "0.6" })),
+          ...COMPARISONS.map((c) => ({
+            path: `/compare/${c.slug}`,
+            changefreq: "monthly",
+            priority: "0.7",
+          })),
           ...(await partnerPages()),
           ...(await publishedLandingPages()),
 

@@ -50,6 +50,7 @@ import { Route as VerifyIndexRouteImport } from './routes/verify.index'
 import { Route as TemplatesIndexRouteImport } from './routes/templates.index'
 import { Route as PartnersIndexRouteImport } from './routes/partners.index'
 import { Route as MarketplaceIndexRouteImport } from './routes/marketplace.index'
+import { Route as CompareIndexRouteImport } from './routes/compare.index'
 import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
@@ -62,6 +63,7 @@ import { Route as MarketplaceCategoriesRouteImport } from './routes/marketplace.
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as CompareSlugRouteImport } from './routes/compare.$slug'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
@@ -363,6 +365,11 @@ const MarketplaceIndexRoute = MarketplaceIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MarketplaceRoute,
 } as any)
+const CompareIndexRoute = CompareIndexRouteImport.update({
+  id: '/compare/',
+  path: '/compare/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyResetPasswordRoute = VerifyResetPasswordRouteImport.update({
   id: '/verify/reset-password',
   path: '/verify/reset-password',
@@ -421,6 +428,11 @@ const FSlugRoute = FSlugRouteImport.update({
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareSlugRoute = CompareSlugRouteImport.update({
+  id: '/compare/$slug',
+  path: '/compare/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSetupSmsRoute = ApiSetupSmsRouteImport.update({
@@ -1018,6 +1030,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
@@ -1030,6 +1043,7 @@ export interface FileRoutesByFullPath {
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/compare/': typeof CompareIndexRoute
   '/marketplace/': typeof MarketplaceIndexRoute
   '/partners/': typeof PartnersIndexRoute
   '/templates/': typeof TemplatesIndexRoute
@@ -1165,6 +1179,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
@@ -1177,6 +1192,7 @@ export interface FileRoutesByTo {
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/compare': typeof CompareIndexRoute
   '/marketplace': typeof MarketplaceIndexRoute
   '/partners': typeof PartnersIndexRoute
   '/templates': typeof TemplatesIndexRoute
@@ -1316,6 +1332,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
@@ -1328,6 +1345,7 @@ export interface FileRoutesById {
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/compare/': typeof CompareIndexRoute
   '/marketplace/': typeof MarketplaceIndexRoute
   '/partners/': typeof PartnersIndexRoute
   '/templates/': typeof TemplatesIndexRoute
@@ -1468,6 +1486,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/api/setup-sms'
+    | '/compare/$slug'
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
@@ -1480,6 +1499,7 @@ export interface FileRouteTypes {
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/compare/'
     | '/marketplace/'
     | '/partners/'
     | '/templates/'
@@ -1615,6 +1635,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/api/setup-sms'
+    | '/compare/$slug'
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
@@ -1627,6 +1648,7 @@ export interface FileRouteTypes {
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/compare'
     | '/marketplace'
     | '/partners'
     | '/templates'
@@ -1765,6 +1787,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/app'
     | '/api/setup-sms'
+    | '/compare/$slug'
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
@@ -1777,6 +1800,7 @@ export interface FileRouteTypes {
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/compare/'
     | '/marketplace/'
     | '/partners/'
     | '/templates/'
@@ -1916,6 +1940,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
+  CompareSlugRoute: typeof CompareSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   FSlugRoute: typeof FSlugRoute
   MMessageIdRoute: typeof MMessageIdRoute
@@ -1924,6 +1949,7 @@ export interface RootRouteChildren {
   RCodeRoute: typeof RCodeRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
+  CompareIndexRoute: typeof CompareIndexRoute
   PartnersIndexRoute: typeof PartnersIndexRoute
   TemplatesIndexRoute: typeof TemplatesIndexRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
@@ -2245,6 +2271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketplaceIndexRouteImport
       parentRoute: typeof MarketplaceRoute
     }
+    '/compare/': {
+      id: '/compare/'
+      path: '/compare'
+      fullPath: '/compare/'
+      preLoaderRoute: typeof CompareIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify/reset-password': {
       id: '/verify/reset-password'
       path: '/verify/reset-password'
@@ -2327,6 +2360,13 @@ declare module '@tanstack/react-router' {
       path: '/email/unsubscribe'
       fullPath: '/email/unsubscribe'
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/$slug': {
+      id: '/compare/$slug'
+      path: '/compare/$slug'
+      fullPath: '/compare/$slug'
+      preLoaderRoute: typeof CompareSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/setup-sms': {
@@ -3310,6 +3350,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiSetupSmsRoute: ApiSetupSmsRoute,
+  CompareSlugRoute: CompareSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   FSlugRoute: FSlugRoute,
   MMessageIdRoute: MMessageIdRoute,
@@ -3318,6 +3359,7 @@ const rootRouteChildren: RootRouteChildren = {
   RCodeRoute: RCodeRoute,
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
+  CompareIndexRoute: CompareIndexRoute,
   PartnersIndexRoute: PartnersIndexRoute,
   TemplatesIndexRoute: TemplatesIndexRoute,
   VerifyIndexRoute: VerifyIndexRoute,

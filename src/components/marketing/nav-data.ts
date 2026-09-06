@@ -1,6 +1,6 @@
 import {
   MessageSquare, Mail, Workflow, LayoutTemplate, FormInput, BarChart3, Users,
-  Globe2, ShieldCheck, Sparkles, Wallet, BookOpen, Building2,
+  Globe2, ShieldCheck, Sparkles, Wallet, BookOpen, Building2, Braces,
   type LucideIcon,
 } from "lucide-react";
 
@@ -59,6 +59,14 @@ export const NAV: NavEntry[] = [
           { to: "/solutions", label: "All industries", blurb: "Retail, services, events and more", icon: Building2 },
           { to: "/solutions/ecommerce", label: "Ecommerce", blurb: "Launches, back-in-stock and win-backs", icon: LayoutTemplate },
           { to: "/solutions/service-businesses", label: "Service businesses", blurb: "Quotes, reminders and follow-ups", icon: Users },
+        ],
+      },
+      {
+        heading: "Why Xellvio",
+        items: [
+          { to: "/compare", label: "Compare platforms", blurb: "Xellvio vs the SMS tools you shortlist", icon: BarChart3 },
+          { to: "/compare/xellvio-vs-twilio", label: "Xellvio vs Twilio", blurb: "Finished platform vs building on an API", icon: Braces },
+          { to: "/compare/xellvio-vs-attentive", label: "Xellvio vs Attentive", blurb: "Self-serve and global vs enterprise retail", icon: MessageSquare },
         ],
       },
       {
