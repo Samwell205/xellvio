@@ -63,6 +63,7 @@ import { Route as MarketplaceCategoriesRouteImport } from './routes/marketplace.
 import { Route as MMessageIdRouteImport } from './routes/m.$messageId'
 import { Route as FSlugRouteImport } from './routes/f.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as CompareSlugRouteImport } from './routes/compare.$slug'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
@@ -427,6 +428,11 @@ const FSlugRoute = FSlugRouteImport.update({
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompareSlugRoute = CompareSlugRouteImport.update({
+  id: '/compare/$slug',
+  path: '/compare/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSetupSmsRoute = ApiSetupSmsRouteImport.update({
@@ -1024,6 +1030,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
@@ -1172,6 +1179,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
@@ -1324,6 +1332,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
   '/m/$messageId': typeof MMessageIdRoute
@@ -1477,6 +1486,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/app'
     | '/api/setup-sms'
+    | '/compare/$slug'
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
@@ -1625,6 +1635,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/api/setup-sms'
+    | '/compare/$slug'
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
@@ -1776,6 +1787,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/app'
     | '/api/setup-sms'
+    | '/compare/$slug'
     | '/email/unsubscribe'
     | '/f/$slug'
     | '/m/$messageId'
@@ -1928,6 +1940,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
+  CompareSlugRoute: typeof CompareSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   FSlugRoute: typeof FSlugRoute
   MMessageIdRoute: typeof MMessageIdRoute
@@ -2347,6 +2360,13 @@ declare module '@tanstack/react-router' {
       path: '/email/unsubscribe'
       fullPath: '/email/unsubscribe'
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compare/$slug': {
+      id: '/compare/$slug'
+      path: '/compare/$slug'
+      fullPath: '/compare/$slug'
+      preLoaderRoute: typeof CompareSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/setup-sms': {
@@ -3330,6 +3350,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiSetupSmsRoute: ApiSetupSmsRoute,
+  CompareSlugRoute: CompareSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   FSlugRoute: FSlugRoute,
   MMessageIdRoute: MMessageIdRoute,
