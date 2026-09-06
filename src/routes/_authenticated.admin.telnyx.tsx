@@ -19,7 +19,7 @@ import {
 import { adminListAccountsLite } from "@/lib/admin-verifiers.functions";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/admin/telnyx")({
   head: () => ({ meta: [{ title: "Admin · Telnyx activity — Xellvio" }] }),
@@ -734,11 +734,12 @@ function FundingPanel() {
 
   // Seed the form from the carrier's current settings once they load.
   const prefs = funding.data?.prefs ?? null;
-  if (!dirty && prefs && enabled === null) {
+  useEffect(() => {
+    if (dirty || !prefs) return;
     setEnabled(prefs.enabled);
     setThreshold(prefs.threshold_amount ?? "");
     setAmount(prefs.recharge_amount ?? "");
-  }
+  }, [prefs, dirty]);
 
   const balance = funding.data?.balance?.ok ? funding.data.balance.balance : null;
   const thresholdNum = Number(threshold);
