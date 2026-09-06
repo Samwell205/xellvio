@@ -354,49 +354,49 @@ const PLACEMENT: Placed[] = [
     id: "activity",
     node: <ActivityCard />,
     from: 1,
-    style: { left: "4%", top: "12%", zIndex: 20 },
+    style: { left: "3%", top: "7%", zIndex: 20 },
     depth: 0.75,
   },
   {
     id: "form",
     node: <FormCard />,
     from: 1,
-    style: { right: "5%", top: "8%", zIndex: 18 },
+    style: { right: "4%", top: "5%", zIndex: 18 },
     depth: 0.6,
   },
   {
     id: "landing",
     node: <LandingCard />,
     from: 1,
-    style: { left: "8%", bottom: "6%", zIndex: 16 },
+    style: { left: "5%", bottom: "8%", zIndex: 16 },
     depth: 0.45,
   },
   {
     id: "automation",
     node: <AutomationCard />,
     from: 3,
-    style: { right: "3%", top: "34%", zIndex: 25 },
+    style: { right: "3%", top: "30%", zIndex: 25 },
     depth: 0.85,
   },
   {
     id: "ai",
     node: <AiCard />,
     from: 4,
-    style: { left: "2%", top: "46%", zIndex: 28 },
+    style: { left: "1%", top: "54%", zIndex: 28 },
     depth: 0.95,
   },
   {
     id: "channels",
     node: <ChannelsCard />,
     from: 5,
-    style: { right: "10%", bottom: "5%", zIndex: 22 },
+    style: { right: "13%", bottom: "7%", zIndex: 22 },
     depth: 0.7,
   },
   {
     id: "campaign",
     node: <CampaignCard />,
     from: 5,
-    style: { left: "34%", bottom: "2%", zIndex: 24 },
+    style: { left: "33%", bottom: "6%", zIndex: 24 },
     depth: 0.55,
   },
 ];
@@ -576,7 +576,7 @@ function DesktopCanvas() {
               mxRaw.set(0);
               myRaw.set(0);
             }}
-            className="relative h-[76vh] rounded-[36px] border border-border bg-muted/40"
+            className="relative h-[80vh] overflow-hidden rounded-[36px] border border-border bg-muted/40"
             style={{ perspective: "1400px" }}
           >
             <motion.div
@@ -597,16 +597,18 @@ function DesktopCanvas() {
               }}
             />
             <ConnectionLines active={stage >= 2} />
-            {PLACEMENT.map((p) => (
-              <Card3D
-                key={p.id}
-                placed={p}
-                stage={stage}
-                mx={mxRaw}
-                my={myRaw}
-                progress={scrollYProgress}
-              />
-            ))}
+            <div className="absolute inset-0 scale-[0.86] 2xl:scale-95">
+              {PLACEMENT.map((p) => (
+                <Card3D
+                  key={p.id}
+                  placed={p}
+                  stage={stage}
+                  mx={mxRaw}
+                  my={myRaw}
+                  progress={scrollYProgress}
+                />
+              ))}
+            </div>
             <motion.div
               initial={false}
               animate={{ opacity: stage >= 6 ? 1 : 0, y: stage >= 6 ? 0 : 8 }}
