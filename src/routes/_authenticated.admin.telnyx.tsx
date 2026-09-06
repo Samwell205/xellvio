@@ -85,6 +85,9 @@ function AdminTelnyxPage() {
         <SpendBox label="Spent last 7 days" v={spend.data?.windows.last_7d} />
       </div>
 
+      <FundingPanel />
+
+
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold flex items-center gap-2">
