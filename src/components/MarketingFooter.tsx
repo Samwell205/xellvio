@@ -13,7 +13,7 @@ export function MarketingFooter() {
             messaging in 190+ countries.
           </p>
         </div>
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <FooterCol title="Channels" items={[
             { label: "SMS marketing", to: "/sms-marketing" },
             { label: "Email marketing", to: "/email-marketing" },
@@ -29,6 +29,16 @@ export function MarketingFooter() {
             { label: "Reporting", to: "/reporting" },
             { label: "Compliance", to: "/compliance" },
             { label: "Pricing", to: "/pricing" },
+          ]} />
+          <FooterCol title="Why Xellvio" items={[
+            { label: "Compare platforms", to: "/compare" },
+            { label: "Xellvio vs Attentive", to: "/compare/xellvio-vs-attentive" },
+            { label: "Xellvio vs SimpleTexting", to: "/compare/xellvio-vs-simpletexting" },
+            { label: "Xellvio vs Textmagic", to: "/compare/xellvio-vs-textmagic" },
+            { label: "Xellvio vs SlickText", to: "/compare/xellvio-vs-slicktext" },
+            { label: "Xellvio vs EZ Texting", to: "/compare/xellvio-vs-ez-texting" },
+            { label: "Xellvio vs Twilio", to: "/compare/xellvio-vs-twilio" },
+            { label: "Xellvio vs ClickSend", to: "/compare/xellvio-vs-clicksend" },
           ]} />
           <FooterCol title="Templates" items={[
             { label: "All templates", to: "/templates" },

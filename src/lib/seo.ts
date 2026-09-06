@@ -287,6 +287,7 @@ export const PUBLIC_PAGES: PublicPage[] = [
   { path: "/reporting", changefreq: "monthly", priority: "0.8", group: "product" },
   { path: "/global-delivery", changefreq: "monthly", priority: "0.8", group: "product" },
   { path: "/compliance", changefreq: "monthly", priority: "0.8", group: "product" },
+  { path: "/compare", changefreq: "monthly", priority: "0.8", group: "product" },
   { path: "/templates", changefreq: "weekly", priority: "0.7", group: "resources" },
   { path: "/resources", changefreq: "monthly", priority: "0.7", group: "resources" },
   { path: "/solutions", changefreq: "monthly", priority: "0.8", group: "solutions" },
