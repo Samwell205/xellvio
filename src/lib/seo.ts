@@ -23,8 +23,9 @@ export const BRAND = {
   /** Full factual description used for Organization / SoftwareApplication schema. */
   long: "Xellvio is a customer messaging platform that helps businesses send bulk SMS and MMS campaigns to 190+ countries, automate customer journeys, collect leads through sign-up forms and landing pages, reply in a shared two-way inbox, and measure delivery, clicks and revenue from one place.",
   logo: `${SITE_URL}/icon-512.png`,
-  /** Only officially owned profiles belong here. Empty until verified. */
-  sameAs: [] as string[],
+  /** Only officially owned profiles belong here. */
+  sameAs: SOCIAL_LINKS.map((s) => s.href),
+
   supportEmail: "support@xellvio.com",
   /** Fallback social share image (1200x630). */
   ogImage:
