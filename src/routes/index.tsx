@@ -25,6 +25,7 @@ import { useState } from "react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { PlatformShowcase } from "@/components/marketing/PlatformShowcase";
+import { InteractiveShowcase } from "@/components/marketing/InteractiveShowcase";
 import { StatsMarquee, reveal } from "@/components/marketing/ProductKit";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -180,6 +181,7 @@ function HomePage() {
             { value: "24/7", label: "delivery monitoring" },
           ]}
         />
+        <InteractiveShowcase />
         <Channels />
         <PlatformShowcase />
         <FeatureGrid />
