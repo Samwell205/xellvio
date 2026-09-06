@@ -458,6 +458,109 @@ export async function getBalance(): Promise<{ balance: number; currency: string;
   }
 }
 
+/** Full balance record, including credit limit and available credit. */
+export async function getBalanceDetails(): Promise<{
+  ok: boolean;
+  balance: number;
+  currency: string;
+  credit_limit: number | null;
+  available_credit: number | null;
+  pending: number | null;
+  error?: string;
+}> {
+  try {
+    const res = await telnyx<{
+      data: {
+        balance: string;
+        currency: string;
+        credit_limit?: string;
+        available_credit?: string;
+        pending_hold?: string;
+      };
+    }>("/balance");
+    const num = (v: unknown) => (v === undefined || v === null || v === "" ? null : Number(v));
+    return {
+      ok: true,
+      balance: Number(res.data.balance ?? 0),
+      currency: res.data.currency || "USD",
+      credit_limit: num(res.data.credit_limit),
+      available_credit: num(res.data.available_credit),
+      pending: num(res.data.pending_hold),
+    };
+  } catch (e: any) {
+    return {
+      ok: false,
+      balance: 0,
+      currency: "USD",
+      credit_limit: null,
+      available_credit: null,
+      pending: null,
+      error: e?.message ?? String(e),
+    };
+  }
+}
+
+// ============ Funding (automatic top-ups) ============
+
+export type AutoRechargePrefs = {
+  enabled: boolean;
+  threshold_amount: string | null;
+  recharge_amount: string | null;
+  invoice_enabled: boolean;
+  preference: string | null;
+};
+
+function normalisePrefs(data: any): AutoRechargePrefs {
+  return {
+    enabled: Boolean(data?.enabled),
+    threshold_amount: data?.threshold_amount ?? null,
+    recharge_amount: data?.recharge_amount ?? null,
+    invoice_enabled: Boolean(data?.invoice_enabled),
+    preference: data?.preference ?? null,
+  };
+}
+
+/** Current automatic top-up preferences on the carrier account. */
+export async function getAutoRechargePrefs(): Promise<
+  { ok: true; prefs: AutoRechargePrefs } | { ok: false; error: string }
+> {
+  try {
+    const res = await telnyx<{ data: any }>("/payment/auto_recharge_prefs");
+    return { ok: true, prefs: normalisePrefs(res?.data) };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? String(e) };
+  }
+}
+
+/**
+ * Update automatic top-ups. The carrier charges the payment method already
+ * stored on the carrier account — we never handle card details here.
+ */
+export async function updateAutoRechargePrefs(input: {
+  enabled: boolean;
+  thresholdAmount: number;
+  rechargeAmount: number;
+  invoiceEnabled?: boolean;
+  preference?: string | null;
+}): Promise<{ ok: true; prefs: AutoRechargePrefs } | { ok: false; error: string }> {
+  try {
+    const body: Record<string, unknown> = {
+      enabled: input.enabled,
+      threshold_amount: input.thresholdAmount.toFixed(2),
+      recharge_amount: input.rechargeAmount.toFixed(2),
+    };
+    if (input.invoiceEnabled !== undefined) body.invoice_enabled = input.invoiceEnabled;
+    if (input.preference) body.preference = input.preference;
+    const res = await telnyx<{ data: any }>("/payment/auto_recharge_prefs", {
+      method: "PATCH",
+      body,
+    });
+    return { ok: true, prefs: normalisePrefs(res?.data) };
+  } catch (e: any) {
+    return { ok: false, error: e?.message ?? String(e) };
+  }
+}
+
 // ============ Status mapping ============
 
 /**
