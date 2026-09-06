@@ -5,6 +5,8 @@
  * page-specific values; global defaults (site name, share image, twitter card,
  * canonical host) are applied here so the whole site stays consistent.
  */
+import { SOCIAL_LINKS } from "@/content/social";
+
 
 /** Production canonical origin. Overridable per environment, never a preview host. */
 export const SITE_URL = (
