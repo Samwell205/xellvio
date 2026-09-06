@@ -1,6 +1,8 @@
 import { Logo } from "./Logo";
 import { Link } from "@tanstack/react-router";
+import { SocialIcons } from "./SocialIcons";
 import { ABUSE_EMAIL, SUPPORT_EMAIL } from "@/content/legal";
+
 
 export function MarketingFooter() {
   return (
@@ -12,7 +14,9 @@ export function MarketingFooter() {
             The customer messaging platform for SMS, email, automations and reporting — trusted for compliant bulk
             messaging in 190+ countries.
           </p>
+          <SocialIcons className="pt-2" />
         </div>
+
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <FooterCol title="Channels" items={[
             { label: "SMS marketing", to: "/sms-marketing" },
