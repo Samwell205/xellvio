@@ -375,7 +375,7 @@ const PLACEMENT: Placed[] = [
     id: "automation",
     node: <AutomationCard />,
     from: 3,
-    style: { right: "3%", top: "30%", zIndex: 25 },
+    style: { right: "3%", top: "24%", zIndex: 25 },
     depth: 0.85,
   },
   {
@@ -389,7 +389,7 @@ const PLACEMENT: Placed[] = [
     id: "channels",
     node: <ChannelsCard />,
     from: 5,
-    style: { right: "13%", bottom: "7%", zIndex: 22 },
+    style: { right: "8%", bottom: "4%", zIndex: 22 },
     depth: 0.7,
   },
   {
