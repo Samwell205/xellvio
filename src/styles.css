@@ -179,6 +179,8 @@
 /* Marketing marquee (stats ticker) */
 @keyframes marquee-x { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .marquee-track { display: flex; width: max-content; animation: marquee-x 32s linear infinite; }
+.marquee-track--reverse { animation-direction: reverse; }
+.marquee-track--slow { animation-duration: 46s; }
 @media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } }
 
 /* Loading system: subtle shimmer sweep used by all skeleton placeholders. */
