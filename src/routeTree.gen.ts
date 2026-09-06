@@ -50,6 +50,7 @@ import { Route as VerifyIndexRouteImport } from './routes/verify.index'
 import { Route as TemplatesIndexRouteImport } from './routes/templates.index'
 import { Route as PartnersIndexRouteImport } from './routes/partners.index'
 import { Route as MarketplaceIndexRouteImport } from './routes/marketplace.index'
+import { Route as CompareIndexRouteImport } from './routes/compare.index'
 import { Route as VerifyResetPasswordRouteImport } from './routes/verify.reset-password'
 import { Route as VerifyAuthRouteImport } from './routes/verify.auth'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
@@ -362,6 +363,11 @@ const MarketplaceIndexRoute = MarketplaceIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MarketplaceRoute,
+} as any)
+const CompareIndexRoute = CompareIndexRouteImport.update({
+  id: '/compare/',
+  path: '/compare/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const VerifyResetPasswordRoute = VerifyResetPasswordRouteImport.update({
   id: '/verify/reset-password',
@@ -1030,6 +1036,7 @@ export interface FileRoutesByFullPath {
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/compare/': typeof CompareIndexRoute
   '/marketplace/': typeof MarketplaceIndexRoute
   '/partners/': typeof PartnersIndexRoute
   '/templates/': typeof TemplatesIndexRoute
@@ -1177,6 +1184,7 @@ export interface FileRoutesByTo {
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/compare': typeof CompareIndexRoute
   '/marketplace': typeof MarketplaceIndexRoute
   '/partners': typeof PartnersIndexRoute
   '/templates': typeof TemplatesIndexRoute
@@ -1328,6 +1336,7 @@ export interface FileRoutesById {
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/compare/': typeof CompareIndexRoute
   '/marketplace/': typeof MarketplaceIndexRoute
   '/partners/': typeof PartnersIndexRoute
   '/templates/': typeof TemplatesIndexRoute
@@ -1480,6 +1489,7 @@ export interface FileRouteTypes {
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/compare/'
     | '/marketplace/'
     | '/partners/'
     | '/templates/'
@@ -1627,6 +1637,7 @@ export interface FileRouteTypes {
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/compare'
     | '/marketplace'
     | '/partners'
     | '/templates'
@@ -1777,6 +1788,7 @@ export interface FileRouteTypes {
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/compare/'
     | '/marketplace/'
     | '/partners/'
     | '/templates/'
@@ -1924,6 +1936,7 @@ export interface RootRouteChildren {
   RCodeRoute: typeof RCodeRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
+  CompareIndexRoute: typeof CompareIndexRoute
   PartnersIndexRoute: typeof PartnersIndexRoute
   TemplatesIndexRoute: typeof TemplatesIndexRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
@@ -2244,6 +2257,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/marketplace/'
       preLoaderRoute: typeof MarketplaceIndexRouteImport
       parentRoute: typeof MarketplaceRoute
+    }
+    '/compare/': {
+      id: '/compare/'
+      path: '/compare'
+      fullPath: '/compare/'
+      preLoaderRoute: typeof CompareIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/verify/reset-password': {
       id: '/verify/reset-password'
@@ -3318,6 +3338,7 @@ const rootRouteChildren: RootRouteChildren = {
   RCodeRoute: RCodeRoute,
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
+  CompareIndexRoute: CompareIndexRoute,
   PartnersIndexRoute: PartnersIndexRoute,
   TemplatesIndexRoute: TemplatesIndexRoute,
   VerifyIndexRoute: VerifyIndexRoute,
