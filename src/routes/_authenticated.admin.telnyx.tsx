@@ -4,17 +4,22 @@ import { useServerFn } from "@tanstack/react-start";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Phone, ExternalLink, RefreshCw, TrendingDown, Wallet, AlertTriangle } from "lucide-react";
 import {
   getTelnyxSpendOverview,
   getTelnyxLiveBalance,
   getTelnyxTenantSpend,
   sendMmsCorrectionEmail,
+  getTelnyxFunding,
+  updateTelnyxFunding,
 } from "@/lib/admin-telnyx.functions";
 import { adminListAccountsLite } from "@/lib/admin-verifiers.functions";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/admin/telnyx")({
   head: () => ({ meta: [{ title: "Admin · Telnyx activity — Xellvio" }] }),
@@ -84,6 +89,9 @@ function AdminTelnyxPage() {
         <SpendBox label="Spent last 24h" v={spend.data?.windows.last_24h} />
         <SpendBox label="Spent last 7 days" v={spend.data?.windows.last_7d} />
       </div>
+
+      <FundingPanel />
+
 
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
@@ -694,6 +702,220 @@ function TenantDrilldown({
           </div>
         </div>
       )}
+    </Card>
+  );
+}
+
+/* ------------------------------- funding panel ------------------------------ */
+
+/**
+ * Fund the carrier account from the admin console.
+ *
+ * The carrier has no one-off "charge my card now" API — funding happens through
+ * its automatic top-up rules, charging the payment method already stored on the
+ * carrier account. So this panel manages those rules: the balance that triggers
+ * a top-up and the amount to add. Saving a trigger above the current balance
+ * makes the carrier fund the account on its next check.
+ */
+function FundingPanel() {
+  const fundingFn = useServerFn(getTelnyxFunding);
+  const saveFn = useServerFn(updateTelnyxFunding);
+  const funding = useQuery({
+    queryKey: ["admin-telnyx-funding"],
+    queryFn: () => fundingFn(),
+    refetchInterval: 120_000,
+  });
+
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [threshold, setThreshold] = useState("");
+  const [amount, setAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  // Seed the form from the carrier's current settings once they load.
+  const prefs = funding.data?.prefs ?? null;
+  useEffect(() => {
+    if (dirty || !prefs) return;
+    setEnabled(prefs.enabled);
+    setThreshold(prefs.threshold_amount ?? "");
+    setAmount(prefs.recharge_amount ?? "");
+  }, [prefs, dirty]);
+
+  const balance = funding.data?.balance?.ok ? funding.data.balance.balance : null;
+  const thresholdNum = Number(threshold);
+  const amountNum = Number(amount);
+  const valid =
+    Number.isFinite(thresholdNum) && thresholdNum >= 0 && Number.isFinite(amountNum) && amountNum >= 1;
+  const willFundNow = enabled === true && balance !== null && valid && thresholdNum > balance;
+
+  async function save() {
+    if (!valid) {
+      toast.error("Enter a trigger balance and a top-up amount of at least $1.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveFn({
+        data: {
+          enabled: enabled === true,
+          thresholdAmount: thresholdNum,
+          rechargeAmount: amountNum,
+        },
+      });
+      toast.success(
+        enabled
+          ? willFundNow
+            ? "Saved. Telnyx will charge your saved payment method on its next check."
+            : "Automatic top-ups saved."
+          : "Automatic top-ups turned off.",
+      );
+      setDirty(false);
+      funding.refetch();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save the top-up settings.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="font-semibold flex items-center gap-2">
+          <Wallet className="size-4" /> Fund the carrier account
+        </h3>
+        <Button size="sm" variant="ghost" onClick={() => funding.refetch()}>
+          <RefreshCw className={`size-3.5 mr-1.5 ${funding.isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+
+      <p className="text-sm text-muted-foreground mt-2 max-w-3xl">
+        Top-ups are charged to the payment method saved on your Telnyx account — card details never
+        touch Xellvio. Set the balance that should trigger a top-up and how much to add, and it runs
+        automatically from here on. Saving a trigger above your current balance makes Telnyx fund the
+        account on its next check.
+      </p>
+
+      {funding.data?.prefs_error && (
+        <div className="mt-4 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+          <span className="text-muted-foreground">
+            Telnyx would not return your top-up settings: {funding.data.prefs_error}. Make sure a
+            payment method is saved on the Telnyx account, then refresh.
+          </span>
+        </div>
+      )}
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div>
+              <div className="text-sm font-semibold">Automatic top-ups</div>
+              <div className="text-xs text-muted-foreground">
+                Keeps sending alive without watching the balance.
+              </div>
+            </div>
+            <Switch
+              checked={enabled === true}
+              onCheckedChange={(v) => {
+                setEnabled(v);
+                setDirty(true);
+              }}
+              aria-label="Automatic top-ups"
+            />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="tnx-threshold">Top up when balance falls below (USD)</Label>
+              <Input
+                id="tnx-threshold"
+                inputMode="decimal"
+                placeholder="100.00"
+                value={threshold}
+                onChange={(e) => {
+                  setThreshold(e.target.value);
+                  setDirty(true);
+                }}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tnx-amount">Amount to add each time (USD)</Label>
+              <Input
+                id="tnx-amount"
+                inputMode="decimal"
+                placeholder="500.00"
+                value={amount}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  setDirty(true);
+                }}
+              />
+            </div>
+          </div>
+
+          {willFundNow && (
+            <p className="text-sm font-medium">
+              Your balance is {balance !== null ? formatUSD(balance) : "—"}, below this trigger — so
+              saving now requests a {formatUSD(amountNum)} top-up.
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={save} disabled={saving || funding.isLoading}>
+              {saving ? "Saving…" : willFundNow ? "Save & fund now" : "Save top-up settings"}
+            </Button>
+            <Button asChild variant="outline">
+              <a
+                href="https://portal.telnyx.com/#/app/billing/payment-methods"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink className="size-3.5 mr-1.5" />
+                Manage payment method
+              </a>
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-md border p-4 space-y-3 bg-muted/30">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">
+              Balance right now
+            </div>
+            <div className="text-2xl font-extrabold tabular-nums">
+              {balance !== null ? formatUSD(balance) : "—"}
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground space-y-1">
+            <div className="flex justify-between gap-3">
+              <span>Current setting</span>
+              <span className="font-medium text-foreground">
+                {prefs
+                  ? prefs.enabled
+                    ? `On · below ${prefs.threshold_amount ?? "—"} add ${prefs.recharge_amount ?? "—"}`
+                    : "Off"
+                  : "—"}
+              </span>
+            </div>
+            {funding.data?.balance?.credit_limit !== null &&
+              funding.data?.balance?.credit_limit !== undefined && (
+                <div className="flex justify-between gap-3">
+                  <span>Credit limit</span>
+                  <span className="font-medium text-foreground">
+                    {formatUSD(Number(funding.data.balance.credit_limit))}
+                  </span>
+                </div>
+              )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Telnyx charges the saved payment method and the funds show up on the balance above,
+            usually within a few minutes. One-off card changes and receipts stay in the Telnyx
+            billing portal.
+          </p>
+        </div>
+      </div>
     </Card>
   );
 }

@@ -386,6 +386,53 @@ export const getTelnyxLiveBalance = createServerFn({ method: "GET" })
   });
 
 /**
+ * Admin: everything needed by the "Fund the carrier account" panel — the live
+ * balance plus the current automatic top-up preferences. No card details ever
+ * pass through Xellvio; the carrier charges the payment method stored on its
+ * own account.
+ */
+export const getTelnyxFunding = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { getBalanceDetails, getAutoRechargePrefs } = await import("./telnyx.server");
+    const [balance, prefs] = await Promise.all([getBalanceDetails(), getAutoRechargePrefs()]);
+    return {
+      balance,
+      prefs: prefs.ok ? prefs.prefs : null,
+      prefs_error: prefs.ok ? null : prefs.error,
+      checked_at: new Date().toISOString(),
+    };
+  });
+
+/**
+ * Admin: turn automatic top-ups on/off and set the trigger balance and the
+ * amount to charge. Saving with a trigger above the current balance makes the
+ * carrier fund the account on its next check, which is how an immediate top-up
+ * is requested — the carrier has no one-off "charge now" endpoint.
+ */
+export const updateTelnyxFunding = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        enabled: z.boolean(),
+        thresholdAmount: z.number().min(0).max(100000),
+        rechargeAmount: z.number().min(1).max(100000),
+        invoiceEnabled: z.boolean().optional(),
+        preference: z.string().max(60).nullable().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { updateAutoRechargePrefs } = await import("./telnyx.server");
+    const res = await updateAutoRechargePrefs(data);
+    if (!res.ok) throw new Error(res.error);
+    return res.prefs;
+  });
+
+/**
  * Admin: send the MMS pricing-correction email to a specific tenant explaining
  * what was debited and why. Idempotent per (accountId + reason key).
  */
