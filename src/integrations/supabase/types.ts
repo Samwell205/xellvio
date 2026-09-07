@@ -522,6 +522,48 @@ export type Database = {
         }
         Relationships: []
       }
+      announcement_receipts: {
+        Row: {
+          account_id: string
+          announcement_id: string
+          clicked_at: string | null
+          dismissed_at: string | null
+          id: string
+          seen_at: string
+        }
+        Insert: {
+          account_id: string
+          announcement_id: string
+          clicked_at?: string | null
+          dismissed_at?: string | null
+          id?: string
+          seen_at?: string
+        }
+        Update: {
+          account_id?: string
+          announcement_id?: string
+          clicked_at?: string | null
+          dismissed_at?: string | null
+          id?: string
+          seen_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_receipts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_receipts_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "lifecycle_announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_actions: {
         Row: {
           app_id: string
@@ -3579,6 +3621,212 @@ export type Database = {
           },
         ]
       }
+      lifecycle_announcements: {
+        Row: {
+          body: string
+          channels: string[]
+          created_at: string
+          cta_label: string | null
+          cta_path: string | null
+          expires_at: string | null
+          id: string
+          kind: string
+          published_at: string | null
+          target_plans: string[] | null
+          target_stages: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          channels?: string[]
+          created_at?: string
+          cta_label?: string | null
+          cta_path?: string | null
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          published_at?: string | null
+          target_plans?: string[] | null
+          target_stages?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          channels?: string[]
+          created_at?: string
+          cta_label?: string | null
+          cta_path?: string | null
+          expires_at?: string | null
+          id?: string
+          kind?: string
+          published_at?: string | null
+          target_plans?: string[] | null
+          target_stages?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lifecycle_messages: {
+        Row: {
+          account_id: string
+          body: string | null
+          category: string
+          channel: string
+          clicked_at: string | null
+          cta_label: string | null
+          cta_path: string | null
+          dismissed_at: string | null
+          id: string
+          seen_at: string | null
+          sent_at: string
+          template_key: string
+          title: string | null
+        }
+        Insert: {
+          account_id: string
+          body?: string | null
+          category?: string
+          channel?: string
+          clicked_at?: string | null
+          cta_label?: string | null
+          cta_path?: string | null
+          dismissed_at?: string | null
+          id?: string
+          seen_at?: string | null
+          sent_at?: string
+          template_key: string
+          title?: string | null
+        }
+        Update: {
+          account_id?: string
+          body?: string | null
+          category?: string
+          channel?: string
+          clicked_at?: string | null
+          cta_label?: string | null
+          cta_path?: string | null
+          dismissed_at?: string | null
+          id?: string
+          seen_at?: string | null
+          sent_at?: string
+          template_key?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lifecycle_messages_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lifecycle_promotions: {
+        Row: {
+          body: string
+          channels: string[]
+          created_at: string
+          credit_below: number | null
+          cta_label: string | null
+          cta_path: string | null
+          enabled: boolean
+          frequency_days: number
+          id: string
+          last_run_at: string | null
+          min_account_age_days: number | null
+          name: string
+          target_stages: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          channels?: string[]
+          created_at?: string
+          credit_below?: number | null
+          cta_label?: string | null
+          cta_path?: string | null
+          enabled?: boolean
+          frequency_days?: number
+          id?: string
+          last_run_at?: string | null
+          min_account_age_days?: number | null
+          name: string
+          target_stages?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          channels?: string[]
+          created_at?: string
+          credit_below?: number | null
+          cta_label?: string | null
+          cta_path?: string | null
+          enabled?: boolean
+          frequency_days?: number
+          id?: string
+          last_run_at?: string | null
+          min_account_age_days?: number | null
+          name?: string
+          target_stages?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lifecycle_templates: {
+        Row: {
+          body: string
+          category: string
+          channels: string[]
+          created_at: string
+          cta_label: string | null
+          cta_path: string | null
+          delay_minutes: number
+          enabled: boolean
+          key: string
+          name: string
+          subject: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          category?: string
+          channels?: string[]
+          created_at?: string
+          cta_label?: string | null
+          cta_path?: string | null
+          delay_minutes?: number
+          enabled?: boolean
+          key: string
+          name: string
+          subject?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          channels?: string[]
+          created_at?: string
+          cta_label?: string | null
+          cta_path?: string | null
+          delay_minutes?: number
+          enabled?: boolean
+          key?: string
+          name?: string
+          subject?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       link_clicks: {
         Row: {
           account_id: string
@@ -5077,6 +5325,162 @@ export type Database = {
           },
         ]
       }
+      tenant_comm_prefs: {
+        Row: {
+          account_id: string
+          announcements: boolean
+          created_at: string
+          educational: boolean
+          product_updates: boolean
+          promotional: boolean
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          announcements?: boolean
+          created_at?: string
+          educational?: boolean
+          product_updates?: boolean
+          promotional?: boolean
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          announcements?: boolean
+          created_at?: string
+          educational?: boolean
+          product_updates?: boolean
+          promotional?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_comm_prefs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_events: {
+        Row: {
+          account_id: string
+          created_at: string
+          event: string
+          id: string
+          metadata: Json
+          user_id: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          event: string
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          event?: string
+          id?: string
+          metadata?: Json
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_lifecycle: {
+        Row: {
+          account_id: string
+          celebrated_first_send_at: string | null
+          checklist_dismissed_until: string | null
+          created_at: string
+          first_audience_at: string | null
+          first_automation_at: string | null
+          first_campaign_at: string | null
+          first_campaign_sent_at: string | null
+          first_contacts_at: string | null
+          first_form_at: string | null
+          first_landing_page_at: string | null
+          first_login_at: string | null
+          last_activity_at: string | null
+          last_login_at: string | null
+          onboarding_completed_at: string | null
+          onboarding_state: string
+          plan: string | null
+          progress_pct: number
+          stage: string
+          updated_at: string
+          welcome_seen_at: string | null
+          workspace_completed_at: string | null
+        }
+        Insert: {
+          account_id: string
+          celebrated_first_send_at?: string | null
+          checklist_dismissed_until?: string | null
+          created_at?: string
+          first_audience_at?: string | null
+          first_automation_at?: string | null
+          first_campaign_at?: string | null
+          first_campaign_sent_at?: string | null
+          first_contacts_at?: string | null
+          first_form_at?: string | null
+          first_landing_page_at?: string | null
+          first_login_at?: string | null
+          last_activity_at?: string | null
+          last_login_at?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_state?: string
+          plan?: string | null
+          progress_pct?: number
+          stage?: string
+          updated_at?: string
+          welcome_seen_at?: string | null
+          workspace_completed_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          celebrated_first_send_at?: string | null
+          checklist_dismissed_until?: string | null
+          created_at?: string
+          first_audience_at?: string | null
+          first_automation_at?: string | null
+          first_campaign_at?: string | null
+          first_campaign_sent_at?: string | null
+          first_contacts_at?: string | null
+          first_form_at?: string | null
+          first_landing_page_at?: string | null
+          first_login_at?: string | null
+          last_activity_at?: string | null
+          last_login_at?: string | null
+          onboarding_completed_at?: string | null
+          onboarding_state?: string
+          plan?: string | null
+          progress_pct?: number
+          stage?: string
+          updated_at?: string
+          welcome_seen_at?: string | null
+          workspace_completed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_lifecycle_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_sending_suspensions: {
         Row: {
           account_id: string
@@ -5114,6 +5518,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tenant_sending_suspensions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_tips: {
+        Row: {
+          account_id: string
+          dismissed_at: string | null
+          id: string
+          seen_at: string
+          tip_key: string
+        }
+        Insert: {
+          account_id: string
+          dismissed_at?: string | null
+          id?: string
+          seen_at?: string
+          tip_key: string
+        }
+        Update: {
+          account_id?: string
+          dismissed_at?: string | null
+          id?: string
+          seen_at?: string
+          tip_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_tips_account_id_fkey"
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
