@@ -4,6 +4,7 @@ import { Menu, X, ChevronDown, ArrowRight, Search } from "lucide-react";
 import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
 import { NAV, type NavEntry, type MenuGroup } from "@/components/marketing/nav-data";
+import { ThemeToggle, ThemeToggleLabelled } from "@/components/ThemeToggle";
 
 function hasMenu(e: NavEntry): e is Extract<NavEntry, { groups: MenuGroup[] }> {
   return "groups" in e;
@@ -65,6 +66,7 @@ export function MarketingNav() {
         </nav>
 
         <div className="ml-auto hidden lg:flex items-center gap-2">
+          <ThemeToggle className="mr-1" />
           <Link to="/docs" aria-label="Search the docs" className="grid size-9 place-items-center rounded-full text-foreground/70 hover:bg-muted hover:text-foreground transition-colors">
             <Search className="size-4" />
           </Link>
@@ -77,8 +79,12 @@ export function MarketingNav() {
           </Link>
         </div>
 
+        <div className="ml-auto lg:hidden">
+          <ThemeToggle />
+        </div>
+
         <button
-          className="ml-auto lg:hidden grid size-10 place-items-center rounded-full hover:bg-muted"
+          className="lg:hidden grid size-10 place-items-center rounded-full hover:bg-muted"
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Menu"
         >
