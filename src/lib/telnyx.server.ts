@@ -287,6 +287,8 @@ export async function orderNumber(opts: {
 }): Promise<NumberOrder> {
   const res = await telnyx<{ data: NumberOrder }>("/number_orders", {
     method: "POST",
+    // Retrying a lost response must not buy the same number twice.
+    idempotencyKey: `order:${opts.phoneNumber}:${opts.messagingProfileId}`,
     body: {
       phone_numbers: [{ phone_number: opts.phoneNumber }],
       messaging_profile_id: opts.messagingProfileId,
