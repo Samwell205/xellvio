@@ -1108,7 +1108,12 @@ async function deliverPending(
   // Claim in small chunks. A single large claim runs hundreds of per-row
   // charge/ledger writes inside one statement and hit the database statement
   // timeout, which aborted the whole tick and left campaigns idle for hours.
-  const CLAIM_CHUNK = 500;
+  // 500 still timed out under contention, so start smaller and shrink further
+  // whenever the database cancels the claim instead of abandoning the queue.
+  const MAX_CLAIM_CHUNK = 150;
+  const MIN_CLAIM_CHUNK = 15;
+  let claimChunk = MAX_CLAIM_CHUNK;
+  let claimTimeouts = 0;
   // Adaptive in-flight limit: drops when the carrier rate-limits us, recovers
   // once requests are being accepted again.
   let effectiveConcurrency = concurrency;
@@ -1119,17 +1124,27 @@ async function deliverPending(
   const sink = createStatusSink(supabaseAdmin);
 
   while (claimedTotal < claimLimit && Date.now() < hardDeadline - 3_000) {
-    const want = Math.min(CLAIM_CHUNK, claimLimit - claimedTotal);
+    const want = Math.min(claimChunk, claimLimit - claimedTotal);
     const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
       _campaign_id: campaign.id,
       _limit: want,
     });
     if (qErr) {
-      // Transient claim failure (timeout/contention): stop claiming and keep
-      // whatever we already sent instead of failing the tick.
+      const timedOut = /statement timeout|canceling statement|57014/i.test(qErr.message ?? "");
       console.error("[dispatch] claim failed", qErr.message);
+      // A statement timeout means the batch was too heavy for the database
+      // right now, not that the queue is empty. Halve the batch and try again
+      // so the campaign keeps moving instead of stalling for the whole tick.
+      if (timedOut && claimChunk > MIN_CLAIM_CHUNK && claimTimeouts < 4) {
+        claimTimeouts += 1;
+        claimChunk = Math.max(MIN_CLAIM_CHUNK, Math.floor(claimChunk / 2));
+        await new Promise((r) => setTimeout(r, 250 * claimTimeouts));
+        continue;
+      }
       break;
     }
+    // A healthy claim lets the batch size creep back up.
+    if (claimChunk < MAX_CLAIM_CHUNK) claimChunk = Math.min(MAX_CLAIM_CHUNK, claimChunk * 2);
     const rows = batch ?? [];
     if (rows.length === 0) break;
     claimedTotal += rows.length;
