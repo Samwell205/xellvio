@@ -8,6 +8,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Logo } from "./Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -307,6 +308,10 @@ export function AppSidebar() {
         )}
       </SidebarContent>
       <SidebarFooter className="border-t p-2">
+        <div className="flex items-center justify-between gap-2 px-2 pb-1 group-data-[collapsible=icon]:hidden">
+          <span className="text-xs text-muted-foreground">Appearance</span>
+          <ThemeToggle />
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
