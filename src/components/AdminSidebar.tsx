@@ -9,6 +9,8 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 
 const groups: { label: string; items: { title: string; url: string; icon: any; exact?: boolean }[] }[] = [
   {
@@ -112,7 +114,13 @@ export function AdminSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter className="border-t border-border">
+        {!collapsed && (
+          <div className="px-2 pb-1">
+            <ThemeToggle />
+          </div>
+        )}
         <SidebarMenu>
+
           <SidebarMenuItem>
             <SidebarMenuButton onClick={signOut} className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
               <LogOut className="size-4" />
