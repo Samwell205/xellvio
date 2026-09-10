@@ -27,7 +27,13 @@ export function statusWebhookFailoverUrl(): string {
   return "https://project--91d3bf8a-0d22-4b7d-9569-057a8306639a.lovable.app/api/public/telnyx-status";
 }
 
-type TelnyxOpts = { method?: string; body?: any; query?: Record<string, string | number | undefined> };
+type TelnyxOpts = {
+  method?: string;
+  body?: any;
+  query?: Record<string, string | number | undefined>;
+  /** Stable key so a retried write is never executed twice by the provider. */
+  idempotencyKey?: string;
+};
 
 // ---------- Pacing + rate-limit handling ----------
 // Telnyx rejects bursts with 429 (code 10011). Campaign dispatch can fan out
