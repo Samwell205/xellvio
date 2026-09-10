@@ -13,7 +13,7 @@ import { TEMPLATES, type TemplateEntry } from "@/lib/email-templates/registry";
 
 const SITE_NAME = "xellvio";
 const SENDER_DOMAIN = "notify.xellvio.com";
-const FROM_DOMAIN = "xellvio.com";
+const FROM_DOMAIN = "notify.xellvio.com";
 const FROM_ADDRESS = `Xellvio <admin@${FROM_DOMAIN}>`;
 
 function generateToken(): string {

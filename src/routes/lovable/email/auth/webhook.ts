@@ -34,7 +34,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 const SITE_NAME = "xellvio"
 const SENDER_DOMAIN = "notify.xellvio.com"
 const ROOT_DOMAIN = "xellvio.com"
-const FROM_DOMAIN = "xellvio.com"
+const FROM_DOMAIN = "notify.xellvio.com"
 
 function redactEmail(email: string | null | undefined): string {
   if (!email) return '***'
