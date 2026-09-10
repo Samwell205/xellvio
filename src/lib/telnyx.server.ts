@@ -27,7 +27,13 @@ export function statusWebhookFailoverUrl(): string {
   return "https://project--91d3bf8a-0d22-4b7d-9569-057a8306639a.lovable.app/api/public/telnyx-status";
 }
 
-type TelnyxOpts = { method?: string; body?: any; query?: Record<string, string | number | undefined> };
+type TelnyxOpts = {
+  method?: string;
+  body?: any;
+  query?: Record<string, string | number | undefined>;
+  /** Stable key so a retried write is never executed twice by the provider. */
+  idempotencyKey?: string;
+};
 
 // ---------- Pacing + rate-limit handling ----------
 // Telnyx rejects bursts with 429 (code 10011). Campaign dispatch can fan out
@@ -101,14 +107,20 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
     const s = q.toString();
     if (s) url += (url.includes("?") ? "&" : "?") + s;
   }
-  const init: RequestInit = {
-    method,
-    headers: {
-      Authorization: `Bearer ${apiKey()}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey()}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
   };
+  // Writes are retried on 5xx/network failures. Without a stable request key a
+  // request the provider already accepted (but whose response was lost) would
+  // be replayed, sending the same text twice and billing twice. The key is
+  // generated once per logical call and reused for every retry of that call.
+  const isWrite = method !== "GET" && method !== "HEAD";
+  if (isWrite) {
+    headers["Idempotency-Key"] = opts.idempotencyKey || crypto.randomUUID();
+  }
+  const init: RequestInit = { method, headers };
   if (opts.body !== undefined) init.body = JSON.stringify(opts.body);
 
   let lastError: any = null;
@@ -275,6 +287,8 @@ export async function orderNumber(opts: {
 }): Promise<NumberOrder> {
   const res = await telnyx<{ data: NumberOrder }>("/number_orders", {
     method: "POST",
+    // Retrying a lost response must not buy the same number twice.
+    idempotencyKey: `order:${opts.phoneNumber}:${opts.messagingProfileId}`,
     body: {
       phone_numbers: [{ phone_number: opts.phoneNumber }],
       messaging_profile_id: opts.messagingProfileId,
@@ -462,6 +476,12 @@ export async function sendMessage(opts: {
   messagingProfileId?: string;
   mediaUrls?: string[];
   webhookUrl?: string;
+  /**
+   * Pass the internal message row id. It keeps a retried send — inside this
+   * call or on a later dispatcher attempt — from delivering the same text
+   * twice and charging twice.
+   */
+  idempotencyKey?: string;
 }): Promise<SendMessageResult> {
   const body: any = {
     to: opts.to,
@@ -472,7 +492,11 @@ export async function sendMessage(opts: {
   if (opts.from) body.from = opts.from;
   if (opts.messagingProfileId) body.messaging_profile_id = opts.messagingProfileId;
   if (opts.mediaUrls && opts.mediaUrls.length) body.media_urls = opts.mediaUrls;
-  const res = await telnyx<{ data: SendMessageResult }>("/messages", { method: "POST", body });
+  const res = await telnyx<{ data: SendMessageResult }>("/messages", {
+    method: "POST",
+    body,
+    idempotencyKey: opts.idempotencyKey,
+  });
   return res.data;
 }
 

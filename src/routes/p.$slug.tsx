@@ -37,7 +37,21 @@ export const Route = createFileRoute("/p/$slug")({
     });
   },
   component: LandingPageView,
+  errorComponent: () => <PageUnavailable />,
 });
+
+function PageUnavailable() {
+  return (
+    <main className="flex min-h-screen items-center justify-center p-8 text-center">
+      <div className="max-w-md space-y-3">
+        <h1 className="text-2xl font-semibold">This page is taking too long to load</h1>
+        <p className="text-muted-foreground">
+          Something slowed down on our side. Please refresh in a moment.
+        </p>
+      </div>
+    </main>
+  );
+}
 
 function LandingPageView() {
   const page = Route.useLoaderData() as any;

@@ -24,17 +24,31 @@ export const getPublicLandingPage = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(80) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: page } = await supabaseAdmin
-      .from("landing_pages")
-      .select(PAGE_FIELDS)
-      .eq("slug", data.slug)
-      .eq("published", true)
-      .maybeSingle();
+    const { withTimeout, withTimeoutOr } = await import("@/lib/server-timeout");
+    // Bounded: a stalled database must surface an error page fast instead of
+    // hanging server-side rendering until the runtime kills the request.
+    const { data: page } = await withTimeout(
+      supabaseAdmin
+        .from("landing_pages")
+        .select(PAGE_FIELDS)
+        .eq("slug", data.slug)
+        .eq("published", true)
+        .maybeSingle(),
+      6_000,
+      "landing page read",
+    );
     if (!page) return null;
-    await supabaseAdmin
-      .from("landing_pages")
-      .update({ views: ((page as any).views ?? 0) + 1 })
-      .eq("id", (page as any).id);
+    // View counting must never delay or break the page render.
+    await withTimeoutOr(
+      supabaseAdmin
+        .from("landing_pages")
+        .update({ views: ((page as any).views ?? 0) + 1 })
+        .eq("id", (page as any).id)
+        .then(() => undefined),
+      undefined,
+      2_000,
+      "landing page view count",
+    );
     const { account_id, list_id, ...pub } = page as any;
     return livePresentation(pub) as Record<string, any>;
   });
@@ -43,17 +57,28 @@ export const getPublicSignupForm = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ slug: z.string().trim().min(1).max(80) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: form } = await supabaseAdmin
-      .from("signup_forms")
-      .select(FORM_FIELDS)
-      .eq("slug", data.slug)
-      .eq("published", true)
-      .maybeSingle();
+    const { withTimeout, withTimeoutOr } = await import("@/lib/server-timeout");
+    const { data: form } = await withTimeout(
+      supabaseAdmin
+        .from("signup_forms")
+        .select(FORM_FIELDS)
+        .eq("slug", data.slug)
+        .eq("published", true)
+        .maybeSingle(),
+      6_000,
+      "sign-up form read",
+    );
     if (!form) return null;
-    await supabaseAdmin
-      .from("signup_forms")
-      .update({ views: ((form as any).views ?? 0) + 1 } as any)
-      .eq("id", (form as any).id);
+    await withTimeoutOr(
+      supabaseAdmin
+        .from("signup_forms")
+        .update({ views: ((form as any).views ?? 0) + 1 } as any)
+        .eq("id", (form as any).id)
+        .then(() => undefined),
+      undefined,
+      2_000,
+      "sign-up form view count",
+    );
     const { account_id, list_id, ...pub } = form as any;
     return livePresentation(pub) as Record<string, any>;
   });
