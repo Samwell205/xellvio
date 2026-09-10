@@ -183,6 +183,7 @@ export function MarketingNav() {
                 </Link>
               ),
             )}
+            <ThemeToggleLabelled className="mt-2 rounded-xl border border-border px-4 py-3" />
             <div className="pt-2 grid gap-2">
               <Link to="/auth" onClick={() => setMobileOpen(false)} className="rounded-full border border-border px-4 py-2.5 text-center text-sm font-medium">Log in</Link>
               <Link to="/auth" onClick={() => setMobileOpen(false)} className="rounded-full bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground">Sign up</Link>
