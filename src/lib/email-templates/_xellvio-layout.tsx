@@ -5,11 +5,16 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Text,
   Hr,
 } from "@react-email/components";
+
+/** Absolute URL — email clients cannot resolve relative asset paths. */
+export const LOGO_URL =
+  "https://www.xellvio.com/__l5e/assets-v1/2300f6b3-e5bc-484f-af06-e0cd5e2284a1/xellio-logo.png";
 
 export const colors = {
   brand: "#0A84FF",
@@ -32,32 +37,39 @@ const main: React.CSSProperties = {
   padding: 0,
 };
 
-const container: React.CSSProperties = {
-  maxWidth: "560px",
+const outer: React.CSSProperties = {
+  maxWidth: "600px",
   margin: "0 auto",
-  padding: "32px 24px",
+  padding: "24px 12px 32px",
+};
+
+const card: React.CSSProperties = {
+  backgroundColor: "#ffffff",
+  border: `1px solid ${colors.border}`,
+  borderRadius: "14px",
+  overflow: "hidden",
 };
 
 const header: React.CSSProperties = {
-  paddingBottom: "20px",
+  padding: "22px 28px",
   borderBottom: `1px solid ${colors.border}`,
+  backgroundColor: "#f8fafc",
 };
 
-const brandText: React.CSSProperties = {
-  fontSize: "22px",
-  fontWeight: 700,
-  color: colors.brand,
-  margin: 0,
-  letterSpacing: "-0.02em",
+const accentBar: React.CSSProperties = {
+  height: "4px",
+  backgroundColor: colors.brand,
+  lineHeight: "4px",
+  fontSize: "0px",
 };
 
 const footer: React.CSSProperties = {
-  marginTop: "32px",
-  paddingTop: "20px",
-  borderTop: `1px solid ${colors.border}`,
+  marginTop: "20px",
+  padding: "0 8px",
   fontSize: "12px",
   color: colors.muted,
   lineHeight: "18px",
+  textAlign: "center" as const,
 };
 
 export function XellvioLayout({
@@ -72,22 +84,44 @@ export function XellvioLayout({
       <Head />
       <Preview>{preview}</Preview>
       <Body style={main}>
-        <Container style={container}>
-          <Section style={header}>
-            <Text style={brandText}>Xellvio</Text>
+        <Container style={outer}>
+          <Section style={card}>
+            <Section style={accentBar}>&nbsp;</Section>
+            <Section style={header}>
+              <Img
+                src={LOGO_URL}
+                alt="Xellvio"
+                width="132"
+                height="36"
+                style={{ display: "block", border: 0, outline: "none", textDecoration: "none" }}
+              />
+            </Section>
+            <Section style={{ padding: "28px" }}>{children}</Section>
+            <Hr
+              style={{
+                border: "none",
+                borderTop: `1px solid ${colors.border}`,
+                margin: 0,
+              }}
+            />
+            <Section style={{ padding: "18px 28px", backgroundColor: "#f8fafc" }}>
+              <Text style={{ margin: 0, fontSize: "12px", color: colors.muted, lineHeight: "18px" }}>
+                Questions? Reply to this email or contact{" "}
+                <a href="mailto:admin@xellvio.com" style={{ color: colors.brand }}>
+                  admin@xellvio.com
+                </a>
+                .
+              </Text>
+            </Section>
           </Section>
-          <Section style={{ paddingTop: "24px" }}>{children}</Section>
-          <Hr style={{ border: "none", borderTop: `1px solid ${colors.border}`, margin: "32px 0 0" }} />
           <Section style={footer}>
             <Text style={{ margin: 0 }}>
-              Xellvio · Global SMS & Toll-Free messaging
+              Xellvio · Global SMS &amp; Toll-Free messaging
             </Text>
-            <Text style={{ margin: "6px 0 0" }}>
-              Questions? Reply to this email or contact{" "}
-              <a href="mailto:admin@xellvio.com" style={{ color: colors.brand }}>
-                admin@xellvio.com
+            <Text style={{ margin: "4px 0 0" }}>
+              <a href="https://www.xellvio.com" style={{ color: colors.muted }}>
+                www.xellvio.com
               </a>
-              .
             </Text>
           </Section>
         </Container>
