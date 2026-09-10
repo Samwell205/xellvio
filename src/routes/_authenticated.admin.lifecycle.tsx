@@ -98,8 +98,9 @@ function Overview() {
   const d = data.data;
   if (!d) return <Card className="p-6 text-sm text-muted-foreground">Loading…</Card>;
   const activationRate = d.totals.workspaces
-    ? Math.round((d.totals.activated / d.totals.workspaces) * 100)
-    : 0;
+    ? `${Math.round((d.totals.activated / d.totals.workspaces) * 100)}%`
+    : "—";
+
 
   return (
     <div className="space-y-4">
