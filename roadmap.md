@@ -22,3 +22,10 @@
 ### Remaining (needs real traffic, not code)
 - [ ] Let data accumulate, then run the first weekly/monthly growth review.
 - [ ] Confirm the activation definition with the team before treating activation rate as a target.
+
+## Customer lifecycle & onboarding automation — done
+- Lifecycle profiles for every workspace (backfilled), real-action progress, stages.
+- In-app: activation checklist, welcome state, first-send celebration, announcements, contextual tips, communication preferences.
+- Scheduled hourly checks: onboarding reminders, celebration, 3/7/14-day re-engagement, low balance, feature discovery (preference + frequency aware).
+- Admin > Customer success: overview, funnel, editable templates, announcements, workspace timeline, manual run.
+- Note: existing workspaces only start receiving lifecycle messages after their next sign-in (no retroactive blast).

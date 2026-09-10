@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ActivityLogFeed, AttributionCard, AIInsightsCard } from "@/components/DashboardWidgets";
 import { FeatureDiscovery } from "@/components/growth/FeatureDiscovery";
+import { LifecyclePanel } from "@/components/lifecycle/LifecyclePanel";
 
 export const Route = createFileRoute("/_authenticated/app/")({
   head: () => ({ meta: [{ title: "Dashboard — Xellvio" }] }),
@@ -173,6 +174,8 @@ function Overview() {
       </div>
 
       <OnboardingBanner />
+
+      <LifecyclePanel />
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={Users} label="Subscribed contacts" value={s?.subscribed ?? 0} />
