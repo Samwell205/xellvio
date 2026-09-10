@@ -11,7 +11,7 @@ export type ResolvedTheme = "light" | "dark";
 export const THEME_STORAGE_KEY = "xellvio-theme";
 
 /** Inline script that runs before first paint so there is no flash of the wrong theme. */
-export const THEME_INIT_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}";var s=localStorage.getItem(k);var m=window.matchMedia("(prefers-color-scheme: dark)").matches;var d=s==="dark"||((!s||s==="system")&&m);var e=document.documentElement;e.classList.toggle("dark",d);e.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}";var s=localStorage.getItem(k);var m=window.matchMedia("(prefers-color-scheme: dark)").matches;var d=s==="dark"||((!s||s==="system")&&m);document.documentElement.classList.toggle("dark",d);}catch(e){}})();`;
 
 export function systemTheme(): ResolvedTheme {
   if (typeof window === "undefined") return "light";
@@ -38,7 +38,6 @@ export function applyTheme(choice: ThemeChoice): ResolvedTheme {
   if (typeof document !== "undefined") {
     const el = document.documentElement;
     el.classList.toggle("dark", resolved === "dark");
-    el.style.colorScheme = resolved;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", resolved === "dark" ? "#0f111a" : "#ffffff");
   }

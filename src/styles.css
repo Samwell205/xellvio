@@ -138,6 +138,8 @@
 
 @layer base {
   * { border-color: var(--color-border); }
+  :root { color-scheme: light; }
+  .dark { color-scheme: dark; }
   html, body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   body { background: var(--color-background); color: var(--color-foreground); }
   h1, h2, h3, h4 { letter-spacing: -0.02em; font-weight: 700; }
