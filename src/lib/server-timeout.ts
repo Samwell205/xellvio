@@ -14,11 +14,11 @@ export class ServerTimeoutError extends Error {
 }
 
 export async function withTimeout<T>(
-  work: Promise<T> | (() => Promise<T>),
+  work: PromiseLike<T> | (() => PromiseLike<T>),
   ms = 6_000,
   label = "server request",
 ): Promise<T> {
-  const promise = typeof work === "function" ? work() : work;
+  const promise = Promise.resolve(typeof work === "function" ? work() : work);
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
@@ -34,7 +34,7 @@ export async function withTimeout<T>(
 
 /** Same bound, but a timeout (or any failure) yields a fallback value. */
 export async function withTimeoutOr<T>(
-  work: Promise<T> | (() => Promise<T>),
+  work: PromiseLike<T> | (() => PromiseLike<T>),
   fallback: T,
   ms = 6_000,
   label = "server request",
