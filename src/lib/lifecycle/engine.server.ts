@@ -227,6 +227,14 @@ export async function refreshLifecycle(
       event: "ACCOUNT_CREATED",
       metadata: { created_at: m.accountCreatedAt },
     });
+    // Welcome the workspace the first time it signs in (deduped inside
+    // deliverMessage). Never sent when we're only backfilling profiles.
+    try {
+      if (!opts.login) throw new Error("skip");
+      await deliverMessage({ accountId, templateKey: "welcome" });
+    } catch {
+      /* onboarding must never block a page load */
+    }
   }
   if (opts.login && !existing?.first_login_at) {
     await recordTenantEvent({ accountId, userId: opts.userId ?? null, event: "FIRST_LOGIN" });

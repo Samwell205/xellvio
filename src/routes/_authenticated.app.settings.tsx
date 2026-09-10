@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { CommPrefsCard } from "@/components/lifecycle/CommPrefsCard";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -380,6 +381,7 @@ function SettingsPage() {
         <div className="space-y-6">
           <LoginEmailCard currentEmail={account.data?.email ?? ""} />
           <PasswordCard />
+          <CommPrefsCard />
         </div>
       )}
 

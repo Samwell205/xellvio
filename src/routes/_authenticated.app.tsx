@@ -18,6 +18,9 @@ import { useSession } from "@/hooks/useAccountId";
 import { firstAllowedPath, isOwnerOnlyPath, requiredPermissionFor } from "@/lib/route-permissions";
 import { PERMISSION_LABELS } from "@/lib/team-permissions";
 import { RouteFallback, skeletonFor } from "@/components/RouteFallback";
+import { AnnouncementBanner } from "@/components/lifecycle/AnnouncementBanner";
+import { ContextualTip } from "@/components/lifecycle/ContextualTip";
+import { CONTEXTUAL_TIPS } from "@/lib/lifecycle/taxonomy";
 
 export const Route = createFileRoute("/_authenticated/app")({
   beforeLoad: async () => {
@@ -71,6 +74,16 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Shows the one-time hint for whichever product area the workspace is in. */
+function AreaTip() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const area = pathname.replace(/^\/app\/?/, "").split("/")[0] ?? "";
+  const key =
+    area === "lists" || area === "audience" || area === "segments" ? "audiences" : area;
+  if (!key || !(key in CONTEXTUAL_TIPS)) return null;
+  return <ContextualTip tip={key} />;
+}
+
 function AppShell() {
   // Ensure this tenant has a carrier messaging profile provisioned.
   // Idempotent: no-op if already set. Covers new signups AND existing users.
@@ -120,7 +133,9 @@ function AppShell() {
             </div>
           </header>
           <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
-          <main className="flex-1 p-4 md:p-6 max-w-[1400px] w-full mx-auto">
+          <main className="flex-1 p-4 md:p-6 max-w-[1400px] w-full mx-auto space-y-4">
+            <AnnouncementBanner />
+            <AreaTip />
             <PermissionGuard>
               <Outlet />
             </PermissionGuard>
