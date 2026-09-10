@@ -17,6 +17,7 @@ import { Toaster } from "../components/ui/sonner";
 import { initAnalytics, trackPageView } from "@/lib/analytics";
 import { installCtaTracking, trackView } from "@/lib/growth/track";
 import { BRAND, organizationSchema } from "@/lib/seo";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 function NotFoundComponent() {
   return (
@@ -102,6 +103,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/png", sizes: "512x512", href: "/icon-512.png" },
     ],
     scripts: [
+      // Applies the visitor's saved light/dark choice before first paint.
+      { children: THEME_INIT_SCRIPT },
       {
         type: "application/ld+json",
         children: JSON.stringify({
@@ -119,7 +122,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // The pre-paint script may add the visitor's "dark" class before React hydrates.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
