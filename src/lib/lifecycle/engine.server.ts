@@ -383,7 +383,7 @@ export async function deliverMessage(input: {
           recipientEmail: to,
           idempotencyKey: `lifecycle-${input.templateKey}-${input.accountId}`,
           templateData: {
-            subject: fill(template.subject ?? title, vars),
+            subject: cleanSubject(fill(template.subject ?? title, vars)),
             heading: title,
             body,
             ctaText: template.cta_label ?? undefined,
