@@ -101,14 +101,20 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
     const s = q.toString();
     if (s) url += (url.includes("?") ? "&" : "?") + s;
   }
-  const init: RequestInit = {
-    method,
-    headers: {
-      Authorization: `Bearer ${apiKey()}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey()}`,
+    "Content-Type": "application/json",
+    Accept: "application/json",
   };
+  // Writes are retried on 5xx/network failures. Without a stable request key a
+  // request the provider already accepted (but whose response was lost) would
+  // be replayed, sending the same text twice and billing twice. The key is
+  // generated once per logical call and reused for every retry of that call.
+  const isWrite = method !== "GET" && method !== "HEAD";
+  if (isWrite) {
+    headers["Idempotency-Key"] = opts.idempotencyKey || crypto.randomUUID();
+  }
+  const init: RequestInit = { method, headers };
   if (opts.body !== undefined) init.body = JSON.stringify(opts.body);
 
   let lastError: any = null;
