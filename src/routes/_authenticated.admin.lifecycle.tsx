@@ -107,7 +107,7 @@ function Overview() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={Users} label="Workspaces tracked" value={d.totals.workspaces} />
         <Stat icon={Rocket} label="Sent a first campaign" value={d.totals.activated} />
-        <Stat icon={Gauge} label="Activation rate" value={`${activationRate}%`} />
+        <Stat icon={Gauge} label="Activation rate" value={activationRate} />
         <Stat icon={Gauge} label="Average progress" value={`${d.totals.avg_progress}%`} />
       </div>
 
