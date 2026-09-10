@@ -274,6 +274,22 @@ function fill(text: string, data: Record<string, string>): string {
   return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k: string) => data[k] ?? "");
 }
 
+/**
+ * Subject lines go out without emoji or shouting: decorative characters and
+ * all-caps words are strong spam signals for inbox filters.
+ */
+function cleanSubject(text: string): string {
+  return text
+    .replace(
+      /[\u{1F000}-\u{1FAFF}\u{2190}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}]/gu,
+      "",
+    )
+    .replace(/!{2,}/g, "!")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+
 /** Quiet period between optional (non-transactional) messages, in hours. */
 const QUIET_HOURS = 20;
 
