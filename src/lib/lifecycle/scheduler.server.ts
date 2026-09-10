@@ -52,16 +52,14 @@ export async function runLifecycleChecks(limit = 200): Promise<LifecycleTickResu
 
   // Make sure every workspace has a lifecycle profile. Backfilled profiles get
   // no welcome message — they only start receiving anything after a real login.
-  const { data: accounts, error: accErr } = await db.from("accounts").select("id").limit(500);
-  if (accErr) console.error("[lifecycle] accounts read failed", accErr);
-  console.log("[lifecycle] accounts", (accounts ?? []).length);
+  const { data: accounts } = await db.from("accounts").select("id").limit(500);
   const { data: known } = await db.from("tenant_lifecycle").select("account_id").limit(2000);
   const have = new Set(((known ?? []) as Array<{ account_id: string }>).map((r) => r.account_id));
   for (const a of ((accounts ?? []) as Array<{ id: string }>).filter((a) => !have.has(a.id)).slice(0, 100)) {
     try {
       await refreshLifecycle(a.id);
-    } catch (e) {
-      console.error("[lifecycle] backfill failed", a.id, e);
+    } catch {
+      /* skip workspaces we can't read */
     }
   }
 
