@@ -112,7 +112,13 @@ export function AdminSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter className="border-t border-border">
+        {!collapsed && (
+          <div className="px-2 pb-1">
+            <ThemeToggle />
+          </div>
+        )}
         <SidebarMenu>
+
           <SidebarMenuItem>
             <SidebarMenuButton onClick={signOut} className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
               <LogOut className="size-4" />
