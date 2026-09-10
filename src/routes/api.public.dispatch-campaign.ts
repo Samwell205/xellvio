@@ -465,6 +465,9 @@ async function sendOneMessage(
         from: fromNumber ?? undefined,
         messagingProfileId: messagingProfileId ?? undefined,
         mediaUrls: sendAsMms ? [deliverableMediaUrl(campaign.media_url)] : undefined,
+        // One key per recipient row + attempt: a retried request can never
+        // deliver the same text twice or bill twice.
+        idempotencyKey: `msg:${m.id}:${m.attempt_number ?? 1}`,
       }),
     );
 
