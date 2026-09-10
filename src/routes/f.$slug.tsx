@@ -23,6 +23,16 @@ export const Route = createFileRoute("/f/$slug")({
     });
   },
   component: SignupFormView,
+  errorComponent: () => (
+    <main className="flex min-h-screen items-center justify-center p-8 text-center">
+      <div className="max-w-md space-y-3">
+        <h1 className="text-2xl font-semibold">This form is taking too long to load</h1>
+        <p className="text-muted-foreground">
+          Something slowed down on our side. Please refresh in a moment.
+        </p>
+      </div>
+    </main>
+  ),
 });
 
 function SignupFormView() {
