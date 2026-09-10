@@ -29,6 +29,51 @@ export function statusWebhookFailoverUrl(): string {
 
 type TelnyxOpts = { method?: string; body?: any; query?: Record<string, string | number | undefined> };
 
+// ---------- Pacing + rate-limit handling ----------
+// Telnyx rejects bursts with 429 (code 10011). Campaign dispatch can fan out
+// dozens of sends at once, so every API call goes through a small gate that
+// caps concurrency, spaces requests out, and backs off when the provider says
+// we're going too fast. A 429 pauses every in-flight caller, not just the one
+// that hit the limit, so a burst settles instead of failing recipient by
+// recipient.
+const MAX_CONCURRENCY = Math.max(1, Number(process.env.TELNYX_MAX_CONCURRENCY ?? 6));
+const MIN_INTERVAL_MS = Math.max(0, Number(process.env.TELNYX_MIN_INTERVAL_MS ?? 40));
+const MAX_ATTEMPTS = Math.max(1, Number(process.env.TELNYX_MAX_ATTEMPTS ?? 5));
+
+let active = 0;
+let lastStart = 0;
+let cooldownUntil = 0;
+const waiters: Array<() => void> = [];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, Math.max(0, ms)));
+
+async function acquireSlot(): Promise<void> {
+  if (active >= MAX_CONCURRENCY) {
+    await new Promise<void>((resolve) => waiters.push(resolve));
+  }
+  active += 1;
+  // Respect any provider-requested cooldown and the minimum spacing.
+  for (;;) {
+    const wait = Math.max(cooldownUntil - Date.now(), lastStart + MIN_INTERVAL_MS - Date.now());
+    if (wait <= 0) break;
+    await sleep(wait);
+  }
+  lastStart = Date.now();
+}
+
+function releaseSlot(): void {
+  active = Math.max(0, active - 1);
+  const next = waiters.shift();
+  if (next) next();
+}
+
+function retryDelayMs(attempt: number, retryAfter: string | null): number {
+  const parsed = retryAfter ? Number(retryAfter) : NaN;
+  if (Number.isFinite(parsed) && parsed > 0) return Math.min(parsed * 1000, 10_000);
+  const base = Math.min(300 * 2 ** attempt, 5_000);
+  return base + Math.floor(Math.random() * 250);
+}
+
 async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> {
   const method = opts.method ?? "GET";
   let url = `${TELNYX_API}${path}`;
@@ -49,25 +94,53 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
     },
   };
   if (opts.body !== undefined) init.body = JSON.stringify(opts.body);
-  const res = await fetch(url, init);
-  const text = await res.text();
-  let json: any = null;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    json = { raw: text };
-  }
-  if (!res.ok) {
+
+  let lastError: any = null;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    await acquireSlot();
+    let res: Response;
+    try {
+      res = await fetch(url, init);
+    } catch (e) {
+      releaseSlot();
+      lastError = e;
+      if (attempt + 1 >= MAX_ATTEMPTS) break;
+      await sleep(retryDelayMs(attempt, null));
+      continue;
+    }
+    const retryAfter = res.headers.get("retry-after");
+    releaseSlot();
+
+    const text = await res.text();
+    let json: any = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = { raw: text };
+    }
+    if (res.ok) return json as T;
+
     const first = json?.errors?.[0];
     const detail = first?.detail || first?.title || json?.error || text.slice(0, 300);
     const err = new Error(`Telnyx ${res.status}: ${detail}`);
     (err as any).telnyxStatus = res.status;
     (err as any).telnyxCode = first?.code ?? null;
     (err as any).telnyxResponse = json;
-    throw err;
+    lastError = err;
+
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt + 1 >= MAX_ATTEMPTS) throw err;
+
+    const delay = retryDelayMs(attempt, retryAfter);
+    if (res.status === 429) {
+      // Hold every caller back, not only this one.
+      cooldownUntil = Math.max(cooldownUntil, Date.now() + delay);
+    }
+    await sleep(delay);
   }
-  return json as T;
+  throw lastError ?? new Error("Telnyx request failed");
 }
+
 
 // ============ Messaging Profiles (per-tenant isolation) ============
 
