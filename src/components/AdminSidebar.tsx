@@ -9,6 +9,8 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { ThemeToggle } from "@/components/ThemeToggle";
+
 
 const groups: { label: string; items: { title: string; url: string; icon: any; exact?: boolean }[] }[] = [
   {
