@@ -36,9 +36,25 @@ type TelnyxOpts = { method?: string; body?: any; query?: Record<string, string |
 // we're going too fast. A 429 pauses every in-flight caller, not just the one
 // that hit the limit, so a burst settles instead of failing recipient by
 // recipient.
-const MAX_CONCURRENCY = Math.max(1, Number(process.env.TELNYX_MAX_CONCURRENCY ?? 6));
-const MIN_INTERVAL_MS = Math.max(0, Number(process.env.TELNYX_MIN_INTERVAL_MS ?? 40));
+// NOTE: these bounds are the real ceiling on campaign throughput. When the
+// dispatcher claimed thousands of rows per tick but this gate only let ~25
+// requests/second through, the surplus sat at status='sending' and was written
+// off as `dispatch_timeout` two minutes later. Keep the gate wide enough for
+// verified high-throughput senders, and let the dispatcher size its claims from
+// `gateThroughputPerSecond()` below so it never claims more than can be sent.
+const MAX_CONCURRENCY = Math.max(1, Number(process.env.TELNYX_MAX_CONCURRENCY ?? 60));
+const MIN_INTERVAL_MS = Math.max(0, Number(process.env.TELNYX_MIN_INTERVAL_MS ?? 4));
 const MAX_ATTEMPTS = Math.max(1, Number(process.env.TELNYX_MAX_ATTEMPTS ?? 5));
+
+/** Max provider requests per second this process can actually issue. */
+export function gateThroughputPerSecond(): number {
+  const spacingCap = MIN_INTERVAL_MS > 0 ? 1000 / MIN_INTERVAL_MS : Number.POSITIVE_INFINITY;
+  return Math.max(1, Math.min(spacingCap, MAX_CONCURRENCY * 20));
+}
+/** Max concurrent provider calls this process can actually have in flight. */
+export function gateMaxConcurrency(): number {
+  return MAX_CONCURRENCY;
+}
 
 let active = 0;
 let lastStart = 0;

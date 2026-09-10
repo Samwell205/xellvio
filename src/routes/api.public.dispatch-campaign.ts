@@ -1072,13 +1072,27 @@ async function deliverPending(
 
 
   const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
-  const concurrency = Math.max(1, Math.min(DELIVER_CONCURRENCY, throttle.concurrency));
+  // The provider client paces every request through a shared gate, so the real
+  // ceiling is that gate, not the numbers above. Claiming past it is what left
+  // thousands of rows stuck at 'sending' and swept as `dispatch_timeout`.
+  const { gateThroughputPerSecond, gateMaxConcurrency } = await import("@/lib/telnyx.server");
+  const gateConcurrency = gateMaxConcurrency();
+  const gateRps = gateThroughputPerSecond();
+  const concurrency = Math.max(
+    1,
+    Math.min(DELIVER_CONCURRENCY, throttle.concurrency, gateConcurrency),
+  );
   // Never claim more than this slot can actually finish before the invocation
   // has to return. Surplus claimed rows sit at status='sending' and later get
   // written off as `dispatch_timeout`, which is what made reports show
   // thousands of unexplained failures on big campaigns.
   const msLeft = limits?.deadlineAt ? limits.deadlineAt - Date.now() : RUN_BUDGET_MS;
-  const budgetClaim = Math.floor((Math.max(0, msLeft) / EST_SEND_MS) * concurrency);
+  const secondsLeft = Math.max(0, msLeft) / 1000;
+  const budgetClaim = Math.min(
+    Math.floor((Math.max(0, msLeft) / EST_SEND_MS) * concurrency),
+    // Hard cap from the provider pacing gate, shared across lease slots.
+    Math.floor((secondsLeft * gateRps) / LEASE_SHARDS),
+  );
   const preflightAllowance = preflight.allowance ?? Number.POSITIVE_INFINITY;
   const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick, budgetClaim, preflightAllowance));
   if (claimLimit === 0) {
