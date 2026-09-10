@@ -122,7 +122,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // The pre-paint script may add the visitor's "dark" class before React hydrates.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
