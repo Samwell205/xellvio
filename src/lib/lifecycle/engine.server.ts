@@ -91,14 +91,22 @@ async function readMilestones(db: Db, accountId: string) {
   const { data: account } = await db
     .from("accounts")
     .select(
-      "created_at,legal_business_name,business_address,contact_email,website_url,use_case_description,last_seen_at,credit_balance",
+      "created_at,legal_business_name,business_address,contact_email,website_url,use_case_description,last_seen_at,credit_balance,onboarding_status,telnyx_phone_number",
     )
     .eq("id", accountId)
     .maybeSingle();
 
-  const workspaceComplete = Boolean(
-    account?.legal_business_name && account?.contact_email && account?.business_address,
-  );
+  // A workspace counts as complete either when the business profile is filled
+  // in, or when sender provisioning already finished — in that case there is
+  // nothing left for the owner to do, so the step must not stay open.
+  const provisioned =
+    Boolean(account?.telnyx_phone_number) ||
+    ["provisioned", "active"].includes(String(account?.onboarding_status ?? ""));
+
+  const workspaceComplete =
+    provisioned ||
+    Boolean(account?.legal_business_name && account?.contact_email && account?.business_address);
+
 
   const [audience, contacts, campaign, sentCampaign, automation, landing, form] = await Promise.all([
     firstAt(db, "contact_lists", accountId),
