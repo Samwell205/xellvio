@@ -13,11 +13,10 @@ import { TEMPLATES, type TemplateEntry } from "@/lib/email-templates/registry";
 
 const SITE_NAME = "xellvio";
 const SENDER_DOMAIN = "notify.xellvio.com";
-const FROM_DOMAIN = "notify.xellvio.com";
-// Keep every Xellvio email stream on one stable, role-based sender identity.
-// Mixing admin@ with noreply@ fragments mailbox reputation and can make a
-// newly warmed domain look less consistent to receiving providers.
-const FROM_ADDRESS = `Xellvio <noreply@${FROM_DOMAIN}>`;
+const FROM_DOMAIN = "xellvio.com";
+// Keep the authenticated sender domain on notify.xellvio.com while presenting
+// the verified, recognizable Xellvio mailbox to recipients.
+const FROM_ADDRESS = `Xellvio <admin@${FROM_DOMAIN}>`;
 
 function generateToken(): string {
   const bytes = new Uint8Array(32);
