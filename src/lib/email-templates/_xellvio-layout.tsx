@@ -14,7 +14,7 @@ import {
 
 /** Absolute URL — email clients cannot resolve relative asset paths. */
 export const LOGO_URL =
-  "https://www.xellvio.com/__l5e/assets-v1/2300f6b3-e5bc-484f-af06-e0cd5e2284a1/xellio-logo.png";
+  "https://www.xellvio.com/__l5e/assets-v1/2bafe4db-ece2-4d0c-afed-be728158a8e0/xellvio-email-logo.png";
 
 export const colors = {
   brand: "#0A84FF",
