@@ -20,3 +20,5 @@ export default function Reauthentication({ siteName, token }: ReauthenticationPr
 
 export const subject = (p: ReauthenticationProps) => `Confirm it\u2019s you for ${p.siteName}`;
 export const previewData: ReauthenticationProps = { siteName: "Xellvio", token: "418205" };
+
+export const ReauthenticationEmail = Reauthentication;

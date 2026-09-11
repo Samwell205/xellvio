@@ -29,3 +29,5 @@ export const previewData: RecoveryProps = {
   siteName: "Xellvio",
   confirmationUrl: "https://www.xellvio.com/auth/recovery?token=sample-token",
 };
+
+export const RecoveryEmail = Recovery;

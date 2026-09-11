@@ -42,3 +42,26 @@ export const previewData: TeamInviteProps = {
   inviteUrl: "https://www.xellvio.com/invite?token=sample-token",
   role: "Member",
 };
+
+function TeamInviteCompat(d: Record<string, any>) {
+  return (
+    <TeamInvite
+      inviterName={String(d.inviterName ?? "A teammate")}
+      workspaceName={String(d.workspaceName ?? "Xellvio workspace")}
+      inviteUrl={String(d.inviteUrl ?? d.acceptUrl ?? "https://www.xellvio.com/auth")}
+      role={String(d.role ?? "member")}
+    />
+  );
+}
+
+export const template = {
+  component: TeamInviteCompat,
+  subject: "You've been invited to a Xellvio workspace",
+  displayName: "Team invitation",
+  previewData: {
+    inviterName: "Alex",
+    workspaceName: "Acme Co",
+    role: "editor",
+    acceptUrl: "https://www.xellvio.com/auth",
+  },
+};

@@ -20,3 +20,14 @@ export default function AccountSignupCode({ code, email }: AccountSignupCodeProp
 
 export const subject = "Your Xellvio signup code";
 export const previewData: AccountSignupCodeProps = { code: "418205", email: "maya@northwind.co" };
+
+function AccountSignupCodeCompat(d: Record<string, any>) {
+  return <AccountSignupCode code={String(d.code ?? "")} email={String(d.email ?? d.recipient ?? "")} />;
+}
+
+export const template = {
+  component: AccountSignupCodeCompat,
+  subject: "Your Xellvio verification code",
+  displayName: "Account signup code",
+  previewData: { code: "123456", email: "you@example.com" },
+};

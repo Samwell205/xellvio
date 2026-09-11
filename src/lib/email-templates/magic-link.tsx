@@ -20,3 +20,5 @@ export default function MagicLink({ siteName, token }: MagicLinkProps) {
 
 export const subject = (p: MagicLinkProps) => `Your ${p.siteName} verification code`;
 export const previewData: MagicLinkProps = { siteName: "Xellvio", token: "418205" };
+
+export const MagicLinkEmail = MagicLink;

@@ -63,3 +63,27 @@ export const subject = (key: LifecycleKey, vars: Record<string, string> = {}) =>
   LIFECYCLE[key].subject.replace(/\{\{\s*(\w+)\s*\}\}/g, (_m, k) => vars[k] ?? "");
 
 export const previewData: GenericProps = genericPropsFor("welcome", { first_name: "Maya" });
+
+/** Registry adapter — tolerates the loose templateData callers already send. */
+function GenericCompat(d: Record<string, any>) {
+  return (
+    <Generic
+      eyebrow={d.eyebrow}
+      heading={d.heading ?? d.subject ?? "Xellvio notification"}
+      body={String(d.body ?? "")}
+      ctaText={d.ctaText}
+      ctaUrl={d.ctaUrl}
+      preview={d.preview ?? d.heading ?? d.subject ?? "Xellvio notification"}
+      tone={d.tone}
+      toneLabel={d.toneLabel}
+      toneBody={d.toneBody}
+    />
+  );
+}
+
+export const template = {
+  component: GenericCompat,
+  subject: (d: Record<string, any>) => d.subject ?? d.heading ?? "Xellvio notification",
+  displayName: "Generic notification",
+  previewData,
+};

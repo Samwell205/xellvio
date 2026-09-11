@@ -30,3 +30,5 @@ export const previewData: EmailChangeProps = {
   newEmail: "maya@northwind.co",
   confirmationUrl: "https://www.xellvio.com/auth/email-change?token=sample-token",
 };
+
+export const EmailChangeEmail = EmailChange;

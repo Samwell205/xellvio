@@ -28,3 +28,5 @@ export const previewData: InviteProps = {
   siteUrl: "https://www.xellvio.com",
   confirmationUrl: "https://www.xellvio.com/invite?token=sample-token",
 };
+
+export const InviteEmail = Invite;

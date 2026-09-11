@@ -20,3 +20,5 @@ export default function Signup({ siteName, recipient, token }: SignupProps) {
 
 export const subject = (p: SignupProps) => `Your ${p.siteName} verification code`;
 export const previewData: SignupProps = { siteName: "Xellvio", recipient: "maya@northwind.co", token: "418205" };
+
+export const SignupEmail = Signup;

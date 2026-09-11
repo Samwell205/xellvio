@@ -20,3 +20,21 @@ export default function VerifierSignupCode({ code, phone }: VerifierSignupCodePr
 
 export const subject = "Your Xellvio verification code";
 export const previewData: VerifierSignupCodeProps = { code: "418205", phone: "+1 (833) 214-9080" };
+
+import AccountSignupCode from "./account-signup-code";
+
+function VerifierSignupCodeCompat(d: Record<string, any>) {
+  const code = String(d.code ?? "");
+  return d.phone ? (
+    <VerifierSignupCode code={code} phone={String(d.phone)} />
+  ) : (
+    <AccountSignupCode code={code} email={String(d.email ?? d.recipient ?? "")} />
+  );
+}
+
+export const template = {
+  component: VerifierSignupCodeCompat,
+  subject: "Your Xellvio verification code",
+  displayName: "Verifier signup code",
+  previewData: { code: "123456", phone: "+18885551234" },
+};
