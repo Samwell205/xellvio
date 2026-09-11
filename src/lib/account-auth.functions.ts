@@ -98,6 +98,7 @@ export const sendAccountSignupCode = createServerFn({ method: "POST" })
       templateData: {
         name: data.full_name,
         code,
+        email,
         expiresMinutes: SIGNUP_CODE_TTL_MINUTES,
       },
       includeUnsubscribe: false,
