@@ -23,10 +23,11 @@ export interface MailPayload {
 }
 
 export function mailerProvider(): "resend" | "lovable" | "none" {
-  if (process.env.RESEND_API_KEY) return "resend";
+  if (process.env.RESEND_API_KEY && process.env.LOVABLE_API_KEY) return "resend";
   if (process.env.LOVABLE_API_KEY) return "lovable";
   return "none";
 }
+
 
 function siteUrl(): string {
   return (
@@ -47,10 +48,13 @@ function withUnsubscribeFooter(html: string, url: string): string {
   return html + footer;
 }
 
+const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+
 export async function sendMail(payload: MailPayload): Promise<void> {
   const resendKey = process.env.RESEND_API_KEY;
+  const lovableKey = process.env.LOVABLE_API_KEY;
 
-  if (resendKey) {
+  if (resendKey && lovableKey) {
     const token = payload.unsubscribe_token || undefined;
     const url = token ? unsubscribeUrl(token) : undefined;
     const headers: Record<string, string> = {};
@@ -60,30 +64,50 @@ export async function sendMail(payload: MailPayload): Promise<void> {
       headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
     }
 
-    const { Resend } = await import("resend");
-    const resend = new Resend(resendKey);
-    const { error } = await resend.emails.send(
-      {
+    const requestHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": resendKey,
+    };
+    if (payload.idempotency_key) {
+      requestHeaders["Idempotency-Key"] = payload.idempotency_key.slice(0, 256);
+    }
+
+    const response = await fetch(`${GATEWAY_URL}/emails`, {
+      method: "POST",
+      headers: requestHeaders,
+      body: JSON.stringify({
         from: payload.from,
         to: [payload.to],
         subject: payload.subject,
         html: url ? withUnsubscribeFooter(payload.html, url) : payload.html,
         ...(payload.text ? { text: payload.text } : {}),
         ...(Object.keys(headers).length ? { headers } : {}),
-        ...(payload.label ? { tags: [{ name: "label", value: payload.label.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 60) }] } : {}),
-      } as any,
-      payload.idempotency_key
-        ? { idempotencyKey: payload.idempotency_key.slice(0, 256) }
-        : undefined,
-    );
+        ...(payload.label
+          ? {
+              tags: [
+                {
+                  name: "label",
+                  value: payload.label.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 60),
+                },
+              ],
+            }
+          : {}),
+      }),
+    });
 
-    if (error) {
-      throw new Error(
-        `resend_send_failed: ${error.name ?? "error"} ${error.message ?? ""}`.trim(),
-      );
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error(`Resend send failed [${response.status}]: ${errorBody}`);
+      const err = new Error(`resend_send_failed [${response.status}]: ${errorBody}`) as Error & {
+        status?: number;
+      };
+      err.status = response.status;
+      throw err;
     }
     return;
   }
+
 
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) throw new Error("Email sender is not configured");
