@@ -231,8 +231,8 @@ export function XellvioLayout({
         <meta name="supported-color-schemes" content="light dark" />
       </Head>
       <Preview>{preview}</Preview>
-      <Body style={{ margin: 0, padding: "24px 0", background: "#eef1f5", fontFamily: FONT, WebkitFontSmoothing: "antialiased" }}>
-        <Container style={{ width: "100%", maxWidth: "600px", margin: "0 auto", padding: "0 24px" }}>
+      <Body style={{ margin: 0, padding: "24px 12px", background: "#eef1f5", fontFamily: FONT, WebkitFontSmoothing: "antialiased" }}>
+        <Container style={{ width: "100%", maxWidth: "600px", margin: "0 auto", padding: 0 }}>
           <Section
             style={{
               background: BRAND.white,
@@ -242,10 +242,10 @@ export function XellvioLayout({
             }}
           >
             <Section style={{ height: "4px", lineHeight: "4px", fontSize: 0, background: BRAND.blue }} />
-            <Section style={{ padding: "18px 28px", background: BRAND.tint, borderBottom: `1px solid ${BRAND.border}` }}>
-              <Img src={LOGO_URL} height="36" alt="Xellvio" style={{ display: "block", border: 0, height: "36px", width: "auto" }} />
+            <Section style={{ padding: "22px 28px", background: BRAND.tint, borderBottom: `1px solid ${BRAND.border}` }}>
+              <Img src={LOGO_URL} height="56" alt="Xellvio" style={{ display: "block", border: 0, height: "56px", width: "auto", maxWidth: "100%" }} />
             </Section>
-            <Section style={{ padding: "30px 28px 28px" }}>{children}</Section>
+            <Section style={{ padding: "28px 24px 26px" }}>{children}</Section>
             <Section style={{ padding: "16px 28px", background: BRAND.tint, borderTop: `1px solid ${BRAND.border}` }}>
               <Text style={{ margin: 0, fontFamily: FONT, fontSize: "13px", lineHeight: "20px", color: BRAND.muted, textAlign: "center" }}>
                 Questions? Reply to this email or contact{" "}
