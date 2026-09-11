@@ -1,56 +1,38 @@
 import * as React from "react";
-import { Text } from "@react-email/components";
-import type { TemplateEntry } from "./registry";
-import { XellvioLayout, StatusBox, CTA, h1, p, muted } from "./_xellvio-layout";
+import { Text, Heading } from "@react-email/components";
+import { XellvioLayout, Eyebrow, CTA, StatusBox, DetailRows, h1, p, muted } from "./_xellvio-layout";
 
-interface Props {
-  firstName?: string;
-  businessName?: string;
-  phoneNumber?: string;
-  reason?: string;
-  setupUrl?: string;
+export type TollfreeRejectedProps = {
+  firstName: string;
+  reason: string;
+  dashboardUrl: string;
+};
+
+export default function TollfreeRejected({ firstName, reason, dashboardUrl }: TollfreeRejectedProps) {
+  return (
+    <XellvioLayout preview="The carrier rejected your toll-free verification — here's what to fix.">
+      <Eyebrow>Toll-free</Eyebrow>
+      <Heading as="h1" style={h1}>Your verification was rejected</Heading>
+      <Text style={p}>
+        Hi {firstName} — the carrier rejected your toll-free verification request. You can correct
+        the details and resubmit.
+      </Text>
+      <DetailRows rows={[{ label: "Carrier reason", value: reason }]} />
+      <StatusBox tone="error" label="Common reasons:">
+        Invalid or mismatched business information, or sample messages that don't match your stated
+        use case.
+      </StatusBox>
+      <CTA href={dashboardUrl}>Review &amp; Resubmit</CTA>
+      <Text style={{ ...muted, margin: "20px 0 0" }}>
+        Reply to this email if you'd like us to look over your submission before you resubmit.
+      </Text>
+    </XellvioLayout>
+  );
 }
 
-const Email = ({
-  firstName,
-  businessName,
-  phoneNumber,
-  reason,
-  setupUrl,
-}: Props) => (
-  <XellvioLayout preview="Action needed on your toll-free verification.">
-    <Text style={h1}>Action needed on your toll-free verification</Text>
-    <Text style={p}>Hi {firstName || "there"},</Text>
-    <Text style={p}>
-      The carriers reviewed {businessName ? `${businessName}'s` : "your"} toll-free
-      verification{phoneNumber ? ` for ${phoneNumber}` : ""} and asked for a
-      change before they can approve it.
-    </Text>
-    <StatusBox tone="warn">
-      <strong>What they flagged:</strong>
-      <br />
-      {reason || "The carrier did not return a specific reason. Please review your submission for completeness."}
-    </StatusBox>
-    <Text style={p}>
-      Update your information on the Set up SMS page and resubmit — most issues
-      are resolved on the next review.
-    </Text>
-    {setupUrl && <CTA href={setupUrl} label="Fix & resubmit" />}
-    <Text style={muted}>
-      Need help? Just reply to this email and our team will guide you through.
-    </Text>
-  </XellvioLayout>
-);
-
-export const template = {
-  component: Email,
-  subject: "Action needed on your toll-free verification",
-  displayName: "Toll-free verification rejected",
-  previewData: {
-    firstName: "Alex",
-    businessName: "Acme Co",
-    phoneNumber: "+18885551234",
-    reason: "Your website needs a visible Privacy Policy link.",
-    setupUrl: "https://www.xellvio.com/app/setup-sms",
-  },
-} satisfies TemplateEntry;
+export const subject = "Action needed: your toll-free verification was rejected";
+export const previewData: TollfreeRejectedProps = {
+  firstName: "Maya",
+  reason: "Business address does not match the registered entity.",
+  dashboardUrl: "https://www.xellvio.com/app/numbers",
+};

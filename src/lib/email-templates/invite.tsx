@@ -1,77 +1,30 @@
-import * as React from 'react'
+import * as React from "react";
+import { Text, Heading, Link } from "@react-email/components";
+import { XellvioLayout, Eyebrow, CTA, h1, p, muted, link } from "./_xellvio-layout";
 
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Link,
-  Preview,
-  Text,
-} from '@react-email/components'
+export type InviteProps = { siteName: string; siteUrl: string; confirmationUrl: string };
 
-interface InviteEmailProps {
-  siteName: string
-  siteUrl: string
-  confirmationUrl: string
+export default function Invite({ siteName, siteUrl, confirmationUrl }: InviteProps) {
+  return (
+    <XellvioLayout preview={`You've been invited to join ${siteName}.`}>
+      <Eyebrow>Invitation</Eyebrow>
+      <Heading as="h1" style={h1}>You've been invited to join {siteName}</Heading>
+      <Text style={p}>
+        You've been invited to join{" "}
+        <Link href={siteUrl} style={link}>{siteName}</Link>. Accept the invitation to set up your
+        account and start sending.
+      </Text>
+      <CTA href={confirmationUrl}>Accept Invitation</CTA>
+      <Text style={{ ...muted, margin: "20px 0 0" }}>
+        This invitation expires in 7 days. If you weren't expecting it, you can ignore this email.
+      </Text>
+    </XellvioLayout>
+  );
 }
 
-export const InviteEmail = ({
-  siteName,
-  siteUrl,
-  confirmationUrl,
-}: InviteEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>You've been invited to join {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>You've been invited</Heading>
-        <Text style={text}>
-          You've been invited to join{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          . Click the button below to accept the invitation and create your
-          account.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Accept Invitation
-        </Button>
-        <Text style={footer}>
-          If you weren't expecting this invitation, you can safely ignore this
-          email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
-
-export default InviteEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+export const subject = (p: InviteProps) => `You've been invited to join ${p.siteName}`;
+export const previewData: InviteProps = {
+  siteName: "Xellvio",
+  siteUrl: "https://www.xellvio.com",
+  confirmationUrl: "https://www.xellvio.com/invite?token=sample-token",
+};

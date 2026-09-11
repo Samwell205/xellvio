@@ -1,90 +1,32 @@
-import * as React from 'react'
+import * as React from "react";
+import { Text, Heading, Hr } from "@react-email/components";
+import { XellvioLayout, Eyebrow, CTA, h1, p, muted, divider, BRAND } from "./_xellvio-layout";
 
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Link,
-  Preview,
-  Text,
-} from '@react-email/components'
+export type EmailChangeProps = { newEmail: string; confirmationUrl: string };
 
-interface EmailChangeEmailProps {
-  siteName: string
-  // oldEmail is the user's current address (HookData.OldEmail). For the
-  // NEW-recipient half of a secure email_change fanout, `email` equals the
-  // recipient (NEW), so the "from" line must render oldEmail to read
-  // "from OLD to NEW" instead of "from NEW to NEW".
-  oldEmail: string
-  email: string
-  newEmail: string
-  confirmationUrl: string
+export default function EmailChange({ newEmail, confirmationUrl }: EmailChangeProps) {
+  return (
+    <XellvioLayout preview="Confirm your new Xellvio email address.">
+      <Eyebrow>Security</Eyebrow>
+      <Heading as="h1" style={h1}>Confirm your new email address</Heading>
+      <Text style={p}>
+        You asked to change the email on your Xellvio account to{" "}
+        <strong style={{ color: BRAND.dark }}>{newEmail}</strong>. Confirm the change to start using it.
+      </Text>
+      <CTA href={confirmationUrl}>Confirm email change</CTA>
+      <Text style={{ ...muted, margin: "20px 0 0" }}>
+        Until you confirm, your current email address stays active. This link expires in 60 minutes.
+      </Text>
+      <Hr style={divider} />
+      <Text style={{ ...muted, margin: "18px 0 0", fontSize: "12px", color: BRAND.faint, wordBreak: "break-all" }}>
+        Button not working? Paste this into your browser: {confirmationUrl}
+      </Text>
+    </XellvioLayout>
+  );
 }
 
-export const EmailChangeEmail = ({
-  siteName,
-  oldEmail,
-  newEmail,
-  confirmationUrl,
-}: EmailChangeEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Confirm your email change for {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
-        <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
-          <Link href={`mailto:${oldEmail}`} style={link}>
-            {oldEmail}
-          </Link>{' '}
-          to{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>
-            {newEmail}
-          </Link>
-          .
-        </Text>
-        <Text style={text}>
-          Click the button below to confirm this change:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
-        </Button>
-        <Text style={footer}>
-          If you didn't request this change, please secure your account
-          immediately.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
-
-export default EmailChangeEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+export const subject = "Confirm your new email address";
+export const previewData: EmailChangeProps = {
+  newEmail: "maya@northwind.co",
+  confirmationUrl: "https://www.xellvio.com/auth/email-change?token=sample-token",
+};
