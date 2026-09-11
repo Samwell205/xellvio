@@ -98,7 +98,7 @@ export function CTA({ href, children }: { href: string; children: React.ReactNod
     <table role="presentation" cellPadding={0} cellSpacing={0} border={0} style={{ borderCollapse: "separate", marginTop: "24px" }}>
       <tbody>
         <tr>
-          <td bgcolor={BRAND.blue} style={{ background: BRAND.blue, borderRadius: "8px", padding: "12px 22px" }}>
+          <td {...({ bgcolor: BRAND.blue } as any)} style={{ background: BRAND.blue, borderRadius: "8px", padding: "12px 22px" }}>
             <Link
               href={href}
               style={{
