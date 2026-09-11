@@ -21,7 +21,7 @@ export const MONO =
   "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace";
 
 export const LOGO_URL =
-  "https://www.xellvio.com/__l5e/assets-v1/5b4a08c8-1bb1-412d-8a09-a1b2afd4d64c/xellvio-mark.png";
+  "https://xellvio.com/__l5e/assets-v1/5b4a08c8-1bb1-412d-8a09-a1b2afd4d64c/xellvio-mark.png";
 
 
 /* ---------- shared text styles ---------- */
