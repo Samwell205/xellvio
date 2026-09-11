@@ -242,9 +242,21 @@ export function XellvioLayout({
             }}
           >
             <Section style={{ height: "4px", lineHeight: "4px", fontSize: 0, background: BRAND.blue }} />
-            <Section style={{ padding: "22px 28px", background: BRAND.tint, borderBottom: `1px solid ${BRAND.border}` }}>
-              <Img src={LOGO_URL} height="56" alt="Xellvio" style={{ display: "block", border: 0, height: "56px", width: "auto", maxWidth: "100%" }} />
+            <Section style={{ padding: "20px 28px", background: BRAND.white, borderBottom: `1px solid ${BRAND.border}` }}>
+              <table role="presentation" cellPadding={0} cellSpacing={0} border={0}>
+                <tbody>
+                  <tr>
+                    <td style={{ verticalAlign: "middle", paddingRight: "10px" }}>
+                      <Img src={LOGO_URL} height="34" width="34" alt="Xellvio" style={{ display: "block", border: 0, height: "34px", width: "34px" }} />
+                    </td>
+                    <td style={{ verticalAlign: "middle", fontFamily: FONT, fontSize: "22px", lineHeight: "26px", fontWeight: 700, letterSpacing: "-0.3px", color: BRAND.dark }}>
+                      Xellvio
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </Section>
+
             <Section style={{ padding: "28px 24px 26px" }}>{children}</Section>
             <Section style={{ padding: "16px 28px", background: BRAND.tint, borderTop: `1px solid ${BRAND.border}` }}>
               <Text style={{ margin: 0, fontFamily: FONT, fontSize: "13px", lineHeight: "20px", color: BRAND.muted, textAlign: "center" }}>
