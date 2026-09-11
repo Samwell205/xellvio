@@ -36,3 +36,24 @@ export const previewData: TollfreeRejectedProps = {
   reason: "Business address does not match the registered entity.",
   dashboardUrl: "https://www.xellvio.com/app/numbers",
 };
+
+function Compat(d: Record<string, any>) {
+  return (
+    <TollfreeRejected
+      firstName={String(d.firstName ?? "there")}
+      reason={String(d.reason ?? d.message ?? "The carrier did not share a specific reason.")}
+      dashboardUrl={String(d.dashboardUrl ?? d.setupUrl ?? "https://www.xellvio.com/app/setup-sms")}
+    />
+  );
+}
+
+export const template = {
+  component: Compat,
+  subject: "Action needed on your toll-free verification",
+  displayName: "Toll-free verification rejected",
+  previewData: {
+    firstName: "Alex",
+    reason: "Your website needs a visible Privacy Policy link.",
+    dashboardUrl: "https://www.xellvio.com/app/setup-sms",
+  },
+};

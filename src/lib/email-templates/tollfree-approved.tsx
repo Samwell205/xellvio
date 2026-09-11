@@ -40,3 +40,26 @@ export const previewData: TollfreeApprovedProps = {
   phoneNumber: "+1 (833) 214-9080",
   dashboardUrl: "https://www.xellvio.com/app/campaigns/new",
 };
+
+function Compat(d: Record<string, any>) {
+  return (
+    <TollfreeApproved
+      firstName={String(d.firstName ?? "there")}
+      businessName={String(d.businessName ?? "your business")}
+      phoneNumber={String(d.phoneNumber ?? "")}
+      dashboardUrl={String(d.dashboardUrl ?? "https://www.xellvio.com/app/campaigns/new")}
+    />
+  );
+}
+
+export const template = {
+  component: Compat,
+  subject: "Your toll-free number is approved",
+  displayName: "Toll-free verification approved",
+  previewData: {
+    firstName: "Alex",
+    businessName: "Acme Co",
+    phoneNumber: "+18885551234",
+    dashboardUrl: "https://www.xellvio.com/app/campaigns/new",
+  },
+};

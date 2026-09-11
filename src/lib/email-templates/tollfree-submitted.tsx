@@ -41,3 +41,26 @@ export const previewData: TollfreeSubmittedProps = {
   phoneNumber: "+1 (833) 214-9080",
   dashboardUrl: "https://www.xellvio.com/app/numbers",
 };
+
+function Compat(d: Record<string, any>) {
+  return (
+    <TollfreeSubmitted
+      firstName={String(d.firstName ?? "there")}
+      businessName={String(d.businessName ?? "your business")}
+      phoneNumber={String(d.phoneNumber ?? "")}
+      dashboardUrl={String(d.dashboardUrl ?? d.setupUrl ?? "https://www.xellvio.com/app/setup-sms")}
+    />
+  );
+}
+
+export const template = {
+  component: Compat,
+  subject: "Your toll-free verification has been submitted",
+  displayName: "Toll-free verification submitted",
+  previewData: {
+    firstName: "Alex",
+    businessName: "Acme Co",
+    phoneNumber: "+18885551234",
+    dashboardUrl: "https://www.xellvio.com/app/setup-sms",
+  },
+};

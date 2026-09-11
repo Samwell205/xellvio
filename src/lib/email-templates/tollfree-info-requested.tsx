@@ -29,3 +29,22 @@ export const previewData: TollfreeInfoRequestedProps = {
   firstName: "Maya",
   dashboardUrl: "https://www.xellvio.com/app/numbers",
 };
+
+function Compat(d: Record<string, any>) {
+  return (
+    <TollfreeInfoRequested
+      firstName={String(d.firstName ?? "there")}
+      dashboardUrl={String(d.dashboardUrl ?? d.setupUrl ?? "https://www.xellvio.com/app/setup-sms")}
+    />
+  );
+}
+
+export const template = {
+  component: Compat,
+  subject: "More info needed on your toll-free verification",
+  displayName: "Toll-free info requested",
+  previewData: {
+    firstName: "Alex",
+    dashboardUrl: "https://www.xellvio.com/app/setup-sms",
+  },
+};
