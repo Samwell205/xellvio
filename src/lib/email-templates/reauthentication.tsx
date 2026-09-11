@@ -1,58 +1,24 @@
-import * as React from 'react'
+import * as React from "react";
+import { Text, Heading, Hr } from "@react-email/components";
+import { XellvioLayout, Eyebrow, CodeBox, h1, p, muted, divider, BRAND } from "./_xellvio-layout";
 
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Text,
-} from '@react-email/components'
+export type ReauthenticationProps = { siteName: string; token: string };
 
-interface ReauthenticationEmailProps {
-  token: string
+export default function Reauthentication({ siteName, token }: ReauthenticationProps) {
+  return (
+    <XellvioLayout preview={`Your ${siteName} confirmation code: ${token}`}>
+      <Eyebrow>Security</Eyebrow>
+      <Heading as="h1" style={h1}>Confirm it's you</Heading>
+      <Text style={p}>{`Enter this code to confirm this action on your ${siteName} account.`}</Text>
+      <CodeBox code={token} />
+      <Text style={muted}>This code expires in 10 minutes. If you didn't request it, you can safely ignore this email.</Text>
+      <Hr style={divider} />
+      <Text style={{ ...muted, margin: "18px 0 0" }}>Never share this code. Xellvio staff will never ask you for it.</Text>
+    </XellvioLayout>
+  );
 }
 
-export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Your verification code</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Confirm reauthentication</Heading>
-        <Text style={text}>Use the code below to confirm your identity:</Text>
-        <Text style={codeStyle}>{token}</Text>
-        <Text style={footer}>
-          This code will expire shortly. If you didn't request this, you can
-          safely ignore this email.
-        </Text>
-      </Container>
-    </Body>
-  </Html>
-)
+export const subject = (p: ReauthenticationProps) => `Confirm it\u2019s you for ${p.siteName}`;
+export const previewData: ReauthenticationProps = { siteName: "Xellvio", token: "418205" };
 
-export default ReauthenticationEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const codeStyle = {
-  fontFamily: 'Courier, monospace',
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 30px',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+export const ReauthenticationEmail = Reauthentication;

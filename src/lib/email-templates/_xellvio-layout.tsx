@@ -1,76 +1,221 @@
 import * as React from "react";
 import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Img,
-  Preview,
-  Section,
-  Text,
-  Hr,
+  Html, Head, Body, Container, Section, Text, Heading, Hr, Img, Link, Preview,
 } from "@react-email/components";
 
-/** Absolute URL — email clients cannot resolve relative asset paths. */
+export const BRAND = {
+  blue: "#0A84FF",
+  blueTintBg: "#eff6ff",
+  dark: "#111827",
+  body: "#374151",
+  muted: "#6b7280",
+  faint: "#8b95a3",
+  border: "#e5e7eb",
+  tint: "#f8fafc",
+  white: "#ffffff",
+};
+
+export const FONT =
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+export const MONO =
+  "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace";
+
 export const LOGO_URL =
   "https://www.xellvio.com/__l5e/assets-v1/2bafe4db-ece2-4d0c-afed-be728158a8e0/xellvio-email-logo.png";
 
-export const colors = {
-  brand: "#0A84FF",
-  dark: "#111827",
-  muted: "#6b7280",
-  border: "#e5e7eb",
-  successBg: "#ecfdf5",
-  successText: "#065f46",
-  warnBg: "#fff7ed",
-  warnText: "#9a3412",
-  errBg: "#fef2f2",
-  errText: "#991b1b",
+/* ---------- shared text styles ---------- */
+
+export const h1: React.CSSProperties = {
+  margin: "16px 0 0",
+  fontFamily: FONT,
+  fontSize: "22px",
+  lineHeight: "30px",
+  fontWeight: 700,
+  color: BRAND.dark,
+  letterSpacing: "-0.2px",
 };
 
-const main: React.CSSProperties = {
-  backgroundColor: "#ffffff",
-  fontFamily:
-    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  margin: 0,
-  padding: 0,
+export const p: React.CSSProperties = {
+  margin: "14px 0 0",
+  fontFamily: FONT,
+  fontSize: "15px",
+  lineHeight: "24px",
+  color: BRAND.body,
 };
 
-const outer: React.CSSProperties = {
-  maxWidth: "600px",
-  margin: "0 auto",
-  padding: "24px 12px 32px",
+export const muted: React.CSSProperties = {
+  margin: "16px 0 0",
+  fontFamily: FONT,
+  fontSize: "13px",
+  lineHeight: "20px",
+  color: BRAND.muted,
 };
 
-const card: React.CSSProperties = {
-  backgroundColor: "#ffffff",
-  border: `1px solid ${colors.border}`,
-  borderRadius: "14px",
-  overflow: "hidden",
+export const link: React.CSSProperties = {
+  color: BRAND.blue,
+  textDecoration: "none",
 };
 
-const header: React.CSSProperties = {
-  padding: "22px 28px",
-  borderBottom: `1px solid ${colors.border}`,
-  backgroundColor: "#f8fafc",
+export const divider: React.CSSProperties = {
+  borderColor: BRAND.border,
+  borderTopWidth: "1px",
+  margin: "26px 0 0",
 };
 
-const accentBar: React.CSSProperties = {
-  height: "4px",
-  backgroundColor: colors.brand,
-  lineHeight: "4px",
-  fontSize: "0px",
-};
+/* ---------- eyebrow pill ---------- */
 
-const footer: React.CSSProperties = {
-  marginTop: "20px",
-  padding: "0 8px",
-  fontSize: "12px",
-  color: colors.muted,
-  lineHeight: "18px",
-  textAlign: "center" as const,
-};
+export function Eyebrow({ children }: { children: React.ReactNode }) {
+  return (
+    <table role="presentation" cellPadding={0} cellSpacing={0} border={0} style={{ borderCollapse: "separate" }}>
+      <tbody>
+        <tr>
+          <td
+            style={{
+              background: BRAND.blueTintBg,
+              borderRadius: "999px",
+              padding: "5px 11px",
+              fontFamily: FONT,
+              fontSize: "11px",
+              lineHeight: "1",
+              fontWeight: 700,
+              letterSpacing: "0.9px",
+              textTransform: "uppercase",
+              color: BRAND.blue,
+            }}
+          >
+            {children}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/* ---------- bulletproof CTA ---------- */
+
+export function CTA({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <table role="presentation" cellPadding={0} cellSpacing={0} border={0} style={{ borderCollapse: "separate", marginTop: "24px" }}>
+      <tbody>
+        <tr>
+          <td {...({ bgcolor: BRAND.blue } as any)} style={{ background: BRAND.blue, borderRadius: "8px", padding: "12px 22px" }}>
+            <Link
+              href={href}
+              style={{
+                display: "block",
+                color: BRAND.white,
+                fontFamily: FONT,
+                fontSize: "14px",
+                lineHeight: "20px",
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              {children}
+            </Link>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/* ---------- 6-digit code box ---------- */
+
+export function CodeBox({ code }: { code: string }) {
+  return (
+    <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0} style={{ borderCollapse: "separate", marginTop: "22px" }}>
+      <tbody>
+        <tr>
+          <td
+            align="center"
+            style={{
+              background: "#f3f4f6",
+              border: `1px solid ${BRAND.border}`,
+              borderRadius: "10px",
+              padding: "22px 16px",
+              fontFamily: MONO,
+              fontSize: "32px",
+              lineHeight: "38px",
+              fontWeight: 700,
+              letterSpacing: "6px",
+              color: BRAND.dark,
+            }}
+          >
+            {code}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/* ---------- status box ---------- */
+
+const TONES = {
+  success: { bg: "#ecfdf5", bar: "#059669", text: "#065f46", strong: "#064e3b" },
+  warn: { bg: "#fffbeb", bar: "#d97706", text: "#92400e", strong: "#78350f" },
+  error: { bg: "#fef2f2", bar: "#dc2626", text: "#991b1b", strong: "#7f1d1d" },
+  info: { bg: "#eff6ff", bar: BRAND.blue, text: "#0b3f78", strong: "#08315e" },
+} as const;
+
+export function StatusBox({
+  tone = "info",
+  label,
+  children,
+}: {
+  tone?: keyof typeof TONES;
+  label?: string;
+  children: React.ReactNode;
+}) {
+  const t = TONES[tone];
+  return (
+    <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0}
+      style={{ borderCollapse: "collapse", marginTop: "18px", background: t.bg, borderLeft: `4px solid ${t.bar}`, borderRadius: "8px" }}>
+      <tbody>
+        <tr>
+          <td style={{ padding: "14px 16px" }}>
+            <Text style={{ margin: 0, fontFamily: FONT, fontSize: "14px", lineHeight: "22px", color: t.text }}>
+              {label ? <strong style={{ color: t.strong }}>{label} </strong> : null}
+              {children}
+            </Text>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+/* ---------- key/value detail rows ---------- */
+
+export function DetailRows({ rows }: { rows: Array<{ label: string; value: React.ReactNode; mono?: boolean }> }) {
+  return (
+    <table role="presentation" width="100%" cellPadding={0} cellSpacing={0} border={0}
+      style={{ borderCollapse: "collapse", marginTop: "22px", background: BRAND.tint, border: `1px solid ${BRAND.border}`, borderRadius: "10px" }}>
+      <tbody>
+        {rows.map((r, i) => {
+          const last = i === rows.length - 1;
+          const cell: React.CSSProperties = {
+            padding: "14px 16px",
+            borderBottom: last ? "none" : `1px solid ${BRAND.border}`,
+          };
+          return (
+            <tr key={r.label}>
+              <td style={{ ...cell, width: "140px", fontFamily: FONT, fontSize: "13px", lineHeight: "20px", color: BRAND.muted }}>
+                {r.label}
+              </td>
+              <td style={{ ...cell, fontFamily: r.mono ? MONO : FONT, fontSize: "14px", lineHeight: "20px", fontWeight: 600, color: BRAND.dark }}>
+                {r.value}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+/* ---------- layout ---------- */
 
 export function XellvioLayout({
   preview,
@@ -80,128 +225,43 @@ export function XellvioLayout({
   children: React.ReactNode;
 }) {
   return (
-    <Html lang="en" dir="ltr">
-      <Head />
+    <Html lang="en">
+      <Head>
+        <meta name="color-scheme" content="light dark" />
+        <meta name="supported-color-schemes" content="light dark" />
+      </Head>
       <Preview>{preview}</Preview>
-      <Body style={main}>
-        <Container style={outer}>
-          <Section style={card}>
-            <Section style={accentBar}>&nbsp;</Section>
-            <Section style={header}>
-              <Img
-                src={LOGO_URL}
-                alt="Xellvio"
-                width="132"
-                height="36"
-                style={{ display: "block", border: 0, outline: "none", textDecoration: "none" }}
-              />
+      <Body style={{ margin: 0, padding: "24px 0", background: "#eef1f5", fontFamily: FONT, WebkitFontSmoothing: "antialiased" }}>
+        <Container style={{ width: "100%", maxWidth: "600px", margin: "0 auto", padding: "0 24px" }}>
+          <Section
+            style={{
+              background: BRAND.white,
+              border: `1px solid ${BRAND.border}`,
+              borderRadius: "14px",
+              overflow: "hidden",
+            }}
+          >
+            <Section style={{ height: "4px", lineHeight: "4px", fontSize: 0, background: BRAND.blue }} />
+            <Section style={{ padding: "18px 28px", background: BRAND.tint, borderBottom: `1px solid ${BRAND.border}` }}>
+              <Img src={LOGO_URL} height="36" alt="Xellvio" style={{ display: "block", border: 0, height: "36px", width: "auto" }} />
             </Section>
-            <Section style={{ padding: "28px" }}>{children}</Section>
-            <Hr
-              style={{
-                border: "none",
-                borderTop: `1px solid ${colors.border}`,
-                margin: 0,
-              }}
-            />
-            <Section style={{ padding: "18px 28px", backgroundColor: "#f8fafc" }}>
-              <Text style={{ margin: 0, fontSize: "12px", color: colors.muted, lineHeight: "18px" }}>
+            <Section style={{ padding: "30px 28px 28px" }}>{children}</Section>
+            <Section style={{ padding: "16px 28px", background: BRAND.tint, borderTop: `1px solid ${BRAND.border}` }}>
+              <Text style={{ margin: 0, fontFamily: FONT, fontSize: "13px", lineHeight: "20px", color: BRAND.muted, textAlign: "center" }}>
                 Questions? Reply to this email or contact{" "}
-                <a href="mailto:admin@xellvio.com" style={{ color: colors.brand }}>
-                  admin@xellvio.com
-                </a>
-                .
+                <Link href="mailto:admin@xellvio.com" style={link}>admin@xellvio.com</Link>
               </Text>
             </Section>
           </Section>
-          <Section style={footer}>
-            <Text style={{ margin: 0 }}>
-              Xellvio · Global SMS &amp; Toll-Free messaging
-            </Text>
-            <Text style={{ margin: "4px 0 0" }}>
-              <a href="https://www.xellvio.com" style={{ color: colors.muted }}>
-                www.xellvio.com
-              </a>
-            </Text>
-          </Section>
+          <Text style={{ margin: "16px 0 0", fontFamily: FONT, fontSize: "12px", lineHeight: "18px", color: BRAND.faint, textAlign: "center" }}>
+            Xellvio · Global SMS &amp; Toll-Free messaging
+            <br />
+            <Link href="https://www.xellvio.com" style={{ color: BRAND.muted, textDecoration: "underline" }}>www.xellvio.com</Link>
+          </Text>
         </Container>
       </Body>
     </Html>
   );
 }
 
-export const h1: React.CSSProperties = {
-  fontSize: "22px",
-  fontWeight: 700,
-  color: colors.dark,
-  margin: "0 0 12px",
-  lineHeight: "28px",
-};
-
-export const p: React.CSSProperties = {
-  fontSize: "15px",
-  lineHeight: "24px",
-  color: colors.dark,
-  margin: "0 0 14px",
-};
-
-export const muted: React.CSSProperties = {
-  fontSize: "13px",
-  lineHeight: "20px",
-  color: colors.muted,
-  margin: "0 0 10px",
-};
-
-export function StatusBox({
-  tone,
-  children,
-}: {
-  tone: "success" | "warn" | "error" | "info";
-  children: React.ReactNode;
-}) {
-  const map = {
-    success: { bg: colors.successBg, fg: colors.successText },
-    warn: { bg: colors.warnBg, fg: colors.warnText },
-    error: { bg: colors.errBg, fg: colors.errText },
-    info: { bg: "#eff6ff", fg: "#1e3a8a" },
-  }[tone];
-  return (
-    <Section
-      style={{
-        backgroundColor: map.bg,
-        color: map.fg,
-        borderRadius: "8px",
-        padding: "14px 16px",
-        margin: "0 0 18px",
-        fontSize: "14px",
-        lineHeight: "20px",
-      }}
-    >
-      {children}
-    </Section>
-  );
-}
-
-export function CTA({ href, label }: { href: string; label: string }) {
-  return (
-    <Section style={{ margin: "20px 0 8px" }}>
-      <a
-        href={href}
-        style={{
-          backgroundColor: colors.brand,
-          color: "#ffffff",
-          padding: "12px 22px",
-          borderRadius: "8px",
-          textDecoration: "none",
-          fontWeight: 600,
-          fontSize: "14px",
-          display: "inline-block",
-        }}
-      >
-        {label}
-      </a>
-    </Section>
-  );
-}
-
-export { Heading };
+export { Hr };

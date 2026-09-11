@@ -1,106 +1,40 @@
 import * as React from "react";
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Text,
-} from "@react-email/components";
-import type { TemplateEntry } from "./registry";
+import { Text, Heading, Hr } from "@react-email/components";
+import { XellvioLayout, Eyebrow, CodeBox, h1, p, muted, divider, BRAND } from "./_xellvio-layout";
 
-interface Props {
-  name?: string;
-  code?: string;
-  expiresMinutes?: number;
+export type VerifierSignupCodeProps = { code: string; phone: string };
+
+export default function VerifierSignupCode({ code, phone }: VerifierSignupCodeProps) {
+  return (
+    <XellvioLayout preview={`Your Xellvio verification code: ${code}`}>
+      <Eyebrow>Verify</Eyebrow>
+      <Heading as="h1" style={h1}>Your Xellvio verification code</Heading>
+      <Text style={p}>{<>Enter this code to verify the number <strong style={{ color: BRAND.dark }}>{phone}</strong> on your Xellvio account.</>}</Text>
+      <CodeBox code={code} />
+      <Text style={muted}>This code expires in 10 minutes. If you didn't request it, you can safely ignore this email.</Text>
+      <Hr style={divider} />
+      <Text style={{ ...muted, margin: "18px 0 0" }}>Never share this code. Xellvio staff will never ask you for it.</Text>
+    </XellvioLayout>
+  );
 }
 
-const Email = ({ name, code = "123456", expiresMinutes = 15 }: Props) => (
-  <Html lang="en" dir="ltr">
-    <Head />
-    <Preview>Your Xellvio verification code is {code}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Text style={brand}>Xellvio</Text>
-        <Heading style={h1}>Your verification code</Heading>
-        <Text style={text}>{name ? `Hi ${name},` : "Hi,"}</Text>
-        <Text style={text}>Enter this code to finish creating your verifier account.</Text>
-        <Text style={codeStyle}>{code}</Text>
-        <Text style={muted}>This code expires in {expiresMinutes} minutes.</Text>
-        <Text style={footer}>If you did not request this, you can ignore this email.</Text>
-      </Container>
-    </Body>
-  </Html>
-);
+export const subject = "Your Xellvio verification code";
+export const previewData: VerifierSignupCodeProps = { code: "418205", phone: "+1 (833) 214-9080" };
 
-export const template: TemplateEntry = {
-  component: Email,
+import AccountSignupCode from "./account-signup-code";
+
+function VerifierSignupCodeCompat(d: Record<string, any>) {
+  const code = String(d.code ?? "");
+  return d.phone ? (
+    <VerifierSignupCode code={code} phone={String(d.phone)} />
+  ) : (
+    <AccountSignupCode code={code} email={String(d.email ?? d.recipient ?? "")} />
+  );
+}
+
+export const template = {
+  component: VerifierSignupCodeCompat,
   subject: "Your Xellvio verification code",
   displayName: "Verifier signup code",
-  previewData: { name: "Jane", code: "123456", expiresMinutes: 15 },
-};
-
-const main = {
-  backgroundColor: "#ffffff",
-  fontFamily: "Arial, sans-serif",
-};
-
-const container = {
-  margin: "0 auto",
-  maxWidth: "520px",
-  padding: "32px 24px",
-};
-
-const brand = {
-  color: "#0A84FF",
-  fontSize: "21px",
-  fontWeight: "bold" as const,
-  margin: "0 0 24px",
-};
-
-const h1 = {
-  color: "#000000",
-  fontSize: "22px",
-  fontWeight: "bold" as const,
-  lineHeight: "28px",
-  margin: "0 0 16px",
-};
-
-const text = {
-  color: "#111827",
-  fontSize: "15px",
-  lineHeight: "24px",
-  margin: "0 0 12px",
-};
-
-const codeStyle = {
-  backgroundColor: "#f3f4f6",
-  border: "1px solid #d1d5db",
-  borderRadius: "8px",
-  color: "#000000",
-  fontFamily: "Courier, monospace",
-  fontSize: "32px",
-  fontWeight: "bold" as const,
-  letterSpacing: "6px",
-  lineHeight: "40px",
-  margin: "20px 0",
-  padding: "18px 22px",
-  textAlign: "center" as const,
-};
-
-const muted = {
-  color: "#4b5563",
-  fontSize: "13px",
-  lineHeight: "20px",
-  margin: "0 0 20px",
-};
-
-const footer = {
-  borderTop: "1px solid #e5e7eb",
-  color: "#6b7280",
-  fontSize: "12px",
-  lineHeight: "18px",
-  margin: "28px 0 0",
-  paddingTop: "18px",
+  previewData: { code: "123456", phone: "+18885551234" },
 };
