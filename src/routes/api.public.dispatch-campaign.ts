@@ -1392,7 +1392,7 @@ async function reconcileStaleCarrierReceipts(
       });
     }
   });
-  return { checked: toCheck.length, updated, stillAwaiting, expired };
+  return { checked, updated, stillAwaiting, expired, remaining: skipped, timedOut: skipped > 0 };
 }
 
 export const Route = createFileRoute("/api/public/dispatch-campaign")({
