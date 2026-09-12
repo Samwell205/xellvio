@@ -1286,8 +1286,12 @@ async function processCampaign(
 
 async function reconcileStaleCarrierReceipts(
   supabaseAdmin: any,
-  opts: { maxPerRun?: number; concurrency?: number; minAgeMs?: number } = {},
-): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
+  opts: { maxPerRun?: number; concurrency?: number; minAgeMs?: number; budgetMs?: number } = {},
+): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number; remaining: number; timedOut: boolean }> {
+  // Hard wall-clock budget: the hosting runtime kills a request that runs too
+  // long, which used to lose the whole run's work. We stop early instead and
+  // let the next cron tick continue where this one left off.
+  const deadline = Date.now() + (opts.budgetMs ?? 20_000);
   // Many US/CA MMS and international carriers never return a final delivery
   // receipt at all — the carrier accepted and finalized the message and simply
   // stays silent. Real receipts land within minutes, so after 1 hour with no
@@ -1315,7 +1319,7 @@ async function reconcileStaleCarrierReceipts(
   const maxPerRun = opts.maxPerRun ?? 500;
   const toCheck: Array<{ id: string; provider_message_id: string; status: string }> = [];
   const pageSize = 500;
-  for (let from = 0; from < 20_000 && toCheck.length < maxPerRun; from += pageSize) {
+  for (let from = 0; from < 20_000 && toCheck.length < maxPerRun && Date.now() < deadline; from += pageSize) {
     const { data: candidates } = await supabaseAdmin
       .from("messages")
       .select("id, provider_message_id, status")
@@ -1339,13 +1343,20 @@ async function reconcileStaleCarrierReceipts(
     toCheck.push(...rows.filter((r) => !recentlyChecked.has(r.id)).slice(0, maxPerRun - toCheck.length));
     if (rows.length < pageSize) break;
   }
-  if (toCheck.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0, expired };
+  if (toCheck.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0, expired, remaining: 0, timedOut: false };
 
 
   const { getMessage, mapTelnyxStatus } = await import("@/lib/telnyx.server");
   let updated = 0;
   let stillAwaiting = 0;
+  let checked = 0;
+  let skipped = 0;
   await runWithConcurrency(toCheck, opts.concurrency ?? 20, async (m) => {
+    if (Date.now() >= deadline) {
+      skipped += 1;
+      return;
+    }
+    checked += 1;
     try {
       const j = await getMessage(m.provider_message_id);
       const first = Array.isArray(j?.to) ? j.to[0] : null;
@@ -1381,7 +1392,7 @@ async function reconcileStaleCarrierReceipts(
       });
     }
   });
-  return { checked: toCheck.length, updated, stillAwaiting, expired };
+  return { checked, updated, stillAwaiting, expired, remaining: skipped, timedOut: skipped > 0 };
 }
 
 export const Route = createFileRoute("/api/public/dispatch-campaign")({
@@ -1413,9 +1424,10 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         const mode = new URL(request.url).searchParams.get("mode") ?? request.headers.get("x-dispatch-mode");
         if (mode === "reconcile") {
           const result = await reconcileStaleCarrierReceipts(supabaseAdmin, {
-            maxPerRun: 3000,
-            concurrency: 40,
+            maxPerRun: 800,
+            concurrency: 25,
             minAgeMs: 90_000,
+            budgetMs: 20_000,
           });
           return Response.json({ mode: "reconcile", ...result });
         }
