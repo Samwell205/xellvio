@@ -1286,8 +1286,12 @@ async function processCampaign(
 
 async function reconcileStaleCarrierReceipts(
   supabaseAdmin: any,
-  opts: { maxPerRun?: number; concurrency?: number; minAgeMs?: number } = {},
-): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number }> {
+  opts: { maxPerRun?: number; concurrency?: number; minAgeMs?: number; budgetMs?: number } = {},
+): Promise<{ checked: number; updated: number; stillAwaiting: number; expired: number; remaining: number; timedOut: boolean }> {
+  // Hard wall-clock budget: the hosting runtime kills a request that runs too
+  // long, which used to lose the whole run's work. We stop early instead and
+  // let the next cron tick continue where this one left off.
+  const deadline = Date.now() + (opts.budgetMs ?? 20_000);
   // Many US/CA MMS and international carriers never return a final delivery
   // receipt at all — the carrier accepted and finalized the message and simply
   // stays silent. Real receipts land within minutes, so after 1 hour with no
