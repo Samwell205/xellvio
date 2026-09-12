@@ -1319,7 +1319,7 @@ async function reconcileStaleCarrierReceipts(
   const maxPerRun = opts.maxPerRun ?? 500;
   const toCheck: Array<{ id: string; provider_message_id: string; status: string }> = [];
   const pageSize = 500;
-  for (let from = 0; from < 20_000 && toCheck.length < maxPerRun; from += pageSize) {
+  for (let from = 0; from < 20_000 && toCheck.length < maxPerRun && Date.now() < deadline; from += pageSize) {
     const { data: candidates } = await supabaseAdmin
       .from("messages")
       .select("id, provider_message_id, status")
