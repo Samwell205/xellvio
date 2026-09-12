@@ -1343,13 +1343,20 @@ async function reconcileStaleCarrierReceipts(
     toCheck.push(...rows.filter((r) => !recentlyChecked.has(r.id)).slice(0, maxPerRun - toCheck.length));
     if (rows.length < pageSize) break;
   }
-  if (toCheck.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0, expired };
+  if (toCheck.length === 0) return { checked: 0, updated: 0, stillAwaiting: 0, expired, remaining: 0, timedOut: false };
 
 
   const { getMessage, mapTelnyxStatus } = await import("@/lib/telnyx.server");
   let updated = 0;
   let stillAwaiting = 0;
+  let checked = 0;
+  let skipped = 0;
   await runWithConcurrency(toCheck, opts.concurrency ?? 20, async (m) => {
+    if (Date.now() >= deadline) {
+      skipped += 1;
+      return;
+    }
+    checked += 1;
     try {
       const j = await getMessage(m.provider_message_id);
       const first = Array.isArray(j?.to) ? j.to[0] : null;
