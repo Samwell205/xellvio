@@ -40,9 +40,8 @@ const DELIVER_PER_WORKER = 12_000;
 // too many concurrent per-message status UPDATEs made some writes fail and left
 // rows stuck at status='sending' (later swept as dispatch_timeout).
 // Keep total concurrent carrier calls below the database connection ceiling.
-// The previous limit of 36 only used a fraction of the verified toll-free
-// throughput and made large queues take hours; 84 still leaves headroom for
-// web traffic and delivery-receipt writes on the current backend tier.
+// Keep this well below the database connection ceiling because several
+// staggered dispatcher invocations can overlap during a large campaign.
 const DELIVER_CONCURRENCY = 120;
 
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
