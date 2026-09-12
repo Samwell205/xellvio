@@ -43,11 +43,11 @@ const DELIVER_PER_WORKER = 12_000;
 // The previous limit of 36 only used a fraction of the verified toll-free
 // throughput and made large queues take hours; 84 still leaves headroom for
 // web traffic and delivery-receipt writes on the current backend tier.
-const DELIVER_CONCURRENCY = 300;
+const DELIVER_CONCURRENCY = 120;
 
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
-const RUN_BUDGET_MS = 40_000;
+const RUN_BUDGET_MS = 32_000;
 // Observed average end-to-end time for one message (carrier submit + status
 // writes). Used to size each slot's claim to the time actually left.
 const EST_SEND_MS = 1_100;
@@ -80,9 +80,9 @@ const TENANT_THROTTLE: Record<string, { perTick: number; concurrency: number }> 
   // the run budget. Claiming more than a slot can finish leaves the surplus
   // stuck in `sending` until the stale sweep writes it off as
   // `dispatch_timeout` — which is why big campaigns showed hundreds of them.
-  toll_free: { perTick: 12_000, concurrency: 300 },
+  toll_free: { perTick: 4_800, concurrency: 120 },
   ten_dlc: { perTick: 3_000, concurrency: 120 },
-  short_code: { perTick: 12_000, concurrency: 300 },
+  short_code: { perTick: 4_800, concurrency: 120 },
   shared_toll_free: { perTick: 1_200, concurrency: 48 },
   personal: { perTick: 120, concurrency: 4 },
 };
@@ -1121,7 +1121,10 @@ async function deliverPending(
   let claimedTotal = 0;
   const unsent: string[] = [];
   const hardDeadline = limits?.deadlineAt ?? Date.now() + RUN_BUDGET_MS;
-  const sink = createStatusSink(supabaseAdmin);
+  // Flush smaller batches so an externally interrupted worker loses at most a
+  // small number of status writes. Large buffers made accepted sends remain in
+  // `sending`, where they were later misreported as dispatch timeouts.
+  const sink = createStatusSink(supabaseAdmin, 50);
 
   while (claimedTotal < claimLimit && Date.now() < hardDeadline - 3_000) {
     const want = Math.min(claimChunk, claimLimit - claimedTotal);
