@@ -1424,9 +1424,10 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         const mode = new URL(request.url).searchParams.get("mode") ?? request.headers.get("x-dispatch-mode");
         if (mode === "reconcile") {
           const result = await reconcileStaleCarrierReceipts(supabaseAdmin, {
-            maxPerRun: 3000,
-            concurrency: 40,
+            maxPerRun: 800,
+            concurrency: 25,
             minAgeMs: 90_000,
+            budgetMs: 20_000,
           });
           return Response.json({ mode: "reconcile", ...result });
         }
