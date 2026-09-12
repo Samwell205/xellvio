@@ -12,8 +12,9 @@
 --
 -- This script does two things:
 --   1. Refunds every historical dispatch_timeout row that is still charged.
---   2. Replaces the timeout write-off inside claim_campaign_messages so the
---      reservation is always refunded going forward.
+--   2. Replaces the timeout write-off inside claim_campaign_messages so an
+--      interrupted paid attempt is safely requeued with the same idempotency
+--      identity instead of becoming a permanent failure.
 --
 -- Run this on the live database, then re-schedule the cron job with a longer
 -- pg_net timeout (see the bottom of this file).
@@ -47,7 +48,7 @@ BEGIN
   END LOOP;
 END $$;
 
--- ── 2. Always refund on future timeouts ─────────────────────
+-- ── 2. Historical refund helper ──────────────────────────────
 CREATE OR REPLACE FUNCTION public.refund_dispatch_timeouts(_campaign_id uuid)
 RETURNS integer
 LANGUAGE plpgsql
@@ -98,8 +99,8 @@ END $function$;
 REVOKE ALL ON FUNCTION public.refund_dispatch_timeouts(uuid) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.refund_dispatch_timeouts(uuid) TO service_role;
 
--- Swap the inline write-off inside claim_campaign_messages for the refunding
--- version above (everything else in the function is unchanged).
+-- New deployments should use the current claim_campaign_messages migration,
+-- which safely requeues stale paid attempts with their original attempt number.
 CREATE OR REPLACE FUNCTION public.claim_campaign_messages(_campaign_id uuid, _limit integer)
  RETURNS TABLE(id uuid, phone_e164 text, rendered_body text, country_code text, segments_count integer, cost numeric, attempt_number integer)
  LANGUAGE plpgsql
@@ -184,7 +185,7 @@ $function$;
 
 -- ── 3. Re-schedule the dispatcher with a real timeout ───────
 -- pg_net defaults to a 5 second timeout. The dispatcher needs longer, and a
--- premature hang-up is exactly what produced the dispatch_timeout rows.
+-- premature hang-up is exactly what previously stranded in-flight rows.
 -- Replace <LIVE_APP_BASE_URL> and <SUPABASE_PUBLISHABLE_KEY> below, then run.
 
 select cron.unschedule('dispatch-campaigns');
