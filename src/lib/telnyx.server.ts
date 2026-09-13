@@ -51,6 +51,10 @@ type TelnyxOpts = {
 const MAX_CONCURRENCY = Math.max(1, Number(process.env.TELNYX_MAX_CONCURRENCY ?? 60));
 const MIN_INTERVAL_MS = Math.max(0, Number(process.env.TELNYX_MIN_INTERVAL_MS ?? 4));
 const MAX_ATTEMPTS = Math.max(1, Number(process.env.TELNYX_MAX_ATTEMPTS ?? 5));
+/** Hard per-request ceiling so one stalled provider call cannot hang the run. */
+const REQUEST_TIMEOUT_MS = Math.max(1_000, Number(process.env.TELNYX_REQUEST_TIMEOUT_MS ?? 12_000));
+/** Longest a caller may queue behind the concurrency gate. */
+const SLOT_WAIT_TIMEOUT_MS = Math.max(1_000, Number(process.env.TELNYX_SLOT_WAIT_TIMEOUT_MS ?? 8_000));
 
 /** Max provider requests per second this process can actually issue. */
 export function gateThroughputPerSecond(): number {
@@ -71,7 +75,28 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, Math.max(0, ms)))
 
 async function acquireSlot(): Promise<void> {
   if (active >= MAX_CONCURRENCY) {
-    await new Promise<void>((resolve) => waiters.push(resolve));
+    // Never wait forever. A provider call that never settles used to hold its
+    // slot for good, so every queued sender blocked and the whole invocation
+    // hung until the runtime killed it (502). Waiting is capped; on expiry we
+    // proceed anyway, briefly exceeding the soft concurrency cap instead of
+    // deadlocking the run.
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const waiter = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        const idx = waiters.indexOf(waiter);
+        if (idx >= 0) waiters.splice(idx, 1);
+        resolve();
+      }, SLOT_WAIT_TIMEOUT_MS);
+      waiters.push(waiter);
+    });
   }
   active += 1;
   // Respect any provider-requested cooldown and the minimum spacing.
@@ -127,9 +152,14 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     await acquireSlot();
     let res: Response;
+    // Abort a call that stalls: an unbounded fetch used to hold its gate slot
+    // forever and hang the whole invocation.
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      res = await fetch(url, init);
+      res = await fetch(url, { ...init, signal: controller.signal });
     } catch (e) {
+      clearTimeout(abortTimer);
       releaseSlot();
       lastError = e;
       if (attempt + 1 >= MAX_ATTEMPTS) break;
@@ -137,9 +167,21 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
       continue;
     }
     const retryAfter = res.headers.get("retry-after");
+
+    let text = "";
+    try {
+      text = await res.text();
+    } catch (e) {
+      clearTimeout(abortTimer);
+      releaseSlot();
+      lastError = e;
+      if (attempt + 1 >= MAX_ATTEMPTS) break;
+      await sleep(retryDelayMs(attempt, null));
+      continue;
+    }
+    clearTimeout(abortTimer);
     releaseSlot();
 
-    const text = await res.text();
     let json: any = null;
     try {
       json = text ? JSON.parse(text) : null;
