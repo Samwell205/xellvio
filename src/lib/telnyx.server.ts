@@ -152,9 +152,14 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     await acquireSlot();
     let res: Response;
+    // Abort a call that stalls: an unbounded fetch used to hold its gate slot
+    // forever and hang the whole invocation.
+    const controller = new AbortController();
+    const abortTimer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-      res = await fetch(url, init);
+      res = await fetch(url, { ...init, signal: controller.signal });
     } catch (e) {
+      clearTimeout(abortTimer);
       releaseSlot();
       lastError = e;
       if (attempt + 1 >= MAX_ATTEMPTS) break;
@@ -162,9 +167,21 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
       continue;
     }
     const retryAfter = res.headers.get("retry-after");
+
+    let text = "";
+    try {
+      text = await res.text();
+    } catch (e) {
+      clearTimeout(abortTimer);
+      releaseSlot();
+      lastError = e;
+      if (attempt + 1 >= MAX_ATTEMPTS) break;
+      await sleep(retryDelayMs(attempt, null));
+      continue;
+    }
+    clearTimeout(abortTimer);
     releaseSlot();
 
-    const text = await res.text();
     let json: any = null;
     try {
       json = text ? JSON.parse(text) : null;
