@@ -71,7 +71,28 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, Math.max(0, ms)))
 
 async function acquireSlot(): Promise<void> {
   if (active >= MAX_CONCURRENCY) {
-    await new Promise<void>((resolve) => waiters.push(resolve));
+    // Never wait forever. A provider call that never settles used to hold its
+    // slot for good, so every queued sender blocked and the whole invocation
+    // hung until the runtime killed it (502). Waiting is capped; on expiry we
+    // proceed anyway, briefly exceeding the soft concurrency cap instead of
+    // deadlocking the run.
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      const waiter = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        const idx = waiters.indexOf(waiter);
+        if (idx >= 0) waiters.splice(idx, 1);
+        resolve();
+      }, SLOT_WAIT_TIMEOUT_MS);
+      waiters.push(waiter);
+    });
   }
   active += 1;
   // Respect any provider-requested cooldown and the minimum spacing.
