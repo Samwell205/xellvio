@@ -51,6 +51,10 @@ type TelnyxOpts = {
 const MAX_CONCURRENCY = Math.max(1, Number(process.env.TELNYX_MAX_CONCURRENCY ?? 60));
 const MIN_INTERVAL_MS = Math.max(0, Number(process.env.TELNYX_MIN_INTERVAL_MS ?? 4));
 const MAX_ATTEMPTS = Math.max(1, Number(process.env.TELNYX_MAX_ATTEMPTS ?? 5));
+/** Hard per-request ceiling so one stalled provider call cannot hang the run. */
+const REQUEST_TIMEOUT_MS = Math.max(1_000, Number(process.env.TELNYX_REQUEST_TIMEOUT_MS ?? 12_000));
+/** Longest a caller may queue behind the concurrency gate. */
+const SLOT_WAIT_TIMEOUT_MS = Math.max(1_000, Number(process.env.TELNYX_SLOT_WAIT_TIMEOUT_MS ?? 8_000));
 
 /** Max provider requests per second this process can actually issue. */
 export function gateThroughputPerSecond(): number {
