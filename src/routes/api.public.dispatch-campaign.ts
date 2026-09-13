@@ -1296,19 +1296,59 @@ async function reconcileStaleCarrierReceipts(
   // receipt at all — the carrier accepted and finalized the message and simply
   // stays silent. Real receipts land within minutes, so after 1 hour with no
   // receipt we preserve the provider's unconfirmed result internally;
-  // user-facing reports classify that terminal outcome as failed, so every
-  // recipient ends up as either delivered or failed.
+  // user-facing reports classify that terminal outcome as failed.
+  //
+  // Only give up on a message we actually asked the provider about at least
+  // once: writing off rows this run never had time to check turned delivered
+  // messages into reported failures on large campaigns. Rows still unchecked
+  // stay 'sent' until a later run reaches them, with a hard backstop so nothing
+  // waits forever.
   const giveUpCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { data: expiredRows } = await supabaseAdmin
+  const hardGiveUpCutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  const UNCONFIRMED_REASON = "Carrier accepted the message but never returned a delivery receipt.";
+  let expired = 0;
+
+  const { data: staleRows } = await supabaseAdmin
     .from("messages")
-    .update({
-      status: "delivery_unconfirmed",
-      failure_reason: "Carrier accepted the message but never returned a delivery receipt (waited 1 hour).",
-    })
+    .select("id")
     .eq("status", "sent")
     .lt("sent_at", giveUpCutoff)
+    .order("sent_at", { ascending: true, nullsFirst: false })
+    .limit(5_000);
+  const staleIds = ((staleRows ?? []) as Array<{ id: string }>).map((r) => r.id);
+  if (staleIds.length > 0) {
+    const checkedIds: string[] = [];
+    for (let i = 0; i < staleIds.length; i += 500) {
+      const slice = staleIds.slice(i, i + 500);
+      const { data: checks } = await supabaseAdmin
+        .from("events")
+        .select("message_id")
+        .in("message_id", slice)
+        .eq("type", "reconcile:checked:sent");
+      const seen = new Set(((checks ?? []) as Array<{ message_id: string }>).map((c) => c.message_id));
+      checkedIds.push(...slice.filter((id) => seen.has(id)));
+    }
+    for (let i = 0; i < checkedIds.length; i += 500) {
+      const { data: rows } = await supabaseAdmin
+        .from("messages")
+        .update({ status: "delivery_unconfirmed", failure_reason: UNCONFIRMED_REASON })
+        .eq("status", "sent")
+        .in("id", checkedIds.slice(i, i + 500))
+        .select("id");
+      expired += (rows ?? []).length;
+    }
+  }
+
+  // Backstop: anything still 'sent' after 6 hours is finalized even if a
+  // provider lookup never succeeded for it.
+  const { data: backstopRows } = await supabaseAdmin
+    .from("messages")
+    .update({ status: "delivery_unconfirmed", failure_reason: UNCONFIRMED_REASON })
+    .eq("status", "sent")
+    .lt("sent_at", hardGiveUpCutoff)
     .select("id");
-  const expired = (expiredRows ?? []).length;
+  expired += (backstopRows ?? []).length;
+
 
 
   const checkedRecentlyCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
