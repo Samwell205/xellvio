@@ -1872,8 +1872,16 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             recoveredInbound = { checked: 0, processed: 0, error: message };
           }
         }
-        const reconciled = budgetLeft() > 12_000
-          ? await reconcileStaleCarrierReceipts(supabaseAdmin)
+        // Tail work must fit inside whatever is left of this invocation's
+        // budget, otherwise the runtime kills the request (502) after the sends
+        // already happened. The dedicated reconcile cron does the bulk work.
+        const reconcileBudget = budgetLeft() - 4_000;
+        const reconciled = reconcileBudget > 6_000
+          ? await reconcileStaleCarrierReceipts(supabaseAdmin, {
+              maxPerRun: 300,
+              concurrency: 20,
+              budgetMs: Math.min(reconcileBudget, 12_000),
+            })
           : { checked: 0, updated: 0, stillAwaiting: 0, expired: 0, skipped: true };
         return Response.json({ processed: results.length, deferred, recoveredInbound, reconciled, results });
 }
