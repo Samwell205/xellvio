@@ -143,7 +143,11 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
   // generated once per logical call and reused for every retry of that call.
   const isWrite = method !== "GET" && method !== "HEAD";
   if (isWrite) {
-    headers["Idempotency-Key"] = opts.idempotencyKey || crypto.randomUUID();
+    // Telnyx only accepts letters, numbers, hyphen and underscore in this
+    // header. Anything else (colons, plus signs from E.164 numbers, dots)
+    // makes the provider reject the whole send with a 400.
+    const rawKey = opts.idempotencyKey || crypto.randomUUID();
+    headers["Idempotency-Key"] = rawKey.replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 128);
   }
   const init: RequestInit = { method, headers };
   if (opts.body !== undefined) init.body = JSON.stringify(opts.body);
