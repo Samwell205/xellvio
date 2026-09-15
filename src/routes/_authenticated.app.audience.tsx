@@ -127,6 +127,30 @@ function AudiencePage() {
     queryFn: async () => getStatsFn(),
   });
 
+  const lineTypeStatsFn = useServerFn(getPhoneLineTypeStats);
+  const screenLineTypesFn = useServerFn(screenPhoneLineTypes);
+  const lineTypesQ = useQuery({
+    queryKey: ["audience-line-types", acctId],
+    queryFn: async () => lineTypeStatsFn(),
+  });
+  const screenLineTypes = useMutation({
+    mutationFn: async () =>
+      screenLineTypesFn({ data: { listId: listFilter === "all" ? null : listFilter } }),
+    onSuccess: (res: any) => {
+      if (!res.checked) {
+        toast.info("Every contact has already been checked.");
+      } else {
+        toast.success(
+          `Checked ${res.checked} contacts — ${res.mobile + res.voip} can receive texts, ${res.landline + res.toll_free} cannot (landline or toll-free).` +
+            (res.remaining ? ` ${res.remaining} still to check — run it again.` : ""),
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["audience-line-types"] });
+      qc.invalidateQueries({ queryKey: ["audience-profiles"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not check phone types"),
+  });
+
   const filtered = useMemo(() => {
     const rows = profilesQ.data ?? [];
     const s = search.trim().toLowerCase();
