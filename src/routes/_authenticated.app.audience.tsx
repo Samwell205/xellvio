@@ -13,6 +13,7 @@ import {
   listAudienceContactLists,
   listAudienceProfiles,
 } from "@/lib/audience.functions";
+import { getPhoneLineTypeStats, screenPhoneLineTypes } from "@/lib/line-type.functions";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,9 @@ import {
   Plus,
   Pencil,
   X,
+  PhoneOff,
+  Smartphone,
+  Loader2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/audience")({
@@ -121,6 +125,30 @@ function AudiencePage() {
   const statsQ = useQuery({
     queryKey: ["audience-stats", acctId],
     queryFn: async () => getStatsFn(),
+  });
+
+  const lineTypeStatsFn = useServerFn(getPhoneLineTypeStats);
+  const screenLineTypesFn = useServerFn(screenPhoneLineTypes);
+  const lineTypesQ = useQuery({
+    queryKey: ["audience-line-types", acctId],
+    queryFn: async () => lineTypeStatsFn(),
+  });
+  const screenLineTypes = useMutation({
+    mutationFn: async () =>
+      screenLineTypesFn({ data: { listId: listFilter === "all" ? null : listFilter } }),
+    onSuccess: (res: any) => {
+      if (!res.checked) {
+        toast.info("Every contact has already been checked.");
+      } else {
+        toast.success(
+          `Checked ${res.checked} contacts — ${res.mobile + res.voip} can receive texts, ${res.landline + res.toll_free} cannot (landline or toll-free).` +
+            (res.remaining ? ` ${res.remaining} still to check — run it again.` : ""),
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["audience-line-types"] });
+      qc.invalidateQueries({ queryKey: ["audience-profiles"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not check phone types"),
   });
 
   const filtered = useMemo(() => {
@@ -285,6 +313,20 @@ function AudiencePage() {
           <p className="text-sm text-muted-foreground">Contacts, lists, consents, and opt-outs.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={() => screenLineTypes.mutate()}
+            disabled={screenLineTypes.isPending}
+            title="Ask the carrier which of your contacts are mobile phones. Landlines and toll-free lines cannot receive texts and are skipped in future campaigns."
+          >
+            {screenLineTypes.isPending ? (
+              <Loader2 className="size-4 mr-1.5 animate-spin" />
+            ) : (
+              <Smartphone className="size-4 mr-1.5" />
+            )}
+            Check phone types
+            {(lineTypesQ.data?.unchecked ?? 0) > 0 ? ` (${lineTypesQ.data?.unchecked})` : ""}
+          </Button>
           <ManageListsDialog lists={listsQ.data ?? []} onDone={invalidateAll} />
           <Button variant="outline" onClick={downloadTemplate}>
             <Download className="size-4 mr-1.5" />
@@ -299,7 +341,7 @@ function AudiencePage() {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={Users} label="Total contacts" value={statsQ.data?.total ?? 0} />
         <Stat
           icon={CheckCircle2}
@@ -308,6 +350,12 @@ function AudiencePage() {
           tone="success"
         />
         <Stat icon={ShieldOff} label="Suppressed" value={statsQ.data?.supp ?? 0} tone="danger" />
+        <Stat
+          icon={PhoneOff}
+          label="Can't receive texts"
+          value={lineTypesQ.data?.non_textable ?? 0}
+          tone="danger"
+        />
       </div>
 
       {/* List filter chips */}
