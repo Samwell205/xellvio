@@ -4377,6 +4377,27 @@ export type Database = {
           },
         ]
       }
+      phone_line_types: {
+        Row: {
+          carrier_name: string | null
+          checked_at: string
+          line_type: string
+          phone_e164: string
+        }
+        Insert: {
+          carrier_name?: string | null
+          checked_at?: string
+          line_type: string
+          phone_e164: string
+        }
+        Update: {
+          carrier_name?: string | null
+          checked_at?: string
+          line_type?: string
+          phone_e164?: string
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           key: string
@@ -4480,6 +4501,8 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          line_type: string | null
+          line_type_checked_at: string | null
           phone_e164: string
           timezone: string | null
           two_way_opt_in: boolean
@@ -4493,6 +4516,8 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          line_type?: string | null
+          line_type_checked_at?: string | null
           phone_e164: string
           timezone?: string | null
           two_way_opt_in?: boolean
@@ -4506,6 +4531,8 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          line_type?: string | null
+          line_type_checked_at?: string | null
           phone_e164?: string
           timezone?: string | null
           two_way_opt_in?: boolean
