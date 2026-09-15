@@ -313,6 +313,20 @@ function AudiencePage() {
           <p className="text-sm text-muted-foreground">Contacts, lists, consents, and opt-outs.</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={() => screenLineTypes.mutate()}
+            disabled={screenLineTypes.isPending}
+            title="Ask the carrier which of your contacts are mobile phones. Landlines and toll-free lines cannot receive texts and are skipped in future campaigns."
+          >
+            {screenLineTypes.isPending ? (
+              <Loader2 className="size-4 mr-1.5 animate-spin" />
+            ) : (
+              <Smartphone className="size-4 mr-1.5" />
+            )}
+            Check phone types
+            {(lineTypesQ.data?.unchecked ?? 0) > 0 ? ` (${lineTypesQ.data?.unchecked})` : ""}
+          </Button>
           <ManageListsDialog lists={listsQ.data ?? []} onDone={invalidateAll} />
           <Button variant="outline" onClick={downloadTemplate}>
             <Download className="size-4 mr-1.5" />
@@ -327,7 +341,7 @@ function AudiencePage() {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={Users} label="Total contacts" value={statsQ.data?.total ?? 0} />
         <Stat
           icon={CheckCircle2}
@@ -336,6 +350,12 @@ function AudiencePage() {
           tone="success"
         />
         <Stat icon={ShieldOff} label="Suppressed" value={statsQ.data?.supp ?? 0} tone="danger" />
+        <Stat
+          icon={PhoneOff}
+          label="Can't receive texts"
+          value={lineTypesQ.data?.non_textable ?? 0}
+          tone="danger"
+        />
       </div>
 
       {/* List filter chips */}
