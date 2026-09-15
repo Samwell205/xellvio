@@ -25,6 +25,14 @@ export interface ScanResult {
   category?: ProhibitedCategory;
   confidence: "keyword" | "ai" | "none";
   details?: string;
+  /**
+   * True when the AI review could not run at all (provider error, exhausted
+   * credits, no provider configured). The message is NOT considered screened
+   * by AI — callers must record this instead of treating it as a pass.
+   */
+  unavailable?: boolean;
+  /** Short machine reason for `unavailable` (e.g. "payment_required"). */
+  unavailableCode?: string;
 }
 
 // Fast keyword patterns (case-insensitive). Tuned to minimize false positives:

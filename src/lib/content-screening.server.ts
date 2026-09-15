@@ -92,7 +92,31 @@ export async function screenMessageContent(
     try {
       const { aiScan } = await import("./ai-content-scan.server");
       const aiResult = await aiScan(body);
-      if (!aiResult.allowed) {
+      if (aiResult.unavailable) {
+        // Do NOT present an unscanned message as AI-approved. Score 0 keeps the
+        // send decision unchanged (fail open), but the audit log and admin
+        // compliance views now show that AI review did not run, and why.
+        reasons.push({
+          code: "ai_scan_unavailable",
+          message:
+            "AI content review did not run for this message — it was screened by keyword rules only.",
+          score: 0,
+          detail: `ai_unavailable=${aiResult.unavailableCode ?? "unknown"}`,
+        });
+        try {
+          await supabaseAdmin.from("events").insert({
+            account_id: tenantAccountId,
+            type: "ai_screening_unavailable",
+            payload: {
+              code: aiResult.unavailableCode ?? "unknown",
+              campaign_id: opts.campaignId ?? null,
+              context: opts.context ?? null,
+            } as unknown as any,
+          });
+        } catch {
+          /* best effort alerting only */
+        }
+      } else if (!aiResult.allowed) {
         // AI-only blocks are treated as review-queue candidates, not hard
         // auto-suspend triggers. The AI classifier can false-positive on
         // legitimate event/party/rental wording (e.g. "delivery to door"),
