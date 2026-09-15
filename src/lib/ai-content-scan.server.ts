@@ -171,8 +171,21 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
     };
 
   } catch (e: any) {
-    console.error("[content-scanner] AI scan failed:", e?.message ?? e);
-    // Fail open: if AI scan errors, allow but log
-    return { allowed: true, confidence: "none", reason: "AI scan unavailable — passed by default" };
+    const code = classifyFailure(e);
+    console.error("[content-scanner] AI scan failed:", code ?? "error", e?.message ?? e);
+    // Terminal provider states (credits exhausted, policy block, bad key) fail
+    // identically on every call — stop calling for a cooldown window.
+    if (code && code !== "bad_request") {
+      providerUnavailableUntil = Date.now() + TERMINAL_COOLDOWN_MS;
+      providerUnavailableCode = code;
+    }
+    // Fail open on sending, but never report this as "screened and passed".
+    return {
+      allowed: true,
+      confidence: "none",
+      unavailable: true,
+      unavailableCode: code ?? "scan_error",
+      reason: "AI scan unavailable — not screened by AI",
+    };
   }
 }
