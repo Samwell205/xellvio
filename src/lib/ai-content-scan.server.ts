@@ -28,11 +28,47 @@ const AI_SCHEMA = z.object({
   reason: z.string().optional(),
 });
 
+/**
+ * When the AI provider rejects calls for a terminal reason (exhausted credits,
+ * policy block, bad key), every subsequent call fails identically. Skip calls
+ * for a cooldown window instead of burning worker CPU on every message, and
+ * report the scan as unavailable so callers can log/alert on it.
+ */
+const TERMINAL_COOLDOWN_MS = 10 * 60 * 1000;
+let providerUnavailableUntil = 0;
+let providerUnavailableCode: string | undefined;
+
+function classifyFailure(e: any): string | undefined {
+  const status = Number(e?.statusCode ?? e?.status ?? e?.response?.status ?? NaN);
+  const msg = String(e?.message ?? e ?? "").toLowerCase();
+  if (status === 402 || msg.includes("payment required")) return "payment_required";
+  if (status === 403 || msg.includes("forbidden")) return "provider_blocked";
+  if (status === 401 || msg.includes("unauthorized")) return "provider_unauthorized";
+  if (status === 400) return "bad_request";
+  return undefined;
+}
+
 export async function aiScan(messageBody: string): Promise<ScanResult> {
+  if (Date.now() < providerUnavailableUntil) {
+    return {
+      allowed: true,
+      confidence: "none",
+      unavailable: true,
+      unavailableCode: providerUnavailableCode ?? "provider_unavailable",
+      reason: "AI scan unavailable — provider rejected recent requests",
+    };
+  }
+
   const model = await getChatModel();
   if (!model) {
     console.warn("[content-scanner] no AI provider configured; skipping AI scan");
-    return { allowed: true, confidence: "none" };
+    return {
+      allowed: true,
+      confidence: "none",
+      unavailable: true,
+      unavailableCode: "not_configured",
+      reason: "AI scan unavailable — no AI provider configured",
+    };
   }
 
   try {
