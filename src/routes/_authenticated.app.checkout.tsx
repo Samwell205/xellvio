@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, CreditCard, Bitcoin, ArrowLeft, Globe, ShieldAlert } from "lucide-react";
+import { Wallet, CreditCard, Bitcoin, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
 import {
@@ -63,10 +63,6 @@ function CheckoutPage() {
 
   const [method, setMethod] = useState<Method>("paystack");
   const [coin, setCoin] = useState<string>(DEFAULT_CRYPTO_COIN);
-
-  useEffect(() => {
-    if (method !== "crypto") return;
-  }, [method, packParam, amountParam]);
 
   const initPaystack = useServerFn(initPaystackCheckout);
   const initPaystackCustom = useServerFn(initPaystackCheckoutCustom);
