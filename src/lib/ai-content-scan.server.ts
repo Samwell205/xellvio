@@ -49,6 +49,14 @@ function classifyFailure(e: any): string | undefined {
 }
 
 export async function aiScan(messageBody: string): Promise<ScanResult> {
+  // This is a narrow, deterministic safe case. Do not ask the model to
+  // reinterpret ordinary contest/loyalty language: it has classified the same
+  // message inconsistently as gambling and fraud_deceptive. Explicit betting,
+  // casino, deposit-bonus, or wagering language is excluded by the guard.
+  if (isContestPromotionWithoutGamblingSignals(messageBody)) {
+    return { allowed: true, confidence: "none" };
+  }
+
   if (Date.now() < providerUnavailableUntil) {
     return {
       allowed: true,
