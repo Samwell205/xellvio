@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keywordScan } from "./content-scanner";
+import { isContestPromotionWithoutGamblingSignals, keywordScan } from "./content-scanner";
 
 describe("keywordScan gambling classification", () => {
   it("consistently blocks the reported NCAA betting promotion", () => {
@@ -29,6 +29,15 @@ Reply STOP to unsubscribe.`);
       "Hey champ, Today's group contest is live. Check the group for detail. You may also have a matching bonus available if you ain't use it yet!";
 
     expect(keywordScan(message)).toEqual({ allowed: true, confidence: "none" });
+    expect(isContestPromotionWithoutGamblingSignals(message)).toBe(true);
+  });
+
+  it.each([
+    "Join today's group contest and place your bet now.",
+    "Your matching deposit bonus is ready at the casino.",
+    "Enter the contest and wager on tonight's game.",
+  ])("does not exempt contest wording with gambling signals: %s", (message) => {
+    expect(isContestPromotionWithoutGamblingSignals(message)).toBe(false);
   });
 });
 
