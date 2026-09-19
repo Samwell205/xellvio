@@ -2,6 +2,7 @@
 
 - [x] Fix high-volume SMS dispatcher failures: safely requeue interrupted paid attempts, preserve idempotency, reduce worker pressure, and flush statuses sooner.
 - [x] Assess request to resend the reported content; keep gambling controls enforced and provide a compliant rewrite path instead of bypassing screening.
+- [x] Allow free community contest and matching-bonus messages without weakening paid betting or gambling controls.
 - [x] Hide My Academy and SMS Pricing from teammates who weren't granted them (owner-only)
 - [x] Real verified connections for every marketplace app; unverifiable apps refuse to connect
 - [ ] External app-store listings (Shopify/BigCommerce/Wix/etc.) — needs partner accounts + public OAuth per platform (see docs/app-store-listings.md)
