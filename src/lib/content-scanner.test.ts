@@ -23,6 +23,13 @@ Reply STOP to unsubscribe.`);
   ])("allows an ordinary sports notice: %s", (message) => {
     expect(keywordScan(message)).toEqual({ allowed: true, confidence: "none" });
   });
+
+  it("allows the reported free community contest promotion", () => {
+    const message =
+      "Hey champ, Today's group contest is live. Check the group for detail. You may also have a matching bonus available if you ain't use it yet!";
+
+    expect(keywordScan(message)).toEqual({ allowed: true, confidence: "none" });
+  });
 });
 
 describe("keywordScan carrier-risk classification", () => {

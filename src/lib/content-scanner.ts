@@ -35,6 +35,19 @@ export interface ScanResult {
   unavailableCode?: string;
 }
 
+const CONTEST_OR_BONUS_REGEX = /\b(?:contest|competition|matching bonus|match(?:ing)? reward)\b/i;
+const EXPLICIT_GAMBLING_REGEX = /\b(?:bet(?:ting)?|wager(?:ing)?|gambl(?:e|ing)|casino|sportsbook|odds|stake|jackpot|lottery|slots?|poker|roulette|blackjack|free spins?|deposit bonus|no deposit bonus)\b/i;
+
+/**
+ * Community contests and ordinary loyalty bonuses are not gambling merely
+ * because they use "contest" or "matching bonus" language. This guard is
+ * deliberately narrow: any explicit betting, casino, deposit, or wagering
+ * signal keeps the message eligible for a gambling block.
+ */
+export function isContestPromotionWithoutGamblingSignals(text: string): boolean {
+  return CONTEST_OR_BONUS_REGEX.test(text) && !EXPLICIT_GAMBLING_REGEX.test(text);
+}
+
 // Fast keyword patterns (case-insensitive). Tuned to minimize false positives:
 // patterns require commercial/promotional context (buy/order/shop/sale/free trial)
 // where a bare word would over-block.

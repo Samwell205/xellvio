@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getChatModel } from "./ai-provider.server";
 import { generateText } from "ai";
-import type { ScanResult } from "./content-scanner";
+import { isContestPromotionWithoutGamblingSignals, type ScanResult } from "./content-scanner";
 
 const AI_SCHEMA = z.object({
   allowed: z.boolean(),
@@ -128,6 +128,7 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
         "- asking customers to order or enquire via WhatsApp, phone, or SMS, and listing contact phone numbers\n" +
         "- appointment reminders, delivery updates, loyalty offers, event invites\n" +
         "- party, event, entertainment, rental, and catering services (e.g. 'delivery to door', 'no party without us', 'write to see selection', 'book our service')\n" +
+        "- free community/group contests and ordinary loyalty or matching bonuses that do not require a deposit, paid entry, wager, or game of chance\n" +
         "- ordinary account, document, application, renewal, payment and appointment notices a business sends to its own opted-in customers, when the sender is clearly identified and the wording does not resemble a regulatory/compliance demand\n" +
         "- general service businesses advertising quality guarantees, honest times, and customer service\n\n" +
         "CRITICAL DISTINCTIONS:\n" +
@@ -135,9 +136,11 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
         "- 'Delivery to door' / 'delivery to your door' is common language for restaurants, caterers, event rentals, and many legal services. Do NOT treat it as drug-trafficking language unless the message also explicitly mentions drugs, narcotics, controlled substances, or unmistakable drug-dealing context.\n" +
         "- 'Party', 'fest', 'event', 'selection', 'write to see', and similar phrases are normal for event/party services. Only block if the message clearly promotes illegal drugs, alcohol to minors, or unregulated controlled substances.\n" +
         "- For illegal_drugs, require explicit drug/narcotic terms (e.g. weed, cocaine, pills, MDMA, Xanax, oxycodone, 'no Rx', 'research chemicals') or clear drug-dealing context. Do not infer drug sales from generic delivery/party wording alone.\n\n" +
+        "- 'Contest', 'group contest', 'bonus', or 'matching bonus' does NOT establish gambling by itself. For gambling, require an explicit wager, bet, casino/sportsbook, deposit bonus, paid game of chance, odds, or similar gambling context.\n\n" +
         "EXAMPLES OF ALLOWED MESSAGES (return allowed=true):\n" +
         "- \"Er I trætte af lange ventetider, forsinkelser og dårlig kvalitet? Vi tilbyder kvalitetsgaranti og levering til døren! Ærlige tider og servicen er den bedste i byen. Der ingen fest uden os. Skriv for at se udvalget. Contact us: +45 81 91 17 11\" (Danish event/party service)\n" +
         "- \"Tired of long waits and poor service? We offer quality guarantee and delivery to your door. Honest times and the best service in town. No party without us. Write to see our selection.\" (event/party service)\n\n" +
+        "- \"Hey champ, Today's group contest is live. Check the group for detail. You may also have a matching bonus available if you ain't use it yet!\" (free community contest; no wager or deposit)\n\n" +
         "Ambiguity is NOT grounds to block: only return allowed=false when the message itself clearly promotes a prohibited category in plain or lightly obfuscated wording. " +
         "If you are not confident, return allowed=true. Set confidence to 'high' only when the violation is unmistakable.",
       prompt:
@@ -153,11 +156,14 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
 
     // Only block on unmistakable violations. Medium/low-confidence AI opinions
     // are advisory only — they must never stop a legitimate campaign.
+    const contestFalsePositive =
+      result.category === "gambling" && isContestPromotionWithoutGamblingSignals(messageBody);
     const shouldBlock =
       result.allowed === false &&
       result.confidence === "high" &&
       !!result.category &&
-      result.category !== "none";
+      result.category !== "none" &&
+      !contestFalsePositive;
 
     if (!shouldBlock) {
       return { allowed: true, confidence: "ai" };
