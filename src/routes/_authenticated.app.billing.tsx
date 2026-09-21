@@ -92,7 +92,7 @@ function BillingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Handle redirect-back ?ref= — Paystack (pmt_/pay_) or NOWPayments (npm_)
+  // Handle redirect-back ?ref= — Paddle (pdl_), Paystack (pmt_/pay_) or NOWPayments (npm_)
   useEffect(() => {
     const url = new URL(window.location.href);
     const ref = url.searchParams.get("ref");
