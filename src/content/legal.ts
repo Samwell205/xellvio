@@ -669,5 +669,6 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
   "sms-terms": { slug: "sms-terms", path: "/sms-terms", title: "SMS / Messaging Terms & Consent", short: "SMS Terms", description: "How SMS works on Xellvio for end users and senders.", markdown: SMS_TERMS_MD, toc: false },
   dpa: { slug: "dpa", path: "/dpa", title: "Data Processing Addendum", short: "DPA", description: "Data-protection terms between Xellvio (processor) and Customers (controllers).", markdown: DPA_MD, toc: true },
   cookies: { slug: "cookies", path: "/cookies", title: "Cookie Policy", short: "Cookies", description: "How Xellvio uses cookies and similar technologies.", markdown: COOKIES_MD, toc: false },
+  refunds: { slug: "refunds", path: "/refunds", title: "Refund Policy", short: "Refunds", description: "Xellvio's 30-day money-back guarantee and how to request a refund.", markdown: REFUND_MD, toc: true },
   "prohibited-content": { slug: "prohibited-content", path: "/prohibited-content", title: "Prohibited Content", short: "Prohibited Content", description: "The full list of content Xellvio does not allow customers to send over SMS.", markdown: PROHIBITED_MD, toc: true },
 };
