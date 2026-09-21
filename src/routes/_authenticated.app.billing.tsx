@@ -474,9 +474,8 @@ function PackPicker({ packs }: { packs: any[] }) {
   const amount = isCustom ? customAmount : Number(pack?.price ?? 0);
   const credits = isCustom ? customAmount : Number(pack?.credits ?? 0);
 
-  function goCheckout(method?: "card") {
+  function goCheckout() {
     const search: Record<string, any> = isCustom ? { amount: customAmount } : { pack: selected };
-    if (method) search.method = method;
     navigate({ to: "/app/checkout", search });
   }
 
