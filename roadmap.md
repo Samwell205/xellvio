@@ -31,3 +31,7 @@
 - Scheduled hourly checks: onboarding reminders, celebration, 3/7/14-day re-engagement, low balance, feature discovery (preference + frequency aware).
 - Admin > Customer success: overview, funnel, editable templates, announcements, workspace timeline, manual run.
 - Note: existing workspaces only start receiving lifecycle messages after their next sign-in (no retroactive blast).
+
+## Collect payments from customers (Sep 21)
+- [ ] Decide built-in Lovable payments vs own-Stripe wiring (own-Stripe code already in place, awaiting keys)
+- [ ] Finish own-Stripe: collect STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET, set VITE_STRIPE_PUBLISHABLE_KEY, publish, test checkout
