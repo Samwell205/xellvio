@@ -612,6 +612,55 @@ For the full legal wording, see our [Acceptable Use Policy](/aup), [Anti-Spam & 
 Report abuse: [ABUSE EMAIL].
 `);
 
+export const REFUND_MD = fill(`# Refund Policy
+
+**Last updated: [DATE]**
+
+This Refund Policy applies to purchases of Xellvio credits and plans made from [LEGAL ENTITY NAME] ("Xellvio," "we," "us").
+
+---
+
+## 1. 30-day money-back guarantee
+
+If you are not satisfied with your purchase, you may request a full refund within **30 days of your order date**. You do not need to give a reason. We will refund the amount you paid for that order to your original payment method.
+
+## 2. How to request a refund
+
+Orders placed through our checkout are processed by our online reseller **Paddle.com**, which is the Merchant of Record for those orders and handles returns.
+
+- Visit [paddle.net](https://paddle.net) and look up your order using the email address you used at checkout, or
+- Email us at [SUPPORT EMAIL] with your order email and approximate order date, and we will arrange the refund with Paddle on your behalf.
+
+For orders placed through any other payment option offered in the Service (for example local bank or card payment, or cryptocurrency), email [SUPPORT EMAIL] and we will process the refund directly.
+
+## 3. What gets refunded
+
+- **Unused credits** are refunded in full within the 30-day window.
+- **Credits already spent on messages** cannot be recovered, because the underlying message was already transmitted and paid to telecommunications carriers. Where part of an order has been used, we refund the unused portion; if your order is materially defective or you were charged in error, we refund the full amount.
+- **Carrier and regulatory registration fees** (for example toll-free verification or A2P/10DLC registration fees) charged to us by third parties are refundable only where the third party refunds them to us, or where the registration was never submitted.
+
+## 4. Errors, duplicate charges, and failed service
+
+If you were charged twice, charged the wrong amount, or credits were not delivered to your account, contact [SUPPORT EMAIL] at any time — these are corrected in full regardless of the 30-day window.
+
+## 5. Cancellation
+
+You may close your account at any time from your account settings. Closing your account does not by itself trigger a refund; request one as described in Section 2 if you are within the 30-day window.
+
+## 6. Chargebacks and abuse
+
+We may decline a refund request where we reasonably determine the purchase was fraudulent, or where the account was suspended for a serious violation of our [Acceptable Use Policy](/aup) or [Anti-Spam & Messaging Policy](/anti-spam) — for example sending messages without recipient consent. Nothing in this policy limits the rights you have under applicable consumer law.
+
+## 7. Timing
+
+Approved refunds are issued promptly. Depending on your bank or card issuer, funds usually appear within 5–10 business days.
+
+## 8. Contact
+
+[LEGAL ENTITY NAME]
+Email: [SUPPORT EMAIL]
+`);
+
 export const LEGAL_DOCS: Record<string, LegalDoc> = {
   privacy: { slug: "privacy", path: "/privacy", title: "Privacy Policy", short: "Privacy", description: "How Xellvio collects, uses, and protects personal information.", markdown: PRIVACY_MD, toc: true },
   terms: { slug: "terms", path: "/terms", title: "Terms of Service", short: "Terms", description: "The binding terms that govern use of the Xellvio platform.", markdown: TERMS_MD, toc: true },
