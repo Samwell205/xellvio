@@ -106,6 +106,46 @@ function BillingPage() {
       qc.invalidateQueries({ queryKey: ["credit-transactions"] });
       qc.invalidateQueries({ queryKey: ["my-payments"] });
     };
+    if (ref.startsWith("pdl_")) {
+      // Paddle webhook credits the user — poll for a short window
+      let cancelled = false;
+      let attempt = 0;
+      const maxAttempts = 6; // ~30s at 5s
+      const poll = async () => {
+        attempt += 1;
+        try {
+          const r = await verifyPaddleFn({ data: { reference: ref } });
+          if (r.status === "success") {
+            toast.success("Payment confirmed — credits added");
+            invalidate();
+            clearRef();
+            return;
+          }
+          if (r.status === "failed") {
+            toast.error("Payment failed");
+            invalidate();
+            clearRef();
+            return;
+          }
+          if (attempt < maxAttempts && !cancelled) setTimeout(poll, 5_000);
+          else {
+            toast.message("Payment is being processed — credits will appear shortly");
+            invalidate();
+            clearRef();
+          }
+        } catch (e: any) {
+          if (attempt < maxAttempts && !cancelled) setTimeout(poll, 5_000);
+          else {
+            toast.error(e.message);
+            clearRef();
+          }
+        }
+      };
+      poll();
+      return () => {
+        cancelled = true;
+      };
+    }
     if (ref.startsWith("npm_")) {
       // Poll for a couple of minutes — ETH/BTC confirmations take time
       let cancelled = false;
