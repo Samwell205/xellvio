@@ -99,30 +99,6 @@ function CheckoutPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const cardPay = useMutation({
-    mutationFn: async () => {
-      if (!amount || amount < 1) throw new Error("Pick a pack or amount first");
-      const r = await initCard({
-        data: { packId: pack?.id, amount: pack ? undefined : amount },
-      });
-      if ("error" in r) throw new Error(r.error);
-      await initializePaddle();
-      const paddlePriceId = await getPaddlePriceId(r.priceId);
-      window.Paddle.Checkout.open({
-        items: [{ priceId: paddlePriceId, quantity: r.quantity }],
-        customer: r.email ? { email: r.email } : undefined,
-        customData: { reference: r.reference },
-        settings: {
-          displayMode: "overlay",
-          successUrl: `${window.location.origin}/app/billing?ref=${r.reference}`,
-          allowLogout: false,
-          variant: "one-page",
-        },
-      });
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   useEffect(() => {
     if (!packsQ.isLoading && !pack && !isCustom) {
       // No selection — bounce back to billing
