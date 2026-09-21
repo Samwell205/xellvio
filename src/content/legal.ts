@@ -86,6 +86,8 @@ Mobile and consent information is used only to deliver the messaging requested b
 We share personal information only as described here:
 
 - **Subprocessors and service providers** — including our messaging infrastructure provider (Telnyx), cloud hosting and database provider, payment processor, email and analytics providers. They act on our instructions under contract. A current list is maintained in our Subprocessor List. Delivering a message necessarily transmits the recipient's number and message content to telecommunications carriers.
+- **Merchant of Record (Paddle.com)** — Paddle.com acts as the Merchant of Record for orders placed through our checkout. We share your name, email address, billing country, and order details with Paddle so it can complete the sale, manage subscriptions and renewals, process payments, issue invoices, meet sales-tax and VAT obligations, handle refunds, and respond to purchase-related support requests. Paddle processes that information as its own controller under its privacy notice.
+- **Professional advisers** — legal, accounting, tax, and audit advisers, where needed and under a duty of confidentiality.
 - **Legal, safety, and compliance** — where required by law, regulation, legal process, carrier rules, or to protect the rights, property, or safety of Xellvio, our Customers, End Users, or the public, and to enforce our terms.
 - **Business transfers** — in connection with a merger, acquisition, financing, or sale of assets, subject to this policy.
 
