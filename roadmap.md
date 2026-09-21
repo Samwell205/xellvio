@@ -33,5 +33,7 @@
 - Note: existing workspaces only start receiving lifecycle messages after their next sign-in (no retroactive blast).
 
 ## Collect payments from customers (Sep 21)
-- [ ] Decide built-in Lovable payments vs own-Stripe wiring (own-Stripe code already in place, awaiting keys)
+- [x] Enable built-in payments (Paddle) for international card checkout — enabled, test+live provisioned
 - [ ] Finish own-Stripe: collect STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET, set VITE_STRIPE_PUBLISHABLE_KEY, publish, test checkout
+
+Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout when user asks.
