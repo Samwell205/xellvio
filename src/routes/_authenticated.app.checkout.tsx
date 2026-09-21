@@ -51,26 +51,16 @@ export const Route = createFileRoute("/_authenticated/app/checkout")({
   component: CheckoutPage,
 });
 
-type Method = "card" | "paystack" | "crypto";
+type Method = "paystack" | "crypto";
 const COINS = CRYPTO_COINS;
 
 function CheckoutPage() {
-  const { pack: packParam, amount: amountParam, method: methodParam } = Route.useSearch();
+  const { pack: packParam, amount: amountParam } = Route.useSearch();
   const navigate = useNavigate();
 
   const loadPacks = useServerFn(listCreditPacks);
   const packsQ = useQuery({ queryKey: ["credit-packs"], queryFn: () => loadPacks() });
   const packs = (packsQ.data ?? []).filter((p) => p.currency === "USD");
-
-  const cardConfigured = isCardCheckoutConfigured();
-  const checkEligibility = useServerFn(getCardEligibility);
-  const eligibilityQ = useQuery({
-    queryKey: ["card-eligibility"],
-    queryFn: () => checkEligibility(),
-    enabled: cardConfigured,
-    staleTime: 5 * 60 * 1000,
-  });
-  const cardAllowed = eligibilityQ.data?.allowed ?? false;
 
   const pack = useMemo(
     () => (packParam ? packs.find((p) => p.id === packParam) : undefined),
