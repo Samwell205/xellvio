@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { verifyWebhook } from "@/lib/stripe.server";
+import { verifyPaddleWebhook, type PaddleEnv } from "@/lib/paddle.server";
 import { creditFromPayment } from "@/lib/billing-packs.functions";
 import { notifyPaymentReceipt } from "@/lib/payment-receipt.server";
 
@@ -24,24 +24,21 @@ async function markFailed(reference: string | undefined) {
     .eq("status", "pending");
 }
 
-async function handleWebhook(req: Request) {
-  const event = await verifyWebhook(req);
-  const object = event.data?.object ?? {};
-  const reference: string | undefined = object?.metadata?.reference;
+async function handleWebhook(req: Request, env: PaddleEnv) {
+  const event = await verifyPaddleWebhook(req, env);
+  const data = event?.data ?? {};
+  const reference: string | undefined = data?.custom_data?.reference;
 
-  switch (event.type) {
-    case "checkout.session.completed":
-      if (object.payment_status !== "unpaid") await fulfill(reference);
-      break;
-    case "checkout.session.async_payment_succeeded":
+  switch (event?.event_type) {
+    case "transaction.completed":
       await fulfill(reference);
       break;
-    case "checkout.session.async_payment_failed":
-    case "checkout.session.expired":
+    case "transaction.payment_failed":
+    case "transaction.canceled":
       await markFailed(reference);
       break;
     default:
-      console.log("Unhandled payments event:", event.type);
+      console.log("Unhandled payments event:", event?.event_type);
   }
 }
 
@@ -50,7 +47,9 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          await handleWebhook(request);
+          const url = new URL(request.url);
+          const env = (url.searchParams.get("env") as PaddleEnv) || "sandbox";
+          await handleWebhook(request, env);
           return Response.json({ received: true });
         } catch (e) {
           console.error("payments webhook error", e);
