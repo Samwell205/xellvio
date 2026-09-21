@@ -36,6 +36,7 @@ export const Route = createFileRoute("/_authenticated/app/checkout")({
         pack: z.string().uuid().optional(),
         amount: z.coerce.number().min(5).max(10000).optional(),
         method: z.enum(["card", "paystack", "crypto"]).optional(),
+
       })
       .parse(s),
   component: CheckoutPage,
