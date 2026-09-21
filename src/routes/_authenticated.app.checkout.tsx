@@ -27,10 +27,16 @@ import {
   initNowPaymentsCheckout,
   initNowPaymentsCheckoutCustom,
 } from "@/lib/nowpayments.functions";
-import { getCardEligibility } from "@/lib/stripe-checkout.functions";
-import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
+import {
+  getCardEligibility,
+  createPaddleCheckout,
+} from "@/lib/paddle-checkout.functions";
+import {
+  isCardCheckoutConfigured,
+  initializePaddle,
+  getPaddlePriceId,
+} from "@/lib/paddle";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { isCardCheckoutConfigured } from "@/lib/stripe";
 
 export const Route = createFileRoute("/_authenticated/app/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Xellvio" }] }),
@@ -84,6 +90,7 @@ function CheckoutPage() {
   const initPaystackCustom = useServerFn(initPaystackCheckoutCustom);
   const initCrypto = useServerFn(initNowPaymentsCheckout);
   const initCryptoCustom = useServerFn(initNowPaymentsCheckoutCustom);
+  const initCard = useServerFn(createPaddleCheckout);
 
   const pay = useMutation({
     mutationFn: async () => {
@@ -105,15 +112,36 @@ function CheckoutPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const cardPay = useMutation({
+    mutationFn: async () => {
+      if (!amount || amount < 1) throw new Error("Pick a pack or amount first");
+      const r = await initCard({
+        data: { packId: pack?.id, amount: pack ? undefined : amount },
+      });
+      if ("error" in r) throw new Error(r.error);
+      await initializePaddle();
+      const paddlePriceId = await getPaddlePriceId(r.priceId);
+      window.Paddle.Checkout.open({
+        items: [{ priceId: paddlePriceId, quantity: r.quantity }],
+        customer: r.email ? { email: r.email } : undefined,
+        customData: { reference: r.reference },
+        settings: {
+          displayMode: "overlay",
+          successUrl: `${window.location.origin}/app/billing?ref=${r.reference}`,
+          allowLogout: false,
+          variant: "one-page",
+        },
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   useEffect(() => {
     if (!packsQ.isLoading && !pack && !isCustom) {
       // No selection — bounce back to billing
       navigate({ to: "/app/billing" });
     }
   }, [packsQ.isLoading, pack, isCustom, navigate]);
-
-  const returnUrl =
-    typeof window !== "undefined" ? `${window.location.origin}/app/billing?card=done` : "";
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -228,11 +256,14 @@ function CheckoutPage() {
             {eligibilityQ.isLoading ? (
               <p className="text-sm text-muted-foreground">Checking card availability…</p>
             ) : cardAllowed && amount > 0 ? (
-              <StripeEmbeddedCheckout
-                packId={pack?.id}
-                amount={pack ? undefined : amount}
-                returnUrl={returnUrl}
-              />
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => cardPay.mutate()}
+                disabled={cardPay.isPending || !amount}
+              >
+                {cardPay.isPending ? "Opening checkout…" : `Pay ${formatUSD(amount)}`}
+              </Button>
             ) : (
               <p className="text-sm text-muted-foreground">
                 Card payment isn't available for this session. Pick Card / Bank or Crypto above.

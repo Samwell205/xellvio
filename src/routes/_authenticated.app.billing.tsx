@@ -15,7 +15,8 @@ import { toast } from "sonner";
 import { saveAutoRecharge } from "@/lib/billing.functions";
 import { listCreditPacks, listMyPayments, verifyPaystack } from "@/lib/billing-packs.functions";
 import { reconcileNowPayment } from "@/lib/nowpayments.functions";
-import { isCardCheckoutConfigured } from "@/lib/stripe";
+import { isCardCheckoutConfigured } from "@/lib/paddle";
+import { verifyPaddlePayment } from "@/lib/paddle-checkout.functions";
 import {
   Select,
   SelectContent,
@@ -61,6 +62,7 @@ function BillingPage() {
   const packsFn = useServerFn(listCreditPacks);
   const paymentsFn = useServerFn(listMyPayments);
   const verifyFn = useServerFn(verifyPaystack);
+  const verifyPaddleFn = useServerFn(verifyPaddlePayment);
   const reconcileNpFn = useServerFn(reconcileNowPayment);
 
   const packs = useQuery({ queryKey: ["credit-packs"], queryFn: () => packsFn() });
@@ -90,7 +92,7 @@ function BillingPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Handle redirect-back ?ref= — Paystack (pmt_/pay_) or NOWPayments (npm_)
+  // Handle redirect-back ?ref= — Paddle (pdl_), Paystack (pmt_/pay_) or NOWPayments (npm_)
   useEffect(() => {
     const url = new URL(window.location.href);
     const ref = url.searchParams.get("ref");
@@ -104,6 +106,46 @@ function BillingPage() {
       qc.invalidateQueries({ queryKey: ["credit-transactions"] });
       qc.invalidateQueries({ queryKey: ["my-payments"] });
     };
+    if (ref.startsWith("pdl_")) {
+      // Paddle webhook credits the user — poll for a short window
+      let cancelled = false;
+      let attempt = 0;
+      const maxAttempts = 6; // ~30s at 5s
+      const poll = async () => {
+        attempt += 1;
+        try {
+          const r = await verifyPaddleFn({ data: { reference: ref } });
+          if (r.status === "success") {
+            toast.success("Payment confirmed — credits added");
+            invalidate();
+            clearRef();
+            return;
+          }
+          if (r.status === "failed") {
+            toast.error("Payment failed");
+            invalidate();
+            clearRef();
+            return;
+          }
+          if (attempt < maxAttempts && !cancelled) setTimeout(poll, 5_000);
+          else {
+            toast.message("Payment is being processed — credits will appear shortly");
+            invalidate();
+            clearRef();
+          }
+        } catch (e: any) {
+          if (attempt < maxAttempts && !cancelled) setTimeout(poll, 5_000);
+          else {
+            toast.error(e.message);
+            clearRef();
+          }
+        }
+      };
+      poll();
+      return () => {
+        cancelled = true;
+      };
+    }
     if (ref.startsWith("npm_")) {
       // Poll for a couple of minutes — ETH/BTC confirmations take time
       let cancelled = false;
