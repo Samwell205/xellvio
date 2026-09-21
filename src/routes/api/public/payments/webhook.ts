@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
+import { verifyWebhook } from "@/lib/stripe.server";
 import { creditFromPayment } from "@/lib/billing-packs.functions";
 
 async function fulfill(reference: string | undefined) {
@@ -87,8 +87,8 @@ async function markFailed(reference: string | undefined) {
     .eq("status", "pending");
 }
 
-async function handleWebhook(req: Request, env: StripeEnv) {
-  const event = await verifyWebhook(req, env);
+async function handleWebhook(req: Request) {
+  const event = await verifyWebhook(req);
   const object = event.data?.object ?? {};
   const reference: string | undefined = object?.metadata?.reference;
 
@@ -112,13 +112,8 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const rawEnv = new URL(request.url).searchParams.get("env");
-        if (rawEnv !== "sandbox" && rawEnv !== "live") {
-          console.error("payments webhook: invalid env", rawEnv);
-          return Response.json({ received: true, ignored: "invalid env" });
-        }
         try {
-          await handleWebhook(request, rawEnv);
+          await handleWebhook(request);
           return Response.json({ received: true });
         } catch (e) {
           console.error("payments webhook error", e);
