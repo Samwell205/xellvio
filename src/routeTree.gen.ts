@@ -21,6 +21,7 @@ import { Route as SellersRouteImport } from './routes/sellers'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ReportingRouteImport } from './routes/reporting'
+import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ProhibitedContentRouteImport } from './routes/prohibited-content'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -222,6 +223,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const ReportingRoute = ReportingRouteImport.update({
   id: '/reporting',
   path: '/reporting',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefundsRoute = RefundsRouteImport.update({
+  id: '/refunds',
+  path: '/refunds',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProhibitedContentRoute = ProhibitedContentRouteImport.update({
@@ -1026,6 +1032,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/prohibited-content': typeof ProhibitedContentRoute
+  '/refunds': typeof RefundsRoute
   '/reporting': typeof ReportingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resources': typeof ResourcesRoute
@@ -1179,6 +1186,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/prohibited-content': typeof ProhibitedContentRoute
+  '/refunds': typeof RefundsRoute
   '/reporting': typeof ReportingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resources': typeof ResourcesRoute
@@ -1332,6 +1340,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/prohibited-content': typeof ProhibitedContentRoute
+  '/refunds': typeof RefundsRoute
   '/reporting': typeof ReportingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/resources': typeof ResourcesRoute
@@ -1488,6 +1497,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/prohibited-content'
+    | '/refunds'
     | '/reporting'
     | '/reset-password'
     | '/resources'
@@ -1641,6 +1651,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/prohibited-content'
+    | '/refunds'
     | '/reporting'
     | '/reset-password'
     | '/resources'
@@ -1793,6 +1804,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/prohibited-content'
+    | '/refunds'
     | '/reporting'
     | '/reset-password'
     | '/resources'
@@ -1950,6 +1962,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProhibitedContentRoute: typeof ProhibitedContentRoute
+  RefundsRoute: typeof RefundsRoute
   ReportingRoute: typeof ReportingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResourcesRoute: typeof ResourcesRoute
@@ -2092,6 +2105,13 @@ declare module '@tanstack/react-router' {
       path: '/reporting'
       fullPath: '/reporting'
       preLoaderRoute: typeof ReportingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/refunds': {
+      id: '/refunds'
+      path: '/refunds'
+      fullPath: '/refunds'
+      preLoaderRoute: typeof RefundsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prohibited-content': {
@@ -3376,6 +3396,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProhibitedContentRoute: ProhibitedContentRoute,
+  RefundsRoute: RefundsRoute,
   ReportingRoute: ReportingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ResourcesRoute: ResourcesRoute,

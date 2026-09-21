@@ -68,6 +68,7 @@ export function MarketingFooter() {
           <FooterCol title="Legal" items={[
             { label: "Privacy Policy", to: "/privacy" },
             { label: "Terms of Service", to: "/terms" },
+            { label: "Refund Policy", to: "/refunds" },
             { label: "Acceptable Use", to: "/aup" },
             { label: "Anti-Spam Policy", to: "/anti-spam" },
             { label: "Prohibited Content", to: "/prohibited-content" },
