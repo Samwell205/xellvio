@@ -207,36 +207,14 @@ function CheckoutPage() {
           </div>
         )}
 
-        {method === "card" ? (
-          <div className="space-y-3">
-            <PaymentTestModeBanner />
-            {eligibilityQ.isLoading ? (
-              <p className="text-sm text-muted-foreground">Checking card availability…</p>
-            ) : cardAllowed && amount > 0 ? (
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={() => cardPay.mutate()}
-                disabled={cardPay.isPending || !amount}
-              >
-                {cardPay.isPending ? "Opening checkout…" : `Pay ${formatUSD(amount)}`}
-              </Button>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Card payment isn't available for this session. Pick Card / Bank or Crypto above.
-              </p>
-            )}
-          </div>
-        ) : (
-          <Button
-            className="w-full"
-            size="lg"
-            onClick={() => pay.mutate()}
-            disabled={pay.isPending || !amount}
-          >
-            {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
-          </Button>
-        )}
+        <Button
+          className="w-full"
+          size="lg"
+          onClick={() => pay.mutate()}
+          disabled={pay.isPending || !amount}
+        >
+          {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
+        </Button>
       </Card>
     </div>
   );
