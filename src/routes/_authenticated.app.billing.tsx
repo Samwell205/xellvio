@@ -495,11 +495,21 @@ function PackPicker({ packs }: { packs: any[] }) {
         <div className="text-sm text-muted-foreground">≈ {formatUSD(credits)} in credits</div>
         <Button
           className="mt-3 w-full"
-          onClick={goCheckout}
+          onClick={() => goCheckout()}
           disabled={isCustom && (customAmount < 5 || customAmount > 10000)}
         >
           Pay
         </Button>
+        {isCardCheckoutConfigured() && (
+          <Button
+            variant="outline"
+            className="mt-2 w-full"
+            onClick={() => goCheckout("card")}
+            disabled={isCustom && (customAmount < 5 || customAmount > 10000)}
+          >
+            Pay by international card
+          </Button>
+        )}
       </div>
     </div>
   );
