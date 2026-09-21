@@ -5,7 +5,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -15,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, CreditCard, Bitcoin, ArrowLeft } from "lucide-react";
+import { Wallet, CreditCard, Bitcoin, ArrowLeft, Globe, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
 import {
@@ -28,6 +27,10 @@ import {
   initNowPaymentsCheckout,
   initNowPaymentsCheckoutCustom,
 } from "@/lib/nowpayments.functions";
+import { getCardEligibility } from "@/lib/stripe-checkout.functions";
+import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { isCardCheckoutConfigured } from "@/lib/stripe";
 
 export const Route = createFileRoute("/_authenticated/app/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Xellvio" }] }),
@@ -36,21 +39,32 @@ export const Route = createFileRoute("/_authenticated/app/checkout")({
       .object({
         pack: z.string().uuid().optional(),
         amount: z.coerce.number().min(5).max(10000).optional(),
+        method: z.enum(["card", "paystack", "crypto"]).optional(),
       })
       .parse(s),
   component: CheckoutPage,
 });
 
-type Method = "paystack" | "crypto";
+type Method = "card" | "paystack" | "crypto";
 const COINS = CRYPTO_COINS;
 
 function CheckoutPage() {
-  const { pack: packParam, amount: amountParam } = Route.useSearch();
+  const { pack: packParam, amount: amountParam, method: methodParam } = Route.useSearch();
   const navigate = useNavigate();
 
   const loadPacks = useServerFn(listCreditPacks);
   const packsQ = useQuery({ queryKey: ["credit-packs"], queryFn: () => loadPacks() });
   const packs = (packsQ.data ?? []).filter((p) => p.currency === "USD");
+
+  const cardConfigured = isCardCheckoutConfigured();
+  const checkEligibility = useServerFn(getCardEligibility);
+  const eligibilityQ = useQuery({
+    queryKey: ["card-eligibility"],
+    queryFn: () => checkEligibility(),
+    enabled: cardConfigured,
+    staleTime: 5 * 60 * 1000,
+  });
+  const cardAllowed = eligibilityQ.data?.allowed ?? false;
 
   const pack = useMemo(
     () => (packParam ? packs.find((p) => p.id === packParam) : undefined),
@@ -61,7 +75,9 @@ function CheckoutPage() {
   const credits = pack ? Number(pack.credits) : Number(amountParam ?? 0);
   const orderLabel = pack ? pack.name : isCustom ? `Custom — ${formatUSD(amount)} in credits` : "—";
 
-  const [method, setMethod] = useState<Method>("paystack");
+  const [method, setMethod] = useState<Method>(
+    methodParam ?? (cardConfigured ? "card" : "paystack"),
+  );
   const [coin, setCoin] = useState<string>(DEFAULT_CRYPTO_COIN);
 
   const initPaystack = useServerFn(initPaystackCheckout);
@@ -95,6 +111,9 @@ function CheckoutPage() {
       navigate({ to: "/app/billing" });
     }
   }, [packsQ.isLoading, pack, isCustom, navigate]);
+
+  const returnUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/app/billing?card=done` : "";
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -132,6 +151,27 @@ function CheckoutPage() {
           onValueChange={(v) => setMethod(v as Method)}
           className="grid sm:grid-cols-2 gap-3"
         >
+          {cardConfigured && (
+            <label
+              className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "card" ? "border-primary bg-primary/5" : ""}`}
+            >
+              <RadioGroupItem value="card" id="m-card" className="mt-1" />
+              <div className="flex-1">
+                <div className="font-medium flex items-center gap-2">
+                  <Globe className="size-4" /> International card
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Visa, Mastercard, Amex, Apple Pay and Google Pay. Credits land instantly.
+                </p>
+                {eligibilityQ.data && !cardAllowed && (
+                  <p className="text-xs text-destructive mt-1.5 flex items-start gap-1">
+                    <ShieldAlert className="size-3.5 mt-0.5 shrink-0" />
+                    {eligibilityQ.data.message}
+                  </p>
+                )}
+              </div>
+            </label>
+          )}
           <label
             className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "paystack" ? "border-primary bg-primary/5" : ""}`}
           >
@@ -182,14 +222,33 @@ function CheckoutPage() {
           </div>
         )}
 
-        <Button
-          className="w-full"
-          size="lg"
-          onClick={() => pay.mutate()}
-          disabled={pay.isPending || !amount}
-        >
-          {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
-        </Button>
+        {method === "card" ? (
+          <div className="space-y-3">
+            <PaymentTestModeBanner />
+            {eligibilityQ.isLoading ? (
+              <p className="text-sm text-muted-foreground">Checking card availability…</p>
+            ) : cardAllowed && amount > 0 ? (
+              <StripeEmbeddedCheckout
+                packId={pack?.id}
+                amount={pack ? undefined : amount}
+                returnUrl={returnUrl}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Card payment isn't available for this session. Pick Card / Bank or Crypto above.
+              </p>
+            )}
+          </div>
+        ) : (
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={() => pay.mutate()}
+            disabled={pay.isPending || !amount}
+          >
+            {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
+          </Button>
+        )}
       </Card>
     </div>
   );
