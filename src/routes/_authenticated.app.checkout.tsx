@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, CreditCard, Bitcoin, ArrowLeft, Globe, ShieldAlert } from "lucide-react";
+import { Wallet, CreditCard, Bitcoin, ArrowLeft, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
 import {
