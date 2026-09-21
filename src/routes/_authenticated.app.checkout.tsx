@@ -71,16 +71,13 @@ function CheckoutPage() {
   const credits = pack ? Number(pack.credits) : Number(amountParam ?? 0);
   const orderLabel = pack ? pack.name : isCustom ? `Custom — ${formatUSD(amount)} in credits` : "—";
 
-  const [method, setMethod] = useState<Method>(
-    methodParam ?? (cardConfigured ? "card" : "paystack"),
-  );
+  const [method, setMethod] = useState<Method>("paystack");
   const [coin, setCoin] = useState<string>(DEFAULT_CRYPTO_COIN);
 
   const initPaystack = useServerFn(initPaystackCheckout);
   const initPaystackCustom = useServerFn(initPaystackCheckoutCustom);
   const initCrypto = useServerFn(initNowPaymentsCheckout);
   const initCryptoCustom = useServerFn(initNowPaymentsCheckoutCustom);
-  const initCard = useServerFn(createPaddleCheckout);
 
   const pay = useMutation({
     mutationFn: async () => {
