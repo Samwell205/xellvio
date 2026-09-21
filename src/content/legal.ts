@@ -172,7 +172,11 @@ You acknowledge that messaging registration and verification (including toll-fre
 
 ## 5. Fees, Credits, and Payment
 
-The Service uses a prepaid Credit model. You purchase Credits in advance; message sends and applicable fees are deducted based on destination country, number type, and message segments. Per-message pricing is set out in the Service and may change on a going-forward basis. **Credits are non-refundable except where required by law, do not constitute a deposit or stored monetary value, and may expire if your account is inactive or closed.** You are responsible for all applicable taxes other than taxes on our income. We may suspend sending if your balance is insufficient.
+The Service uses a prepaid Credit model. You purchase Credits in advance; message sends and applicable fees are deducted based on destination country, number type, and message segments. Per-message pricing is set out in the Service and may change on a going-forward basis. Credits do not constitute a deposit or stored monetary value. We may suspend sending if your balance is insufficient.
+
+**Order process, billing, and taxes.** Our order process is conducted by our online reseller Paddle.com. Paddle.com is the Merchant of Record for all our orders. Paddle provides all customer service inquiries and handles returns. Payment, billing, currency, invoicing, sales tax and VAT, cancellation, and refund mechanics for orders placed through Paddle are governed by the [Paddle Buyer Terms](https://www.paddle.com/legal/checkout-buyer-terms), which you accept at checkout. Where an order is placed through another payment option offered in the Service, we handle billing and refunds for that order directly.
+
+**Refunds.** We offer a 30-day money-back guarantee on purchases, as set out in our [Refund Policy](/refunds).
 
 ## 6. Customer Data and Data Protection
 
