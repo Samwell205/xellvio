@@ -27,16 +27,6 @@ import {
   initNowPaymentsCheckout,
   initNowPaymentsCheckoutCustom,
 } from "@/lib/nowpayments.functions";
-import {
-  getCardEligibility,
-  createPaddleCheckout,
-} from "@/lib/paddle-checkout.functions";
-import {
-  isCardCheckoutConfigured,
-  initializePaddle,
-  getPaddlePriceId,
-} from "@/lib/paddle";
-import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export const Route = createFileRoute("/_authenticated/app/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Xellvio" }] }),
