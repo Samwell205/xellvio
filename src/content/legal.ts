@@ -1,6 +1,6 @@
 // Versioned legal content. Bump LEGAL_VERSION when any policy materially changes.
-export const LEGAL_VERSION = "2026-06-20";
-export const LAST_UPDATED = "June 20, 2026";
+export const LEGAL_VERSION = "2026-09-21";
+export const LAST_UPDATED = "September 21, 2026";
 
 export const ABUSE_EMAIL = "abuse@xellvio.com";
 export const PRIVACY_EMAIL = "privacy@xellvio.com";
