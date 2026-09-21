@@ -1,6 +1,6 @@
 // Versioned legal content. Bump LEGAL_VERSION when any policy materially changes.
-export const LEGAL_VERSION = "2026-06-20";
-export const LAST_UPDATED = "June 20, 2026";
+export const LEGAL_VERSION = "2026-09-21";
+export const LAST_UPDATED = "September 21, 2026";
 
 export const ABUSE_EMAIL = "abuse@xellvio.com";
 export const PRIVACY_EMAIL = "privacy@xellvio.com";
@@ -86,6 +86,8 @@ Mobile and consent information is used only to deliver the messaging requested b
 We share personal information only as described here:
 
 - **Subprocessors and service providers** — including our messaging infrastructure provider (Telnyx), cloud hosting and database provider, payment processor, email and analytics providers. They act on our instructions under contract. A current list is maintained in our Subprocessor List. Delivering a message necessarily transmits the recipient's number and message content to telecommunications carriers.
+- **Merchant of Record (Paddle.com)** — Paddle.com acts as the Merchant of Record for orders placed through our checkout. We share your name, email address, billing country, and order details with Paddle so it can complete the sale, manage subscriptions and renewals, process payments, issue invoices, meet sales-tax and VAT obligations, handle refunds, and respond to purchase-related support requests. Paddle processes that information as its own controller under its privacy notice.
+- **Professional advisers** — legal, accounting, tax, and audit advisers, where needed and under a duty of confidentiality.
 - **Legal, safety, and compliance** — where required by law, regulation, legal process, carrier rules, or to protect the rights, property, or safety of Xellvio, our Customers, End Users, or the public, and to enforce our terms.
 - **Business transfers** — in connection with a merger, acquisition, financing, or sale of assets, subject to this policy.
 
@@ -172,7 +174,11 @@ You acknowledge that messaging registration and verification (including toll-fre
 
 ## 5. Fees, Credits, and Payment
 
-The Service uses a prepaid Credit model. You purchase Credits in advance; message sends and applicable fees are deducted based on destination country, number type, and message segments. Per-message pricing is set out in the Service and may change on a going-forward basis. **Credits are non-refundable except where required by law, do not constitute a deposit or stored monetary value, and may expire if your account is inactive or closed.** You are responsible for all applicable taxes other than taxes on our income. We may suspend sending if your balance is insufficient.
+The Service uses a prepaid Credit model. You purchase Credits in advance; message sends and applicable fees are deducted based on destination country, number type, and message segments. Per-message pricing is set out in the Service and may change on a going-forward basis. Credits do not constitute a deposit or stored monetary value. We may suspend sending if your balance is insufficient.
+
+**Order process, billing, and taxes.** Our order process is conducted by our online reseller Paddle.com. Paddle.com is the Merchant of Record for all our orders. Paddle provides all customer service inquiries and handles returns. Payment, billing, currency, invoicing, sales tax and VAT, cancellation, and refund mechanics for orders placed through Paddle are governed by the [Paddle Buyer Terms](https://www.paddle.com/legal/checkout-buyer-terms), which you accept at checkout. Where an order is placed through another payment option offered in the Service, we handle billing and refunds for that order directly.
+
+**Refunds.** We offer a 30-day money-back guarantee on purchases, as set out in our [Refund Policy](/refunds).
 
 ## 6. Customer Data and Data Protection
 
@@ -606,6 +612,55 @@ For the full legal wording, see our [Acceptable Use Policy](/aup), [Anti-Spam & 
 Report abuse: [ABUSE EMAIL].
 `);
 
+export const REFUND_MD = fill(`# Refund Policy
+
+**Last updated: [DATE]**
+
+This Refund Policy applies to purchases of Xellvio credits and plans made from [LEGAL ENTITY NAME] ("Xellvio," "we," "us").
+
+---
+
+## 1. 30-day money-back guarantee
+
+If you are not satisfied with your purchase, you may request a full refund within **30 days of your order date**. You do not need to give a reason. We will refund the amount you paid for that order to your original payment method.
+
+## 2. How to request a refund
+
+Orders placed through our checkout are processed by our online reseller **Paddle.com**, which is the Merchant of Record for those orders and handles returns.
+
+- Visit [paddle.net](https://paddle.net) and look up your order using the email address you used at checkout, or
+- Email us at [SUPPORT EMAIL] with your order email and approximate order date, and we will arrange the refund with Paddle on your behalf.
+
+For orders placed through any other payment option offered in the Service (for example local bank or card payment, or cryptocurrency), email [SUPPORT EMAIL] and we will process the refund directly.
+
+## 3. What gets refunded
+
+- **Unused credits** are refunded in full within the 30-day window.
+- **Credits already spent on messages** cannot be recovered, because the underlying message was already transmitted and paid to telecommunications carriers. Where part of an order has been used, we refund the unused portion; if your order is materially defective or you were charged in error, we refund the full amount.
+- **Carrier and regulatory registration fees** (for example toll-free verification or A2P/10DLC registration fees) charged to us by third parties are refundable only where the third party refunds them to us, or where the registration was never submitted.
+
+## 4. Errors, duplicate charges, and failed service
+
+If you were charged twice, charged the wrong amount, or credits were not delivered to your account, contact [SUPPORT EMAIL] at any time — these are corrected in full regardless of the 30-day window.
+
+## 5. Cancellation
+
+You may close your account at any time from your account settings. Closing your account does not by itself trigger a refund; request one as described in Section 2 if you are within the 30-day window.
+
+## 6. Chargebacks and abuse
+
+We may decline a refund request where we reasonably determine the purchase was fraudulent, or where the account was suspended for a serious violation of our [Acceptable Use Policy](/aup) or [Anti-Spam & Messaging Policy](/anti-spam) — for example sending messages without recipient consent. Nothing in this policy limits the rights you have under applicable consumer law.
+
+## 7. Timing
+
+Approved refunds are issued promptly. Depending on your bank or card issuer, funds usually appear within 5–10 business days.
+
+## 8. Contact
+
+[LEGAL ENTITY NAME]
+Email: [SUPPORT EMAIL]
+`);
+
 export const LEGAL_DOCS: Record<string, LegalDoc> = {
   privacy: { slug: "privacy", path: "/privacy", title: "Privacy Policy", short: "Privacy", description: "How Xellvio collects, uses, and protects personal information.", markdown: PRIVACY_MD, toc: true },
   terms: { slug: "terms", path: "/terms", title: "Terms of Service", short: "Terms", description: "The binding terms that govern use of the Xellvio platform.", markdown: TERMS_MD, toc: true },
@@ -614,5 +669,6 @@ export const LEGAL_DOCS: Record<string, LegalDoc> = {
   "sms-terms": { slug: "sms-terms", path: "/sms-terms", title: "SMS / Messaging Terms & Consent", short: "SMS Terms", description: "How SMS works on Xellvio for end users and senders.", markdown: SMS_TERMS_MD, toc: false },
   dpa: { slug: "dpa", path: "/dpa", title: "Data Processing Addendum", short: "DPA", description: "Data-protection terms between Xellvio (processor) and Customers (controllers).", markdown: DPA_MD, toc: true },
   cookies: { slug: "cookies", path: "/cookies", title: "Cookie Policy", short: "Cookies", description: "How Xellvio uses cookies and similar technologies.", markdown: COOKIES_MD, toc: false },
+  refunds: { slug: "refunds", path: "/refunds", title: "Refund Policy", short: "Refunds", description: "Xellvio's 30-day money-back guarantee and how to request a refund.", markdown: REFUND_MD, toc: true },
   "prohibited-content": { slug: "prohibited-content", path: "/prohibited-content", title: "Prohibited Content", short: "Prohibited Content", description: "The full list of content Xellvio does not allow customers to send over SMS.", markdown: PROHIBITED_MD, toc: true },
 };
