@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createHmac, timingSafeEqual } from "crypto";
 import { creditFromPayment } from "@/lib/billing-packs.functions";
+import { notifyPaymentReceipt } from "@/lib/payment-receipt.server";
 
 export const Route = createFileRoute("/api/public/paystack-webhook")({
   server: {
@@ -24,7 +25,12 @@ export const Route = createFileRoute("/api/public/paystack-webhook")({
           if (reference) {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             try {
-              await creditFromPayment(supabaseAdmin, reference);
+              const result = await creditFromPayment(supabaseAdmin, reference);
+              if (result?.ok && !result.already) {
+                await notifyPaymentReceipt(supabaseAdmin, reference, "bank/card").catch((e) =>
+                  console.error("paystack notify failed", e),
+                );
+              }
             } catch (e) {
               console.error("paystack credit error", e);
               return new Response("credit error", { status: 500 });
