@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { AlertCircle } from "lucide-react";
-import { getStripe, getStripeEnvironment } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { createCardCreditCheckout } from "@/lib/stripe-checkout.functions";
 
 interface Props {
@@ -16,7 +16,7 @@ export function StripeEmbeddedCheckout({ packId, amount, returnUrl }: Props) {
   const fetchClientSecret = useCallback(async (): Promise<string> => {
     try {
       const result = await createCardCreditCheckout({
-        data: { packId, amount, environment: getStripeEnvironment(), returnUrl },
+        data: { packId, amount, returnUrl },
       });
       if ("error" in result) throw new Error(result.error);
       if (!result.clientSecret) throw new Error("Card checkout did not start");
