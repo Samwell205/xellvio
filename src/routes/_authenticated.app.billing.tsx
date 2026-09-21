@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { saveAutoRecharge } from "@/lib/billing.functions";
 import { listCreditPacks, listMyPayments, verifyPaystack } from "@/lib/billing-packs.functions";
 import { reconcileNowPayment } from "@/lib/nowpayments.functions";
-import { isCardCheckoutConfigured } from "@/lib/paddle";
 import { verifyPaddlePayment } from "@/lib/paddle-checkout.functions";
 import {
   Select,
@@ -474,9 +473,8 @@ function PackPicker({ packs }: { packs: any[] }) {
   const amount = isCustom ? customAmount : Number(pack?.price ?? 0);
   const credits = isCustom ? customAmount : Number(pack?.credits ?? 0);
 
-  function goCheckout(method?: "card") {
+  function goCheckout() {
     const search: Record<string, any> = isCustom ? { amount: customAmount } : { pack: selected };
-    if (method) search.method = method;
     navigate({ to: "/app/checkout", search });
   }
 
@@ -543,16 +541,9 @@ function PackPicker({ packs }: { packs: any[] }) {
         >
           Pay
         </Button>
-        {isCardCheckoutConfigured() && (
-          <Button
-            variant="outline"
-            className="mt-2 w-full"
-            onClick={() => goCheckout("card")}
-            disabled={isCustom && (customAmount < 5 || customAmount > 10000)}
-          >
-            Pay by international card
-          </Button>
-        )}
+        <Button variant="outline" className="mt-2 w-full" disabled>
+          International card — coming soon
+        </Button>
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, CreditCard, Bitcoin, ArrowLeft, Globe, ShieldAlert } from "lucide-react";
+import { Wallet, CreditCard, Bitcoin, ArrowLeft, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
 import {
@@ -27,16 +27,6 @@ import {
   initNowPaymentsCheckout,
   initNowPaymentsCheckoutCustom,
 } from "@/lib/nowpayments.functions";
-import {
-  getCardEligibility,
-  createPaddleCheckout,
-} from "@/lib/paddle-checkout.functions";
-import {
-  isCardCheckoutConfigured,
-  initializePaddle,
-  getPaddlePriceId,
-} from "@/lib/paddle";
-import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
 export const Route = createFileRoute("/_authenticated/app/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Xellvio" }] }),
@@ -46,31 +36,22 @@ export const Route = createFileRoute("/_authenticated/app/checkout")({
         pack: z.string().uuid().optional(),
         amount: z.coerce.number().min(5).max(10000).optional(),
         method: z.enum(["card", "paystack", "crypto"]).optional(),
+
       })
       .parse(s),
   component: CheckoutPage,
 });
 
-type Method = "card" | "paystack" | "crypto";
+type Method = "paystack" | "crypto";
 const COINS = CRYPTO_COINS;
 
 function CheckoutPage() {
-  const { pack: packParam, amount: amountParam, method: methodParam } = Route.useSearch();
+  const { pack: packParam, amount: amountParam } = Route.useSearch();
   const navigate = useNavigate();
 
   const loadPacks = useServerFn(listCreditPacks);
   const packsQ = useQuery({ queryKey: ["credit-packs"], queryFn: () => loadPacks() });
   const packs = (packsQ.data ?? []).filter((p) => p.currency === "USD");
-
-  const cardConfigured = isCardCheckoutConfigured();
-  const checkEligibility = useServerFn(getCardEligibility);
-  const eligibilityQ = useQuery({
-    queryKey: ["card-eligibility"],
-    queryFn: () => checkEligibility(),
-    enabled: cardConfigured,
-    staleTime: 5 * 60 * 1000,
-  });
-  const cardAllowed = eligibilityQ.data?.allowed ?? false;
 
   const pack = useMemo(
     () => (packParam ? packs.find((p) => p.id === packParam) : undefined),
@@ -81,16 +62,13 @@ function CheckoutPage() {
   const credits = pack ? Number(pack.credits) : Number(amountParam ?? 0);
   const orderLabel = pack ? pack.name : isCustom ? `Custom — ${formatUSD(amount)} in credits` : "—";
 
-  const [method, setMethod] = useState<Method>(
-    methodParam ?? (cardConfigured ? "card" : "paystack"),
-  );
+  const [method, setMethod] = useState<Method>("paystack");
   const [coin, setCoin] = useState<string>(DEFAULT_CRYPTO_COIN);
 
   const initPaystack = useServerFn(initPaystackCheckout);
   const initPaystackCustom = useServerFn(initPaystackCheckoutCustom);
   const initCrypto = useServerFn(initNowPaymentsCheckout);
   const initCryptoCustom = useServerFn(initNowPaymentsCheckoutCustom);
-  const initCard = useServerFn(createPaddleCheckout);
 
   const pay = useMutation({
     mutationFn: async () => {
@@ -108,30 +86,6 @@ function CheckoutPage() {
     },
     onSuccess: (r) => {
       window.location.href = r.authorization_url;
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const cardPay = useMutation({
-    mutationFn: async () => {
-      if (!amount || amount < 1) throw new Error("Pick a pack or amount first");
-      const r = await initCard({
-        data: { packId: pack?.id, amount: pack ? undefined : amount },
-      });
-      if ("error" in r) throw new Error(r.error);
-      await initializePaddle();
-      const paddlePriceId = await getPaddlePriceId(r.priceId);
-      window.Paddle.Checkout.open({
-        items: [{ priceId: paddlePriceId, quantity: r.quantity }],
-        customer: r.email ? { email: r.email } : undefined,
-        customData: { reference: r.reference },
-        settings: {
-          displayMode: "overlay",
-          successUrl: `${window.location.origin}/app/billing?ref=${r.reference}`,
-          allowLogout: false,
-          variant: "one-page",
-        },
-      });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -179,27 +133,21 @@ function CheckoutPage() {
           onValueChange={(v) => setMethod(v as Method)}
           className="grid sm:grid-cols-2 gap-3"
         >
-          {cardConfigured && (
-            <label
-              className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "card" ? "border-primary bg-primary/5" : ""}`}
-            >
-              <RadioGroupItem value="card" id="m-card" className="mt-1" />
-              <div className="flex-1">
-                <div className="font-medium flex items-center gap-2">
-                  <Globe className="size-4" /> International card
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Visa, Mastercard, Amex, Apple Pay and Google Pay. Credits land instantly.
-                </p>
-                {eligibilityQ.data && !cardAllowed && (
-                  <p className="text-xs text-destructive mt-1.5 flex items-start gap-1">
-                    <ShieldAlert className="size-3.5 mt-0.5 shrink-0" />
-                    {eligibilityQ.data.message}
-                  </p>
-                )}
+          <div className="rounded-xl border border-dashed p-4 flex items-start gap-3 opacity-70 cursor-not-allowed">
+            <Globe className="size-4 mt-0.5 text-muted-foreground" />
+            <div className="flex-1">
+              <div className="font-medium flex items-center gap-2">
+                International card
+                <span className="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Coming soon
+                </span>
               </div>
-            </label>
-          )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Visa, Mastercard, Amex, Apple Pay and Google Pay — not available yet. Use Card / Bank
+                or Crypto for now.
+              </p>
+            </div>
+          </div>
           <label
             className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "paystack" ? "border-primary bg-primary/5" : ""}`}
           >
@@ -250,36 +198,14 @@ function CheckoutPage() {
           </div>
         )}
 
-        {method === "card" ? (
-          <div className="space-y-3">
-            <PaymentTestModeBanner />
-            {eligibilityQ.isLoading ? (
-              <p className="text-sm text-muted-foreground">Checking card availability…</p>
-            ) : cardAllowed && amount > 0 ? (
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={() => cardPay.mutate()}
-                disabled={cardPay.isPending || !amount}
-              >
-                {cardPay.isPending ? "Opening checkout…" : `Pay ${formatUSD(amount)}`}
-              </Button>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Card payment isn't available for this session. Pick Card / Bank or Crypto above.
-              </p>
-            )}
-          </div>
-        ) : (
-          <Button
-            className="w-full"
-            size="lg"
-            onClick={() => pay.mutate()}
-            disabled={pay.isPending || !amount}
-          >
-            {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
-          </Button>
-        )}
+        <Button
+          className="w-full"
+          size="lg"
+          onClick={() => pay.mutate()}
+          disabled={pay.isPending || !amount}
+        >
+          {pay.isPending ? "Redirecting…" : `Pay ${formatUSD(amount)}`}
+        </Button>
       </Card>
     </div>
   );
