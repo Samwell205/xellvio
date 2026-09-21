@@ -42,7 +42,7 @@ async function createSession(opts: {
       },
     ],
     mode: "payment",
-    ui_mode: "embedded",
+    ui_mode: "embedded_page",
     return_url: opts.returnUrl,
     ...(opts.email && { customer_email: opts.email }),
     payment_intent_data: { description: opts.label },
