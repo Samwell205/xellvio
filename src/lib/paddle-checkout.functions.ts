@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { isPaddleConfigured } from "@/lib/paddle.server";
 import { checkCardEligibility } from "@/lib/payment-geo.server";
@@ -140,5 +141,3 @@ export const verifyPaddlePayment = createServerFn({ method: "GET" })
     return { status: "pending" as const };
   });
 
-// Re-export so getRequest is available without a separate import line
-import { getRequest } from "@tanstack/react-start/server";
