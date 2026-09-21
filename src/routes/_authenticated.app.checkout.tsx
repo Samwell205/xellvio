@@ -142,27 +142,21 @@ function CheckoutPage() {
           onValueChange={(v) => setMethod(v as Method)}
           className="grid sm:grid-cols-2 gap-3"
         >
-          {cardConfigured && (
-            <label
-              className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "card" ? "border-primary bg-primary/5" : ""}`}
-            >
-              <RadioGroupItem value="card" id="m-card" className="mt-1" />
-              <div className="flex-1">
-                <div className="font-medium flex items-center gap-2">
-                  <Globe className="size-4" /> International card
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Visa, Mastercard, Amex, Apple Pay and Google Pay. Credits land instantly.
-                </p>
-                {eligibilityQ.data && !cardAllowed && (
-                  <p className="text-xs text-destructive mt-1.5 flex items-start gap-1">
-                    <ShieldAlert className="size-3.5 mt-0.5 shrink-0" />
-                    {eligibilityQ.data.message}
-                  </p>
-                )}
+          <div className="rounded-xl border border-dashed p-4 flex items-start gap-3 opacity-70 cursor-not-allowed">
+            <Globe className="size-4 mt-0.5 text-muted-foreground" />
+            <div className="flex-1">
+              <div className="font-medium flex items-center gap-2">
+                International card
+                <span className="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Coming soon
+                </span>
               </div>
-            </label>
-          )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Visa, Mastercard, Amex, Apple Pay and Google Pay — not available yet. Use Card / Bank
+                or Crypto for now.
+              </p>
+            </div>
+          </div>
           <label
             className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "paystack" ? "border-primary bg-primary/5" : ""}`}
           >
