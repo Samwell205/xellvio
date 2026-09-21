@@ -46,8 +46,7 @@ export async function gatewayFetch(
   if (!lovableKey) throw new Error("LOVABLE_API_KEY not configured");
 
   const cleanPath = path.replace(/^\//, "");
-  const separator = cleanPath.includes("?") ? "&" : "?";
-  const url = `${GATEWAY_URL}/${cleanPath}${cleanPath.includes("?") ? "" : ""}`;
+  const url = `${GATEWAY_URL}/${cleanPath}`;
 
   return fetch(url, {
     ...init,
