@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { saveAutoRecharge } from "@/lib/billing.functions";
 import { listCreditPacks, listMyPayments, verifyPaystack } from "@/lib/billing-packs.functions";
 import { reconcileNowPayment } from "@/lib/nowpayments.functions";
-import { isCardCheckoutConfigured } from "@/lib/stripe";
+import { isCardCheckoutConfigured } from "@/lib/paddle";
 import {
   Select,
   SelectContent,
