@@ -10,6 +10,7 @@ export const PERMISSION_KEYS = [
   "suppressions",
   "setup_sms",
   "billing",
+  "costs",
   "team",
   "settings",
 ] as const;
