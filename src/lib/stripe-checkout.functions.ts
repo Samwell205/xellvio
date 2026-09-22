@@ -42,7 +42,8 @@ async function createSession(opts: {
       },
     ],
     mode: "payment",
-    success_url: opts.returnUrl,
+    // Carry the reference back so the app can confirm the payment on return.
+    success_url: `${opts.returnUrl}${opts.returnUrl.includes("?") ? "&" : "?"}ref=${opts.reference}`,
     cancel_url: opts.returnUrl.split("?")[0],
     client_reference_id: opts.reference,
     ...(opts.email && { customer_email: opts.email }),
