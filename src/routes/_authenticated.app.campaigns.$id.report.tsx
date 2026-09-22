@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useCanViewCosts } from "@/hooks/useCanViewCosts";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCampaignReport, type CampaignReport } from "@/lib/reports.functions";
@@ -60,6 +61,7 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/$id/report")
 
 function ReportPage() {
   const { id } = useParams({ from: "/_authenticated/app/campaigns/$id/report" });
+  const canViewCosts = useCanViewCosts();
   const call = useServerFn(getCampaignReport);
   const callExport = useServerFn(getCampaignRecipientsExport);
   const q = useQuery<CampaignReport>({
