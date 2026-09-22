@@ -27,6 +27,8 @@ import {
   initNowPaymentsCheckout,
   initNowPaymentsCheckoutCustom,
 } from "@/lib/nowpayments.functions";
+import { createCardCreditCheckout } from "@/lib/stripe-checkout.functions";
+
 
 export const Route = createFileRoute("/_authenticated/app/checkout")({
   head: () => ({ meta: [{ title: "Checkout — Xellvio" }] }),
@@ -42,11 +44,11 @@ export const Route = createFileRoute("/_authenticated/app/checkout")({
   component: CheckoutPage,
 });
 
-type Method = "paystack" | "crypto";
+type Method = "card" | "paystack" | "crypto";
 const COINS = CRYPTO_COINS;
 
 function CheckoutPage() {
-  const { pack: packParam, amount: amountParam } = Route.useSearch();
+  const { pack: packParam, amount: amountParam, method: methodParam } = Route.useSearch();
   const navigate = useNavigate();
 
   const loadPacks = useServerFn(listCreditPacks);
@@ -62,17 +64,26 @@ function CheckoutPage() {
   const credits = pack ? Number(pack.credits) : Number(amountParam ?? 0);
   const orderLabel = pack ? pack.name : isCustom ? `Custom — ${formatUSD(amount)} in credits` : "—";
 
-  const [method, setMethod] = useState<Method>("paystack");
+  const [method, setMethod] = useState<Method>(methodParam ?? "card");
   const [coin, setCoin] = useState<string>(DEFAULT_CRYPTO_COIN);
 
   const initPaystack = useServerFn(initPaystackCheckout);
   const initPaystackCustom = useServerFn(initPaystackCheckoutCustom);
   const initCrypto = useServerFn(initNowPaymentsCheckout);
   const initCryptoCustom = useServerFn(initNowPaymentsCheckoutCustom);
+  const initCard = useServerFn(createCardCreditCheckout);
 
   const pay = useMutation({
     mutationFn: async () => {
       if (!amount || amount < 1) throw new Error("Pick a pack or amount first");
+      if (method === "card") {
+        const returnUrl = `${window.location.origin}/app/billing`;
+        const r = await initCard({
+          data: pack ? { packId: pack.id, returnUrl } : { amount, returnUrl },
+        });
+        if ("error" in r) throw new Error(r.error);
+        return { authorization_url: r.url, reference: r.reference };
+      }
       if (method === "paystack") {
         if (pack) return initPaystack({ data: { packId: pack.id } });
         return initPaystackCustom({ data: { amount } });
@@ -89,6 +100,7 @@ function CheckoutPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   useEffect(() => {
     if (!packsQ.isLoading && !pack && !isCustom) {
@@ -133,21 +145,20 @@ function CheckoutPage() {
           onValueChange={(v) => setMethod(v as Method)}
           className="grid sm:grid-cols-2 gap-3"
         >
-          <div className="rounded-xl border border-dashed p-4 flex items-start gap-3 opacity-70 cursor-not-allowed">
-            <Globe className="size-4 mt-0.5 text-muted-foreground" />
+          <label
+            className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "card" ? "border-primary bg-primary/5" : ""}`}
+          >
+            <RadioGroupItem value="card" id="m-card" className="mt-1" />
             <div className="flex-1">
               <div className="font-medium flex items-center gap-2">
-                International card
-                <span className="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
-                  Coming soon
-                </span>
+                <Globe className="size-4" /> International card
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Visa, Mastercard, Amex, Apple Pay and Google Pay — not available yet. Use Card / Bank
-                or Crypto for now.
+                Visa, Mastercard, Amex, Apple Pay and Google Pay — billed in USD.
               </p>
             </div>
-          </div>
+          </label>
+
           <label
             className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "paystack" ? "border-primary bg-primary/5" : ""}`}
           >
