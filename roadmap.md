@@ -34,7 +34,7 @@
 
 ## Collect payments from customers (Sep 21)
 - [x] Enable built-in payments (Paddle) for international card checkout — enabled, test+live provisioned
-- [ ] Finish own-Stripe: collect STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET, set VITE_STRIPE_PUBLISHABLE_KEY, publish, test checkout
-- [ ] Replace the Lovable-managed Stripe key with the new Stripe account key, then update its webhook signing secret
+- [ ] Finish own-Stripe: publish and test checkout (publishable key is unnecessary for hosted checkout)
+- [x] Replace the Lovable-managed Stripe key with the new Stripe account key, create its live webhook, save the signing secret, and disable the duplicate endpoint
 
 Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout when user asks.
