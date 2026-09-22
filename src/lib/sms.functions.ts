@@ -122,6 +122,10 @@ export const sendTestSms = createServerFn({ method: "POST" })
       messagingProfileId = await ensureMessagingProfileForAccount(userId);
     }
 
+    // ── Opt-out firewall: an opted-out number must never be texted again.
+    const { assertNotSuppressed } = await import("./suppression.server");
+    await assertNotSuppressed(userId, data.to);
+
     // ── Compliance firewall: screen every outbound message BEFORE Telnyx.
     const { screenMessageContent } = await import("./content-screening.server");
     const { TOS_CURRENT_VERSION } = await import("./tos");
