@@ -83,6 +83,7 @@ import {
 } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
+import { useCanViewCosts } from "@/hooks/useCanViewCosts";
 import { formatUSD } from "@/lib/money";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
@@ -92,6 +93,7 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
 
 function CampaignReport() {
   const { id } = Route.useParams();
+  const canViewCosts = useCanViewCosts();
   const queryClient = useQueryClient();
   const reconcileFn = useServerFn(reconcileCampaignMessages);
   const reconcileM = useMutation({
@@ -942,7 +944,9 @@ function CampaignReport() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="recipients">Recipient activity</TabsTrigger>
           <TabsTrigger value="links">Link activity</TabsTrigger>
-          <TabsTrigger value="cost">Cost & deliverability</TabsTrigger>
+          {canViewCosts && (
+            <TabsTrigger value="cost">Cost & deliverability</TabsTrigger>
+          )}
         </TabsList>
 
         {/* ───────────── OVERVIEW ───────────── */}
@@ -1041,13 +1045,23 @@ function CampaignReport() {
                   sub="since campaign send"
                   tone="danger"
                 />
-                <Kpi
-                  icon={Wallet}
-                  label="Spend"
-                  value={formatUSD(stats.totalCost)}
-                  sub={`${stats.totalSegments.toLocaleString()} segments`}
-                  tone="muted"
-                />
+                {canViewCosts ? (
+                  <Kpi
+                    icon={Wallet}
+                    label="Spend"
+                    value={formatUSD(stats.totalCost)}
+                    sub={`${stats.totalSegments.toLocaleString()} segments`}
+                    tone="muted"
+                  />
+                ) : (
+                  <Kpi
+                    icon={Wallet}
+                    label="Segments"
+                    value={stats.totalSegments.toLocaleString()}
+                    sub="message parts sent"
+                    tone="muted"
+                  />
+                )}
               </div>
 
               {/* Engagement over time */}
@@ -1398,6 +1412,7 @@ function RecipientActivity({
   retryingId?: string;
   canRetry?: boolean;
 }) {
+  const canViewCosts = useCanViewCosts();
   // Counts come from the aggregate summary, not from the current page.
   const items = [
     { key: "all", label: "All", count: stats.attempted },
@@ -1450,12 +1465,16 @@ function RecipientActivity({
             tone="primary"
           />
           <SummaryStat label="Opt-outs" value={optOuts} tone="danger" />
-          <SummaryStat label="Spend" value={formatUSD(stats.totalCost)} tone="muted" />
-          <SummaryStat
-            label="Cost / msg"
-            value={formatUSD(stats.sent ? stats.totalCost / stats.sent : 0)}
-            tone="muted"
-          />
+          {canViewCosts && (
+            <>
+              <SummaryStat label="Spend" value={formatUSD(stats.totalCost)} tone="muted" />
+              <SummaryStat
+                label="Cost / msg"
+                value={formatUSD(stats.sent ? stats.totalCost / stats.sent : 0)}
+                tone="muted"
+              />
+            </>
+          )}
         </div>
       </Card>
 
@@ -1491,7 +1510,7 @@ function RecipientActivity({
                   <TableHead>Country</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Segments</TableHead>
-                  <TableHead>Cost</TableHead>
+                  {canViewCosts && <TableHead>Cost</TableHead>}
                   <TableHead>Sent</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
@@ -1549,9 +1568,11 @@ function RecipientActivity({
                       </TableCell>
 
                       <TableCell className="tabular-nums">{m.segments_count ?? 1}</TableCell>
-                      <TableCell className="tabular-nums">
-                        {formatUSD(Number(m.cost ?? 0))}
-                      </TableCell>
+                      {canViewCosts && (
+                        <TableCell className="tabular-nums">
+                          {formatUSD(Number(m.cost ?? 0))}
+                        </TableCell>
+                      )}
                       <TableCell className="text-xs text-muted-foreground">
                         {m.sent_at ? new Date(m.sent_at).toLocaleString() : "—"}
                       </TableCell>

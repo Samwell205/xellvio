@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useCanViewCosts } from "@/hooks/useCanViewCosts";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getCampaignReport, type CampaignReport } from "@/lib/reports.functions";
@@ -60,6 +61,7 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/$id/report")
 
 function ReportPage() {
   const { id } = useParams({ from: "/_authenticated/app/campaigns/$id/report" });
+  const canViewCosts = useCanViewCosts();
   const call = useServerFn(getCampaignReport);
   const callExport = useServerFn(getCampaignRecipientsExport);
   const q = useQuery<CampaignReport>({
@@ -444,11 +446,13 @@ function ReportPage() {
           label="Queued"
           value={r.totals.queued.toLocaleString()}
         />
-        <Stat
-          icon={<DollarSign className="size-4" />}
-          label="Charged"
-          value={formatUSD(r.totals.cost)}
-        />
+        {canViewCosts && (
+          <Stat
+            icon={<DollarSign className="size-4" />}
+            label="Charged"
+            value={formatUSD(r.totals.cost)}
+          />
+        )}
       </div>
 
       {r.timeline.length > 0 && (
@@ -487,7 +491,7 @@ function ReportPage() {
                 <th className="text-right">Recipients</th>
                 <th className="text-right">Delivered</th>
                 <th className="text-right">Failed</th>
-                <th className="text-right">Cost</th>
+                {canViewCosts && <th className="text-right">Cost</th>}
               </tr>
             </thead>
             <tbody>
@@ -497,7 +501,7 @@ function ReportPage() {
                   <td className="text-right">{c.recipients.toLocaleString()}</td>
                   <td className="text-right text-green-700">{c.delivered.toLocaleString()}</td>
                   <td className="text-right text-destructive">{c.failed.toLocaleString()}</td>
-                  <td className="text-right">{formatUSD(c.cost)}</td>
+                  {canViewCosts && <td className="text-right">{formatUSD(c.cost)}</td>}
                 </tr>
               ))}
             </tbody>

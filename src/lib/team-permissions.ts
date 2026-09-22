@@ -10,6 +10,7 @@ export const PERMISSION_KEYS = [
   "suppressions",
   "setup_sms",
   "billing",
+  "costs",
   "team",
   "settings",
 ] as const;
@@ -26,6 +27,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   suppressions: "Suppressions",
   setup_sms: "Set up SMS / sender IDs",
   billing: "Billing & payments",
+  costs: "See amounts spent (spend & cost figures)",
   team: "Team management",
   settings: "Account settings",
 };
@@ -34,6 +36,7 @@ export type PresetId =
   | "owner_admin"
   | "manager"
   | "campaign_creator"
+  | "campaign_viewer"
   | "inbox_agent"
   | "analyst"
   | "custom";
@@ -51,8 +54,14 @@ export const PRESETS: { id: PresetId; label: string; description: string; permis
     description: "Campaigns, inbox, audience, segments, suppressions, sender setup. No billing or team.",
     permissions: {
       dashboard: true, campaigns: true, inbox: true, audience: true,
-      segments: true, suppressions: true, setup_sms: true,
+      segments: true, suppressions: true, setup_sms: true, costs: true,
     },
+  },
+  {
+    id: "campaign_viewer",
+    label: "Campaign viewer (no spend)",
+    description: "Can open campaigns and see results, but never sees amounts spent or costs.",
+    permissions: { campaigns: true },
   },
   {
     id: "campaign_creator",
