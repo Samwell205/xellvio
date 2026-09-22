@@ -1041,13 +1041,23 @@ function CampaignReport() {
                   sub="since campaign send"
                   tone="danger"
                 />
-                <Kpi
-                  icon={Wallet}
-                  label="Spend"
-                  value={formatUSD(stats.totalCost)}
-                  sub={`${stats.totalSegments.toLocaleString()} segments`}
-                  tone="muted"
-                />
+                {canViewCosts ? (
+                  <Kpi
+                    icon={Wallet}
+                    label="Spend"
+                    value={formatUSD(stats.totalCost)}
+                    sub={`${stats.totalSegments.toLocaleString()} segments`}
+                    tone="muted"
+                  />
+                ) : (
+                  <Kpi
+                    icon={Wallet}
+                    label="Segments"
+                    value={stats.totalSegments.toLocaleString()}
+                    sub="message parts sent"
+                    tone="muted"
+                  />
+                )}
               </div>
 
               {/* Engagement over time */}
