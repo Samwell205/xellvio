@@ -16,6 +16,7 @@ import { saveAutoRecharge } from "@/lib/billing.functions";
 import { listCreditPacks, listMyPayments, verifyPaystack } from "@/lib/billing-packs.functions";
 import { reconcileNowPayment } from "@/lib/nowpayments.functions";
 import { verifyPaddlePayment } from "@/lib/paddle-checkout.functions";
+import { verifyCardPayment } from "@/lib/stripe-checkout.functions";
 import {
   Select,
   SelectContent,
@@ -62,6 +63,7 @@ function BillingPage() {
   const paymentsFn = useServerFn(listMyPayments);
   const verifyFn = useServerFn(verifyPaystack);
   const verifyPaddleFn = useServerFn(verifyPaddlePayment);
+  const verifyCardFn = useServerFn(verifyCardPayment);
   const reconcileNpFn = useServerFn(reconcileNowPayment);
 
   const packs = useQuery({ queryKey: ["credit-packs"], queryFn: () => packsFn() });
@@ -114,6 +116,46 @@ function BillingPage() {
         attempt += 1;
         try {
           const r = await verifyPaddleFn({ data: { reference: ref } });
+          if (r.status === "success") {
+            toast.success("Payment confirmed — credits added");
+            invalidate();
+            clearRef();
+            return;
+          }
+          if (r.status === "failed") {
+            toast.error("Payment failed");
+            invalidate();
+            clearRef();
+            return;
+          }
+          if (attempt < maxAttempts && !cancelled) setTimeout(poll, 5_000);
+          else {
+            toast.message("Payment is being processed — credits will appear shortly");
+            invalidate();
+            clearRef();
+          }
+        } catch (e: any) {
+          if (attempt < maxAttempts && !cancelled) setTimeout(poll, 5_000);
+          else {
+            toast.error(e.message);
+            clearRef();
+          }
+        }
+      };
+      poll();
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (ref.startsWith("stp_")) {
+      // Card: confirm straight with Stripe, retrying briefly while it settles
+      let cancelled = false;
+      let attempt = 0;
+      const maxAttempts = 6; // ~30s at 5s
+      const poll = async () => {
+        attempt += 1;
+        try {
+          const r = await verifyCardFn({ data: { reference: ref } });
           if (r.status === "success") {
             toast.success("Payment confirmed — credits added");
             invalidate();
