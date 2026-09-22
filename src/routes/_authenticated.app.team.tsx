@@ -54,7 +54,7 @@ type Role = "viewer" | "editor" | "admin";
 
 function roleFromPreset(id: PresetId): Role {
   if (id === "owner_admin") return "admin";
-  if (id === "inbox_agent" || id === "analyst") return "viewer";
+  if (id === "inbox_agent" || id === "analyst" || id === "campaign_viewer") return "viewer";
   return "editor";
 }
 
