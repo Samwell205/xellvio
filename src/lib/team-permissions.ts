@@ -53,8 +53,14 @@ export const PRESETS: { id: PresetId; label: string; description: string; permis
     description: "Campaigns, inbox, audience, segments, suppressions, sender setup. No billing or team.",
     permissions: {
       dashboard: true, campaigns: true, inbox: true, audience: true,
-      segments: true, suppressions: true, setup_sms: true,
+      segments: true, suppressions: true, setup_sms: true, costs: true,
     },
+  },
+  {
+    id: "campaign_viewer",
+    label: "Campaign viewer (no spend)",
+    description: "Can open campaigns and see results, but never sees amounts spent or costs.",
+    permissions: { campaigns: true },
   },
   {
     id: "campaign_creator",
