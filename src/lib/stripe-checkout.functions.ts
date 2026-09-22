@@ -28,7 +28,7 @@ async function createSession(opts: {
   accountId: string;
   email?: string;
   returnUrl: string;
-}): Promise<{ url: string }> {
+}): Promise<{ url: string; sessionId: string }> {
   const stripe = createStripeClient();
   const session = await stripe.checkout.sessions.create({
     line_items: [
@@ -53,7 +53,7 @@ async function createSession(opts: {
       credits: String(opts.credits),
     },
   });
-  return { url: session.url ?? "" };
+  return { url: session.url ?? "", sessionId: session.id };
 }
 
 
@@ -131,7 +131,7 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
 
     try {
       const { data: userRes } = await context.supabase.auth.getUser();
-      const { url } = await createSession({
+      const { url, sessionId } = await createSession({
         amountUsd,
         credits,
         label,
@@ -141,6 +141,12 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
         returnUrl: data.returnUrl,
       });
       if (!url) return { error: "Card checkout did not start — please try again." };
+      await supabaseAdmin
+        .from("payments")
+        .update({
+          metadata: { label, custom: !packId, country: eligibility.country, session_id: sessionId },
+        })
+        .eq("id", payment.id);
       return { url, reference };
     } catch (error) {
       await supabaseAdmin
@@ -151,3 +157,51 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
     }
   });
 
+
+/**
+ * Confirm a card payment straight from Stripe (used on redirect-back, so a
+ * missed or mis-signed webhook never leaves a paid customer uncredited).
+ */
+export const verifyCardPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { reference: string }) => {
+    if (!d?.reference?.startsWith("stp_")) throw new Error("reference required");
+    return d;
+  })
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: payment } = await supabaseAdmin
+      .from("payments")
+      .select("id,account_id,status,metadata")
+      .eq("provider_reference", data.reference)
+      .maybeSingle();
+    if (!payment) throw new Error("Payment not found");
+    if (payment.account_id !== context.userId) throw new Error("Reference does not belong to this account");
+    if (payment.status === "paid") return { status: "success" as const };
+
+    const sessionId = (payment.metadata as any)?.session_id as string | undefined;
+    if (!sessionId) return { status: "pending" as const };
+
+    const stripe = createStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.client_reference_id !== data.reference) return { status: "pending" as const };
+
+    if (session.payment_status === "paid") {
+      const { creditFromPayment } = await import("./billing-packs.functions");
+      const result = await creditFromPayment(supabaseAdmin, data.reference);
+      if (result?.ok && !result.already) {
+        const { notifyPaymentReceipt } = await import("./payment-receipt.server");
+        await notifyPaymentReceipt(supabaseAdmin, data.reference, "card").catch(() => {});
+      }
+      return { status: "success" as const };
+    }
+    if (session.status === "expired") {
+      await supabaseAdmin
+        .from("payments")
+        .update({ status: "failed", admin_note: "Checkout expired" })
+        .eq("id", payment.id)
+        .eq("status", "pending");
+      return { status: "failed" as const };
+    }
+    return { status: "pending" as const };
+  });
