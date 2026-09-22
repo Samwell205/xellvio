@@ -91,6 +91,7 @@ import { Route as ApiPublicNowpaymentsIpnRouteImport } from './routes/api/public
 import { Route as ApiPublicLifecycleTickRouteImport } from './routes/api.public.lifecycle-tick'
 import { Route as ApiPublicGrowthEventsRouteImport } from './routes/api/public/growth-events'
 import { Route as ApiPublicDispatchCampaignRouteImport } from './routes/api.public.dispatch-campaign'
+import { Route as ApiPublicContactRouteImport } from './routes/api.public.contact'
 import { Route as AuthenticatedSellersDashboardRouteImport } from './routes/_authenticated.sellers.dashboard'
 import { Route as AuthenticatedAppTollFreeVerificationRouteImport } from './routes/_authenticated.app.toll-free-verification'
 import { Route as AuthenticatedAppTeamRouteImport } from './routes/_authenticated.app.team'
@@ -582,6 +583,11 @@ const ApiPublicDispatchCampaignRoute =
     path: '/api/public/dispatch-campaign',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicContactRoute = ApiPublicContactRouteImport.update({
+  id: '/api/public/contact',
+  path: '/api/public/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedSellersDashboardRoute =
   AuthenticatedSellersDashboardRouteImport.update({
     id: '/sellers/dashboard',
@@ -1112,6 +1118,7 @@ export interface FileRoutesByFullPath {
   '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/growth-events': typeof ApiPublicGrowthEventsRoute
   '/api/public/lifecycle-tick': typeof ApiPublicLifecycleTickRoute
@@ -1262,6 +1269,7 @@ export interface FileRoutesByTo {
   '/app/team': typeof AuthenticatedAppTeamRoute
   '/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/growth-events': typeof ApiPublicGrowthEventsRoute
   '/api/public/lifecycle-tick': typeof ApiPublicLifecycleTickRoute
@@ -1420,6 +1428,7 @@ export interface FileRoutesById {
   '/_authenticated/app/team': typeof AuthenticatedAppTeamRoute
   '/_authenticated/app/toll-free-verification': typeof AuthenticatedAppTollFreeVerificationRoute
   '/_authenticated/sellers/dashboard': typeof AuthenticatedSellersDashboardRoute
+  '/api/public/contact': typeof ApiPublicContactRoute
   '/api/public/dispatch-campaign': typeof ApiPublicDispatchCampaignRoute
   '/api/public/growth-events': typeof ApiPublicGrowthEventsRoute
   '/api/public/lifecycle-tick': typeof ApiPublicLifecycleTickRoute
@@ -1577,6 +1586,7 @@ export interface FileRouteTypes {
     | '/app/team'
     | '/app/toll-free-verification'
     | '/sellers/dashboard'
+    | '/api/public/contact'
     | '/api/public/dispatch-campaign'
     | '/api/public/growth-events'
     | '/api/public/lifecycle-tick'
@@ -1727,6 +1737,7 @@ export interface FileRouteTypes {
     | '/app/team'
     | '/app/toll-free-verification'
     | '/sellers/dashboard'
+    | '/api/public/contact'
     | '/api/public/dispatch-campaign'
     | '/api/public/growth-events'
     | '/api/public/lifecycle-tick'
@@ -1884,6 +1895,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/team'
     | '/_authenticated/app/toll-free-verification'
     | '/_authenticated/sellers/dashboard'
+    | '/api/public/contact'
     | '/api/public/dispatch-campaign'
     | '/api/public/growth-events'
     | '/api/public/lifecycle-tick'
@@ -1993,6 +2005,7 @@ export interface RootRouteChildren {
   VerifyIndexRoute: typeof VerifyIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicContactRoute: typeof ApiPublicContactRoute
   ApiPublicDispatchCampaignRoute: typeof ApiPublicDispatchCampaignRoute
   ApiPublicGrowthEventsRoute: typeof ApiPublicGrowthEventsRoute
   ApiPublicLifecycleTickRoute: typeof ApiPublicLifecycleTickRoute
@@ -2595,6 +2608,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/dispatch-campaign'
       fullPath: '/api/public/dispatch-campaign'
       preLoaderRoute: typeof ApiPublicDispatchCampaignRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/contact': {
+      id: '/api/public/contact'
+      path: '/api/public/contact'
+      fullPath: '/api/public/contact'
+      preLoaderRoute: typeof ApiPublicContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/sellers/dashboard': {
@@ -3428,6 +3448,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyIndexRoute: VerifyIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicContactRoute: ApiPublicContactRoute,
   ApiPublicDispatchCampaignRoute: ApiPublicDispatchCampaignRoute,
   ApiPublicGrowthEventsRoute: ApiPublicGrowthEventsRoute,
   ApiPublicLifecycleTickRoute: ApiPublicLifecycleTickRoute,
