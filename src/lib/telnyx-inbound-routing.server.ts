@@ -122,6 +122,20 @@ export async function handleTelnyxInboundMessage(payload: any) {
     accountIds.add(Array.from(numberOwners)[0]);
   }
 
+  // Opt-out must stick even when the number is not a saved contact: suppress it
+  // for every account that could text it (resolved sender account + owners of
+  // the number it replied to).
+  const suppressionTargets = new Set<string>([...accountIds, ...numberOwners]);
+  if (suppressionTargets.size > 0) {
+    if (STOP_WORDS.includes(upper)) {
+      const { recordOptOut } = await import("@/lib/suppression.server");
+      await recordOptOut({ accountIds: suppressionTargets, phone: from });
+    } else if (RESUB_WORDS.includes(upper)) {
+      const { clearOptOut } = await import("@/lib/suppression.server");
+      await clearOptOut({ accountIds: suppressionTargets, phone: from });
+    }
+  }
+
   if (!bodyText || accountIds.size === 0) return;
 
   let targetAccountIds = Array.from(accountIds);
