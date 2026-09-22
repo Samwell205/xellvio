@@ -47,14 +47,18 @@ function ContactPage() {
     }
     setSending(true);
     try {
-      const { error } = await supabase.from("contact_messages").insert({
-        name: parsed.data.name,
-        email: parsed.data.email,
-        topic: parsed.data.topic,
-        message: parsed.data.message,
-        user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null,
+      const res = await fetch("/api/public/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...parsed.data,
+          user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 500) : null,
+        }),
       });
-      if (error) throw error;
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}) as any);
+        throw new Error(body?.error ?? "Could not send your message");
+      }
       toast.success("Message sent — we'll get back to you within one business day.");
       setForm({ name: "", email: "", topic: "General question", message: "" });
     } catch (err: any) {
