@@ -473,10 +473,12 @@ function PackPicker({ packs }: { packs: any[] }) {
   const amount = isCustom ? customAmount : Number(pack?.price ?? 0);
   const credits = isCustom ? customAmount : Number(pack?.credits ?? 0);
 
-  function goCheckout() {
+  function goCheckout(method?: "card" | "paystack" | "crypto") {
     const search: Record<string, any> = isCustom ? { amount: customAmount } : { pack: selected };
+    if (method) search.method = method;
     navigate({ to: "/app/checkout", search });
   }
+
 
   if (!packs.length) {
     return (
@@ -541,9 +543,15 @@ function PackPicker({ packs }: { packs: any[] }) {
         >
           Pay
         </Button>
-        <Button variant="outline" className="mt-2 w-full" disabled>
-          International card — coming soon
+        <Button
+          variant="outline"
+          className="mt-2 w-full"
+          onClick={() => goCheckout("card")}
+          disabled={isCustom && (customAmount < 5 || customAmount > 10000)}
+        >
+          Pay by international card
         </Button>
+
       </div>
     </div>
   );

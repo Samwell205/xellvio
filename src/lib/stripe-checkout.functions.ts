@@ -18,7 +18,7 @@ export const getCardEligibility = createServerFn({ method: "GET" }).handler(asyn
   return await checkCardEligibility(req.headers);
 });
 
-type CheckoutResult = { clientSecret: string; reference: string } | { error: string };
+type CheckoutResult = { url: string; reference: string } | { error: string };
 
 async function createSession(opts: {
   amountUsd: number;
@@ -28,7 +28,7 @@ async function createSession(opts: {
   accountId: string;
   email?: string;
   returnUrl: string;
-}): Promise<{ clientSecret: string }> {
+}): Promise<{ url: string }> {
   const stripe = createStripeClient();
   const session = await stripe.checkout.sessions.create({
     line_items: [
@@ -42,8 +42,9 @@ async function createSession(opts: {
       },
     ],
     mode: "payment",
-    ui_mode: "embedded_page",
-    return_url: opts.returnUrl,
+    success_url: opts.returnUrl,
+    cancel_url: opts.returnUrl.split("?")[0],
+    client_reference_id: opts.reference,
     ...(opts.email && { customer_email: opts.email }),
     payment_intent_data: { description: opts.label },
     metadata: {
@@ -52,8 +53,9 @@ async function createSession(opts: {
       credits: String(opts.credits),
     },
   });
-  return { clientSecret: session.client_secret ?? "" };
+  return { url: session.url ?? "" };
 }
+
 
 /** Start a card checkout for a credit pack or a custom USD amount. */
 export const createCardCreditCheckout = createServerFn({ method: "POST" })
@@ -129,7 +131,7 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
 
     try {
       const { data: userRes } = await context.supabase.auth.getUser();
-      const { clientSecret } = await createSession({
+      const { url } = await createSession({
         amountUsd,
         credits,
         label,
@@ -138,8 +140,8 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
         email: userRes?.user?.email ?? undefined,
         returnUrl: data.returnUrl,
       });
-      if (!clientSecret) return { error: "Card checkout did not start — please try again." };
-      return { clientSecret, reference };
+      if (!url) return { error: "Card checkout did not start — please try again." };
+      return { url, reference };
     } catch (error) {
       await supabaseAdmin
         .from("payments")
@@ -148,3 +150,4 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
       return { error: getStripeErrorMessage(error) };
     }
   });
+
