@@ -444,11 +444,13 @@ function ReportPage() {
           label="Queued"
           value={r.totals.queued.toLocaleString()}
         />
-        <Stat
-          icon={<DollarSign className="size-4" />}
-          label="Charged"
-          value={formatUSD(r.totals.cost)}
-        />
+        {canViewCosts && (
+          <Stat
+            icon={<DollarSign className="size-4" />}
+            label="Charged"
+            value={formatUSD(r.totals.cost)}
+          />
+        )}
       </div>
 
       {r.timeline.length > 0 && (
@@ -487,7 +489,7 @@ function ReportPage() {
                 <th className="text-right">Recipients</th>
                 <th className="text-right">Delivered</th>
                 <th className="text-right">Failed</th>
-                <th className="text-right">Cost</th>
+                {canViewCosts && <th className="text-right">Cost</th>}
               </tr>
             </thead>
             <tbody>
@@ -497,7 +499,7 @@ function ReportPage() {
                   <td className="text-right">{c.recipients.toLocaleString()}</td>
                   <td className="text-right text-green-700">{c.delivered.toLocaleString()}</td>
                   <td className="text-right text-destructive">{c.failed.toLocaleString()}</td>
-                  <td className="text-right">{formatUSD(c.cost)}</td>
+                  {canViewCosts && <td className="text-right">{formatUSD(c.cost)}</td>}
                 </tr>
               ))}
             </tbody>
