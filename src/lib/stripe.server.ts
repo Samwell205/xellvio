@@ -54,9 +54,10 @@ export function getStripeErrorMessage(error: unknown): string {
 }
 
 /** Verifies a Stripe webhook signature without the SDK (HMAC-SHA256). */
-export async function verifyWebhook(req: Request): Promise<{ type: string; data: { object: any } }> {
-  const signature = req.headers.get("stripe-signature");
-  const body = await req.text();
+export async function verifyWebhookBody(
+  signature: string | null,
+  body: string,
+): Promise<{ type: string; data: { object: any } }> {
   const secret = getEnv("STRIPE_WEBHOOK_SECRET");
 
   if (!signature || !body) throw new Error("Missing signature or body");
