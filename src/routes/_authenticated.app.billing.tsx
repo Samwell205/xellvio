@@ -543,9 +543,15 @@ function PackPicker({ packs }: { packs: any[] }) {
         >
           Pay
         </Button>
-        <Button variant="outline" className="mt-2 w-full" disabled>
-          International card — coming soon
+        <Button
+          variant="outline"
+          className="mt-2 w-full"
+          onClick={() => goCheckout("card")}
+          disabled={isCustom && (customAmount < 5 || customAmount > 10000)}
+        >
+          Pay by international card
         </Button>
+
       </div>
     </div>
   );
