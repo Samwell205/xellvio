@@ -27,6 +27,7 @@ export const PERMISSION_LABELS: Record<PermissionKey, string> = {
   suppressions: "Suppressions",
   setup_sms: "Set up SMS / sender IDs",
   billing: "Billing & payments",
+  costs: "See amounts spent (spend & cost figures)",
   team: "Team management",
   settings: "Account settings",
 };
