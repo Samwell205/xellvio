@@ -83,6 +83,7 @@ import {
 } from "lucide-react";
 
 import { useEffect, useMemo, useState } from "react";
+import { useCanViewCosts } from "@/hooks/useCanViewCosts";
 import { formatUSD } from "@/lib/money";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
