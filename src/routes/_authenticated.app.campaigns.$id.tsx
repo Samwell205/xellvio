@@ -1412,6 +1412,7 @@ function RecipientActivity({
   retryingId?: string;
   canRetry?: boolean;
 }) {
+  const canViewCosts = useCanViewCosts();
   // Counts come from the aggregate summary, not from the current page.
   const items = [
     { key: "all", label: "All", count: stats.attempted },
