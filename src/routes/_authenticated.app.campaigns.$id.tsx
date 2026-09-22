@@ -944,7 +944,9 @@ function CampaignReport() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="recipients">Recipient activity</TabsTrigger>
           <TabsTrigger value="links">Link activity</TabsTrigger>
-          <TabsTrigger value="cost">Cost & deliverability</TabsTrigger>
+          {canViewCosts && (
+            <TabsTrigger value="cost">Cost & deliverability</TabsTrigger>
+          )}
         </TabsList>
 
         {/* ───────────── OVERVIEW ───────────── */}
@@ -1462,12 +1464,16 @@ function RecipientActivity({
             tone="primary"
           />
           <SummaryStat label="Opt-outs" value={optOuts} tone="danger" />
-          <SummaryStat label="Spend" value={formatUSD(stats.totalCost)} tone="muted" />
-          <SummaryStat
-            label="Cost / msg"
-            value={formatUSD(stats.sent ? stats.totalCost / stats.sent : 0)}
-            tone="muted"
-          />
+          {canViewCosts && (
+            <>
+              <SummaryStat label="Spend" value={formatUSD(stats.totalCost)} tone="muted" />
+              <SummaryStat
+                label="Cost / msg"
+                value={formatUSD(stats.sent ? stats.totalCost / stats.sent : 0)}
+                tone="muted"
+              />
+            </>
+          )}
         </div>
       </Card>
 
@@ -1503,7 +1509,7 @@ function RecipientActivity({
                   <TableHead>Country</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Segments</TableHead>
-                  <TableHead>Cost</TableHead>
+                  {canViewCosts && <TableHead>Cost</TableHead>}
                   <TableHead>Sent</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
@@ -1561,9 +1567,11 @@ function RecipientActivity({
                       </TableCell>
 
                       <TableCell className="tabular-nums">{m.segments_count ?? 1}</TableCell>
-                      <TableCell className="tabular-nums">
-                        {formatUSD(Number(m.cost ?? 0))}
-                      </TableCell>
+                      {canViewCosts && (
+                        <TableCell className="tabular-nums">
+                          {formatUSD(Number(m.cost ?? 0))}
+                        </TableCell>
+                      )}
                       <TableCell className="text-xs text-muted-foreground">
                         {m.sent_at ? new Date(m.sent_at).toLocaleString() : "—"}
                       </TableCell>
