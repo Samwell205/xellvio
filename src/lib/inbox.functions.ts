@@ -147,6 +147,10 @@ export const sendReply = createServerFn({ method: "POST" })
     const accountId = acting.accountId;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // An opted-out number must never be texted again, not even from the inbox.
+    const { assertNotSuppressed } = await import("./suppression.server");
+    await assertNotSuppressed(accountId, data.phone);
+
     const { data: lastInbound } = await supabase
       .from("sms_thread_messages")
       .select("to_number").eq("account_id", accountId).eq("phone_e164", data.phone)
