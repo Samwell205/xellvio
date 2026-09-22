@@ -36,6 +36,7 @@ export type PresetId =
   | "owner_admin"
   | "manager"
   | "campaign_creator"
+  | "campaign_viewer"
   | "inbox_agent"
   | "analyst"
   | "custom";
