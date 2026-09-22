@@ -92,6 +92,7 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
 
 function CampaignReport() {
   const { id } = Route.useParams();
+  const canViewCosts = useCanViewCosts();
   const queryClient = useQueryClient();
   const reconcileFn = useServerFn(reconcileCampaignMessages);
   const reconcileM = useMutation({
