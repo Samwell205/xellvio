@@ -395,6 +395,23 @@ function InboxPage() {
                             : "bg-muted"
                         }`}
                       >
+                        {m.mediaUrl && /^https?:\/\//i.test(m.mediaUrl) && (
+                          <a
+                            href={m.mediaUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mb-2 block overflow-hidden rounded-md border border-primary-foreground/20 bg-background"
+                            aria-label="Open sent image"
+                          >
+                            <img
+                              src={m.mediaUrl}
+                              alt="Sent attachment"
+                              loading="lazy"
+                              decoding="async"
+                              className="max-h-72 w-full object-contain"
+                            />
+                          </a>
+                        )}
                         <div className="whitespace-pre-wrap break-words">{m.body}</div>
                         <div
                           className={`text-[10px] mt-1 ${
