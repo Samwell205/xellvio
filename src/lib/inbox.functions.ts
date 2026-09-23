@@ -90,19 +90,21 @@ export const getConversation = createServerFn({ method: "GET" })
       .order("created_at", { ascending: true });
     const { data: campaignMsgs } = await supabase
       .from("messages")
-      .select("id,rendered_body,created_at,sent_at,status,campaigns!inner(account_id)")
+      .select("id,rendered_body,created_at,sent_at,status,campaigns!inner(account_id,media_url)")
       .eq("campaigns.account_id", accountId).eq("phone_e164", data.phone)
       .order("created_at", { ascending: true });
     const merged = [
       ...(thread ?? []).map((m) => ({
         id: m.id, direction: m.direction as "inbound" | "outbound",
         body: m.body, created_at: m.created_at, status: null as string | null,
+        mediaUrl: null as string | null,
         source: "thread" as const,
       })),
       ...((campaignMsgs ?? []) as any[]).map((m) => ({
         id: m.id, direction: "outbound" as const,
         body: m.rendered_body, created_at: m.sent_at ?? m.created_at,
         status: m.status as string | null,
+        mediaUrl: (m.campaigns?.media_url as string | null) ?? null,
         source: "campaign" as const,
       })),
     ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
