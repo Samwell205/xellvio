@@ -562,7 +562,7 @@ function NewCampaignPage() {
     try {
       const testBody = await shortenMessageUrls(bodyWithStop);
       const res = await callTestSend({
-        data: { to: s.testTo, body: testBody, country: testCountry ?? undefined },
+        data: { to: s.testTo, body: testBody, country: testCountry ?? undefined, mediaUrl: s.mediaUrl || undefined },
       });
       toast.success(`Test sent (sid ${res.sid.slice(0, 10)}…)`);
       setS({ ...s, testSent: true });
