@@ -6,6 +6,7 @@ const TestSendSchema = z.object({
   to: z.string().regex(/^\+[1-9][0-9]{6,14}$/, "Phone must be E.164, e.g. +15551234567"),
   body: z.string().trim().min(1).max(1600),
   country: z.string().length(2).optional(),
+  mediaUrl: z.string().url().max(2048).optional(),
 });
 
 export const TEST_SEND_DAILY_LIMIT = 5;
@@ -154,6 +155,10 @@ export const sendTestSms = createServerFn({ method: "POST" })
     }
 
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
+    const { publicCampaignMediaUrl } = await import("./campaign-media");
+    const testMediaUrls = data.mediaUrl
+      ? [publicCampaignMediaUrl(data.mediaUrl, (process.env.PUBLIC_BASE_URL ?? "https://xellvio.com").replace(/\/$/, ""))]
+      : undefined;
     try {
       const result = await safeTelnyxCall(
         "send_test_sms",
@@ -163,6 +168,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
           text: data.body,
           from: asset.phone_number ?? undefined,
           messagingProfileId,
+          mediaUrls: testMediaUrls,
         }),
       );
       await supabase.from("campaign_test_sends").insert({
