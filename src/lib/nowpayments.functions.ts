@@ -16,7 +16,9 @@ function siteOrigin(): string {
 
 function ipnUrl(): string {
   // Use stable project URL so IPNs work in preview + production
-  return process.env.NOWPAYMENTS_IPN_URL || `${siteOrigin()}/api/public/nowpayments-ipn`;
+  // Must be the non-redirecting apex host: www.xellvio.com 307-redirects, and
+  // NOWPayments does not follow redirects, so confirmations were being lost.
+  return process.env.NOWPAYMENTS_IPN_URL || "https://xellvio.com/api/public/nowpayments-ipn";
 }
 
 /** Allowed crypto for hosted invoices. NOWPayments expects lowercase tickers. */
