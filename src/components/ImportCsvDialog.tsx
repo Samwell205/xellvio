@@ -23,6 +23,35 @@ import {
 } from "@/lib/audience-import.functions";
 
 type ContactList = { id: string; name: string; description: string | null };
+
+function CsvDropZone({ fileRef, disabled, onFile }: {
+  fileRef: React.RefObject<HTMLInputElement | null>; disabled?: boolean; onFile: (f: File) => void;
+}) {
+  const [over, setOver] = useState(false);
+  const [name, setName] = useState<string | null>(null);
+  const pick = (f?: File | null) => {
+    if (!f) return;
+    if (!/\.csv$/i.test(f.name) && f.type !== "text/csv") { toast.error("Please choose a .csv file"); return; }
+    setName(f.name); onFile(f);
+  };
+  return (
+    <div
+      role="button" tabIndex={0} aria-disabled={disabled}
+      onClick={() => !disabled && fileRef.current?.click()}
+      onKeyDown={(e) => { if (!disabled && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); fileRef.current?.click(); } }}
+      onDragOver={(e) => { e.preventDefault(); if (!disabled) setOver(true); }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => { e.preventDefault(); setOver(false); if (!disabled) pick(e.dataTransfer.files?.[0]); }}
+      className={`flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed px-4 py-6 text-center cursor-pointer transition-colors ${over ? "border-primary bg-primary/5" : "border-border hover:border-primary/60 hover:bg-muted/40"} ${disabled ? "opacity-50 pointer-events-none" : ""}`}
+    >
+      <Upload className="h-6 w-6 text-muted-foreground" />
+      <p className="text-sm font-medium">{name ?? "Drag & drop your CSV here"}</p>
+      <p className="text-xs text-muted-foreground">{name ? "Click or drop to replace" : "or click to browse"}</p>
+      <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden"
+        onChange={(e) => { pick(e.target.files?.[0]); }} />
+    </div>
+  );
+}
 type Mapping = { phone?: string; first?: string; last?: string; country?: string };
 type RowError = { row: number; reason: string };
 
@@ -282,10 +311,9 @@ export default function ImportCsvDialog({
 
         <div className="space-y-3">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
+            <div className="space-y-1 w-full">
               <Label className="text-xs">CSV file</Label>
-              <Input ref={fileRef} type="file" accept=".csv,text/csv" disabled={busy}
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+              <CsvDropZone fileRef={fileRef} disabled={busy} onFile={handleFile} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Add to list</Label>
