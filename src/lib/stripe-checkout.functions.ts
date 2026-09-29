@@ -1,12 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createStripeClient, getStripeErrorMessage, isStripeConfigured } from "@/lib/stripe.server";
 import { checkCardEligibility } from "@/lib/payment-geo.server";
+
+// International card payments. Provider details stay server-side only.
 
 /** Public: can this visitor pay by card from their current location/network? */
 export const getCardEligibility = createServerFn({ method: "GET" }).handler(async () => {
-  if (!isStripeConfigured()) {
+  const { isCardProcessorConfigured } = await import("@/lib/flw.server");
+  if (!isCardProcessorConfigured()) {
     return {
       allowed: false,
       country: null,
@@ -19,44 +21,6 @@ export const getCardEligibility = createServerFn({ method: "GET" }).handler(asyn
 });
 
 type CheckoutResult = { url: string; reference: string } | { error: string };
-
-async function createSession(opts: {
-  amountUsd: number;
-  credits: number;
-  label: string;
-  reference: string;
-  accountId: string;
-  email?: string;
-  returnUrl: string;
-}): Promise<{ url: string; sessionId: string }> {
-  const stripe = createStripeClient();
-  const session = await stripe.checkout.sessions.create({
-    line_items: [
-      {
-        price_data: {
-          currency: "usd",
-          product_data: { name: opts.label },
-          unit_amount: Math.round(opts.amountUsd * 100),
-        },
-        quantity: 1,
-      },
-    ],
-    mode: "payment",
-    // Carry the reference back so the app can confirm the payment on return.
-    success_url: `${opts.returnUrl}${opts.returnUrl.includes("?") ? "&" : "?"}ref=${opts.reference}`,
-    cancel_url: opts.returnUrl.split("?")[0],
-    client_reference_id: opts.reference,
-    ...(opts.email && { customer_email: opts.email }),
-    payment_intent_data: { description: opts.label },
-    metadata: {
-      reference: opts.reference,
-      userId: opts.accountId,
-      credits: String(opts.credits),
-    },
-  });
-  return { url: session.url ?? "", sessionId: session.id };
-}
-
 
 /** Start a card checkout for a credit pack or a custom USD amount. */
 export const createCardCreditCheckout = createServerFn({ method: "POST" })
@@ -72,7 +36,8 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
     return { returnUrl: d.returnUrl, packId: d.packId };
   })
   .handler(async ({ data, context }): Promise<CheckoutResult> => {
-    if (!isStripeConfigured()) {
+    const { isCardProcessorConfigured, createHostedPayment } = await import("@/lib/flw.server");
+    if (!isCardProcessorConfigured()) {
       return { error: "Card payments are not set up yet — please pay by bank/card or crypto." };
     }
     const req = getRequest();
@@ -103,106 +68,72 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
       label = `${amountUsd} USD credits`;
     }
 
+    const { data: userRes } = await context.supabase.auth.getUser();
+    const email = userRes?.user?.email;
+    if (!email) return { error: "Your account needs an email address to pay by card." };
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
       .insert({
         account_id: context.userId,
         pack_id: packId,
-        provider: "stripe",
+        provider: "flutterwave",
         currency: "USD",
         amount: amountUsd,
         credits,
         status: "pending",
-        metadata: {
-          label,
-          custom: !packId,
-          country: eligibility.country,
-        },
+        metadata: { label, custom: !packId, country: eligibility.country },
       })
       .select("id")
       .single();
     if (payErr) return { error: payErr.message };
 
-    const reference = `stp_${payment.id.replace(/-/g, "")}`;
-    await supabaseAdmin
-      .from("payments")
-      .update({ provider_reference: reference })
-      .eq("id", payment.id);
+    const reference = `icp_${payment.id.replace(/-/g, "")}`;
+    await supabaseAdmin.from("payments").update({ provider_reference: reference }).eq("id", payment.id);
 
     try {
-      const { data: userRes } = await context.supabase.auth.getUser();
-      const { url, sessionId } = await createSession({
-        amountUsd,
-        credits,
-        label,
+      const sep = data.returnUrl.includes("?") ? "&" : "?";
+      const url = await createHostedPayment({
         reference,
-        accountId: context.userId,
-        email: userRes?.user?.email ?? undefined,
-        returnUrl: data.returnUrl,
+        amountUsd,
+        email,
+        label,
+        redirectUrl: `${data.returnUrl}${sep}ref=${reference}`,
       });
-      if (!url) return { error: "Card checkout did not start — please try again." };
-      await supabaseAdmin
-        .from("payments")
-        .update({
-          metadata: { label, custom: !packId, country: eligibility.country, session_id: sessionId },
-        })
-        .eq("id", payment.id);
       return { url, reference };
     } catch (error) {
+      const msg = error instanceof Error ? error.message : "Card checkout failed";
       await supabaseAdmin
         .from("payments")
-        .update({ status: "failed", admin_note: getStripeErrorMessage(error) })
+        .update({ status: "failed", admin_note: msg })
         .eq("id", payment.id);
-      return { error: getStripeErrorMessage(error) };
+      return { error: "Card checkout could not start — please try again or use another method." };
     }
   });
 
-
-/**
- * Confirm a card payment straight from Stripe (used on redirect-back, so a
- * missed or mis-signed webhook never leaves a paid customer uncredited).
- */
+/** Confirm a card payment directly with the processor (used on redirect-back). */
 export const verifyCardPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { reference: string }) => {
-    if (!d?.reference?.startsWith("stp_")) throw new Error("reference required");
+    if (!d?.reference?.startsWith("icp_") && !d?.reference?.startsWith("stp_"))
+      throw new Error("reference required");
     return d;
   })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: payment } = await supabaseAdmin
       .from("payments")
-      .select("id,account_id,status,metadata")
+      .select("id,account_id,status")
       .eq("provider_reference", data.reference)
       .maybeSingle();
     if (!payment) throw new Error("Payment not found");
     if (payment.account_id !== context.userId) throw new Error("Reference does not belong to this account");
     if (payment.status === "paid") return { status: "success" as const };
+    if (payment.status === "failed") return { status: "failed" as const };
+    if (!data.reference.startsWith("icp_")) return { status: "pending" as const };
 
-    const sessionId = (payment.metadata as any)?.session_id as string | undefined;
-    if (!sessionId) return { status: "pending" as const };
-
-    const stripe = createStripeClient();
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-    if (session.client_reference_id !== data.reference) return { status: "pending" as const };
-
-    if (session.payment_status === "paid") {
-      const { creditFromPayment } = await import("./billing-packs.functions");
-      const result = await creditFromPayment(supabaseAdmin, data.reference);
-      if (result?.ok && !result.already) {
-        const { notifyPaymentReceipt } = await import("./payment-receipt.server");
-        await notifyPaymentReceipt(supabaseAdmin, data.reference, "card").catch(() => {});
-      }
-      return { status: "success" as const };
-    }
-    if (session.status === "expired") {
-      await supabaseAdmin
-        .from("payments")
-        .update({ status: "failed", admin_note: "Checkout expired" })
-        .eq("id", payment.id)
-        .eq("status", "pending");
-      return { status: "failed" as const };
-    }
-    return { status: "pending" as const };
+    const { settleCardPayment } = await import("@/lib/card-settle.server");
+    const r = await settleCardPayment(data.reference);
+    return { status: r === "not_found" ? ("pending" as const) : r };
   });
