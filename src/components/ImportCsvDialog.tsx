@@ -282,10 +282,9 @@ export default function ImportCsvDialog({
 
         <div className="space-y-3">
           <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
+            <div className="space-y-1 w-full">
               <Label className="text-xs">CSV file</Label>
-              <Input ref={fileRef} type="file" accept=".csv,text/csv" disabled={busy}
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+              <CsvDropZone fileRef={fileRef} disabled={busy} onFile={handleFile} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Add to list</Label>
