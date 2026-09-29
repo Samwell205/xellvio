@@ -122,30 +122,22 @@ function CampaignReport() {
   ) {
     setExportingPhones(true);
     try {
-      const { rows, campaign } = await callExport({ data: { campaignId: id } });
-      const filtered = rows.filter((r: any) => {
-        switch (key) {
-          case "delivered":
-            return r.status === "delivered";
-          case "failed":
-            return (
-              r.status === "failed" ||
-              r.status === "undelivered" ||
-              r.status === "delivery_unconfirmed"
-            );
-          case "not_delivered":
-            return r.status === "delivery_unconfirmed";
-          case "sent_awaiting":
-            return r.status === "sent";
-          case "clicked":
-            return (r.clicks ?? 0) > 0;
-          case "replied":
-            return (r.reply_count ?? 0) > 0;
-          case "all":
-          default:
-            return true;
+      const filtered: any[] = [];
+      let campaign: { name: string } | undefined;
+      let offset = 0;
+      const toastId = toast.loading(`Preparing ${label} export…`);
+      try {
+        for (let guard = 0; guard < 500; guard++) {
+          const res = await callExport({ data: { campaignId: id, filter: key, offset } });
+          campaign = res.campaign;
+          filtered.push(...res.rows);
+          toast.loading(`Preparing ${label} export… ${filtered.length.toLocaleString()} found`, { id: toastId });
+          if (res.done) break;
+          offset = res.nextOffset;
         }
-      });
+      } finally {
+        toast.dismiss(toastId);
+      }
       if (!filtered.length) {
         toast.info(`No ${label} to export.`);
         return;

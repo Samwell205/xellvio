@@ -63,7 +63,20 @@ function ReportPage() {
   const { id } = useParams({ from: "/_authenticated/app/campaigns/$id/report" });
   const canViewCosts = useCanViewCosts();
   const call = useServerFn(getCampaignReport);
-  const callExport = useServerFn(getCampaignRecipientsExport);
+  const callExportPage = useServerFn(getCampaignRecipientsExport);
+  const callExport = async ({ data }: { data: { campaignId: string } }) => {
+    const rows: any[] = [];
+    let campaign: any;
+    let offset = 0;
+    for (let g = 0; g < 500; g++) {
+      const res = await callExportPage({ data: { campaignId: data.campaignId, filter: "all", offset } });
+      campaign = res.campaign;
+      rows.push(...res.rows);
+      if (res.done) break;
+      offset = res.nextOffset;
+    }
+    return { rows, campaign };
+  };
   const q = useQuery<CampaignReport>({
     queryKey: ["campaign-report", id],
     queryFn: () => call({ data: { campaignId: id } }),
