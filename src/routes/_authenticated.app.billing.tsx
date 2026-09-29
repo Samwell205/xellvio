@@ -147,8 +147,8 @@ function BillingPage() {
         cancelled = true;
       };
     }
-    if (ref.startsWith("stp_")) {
-      // Card: confirm straight with Stripe, retrying briefly while it settles
+    if (ref.startsWith("icp_") || ref.startsWith("stp_")) {
+      // Card: confirm directly, retrying briefly while it settles
       let cancelled = false;
       let attempt = 0;
       const maxAttempts = 6; // ~30s at 5s
