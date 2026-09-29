@@ -138,7 +138,7 @@ function CampaignReport() {
           case "sent_awaiting":
             return r.status === "sent";
           case "clicked":
-            return (r.click_count ?? 0) > 0;
+            return (r.clicks ?? 0) > 0;
           case "replied":
             return (r.reply_count ?? 0) > 0;
           case "all":
@@ -151,13 +151,24 @@ function CampaignReport() {
         return;
       }
       const safe = (campaign?.name ?? "campaign").replace(/[^a-z0-9-_]+/gi, "_");
+      const fmt = (d: string | null) => (d ? new Date(d).toLocaleString() : "");
       downloadCsv(
-        `${safe}_${label}_phone_numbers.csv`,
-        ["phone_number"],
-        filtered.map((r: any) => [r.phone_number]),
+        `${safe}_${label}_recipients.csv`,
+        ["phone_number", "country", "status", "error_code", "failure_reason", "sent_at", "delivered_at", "clicks", "replied"],
+        filtered.map((r: any) => [
+          r.phone_e164,
+          r.country_code ?? "",
+          r.status,
+          r.error_code ?? "",
+          r.failure_reason ?? "",
+          fmt(r.sent_at),
+          fmt(r.delivered_at),
+          r.clicks ?? 0,
+          r.replied ? "yes" : "no",
+        ]),
       );
 
-      toast.success(`Exported ${filtered.length.toLocaleString()} phone numbers (${label})`);
+      toast.success(`Exported ${filtered.length.toLocaleString()} recipients (${label})`);
     } catch (e: any) {
       toast.error(e?.message ?? "Export failed");
     } finally {
