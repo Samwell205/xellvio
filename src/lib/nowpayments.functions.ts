@@ -10,6 +10,21 @@ function npKey() {
   return k;
 }
 
+/** Short-lived JWT for NOWPayments endpoints that require it (payment list). */
+export async function npJwt(): Promise<string | null> {
+  const email = process.env.NOWPAYMENTS_EMAIL;
+  const password = process.env.NOWPAYMENTS_PASSWORD;
+  if (!email || !password) return null;
+  const res = await fetch(`${NP_API}/auth`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  const json: any = await res.json().catch(() => ({}));
+  if (!res.ok || !json?.token) throw new Error(json?.message || `NOWPayments auth failed (${res.status})`);
+  return String(json.token);
+}
+
 function siteOrigin(): string {
   return process.env.PUBLIC_SITE_URL || "https://www.xellvio.com";
 }
@@ -261,12 +276,26 @@ export async function reconcileOneNowPayment(payment: {
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
   if (!apiKey) throw new Error("NOWPayments is not configured");
 
-  // Query NOWPayments for the latest payment(s) tied to this invoice
+  // Query NOWPayments for the latest payment(s) tied to this invoice.
+  // The list endpoint requires a Bearer JWT (obtained with the NOWPayments
+  // account email/password); single-payment lookup works with the API key.
   let list: any[] = [];
-  if (invoiceId) {
-    const url = `${NP_API}/payment/?invoiceId=${encodeURIComponent(String(invoiceId))}&limit=25&page=0&sortBy=updated_at&orderBy=desc`;
-    const res = await fetch(url, { headers: { "x-api-key": apiKey } });
+  const knownPaymentId =
+    (payment.metadata as any)?.np_payment_id ?? (payment.metadata as any)?.last_ipn?.payment_id ?? null;
+  if (knownPaymentId) {
+    const res = await fetch(`${NP_API}/payment/${encodeURIComponent(String(knownPaymentId))}`, {
+      headers: { "x-api-key": apiKey },
+    });
     const json: any = await res.json().catch(() => ({}));
+    if (res.ok && json?.payment_id) list.push(json);
+  }
+  if (invoiceId && !list.length) {
+    const jwt = await npJwt();
+    if (!jwt) throw new Error("NOWPAYMENTS_EMAIL / NOWPAYMENTS_PASSWORD not configured — cannot look up invoice payments");
+    const url = `${NP_API}/payment/?invoiceId=${encodeURIComponent(String(invoiceId))}&limit=25&page=0&sortBy=updated_at&orderBy=desc`;
+    const res = await fetch(url, { headers: { "x-api-key": apiKey, Authorization: `Bearer ${jwt}` } });
+    const json: any = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.message || `NOWPayments lookup failed (${res.status})`);
     list = Array.isArray(json?.data) ? json.data : [];
   }
 
