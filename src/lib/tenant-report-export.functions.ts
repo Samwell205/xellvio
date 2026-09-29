@@ -60,8 +60,8 @@ export const getCampaignRecipientsExport = createServerFn({ method: "POST" })
     // Link clicks per message
     const clicksByMsg = new Map<string, { clicks: number; first: string | null; last: string | null }>();
     if (messageIds.length) {
-      for (let i = 0; i < messageIds.length; i += 500) {
-        const chunk = messageIds.slice(i, i + 500);
+      for (let i = 0; i < messageIds.length; i += 150) {
+        const chunk = messageIds.slice(i, i + 150);
         const { data: rows } = await supabase
           .from("link_clicks")
           .select("message_id,clicks,first_click_at,last_click_at")
@@ -80,8 +80,8 @@ export const getCampaignRecipientsExport = createServerFn({ method: "POST" })
     // Reply counts per phone (inbound SMS in this account after campaign creation)
     const repliesByPhone = new Map<string, number>();
     if (phones.length) {
-      for (let i = 0; i < phones.length; i += 500) {
-        const chunk = phones.slice(i, i + 500);
+      for (let i = 0; i < phones.length; i += 150) {
+        const chunk = phones.slice(i, i + 150);
         const { data: rows } = await supabase
           .from("sms_thread_messages")
           .select("phone_e164")
