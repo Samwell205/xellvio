@@ -15,11 +15,23 @@ const GREETING: Msg = {
     "👋 Hi! I'm the Xellvio assistant. Ask me about sign up, verifying your email, importing contacts, sending SMS, or anything else.",
 };
 
+// Turn bare "/contact"-style paths into clickable links.
+function linkify(text: string) {
+  return text.replace(/(^|[\s(])(\/(?:contact|auth|forgot-password|pricing|app\/[a-z0-9\-/]+))(?=[\s.,)!?]|$)/g, "$1[$2]($2)");
+}
+
 export function AiChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([GREETING]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [human, setHuman] = useState(false);
+  const [humanDone, setHumanDone] = useState(false);
+  const [hName, setHName] = useState("");
+  const [hEmail, setHEmail] = useState("");
+  const [hMsg, setHMsg] = useState("");
+  const [hErr, setHErr] = useState<string | null>(null);
+  const [hSending, setHSending] = useState(false);
   const sendChat = useServerFn(chatWithSupportBot);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -53,6 +65,43 @@ export function AiChatWidget() {
       ]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  function openHuman() {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    setHMsg(lastUser?.content ?? "");
+    setHErr(null);
+    setHuman(true);
+    import("@/integrations/supabase/client").then(({ supabase }) =>
+      supabase.auth.getUser().then(({ data }) => {
+        if (data.user?.email) setHEmail((v) => v || data.user!.email!);
+      }),
+    );
+  }
+
+  async function sendToHuman(e: React.FormEvent) {
+    e.preventDefault();
+    setHSending(true);
+    setHErr(null);
+    const transcript = messages
+      .slice(1)
+      .slice(-10)
+      .map((m) => `${m.role === "user" ? "Tenant" : "Assistant"}: ${m.content}`)
+      .join("\n\n");
+    const message = `${hMsg}\n\n--- Chat history ---\n${transcript}`.slice(0, 2000);
+    try {
+      const r = await fetch("/api/public/contact", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: hName, email: hEmail, topic: "Support chat", message, user_agent: navigator.userAgent }),
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error ?? "Could not send");
+      setHumanDone(true);
+    } catch (err) {
+      setHErr(err instanceof Error ? err.message : "Could not send");
+    } finally {
+      setHSending(false);
     }
   }
 
@@ -101,7 +150,17 @@ export function AiChatWidget() {
               >
                 {m.role === "assistant" ? (
                   <div className="prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-a:text-primary">
-                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                    <ReactMarkdown
+                      components={{
+                        a: ({ href, children }) => (
+                          <a href={href} className="font-medium underline" target={href?.startsWith("/") ? undefined : "_blank"} rel="noreferrer">
+                            {children}
+                          </a>
+                        ),
+                      }}
+                    >
+                      {linkify(m.content)}
+                    </ReactMarkdown>
                   </div>
                 ) : (
                   <span className="whitespace-pre-wrap">{m.content}</span>
@@ -118,24 +177,50 @@ export function AiChatWidget() {
           )}
         </div>
 
-        <form onSubmit={handleSend} className="flex items-end gap-2 border-t bg-background p-3">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            rows={1}
-            placeholder="Ask anything about the platform…"
-            className="max-h-32 flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
-          <Button type="submit" size="icon" disabled={loading || !input.trim()} aria-label="Send">
-            <Send className="size-4" />
-          </Button>
-        </form>
+        {human ? (
+          <form onSubmit={sendToHuman} className="space-y-2 border-t bg-background p-3">
+            {humanDone ? (
+              <p className="text-sm">✅ Sent! Our team will reply to your email soon.</p>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <input required minLength={2} value={hName} onChange={(e) => setHName(e.target.value)} placeholder="Your name" className="w-1/2 rounded-md border bg-background px-2 py-1.5 text-sm" />
+                  <input required type="email" value={hEmail} onChange={(e) => setHEmail(e.target.value)} placeholder="Your email" className="w-1/2 rounded-md border bg-background px-2 py-1.5 text-sm" />
+                </div>
+                <textarea required minLength={10} value={hMsg} onChange={(e) => setHMsg(e.target.value)} rows={3} placeholder="Describe your problem…" className="w-full resize-none rounded-md border bg-background px-2 py-1.5 text-sm" />
+                {hErr && <p className="text-xs text-destructive">{hErr}</p>}
+              </>
+            )}
+            <div className="flex justify-between">
+              <Button type="button" variant="ghost" size="sm" onClick={() => { setHuman(false); setHumanDone(false); }}>Back to chat</Button>
+              {!humanDone && <Button type="submit" size="sm" disabled={hSending}>{hSending ? "Sending…" : "Send to team"}</Button>}
+            </div>
+          </form>
+        ) : (
+          <div className="border-t bg-background">
+            <button type="button" onClick={openHuman} className="w-full px-3 pt-2 text-left text-xs font-medium text-primary hover:underline">
+              Talk to a human →
+            </button>
+            <form onSubmit={handleSend} className="flex items-end gap-2 p-3 pt-2">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                rows={1}
+                placeholder="Ask anything about the platform…"
+                className="max-h-32 flex-1 resize-none rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+              <Button type="submit" size="icon" disabled={loading || !input.trim()} aria-label="Send">
+                <Send className="size-4" />
+              </Button>
+            </form>
+          </div>
+        )}
       </div>
     </>
   );
