@@ -1054,13 +1054,16 @@ async function deliverPending(
 
   const spam = await carrierSpamBlockRate(supabaseAdmin, campaign.id);
   if (spam.total >= SPAM_BLOCK_MIN_SAMPLE && spam.ratio >= SPAM_BLOCK_RATIO) {
-    const pct = Math.round(spam.ratio * 100);
+    // Blocked receipts can be counted from more than the sampled window, so
+    // cap both figures so the notice never reads above 100%.
+    const shownBlocked = Math.min(spam.blocked, spam.total);
+    const pct = Math.min(100, Math.round(spam.ratio * 100));
     await supabaseAdmin.from("campaigns").update({
       status: "paused",
       paused_at: new Date().toISOString(),
       paused_reason:
         `Paused automatically: the recipient carriers' spam filter rejected ${pct}% of the messages sent so far ` +
-        `(${spam.blocked.toLocaleString()} of ${spam.total.toLocaleString()}, carrier code 40002). ` +
+        `(${shownBlocked.toLocaleString()} of ${spam.total.toLocaleString()}, carrier code 40002). ` +
         `Sending more of this exact message from this sender will keep being filtered. ` +
         `Edit the wording, change or remove the link, or send from a different registered number, then resume.`,
     }).eq("id", campaign.id).in("status", ["sending", "queued"]);
