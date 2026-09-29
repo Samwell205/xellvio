@@ -1492,6 +1492,19 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 
 
 async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
+        // Carrier-wide hold: messaging was disabled on the carrier account
+        // (error 40314). Pause every send for 30 minutes after the latest such
+        // rejection; campaigns stay queued and resume on their own once the
+        // carrier accepts traffic again (a new rejection re-arms the hold).
+        {
+          const { data: hold } = await supabaseAdmin
+            .from("platform_settings").select("value").eq("key", "carrier_messaging_hold_at").maybeSingle();
+          const heldAt = hold?.value ? Date.parse(String(hold.value)) : NaN;
+          if (Number.isFinite(heldAt) && Date.now() - heldAt < 30 * 60 * 1000) {
+            return Response.json({ ok: true, held: "carrier_messaging_disabled" });
+          }
+        }
+
         const { data: ratesRows } = await supabaseAdmin
           .from("country_rates")
           .select("country_code,dial_prefix,sell_price,mms_multiplier,active")

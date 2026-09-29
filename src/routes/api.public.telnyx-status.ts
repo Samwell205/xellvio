@@ -99,6 +99,18 @@ async function handleStatus(payload: any) {
     .from("events")
     .insert({ message_id: msg.id, type: `status:${finalStatus}`, payload });
 
+  // 40314 = messaging disabled on the whole carrier account. The message never
+  // left, so the tenant must not pay for it, and sending must stop platform-wide
+  // instead of burning the rest of every running campaign.
+  if (String(errCode ?? "") === "40314") {
+    await (supabaseAdmin as any).rpc("refund_message_charge", { _message_id: msg.id });
+    await supabaseAdmin
+      .from("platform_settings")
+      .upsert(
+        { key: "carrier_messaging_hold_at", value: new Date().toISOString() as any, updated_at: new Date().toISOString() },
+        { onConflict: "key" },
+      );
+  }
 }
 
 async function handleTollfreeVerification(payload: any): Promise<boolean> {

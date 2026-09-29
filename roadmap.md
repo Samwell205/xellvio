@@ -38,3 +38,7 @@
 - [x] Replace the Lovable-managed Stripe key with the new Stripe account key, create its live webhook, save the signing secret, and disable the duplicate endpoint
 
 Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout when user asks.
+
+## Sep 29
+- [ ] Switch International card checkout from Stripe to Flutterwave (no Flutterwave branding on site) — waiting on user's go-ahead + Flutterwave secret key/hash
+- [ ] Resend "batch 2" (6f6ace6d) 4,792 recipients blocked by carrier 40314 — waiting on carrier to re-enable messaging
