@@ -99,11 +99,10 @@ async function handleStatus(payload: any) {
     .from("events")
     .insert({ message_id: msg.id, type: `status:${finalStatus}`, payload });
 
-  // 40314 = messaging disabled on the whole carrier account. The message never
-  // left, so the tenant must not pay for it, and sending must stop platform-wide
-  // instead of burning the rest of every running campaign.
+  // 40314 = messaging disabled on the whole carrier account. Stop sending
+  // platform-wide instead of burning the rest of every running campaign.
+  // No automatic refunds — the owner decides refunds manually.
   if (String(errCode ?? "") === "40314") {
-    await (supabaseAdmin as any).rpc("refund_message_charge", { _message_id: msg.id });
     await supabaseAdmin
       .from("platform_settings")
       .upsert(
