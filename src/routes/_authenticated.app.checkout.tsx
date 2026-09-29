@@ -154,7 +154,7 @@ function CheckoutPage() {
                 <Globe className="size-4" /> International card
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Visa, Mastercard, Amex, Apple Pay and Google Pay — billed in USD.
+                Visa, Mastercard and Amex — billed in USD.
               </p>
             </div>
           </label>
