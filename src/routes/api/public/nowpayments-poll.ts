@@ -31,7 +31,7 @@ async function handle(request: Request) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   // Only touch payments that had time to confirm on-chain (>2 min) and aren't ancient
   const cutoffMin = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-  const cutoffMax = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const cutoffMax = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
   const { data: pending, error } = await supabaseAdmin
     .from("payments")
     .select("id,account_id,status,credits,amount,currency,metadata,provider,provider_reference,created_at")

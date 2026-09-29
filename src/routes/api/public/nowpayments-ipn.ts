@@ -25,7 +25,20 @@ export const Route = createFileRoute("/api/public/nowpayments-ipn")({
         const sigBuf = Buffer.from(signature, "hex");
         const expBuf = Buffer.from(expected, "hex");
         if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
-          return new Response("Invalid signature", { status: 401 });
+          // Signature mismatch: don't trust the body, but re-fetch the payment
+          // straight from NOWPayments and use that authoritative record instead.
+          const apiKey = process.env.NOWPAYMENTS_API_KEY;
+          const pid = payload?.payment_id;
+          if (!apiKey || !pid) return new Response("Invalid signature", { status: 401 });
+          const r = await fetch(`https://api.nowpayments.io/v1/payment/${encodeURIComponent(String(pid))}`, {
+            headers: { "x-api-key": apiKey },
+          });
+          const verified: any = await r.json().catch(() => null);
+          if (!r.ok || !verified?.payment_id || String(verified.order_id ?? "") !== String(payload.order_id ?? "")) {
+            console.error("[np-ipn] invalid signature and API verification failed", pid);
+            return new Response("Invalid signature", { status: 401 });
+          }
+          payload = verified;
         }
 
         const status = String(payload.payment_status ?? "").toLowerCase();
