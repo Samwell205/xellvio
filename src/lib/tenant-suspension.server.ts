@@ -114,5 +114,14 @@ export async function resumeTenantSending(opts: {
     .eq("account_id", opts.tenantAccountId)
     .is("lifted_at", null);
 
+  // Wake every campaign that was halted only because of the suspension, so
+  // lifting the hold actually resumes the remaining recipients.
+  await supabaseAdmin
+    .from("campaigns")
+    .update({ status: "queued", paused_reason: null, paused_at: null })
+    .eq("account_id", opts.tenantAccountId)
+    .eq("status", "paused")
+    .or("paused_reason.eq.Tenant sending suspended,paused_reason.like.Sending suspended:*");
+
   return { ok: true, telnyxOk, telnyxError };
 }
