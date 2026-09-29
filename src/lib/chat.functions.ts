@@ -41,7 +41,7 @@ async function loadTenantContext(): Promise<string | null> {
     if (!u?.user) return null;
     const { resolveActingAccount } = await import("./acting-account.server");
     const acting = await resolveActingAccount(u.user.id);
-    const canCost = acting.permissions?.["view_costs" as keyof typeof acting.permissions] !== false;
+    const canCost = acting.isOwner || (acting.permissions as Record<string, boolean>)?.costs === true;
 
     const [{ data: acct }, { data: camps }] = await Promise.all([
       supabaseAdmin
