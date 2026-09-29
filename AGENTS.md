@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- International card payments use Flutterwave server-side (src/lib/flw.server.ts, webhook /api/public/card/webhook, refs icp_); never name the provider in UI — owner requirement.
