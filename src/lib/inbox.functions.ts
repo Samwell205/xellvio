@@ -90,7 +90,7 @@ export const getConversation = createServerFn({ method: "GET" })
       .order("created_at", { ascending: true });
     const { data: campaignMsgs } = await supabase
       .from("messages")
-      .select("id,rendered_body,created_at,sent_at,status,campaigns!inner(account_id,media_url)")
+      .select("id,rendered_body,created_at,sent_at,status,country_code,force_sms,campaigns!inner(account_id,media_url)")
       .eq("campaigns.account_id", accountId).eq("phone_e164", data.phone)
       .order("created_at", { ascending: true });
     const merged = [
@@ -104,7 +104,10 @@ export const getConversation = createServerFn({ method: "GET" })
         id: m.id, direction: "outbound" as const,
         body: m.rendered_body, created_at: m.sent_at ?? m.created_at,
         status: m.status as string | null,
-        mediaUrl: (m.campaigns?.media_url as string | null) ?? null,
+        // Only show the picture when it was actually sent as MMS (US/CA, not forced SMS).
+        mediaUrl: ["US", "CA"].includes(String(m.country_code ?? "").toUpperCase()) && !m.force_sms
+          ? ((m.campaigns?.media_url as string | null) ?? null)
+          : null,
         source: "campaign" as const,
       })),
     ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());

@@ -156,16 +156,21 @@ export const sendTestSms = createServerFn({ method: "POST" })
 
     const { sendMessage, safeTelnyxCall } = await import("./telnyx.server");
     const { publicCampaignMediaUrl } = await import("./campaign-media");
-    const testMediaUrls = data.mediaUrl
-      ? [publicCampaignMediaUrl(data.mediaUrl, (process.env.PUBLIC_BASE_URL ?? "https://xellvio.com").replace(/\/$/, ""))]
-      : undefined;
+    // Mirror the campaign dispatcher: picture messages only to US/CA (+1);
+    // elsewhere send the text with an image link instead.
+    const testPublicMedia = data.mediaUrl
+      ? publicCampaignMediaUrl(data.mediaUrl, (process.env.PUBLIC_BASE_URL ?? "https://xellvio.com").replace(/\/$/, ""))
+      : null;
+    const testSupportsMms = data.to.trim().startsWith("+1");
+    const testMediaUrls = testPublicMedia && testSupportsMms ? [testPublicMedia] : undefined;
+    const testText = testPublicMedia && !testSupportsMms ? `${data.body}\n\nImage: ${testPublicMedia}` : data.body;
     try {
       const result = await safeTelnyxCall(
         "send_test_sms",
         { userId, messagingProfileId },
         () => sendMessage({
           to: data.to,
-          text: data.body,
+          text: testText,
           from: asset.phone_number ?? undefined,
           messagingProfileId,
           mediaUrls: testMediaUrls,

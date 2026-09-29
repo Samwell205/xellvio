@@ -268,7 +268,11 @@ export async function screenMessageContent(
     action = "passed";
   }
 
-  const blockedReasons = reasons.map((r) => r.message);
+  // Advisory notes (e.g. AI review unavailable) go last so the real reason is shown first.
+  const blockedReasons = [
+    ...reasons.filter((r) => r.code !== "ai_scan_unavailable"),
+    ...reasons.filter((r) => r.code === "ai_scan_unavailable"),
+  ].map((r) => r.message);
 
 
   // Audit log — every decision.
