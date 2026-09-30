@@ -77,8 +77,9 @@ export const getCampaignRecipientsExport = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const messages = (batch ?? []) as any[];
 
-    const needClicks = ["clicked", "all"].includes(data.filter);
-    const needReplies = ["replied", "all"].includes(data.filter);
+    // Every export writes clicks and replies columns, so always look them up.
+    const needClicks = true;
+    const needReplies = true;
 
     const clicksByMsg = new Map<string, { clicks: number; first: string | null; last: string | null }>();
     if (needClicks && messages.length) {
