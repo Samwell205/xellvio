@@ -579,7 +579,11 @@ async function sendOneMessage(
     // row straight back in the queue (it stays paid, so it is not charged
     // twice) and tell the caller to back off instead of burning thousands of
     // recipients as "failed" the moment we push too fast.
-    const rateLimited = code === "10011" || /429|rate limit|maximum number of allowed requests/i.test(String(reason));
+    // Worker runtime "different request" I/O errors are local glitches, not
+    // carrier outcomes — requeue (the idempotency key prevents double sends).
+    const rateLimited =
+      code === "10011" ||
+      /429|rate limit|maximum number of allowed requests|Cannot perform I\/O on behalf of a different request/i.test(String(reason));
     if (rateLimited) {
       try {
         await recordStatus(supabaseAdmin, sink, m.id, {
