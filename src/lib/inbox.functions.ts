@@ -29,6 +29,23 @@ export const getInboxUnreadCount = createServerFn({ method: "GET" })
     return { count: count ?? 0, lastAt: latest?.created_at ?? null };
   });
 
+async function loadHidden(accountId: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await (supabaseAdmin as any).from("inbox_hidden")
+    .select("phone_e164,message_id,hidden_at").eq("account_id", accountId).limit(10000);
+  const ids = new Set<string>();
+  const phoneCut = new Map<string, number>();
+  for (const r of (data ?? []) as any[]) {
+    if (r.message_id) ids.add(r.message_id);
+    else if (r.phone_e164) {
+      const t = new Date(r.hidden_at).getTime();
+      if (t > (phoneCut.get(r.phone_e164) ?? 0)) phoneCut.set(r.phone_e164, t);
+    }
+  }
+  return (phone: string, id: string | null, at: string) =>
+    (id != null && ids.has(id)) || new Date(at).getTime() <= (phoneCut.get(phone) ?? 0);
+}
+
 /** List distinct conversations (one per customer phone) with last message preview. */
 export const listConversations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -56,8 +73,10 @@ export const listConversations = createServerFn({ method: "GET" })
       .select("phone_e164,rendered_body,created_at,campaigns!inner(account_id)")
       .eq("campaigns.account_id", accountId).in("phone_e164", phones)
       .order("created_at", { ascending: false }).limit(2000);
+    const isHidden = await loadHidden(accountId);
     const map = new Map<string, { phone: string; lastBody: string; lastAt: string; lastDirection: "inbound" | "outbound" }>();
     for (const r of thread ?? []) {
+      if (isHidden(r.phone_e164, null, r.created_at)) continue;
       const existing = map.get(r.phone_e164);
       if (!existing || new Date(r.created_at) > new Date(existing.lastAt)) {
         map.set(r.phone_e164, {
@@ -67,6 +86,7 @@ export const listConversations = createServerFn({ method: "GET" })
       }
     }
     for (const r of (campaignMsgs ?? []) as any[]) {
+      if (isHidden(r.phone_e164, null, r.created_at)) continue;
       const existing = map.get(r.phone_e164);
       if (!existing || new Date(r.created_at) > new Date(existing.lastAt)) {
         map.set(r.phone_e164, { phone: r.phone_e164, lastBody: r.rendered_body, lastAt: r.created_at, lastDirection: "outbound" });
@@ -111,7 +131,9 @@ export const getConversation = createServerFn({ method: "GET" })
         source: "campaign" as const,
       })),
     ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    return { phone: data.phone, messages: merged };
+    const isHidden = await loadHidden(accountId);
+    const visible = merged.filter((m) => !isHidden(data.phone, m.id, m.created_at));
+    return { phone: data.phone, messages: visible };
   });
 
 const DeleteInboxSchema = z.object({
@@ -134,6 +156,15 @@ export const deleteInboxMessages = createServerFn({ method: "POST" })
     if (data.phones?.length) query = query.in("phone_e164", data.phones);
     const { error } = await query;
     if (error) throw error;
+    // Campaign messages live elsewhere and can't be removed, so remember them as hidden.
+    const marks = [
+      ...(data.ids ?? []).map((id) => ({ account_id: acting.accountId, message_id: id })),
+      ...(data.phones ?? []).map((p) => ({ account_id: acting.accountId, phone_e164: p })),
+    ];
+    if (marks.length) {
+      const { error: hErr } = await (supabaseAdmin as any).from("inbox_hidden").insert(marks);
+      if (hErr) throw hErr;
+    }
     return { ok: true };
   });
 
