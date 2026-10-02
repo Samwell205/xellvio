@@ -3442,6 +3442,30 @@ export type Database = {
           },
         ]
       }
+      inbox_hidden: {
+        Row: {
+          account_id: string
+          hidden_at: string
+          id: string
+          message_id: string | null
+          phone_e164: string | null
+        }
+        Insert: {
+          account_id: string
+          hidden_at?: string
+          id?: string
+          message_id?: string | null
+          phone_e164?: string | null
+        }
+        Update: {
+          account_id?: string
+          hidden_at?: string
+          id?: string
+          message_id?: string | null
+          phone_e164?: string | null
+        }
+        Relationships: []
+      }
       integration_logs: {
         Row: {
           action: string | null
