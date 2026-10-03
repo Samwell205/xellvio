@@ -287,7 +287,17 @@ function InboxPage() {
                 return (
                   <div
                     key={c.phone}
-                    className={`w-full text-left px-3 py-2.5 border-b transition relative ${
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('[role="checkbox"]')) return;
+                      setSelected(c.phone);
+                      markRead(c.phone, c.lastAt);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { setSelected(c.phone); markRead(c.phone, c.lastAt); }
+                    }}
+                    className={`w-full text-left px-3 py-2.5 border-b transition relative cursor-pointer ${
                       isActive
                         ? "bg-muted"
                         : unread
