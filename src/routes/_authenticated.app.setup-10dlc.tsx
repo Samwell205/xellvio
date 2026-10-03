@@ -30,7 +30,7 @@ import {
 export const Route = createFileRoute("/_authenticated/app/setup-10dlc")({
   head: () => ({ meta: [{ title: "10DLC Registration — Xellvio" }] }),
   component: TenDlcPage,
-  errorComponent: ({ error }) => <div className="p-8 text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-8 text-destructive">{(error as Error).message}</div>,
   notFoundComponent: () => <div className="p-8">Not found.</div>,
 });
 
