@@ -860,11 +860,6 @@ function CampaignReport() {
               </AlertDialog>
             )}
             {/* Provider portal link removed — tenants shouldn't see upstream provider */}
-            <Button asChild variant="outline" size="sm">
-              <Link to="/app/campaigns/new" search={{ from: id } as any}>
-                View campaign
-              </Link>
-            </Button>
           </div>
         </div>
       </div>

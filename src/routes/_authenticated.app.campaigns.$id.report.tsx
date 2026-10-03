@@ -53,7 +53,7 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/$id/report")
   errorComponent: ({ error }) => (
     <div className="p-8">
       <div className="text-destructive font-semibold">Report failed to load</div>
-      <div className="text-sm text-muted-foreground mt-2">{error.message}</div>
+      <div className="text-sm text-muted-foreground mt-2">{(error as Error).message}</div>
     </div>
   ),
   notFoundComponent: () => <div className="p-8">Campaign not found.</div>,
