@@ -3,7 +3,6 @@
  * current draft, take the page offline and roll back to an earlier version.
  */
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +45,6 @@ export function PublishDialog({
   onPublishedChange: (published: boolean) => void;
   onRestore: (blocks: Block[], theme: Theme) => void;
 }) {
-  const queryClient = useQueryClient();
   const [draftSlug, setDraftSlug] = useState(slug ?? "");
   const [busy, setBusy] = useState<string | null>(null);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -83,7 +81,6 @@ export function PublishDialog({
       const r = await updateWebsiteSlug({ data: { kind, id, slug: draftSlug } });
       onSlugChange(r.slug);
       setDraftSlug(r.slug);
-      await queryClient.invalidateQueries({ queryKey: [kind === "page" ? "landing-pages" : "signup-forms"] });
       toast.success("Web address updated");
     });
 
@@ -92,7 +89,6 @@ export function PublishDialog({
       if (!id) throw new Error("Save this design first.");
       const r = await publishWebsiteDesign({ data: { kind, id } });
       onPublishedChange(true);
-      await queryClient.invalidateQueries({ queryKey: [kind === "page" ? "landing-pages" : "signup-forms"] });
       toast.success(`Published — version ${r.version} is now live`);
       await loadVersions();
     });
@@ -102,7 +98,6 @@ export function PublishDialog({
       if (!id) return;
       await unpublishWebsiteDesign({ data: { kind, id } });
       onPublishedChange(false);
-      await queryClient.invalidateQueries({ queryKey: [kind === "page" ? "landing-pages" : "signup-forms"] });
       toast.success("Taken offline");
     });
 

@@ -34,6 +34,16 @@ export function MarketingFooter() {
             { label: "Compliance", to: "/compliance" },
             { label: "Pricing", to: "/pricing" },
           ]} />
+          <FooterCol title="Why Xellvio" items={[
+            { label: "Compare platforms", to: "/compare" },
+            { label: "Xellvio vs Attentive", to: "/compare/xellvio-vs-attentive" },
+            { label: "Xellvio vs SimpleTexting", to: "/compare/xellvio-vs-simpletexting" },
+            { label: "Xellvio vs Textmagic", to: "/compare/xellvio-vs-textmagic" },
+            { label: "Xellvio vs SlickText", to: "/compare/xellvio-vs-slicktext" },
+            { label: "Xellvio vs EZ Texting", to: "/compare/xellvio-vs-ez-texting" },
+            { label: "Xellvio vs Twilio", to: "/compare/xellvio-vs-twilio" },
+            { label: "Xellvio vs ClickSend", to: "/compare/xellvio-vs-clicksend" },
+          ]} />
           <FooterCol title="Templates" items={[
             { label: "All templates", to: "/templates" },
             { label: "Landing page templates", to: "/templates/landing-pages" },
@@ -47,7 +57,6 @@ export function MarketingFooter() {
             { label: "SMS for ecommerce", to: "/solutions/ecommerce" },
             { label: "SMS for retail", to: "/solutions/retail" },
             { label: "Earn as a verifier", to: "/verify" },
-            { label: "Compare platforms", to: "/compare" },
           ]} />
           <FooterCol title="Company" items={[
             { label: "About Xellvio", to: "/about" },
