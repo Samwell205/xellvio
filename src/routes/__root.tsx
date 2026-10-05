@@ -7,17 +7,18 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { AiChatWidget } from "../components/AiChatWidget";
 import { CookieBanner } from "../components/CookieBanner";
 import { Toaster } from "../components/ui/sonner";
 import { initAnalytics, trackPageView } from "@/lib/analytics";
 import { installCtaTracking, trackView } from "@/lib/growth/track";
 import { BRAND, organizationSchema } from "@/lib/seo";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+
+const AiChatWidget = lazy(() => import("../components/AiChatWidget").then((module) => ({ default: module.AiChatWidget })));
 
 function NotFoundComponent() {
   return (
@@ -138,6 +139,17 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const [showChat, setShowChat] = useState(false);
+
+  useEffect(() => {
+    const windowWithIdle = window as Window & { requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number; cancelIdleCallback?: (id: number) => void };
+    if (windowWithIdle.requestIdleCallback) {
+      const id = windowWithIdle.requestIdleCallback(() => setShowChat(true), { timeout: 2500 });
+      return () => windowWithIdle.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(() => setShowChat(true), 1200);
+    return () => window.clearTimeout(id);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -205,7 +217,7 @@ function RootComponent() {
       <Outlet />
       <Toaster richColors position="top-right" />
       <CookieBanner />
-      <AiChatWidget />
+      {showChat ? <Suspense fallback={null}><AiChatWidget /></Suspense> : null}
     </QueryClientProvider>
   );
 }

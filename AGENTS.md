@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - International card payments use Flutterwave server-side (src/lib/flw.server.ts, webhook /api/public/card/webhook, refs icp_); never name the provider in UI — owner requirement.
+- Keep the public homepage as a focused editorial product story with one primary product workspace; avoid stacked generic mockup-card sections because they weaken trust and performance.

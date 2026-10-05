@@ -1,5 +1,8 @@
 # Roadmap
 
+- [x] Rebuild the public homepage in the Editorial Tech Minimal direction, reduce visual repetition, and improve first-load performance.
+- [x] Refresh landing-page and sign-up-form lists immediately after publish, unpublish, or web-address changes.
+
 - [x] Fix high-volume SMS dispatcher failures: safely requeue interrupted paid attempts, preserve idempotency, reduce worker pressure, and flush statuses sooner.
 - [x] Assess request to resend the reported content; keep gambling controls enforced and provide a compliant rewrite path instead of bypassing screening.
 - [x] Allow free community contest and matching-bonus messages without weakening paid betting or gambling controls.
