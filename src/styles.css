@@ -59,7 +59,7 @@
 
 :root {
   --radius: 0.75rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.993 0.003 95);
   --foreground: oklch(0.18 0.02 256);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.02 256);
@@ -144,7 +144,16 @@
   .dark { color-scheme: dark; }
   html, body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   body { background: var(--color-background); color: var(--color-foreground); }
-  h1, h2, h3, h4 { letter-spacing: -0.02em; font-weight: 700; }
+  h1, h2, h3, h4 { letter-spacing: 0; font-weight: 700; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @utility hero-gradient {
