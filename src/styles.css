@@ -208,12 +208,17 @@
   --arctic-ice: oklch(0.87 0.11 210);          /* #6ee7ff */
   --arctic-line: oklch(0.86 0.025 255);        /* #c7d2e3 */
   --arctic-tile: oklch(1 0 0);
+  --arctic-feature: oklch(0.18 0.03 260);
 }
 .dark {
-  --arctic-bg: oklch(0.16 0.025 260);
-  --arctic-tile: oklch(0.21 0.03 260);
-  --arctic-line: oklch(0.32 0.03 260);
-  --arctic-ink: oklch(0.11 0.03 260);
+  --arctic-bg: oklch(0.125 0.008 258);
+  --arctic-tile: oklch(0.175 0.011 258);
+  --arctic-line: oklch(0.32 0.014 258 / 78%);
+  --arctic-ink: oklch(0.145 0.009 258);
+  --arctic-ink-fg: oklch(0.97 0.003 258);
+  --arctic-electric: oklch(0.67 0.2 254);
+  --arctic-ice: oklch(0.79 0.12 210);
+  --arctic-feature: oklch(0.205 0.018 258);
 }
 @theme inline {
   --font-display: "Space Grotesk", system-ui, sans-serif;
@@ -225,18 +230,19 @@
   --color-arctic-ice: var(--arctic-ice);
   --color-arctic-line: var(--arctic-line);
   --color-arctic-tile: var(--arctic-tile);
+  --color-arctic-feature: var(--arctic-feature);
 }
-@keyframes bento-rise { from { opacity: 0; transform: translateY(18px) scale(.98); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes bento-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes bento-float { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-14px,12px) scale(1.15); } }
 @keyframes bento-bar { from { transform: scaleY(.15); } to { transform: scaleY(1); } }
 @keyframes bento-sheen { from { transform: translateX(-120%) skewX(-20deg); } to { transform: translateX(320%) skewX(-20deg); } }
 @keyframes bento-fill { from { width: 0; } }
 @utility bento-tile {
-  position: relative; overflow: hidden; border-radius: 2rem;
-  animation: bento-rise .7s cubic-bezier(.2,.8,.2,1) both;
+  position: relative; overflow: hidden; border-radius: 1rem;
+  animation: bento-rise .55s cubic-bezier(.2,.8,.2,1) both;
   animation-delay: calc(var(--i, 0) * 80ms);
   transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s;
-  &:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -24px color-mix(in oklab, var(--arctic-electric) 45%, transparent); }
+  &:hover { transform: translateY(-3px); box-shadow: 0 18px 32px -24px color-mix(in oklab, var(--arctic-electric) 38%, transparent); }
 }
 @utility bento-orb { position: absolute; border-radius: 9999px; filter: blur(40px); pointer-events: none; animation: bento-float 9s ease-in-out infinite; }
 @utility bento-sheen {
@@ -246,4 +252,21 @@
 @utility bento-fill { animation: bento-fill 1.4s cubic-bezier(.2,.8,.2,1) both; }
 @media (prefers-reduced-motion: reduce) {
   .bento-tile, .bento-orb, .bento-bar, .bento-fill, .bento-sheen::after { animation: none !important; }
+}
+
+/* Dark dashboard: crisp graphite hierarchy instead of blue-on-blue glow. */
+.dark .bento-tile {
+  box-shadow: inset 0 1px 0 color-mix(in oklab, var(--arctic-ink-fg) 5%, transparent);
+}
+.dark .bento-tile:hover {
+  border-color: color-mix(in oklab, var(--arctic-electric) 42%, var(--arctic-line));
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--arctic-ink-fg) 7%, transparent),
+    0 16px 32px -24px color-mix(in oklab, var(--arctic-electric) 35%, transparent);
+}
+.dark .bento-orb { display: none; }
+.dark .bento-sheen::after {
+  width: 20%;
+  opacity: .16;
+  animation-duration: 6s;
 }
