@@ -221,33 +221,14 @@ export function defaultWizardForm(): WizardForm {
   };
 }
 
-// ---------- Substep definitions ----------
+// ---------- Three-step carrier flow ----------
 
-type SubStepKey =
-  | "business-info"
-  | "authorized-rep"
-  | "business-address"
-  | "assign-numbers"
-  | "use-case"
-  | "opt-in"
-  | "additional"
-  | "review";
+type StepKey = "general" | "numbers" | "use-case-details";
 
-const SUB_STEPS: Array<{ key: SubStepKey; label: string }> = [
-  { key: "business-info", label: "Business info" },
-  { key: "authorized-rep", label: "Contact details" },
-  { key: "business-address", label: "Business address" },
-  { key: "assign-numbers", label: "Assign numbers" },
-  { key: "use-case", label: "Use case" },
-  { key: "opt-in", label: "Opt-in" },
-  { key: "additional", label: "Additional details" },
-  { key: "review", label: "Review & submit" },
-];
-
-const MAIN_STEPS = [
-  { label: "Business Details", keys: ["business-info", "authorized-rep", "business-address"] as SubStepKey[] },
-  { label: "Assign Numbers", keys: ["assign-numbers"] as SubStepKey[] },
-  { label: "Use Case Details", keys: ["use-case", "opt-in", "additional", "review"] as SubStepKey[] },
+const STEPS: Array<{ key: StepKey; label: string }> = [
+  { key: "general", label: "General" },
+  { key: "numbers", label: "Numbers" },
+  { key: "use-case-details", label: "Use Case Details" },
 ];
 
 // ---------- Per-substep validation ----------
@@ -256,53 +237,41 @@ function isEmail(v: string) { return /^[^@]+@[^@]+\.[^@]+$/.test(v.trim()); }
 function isHttps(v: string) { return /^https:\/\//.test(v.trim()); }
 function isHttp(v: string) { return /^https?:\/\//.test(v.trim()); }
 
-function stepValid(f: WizardForm, key: SubStepKey): string | null {
+function stepValid(f: WizardForm, key: StepKey): string | null {
   switch (key) {
-    case "business-info":
+    case "general":
       if (f.legalEntityName.trim().length < 2) return "Enter the legal business name.";
       if (!isHttp(f.websiteUrl)) return "Enter a valid website URL (https://…).";
       if (!f.businessType) return "Select a company type.";
-      // Registration number / authority / country are optional — Telnyx only
-      // requires them for a subset of entity types and validates them itself.
-      return null;
-    case "business-address":
+      if (!f.contactFirstName.trim()) return "Enter first name.";
+      if (!f.contactLastName.trim()) return "Enter last name.";
+      if (!isEmail(f.contactEmail)) return "Enter a valid email.";
+      if (!/^\+\d{1,4}$/.test(f.contactPhoneCountry)) return "Select a phone country code.";
+      if (f.contactPhone.replace(/\D/g, "").length < 5) return "Enter a valid phone number.";
       if (!/^[A-Z]{2}$/.test(f.businessCountry)) return "Select a country.";
       if (!f.addressLine1.trim()) return "Enter address line 1.";
       if (!f.city.trim()) return "Enter city.";
       if (!f.state.trim()) return "Enter state / region.";
       if (!f.zip.trim()) return "Enter zip / postal code.";
       return null;
-    case "assign-numbers":
+    case "numbers":
       return null;
-    case "authorized-rep":
-      if (!f.contactFirstName.trim()) return "Enter first name.";
-      if (!f.contactLastName.trim()) return "Enter last name.";
-      if (!isEmail(f.contactEmail)) return "Enter a valid email.";
-      if (!/^\+\d{1,4}$/.test(f.contactPhoneCountry)) return "Select a phone country code.";
-      if (f.contactPhone.replace(/\D/g, "").length < 5) return "Enter a valid phone number.";
-      return null;
-    case "use-case":
+    case "use-case-details":
       if (!f.monthlyVolume) return "Select a monthly SMS volume.";
       if (f.useCaseCategories.length === 0) return "Select at least one use case category.";
       if (f.useCaseDescription.trim().length < 40) return "Describe your use case in at least 40 characters.";
       if (f.useCaseDescription.trim().length > 500) return "Use-case summary must be 500 characters or fewer.";
       if (f.sampleMessage.trim().length < 20) return "Enter a sample message (min 20 characters).";
       if (f.sampleMessage.trim().length > 1000) return "Sample message must be 1,000 characters or fewer.";
-      return null;
-    case "opt-in":
       if (!f.optInType) return "Select an opt-in type.";
       if (!isHttps(f.proofOfOptInUrl)) return "Add a public https:// URL (or upload a screenshot) as opt-in policy proof.";
       if (!isHttps(f.privacyPolicyUrl)) return "Enter a public https:// Privacy Policy URL.";
       if (!isHttps(f.termsUrl)) return "Enter a public https:// Terms and Conditions URL.";
       if (!f.proofShowsRequiredConsent) return "Confirm your opt-in proof includes the required disclosures.";
-      return null;
-    case "additional":
       if (!isEmail(f.notificationEmail)) return "Enter a valid notification email.";
       if (!f.additionalInformation.trim()) return "Enter additional use-case details.";
       if (f.additionalInformation.trim().length > 500) return "Additional use-case details must be 500 characters or fewer.";
       if (!f.optInKeywords.trim()) return "Enter opt-in keywords, e.g. START, YES, SUBSCRIBE.";
-      return null;
-    case "review":
       if (!f.agreeToTos) return "You must accept the carrier Terms of Service.";
       return null;
   }
@@ -331,32 +300,30 @@ export function TollfreeWizard({
   verificationStatus, feeAmount = 5, creditBalance = 0, feePaid = false,
 }: TollfreeWizardProps) {
   const [form, setForm] = useState<WizardForm>(() => ({ ...defaultWizardForm(), ...(initial ?? {}) }));
-  const [subIdx, setSubIdx] = useState(0);
-  const [completed, setCompleted] = useState<Set<SubStepKey>>(new Set());
-  const sub = SUB_STEPS[subIdx];
+  const [stepIdx, setStepIdx] = useState(0);
+  const [completed, setCompleted] = useState<Set<StepKey>>(new Set());
+  const step = STEPS[stepIdx];
 
   const update = <K extends keyof WizardForm>(k: K, v: WizardForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
-  const currentMainStep = MAIN_STEPS.findIndex((step) => step.keys.includes(sub.key));
-
   function goNext() {
-    const err = stepValid(form, sub.key);
+    const err = stepValid(form, step.key);
     if (err) { toast.error(err); return; }
-    setCompleted((c) => new Set(c).add(sub.key));
-    if (subIdx < SUB_STEPS.length - 1) setSubIdx(subIdx + 1);
+    setCompleted((c) => new Set(c).add(step.key));
+    if (stepIdx < STEPS.length - 1) setStepIdx(stepIdx + 1);
   }
 
   function goBack() {
-    if (subIdx > 0) setSubIdx(subIdx - 1);
+    if (stepIdx > 0) setStepIdx(stepIdx - 1);
   }
 
   async function handleSubmit() {
-    for (const s of SUB_STEPS) {
+    for (const s of STEPS) {
       const err = stepValid(form, s.key);
       if (err) {
-        const idx = SUB_STEPS.findIndex((x) => x.key === s.key);
-        setSubIdx(idx);
+        const idx = STEPS.findIndex((x) => x.key === s.key);
+        setStepIdx(idx);
         toast.error(err);
         return;
       }
@@ -368,101 +335,80 @@ export function TollfreeWizard({
     <div className="rounded-lg border bg-card overflow-hidden">
       {onClose && (
         <div className="border-b px-6 py-3">
-          <button type="button" onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-auto px-0 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground">
             ← Back to Toll Free Verification
-          </button>
+          </Button>
         </div>
       )}
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_240px]">
-        <div className="space-y-5 p-5 sm:p-6 lg:p-8">
-          {helperBanner}
-          <fieldset disabled={disabled} className={disabled ? "opacity-70 pointer-events-none" : ""}>
-            <div className="space-y-5">
-              {sub.key === "business-info" && <BusinessInfoStep form={form} update={update} />}
-              {sub.key === "business-address" && <BusinessAddressStep form={form} update={update} />}
-              {sub.key === "authorized-rep" && <AuthorizedRepStep form={form} update={update} />}
-              {sub.key === "assign-numbers" && (
-                <AssignNumbersStep
-                  reservedNumber={reservedNumber}
-                  verificationStatus={verificationStatus}
-                  feeAmount={feeAmount}
-                  creditBalance={creditBalance}
-                  feePaid={feePaid}
-                />
-              )}
-              {sub.key === "use-case" && <UseCaseStep form={form} update={update} />}
-              {sub.key === "opt-in" && <OptInStep form={form} update={update} />}
-              {sub.key === "additional" && <AdditionalStep form={form} update={update} />}
-              {sub.key === "review" && <ReviewStep form={form} update={update} />}
-            </div>
-          </fieldset>
-
-          {!disabled && (
-            <div className="flex items-center justify-between gap-2">
-              <Button type="button" variant="outline" onClick={goBack} disabled={subIdx === 0}>
-                <ChevronLeft className="size-4 mr-1" /> Back
-              </Button>
-              {subIdx < SUB_STEPS.length - 1 ? (
-                <Button type="button" onClick={goNext}>
-                  Next <ChevronRight className="size-4 ml-1" />
-                </Button>
-              ) : (
-                <Button type="button" onClick={handleSubmit} disabled={submitting} size="lg">
-                  {submitting && <Loader2 className="size-4 mr-2 animate-spin" />}
-                  {submitLabel}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <aside className="border-t bg-muted/20 p-5 lg:border-l lg:border-t-0 lg:p-6">
-          <ol className="space-y-0">
-            {MAIN_STEPS.map((step, i) => {
-              const allDone = step.keys.every((key) => completed.has(key));
-              const state: "done" | "current" | "pending" = allDone && i !== currentMainStep ? "done" : i === currentMainStep ? "current" : "pending";
-              return <RailRow key={step.label} index={i + 1} label={step.label} state={state} />;
-            })}
-          </ol>
-          <div className="mt-5 border-l pl-4 space-y-2">
-            {SUB_STEPS.map((s, i) => {
-              const state = completed.has(s.key) && i !== subIdx ? "done" : i === subIdx ? "current" : "pending";
-              return (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => { if (state === "done" || i <= subIdx) setSubIdx(i); }}
-                  className={`block w-full text-left text-xs ${state === "current" ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
+      <nav className="flex overflow-x-auto border-b px-4 sm:px-6" aria-label="Registration steps">
+        {STEPS.map((item, index) => {
+          const isCurrent = index === stepIdx;
+          const isDone = completed.has(item.key);
+          return (
+            <Button
+              key={item.key}
+              type="button"
+              variant="ghost"
+              onClick={() => setStepIdx(index)}
+              className={`h-12 shrink-0 rounded-none border-b-2 px-3 text-sm hover:bg-transparent ${isCurrent ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
+              aria-current={isCurrent ? "step" : undefined}
+            >
+              {isDone && !isCurrent && <CheckIcon className="mr-1.5 size-3.5 text-success" />}
+              {item.label}
+            </Button>
+          );
+        })}
+      </nav>
+      <div className="space-y-6 p-5 sm:p-6 lg:p-8">
+        {helperBanner}
+        <fieldset disabled={disabled} className={disabled ? "pointer-events-none opacity-70" : ""}>
+          <div className="space-y-8">
+            {step.key === "general" && (
+              <>
+                <BusinessInfoStep form={form} update={update} />
+                <div className="border-t pt-8"><AuthorizedRepStep form={form} update={update} /></div>
+                <div className="border-t pt-8"><BusinessAddressStep form={form} update={update} /></div>
+              </>
+            )}
+            {step.key === "numbers" && (
+              <AssignNumbersStep
+                reservedNumber={reservedNumber}
+                verificationStatus={verificationStatus}
+                feeAmount={feeAmount}
+                creditBalance={creditBalance}
+                feePaid={feePaid}
+              />
+            )}
+            {step.key === "use-case-details" && (
+              <>
+                <UseCaseStep form={form} update={update} />
+                <div className="border-t pt-8"><OptInStep form={form} update={update} /></div>
+                <div className="border-t pt-8"><AdditionalStep form={form} update={update} /></div>
+                <div className="border-t pt-8"><ReviewStep form={form} update={update} /></div>
+              </>
+            )}
           </div>
-        </aside>
+        </fieldset>
+
+        {!disabled && (
+          <div className="flex items-center justify-between gap-2 border-t pt-5">
+            <Button type="button" variant="outline" onClick={goBack} disabled={stepIdx === 0}>
+              <ChevronLeft className="mr-1 size-4" /> Back
+            </Button>
+            {stepIdx < STEPS.length - 1 ? (
+              <Button type="button" onClick={goNext}>
+                Next <ChevronRight className="ml-1 size-4" />
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleSubmit} disabled={submitting} size="lg">
+                {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
+                {submitLabel}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
-  );
-}
-
-// ---------- Rail ----------
-
-function RailRow({ index, label, state }: { index: number; label: string; state: "done" | "current" | "pending" }) {
-  return (
-    <li className={`flex items-center gap-3 border-l-4 px-3 py-3 text-sm font-medium ${state === "current" ? "border-primary" : "border-border"}`}>
-      <span
-        className={`inline-flex size-5 items-center justify-center rounded-full border text-[11px] ${
-          state === "done"
-            ? "bg-success border-success text-success-foreground"
-            : state === "current"
-              ? "border-primary text-primary"
-              : "border-border text-muted-foreground"
-        }`}
-      >
-        {state === "done" ? <CheckIcon className="size-3" /> : index}
-      </span>
-      <span className={state === "pending" ? "text-muted-foreground" : ""}>{label}</span>
-    </li>
   );
 }
 
@@ -508,8 +454,8 @@ function BusinessInfoStep({ form, update }: StepProps) {
   return (
     <>
       <StepHeader
-        title="Business Details"
-        subtitle="Enter the legal details of the business that will send SMS. These are shared with US carriers during verification."
+        title="General"
+        subtitle="Enter the business and contact details for this verification request."
       />
       <div className="flex items-start gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-muted-foreground">
         <Info className="mt-0.5 size-4 text-primary" />
@@ -620,22 +566,15 @@ function AssignNumbersStep({
   return (
     <>
       <StepHeader
-        title="Assign Numbers"
-        subtitle="A US toll-free number is attached to this request automatically when you submit."
+        title="Assigned Numbers"
+        subtitle="The toll-free number attached to this verification request."
       />
-      <div className="rounded-lg border">
-        <div className="flex flex-wrap gap-3 border-b p-4">
-          <Button type="button" variant="outline" size="sm" className="border-primary text-primary hover:text-primary">
-            My Xellvio Numbers
-          </Button>
-          <Button type="button" variant="ghost" size="sm">Messaging Profiles</Button>
-          <Button type="button" variant="ghost" size="sm">Hosted Numbers</Button>
-        </div>
-        <div className="overflow-x-auto p-4">
+      <div className="overflow-hidden rounded-md border">
+        <div className="overflow-x-auto px-4">
           <table className="w-full min-w-[560px] text-sm">
             <thead className="text-left text-muted-foreground">
               <tr className="border-b">
-                <th className="py-2 font-medium">Number</th>
+                <th className="py-3 font-medium">Number</th>
                 <th className="py-2 font-medium">Status</th>
                 <th className="py-2 font-medium">Messaging Profile</th>
                 <th className="py-2 font-medium">Type</th>
@@ -651,7 +590,7 @@ function AssignNumbersStep({
                 </tr>
               ) : (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-muted-foreground">No toll free numbers assigned yet</td>
+                  <td colSpan={4} className="py-8 text-center text-muted-foreground">A toll-free number will be assigned when you submit.</td>
                 </tr>
               )}
             </tbody>
@@ -719,8 +658,8 @@ function UseCaseStep({ form, update }: StepProps) {
   return (
     <>
       <StepHeader
-        title="How you'll use this number"
-        subtitle="Carriers use this to decide whether your traffic matches the toll-free program."
+        title="Use Case Details"
+        subtitle="Describe the messages you will send and how recipients provide consent."
       />
       <Two>
         <Field label="Expected messaging volume per month" required>
