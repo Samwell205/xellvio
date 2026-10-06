@@ -66,12 +66,6 @@ export function LifecyclePanel() {
                   See the report
                 </button>
               </Link>
-              <button
-                className="px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-arctic-ink-fg/10"
-                onClick={() => acknowledge.mutate({ celebrated: true })}
-              >
-                Got it
-              </button>
             </div>
           </div>
         </div>
@@ -110,27 +104,15 @@ export function LifecyclePanel() {
                 <span className="text-xs font-bold text-arctic-electric font-display">
                   {s.completed}/{s.total} COMPLETED
                 </span>
-                <div className="flex items-center gap-3">
-                  {s.next && (
-                    <Link
-                      to={s.next.href as never}
-                      onClick={() => s.show_welcome && acknowledge.mutate({ welcome_seen: true })}
-                      className="text-sm font-bold underline underline-offset-4 decoration-arctic-electric"
-                    >
-                      {s.next.label}
-                    </Link>
-                  )}
-                  <button
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() =>
-                      acknowledge.mutate(
-                        s.show_welcome ? { welcome_seen: true } : { snooze_hours: 24 },
-                      )
-                    }
+                {s.next && (
+                  <Link
+                    to={s.next.href as never}
+                    onClick={() => s.show_welcome && acknowledge.mutate({ welcome_seen: true })}
+                    className="text-sm font-bold underline underline-offset-4 decoration-arctic-electric"
                   >
-                    Dismiss
-                  </button>
-                </div>
+                    {s.next.label}
+                  </Link>
+                )}
               </div>
             </div>
             {!done && (
