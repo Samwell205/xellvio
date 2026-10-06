@@ -169,13 +169,6 @@ export function LifecyclePanel() {
               >
                 <Icon className={`size-5 ${dark ? "text-arctic-ice" : "text-arctic-electric"}`} />
               </div>
-              <button
-                aria-label="Dismiss"
-                className="opacity-50 hover:opacity-100 transition-opacity"
-                onClick={() => dismissMessage.mutate(m.id)}
-              >
-                <X className="size-4" />
-              </button>
             </div>
             <h3 className="relative font-display text-lg font-bold">{m.title}</h3>
             {m.body && (
