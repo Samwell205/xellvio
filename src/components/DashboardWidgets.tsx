@@ -6,16 +6,26 @@ import {
   Check, MessageSquare, UserPlus, AlertTriangle, ArrowRight,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useAccountId } from "@/hooks/useAccountId";
+
+async function fetchStats(accountId: string) {
+  const { data, error } = await (supabase as any).rpc("dashboard_stats", { p_account: accountId });
+  if (error) throw error;
+  return (data ?? {}) as Record<string, number>;
+}
 
 /* ─────────────── Activity Log Feed ─────────────── */
 export function ActivityLogFeed() {
+  const accountId = useAccountId();
   const q = useQuery({
-    queryKey: ["dash-activity-log"],
-    refetchInterval: 15_000,
+    queryKey: ["dash-activity-log", accountId],
+    enabled: !!accountId,
+    refetchInterval: 30_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
         .select("id,type,created_at")
+        .eq("account_id", accountId!)
         .order("created_at", { ascending: false })
         .limit(8);
       return data ?? [];
@@ -72,20 +82,19 @@ export function ActivityLogFeed() {
 
 /* ─────────────── Attribution Windows ─────────────── */
 export function AttributionCard() {
+  const accountId = useAccountId();
   const q = useQuery({
-    queryKey: ["dash-attribution"],
-    refetchInterval: 30_000,
+    queryKey: ["dash-attribution", accountId],
+    enabled: !!accountId,
+    refetchInterval: 60_000,
     queryFn: async () => {
-      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const [{ count: sent }, { count: delivered }, { count: failed }] = await Promise.all([
-        supabase.from("messages").select("*", { count: "exact", head: true }).gte("created_at", since),
-        supabase.from("messages").select("*", { count: "exact", head: true }).eq("status", "delivered").gte("created_at", since),
-        supabase.from("messages").select("*", { count: "exact", head: true }).eq("status", "failed").gte("created_at", since),
-      ]);
-      const total = sent ?? 0;
-      const deliveryRate = total ? Math.round(((delivered ?? 0) / total) * 100) : 0;
-      const failureRate = total ? Math.round(((failed ?? 0) / total) * 100) : 0;
-      return { total, delivered: delivered ?? 0, deliveryRate, failureRate };
+      const d = await fetchStats(accountId!);
+      const total = Number(d.sent7 ?? 0);
+      const delivered = Number(d.delivered7 ?? 0);
+      const failed = Number(d.failed7 ?? 0);
+      const deliveryRate = total ? Math.round((delivered / total) * 100) : 0;
+      const failureRate = total ? Math.round((failed / total) * 100) : 0;
+      return { total, delivered, deliveryRate, failureRate };
     },
   });
 
@@ -133,31 +142,19 @@ export function AttributionCard() {
 type Insight = { icon: typeof Sparkles; tone: "primary" | "warning" | "success"; title: string; desc: string; cta?: { label: string; to: string } };
 
 export function AIInsightsCard() {
+  const accountId = useAccountId();
   const q = useQuery({
-    queryKey: ["dash-ai-insights"],
+    queryKey: ["dash-ai-insights", accountId],
+    enabled: !!accountId,
     refetchInterval: 60_000,
     queryFn: async () => {
-      const since24 = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-      const [
-        { count: subscribed },
-        { count: campaigns },
-        { count: failed },
-        { count: optOuts },
-        { count: recentMessages },
-      ] = await Promise.all([
-        supabase.from("consents").select("*", { count: "exact", head: true }).eq("status", "subscribed"),
-        supabase.from("campaigns").select("*", { count: "exact", head: true }).eq("status", "sent").gte("created_at", since7),
-        supabase.from("messages").select("*", { count: "exact", head: true }).eq("status", "failed").gte("created_at", since24),
-        supabase.from("consents").select("*", { count: "exact", head: true }).eq("status", "unsubscribed").gte("updated_at", since7),
-        supabase.from("messages").select("*", { count: "exact", head: true }).gte("created_at", since7),
-      ]);
+      const d = await fetchStats(accountId!);
       return {
-        subscribed: subscribed ?? 0,
-        campaigns: campaigns ?? 0,
-        failed: failed ?? 0,
-        optOuts: optOuts ?? 0,
-        recentMessages: recentMessages ?? 0,
+        subscribed: Number(d.subscribed ?? 0),
+        campaigns: Number(d.campaignsSent7 ?? 0),
+        failed: Number(d.failed24 ?? 0),
+        optOuts: Number(d.optOuts7 ?? 0),
+        recentMessages: Number(d.sent7 ?? 0),
       };
     },
   });
