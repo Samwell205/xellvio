@@ -109,6 +109,19 @@ async function loadTenantContext(): Promise<string | null> {
   }
 }
 
+/** Returns the SMS draft when the user asks for a review, else null. */
+export function extractDraft(text: string): string | null {
+  const t = text.trim();
+  const quoted = t.match(/["“'`]{1,3}([\s\S]{15,1600}?)["”'`]{1,3}/)?.[1];
+  const asks = /\b(review|check|is (this|it) (ok|okay|allowed|fine)|can i send|allowed|approve|permitted|will (this|it) (pass|get blocked))\b/i.test(t);
+  if (quoted && asks) return quoted.trim();
+  if (asks) {
+    const after = t.split(/[:\n]/).slice(1).join("\n").trim();
+    if (after.length >= 15) return after.slice(0, 1600);
+  }
+  return null;
+}
+
 export const chatWithSupportBot = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }) => {
@@ -119,9 +132,32 @@ export const chatWithSupportBot = createServerFn({ method: "POST" })
     if (!model) throw new Error("AI is not configured");
 
     const ctx = await loadTenantContext();
-    const system = ctx
+    let system = ctx
       ? `${SYSTEM_PROMPT}\n\nTENANT ACCOUNT (signed in):\n${ctx}`
       : `${SYSTEM_PROMPT}\n\nThe visitor is not signed in.`;
+
+    // Message review: screen a pasted draft with the same checks campaigns use.
+    const last = [...data.messages].reverse().find((m) => m.role === "user")?.content ?? "";
+    const draft = extractDraft(last);
+    if (draft) {
+      try {
+        const { keywordScan } = await import("./content-scanner");
+        const { aiScan } = await import("./ai-content-scan.server");
+        let r = keywordScan(draft);
+        if (r.allowed && r.confidence !== "keyword") r = await aiScan(draft);
+        const verdict = !r.allowed
+          ? `BLOCKED — ${r.category ? r.category.replace(/_/g, " ") : "prohibited content"}: ${r.reason ?? ""}`
+          : r.confidence === "keyword"
+            ? `ALLOWED WITH WARNING — ${r.reason ?? "wording may be flagged"}`
+            : r.confidence === "unavailable"
+              ? "CHECK UNAVAILABLE — review manually against the guidance"
+              : "ALLOWED by content screening";
+        const hasStop = /\bstop\b/i.test(draft);
+        system += `\n\nMESSAGE REVIEW REQUEST. The user wants this draft checked:\n"""${draft}"""\nScreening result: ${verdict}\nContains opt-out (STOP) wording: ${hasStop ? "yes" : "no"}. Length: ${draft.length} chars.\nReply as a review: say plainly if it can be sent, why or why not, list any fixes (name the business, add "Reply STOP to unsubscribe", avoid link shorteners/urgent/prize/"not spam" wording), and offer an improved rewrite in a short block. If BLOCKED, say this type of content isn't allowed on the platform and don't offer a rewrite that keeps the same product. Never mention internal tools or vendors.`;
+      } catch (e) {
+        console.error("[chat] review failed", e);
+      }
+    }
 
     try {
       const { text } = await generateText({
