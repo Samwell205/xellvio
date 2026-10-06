@@ -496,7 +496,15 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
         rejectionReason = result.rejectionReason;
       } catch (e: any) {
         console.error("[verifier submit tfn] carrier submit failed", e?.message, e?.telnyxResponse);
-        throw new Error(e?.message ?? "Carrier rejected the submission");
+        const msg = e?.message ?? "Carrier rejected the submission";
+        // Keep the verifier's answers and show why it failed, so the card
+        // updates and the wizard reopens pre-filled instead of losing everything.
+        await supabaseAdmin
+          .from("verifier_tfns")
+          .update({ notes: data.notes ?? null, rejection_reason: `Submission failed: ${msg}` } as any)
+          .eq("id", data.id)
+          .eq("verifier_id", verifier.id);
+        throw new Error(msg);
       }
     }
 
