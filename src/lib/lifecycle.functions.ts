@@ -7,6 +7,7 @@ import {
   STAGE_LABELS,
   type LifecycleStage,
 } from "@/lib/lifecycle/taxonomy";
+import { dashboardLifecycleVisibility } from "@/lib/lifecycle/visibility";
 
 /**
  * Tenant-facing lifecycle surface: the onboarding checklist, the in-app
@@ -73,7 +74,6 @@ export const getLifecycle = createServerFn({ method: "GET" })
       .from("lifecycle_messages")
       .select("id,title,body,cta_label,cta_path,sent_at,seen_at")
       .eq("account_id", accountId)
-      .is("dismissed_at", null)
       .order("sent_at", { ascending: false })
       .limit(5);
 
@@ -117,10 +117,11 @@ export const getLifecycle = createServerFn({ method: "GET" })
       });
     }
 
-    const celebrate = Boolean(row.first_campaign_sent_at && !row.celebrated_first_send_at);
-    const hidden =
-      Boolean(row.checklist_dismissed_until) &&
-      new Date(row.checklist_dismissed_until as string).getTime() > Date.now();
+    const visibility = dashboardLifecycleVisibility({
+      completed,
+      total: checklist.length,
+      firstCampaignSentAt: row.first_campaign_sent_at,
+    });
 
     return {
       stage: row.stage,
@@ -130,9 +131,9 @@ export const getLifecycle = createServerFn({ method: "GET" })
       total: checklist.length,
       checklist,
       next,
-      show_welcome: !row.welcome_seen_at,
-      celebrate_first_send: celebrate,
-      checklist_hidden: hidden,
+      show_welcome: visibility.showWelcome,
+      celebrate_first_send: visibility.celebrateFirstSend,
+      checklist_hidden: visibility.checklistHidden,
       messages: (messages ?? []) as LifecycleMessage[],
       recommendations: recommendations.slice(0, 3),
     };
@@ -144,24 +145,11 @@ const AckSchema = z.object({
   snooze_hours: z.number().int().min(0).max(720).optional(),
 });
 
-/** Records that the welcome or celebration was seen, or snoozes the checklist. */
+/** Dashboard guidance is no longer dismissible; this endpoint is retained for old clients. */
 export const acknowledgeLifecycle = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => AckSchema.parse(i))
-  .handler(async ({ data, context }) => {
-    const accountId = await acct(context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const db = supabaseAdmin as any;
-    const patch: Record<string, unknown> = {};
-    const now = new Date().toISOString();
-    if (data.welcome_seen) patch.welcome_seen_at = now;
-    if (data.celebrated) patch.celebrated_first_send_at = now;
-    if (typeof data.snooze_hours === "number")
-      patch.checklist_dismissed_until = new Date(
-        Date.now() + data.snooze_hours * 3_600_000,
-      ).toISOString();
-    if (Object.keys(patch).length === 0) return { ok: true };
-    await db.from("tenant_lifecycle").update(patch).eq("account_id", accountId);
+  .handler(async () => {
     return { ok: true };
   });
 
