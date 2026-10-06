@@ -109,7 +109,7 @@ function ListsPage() {
   const segmentsQ = useQuery({
     queryKey: ["lists-page-segments", acctId],
     queryFn: async () =>
-      (await sb.from("segments").select("id,name,description,created_at")).data ?? [],
+      (await sb.from("segments").select("id,name,created_at")).data ?? [],
   });
 
   const rows: Row[] = useMemo(() => {

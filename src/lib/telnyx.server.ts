@@ -529,8 +529,16 @@ export async function sendMessage(opts: {
    */
   idempotencyKey?: string;
 }): Promise<SendMessageResult> {
+  // The carrier rejects anything that is not a single E.164 number (error
+  // 10002 "Invalid destination number"). Fail fast locally so every send
+  // path — campaigns, inbox replies, flows — flags the bad contact instead
+  // of burning a carrier call that can never succeed.
+  const to = String(opts.to ?? "").trim();
+  if (!/^\+[1-9]\d{7,14}$/.test(to)) {
+    throw new Error(`Invalid destination number: "${opts.to}" is not a valid international (E.164) number`);
+  }
   const body: any = {
-    to: opts.to,
+    to,
     text: opts.text,
     webhook_url: opts.webhookUrl ?? statusWebhookUrl(),
     use_profile_webhooks: false,
