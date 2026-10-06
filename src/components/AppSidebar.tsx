@@ -137,9 +137,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b h-16 justify-center px-4">
-        <div className="flex items-center">
-          {!collapsed ? <Logo className="text-xl" /> : <div className="size-8 rounded-lg bg-primary" />}
+      <SidebarHeader className="border-b h-16 justify-center px-4 group-data-[collapsible=icon]:px-0">
+        <div className={`flex items-center ${collapsed ? "justify-center" : ""}`}>
+          <Logo className="text-xl" iconOnly={collapsed} />
         </div>
       </SidebarHeader>
       <SidebarContent className="px-1 py-3">
