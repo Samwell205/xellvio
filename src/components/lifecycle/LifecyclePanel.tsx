@@ -23,7 +23,6 @@ export function LifecyclePanel() {
   const qc = useQueryClient();
   const load = useServerFn(getLifecycle);
   const ack = useServerFn(acknowledgeLifecycle);
-  const ackMessage = useServerFn(acknowledgeMessage);
 
   const state = useQuery({ queryKey: ["lifecycle"], queryFn: () => load(), staleTime: 30_000 });
 
