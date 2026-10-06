@@ -149,7 +149,7 @@ export const chatWithSupportBot = createServerFn({ method: "POST" })
           ? `BLOCKED — ${r.category ? r.category.replace(/_/g, " ") : "prohibited content"}: ${r.reason ?? ""}`
           : r.confidence === "keyword"
             ? `ALLOWED WITH WARNING — ${r.reason ?? "wording may be flagged"}`
-            : r.confidence === "unavailable"
+            : (r as { reason?: string }).reason?.includes("unavailable")
               ? "CHECK UNAVAILABLE — review manually against the guidance"
               : "ALLOWED by content screening";
         const hasStop = /\bstop\b/i.test(draft);
