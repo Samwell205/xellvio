@@ -7,17 +7,12 @@ import {
   Circle,
   PartyPopper,
   Sparkles,
-  X,
   ArrowRight,
   Zap,
   BarChart3,
   Wallet,
 } from "lucide-react";
-import {
-  getLifecycle,
-  acknowledgeLifecycle,
-  acknowledgeMessage,
-} from "@/lib/lifecycle.functions";
+import { getLifecycle, acknowledgeLifecycle } from "@/lib/lifecycle.functions";
 
 /**
  * The workspace-facing onboarding surface, laid out as an animated bento grid:
@@ -28,17 +23,12 @@ export function LifecyclePanel() {
   const qc = useQueryClient();
   const load = useServerFn(getLifecycle);
   const ack = useServerFn(acknowledgeLifecycle);
-  const ackMessage = useServerFn(acknowledgeMessage);
 
   const state = useQuery({ queryKey: ["lifecycle"], queryFn: () => load(), staleTime: 30_000 });
 
   const acknowledge = useMutation({
     mutationFn: (data: { welcome_seen?: boolean; celebrated?: boolean; snooze_hours?: number }) =>
       ack({ data }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["lifecycle"] }),
-  });
-  const dismissMessage = useMutation({
-    mutationFn: (id: string) => ackMessage({ data: { id, action: "dismissed" } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lifecycle"] }),
   });
 
@@ -75,12 +65,6 @@ export function LifecyclePanel() {
                   See the report
                 </button>
               </Link>
-              <button
-                className="px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-arctic-ink-fg/10"
-                onClick={() => acknowledge.mutate({ celebrated: true })}
-              >
-                Got it
-              </button>
             </div>
           </div>
         </div>
@@ -119,27 +103,15 @@ export function LifecyclePanel() {
                 <span className="text-xs font-bold text-arctic-electric font-display">
                   {s.completed}/{s.total} COMPLETED
                 </span>
-                <div className="flex items-center gap-3">
-                  {s.next && (
-                    <Link
-                      to={s.next.href as never}
-                      onClick={() => s.show_welcome && acknowledge.mutate({ welcome_seen: true })}
-                      className="text-sm font-bold underline underline-offset-4 decoration-arctic-electric"
-                    >
-                      {s.next.label}
-                    </Link>
-                  )}
-                  <button
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                    onClick={() =>
-                      acknowledge.mutate(
-                        s.show_welcome ? { welcome_seen: true } : { snooze_hours: 24 },
-                      )
-                    }
+                {s.next && (
+                  <Link
+                    to={s.next.href as never}
+                    onClick={() => s.show_welcome && acknowledge.mutate({ welcome_seen: true })}
+                    className="text-sm font-bold underline underline-offset-4 decoration-arctic-electric"
                   >
-                    Dismiss
-                  </button>
-                </div>
+                    {s.next.label}
+                  </Link>
+                )}
               </div>
             </div>
             {!done && (
@@ -196,13 +168,6 @@ export function LifecyclePanel() {
               >
                 <Icon className={`size-5 ${dark ? "text-arctic-ice" : "text-arctic-electric"}`} />
               </div>
-              <button
-                aria-label="Dismiss"
-                className="opacity-50 hover:opacity-100 transition-opacity"
-                onClick={() => dismissMessage.mutate(m.id)}
-              >
-                <X className="size-4" />
-              </button>
             </div>
             <h3 className="relative font-display text-lg font-bold">{m.title}</h3>
             {m.body && (
