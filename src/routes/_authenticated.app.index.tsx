@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAccountId } from "@/hooks/useAccountId";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -119,36 +120,22 @@ function OnboardingBanner() {
 }
 
 function Overview() {
+  const accountId = useAccountId();
   const stats = useQuery({
-    queryKey: ["dash-stats"],
-    refetchInterval: 10_000,
+    queryKey: ["dash-stats", accountId],
+    enabled: !!accountId,
+    refetchInterval: 30_000,
     queryFn: async () => {
-      const [
-        { count: subscribed },
-        { count: campaignsSent },
-        { count: delivered },
-        { count: totalMessages },
-      ] = await Promise.all([
-        supabase
-          .from("consents")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "subscribed"),
-        supabase.from("campaigns").select("*", { count: "exact", head: true }).eq("status", "sent"),
-        supabase
-          .from("messages")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "delivered"),
-        supabase.from("messages").select("*", { count: "exact", head: true }),
-      ]);
-      const rate =
-        totalMessages && totalMessages > 0
-          ? Math.round(((delivered ?? 0) / totalMessages) * 100)
-          : 0;
+      const { data, error } = await (supabase as any).rpc("dashboard_stats", { p_account: accountId });
+      if (error) throw error;
+      const d = (data ?? {}) as Record<string, number>;
+      const total = Number(d.totalMessages ?? 0);
+      const delivered = Number(d.delivered ?? 0);
       return {
-        subscribed: subscribed ?? 0,
-        campaignsSent: campaignsSent ?? 0,
-        deliveryRate: rate,
-        delivered: delivered ?? 0,
+        subscribed: Number(d.subscribed ?? 0),
+        campaignsSent: Number(d.campaignsSent ?? 0),
+        deliveryRate: total > 0 ? Math.round((delivered / total) * 100) : 0,
+        delivered,
       };
     },
   });
