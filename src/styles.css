@@ -198,3 +198,52 @@
   .xv-page-enter { animation: none; }
   [class*="animate-\\[xv-shimmer"]::before { animation: none; }
 }
+
+/* ===== Arctic bento dashboard ===== */
+:root {
+  --arctic-bg: oklch(0.98 0.005 250);          /* #f7f9fc */
+  --arctic-ink: oklch(0.18 0.03 260);          /* #0b1220 */
+  --arctic-ink-fg: oklch(0.98 0.005 250);
+  --arctic-electric: oklch(0.58 0.23 262);     /* #1f6bff */
+  --arctic-ice: oklch(0.87 0.11 210);          /* #6ee7ff */
+  --arctic-line: oklch(0.86 0.025 255);        /* #c7d2e3 */
+  --arctic-tile: oklch(1 0 0);
+}
+.dark {
+  --arctic-bg: oklch(0.16 0.025 260);
+  --arctic-tile: oklch(0.21 0.03 260);
+  --arctic-line: oklch(0.32 0.03 260);
+  --arctic-ink: oklch(0.11 0.03 260);
+}
+@theme inline {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-dash: "DM Sans", system-ui, sans-serif;
+  --color-arctic-bg: var(--arctic-bg);
+  --color-arctic-ink: var(--arctic-ink);
+  --color-arctic-ink-fg: var(--arctic-ink-fg);
+  --color-arctic-electric: var(--arctic-electric);
+  --color-arctic-ice: var(--arctic-ice);
+  --color-arctic-line: var(--arctic-line);
+  --color-arctic-tile: var(--arctic-tile);
+}
+@keyframes bento-rise { from { opacity: 0; transform: translateY(18px) scale(.98); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes bento-float { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-14px,12px) scale(1.15); } }
+@keyframes bento-bar { from { transform: scaleY(.15); } to { transform: scaleY(1); } }
+@keyframes bento-sheen { from { transform: translateX(-120%) skewX(-20deg); } to { transform: translateX(320%) skewX(-20deg); } }
+@keyframes bento-fill { from { width: 0; } }
+@utility bento-tile {
+  position: relative; overflow: hidden; border-radius: 2rem;
+  animation: bento-rise .7s cubic-bezier(.2,.8,.2,1) both;
+  animation-delay: calc(var(--i, 0) * 80ms);
+  transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s;
+  &:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -24px color-mix(in oklab, var(--arctic-electric) 45%, transparent); }
+}
+@utility bento-orb { position: absolute; border-radius: 9999px; filter: blur(40px); pointer-events: none; animation: bento-float 9s ease-in-out infinite; }
+@utility bento-sheen {
+  &::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 35%; background: linear-gradient(90deg, transparent, color-mix(in oklab, white 35%, transparent), transparent); animation: bento-sheen 3.8s ease-in-out infinite; pointer-events: none; }
+}
+@utility bento-bar { transform-origin: bottom; animation: bento-bar 1s cubic-bezier(.2,.8,.2,1) both; }
+@utility bento-fill { animation: bento-fill 1.4s cubic-bezier(.2,.8,.2,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .bento-tile, .bento-orb, .bento-bar, .bento-fill, .bento-sheen::after { animation: none !important; }
+}
