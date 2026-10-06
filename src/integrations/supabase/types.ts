@@ -6430,6 +6430,7 @@ export type Database = {
         }
         Returns: number
       }
+      dashboard_stats: { Args: { p_account: string }; Returns: Json }
       debit_account: {
         Args: {
           _account_id: string
