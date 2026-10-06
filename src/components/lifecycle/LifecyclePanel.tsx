@@ -2,10 +2,17 @@ import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Circle, PartyPopper, Sparkles, X, ArrowRight } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  PartyPopper,
+  Sparkles,
+  X,
+  ArrowRight,
+  Zap,
+  BarChart3,
+  Wallet,
+} from "lucide-react";
 import {
   getLifecycle,
   acknowledgeLifecycle,
@@ -13,9 +20,9 @@ import {
 } from "@/lib/lifecycle.functions";
 
 /**
- * The workspace-facing onboarding surface: welcome, activation checklist with
- * real progress, the first-send celebration, lifecycle messages and contextual
- * next steps. Every value comes from the workspace's own activity.
+ * The workspace-facing onboarding surface, laid out as an animated bento grid:
+ * welcome + checklist hero, the first-send celebration, lifecycle messages and
+ * contextual next steps. Every value comes from the workspace's own activity.
  */
 export function LifecyclePanel() {
   const qc = useQueryClient();
@@ -23,11 +30,7 @@ export function LifecyclePanel() {
   const ack = useServerFn(acknowledgeLifecycle);
   const ackMessage = useServerFn(acknowledgeMessage);
 
-  const state = useQuery({
-    queryKey: ["lifecycle"],
-    queryFn: () => load(),
-    staleTime: 30_000,
-  });
+  const state = useQuery({ queryKey: ["lifecycle"], queryFn: () => load(), staleTime: 30_000 });
 
   const acknowledge = useMutation({
     mutationFn: (data: { welcome_seen?: boolean; celebrated?: boolean; snooze_hours?: number }) =>
@@ -44,168 +47,218 @@ export function LifecyclePanel() {
   if (!s) return null;
 
   const done = s.completed >= s.total;
+  const showHero = (s.show_welcome || (!done && !s.checklist_hidden)) && !s.celebrate_first_send;
+  let i = 0;
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 font-dash">
       {s.celebrate_first_send && (
-        <Card className="p-5 border-primary/40 bg-primary/5">
-          <div className="flex items-start gap-3">
-            <PartyPopper className="size-5 text-primary shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <div className="font-semibold">Your first campaign is on its way 🎉</div>
-              <p className="text-sm text-muted-foreground mt-1">
-                That's the hardest step done. Open the report to watch delivery in real time.
+        <div
+          style={{ "--i": i++ } as React.CSSProperties}
+          className="bento-tile col-span-2 lg:col-span-4 bg-arctic-electric text-arctic-ink-fg p-6 bento-sheen"
+        >
+          <div className="bento-orb -top-10 -right-10 size-40 bg-arctic-ice/40" />
+          <div className="relative flex flex-wrap items-center gap-4">
+            <div className="size-12 rounded-2xl bg-arctic-ink-fg/15 grid place-items-center">
+              <PartyPopper className="size-6 text-arctic-ice" />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <p className="text-[10px] uppercase tracking-[0.2em] opacity-70 font-bold">Milestone</p>
+              <h2 className="font-display text-2xl font-bold">Your first campaign is on its way</h2>
+              <p className="text-sm opacity-80 mt-1">
+                That's the hardest step done. Watch delivery in real time.
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Link to="/app/campaigns">
-                  <Button size="sm">See the report</Button>
-                </Link>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => acknowledge.mutate({ celebrated: true })}
-                >
-                  Got it
-                </Button>
-              </div>
+            </div>
+            <div className="flex gap-2">
+              <Link to="/app/campaigns">
+                <button className="px-5 py-2.5 rounded-xl bg-arctic-ice text-arctic-ink font-bold text-sm active:scale-95 transition-transform">
+                  See the report
+                </button>
+              </Link>
+              <button
+                className="px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-arctic-ink-fg/10"
+                onClick={() => acknowledge.mutate({ celebrated: true })}
+              >
+                Got it
+              </button>
             </div>
           </div>
-        </Card>
+        </div>
       )}
 
-      {s.show_welcome && !s.celebrate_first_send && (
-        <Card className="p-5 border-primary/30 bg-gradient-to-br from-primary/10 to-transparent">
-          <div className="flex items-start gap-3">
-            <Sparkles className="size-5 text-primary shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <div className="font-semibold">Welcome to Xellvio</div>
-              <p className="text-sm text-muted-foreground mt-1">
-                There are {s.total} short steps between here and your first SMS campaign. We'll keep
-                track as you go.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {s.next && (
-                  <Link to={s.next.href as never}>
-                    <Button size="sm" onClick={() => acknowledge.mutate({ welcome_seen: true })}>
-                      {s.next.label}
-                    </Button>
-                  </Link>
-                )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => acknowledge.mutate({ welcome_seen: true })}
-                >
-                  Dismiss
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {!done && !s.checklist_hidden && (
-        <Card className="p-5">
-          <div className="flex items-start justify-between gap-3">
+      {showHero && (
+        <div
+          style={{ "--i": i++ } as React.CSSProperties}
+          className="bento-tile col-span-2 lg:col-span-4 bg-arctic-tile border border-arctic-line p-6 lg:p-8"
+        >
+          <div className="bento-orb -top-16 -right-16 size-56 bg-arctic-ice/30" />
+          <div className="bento-orb -bottom-20 left-1/3 size-48 bg-arctic-electric/10 [animation-delay:-4s]" />
+          <div className="relative grid lg:grid-cols-[1.1fr_1fr] gap-6">
             <div>
-              <div className="font-semibold flex items-center gap-2">
-                Get set up
-                <Badge variant="secondary">{s.stage_label}</Badge>
+              <div className="flex items-center gap-2 text-arctic-electric">
+                <Sparkles className="size-4" />
+                <span className="text-[10px] uppercase tracking-[0.2em] font-bold">
+                  {s.stage_label}
+                </span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {remaining} step{remaining === 1 ? "" : "s"} left to your first campaign.
+              <h2 className="font-display text-3xl font-bold tracking-tight mt-2">
+                Welcome to Xellvio
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed mt-2 max-w-md">
+                {done
+                  ? "You're all set up. Time to grow."
+                  : `${remaining} step${remaining === 1 ? "" : "s"} until your first SMS campaign is live. We'll keep track as you go.`}
               </p>
-            </div>
-            <button
-              type="button"
-              aria-label="Hide setup for now"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={() => acknowledge.mutate({ snooze_hours: 24 })}
-            >
-              <X className="size-4" />
-            </button>
-          </div>
-
-          <div className="mt-4 h-2 w-full rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-500"
-              style={{ width: `${s.progress}%` }}
-            />
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">{s.progress}% complete</div>
-
-          <ul className="mt-4 space-y-1.5">
-            {s.checklist.map((item) => (
-              <li key={item.key}>
-                <Link
-                  to={item.href as never}
-                  className={`flex items-center gap-2 rounded-md px-2 py-2 text-sm transition hover:bg-muted ${
-                    item.done ? "text-muted-foreground" : "font-medium"
-                  }`}
-                >
-                  {item.done ? (
-                    <CheckCircle2 className="size-4 text-primary shrink-0" />
-                  ) : (
-                    <Circle className="size-4 text-muted-foreground shrink-0" />
-                  )}
-                  <span className={item.done ? "line-through" : ""}>{item.label}</span>
-                  {!item.done && <ArrowRight className="size-3.5 ml-auto text-muted-foreground" />}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {s.messages.length > 0 && (
-        <div className="space-y-3">
-          {s.messages.map((m) => (
-            <Card key={m.id} className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex-1">
-                  <div className="font-semibold text-sm">{m.title}</div>
-                  {m.body && (
-                    <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">
-                      {m.body}
-                    </p>
-                  )}
-                  {m.cta_path && m.cta_label && (
-                    <Link to={m.cta_path as never} className="inline-block mt-3">
-                      <Button size="sm" variant="outline">
-                        {m.cta_label}
-                      </Button>
+              <div className="mt-6 h-2 w-full rounded-full bg-arctic-bg overflow-hidden">
+                <div
+                  className="bento-fill h-full rounded-full bg-gradient-to-r from-arctic-electric to-arctic-ice shadow-[0_0_12px_var(--arctic-electric)]"
+                  style={{ width: `${s.progress}%` }}
+                />
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <span className="text-xs font-bold text-arctic-electric font-display">
+                  {s.completed}/{s.total} COMPLETED
+                </span>
+                <div className="flex items-center gap-3">
+                  {s.next && (
+                    <Link
+                      to={s.next.href as never}
+                      onClick={() => s.show_welcome && acknowledge.mutate({ welcome_seen: true })}
+                      className="text-sm font-bold underline underline-offset-4 decoration-arctic-electric"
+                    >
+                      {s.next.label}
                     </Link>
                   )}
+                  <button
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() =>
+                      acknowledge.mutate(
+                        s.show_welcome ? { welcome_seen: true } : { snooze_hours: 24 },
+                      )
+                    }
+                  >
+                    Dismiss
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  aria-label="Dismiss"
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => dismissMessage.mutate(m.id)}
-                >
-                  <X className="size-4" />
-                </button>
               </div>
-            </Card>
-          ))}
+            </div>
+            {!done && (
+              <ul className="space-y-1.5">
+                {s.checklist.map((item, idx) => (
+                  <li
+                    key={item.key}
+                    className="bento-tile !rounded-xl hover:!translate-y-0 hover:!shadow-none"
+                    style={{ "--i": idx + 2 } as React.CSSProperties}
+                  >
+                    <Link
+                      to={item.href as never}
+                      className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition hover:bg-arctic-bg ${
+                        item.done ? "text-muted-foreground" : "font-medium"
+                      }`}
+                    >
+                      {item.done ? (
+                        <CheckCircle2 className="size-4 text-arctic-electric shrink-0" />
+                      ) : (
+                        <Circle className="size-4 text-arctic-line shrink-0" />
+                      )}
+                      <span className={item.done ? "line-through" : ""}>{item.label}</span>
+                      {!item.done && (
+                        <ArrowRight className="size-3.5 ml-auto text-muted-foreground transition-transform group-hover:translate-x-1" />
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
 
-      {s.recommendations.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {s.recommendations.map((r) => (
-            <Card key={r.key} className="p-4 flex flex-col">
-              <div className="font-semibold text-sm">{r.title}</div>
-              <p className="text-sm text-muted-foreground mt-1 flex-1">{r.body}</p>
-              <Link to={r.href as never} className="mt-3">
-                <Button size="sm" variant="outline" className="w-full">
-                  {r.cta}
-                </Button>
+      {s.messages.map((m) => {
+        const low = /balance|top up/i.test(`${m.title} ${m.cta_label ?? ""}`);
+        const report = /report|congrat/i.test(`${m.title} ${m.cta_label ?? ""}`);
+        const Icon = low ? Wallet : report ? BarChart3 : Zap;
+        const dark = low;
+        return (
+          <div
+            key={m.id}
+            style={{ "--i": i++ } as React.CSSProperties}
+            className={`bento-tile col-span-2 p-6 flex flex-col ${
+              dark
+                ? "bg-arctic-ink text-arctic-ink-fg"
+                : "bg-arctic-tile border border-arctic-line"
+            }`}
+          >
+            {dark && <div className="bento-orb -bottom-10 -right-6 size-32 bg-arctic-electric/40" />}
+            <div className="relative flex items-start justify-between mb-4">
+              <div
+                className={`p-3 rounded-xl ${dark ? "bg-arctic-ink-fg/10" : "bg-arctic-bg"}`}
+              >
+                <Icon className={`size-5 ${dark ? "text-arctic-ice" : "text-arctic-electric"}`} />
+              </div>
+              <button
+                aria-label="Dismiss"
+                className="opacity-50 hover:opacity-100 transition-opacity"
+                onClick={() => dismissMessage.mutate(m.id)}
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <h3 className="relative font-display text-lg font-bold">{m.title}</h3>
+            {m.body && (
+              <p
+                className={`relative text-sm mt-1 whitespace-pre-line flex-1 ${dark ? "opacity-70" : "text-muted-foreground"}`}
+              >
+                {m.body}
+              </p>
+            )}
+            {m.cta_path && m.cta_label && (
+              <Link to={m.cta_path as never} className="relative mt-4">
+                <button
+                  className={`w-full py-3 rounded-xl font-bold text-sm active:scale-95 transition-transform ${
+                    dark
+                      ? "bg-arctic-ice text-arctic-ink"
+                      : "bg-arctic-bg border border-arctic-line hover:border-arctic-electric"
+                  }`}
+                >
+                  {m.cta_label}
+                </button>
               </Link>
-            </Card>
-          ))}
-        </div>
-      )}
+            )}
+          </div>
+        );
+      })}
+
+      {s.recommendations.map((r, idx) => {
+        const electric = idx % 2 === 0;
+        return (
+          <Link
+            key={r.key}
+            to={r.href as never}
+            style={{ "--i": i++ } as React.CSSProperties}
+            className={`bento-tile group col-span-1 aspect-square p-5 flex flex-col justify-between ${
+              electric
+                ? "bg-arctic-electric text-arctic-ink-fg"
+                : "bg-arctic-bg border-2 border-dashed border-arctic-line"
+            }`}
+          >
+            <div
+              className={`size-10 rounded-full grid place-items-center ${electric ? "bg-arctic-ink-fg/20" : "bg-arctic-tile"}`}
+            >
+              <Zap className={`size-5 ${electric ? "text-arctic-ice" : "text-arctic-electric"}`} />
+            </div>
+            <div>
+              <p
+                className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${electric ? "opacity-60" : "text-muted-foreground"}`}
+              >
+                {r.cta}
+              </p>
+              <p className="font-display text-sm font-bold leading-tight">{r.title}</p>
+              <ArrowRight className="size-4 mt-2 transition-transform group-hover:translate-x-1.5" />
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }

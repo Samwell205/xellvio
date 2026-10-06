@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -154,40 +155,37 @@ function Overview() {
 
   const s = stats.data;
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground flex items-center gap-2">
-            High-level performance.
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/70">
-              <RefreshCw className={`size-3 ${stats.isFetching ? "animate-spin" : ""}`} /> live
+    <div className="space-y-6 font-dash">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="bento-tile !overflow-visible hover:!translate-y-0 hover:!shadow-none">
+          <h1 className="font-display text-4xl font-bold tracking-tight">Dashboard</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="relative flex size-2">
+              <span className="animate-ping absolute inline-flex size-full rounded-full bg-success opacity-75" />
+              <span className="relative inline-flex size-2 rounded-full bg-success" />
             </span>
-          </p>
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
+              High-level performance · live
+            </p>
+          </div>
         </div>
         <Link to="/app/campaigns">
-          <Button>
-            <Megaphone className="size-4 mr-1.5" />
-            Campaigns
-          </Button>
+          <button className="flex items-center gap-2 px-5 py-3 bg-arctic-electric text-arctic-ink-fg rounded-2xl font-bold text-sm shadow-lg shadow-arctic-electric/25 hover:-translate-y-0.5 active:scale-95 transition-transform">
+            <Megaphone className="size-4" /> Campaigns
+          </button>
         </Link>
       </div>
 
       <OnboardingBanner />
 
-      <LifecyclePanel />
-
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat icon={Users} label="Subscribed contacts" value={s?.subscribed ?? 0} />
-        <Stat icon={Megaphone} label="Campaigns sent" value={s?.campaignsSent ?? 0} />
-        <Stat
-          icon={CheckCircle2}
-          label="Delivery rate"
-          value={`${s?.deliveryRate ?? 0}%`}
-          tone="success"
-        />
-        <Stat icon={Send} label="Messages delivered" value={s?.delivered ?? 0} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Stat i={0} icon={Users} label="Subscribed contacts" value={s?.subscribed ?? 0} />
+        <Stat i={1} icon={Megaphone} label="Campaigns sent" value={s?.campaignsSent ?? 0} />
+        <Stat i={2} icon={CheckCircle2} label="Delivery rate" value={s?.deliveryRate ?? 0} suffix="%" featured />
+        <Stat i={3} icon={Send} label="Messages delivered" value={s?.delivered ?? 0} />
       </div>
+
+      <LifecyclePanel />
 
       <DeliveryAlerts />
 
@@ -460,25 +458,79 @@ function RecentCampaigns() {
   );
 }
 
+function useCountUp(target: number, ms = 1200) {
+  const [v, setV] = useState(0);
+  const from = useRef(0);
+  useEffect(() => {
+    const start = performance.now();
+    const a = from.current;
+    let raf = 0;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - start) / ms);
+      const e = 1 - Math.pow(1 - p, 3);
+      setV(Math.round(a + (target - a) * e));
+      if (p < 1) raf = requestAnimationFrame(tick);
+      else from.current = target;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return v;
+}
+
+const BARS = [35, 55, 42, 70, 50, 85, 64];
+
 function Stat({
   icon: Icon,
   label,
   value,
-  tone,
+  suffix = "",
+  featured,
+  i,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: number | string;
-  tone?: "success";
+  value: number;
+  suffix?: string;
+  featured?: boolean;
+  i: number;
 }) {
-  const ring = tone === "success" ? "text-success bg-success/10" : "text-primary bg-primary/10";
+  const n = useCountUp(value);
   return (
-    <Card className="p-5">
-      <div className={`size-10 rounded-lg grid place-items-center ${ring}`}>
-        <Icon className="size-5" />
+    <div
+      style={{ "--i": i } as React.CSSProperties}
+      className={`bento-tile p-5 ${
+        featured
+          ? "bg-arctic-ink text-arctic-ink-fg bento-sheen"
+          : "bg-arctic-tile border border-arctic-line"
+      }`}
+    >
+      {featured && <div className="bento-orb -top-8 -right-8 size-28 bg-arctic-electric/50" />}
+      <div className="relative flex items-start justify-between">
+        <div
+          className={`size-10 rounded-full grid place-items-center ${featured ? "bg-arctic-ink-fg/10 text-arctic-ice" : "bg-arctic-bg text-arctic-electric"}`}
+        >
+          <Icon className="size-5" />
+        </div>
+        <div className="flex items-end gap-1 h-8">
+          {BARS.map((h, k) => (
+            <span
+              key={k}
+              className={`bento-bar w-1 rounded-full ${k === BARS.length - 1 ? (featured ? "bg-arctic-ice" : "bg-arctic-electric") : featured ? "bg-arctic-ink-fg/20" : "bg-arctic-line"}`}
+              style={{ height: `${h}%`, animationDelay: `${i * 80 + k * 60 + 300}ms` }}
+            />
+          ))}
+        </div>
       </div>
-      <div className="mt-3 text-2xl font-extrabold">{value}</div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-    </Card>
+      <div className="relative mt-4 font-display text-3xl font-bold tabular-nums tracking-tight">
+        {n.toLocaleString()}
+        {suffix}
+      </div>
+      <div
+        className={`relative text-[11px] uppercase tracking-widest font-bold mt-1 ${featured ? "opacity-60" : "text-muted-foreground"}`}
+      >
+        {label}
+      </div>
+    </div>
   );
 }
