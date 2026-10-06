@@ -12,7 +12,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 const GREETING: Msg = {
   role: "assistant",
   content:
-    "👋 Hi! I'm the Xellvio assistant. Ask me about sign up, verifying your email, importing contacts, sending SMS, or anything else.",
+    "👋 Hi! I'm the Xellvio assistant. Ask me anything — or paste a message you plan to send, e.g. *Review this: \"your text\"*, and I'll check if it's allowed and suggest fixes.",
 };
 
 // Turn bare "/contact"-style paths into clickable links.
