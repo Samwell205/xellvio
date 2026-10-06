@@ -125,7 +125,7 @@ function ListsPage() {
     const segs: Row[] = (segmentsQ.data ?? []).map((s: any) => ({
       id: s.id,
       name: s.name,
-      description: s.description ?? null,
+      description: null,
       type: "Segment",
       members: null,
       created_at: s.created_at,
