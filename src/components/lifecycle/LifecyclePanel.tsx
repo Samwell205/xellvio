@@ -7,17 +7,12 @@ import {
   Circle,
   PartyPopper,
   Sparkles,
-  X,
   ArrowRight,
   Zap,
   BarChart3,
   Wallet,
 } from "lucide-react";
-import {
-  getLifecycle,
-  acknowledgeLifecycle,
-  acknowledgeMessage,
-} from "@/lib/lifecycle.functions";
+import { getLifecycle, acknowledgeLifecycle } from "@/lib/lifecycle.functions";
 
 /**
  * The workspace-facing onboarding surface, laid out as an animated bento grid:
@@ -35,10 +30,6 @@ export function LifecyclePanel() {
   const acknowledge = useMutation({
     mutationFn: (data: { welcome_seen?: boolean; celebrated?: boolean; snooze_hours?: number }) =>
       ack({ data }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["lifecycle"] }),
-  });
-  const dismissMessage = useMutation({
-    mutationFn: (id: string) => ackMessage({ data: { id, action: "dismissed" } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lifecycle"] }),
   });
 
