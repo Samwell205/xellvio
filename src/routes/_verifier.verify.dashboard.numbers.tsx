@@ -302,11 +302,16 @@ function NumbersPage() {
                   : "Submit for verification"
               }
               onSubmit={async (form: WizardForm) => {
-                await submitAssignedMut.mutateAsync({
-                  id: wizardTfnId,
-                  payload: form,
-                });
-                setWizardTfnId(null);
+                try {
+                  await submitAssignedMut.mutateAsync({
+                    id: wizardTfnId,
+                    payload: form,
+                  });
+                  setWizardTfnId(null);
+                } catch {
+                  // error toast already shown; keep the wizard open so they can fix it
+                  qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
+                }
               }}
             />
           )}
