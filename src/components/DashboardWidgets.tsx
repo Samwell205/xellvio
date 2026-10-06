@@ -6,16 +6,26 @@ import {
   Check, MessageSquare, UserPlus, AlertTriangle, ArrowRight,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useAccountId } from "@/hooks/useAccountId";
+
+async function fetchStats(accountId: string) {
+  const { data, error } = await (supabase as any).rpc("dashboard_stats", { p_account: accountId });
+  if (error) throw error;
+  return (data ?? {}) as Record<string, number>;
+}
 
 /* ─────────────── Activity Log Feed ─────────────── */
 export function ActivityLogFeed() {
+  const accountId = useAccountId();
   const q = useQuery({
-    queryKey: ["dash-activity-log"],
-    refetchInterval: 15_000,
+    queryKey: ["dash-activity-log", accountId],
+    enabled: !!accountId,
+    refetchInterval: 30_000,
     queryFn: async () => {
       const { data } = await supabase
         .from("events")
         .select("id,type,created_at")
+        .eq("account_id", accountId!)
         .order("created_at", { ascending: false })
         .limit(8);
       return data ?? [];
