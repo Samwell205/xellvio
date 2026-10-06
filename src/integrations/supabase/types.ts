@@ -6318,6 +6318,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_attempt_audit: { Args: never; Returns: Json }
       admin_campaign_stats: {
         Args: never
         Returns: {
