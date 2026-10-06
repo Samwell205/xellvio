@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   CheckCircle2,
@@ -12,7 +12,7 @@ import {
   BarChart3,
   Wallet,
 } from "lucide-react";
-import { getLifecycle, acknowledgeLifecycle } from "@/lib/lifecycle.functions";
+import { getLifecycle } from "@/lib/lifecycle.functions";
 
 /**
  * The workspace-facing onboarding surface, laid out as an animated bento grid:
@@ -20,24 +20,16 @@ import { getLifecycle, acknowledgeLifecycle } from "@/lib/lifecycle.functions";
  * contextual next steps. Every value comes from the workspace's own activity.
  */
 export function LifecyclePanel() {
-  const qc = useQueryClient();
   const load = useServerFn(getLifecycle);
-  const ack = useServerFn(acknowledgeLifecycle);
 
   const state = useQuery({ queryKey: ["lifecycle"], queryFn: () => load(), staleTime: 30_000 });
-
-  const acknowledge = useMutation({
-    mutationFn: (data: { welcome_seen?: boolean; celebrated?: boolean; snooze_hours?: number }) =>
-      ack({ data }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["lifecycle"] }),
-  });
 
   const s = state.data;
   const remaining = useMemo(() => (s ? s.total - s.completed : 0), [s]);
   if (!s) return null;
 
   const done = s.completed >= s.total;
-  const showHero = (s.show_welcome || (!done && !s.checklist_hidden)) && !s.celebrate_first_send;
+  const showHero = s.show_welcome || (!done && !s.checklist_hidden);
   let i = 0;
 
   return (
@@ -106,7 +98,6 @@ export function LifecyclePanel() {
                 {s.next && (
                   <Link
                     to={s.next.href as never}
-                    onClick={() => s.show_welcome && acknowledge.mutate({ welcome_seen: true })}
                     className="text-sm font-bold underline underline-offset-4 decoration-arctic-electric"
                   >
                     {s.next.label}
