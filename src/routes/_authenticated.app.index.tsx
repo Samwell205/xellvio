@@ -501,7 +501,7 @@ function Stat({
       style={{ "--i": i } as React.CSSProperties}
       className={`bento-tile p-5 ${
         featured
-          ? "bg-arctic-ink text-arctic-ink-fg bento-sheen"
+          ? "bg-arctic-feature text-arctic-ink-fg border border-arctic-electric/35 bento-sheen"
           : "bg-arctic-tile border border-arctic-line"
       }`}
     >

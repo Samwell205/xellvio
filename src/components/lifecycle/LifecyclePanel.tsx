@@ -185,7 +185,7 @@ export function LifecyclePanel() {
             style={{ "--i": i++ } as React.CSSProperties}
             className={`bento-tile col-span-2 p-6 flex flex-col ${
               dark
-                ? "bg-arctic-ink text-arctic-ink-fg"
+                ? "bg-arctic-feature text-arctic-ink-fg border border-arctic-line"
                 : "bg-arctic-tile border border-arctic-line"
             }`}
           >
@@ -217,7 +217,7 @@ export function LifecyclePanel() {
                 <button
                   className={`w-full py-3 rounded-xl font-bold text-sm active:scale-95 transition-transform ${
                     dark
-                      ? "bg-arctic-ice text-arctic-ink"
+                      ? "bg-arctic-electric text-arctic-ink-fg"
                       : "bg-arctic-bg border border-arctic-line hover:border-arctic-electric"
                   }`}
                 >
