@@ -1667,7 +1667,7 @@ function ListPicker({
               type="button"
               variant="outline"
               role="combobox"
-              className="w-full sm:max-w-md justify-between mt-1 font-normal"
+              className="w-full sm:max-w-md justify-between mt-1 font-normal h-11 bg-muted/50 rounded-xl"
             >
               <span className="flex items-center gap-2 truncate">
                 <ListFilter className="size-4 text-muted-foreground shrink-0" />
