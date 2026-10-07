@@ -673,6 +673,54 @@ export type Database = {
           },
         ]
       }
+      api_request_log: {
+        Row: {
+          account_id: string
+          api_key_id: string
+          created_at: string
+          id: string
+          method: string
+          path: string
+          request_id: string
+          response_status: number | null
+        }
+        Insert: {
+          account_id: string
+          api_key_id: string
+          created_at?: string
+          id?: string
+          method: string
+          path: string
+          request_id: string
+          response_status?: number | null
+        }
+        Update: {
+          account_id?: string
+          api_key_id?: string
+          created_at?: string
+          id?: string
+          method?: string
+          path?: string
+          request_id?: string
+          response_status?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_request_log_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_request_log_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_webhook_delivery_attempts: {
         Row: {
           account_id: string
@@ -6763,6 +6811,20 @@ export type Database = {
         }[]
       }
       apply_message_status_batch: { Args: { _rows: Json }; Returns: number }
+      authenticate_workspace_api_key: {
+        Args: {
+          _key_hash: string
+          _method: string
+          _path: string
+          _request_id: string
+        }
+        Returns: {
+          account_id: string
+          api_key_id: string
+          rate_limit_per_minute: number
+          scopes: string[]
+        }[]
+      }
       bulk_import_profiles: {
         Args: { _account_id: string; _list_id: string; _rows: Json }
         Returns: {
