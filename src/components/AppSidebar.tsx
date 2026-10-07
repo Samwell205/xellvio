@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, Building2, Workflow, Sparkles, FormInput, LayoutTemplate, ListTree, Blocks, Code2 } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, Building2, Workflow, Sparkles, FormInput, LayoutTemplate, ListTree, Blocks } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
@@ -61,7 +61,6 @@ const items: Entry[] = [
     icon: Blocks,
     children: [
       { title: "App Marketplace", url: "/app/apps", icon: Blocks, exact: true },
-      { title: "Developer portal", url: "/app/developer", icon: Code2, ownerOnly: true },
     ],
   },
 ];
