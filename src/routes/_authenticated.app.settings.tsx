@@ -23,6 +23,7 @@ import {
   User,
 } from "lucide-react";
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
+import { TenantApiPanel } from "@/components/settings/TenantApiPanel";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({
@@ -44,13 +45,14 @@ export const Route = createFileRoute("/_authenticated/app/settings")({
   component: SettingsPage,
 });
 
-type Tab = "personal" | "account" | "security" | "messaging";
+type Tab = "personal" | "account" | "security" | "messaging" | "api";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "personal", label: "Personal" },
   { id: "account", label: "Account" },
   { id: "security", label: "Security" },
   { id: "messaging", label: "Messaging" },
+  { id: "api", label: "API & webhooks" },
 ];
 
 function TollfreeStatusCard() {
@@ -414,6 +416,7 @@ function SettingsPage() {
           </Card>
         </div>
       )}
+      {tab === "api" && <TenantApiPanel />}
     </div>
   );
 }

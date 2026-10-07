@@ -564,6 +564,327 @@ export type Database = {
           },
         ]
       }
+      api_batches: {
+        Row: {
+          accepted_count: number
+          account_id: string
+          api_key_id: string
+          campaign_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          recipient_count: number
+          rejected_count: number
+        }
+        Insert: {
+          accepted_count?: number
+          account_id: string
+          api_key_id: string
+          campaign_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          recipient_count?: number
+          rejected_count?: number
+        }
+        Update: {
+          accepted_count?: number
+          account_id?: string
+          api_key_id?: string
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          recipient_count?: number
+          rejected_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_batches_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_batches_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_batches_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_idempotency_records: {
+        Row: {
+          account_id: string
+          api_key_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          request_hash: string
+          response_body: Json | null
+          response_status: number | null
+        }
+        Insert: {
+          account_id: string
+          api_key_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          idempotency_key: string
+          request_hash: string
+          response_body?: Json | null
+          response_status?: number | null
+        }
+        Update: {
+          account_id?: string
+          api_key_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          request_hash?: string
+          response_body?: Json | null
+          response_status?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_idempotency_records_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_idempotency_records_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_request_log: {
+        Row: {
+          account_id: string
+          api_key_id: string
+          created_at: string
+          id: string
+          method: string
+          path: string
+          request_id: string
+          response_status: number | null
+        }
+        Insert: {
+          account_id: string
+          api_key_id: string
+          created_at?: string
+          id?: string
+          method: string
+          path: string
+          request_id: string
+          response_status?: number | null
+        }
+        Update: {
+          account_id?: string
+          api_key_id?: string
+          created_at?: string
+          id?: string
+          method?: string
+          path?: string
+          request_id?: string
+          response_status?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_request_log_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_request_log_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "workspace_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_webhook_delivery_attempts: {
+        Row: {
+          account_id: string
+          attempt_number: number
+          created_at: string
+          duration_ms: number | null
+          error: string | null
+          event_id: string
+          id: string
+          response_body: string | null
+          response_status: number | null
+        }
+        Insert: {
+          account_id: string
+          attempt_number: number
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          event_id: string
+          id?: string
+          response_body?: string | null
+          response_status?: number | null
+        }
+        Update: {
+          account_id?: string
+          attempt_number?: number
+          created_at?: string
+          duration_ms?: number | null
+          error?: string | null
+          event_id?: string
+          id?: string
+          response_body?: string | null
+          response_status?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_webhook_delivery_attempts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_webhook_delivery_attempts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "api_webhook_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_webhook_endpoints: {
+        Row: {
+          account_id: string
+          active: boolean
+          created_at: string
+          created_by: string | null
+          events: string[]
+          id: string
+          last_failure_at: string | null
+          last_success_at: string | null
+          name: string
+          secret_ciphertext: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          account_id: string
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          events?: string[]
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          name: string
+          secret_ciphertext: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          account_id?: string
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          events?: string[]
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          name?: string
+          secret_ciphertext?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_webhook_endpoints_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_webhook_events: {
+        Row: {
+          account_id: string
+          attempt_count: number
+          available_at: string
+          created_at: string
+          delivered_at: string | null
+          endpoint_id: string
+          event_type: string
+          id: string
+          last_error: string | null
+          payload: Json
+          resource_id: string | null
+          status: string
+        }
+        Insert: {
+          account_id: string
+          attempt_count?: number
+          available_at?: string
+          created_at?: string
+          delivered_at?: string | null
+          endpoint_id: string
+          event_type: string
+          id?: string
+          last_error?: string | null
+          payload: Json
+          resource_id?: string | null
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          attempt_count?: number
+          available_at?: string
+          created_at?: string
+          delivered_at?: string | null
+          endpoint_id?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          payload?: Json
+          resource_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_webhook_events_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_webhook_events_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "api_webhook_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_actions: {
         Row: {
           app_id: string
@@ -6371,34 +6692,43 @@ export type Database = {
           account_id: string
           created_at: string
           created_by: string | null
+          expires_at: string | null
           id: string
           key_hash: string
           key_prefix: string
           last_used_at: string | null
           name: string
+          rate_limit_per_minute: number
           revoked_at: string | null
+          scopes: string[]
         }
         Insert: {
           account_id: string
           created_at?: string
           created_by?: string | null
+          expires_at?: string | null
           id?: string
           key_hash: string
           key_prefix: string
           last_used_at?: string | null
           name?: string
+          rate_limit_per_minute?: number
           revoked_at?: string | null
+          scopes?: string[]
         }
         Update: {
           account_id?: string
           created_at?: string
           created_by?: string | null
+          expires_at?: string | null
           id?: string
           key_hash?: string
           key_prefix?: string
           last_used_at?: string | null
           name?: string
+          rate_limit_per_minute?: number
           revoked_at?: string | null
+          scopes?: string[]
         }
         Relationships: [
           {
@@ -6481,6 +6811,20 @@ export type Database = {
         }[]
       }
       apply_message_status_batch: { Args: { _rows: Json }; Returns: number }
+      authenticate_workspace_api_key: {
+        Args: {
+          _key_hash: string
+          _method: string
+          _path: string
+          _request_id: string
+        }
+        Returns: {
+          account_id: string
+          api_key_id: string
+          rate_limit_per_minute: number
+          scopes: string[]
+        }[]
+      }
       bulk_import_profiles: {
         Args: { _account_id: string; _list_id: string; _rows: Json }
         Returns: {
@@ -6517,6 +6861,21 @@ export type Database = {
           phone_e164: string
           rendered_body: string
           segments_count: number
+        }[]
+      }
+      create_api_sms_batch: {
+        Args: {
+          _account_id: string
+          _api_key_id: string
+          _body: string
+          _metadata?: Json
+          _name: string
+          _recipients: Json
+        }
+        Returns: {
+          accepted_count: number
+          batch_id: string
+          campaign_id: string
         }[]
       }
       credit_seller: {

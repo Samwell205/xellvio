@@ -72,14 +72,33 @@ const guides = [
 ];
 
 const apiExample = [
-  "POST /api/messages",
-  "Authorization: Bearer YOUR_API_KEY",
+  "curl -X POST https://xellvio.com/api/public/v1/messages \\",
+  '  -H "Authorization: Bearer xv_api_..." \\',
+  '  -H "Idempotency-Key: order-10482" \\',
+  '  -H "Content-Type: application/json" \\',
+  "  -d '{",
+  '    "to": "+14155550123",',
+  '    "body": "Your order is ready for pickup. Reply STOP to opt out.",',
+  '    "consent_confirmed": true',
+  "  }'",
+].join("\n");
+
+const apiEndpoints = [
+  ["POST", "/messages", "Queue one SMS"],
+  ["POST", "/messages/bulk", "Queue up to 1,000 recipients"],
+  ["GET", "/messages/{id}", "Read message status and failure details"],
+  ["GET", "/batches/{id}", "Read batch totals and recipient results"],
+  ["GET", "/replies", "Read inbound replies with cursor pagination"],
+  ["GET", "/senders", "List verified workspace senders"],
+  ["GET", "/suppressions/{phone}", "Check whether a number opted out"],
+];
+
+const webhookExample = [
+  "X-Xellvio-Event: message.delivered",
+  "X-Xellvio-Timestamp: 1791372000",
+  "X-Xellvio-Signature: v1=<hex HMAC-SHA256>",
   "",
-  "{",
-  '  "from": "XELLIO",',
-  '  "to": "+14155550123",',
-  '  "body": "Your order is ready for pickup."',
-  "}",
+  "signed_payload = timestamp + '.' + raw_request_body",
 ].join("\n");
 
 function DocsPage() {
@@ -160,7 +179,7 @@ function DocsPage() {
           </div>
         </section>
 
-        <section className="py-16">
+        <section id="api-reference" className="py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 grid gap-6 lg:grid-cols-2">
             <Card className="p-6">
               <Code2 className="size-6 text-primary" />
@@ -184,6 +203,35 @@ function DocsPage() {
               <pre className="mt-4 overflow-x-auto rounded-lg bg-background/10 p-4 text-xs leading-relaxed">
                 <code>{apiExample}</code>
               </pre>
+            </Card>
+          </div>
+          <div className="mx-auto mt-10 grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-2">
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold">REST API reference</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Base URL: <code>https://xellvio.com/api/public/v1</code>. Create workspace keys under Settings → API &amp; webhooks. Keys are shown once, can be scoped, and can be revoked immediately.
+              </p>
+              <div className="mt-5 divide-y rounded-md border">
+                {apiEndpoints.map(([method, path, detail]) => (
+                  <div key={path} className="grid grid-cols-[54px_1fr] gap-3 p-3 text-sm">
+                    <Badge variant="outline" className="w-fit">{method}</Badge>
+                    <div><code>{path}</code><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 space-y-2 text-sm text-muted-foreground">
+                <p><strong className="text-foreground">Authentication:</strong> send the workspace key as a Bearer token from a secure server.</p>
+                <p><strong className="text-foreground">Idempotency:</strong> every POST send requires a unique <code>Idempotency-Key</code>. Replaying the same body returns the original result without creating another charge or message.</p>
+                <p><strong className="text-foreground">Consent:</strong> every recipient requires <code>consent_confirmed: true</code>. Suppressed numbers are always rejected.</p>
+                <p><strong className="text-foreground">Limits:</strong> 120 API requests per minute per key by default; bulk requests accept 1–1,000 recipients. Carrier throughput depends on the verified sender and destination route.</p>
+              </div>
+            </Card>
+            <Card className="p-6">
+              <h2 className="text-xl font-semibold">Signed webhooks</h2>
+              <p className="mt-2 text-sm text-muted-foreground">Register a public HTTPS endpoint to receive delivery, failure, reply, STOP, START, and batch events. Failed deliveries retry with exponential backoff for up to eight attempts.</p>
+              <pre className="mt-4 overflow-x-auto rounded-lg bg-secondary p-4 text-xs leading-relaxed text-secondary-foreground"><code>{webhookExample}</code></pre>
+              <p className="mt-4 text-sm text-muted-foreground">Verify the signature against the exact raw request body, reject stale timestamps, and deduplicate using the event <code>id</code>. Signing secrets are shown once and can be rotated from Settings.</p>
+              <div className="mt-5 flex flex-wrap gap-2">{["message.sent","message.delivered","message.delivery_unconfirmed","message.failed","reply.received","contact.opted_out","contact.opted_in","batch.completed"].map((event) => <Badge key={event} variant="outline">{event}</Badge>)}</div>
             </Card>
           </div>
         </section>

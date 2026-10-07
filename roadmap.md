@@ -1,5 +1,7 @@
 # Roadmap
 
+- [x] Tenant SMS API: workspace keys, individual and bulk queueing, status/reply/sender/suppression reads, signed webhooks, and documentation.
+
 - [x] Match the toll-free verification experience across tenant and verifier accounts to the carrier's exact three-step flow: General, Numbers, and Use Case Details.
 - [x] Fix high-volume SMS dispatcher failures: safely requeue interrupted paid attempts, preserve idempotency, reduce worker pressure, and flush statuses sooner.
 - [x] Assess request to resend the reported content; keep gambling controls enforced and provide a compliant rewrite path instead of bypassing screening.

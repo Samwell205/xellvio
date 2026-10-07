@@ -76,7 +76,7 @@ async function handleStatus(payload: any) {
 
   const { data: msg } = await supabaseAdmin
     .from("messages")
-    .select("id,status")
+    .select("id,status,campaigns!inner(account_id)")
     .eq("provider_message_id", providerId)
     .maybeSingle();
   if (!msg) return;
@@ -98,6 +98,20 @@ async function handleStatus(payload: any) {
   await supabaseAdmin
     .from("events")
     .insert({ message_id: msg.id, type: `status:${finalStatus}`, payload });
+
+  const accountId = (msg as any).campaigns?.account_id as string | undefined;
+  if (accountId && ["sent", "delivered", "delivery_unconfirmed", "undelivered", "failed"].includes(finalStatus)) {
+    const { enqueueTenantWebhook } = await import("@/lib/tenant-api.server");
+    const eventType = finalStatus === "undelivered" ? "message.failed" : `message.${finalStatus}`;
+    if (["message.sent", "message.delivered", "message.delivery_unconfirmed", "message.failed"].includes(eventType)) {
+      await enqueueTenantWebhook(accountId, eventType as any, msg.id, {
+        message_id: msg.id,
+        status: finalStatus,
+        error_code: errCode ? String(errCode) : null,
+        failure_reason: errDetail ? String(errDetail).slice(0, 500) : update.failure_reason ?? null,
+      });
+    }
+  }
 
   // 40314 = messaging disabled on the whole carrier account. Stop sending
   // platform-wide instead of burning the rest of every running campaign.

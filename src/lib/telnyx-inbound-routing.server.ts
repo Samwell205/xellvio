@@ -165,6 +165,20 @@ export async function handleTelnyxInboundMessage(payload: any) {
     })),
   );
 
+  try {
+    const { enqueueTenantWebhook } = await import("@/lib/tenant-api.server");
+    await Promise.all(targetAccountIds.flatMap((accountId) => {
+      const events: Promise<void>[] = [enqueueTenantWebhook(accountId, "reply.received", providerSid ?? `${from}:${occurredAt}`, {
+        phone: from, from_number: from, to_number: to ?? null, body: bodyText, received_at: occurredAt,
+      })];
+      if (STOP_WORDS.includes(upper)) events.push(enqueueTenantWebhook(accountId, "contact.opted_out", from, { phone: from, source: "inbound_stop", occurred_at: occurredAt }));
+      if (RESUB_WORDS.includes(upper)) events.push(enqueueTenantWebhook(accountId, "contact.opted_in", from, { phone: from, source: "inbound_start", occurred_at: occurredAt }));
+      return events;
+    }));
+  } catch {
+    // Tenant webhook delivery is best-effort and cannot block inbound handling.
+  }
+
   // A genuine reply (not a bare STOP) demonstrates two-way engagement, which
   // exempts this contact from the per-recipient frequency cap going forward.
   if (!STOP_WORDS.includes(upper)) {
