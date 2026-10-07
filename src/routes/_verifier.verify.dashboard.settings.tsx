@@ -22,6 +22,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, CheckCircle2 } from "lucide-react";
+import { IdentityCard } from "@/components/verifier/IdentityCard";
 
 export const Route = createFileRoute("/_verifier/verify/dashboard/settings")({
   component: SettingsPage,
@@ -119,7 +120,8 @@ function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-lg">
-      <h1 className="text-2xl font-semibold">Bank details</h1>
+      <h1 className="text-2xl font-semibold">Bank & identity</h1>
+      <IdentityCard />
       <Card className="bg-slate-900 border-slate-800">
         <CardHeader>
           <CardTitle>Payout account</CardTitle>

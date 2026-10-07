@@ -36,6 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { IdentityReviewTab } from "@/components/verifier/IdentityReviewTab";
 
 export const Route = createFileRoute("/_authenticated/admin/verifiers")({
   component: AdminVerifiersPage,
@@ -53,6 +54,7 @@ function AdminVerifiersPage() {
       <Tabs defaultValue="verifiers">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="verifiers">Verifiers</TabsTrigger>
+          <TabsTrigger value="identity">Identity checks</TabsTrigger>
           <TabsTrigger value="submissions">Submissions</TabsTrigger>
           <TabsTrigger value="pool">Verified pool</TabsTrigger>
           <TabsTrigger value="sold">Sold / payouts</TabsTrigger>
@@ -62,6 +64,9 @@ function AdminVerifiersPage() {
         </TabsList>
         <TabsContent value="verifiers">
           <VerifiersTab />
+        </TabsContent>
+        <TabsContent value="identity">
+          <IdentityReviewTab />
         </TabsContent>
         <TabsContent value="submissions">
           <SubmissionsTab />

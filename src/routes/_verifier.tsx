@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect, Link, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { useDeviceSignal } from "@/components/verifier/useDeviceSignal";
 import { LayoutDashboard, PhoneCall, Coins, Wallet, Settings2, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/_verifier")({
@@ -21,10 +22,11 @@ const NAV = [
   { to: "/verify/dashboard/numbers", label: "My numbers", icon: PhoneCall },
   { to: "/verify/dashboard/earnings", label: "Earnings", icon: Coins },
   { to: "/verify/dashboard/withdrawals", label: "Withdrawals", icon: Wallet },
-  { to: "/verify/dashboard/settings", label: "Bank details", icon: Settings2 },
+  { to: "/verify/dashboard/settings", label: "Bank & identity", icon: Settings2 },
 ];
 
 function VerifierShell() {
+  useDeviceSignal();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   async function signOut() {
     await supabase.auth.signOut();

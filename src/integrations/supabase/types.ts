@@ -5861,6 +5861,97 @@ export type Database = {
           },
         ]
       }
+      verifier_device_signals: {
+        Row: {
+          created_at: string
+          device_id: string
+          fingerprint: string | null
+          id: string
+          ip: string | null
+          last_seen_at: string
+          user_agent: string | null
+          verifier_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_id: string
+          fingerprint?: string | null
+          id?: string
+          ip?: string | null
+          last_seen_at?: string
+          user_agent?: string | null
+          verifier_id: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          fingerprint?: string | null
+          id?: string
+          ip?: string | null
+          last_seen_at?: string
+          user_agent?: string | null
+          verifier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verifier_device_signals_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: false
+            referencedRelation: "verifiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verifier_identity: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          id: string
+          id_photo_path: string
+          nin_hash: string
+          nin_last4: string
+          reviewed_at: string | null
+          selfie_path: string
+          status: string
+          updated_at: string
+          verifier_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          id_photo_path: string
+          nin_hash: string
+          nin_last4: string
+          reviewed_at?: string | null
+          selfie_path: string
+          status?: string
+          updated_at?: string
+          verifier_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          id?: string
+          id_photo_path?: string
+          nin_hash?: string
+          nin_last4?: string
+          reviewed_at?: string | null
+          selfie_path?: string
+          status?: string
+          updated_at?: string
+          verifier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verifier_identity_verifier_id_fkey"
+            columns: ["verifier_id"]
+            isOneToOne: true
+            referencedRelation: "verifiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       verifier_signup_codes: {
         Row: {
           attempts: number

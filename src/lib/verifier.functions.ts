@@ -374,6 +374,8 @@ export const submitTfn = createServerFn({ method: "POST" })
     const { data: bank } = await supabaseAdmin
       .from("verifier_bank_accounts").select("id").eq("verifier_id", verifier.id).maybeSingle();
     if (!bank) throw new Error("Add your bank details before submitting numbers");
+    { const { data: idn } = await supabaseAdmin.from("verifier_identity").select("status").eq("verifier_id", verifier.id).maybeSingle();
+      if (!idn || idn.status === "rejected") throw new Error("Verify your identity (NIN, ID photo and selfie) in Settings first"); }
     const { count: activeCount } = await supabaseAdmin
       .from("verifier_tfns")
       .select("id", { count: "exact", head: true })
@@ -410,6 +412,8 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
     const { data: bank } = await supabaseAdmin
       .from("verifier_bank_accounts").select("id").eq("verifier_id", verifier.id).maybeSingle();
     if (!bank) throw new Error("Add your bank details before claiming a number");
+    { const { data: idn } = await supabaseAdmin.from("verifier_identity").select("status").eq("verifier_id", verifier.id).maybeSingle();
+      if (!idn || idn.status === "rejected") throw new Error("Verify your identity (NIN, ID photo and selfie) in Settings first"); }
     const { count: activeCount } = await supabaseAdmin
       .from("verifier_tfns")
       .select("id", { count: "exact", head: true })
@@ -642,6 +646,8 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
     const { data: bank } = await supabaseAdmin
       .from("verifier_bank_accounts").select("id").eq("verifier_id", verifier.id).maybeSingle();
     if (!bank) throw new Error("Add your bank details before requesting a withdrawal");
+    { const { data: idn } = await supabaseAdmin.from("verifier_identity").select("status").eq("verifier_id", verifier.id).maybeSingle();
+      if (idn?.status !== "approved") throw new Error("Your identity must be approved before you can withdraw"); }
 
     const { error } = await supabaseAdmin
       .from("verifier_withdrawals")
