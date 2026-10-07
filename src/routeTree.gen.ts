@@ -159,6 +159,7 @@ import { Route as ApiPublicCardWebhookRouteImport } from './routes/api/public/ca
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media.$'
 import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -979,6 +980,11 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicV1SplatRoute = ApiPublicV1SplatRouteImport.update({
+  id: '/api/public/v1/$',
+  path: '/api/public/v1/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -1163,6 +1169,7 @@ export interface FileRoutesByFullPath {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1315,6 +1322,7 @@ export interface FileRoutesByTo {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1475,6 +1483,7 @@ export interface FileRoutesById {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1634,6 +1643,7 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1786,6 +1796,7 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1945,6 +1956,7 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -2040,6 +2052,7 @@ export interface RootRouteChildren {
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -3099,6 +3112,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/$': {
+      id: '/api/public/v1/$'
+      path: '/api/public/v1/$'
+      fullPath: '/api/public/v1/$'
+      preLoaderRoute: typeof ApiPublicV1SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
       path: '/lovable/email/auth/preview'
@@ -3491,6 +3511,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
