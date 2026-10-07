@@ -25,13 +25,13 @@ export function IdentityCard() {
   const qc = useQueryClient();
   const { data: idn, isLoading } = useQuery({ queryKey: ["verifier", "identity"], queryFn: () => getFn() });
   const [nin, setNin] = useState("");
-  const [idPhoto, setIdPhoto] = useState<string | null>(null);
   const [selfie, setSelfie] = useState<string | null>(null);
 
   const mut = useMutation({
-    mutationFn: () => submitFn({ data: { nin, id_photo: idPhoto!, selfie: selfie! } }),
-    onSuccess: () => {
-      toast.success("Submitted for review");
+    mutationFn: () => submitFn({ data: { nin, selfie: selfie!, device_id: localStorage.getItem("xv_device_id") ?? undefined } }),
+    onSuccess: (r: any) => {
+      if (r.status === "approved") toast.success("Identity verified");
+      else toast.error(r.note ?? "Verification failed");
       qc.invalidateQueries({ queryKey: ["verifier"] });
     },
     onError: (e: any) => {
@@ -50,13 +50,13 @@ export function IdentityCard() {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-slate-400">
-          One account per person. We check your NIN, a photo of your ID and a selfie before you can withdraw.
+          One account per person. We check your NIN and a selfie automatically before you can withdraw.
         </p>
         {idn?.status === "approved" && (
           <div className="flex items-center gap-2 text-green-400 text-sm"><CheckCircle2 className="size-4" /> Approved · NIN ending {idn.nin_last4}</div>
         )}
         {idn?.status === "pending" && (
-          <div className="flex items-center gap-2 text-amber-400 text-sm"><Clock className="size-4" /> Under review · NIN ending {idn.nin_last4}</div>
+          <div className="flex items-center gap-2 text-amber-400 text-sm"><Clock className="size-4" /> Checking · NIN ending {idn.nin_last4}</div>
         )}
         {idn?.status === "rejected" && (
           <div className="flex items-start gap-2 text-red-400 text-sm"><XCircle className="size-4 mt-0.5" /> Rejected{idn.admin_note ? `: ${idn.admin_note}` : ""}. Please submit again.</div>
@@ -68,21 +68,14 @@ export function IdentityCard() {
               <Input inputMode="numeric" value={nin} onChange={(e) => setNin(e.target.value.replace(/\D/g, "").slice(0, 11))} />
             </div>
             <div>
-              <Label>Photo of your NIN slip or ID card</Label>
-              <Input type="file" accept="image/*" onChange={async (e) => {
-                const f = e.target.files?.[0]; if (f) setIdPhoto(await toDataUrl(f));
-              }} />
-              {idPhoto && <img src={idPhoto} alt="ID preview" className="mt-2 h-24 rounded border border-slate-700" />}
-            </div>
-            <div>
-              <Label>Selfie holding your ID</Label>
+              <Label>Selfie (face only, good light)</Label>
               <Input type="file" accept="image/*" capture="user" onChange={async (e) => {
                 const f = e.target.files?.[0]; if (f) setSelfie(await toDataUrl(f));
               }} />
               {selfie && <img src={selfie} alt="Selfie preview" className="mt-2 h-24 rounded border border-slate-700" />}
             </div>
-            <Button disabled={mut.isPending || nin.length !== 11 || !idPhoto || !selfie} onClick={() => mut.mutate()}>
-              {mut.isPending ? "Submitting…" : "Submit for verification"}
+            <Button disabled={mut.isPending || nin.length !== 11 || !selfie} onClick={() => mut.mutate()}>
+              {mut.isPending ? "Checking…" : "Verify me"}
             </Button>
           </>
         )}

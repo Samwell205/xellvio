@@ -36,13 +36,64 @@ export const getMyIdentity = createServerFn({ method: "GET" })
     return data ?? null;
   });
 
+async function checkSelfie(dataUrl: string): Promise<{ ok: boolean; reason: string }> {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) throw new Error("Face check is temporarily unavailable. Please try again shortly.");
+  const prompt = 'You verify selfies for identity checks. Approve only if the image is a live photo of exactly one real human face, clearly visible, eyes open, not covered, taken directly with a camera. Reject photos of screens, printed photos, ID cards, cartoons, AI art, group photos, blurry or dark images. Give a short reason the person can act on.';
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch" },
+    body: JSON.stringify({
+      model: "openai/gpt-6-astra",
+      stream: true,
+      store: false,
+      reasoning: { effort: "low" },
+      input: [{ role: "user", content: [
+        { type: "input_text", text: prompt },
+        { type: "input_image", image_url: dataUrl },
+      ] }],
+      text: { format: { type: "json_schema", name: "selfie_check", strict: true, schema: {
+        type: "object", additionalProperties: false, required: ["ok", "reason"],
+        properties: { ok: { type: "boolean" }, reason: { type: "string" } },
+      } } },
+    }),
+  });
+  if (!res.ok || !res.body) throw new Error("Face check is temporarily unavailable. Please try again shortly.");
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      try {
+        const ev = JSON.parse(payload);
+        if (ev.type === "response.output_text.delta") text += ev.delta ?? "";
+      } catch { /* ignore partial */ }
+    }
+  }
+  try {
+    const out = JSON.parse(text);
+    return { ok: out.ok === true, reason: String(out.reason ?? "") };
+  } catch {
+    throw new Error("Face check failed. Please try again.");
+  }
+}
+
 export const submitMyIdentity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z.object({
       nin: z.string().regex(/^\d{11}$/, "NIN must be 11 digits"),
-      id_photo: z.string().min(50),
       selfie: z.string().min(50),
+      device_id: z.string().max(100).optional(),
+      fingerprint: z.string().max(100).optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -50,8 +101,9 @@ export const submitMyIdentity = createServerFn({ method: "POST" })
     if (!verifier) throw new Error("Complete your verifier profile first");
     const nin_hash = await hashNin(data.nin);
 
+    // 1. One NIN per person
     const { data: existing } = await supabaseAdmin
-      .from("verifier_identity").select("verifier_id,status").eq("nin_hash", nin_hash).maybeSingle();
+      .from("verifier_identity").select("verifier_id").eq("nin_hash", nin_hash).maybeSingle();
     if (existing && existing.verifier_id !== verifier.id) {
       await supabaseAdmin.from("verifiers").update({ is_active: false }).eq("id", verifier.id);
       throw new Error("This NIN is already linked to another verifier account. Only one account per person is allowed, so this account has been suspended.");
@@ -60,31 +112,53 @@ export const submitMyIdentity = createServerFn({ method: "POST" })
       .from("verifier_identity").select("status").eq("verifier_id", verifier.id).maybeSingle();
     if (mine?.status === "approved") throw new Error("Your identity is already approved");
 
-    const id = decodeImage(data.id_photo);
     const sf = decodeImage(data.selfie);
-    const stamp = Date.now();
-    const idPath = `${verifier.id}/id-${stamp}.${id.ext}`;
-    const sfPath = `${verifier.id}/selfie-${stamp}.${sf.ext}`;
-    const up1 = await supabaseAdmin.storage.from("verifier-kyc").upload(idPath, id.bytes, { contentType: id.type });
-    if (up1.error) throw new Error(up1.error.message);
-    const up2 = await supabaseAdmin.storage.from("verifier-kyc").upload(sfPath, sf.bytes, { contentType: sf.type });
-    if (up2.error) throw new Error(up2.error.message);
+    const sfPath = `${verifier.id}/selfie-${Date.now()}.${sf.ext}`;
+    const up = await supabaseAdmin.storage.from("verifier-kyc").upload(sfPath, sf.bytes, { contentType: sf.type });
+    if (up.error) throw new Error(up.error.message);
+
+    // 2. Same device as another verifier account
+    const keys = [data.device_id, data.fingerprint].filter(Boolean) as string[];
+    let sharedDevice = false;
+    if (keys.length) {
+      const orParts = [
+        data.device_id ? `device_id.eq.${data.device_id}` : "",
+        data.fingerprint ? `fingerprint.eq.${data.fingerprint}` : "",
+      ].filter(Boolean).join(",");
+      const { data: hits } = await supabaseAdmin
+        .from("verifier_device_signals").select("verifier_id").or(orParts).neq("verifier_id", verifier.id).limit(1);
+      sharedDevice = (hits ?? []).length > 0;
+    }
+
+    // 3. Automatic face check
+    let status: "approved" | "rejected" = "approved";
+    let note: string | null = null;
+    if (sharedDevice) {
+      status = "rejected";
+      note = "This device is already used by another verifier account. Only one account per person is allowed.";
+    } else {
+      const face = await checkSelfie(data.selfie);
+      if (!face.ok) { status = "rejected"; note = face.reason || "Selfie not accepted. Take a clear photo of your face."; }
+    }
 
     const { error } = await supabaseAdmin.from("verifier_identity").upsert({
       verifier_id: verifier.id,
       nin_hash,
       nin_last4: data.nin.slice(-4),
-      id_photo_path: idPath,
+      id_photo_path: null,
       selfie_path: sfPath,
-      status: "pending",
-      admin_note: null,
-      reviewed_at: null,
+      status,
+      admin_note: note,
+      reviewed_at: new Date().toISOString(),
     }, { onConflict: "verifier_id" });
     if (error) {
       if (error.message.includes("nin_hash")) throw new Error("This NIN is already linked to another account.");
       throw new Error(error.message);
     }
-    return { ok: true };
+    if (sharedDevice) {
+      await supabaseAdmin.from("verifiers").update({ is_active: false }).eq("id", verifier.id);
+    }
+    return { status, note };
   });
 
 export const recordVerifierDevice = createServerFn({ method: "POST" })
@@ -155,7 +229,7 @@ export const adminListIdentityChecks = createServerFn({ method: "GET" })
 
     const identities = await Promise.all((ids ?? []).map(async (r) => {
       const [a, b] = await Promise.all([
-        supabaseAdmin.storage.from("verifier-kyc").createSignedUrl(r.id_photo_path, 3600),
+        r.id_photo_path ? supabaseAdmin.storage.from("verifier-kyc").createSignedUrl(r.id_photo_path, 3600) : Promise.resolve({ data: null }),
         supabaseAdmin.storage.from("verifier-kyc").createSignedUrl(r.selfie_path, 3600),
       ]);
       return {
@@ -166,7 +240,7 @@ export const adminListIdentityChecks = createServerFn({ method: "GET" })
         status: r.status,
         admin_note: r.admin_note,
         created_at: r.created_at,
-        id_photo_url: a.data?.signedUrl ?? null,
+        id_photo_url: (a as any).data?.signedUrl ?? null,
         selfie_url: b.data?.signedUrl ?? null,
       };
     }));

@@ -5907,7 +5907,7 @@ export type Database = {
           admin_note: string | null
           created_at: string
           id: string
-          id_photo_path: string
+          id_photo_path: string | null
           nin_hash: string
           nin_last4: string
           reviewed_at: string | null
@@ -5920,7 +5920,7 @@ export type Database = {
           admin_note?: string | null
           created_at?: string
           id?: string
-          id_photo_path: string
+          id_photo_path?: string | null
           nin_hash: string
           nin_last4: string
           reviewed_at?: string | null
@@ -5933,7 +5933,7 @@ export type Database = {
           admin_note?: string | null
           created_at?: string
           id?: string
-          id_photo_path?: string
+          id_photo_path?: string | null
           nin_hash?: string
           nin_last4?: string
           reviewed_at?: string | null
