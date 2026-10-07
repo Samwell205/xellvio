@@ -201,7 +201,25 @@ export const adminReviewNumberRequest = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => reviewSchema.parse(input))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase, context.userId);
-    const { error } = await context.supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: req } = await supabaseAdmin
+      .from("number_requests").select("account_id,number_type,area_code,charged_at")
+      .eq("id", data.id).maybeSingle();
+    let chargedAt: string | null = (req as any)?.charged_at ?? null;
+    // Area-code local requests: attach the number and charge only on assignment.
+    if (req && (req as any).area_code && data.status === "provisioned" && !chargedAt) {
+      const phone = (data.assigned_phone_number ?? "").trim();
+      if (!/^\+1\d{10}$/.test(phone)) throw new Error("Enter the assigned number in E.164 format, e.g. +12125551234");
+      const m = await import("./local-number.server");
+      const price = await m.readLocalPrice();
+      if ((await m.getBalance(req.account_id)) < price) {
+        throw new Error(`Tenant balance is below $${price.toFixed(2)}. Ask them to top up before assigning.`);
+      }
+      await m.attachLocalNumber(req.account_id, phone, "US");
+      await m.chargeLocal(req.account_id, phone, price);
+      chargedAt = new Date().toISOString();
+    }
+    const { error } = await supabaseAdmin
       .from("number_requests")
       .update({
         status: data.status,
@@ -209,7 +227,8 @@ export const adminReviewNumberRequest = createServerFn({ method: "POST" })
         assigned_phone_number: data.assigned_phone_number ?? null,
         reviewed_at: new Date().toISOString(),
         reviewed_by: context.userId,
-      })
+        charged_at: chargedAt,
+      } as any)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };

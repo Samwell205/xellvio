@@ -4215,9 +4215,11 @@ export type Database = {
         Row: {
           account_id: string
           admin_notes: string | null
+          area_code: string | null
           assigned_phone_number: string | null
           business_name: string
           business_website: string | null
+          charged_at: string | null
           country: Database["public"]["Enums"]["number_request_country"]
           created_at: string
           expected_monthly_volume: number
@@ -4234,9 +4236,11 @@ export type Database = {
         Insert: {
           account_id: string
           admin_notes?: string | null
+          area_code?: string | null
           assigned_phone_number?: string | null
           business_name: string
           business_website?: string | null
+          charged_at?: string | null
           country: Database["public"]["Enums"]["number_request_country"]
           created_at?: string
           expected_monthly_volume?: number
@@ -4253,9 +4257,11 @@ export type Database = {
         Update: {
           account_id?: string
           admin_notes?: string | null
+          area_code?: string | null
           assigned_phone_number?: string | null
           business_name?: string
           business_website?: string | null
+          charged_at?: string | null
           country?: Database["public"]["Enums"]["number_request_country"]
           created_at?: string
           expected_monthly_volume?: number

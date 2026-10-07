@@ -1,0 +1,1 @@
+ALTER TABLE public.number_requests ADD COLUMN IF NOT EXISTS area_code text, ADD COLUMN IF NOT EXISTS charged_at timestamptz;
