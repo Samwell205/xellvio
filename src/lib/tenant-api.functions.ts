@@ -54,7 +54,7 @@ export const updateTenantWebhook = createServerFn({ method: "POST" }).middleware
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid(), active: z.boolean().optional(), rotateSecret: z.boolean().optional() }).parse(input))
   .handler(async ({ data, context }) => {
     const { acting, db } = await adminContext(context.userId);
-    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }; let secret: string | undefined;
+    const patch: { updated_at: string; active?: boolean; secret_ciphertext?: string } = { updated_at: new Date().toISOString() }; let secret: string | undefined;
     if (data.active !== undefined) patch.active = data.active;
     if (data.rotateSecret) { const api = await import("./tenant-api.server"); secret = api.makeWebhookSecret(); patch.secret_ciphertext = api.encryptWebhookSecret(secret); }
     const { error } = await db.from("api_webhook_endpoints").update(patch).eq("id", data.id).eq("account_id", acting.accountId); if (error) throw new Error(error.message);

@@ -118,9 +118,10 @@ export async function enqueueTenantWebhook(accountId: string, eventType: TenantW
   const { data: endpoints } = await supabaseAdmin.from("api_webhook_endpoints")
     .select("id").eq("account_id", accountId).eq("active", true).contains("events", [eventType]);
   if (!endpoints?.length) return;
+  const safeData = JSON.parse(JSON.stringify(data)) as any;
   await supabaseAdmin.from("api_webhook_events").upsert(endpoints.map((endpoint) => ({
     account_id: accountId, endpoint_id: endpoint.id, event_type: eventType, resource_id: resourceId,
-    payload: { id: resourceId, type: eventType, created_at: new Date().toISOString(), data },
+    payload: { id: resourceId, type: eventType, created_at: new Date().toISOString(), data: safeData },
   })), { onConflict: "endpoint_id,event_type,resource_id", ignoreDuplicates: true });
   void dispatchPendingWebhooks(accountId, 6);
 }

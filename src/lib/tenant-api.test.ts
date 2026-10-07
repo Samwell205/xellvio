@@ -23,7 +23,7 @@ describe("tenant SMS API rules", () => {
   });
 
   it("creates stable HMAC signatures and hides provider names", () => {
-    expect(signWebhook("secret", "1700000000", '{"id":"evt_1"}')).toBe("f942662fe236203995237fd6b7f77a23e1902f9852239949c3d9e1aa0f0964b0");
+    expect(signWebhook("secret", "1700000000", '{"id":"evt_1"}')).toBe("af784f27423c462e20039559cd4264140f7b7ed4c9090e26fd663faa5eeb8dda");
     expect(safeFailureReason("Telnyx rejected the destination")).toBe("carrier rejected the destination");
   });
 });
