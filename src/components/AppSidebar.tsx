@@ -70,6 +70,14 @@ const advancedItems: Entry[] = [
   { title: "Team", url: "/app/team", icon: UserPlus, perm: "team" },
 ];
 
+const navigationSections = [
+  { title: "Overview", entries: items.slice(0, 1) },
+  { title: "Messaging", entries: items.slice(1, 4) },
+  { title: "Audience", entries: items.slice(4, 5) },
+  { title: "Automation", entries: items.slice(5, 7) },
+  { title: "Website", entries: items.slice(7, 8) },
+  { title: "Apps & integrations", entries: items.slice(8, 9) },
+];
 
 
 const settingsChildren: Item[] = [
@@ -99,9 +107,12 @@ export function AppSidebar() {
     return !!session.permissions[it.perm];
   };
 
-  const visibleItems: Entry[] = items
-    .map((e) => (isGroup(e) ? { ...e, children: e.children.filter(canSee) } : e))
-    .filter((e) => (isGroup(e) ? e.children.length > 0 : canSee(e)));
+  const visibleSections = navigationSections.map((section) => ({
+    ...section,
+    entries: section.entries
+      .map((e) => (isGroup(e) ? { ...e, children: e.children.filter(canSee) } : e))
+      .filter((e) => (isGroup(e) ? e.children.length > 0 : canSee(e))),
+  })).filter((section) => section.entries.length > 0);
   const visibleAdvanced: Entry[] = advancedItems.filter((e) => (isGroup(e) ? false : canSee(e)));
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const groupActive = (g: Group) => g.children.some((c) => isActive(c.url, c.exact));
@@ -157,10 +168,17 @@ export function AppSidebar() {
             </div>
           </div>
         )}
-        <SidebarGroup className="px-2 py-0">
+        {visibleSections.map((section, sectionIndex) => (
+        <SidebarGroup key={section.title} className={`px-2 py-0 ${sectionIndex > 0 ? "mt-4" : ""}`}>
+          {!collapsed && (
+            <SidebarGroupLabel className="px-3 text-[11px] uppercase tracking-wider">
+              {section.title}
+            </SidebarGroupLabel>
+          )}
+          {collapsed && sectionIndex > 0 && <div className="mx-2 mb-2 border-t border-sidebar-border" />}
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              {visibleItems.map((entry) => {
+              {section.entries.map((entry) => {
                 if (isGroup(entry)) {
                   const gActive = groupActive(entry);
                   const open = collapsed ? false : !!openGroups[entry.title];
@@ -231,6 +249,7 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        ))}
 
         {visibleAdvanced.length > 0 && (
           <SidebarGroup className="px-2 py-0 mt-4">
