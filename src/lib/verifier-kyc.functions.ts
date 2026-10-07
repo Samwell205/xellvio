@@ -39,25 +39,47 @@ export const getMyIdentity = createServerFn({ method: "GET" })
 async function checkSelfie(dataUrl: string): Promise<{ ok: boolean; reason: string }> {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) throw new Error("Face check is temporarily unavailable. Please try again shortly.");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const prompt = 'You verify selfies for identity checks. Approve only if the image is a live photo of exactly one real human face, clearly visible, eyes open, not covered, taken directly with a camera. Reject photos of screens, printed photos, ID cards, cartoons, AI art, group photos, blurry or dark images. Give a short reason the person can act on.';
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+    headers: { "Content-Type": "application/json", "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "fetch" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      response_format: { type: "json_object" },
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: 'You verify selfies for identity checks. Approve only if the image is a live photo of exactly one real human face, clearly visible, eyes open, not covered, taken directly with a camera. Reject photos of screens, printed photos, ID cards, cartoons, AI art, group photos, blurry or dark images. Reply JSON: {"ok": boolean, "reason": "short reason for the person"}' },
-          { type: "image_url", image_url: { url: dataUrl } },
-        ],
-      }],
+      model: "openai/gpt-6-astra",
+      stream: true,
+      store: false,
+      reasoning: { effort: "low" },
+      input: [{ role: "user", content: [
+        { type: "input_text", text: prompt },
+        { type: "input_image", image_url: dataUrl },
+      ] }],
+      text: { format: { type: "json_schema", name: "selfie_check", strict: true, schema: {
+        type: "object", additionalProperties: false, required: ["ok", "reason"],
+        properties: { ok: { type: "boolean" }, reason: { type: "string" } },
+      } } },
     }),
   });
-  if (!res.ok) throw new Error("Face check is temporarily unavailable. Please try again shortly.");
-  const j: any = await res.json();
+  if (!res.ok || !res.body) throw new Error("Face check is temporarily unavailable. Please try again shortly.");
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      try {
+        const ev = JSON.parse(payload);
+        if (ev.type === "response.output_text.delta") text += ev.delta ?? "";
+      } catch { /* ignore partial */ }
+    }
+  }
   try {
-    const out = JSON.parse(j.choices?.[0]?.message?.content ?? "{}");
+    const out = JSON.parse(text);
     return { ok: out.ok === true, reason: String(out.reason ?? "") };
   } catch {
     throw new Error("Face check failed. Please try again.");

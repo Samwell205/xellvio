@@ -1,25 +1,12 @@
 import { useServerFn } from "@tanstack/react-start";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
-import { adminListIdentityChecks, adminReviewIdentity } from "@/lib/verifier-kyc.functions";
+import { useQuery } from "@tanstack/react-query";
+import { adminListIdentityChecks } from "@/lib/verifier-kyc.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 export function IdentityReviewTab() {
   const listFn = useServerFn(adminListIdentityChecks);
-  const reviewFn = useServerFn(adminReviewIdentity);
-  const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["admin", "verifier-identity"], queryFn: () => listFn() });
-  const [notes, setNotes] = useState<Record<string, string>>({});
-  const mut = useMutation({
-    mutationFn: (a: { id: string; decision: "approved" | "rejected" }) =>
-      reviewFn({ data: { verifier_id: a.id, decision: a.decision, note: notes[a.id] || undefined } }),
-    onSuccess: () => { toast.success("Saved"); qc.invalidateQueries({ queryKey: ["admin", "verifier-identity"] }); },
-    onError: (e: any) => toast.error(e.message),
-  });
 
   const flags = data?.flags ?? {};
   const flaggedNoId = Object.keys(flags).filter((v) => !(data?.identities ?? []).some((i) => i.verifier_id === v));
