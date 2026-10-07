@@ -27,7 +27,7 @@ export function IdentityReviewTab() {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader><CardTitle>Identity checks</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Identity checks (automatic)</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           {isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
           {!isLoading && (data?.identities ?? []).length === 0 && (
@@ -52,12 +52,7 @@ export function IdentityReviewTab() {
                   {i.id_photo_url && <a href={i.id_photo_url} target="_blank" rel="noreferrer"><img src={i.id_photo_url} alt="ID" className="h-40 rounded border" /></a>}
                   {i.selfie_url && <a href={i.selfie_url} target="_blank" rel="noreferrer"><img src={i.selfie_url} alt="Selfie" className="h-40 rounded border" /></a>}
                 </div>
-                <div className="flex gap-2 items-center">
-                  <Input placeholder="Note (shown to verifier if rejected)" value={notes[i.verifier_id] ?? ""}
-                    onChange={(e) => setNotes({ ...notes, [i.verifier_id]: e.target.value })} />
-                  <Button size="sm" disabled={mut.isPending} onClick={() => mut.mutate({ id: i.verifier_id, decision: "approved" })}>Approve</Button>
-                  <Button size="sm" variant="destructive" disabled={mut.isPending} onClick={() => mut.mutate({ id: i.verifier_id, decision: "rejected" })}>Reject</Button>
-                </div>
+                {i.admin_note && <div className="text-xs text-muted-foreground">Reason: {i.admin_note}</div>}
               </div>
             );
           })}
