@@ -1,0 +1,1 @@
+ALTER TABLE public.verifier_identity ALTER COLUMN id_photo_path DROP NOT NULL;
