@@ -27,3 +27,11 @@ describe("dashboardLifecycleVisibility", () => {
     ).toBe(true);
   });
 });
+import { isLowBalanceMessage as isLow, LOW_BALANCE_THRESHOLD as T } from "./visibility";
+describe("low balance notice", () => {
+  it("threshold is 2", () => expect(T).toBe(2));
+  it("detects low balance message", () =>
+    expect(isLow({ title: "Your balance is running low", cta_label: "Top up" })).toBe(true));
+  it("ignores other messages", () =>
+    expect(isLow({ title: "Ready to save time?", cta_label: "Explore" })).toBe(false));
+});
