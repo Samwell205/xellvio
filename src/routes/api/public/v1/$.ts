@@ -43,6 +43,7 @@ async function getHandler(request: Request) {
 }
 
 export const Route = createFileRoute("/api/public/v1/$")({ server: { handlers: {
+  OPTIONS: async () => new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-allow-headers": "Authorization,Content-Type,Idempotency-Key,X-Request-Id" } }),
   GET: async ({ request }) => { const requestId = request.headers.get("x-request-id")?.slice(0,100) || crypto.randomUUID(); try { return await getHandler(request); } catch (e) { return apiErrorResponse(e, requestId); } },
   POST: async ({ request }) => { const requestId = request.headers.get("x-request-id")?.slice(0,100) || crypto.randomUUID(); try { const p = parts(request); if (p.length === 1 && p[0] === "messages") return await queueBatch(request, true); if (p.length === 2 && p[0] === "messages" && p[1] === "bulk") return await queueBatch(request, false); throw new ApiError(404, "not_found", "API endpoint not found."); } catch (e) { if (e instanceof z.ZodError) return apiErrorResponse(new ApiError(422, "validation_error", e.issues.map((x) => x.message).join("; ")), requestId); return apiErrorResponse(e, requestId); } },
 } } });

@@ -277,6 +277,27 @@ async function finalizeIfComplete(supabaseAdmin: any, campaign: any): Promise<vo
   await supabaseAdmin.from("campaigns").update({ status: "sent" })
     .eq("id", campaign.id)
     .in("status", ["queued", "sending", "processing", "scheduled"]);
+  const { data: apiBatch } = await supabaseAdmin
+    .from("api_batches")
+    .select("id")
+    .eq("campaign_id", campaign.id)
+    .maybeSingle();
+  if (apiBatch) {
+    const { data: messageRows } = await supabaseAdmin
+      .from("messages")
+      .select("status")
+      .eq("campaign_id", campaign.id);
+    const totals = (messageRows ?? []).reduce((summary: Record<string, number>, row: { status: string }) => {
+      summary[row.status] = (summary[row.status] ?? 0) + 1;
+      return summary;
+    }, {});
+    const { enqueueTenantWebhook } = await import("@/lib/tenant-api.server");
+    await enqueueTenantWebhook(campaign.account_id, "batch.completed", apiBatch.id, {
+      batch_id: apiBatch.id,
+      campaign_id: campaign.id,
+      totals,
+    });
+  }
 }
 
 function isShaftLikeCode(code: string): boolean {
