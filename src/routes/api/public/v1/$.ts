@@ -19,6 +19,12 @@ async function queueBatch(request: Request, single: boolean) {
   const parsed = single ? sendMessageSchema.parse(raw) : sendBulkSchema.parse(raw);
   const recipients = single ? [{ phone: (parsed as z.infer<typeof sendMessageSchema>).to, consent_confirmed: true }] : (parsed as z.infer<typeof sendBulkSchema>).recipients;
   const body = parsed.body; const sender = parsed.sender; await validateSender(auth.accountId, sender);
+  {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: acct } = await supabaseAdmin.from("accounts").select("credit_balance").eq("id", auth.accountId).maybeSingle();
+    const balance = Number(acct?.credit_balance ?? 0);
+    if (!(balance > 0)) throw new ApiError(402, "insufficient_credit", "This workspace has no SMS credit left. Top up your Xellvio balance to send.");
+  }
   const { screenMessageContent } = await import("@/lib/content-screening.server");
   const screened = await screenMessageContent(body, auth.accountId, { context: "campaign", plannedRecipients: recipients.length, skipReviewQueue: true });
   if (!screened.passed) throw new ApiError(422, "content_blocked", `Message content was blocked: ${screened.blockedReasons.slice(0, 2).join("; ")}`);
