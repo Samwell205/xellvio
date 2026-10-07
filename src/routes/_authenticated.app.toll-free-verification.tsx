@@ -496,9 +496,10 @@ function TollfreeVerificationPage() {
           </Card>
 
           <MarketplaceBuyCard />
-          <LocalNumberBuyCard />
         </>
       )}
+
+      <LocalNumberBuyCard />
 
       {isLoading && (
         <div className="text-sm text-muted-foreground flex items-center gap-2">
