@@ -1623,29 +1623,81 @@ function ListPicker({
   return (
     <div>
       <Label>Pick contact lists</Label>
-      <div className="grid sm:grid-cols-2 gap-2 mt-1">
-        {lists.length === 0 && (
-          <div className="text-xs text-muted-foreground">
-            No lists yet.{" "}
-            <Link to="/app/audience" className="text-primary underline">
-              Create a list
-            </Link>
-            .
-          </div>
-        )}
-        {lists.map((l) => {
-          const on = selected.includes(l.id);
-          return (
-            <label
-              key={l.id}
-              className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer ${on ? "border-primary bg-primary/5" : ""}`}
+      {lists.length === 0 ? (
+        <div className="text-xs text-muted-foreground mt-1">
+          No lists yet.{" "}
+          <Link to="/app/audience" className="text-primary underline">
+            Create a list
+          </Link>
+          .
+        </div>
+      ) : (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              role="combobox"
+              className="w-full sm:max-w-md justify-between mt-1 font-normal"
             >
-              <Checkbox checked={on} onCheckedChange={() => toggle(l.id)} />
-              <div className="font-medium text-sm">{l.name}</div>
-            </label>
-          );
-        })}
-      </div>
+              <span className="flex items-center gap-2 truncate">
+                <ListFilter className="size-4 text-muted-foreground shrink-0" />
+                {selected.length === 0 ? (
+                  <span className="text-muted-foreground">Choose lists…</span>
+                ) : selected.length <= 2 ? (
+                  <span className="truncate">
+                    {lists
+                      .filter((l) => selected.includes(l.id))
+                      .map((l) => l.name)
+                      .join(", ")}
+                  </span>
+                ) : (
+                  <span>
+                    {selected.length} lists selected
+                  </span>
+                )}
+              </span>
+              <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Search lists…" />
+              <CommandList>
+                <CommandEmpty>No list matches.</CommandEmpty>
+                <CommandGroup>
+                  {lists.map((l) => {
+                    const on = selected.includes(l.id);
+                    return (
+                      <CommandItem key={l.id} value={l.name} onSelect={() => toggle(l.id)}>
+                        <Checkbox checked={on} className="mr-2" />
+                        <span className="flex-1">{l.name}</span>
+                        {on && <CheckCircle2 className="size-4 text-primary" />}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      )}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {lists
+            .filter((l) => selected.includes(l.id))
+            .map((l) => (
+              <Badge
+                key={l.id}
+                variant="secondary"
+                className="cursor-pointer"
+                onClick={() => toggle(l.id)}
+              >
+                {l.name} ✕
+              </Badge>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
