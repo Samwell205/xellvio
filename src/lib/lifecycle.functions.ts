@@ -7,7 +7,11 @@ import {
   STAGE_LABELS,
   type LifecycleStage,
 } from "@/lib/lifecycle/taxonomy";
-import { dashboardLifecycleVisibility } from "@/lib/lifecycle/visibility";
+import {
+  dashboardLifecycleVisibility,
+  isLowBalanceMessage,
+  LOW_BALANCE_THRESHOLD,
+} from "@/lib/lifecycle/visibility";
 
 /**
  * Tenant-facing lifecycle surface: the onboarding checklist, the in-app
