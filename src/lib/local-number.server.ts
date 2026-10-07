@@ -6,6 +6,13 @@
  */
 export const DEFAULT_LOCAL_PRICE_USD = 100;
 
+/** A usable US area code: 3 digits, first digit 2-9, and not an N11 service code. */
+export const AREA_CODE_PATTERN = /^(?![2-9]11$)[2-9]\d{2}$/;
+
+export function isValidAreaCode(value: string): boolean {
+  return AREA_CODE_PATTERN.test(value.trim());
+}
+
 export async function readLocalPrice(): Promise<number> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin

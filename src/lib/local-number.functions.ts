@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { AREA_CODE_PATTERN } from "./local-number.server";
 
 export const getLocalNumberOffer = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
