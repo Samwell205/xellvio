@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, Building2, Workflow, Sparkles, FormInput, LayoutTemplate, ListTree, Blocks } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, Building2, Workflow, Sparkles, FormInput, LayoutTemplate, ListTree } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
@@ -56,13 +56,6 @@ const items: Entry[] = [
       { title: "Landing pages", url: "/app/landing-pages", icon: LayoutTemplate, perm: "audience" },
     ],
   },
-  {
-    title: "Apps",
-    icon: Blocks,
-    children: [
-      { title: "App Marketplace", url: "/app/apps", icon: Blocks, exact: true },
-    ],
-  },
 ];
 
 const advancedItems: Entry[] = [
@@ -75,7 +68,6 @@ const navigationSections = [
   { title: "Audience", entries: items.slice(4, 5) },
   { title: "Automation", entries: items.slice(5, 7) },
   { title: "Website", entries: items.slice(7, 8) },
-  { title: "Apps & integrations", entries: items.slice(8, 9) },
 ];
 
 
