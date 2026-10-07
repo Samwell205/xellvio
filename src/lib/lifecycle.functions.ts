@@ -57,9 +57,19 @@ export const getLifecycle = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<LifecycleState> => {
     const accountId = await acct(context.userId);
     const { refreshLifecycle } = await import("./lifecycle/engine.server");
-    const row = await refreshLifecycle(accountId, { login: true, userId: context.userId });
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const db = supabaseAdmin as any;
+    // Run the profile refresh and the message/balance reads together.
+    const [row, msgRes, accRes] = await Promise.all([
+      refreshLifecycle(accountId, { login: true, userId: context.userId }),
+      db
+        .from("lifecycle_messages")
+        .select("id,title,body,cta_label,cta_path,sent_at,seen_at")
+        .eq("account_id", accountId)
+        .order("sent_at", { ascending: false })
+        .limit(5),
+      db.from("accounts").select("credit_balance").eq("id", accountId).maybeSingle(),
+    ]);
 
     const checklist: ChecklistItem[] = CHECKLIST_STEPS.map((s) => ({
       key: s.key,
@@ -70,12 +80,12 @@ export const getLifecycle = createServerFn({ method: "GET" })
     const completed = checklist.filter((c) => c.done).length;
     const next = checklist.find((c) => !c.done) ?? null;
 
-    const { data: messages } = await db
-      .from("lifecycle_messages")
-      .select("id,title,body,cta_label,cta_path,sent_at,seen_at")
-      .eq("account_id", accountId)
-      .order("sent_at", { ascending: false })
-      .limit(5);
+    // Low-balance notices only show while the balance is actually low right now.
+    const balance = Number(accRes?.data?.credit_balance ?? 0);
+    const messages = ((msgRes?.data ?? []) as LifecycleMessage[]).filter(
+      (m) =>
+        !isLowBalanceMessage(m) || balance < LOW_BALANCE_THRESHOLD,
+    );
 
     // Recommendations: only ever about something the workspace has not done yet,
     // and only when an earlier step makes the suggestion sensible.
