@@ -1464,6 +1464,16 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+         const { dispatchPendingWebhooks } = await import("@/lib/tenant-api.server");
+         const { data: dueWebhookAccounts } = await supabaseAdmin
+           .from("api_webhook_events")
+           .select("account_id")
+           .in("status", ["pending", "retrying"])
+           .lte("available_at", new Date().toISOString())
+           .limit(6);
+         for (const accountId of new Set((dueWebhookAccounts ?? []).map((row) => row.account_id))) {
+           await dispatchPendingWebhooks(accountId, 6);
+         }
 
         // Dedicated receipt-reconciliation mode. Runs on its own cron schedule
         // so pulling final delivery receipts never competes with the sending

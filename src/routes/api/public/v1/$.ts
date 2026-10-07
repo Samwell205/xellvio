@@ -17,15 +17,18 @@ async function validateSender(accountId: string, sender?: string) {
 async function queueBatch(request: Request, single: boolean) {
   const auth = await authenticateApiRequest(request, "messages:send"); const raw = await readJson(request);
   const parsed = single ? sendMessageSchema.parse(raw) : sendBulkSchema.parse(raw);
-  const idem = await assertIdempotency(request, auth, parsed); if (idem.replay) return apiJson(idem.replay.body, idem.replay.status, auth.requestId);
   const recipients = single ? [{ phone: (parsed as z.infer<typeof sendMessageSchema>).to, consent_confirmed: true }] : (parsed as z.infer<typeof sendBulkSchema>).recipients;
   const body = parsed.body; const sender = parsed.sender; await validateSender(auth.accountId, sender);
   const { screenMessageContent } = await import("@/lib/content-screening.server");
   const screened = await screenMessageContent(body, auth.accountId, { context: "campaign", plannedRecipients: recipients.length, skipReviewQueue: true });
   if (!screened.passed) throw new ApiError(422, "content_blocked", `Message content was blocked: ${screened.blockedReasons.slice(0, 2).join("; ")}`);
+  const idem = await assertIdempotency(request, auth, parsed); if (idem.replay) return apiJson(idem.replay.body, idem.replay.status, auth.requestId);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await (supabaseAdmin.rpc as any)("create_api_sms_batch", { _account_id: auth.accountId, _api_key_id: auth.apiKeyId, _name: single ? "API message" : (parsed as z.infer<typeof sendBulkSchema>).name, _body: body, _recipients: recipients, _metadata: parsed.metadata ?? {} });
-  if (error || !data?.[0]) { const message = String(error?.message ?? ""); if (message.includes("opted out")) throw new ApiError(422, "recipient_suppressed", "One or more recipients opted out."); throw new ApiError(422, "request_rejected", message || "The batch could not be queued."); }
+  if (error || !data?.[0]) {
+    await supabaseAdmin.from("api_idempotency_records").delete().eq("api_key_id", auth.apiKeyId).eq("idempotency_key", idem.key).is("response_body", null);
+    const message = String(error?.message ?? ""); if (message.includes("opted out")) throw new ApiError(422, "recipient_suppressed", "One or more recipients opted out."); throw new ApiError(422, "request_rejected", message || "The batch could not be queued.");
+  }
   const row = data[0]; const response = single ? { id: row.batch_id, batch_id: row.batch_id, status: "queued", recipient: recipients[0].phone } : { id: row.batch_id, status: "queued", recipient_count: row.accepted_count };
   await finishIdempotency(auth, idem.key, 202, response); return apiJson(response, 202, auth.requestId);
 }
