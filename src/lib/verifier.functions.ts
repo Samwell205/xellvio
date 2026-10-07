@@ -310,6 +310,21 @@ export const saveVerifierBank = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .maybeSingle();
     if (!verifier) throw new Error("Complete your verifier profile first");
+    // One person, one verifier account: a bank account (or account holder) already
+    // linked to another verifier cannot be reused.
+    const holder = resolved.account_name.trim().replace(/\s+/g, " ").toUpperCase();
+    const { data: others } = await supabaseAdmin
+      .from("verifier_bank_accounts")
+      .select("verifier_id,account_number,account_name")
+      .neq("verifier_id", verifier.id);
+    const dup = (others ?? []).some(
+      (o) => o.account_number === resolved.account_number ||
+        o.account_name.trim().replace(/\s+/g, " ").toUpperCase() === holder,
+    );
+    if (dup) {
+      await supabaseAdmin.from("verifiers").update({ is_active: false }).eq("id", verifier.id);
+      throw new Error("This bank account belongs to another verifier account. Only one account per person is allowed, so this account has been suspended.");
+    }
     const { error } = await supabaseAdmin
       .from("verifier_bank_accounts")
       .upsert({
@@ -353,8 +368,9 @@ export const submitTfn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: verifier } = await supabaseAdmin
-      .from("verifiers").select("id").eq("user_id", context.userId).maybeSingle();
+      .from("verifiers").select("id,is_active").eq("user_id", context.userId).maybeSingle();
     if (!verifier) throw new Error("Complete your verifier profile first");
+    if (!verifier.is_active) throw new Error("Your verifier account is suspended. Contact support.");
     const { data: bank } = await supabaseAdmin
       .from("verifier_bank_accounts").select("id").eq("verifier_id", verifier.id).maybeSingle();
     if (!bank) throw new Error("Add your bank details before submitting numbers");
@@ -388,8 +404,9 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: verifier } = await supabaseAdmin
-      .from("verifiers").select("id").eq("user_id", context.userId).maybeSingle();
+      .from("verifiers").select("id,is_active").eq("user_id", context.userId).maybeSingle();
     if (!verifier) throw new Error("Complete your verifier profile first");
+    if (!verifier.is_active) throw new Error("Your verifier account is suspended. Contact support.");
     const { data: bank } = await supabaseAdmin
       .from("verifier_bank_accounts").select("id").eq("verifier_id", verifier.id).maybeSingle();
     if (!bank) throw new Error("Add your bank details before claiming a number");
@@ -454,8 +471,9 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: verifier } = await supabaseAdmin
-      .from("verifiers").select("id").eq("user_id", context.userId).maybeSingle();
+      .from("verifiers").select("id,is_active").eq("user_id", context.userId).maybeSingle();
     if (!verifier) throw new Error("Complete your verifier profile first");
+    if (!verifier.is_active) throw new Error("Your verifier account is suspended. Contact support.");
     const { data: row, error } = await supabaseAdmin
       .from("verifier_tfns")
       .select("id,telnyx_number_id,telnyx_verification_id,phone_number,status,rejection_reason")
@@ -543,8 +561,9 @@ export const refreshMyTfn = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: verifier } = await supabaseAdmin
-      .from("verifiers").select("id").eq("user_id", context.userId).maybeSingle();
+      .from("verifiers").select("id,is_active").eq("user_id", context.userId).maybeSingle();
     if (!verifier) throw new Error("Complete your verifier profile first");
+    if (!verifier.is_active) throw new Error("Your verifier account is suspended. Contact support.");
     const { data: row } = await supabaseAdmin
       .from("verifier_tfns")
       .select("id,telnyx_verification_id,status")
@@ -612,8 +631,9 @@ export const requestWithdrawal = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: verifier } = await supabaseAdmin
-      .from("verifiers").select("id").eq("user_id", context.userId).maybeSingle();
+      .from("verifiers").select("id,is_active").eq("user_id", context.userId).maybeSingle();
     if (!verifier) throw new Error("Complete your verifier profile first");
+    if (!verifier.is_active) throw new Error("Your verifier account is suspended. Contact support.");
     const { data: wallet } = await supabaseAdmin
       .from("verifier_wallets").select("balance_ngn").eq("verifier_id", verifier.id).maybeSingle();
     if (!wallet || Number(wallet.balance_ngn) < data.amount_ngn) {
