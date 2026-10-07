@@ -1507,7 +1507,7 @@ function SegmentPicker({
           return (
             <label
               key={seg.id}
-              className={`flex items-start gap-2 rounded-lg border p-3 cursor-pointer ${on ? "border-primary bg-primary/5" : ""}`}
+              className={`flex items-start gap-2 rounded-xl border-2 p-3 cursor-pointer transition-colors ${on ? "border-primary bg-primary/5" : "border-border/60 hover:border-border"}`}
             >
               <Checkbox
                 checked={on}
@@ -1579,13 +1579,18 @@ function ContactPicker({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label>Or pick specific contacts</Label>
-        <span className="text-xs text-muted-foreground">{selected.length} selected</span>
+        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Or pick specific contacts
+        </Label>
+        <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+          {selected.length} SELECTED
+        </span>
       </div>
       <Input
         placeholder="Search by name or phone…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
+        className="h-11 bg-muted/50 rounded-xl"
       />
       <div className="max-h-56 overflow-y-auto rounded-md border divide-y">
         {search.length < 2 && (
