@@ -113,7 +113,15 @@ function RequestRow({
             </a>
           )}
         </div>
-        <Badge variant={statusVariant as any}>{req.status}</Badge>
+        <div className="flex items-center gap-2">
+          {req.area_code && (
+            <Badge variant="outline">
+              Local · area code {req.area_code}
+              {req.charged_at ? " · charged" : " · charged on assign"}
+            </Badge>
+          )}
+          <Badge variant={statusVariant as any}>{req.status}</Badge>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-3 text-sm">
