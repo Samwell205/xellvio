@@ -54,7 +54,7 @@ export const buyLocalNumber = createServerFn({ method: "POST" })
 export const requestLocalAreaCode = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) =>
-    z.object({ area_code: z.string().trim().regex(/^[2-9]\d{2}$/, "Enter a valid 3-digit US area code") }).parse(i),
+    z.object({ area_code: z.string().trim().regex(AREA_CODE_PATTERN, "Enter a valid 3-digit US area code") }).parse(i),
   )
   .handler(async ({ data, context }) => {
     const { resolveActingAccount, assertPermission } = await import("./acting-account.server");
