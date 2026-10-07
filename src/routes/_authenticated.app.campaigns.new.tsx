@@ -804,15 +804,31 @@ function NewCampaignPage() {
       <Stepper step={step} />
 
       {step === 0 && (
-        <Card className="p-5 space-y-4">
-          <div>
-            <Label>Campaign name</Label>
+        <Card className="p-5 sm:p-6 space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-md shadow-primary/25">
+              <Users className="size-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold font-display leading-tight">Audience</h2>
+              <p className="text-xs text-muted-foreground font-medium">
+                Step 1 of 5 · Setup & contacts
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Campaign name
+            </Label>
             <Input
               value={s.name}
               onChange={(e) => setS({ ...s, name: e.target.value })}
               placeholder="e.g. Black Friday — US"
+              className="h-11 bg-muted/50 rounded-xl"
             />
           </div>
+
           <ListPicker
             lists={listsQ.data ?? []}
             selected={s.listIds}
@@ -828,47 +844,51 @@ function NewCampaignPage() {
             selected={s.profileIds}
             onChange={(ids) => setS({ ...s, profileIds: ids })}
           />
-          <Card className="p-4 flex items-center justify-between bg-primary/5 border-primary/30">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-lg bg-primary/15 text-primary grid place-items-center">
-                <Users className="size-5" />
+
+          <div className="relative overflow-hidden rounded-2xl bg-foreground text-background p-5 shadow-lg">
+            <div className="absolute -top-10 -right-10 size-40 rounded-full bg-primary/25 blur-3xl" />
+            <div className="relative flex items-start gap-4">
+              <div className="size-12 rounded-xl bg-background/10 border border-background/10 grid place-items-center shrink-0">
+                <Users className="size-6 text-primary" />
               </div>
-              <div>
-                <div className="text-xs uppercase text-muted-foreground tracking-wide">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">
                   Eligible audience
+                </p>
+                <div className="text-2xl font-bold font-display tracking-tight">
+                  {!hasAudience ? "—" : countsQ.isFetching ? "…" : audienceTotal.toLocaleString()}{" "}
+                  <span className="text-sm font-medium opacity-60">contacts</span>
                 </div>
-                <div className="text-2xl font-extrabold">
-                  {!hasAudience ? "—" : countsQ.isFetching ? "…" : audienceTotal.toLocaleString()}
-                </div>
-                <div className="text-xs text-muted-foreground">
+                <p className="text-[11px] opacity-60 mt-1 flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-success inline-block" />
                   subscribed, not on suppression list
-                </div>
+                </p>
                 {countsQ.isError && (
-                  <div className="text-xs text-destructive">
+                  <div className="text-xs text-destructive mt-1">
                     Could not read this audience. Please retry.
                   </div>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {audienceTotal > 0 && (
+            <div className="relative mt-4 pt-4 border-t border-background/10 flex items-center justify-between gap-2">
+              {audienceTotal > 0 ? (
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={exportingAudience}
                   onClick={exportEligibleAudience}
+                  className="bg-background/10 border-background/15 text-background hover:bg-background/20 hover:text-background"
                 >
                   <Send className="size-4 mr-1.5 rotate-90" />
                   {exportingAudience ? "Preparing…" : "Export CSV"}
                 </Button>
-              )}
-              {!hasAudience && (
-                <span className="text-xs text-muted-foreground">
+              ) : (
+                <span className="text-xs opacity-60">
                   Pick contacts above to see the eligible audience.
                 </span>
               )}
             </div>
-          </Card>
+          </div>
         </Card>
       )}
 
@@ -1475,7 +1495,9 @@ function SegmentPicker({
 }) {
   return (
     <div>
-      <Label>{title}</Label>
+        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </Label>
       <div className="grid sm:grid-cols-2 gap-2 mt-1">
         {segments.length === 0 && (
           <div className="text-xs text-muted-foreground">No segments available.</div>
@@ -1485,7 +1507,7 @@ function SegmentPicker({
           return (
             <label
               key={seg.id}
-              className={`flex items-start gap-2 rounded-lg border p-3 cursor-pointer ${on ? "border-primary bg-primary/5" : ""}`}
+              className={`flex items-start gap-2 rounded-xl border-2 p-3 cursor-pointer transition-colors ${on ? "border-primary bg-primary/5" : "border-border/60 hover:border-border"}`}
             >
               <Checkbox
                 checked={on}
@@ -1557,13 +1579,18 @@ function ContactPicker({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label>Or pick specific contacts</Label>
-        <span className="text-xs text-muted-foreground">{selected.length} selected</span>
+        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Or pick specific contacts
+        </Label>
+        <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+          {selected.length} SELECTED
+        </span>
       </div>
       <Input
         placeholder="Search by name or phone…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
+        className="h-11 bg-muted/50 rounded-xl"
       />
       <div className="max-h-56 overflow-y-auto rounded-md border divide-y">
         {search.length < 2 && (
@@ -1622,7 +1649,9 @@ function ListPicker({
   }
   return (
     <div>
-      <Label>Pick contact lists</Label>
+      <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Pick contact lists
+      </Label>
       {lists.length === 0 ? (
         <div className="text-xs text-muted-foreground mt-1">
           No lists yet.{" "}
@@ -1638,7 +1667,7 @@ function ListPicker({
               type="button"
               variant="outline"
               role="combobox"
-              className="w-full sm:max-w-md justify-between mt-1 font-normal"
+              className="w-full sm:max-w-md justify-between mt-1 font-normal h-11 bg-muted/50 rounded-xl"
             >
               <span className="flex items-center gap-2 truncate">
                 <ListFilter className="size-4 text-muted-foreground shrink-0" />
