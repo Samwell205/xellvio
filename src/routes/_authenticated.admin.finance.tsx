@@ -81,25 +81,50 @@ function FinancePage() {
   const overviewFn = useServerFn(adminFinanceOverview);
   const tenantsFn = useServerFn(adminFinanceTenants);
 
+  const FIVE_MIN = 5 * 60_000;
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin-finance"],
-    queryFn: () => overviewFn({}),
+    queryFn: () => overviewFn({ data: {} }),
+    staleTime: FIVE_MIN,
   });
   const { data: tenants } = useQuery({
     queryKey: ["admin-finance-tenants"],
-    queryFn: () => tenantsFn({}),
+    queryFn: () => tenantsFn({ data: {} }),
+    staleTime: FIVE_MIN,
   });
 
   const marginFn = useServerFn(adminMarginAudit);
   const pricingFn = useServerFn(adminPricingPreview);
   const { data: margins } = useQuery({
     queryKey: ["admin-margin-audit"],
-    queryFn: () => marginFn({}),
+    queryFn: () => marginFn({ data: {} }),
+    staleTime: FIVE_MIN,
   });
   const { data: pricing } = useQuery({
     queryKey: ["admin-pricing-preview"],
     queryFn: () => pricingFn({ data: { markupPercent: 100 } }),
+    staleTime: FIVE_MIN,
   });
+
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshAll = async () => {
+    setRefreshing(true);
+    try {
+      const [o, t, m] = await Promise.all([
+        overviewFn({ data: { refresh: true } }),
+        tenantsFn({ data: { refresh: true } }),
+        marginFn({ data: { refresh: true } }),
+      ]);
+      queryClient.setQueryData(["admin-finance"], o);
+      queryClient.setQueryData(["admin-finance-tenants"], t);
+      queryClient.setQueryData(["admin-margin-audit"], m);
+      toast.success("Finance totals recalculated");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not recalculate");
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const recoveryFn = useServerFn(adminListRecoveryCases);
   const updateRecoveryFn = useServerFn(adminUpdateRecoveryCase);
   const csvRecoveryFn = useServerFn(adminRecoveryCaseCsv);
@@ -191,12 +216,17 @@ function FinancePage() {
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px]">
-      <div>
-        <h1 className="text-2xl font-semibold">Finance analysis</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Every figure below is calculated live from payments, tenant wallets and the messages
-          actually sent. Amounts are in USD.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Finance analysis</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Calculated from payments, tenant wallets and the messages actually sent. Amounts are in
+            USD. Totals last updated {date((data as any)?.computedAt)}.
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={refreshAll} disabled={refreshing}>
+          {refreshing ? "Recalculating…" : "Recalculate now"}
+        </Button>
       </div>
 
       {/* 1. Where the money is */}
