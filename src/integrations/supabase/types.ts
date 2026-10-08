@@ -522,6 +522,24 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_report_cache: {
+        Row: {
+          computed_at: string
+          key: string
+          payload: Json
+        }
+        Insert: {
+          computed_at?: string
+          key: string
+          payload: Json
+        }
+        Update: {
+          computed_at?: string
+          key?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
       announcement_receipts: {
         Row: {
           account_id: string
