@@ -1,16 +1,14 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, Link, useRouterState } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
-import { ShieldCheck } from "lucide-react";
+import { ArrowUpRight, ShieldCheck } from "lucide-react";
 import { getCachedIsAdmin } from "@/lib/auth-cache";
-import { Badge } from "@/components/ui/badge";
-import { LowBalanceBanner } from "@/components/BalanceCard";
 import { RouteFallback } from "@/components/RouteFallback";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async () => {
-    // Cached per session: repeating this RPC on every admin navigation added a
-    // round-trip of dead time before any page could render.
     if (!(await getCachedIsAdmin())) throw redirect({ to: "/app" });
   },
   pendingComponent: RouteFallback,
@@ -18,29 +16,18 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function AdminShell() {
-  return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-slate-950 text-slate-100">
-        <AdminSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 sticky top-0 z-30 bg-slate-950/80 backdrop-blur border-b border-slate-800 flex items-center gap-3 px-4">
-            <SidebarTrigger className="text-slate-200 hover:text-white" />
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-primary" />
-              <span className="font-semibold tracking-tight">Admin console</span>
-              <Badge variant="outline" className="border-slate-700 text-slate-300">
-                Platform
-              </Badge>
-            </div>
-          </header>
-          <main className="flex-1 p-4 md:p-6 max-w-[1500px] w-full mx-auto">
-            <div className="admin-surface text-foreground bg-background rounded-xl border border-slate-800/60 p-4 md:p-6 shadow-2xl space-y-4">
-              <LowBalanceBanner />
-              <Outlet />
-            </div>
-          </main>
-        </div>
+  const pathname = useRouterState({ select: s => s.location.pathname });
+  const section = pathname.split("/")[2]?.replaceAll("-", " ") || "overview";
+  return <SidebarProvider className="admin-workspace font-dash">
+    <div className="flex min-h-screen w-full bg-background text-foreground">
+      <AdminSidebar />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 grid h-[72px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur-md md:px-8">
+          <div className="flex min-w-0 items-center gap-3"><SidebarTrigger /><div className="min-w-0 text-sm"><span className="hidden text-muted-foreground sm:inline">Workspace <span className="mx-3 text-border">/</span></span><span className="capitalize truncate">{section}</span></div></div>
+          <div className="flex shrink-0 items-center gap-3"><ThemeToggle /><Button asChild variant="ghost" size="icon" title="Open tenant workspace"><Link to="/app" aria-label="Open tenant workspace"><ArrowUpRight /></Link></Button><div className="hidden size-8 place-items-center rounded-md border border-border bg-card sm:grid"><ShieldCheck className="size-4 text-primary" /></div></div>
+        </header>
+        <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 md:p-8 lg:p-10"><div key={pathname} className="admin-page-enter min-w-0"><Outlet /></div></main>
       </div>
-    </SidebarProvider>
-  );
+    </div>
+  </SidebarProvider>;
 }

@@ -1,5 +1,10 @@
 # Roadmap
 
+## Admin experience refresh
+- [x] Redesign the shared admin shell and navigation with theme-aware styling and motion.
+- [x] Replace the crowded overview with focused operational panels and remove its full-history loading bottleneck.
+- [x] Verify authenticated loading, navigation, light/dark appearance, and narrow layouts.
+
 - [x] Tenant SMS API: workspace keys, individual and bulk queueing, status/reply/sender/suppression reads, signed webhooks, and documentation.
 
 - [x] Match the toll-free verification experience across tenant and verifier accounts to the carrier's exact three-step flow: General, Numbers, and Use Case Details.

@@ -270,3 +270,74 @@
   opacity: .16;
   animation-duration: 6s;
 }
+
+/* Admin workspace: neutral surfaces, electric blue, acid green and coral signals. */
+.admin-workspace {
+  --background: oklch(0.977 0.002 240);
+  --foreground: oklch(0.23 0.008 240);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --muted: oklch(0.945 0.003 240);
+  --muted-foreground: oklch(0.52 0.01 240);
+  --border: oklch(0.89 0.006 240);
+  --input: var(--border);
+  --sidebar: oklch(0.99 0.002 240);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-accent: var(--muted);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --admin-signal: oklch(0.53 0.13 145);
+  --admin-signal-soft: oklch(0.94 0.055 145);
+  --admin-feature: oklch(0.23 0.009 240);
+  --admin-feature-foreground: oklch(0.98 0.003 240);
+  --admin-feature-muted: oklch(0.73 0.005 240);
+  --admin-feature-line: oklch(0.36 0.008 240);
+  --admin-highlight: oklch(0.9 0.19 118);
+  --admin-highlight-foreground: oklch(0.22 0.02 130);
+  --admin-shadow: 0 8px 24px -18px oklch(0.2 0.005 240 / .18);
+  letter-spacing: 0;
+}
+.dark .admin-workspace {
+  --background: oklch(0.155 0.003 240);
+  --foreground: oklch(0.94 0.003 240);
+  --card: oklch(0.205 0.004 240);
+  --card-foreground: var(--foreground);
+  --muted: oklch(0.25 0.004 240);
+  --muted-foreground: oklch(0.67 0.006 240);
+  --border: oklch(0.3 0.006 240);
+  --sidebar: oklch(0.18 0.003 240);
+  --admin-signal: oklch(0.85 0.17 118);
+  --admin-signal-soft: oklch(0.27 0.04 130);
+  --admin-feature: oklch(0.22 0.006 240);
+  --admin-feature-line: oklch(0.36 0.005 240);
+}
+@theme inline {
+  --color-admin-signal: var(--admin-signal);
+  --color-admin-signal-soft: var(--admin-signal-soft);
+  --color-admin-feature: var(--admin-feature);
+  --color-admin-feature-foreground: var(--admin-feature-foreground);
+  --color-admin-feature-muted: var(--admin-feature-muted);
+  --color-admin-feature-line: var(--admin-feature-line);
+  --color-admin-highlight: var(--admin-highlight);
+  --color-admin-highlight-foreground: var(--admin-highlight-foreground);
+}
+.admin-workspace h1, .admin-workspace h2, .admin-workspace h3 { font-family: var(--font-display); letter-spacing: 0; }
+.admin-workspace [data-sidebar="sidebar"] { background: var(--sidebar); color: var(--sidebar-foreground); }
+.admin-nav-item { transition: background-color .18s, transform .18s; }
+.admin-nav-item:hover { transform: translateX(2px); }
+.admin-nav-item[data-active="true"] { background: var(--primary-soft); color: var(--primary); box-shadow: inset 3px 0 var(--primary); }
+.admin-metric { box-shadow: var(--admin-shadow); transition: transform .25s ease, border-color .25s; }
+.admin-metric:hover { transform: translateY(-3px); border-color: var(--primary); }
+@keyframes admin-arrive { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes admin-trace { from { stroke-dashoffset: 600; } to { stroke-dashoffset: 0; } }
+.admin-page-enter, .admin-reveal { animation: admin-arrive .3s ease-out both; }
+.admin-metric { animation: admin-arrive .5s ease-out both; }
+.admin-metric:nth-child(2) { animation-delay: 70ms; }
+.admin-metric:nth-child(3) { animation-delay: 140ms; }
+.admin-metric:nth-child(4) { animation-delay: 210ms; }
+.admin-trace { stroke-dasharray: 600; animation: admin-trace 1.5s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .admin-page-enter, .admin-reveal, .admin-trace, .admin-metric { animation: none; }
+  .admin-metric, .admin-nav-item { transition: none; }
+  .admin-metric:hover, .admin-nav-item:hover { transform: none; }
+}
