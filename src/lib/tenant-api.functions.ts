@@ -14,7 +14,7 @@ async function adminContext(userId: string) {
 
 async function latestRequest(db: any, accountId: string) {
   const { data } = await db.from("api_access_requests").select("id,status,company_name,website,use_case,reason,expected_monthly_volume,admin_note,created_at,reviewed_at").eq("account_id", accountId).order("created_at", { ascending: false }).limit(1).maybeSingle();
-  return data as null | { id: string; status: string; admin_note: string | null; [k: string]: unknown };
+  return data as null | { id: string; status: string; company_name: string; website: string | null; use_case: string; reason: string; expected_monthly_volume: number | null; admin_note: string | null; created_at: string; reviewed_at: string | null };
 }
 
 async function approvedContext(userId: string) {
