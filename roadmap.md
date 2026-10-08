@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Admin experience refresh
-- [ ] Redesign the shared admin shell and navigation with theme-aware styling and motion.
-- [ ] Replace the crowded overview with focused operational panels and remove its full-history loading bottleneck.
-- [ ] Verify authenticated loading, navigation, light/dark appearance, and narrow layouts.
+- [x] Redesign the shared admin shell and navigation with theme-aware styling and motion.
+- [x] Replace the crowded overview with focused operational panels and remove its full-history loading bottleneck.
+- [x] Verify authenticated loading, navigation, light/dark appearance, and narrow layouts.
 
 - [x] Tenant SMS API: workspace keys, individual and bulk queueing, status/reply/sender/suppression reads, signed webhooks, and documentation.
 

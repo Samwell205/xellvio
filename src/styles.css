@@ -331,9 +331,13 @@
 @keyframes admin-arrive { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes admin-trace { from { stroke-dashoffset: 600; } to { stroke-dashoffset: 0; } }
 .admin-page-enter, .admin-reveal { animation: admin-arrive .3s ease-out both; }
+.admin-metric { animation: admin-arrive .5s ease-out both; }
+.admin-metric:nth-child(2) { animation-delay: 70ms; }
+.admin-metric:nth-child(3) { animation-delay: 140ms; }
+.admin-metric:nth-child(4) { animation-delay: 210ms; }
 .admin-trace { stroke-dasharray: 600; animation: admin-trace 1.5s ease-out both; }
 @media (prefers-reduced-motion: reduce) {
-  .admin-page-enter, .admin-reveal, .admin-trace { animation: none; }
+  .admin-page-enter, .admin-reveal, .admin-trace, .admin-metric { animation: none; }
   .admin-metric, .admin-nav-item { transition: none; }
   .admin-metric:hover, .admin-nav-item:hover { transform: none; }
 }
