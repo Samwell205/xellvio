@@ -130,18 +130,44 @@ function AuthPage() {
   async function handleGoogle() {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: window.location.origin + destination },
+      const { lovable } = await import("@/integrations/lovable/index");
+      try {
+        sessionStorage.setItem("post_auth_redirect", destination);
+      } catch {}
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin + "/auth",
       });
-      if (error) {
-        toast.error(error.message ?? "Google sign-in failed");
+      if (result.error) {
+        toast.error(result.error.message ?? "Google sign-in failed");
         return;
       }
+      if (result.redirected) return;
+      toast.success("Welcome");
+      navigate({ href: destination });
     } finally {
       setLoading(false);
     }
   }
+
+  // After returning from Google, send the signed-in user on to their page.
+  useEffect(() => {
+    let done = false;
+    const go = (hasSession: boolean) => {
+      if (!hasSession || done) return;
+      let target: string | null = null;
+      try {
+        target = sessionStorage.getItem("post_auth_redirect");
+        sessionStorage.removeItem("post_auth_redirect");
+      } catch {}
+      if (!target) return;
+      done = true;
+      const safe = target.startsWith("/") && !target.startsWith("//") ? target : "/app";
+      navigate({ href: safe });
+    };
+    supabase.auth.getSession().then(({ data }) => go(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => go(!!s));
+    return () => sub.subscription.unsubscribe();
+  }, [navigate]);
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
