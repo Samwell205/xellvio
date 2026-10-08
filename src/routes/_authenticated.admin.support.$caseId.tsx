@@ -24,7 +24,7 @@ function parse(content: string) {
   for (const m of content.matchAll(/ACTION:\s*(resume_campaign|lift_hold)\s+([0-9a-f-]{36})\s*\|?\s*(.*)/gi)) {
     actions.push({ action: m[1].toLowerCase() as Action["action"], target: m[2], reason: m[3]?.trim() ?? "" });
   }
-  const body = content.replace(/```reply\s*\n[\s\S]*?```/, "").replace(/^.*ACTION:.*$/gim, "").trim();
+  const body = content.replace(/```reply\s*\n[\s\S]*?```/, "").replace(/^.*ACTION:.*$/gim, "").replace(/^\s*(#+\s*)?\**Reply to send\**:?\s*$/gim, "").trim();
   return { reply, actions, body };
 }
 
@@ -140,7 +140,13 @@ function AssistantMessage({ content, onAction, busy }: { content: string; onActi
   const { reply, actions, body } = parse(content);
   return (
     <div className="max-w-[85%] space-y-4">
-      <div className="prose prose-sm max-w-none dark:prose-invert"><ReactMarkdown>{body}</ReactMarkdown></div>
+      <div className="prose prose-sm max-w-none dark:prose-invert"><ReactMarkdown components={{
+        h2: ({ children }) => <h2 className="mb-1 mt-4 text-sm font-semibold uppercase tracking-wide text-primary">{children}</h2>,
+        h3: ({ children }) => <h3 className="mb-1 mt-3 font-semibold">{children}</h3>,
+        p: ({ children }) => <p className="mb-2 text-sm leading-relaxed">{children}</p>,
+        ul: ({ children }) => <ul className="mb-2 list-disc space-y-1 pl-5 text-sm">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-2 list-decimal space-y-1 pl-5 text-sm">{children}</ol>,
+      }}>{body}</ReactMarkdown></div>
       {reply && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
           <div className="mb-2 flex items-center justify-between">

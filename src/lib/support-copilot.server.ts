@@ -87,4 +87,53 @@ ACTION: resume_campaign <campaign uuid> | <short reason>
 ACTION: lift_hold <account uuid> | <short reason>
 Only suggest resume_campaign for campaigns in status paused or paused_by_user whose cause is resolved. Write "None" if nothing is needed.
 
+PLATFORM HEALTH data is always provided. When the admin asks about the platform as a whole (outage, nothing sending, slow, payments failing), use it: say whether sending is flowing (last carrier hand-off time, queue size vs. sent), name stuck campaigns, dominant failure reasons and what they mean, and give a prioritized checklist. For platform questions the "Reply to send" can be a tenant-wide notice, and "Suggested fixes" lists checks for the admin. Don't invent causes the data doesn't show.
+
 If the admin asks a follow-up question, answer it directly and keep the same structure when a new reply is useful.`;
+
+/** Platform-wide health snapshot (cheap, bounded queries). Server-only. */
+export async function buildPlatformSnapshot(): Promise<string> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const sb = supabaseAdmin as any;
+  const now = Date.now();
+  const h1 = new Date(now - 3600e3).toISOString();
+  const h24 = new Date(now - 86400e3).toISOString();
+  const cnt = (q: any) => q.then((r: any) => (r.error ? `error: ${r.error.message}` : r.count ?? 0));
+  const msgs = () => sb.from("messages").select("id", { count: "exact", head: true });
+  const [sent1, failed1, queued, sent24, failed24, lastSent, sending, pausedCamps, recentFails, pendingReq, holds, notices, pays] =
+    await Promise.all([
+      cnt(msgs().gte("created_at", h1).in("status", ["sent", "delivered", "delivery_unconfirmed"])),
+      cnt(msgs().gte("created_at", h1).in("status", ["failed", "undelivered"])),
+      cnt(msgs().eq("status", "queued")),
+      cnt(msgs().gte("created_at", h24).in("status", ["sent", "delivered", "delivery_unconfirmed"])),
+      cnt(msgs().gte("created_at", h24).in("status", ["failed", "undelivered"])),
+      sb.from("messages").select("sent_at").not("sent_at", "is", null).order("sent_at", { ascending: false }).limit(1).maybeSingle(),
+      sb.from("campaigns").select("id, name, account_id, updated_at, created_at").in("status", ["sending", "queued"]).order("created_at", { ascending: false }).limit(15),
+      sb.from("campaigns").select("paused_reason").eq("status", "paused").gte("created_at", h24).limit(200),
+      sb.from("messages").select("error_code, failure_reason").gte("created_at", h24).in("status", ["failed", "undelivered"]).limit(2000),
+      cnt(sb.from("number_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
+      cnt(sb.from("accounts").select("id", { count: "exact", head: true }).not("sending_suspended_at", "is", null)),
+      sb.from("lifecycle_announcements").select("title, kind, created_at").eq("kind", "maintenance").order("created_at", { ascending: false }).limit(3),
+      sb.from("payments").select("provider, status").gte("created_at", h24).limit(500),
+    ]);
+  const tally = (rows: any[], key: (r: any) => string) => {
+    const t: Record<string, number> = {};
+    for (const r of rows ?? []) { const k = key(r); t[k] = (t[k] ?? 0) + 1; }
+    return Object.entries(t).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, n]) => `${n}× ${k}`).join("; ") || "none";
+  };
+  const last = lastSent.data?.sent_at as string | undefined;
+  const minsAgo = last ? Math.round((now - new Date(last).getTime()) / 60000) : null;
+  return [
+    `Checked at: ${new Date(now).toISOString()}`,
+    `Last message handed to carrier: ${last ?? "never"}${minsAgo != null ? ` (${minsAgo} min ago)` : ""}`,
+    `Last hour: ${sent1} sent, ${failed1} failed. Last 24h: ${sent24} sent, ${failed24} failed.`,
+    `Messages waiting in queue: ${queued}`,
+    `Campaigns currently sending/queued (${(sending.data ?? []).length}): ${(sending.data ?? []).map((c: any) => `[${c.id}] "${c.name}" started ${String(c.created_at).slice(0, 16)}`).join("; ") || "none"}`,
+    `Campaigns paused in last 24h by reason: ${tally(pausedCamps.data, (r) => r.paused_reason ?? "?")}`,
+    `Top failure reasons last 24h: ${tally(recentFails.data, (r) => `${r.error_code ?? "?"} ${String(r.failure_reason ?? "").slice(0, 60)}`)}`,
+    `Payments last 24h by status: ${tally(pays.data, (r) => `${r.provider} ${r.status}`)}`,
+    `Pending number requests: ${pendingReq}`,
+    `Accounts with sending on hold: ${holds}`,
+    `Recent maintenance notices: ${(notices.data ?? []).map((n: any) => `"${n.title}" ${String(n.created_at).slice(0, 10)}`).join("; ") || "none"}`,
+  ].join("\n");
+}
