@@ -277,7 +277,7 @@ export const getAnnouncements = createServerFn({ method: "GET" })
       .select("announcements")
       .eq("account_id", accountId)
       .maybeSingle();
-    if (prefs && prefs.announcements === false) return [];
+    const optedOut = prefs?.announcements === false;
     const { data: life } = await db
       .from("tenant_lifecycle")
       .select("stage")
@@ -292,10 +292,14 @@ export const getAnnouncements = createServerFn({ method: "GET" })
       .order("published_at", { ascending: false })
       .limit(5);
     const stage = life?.stage ?? "new";
-    const matching = (rows ?? []).filter(
-      (r: any) => !r.target_stages?.length || r.target_stages.includes(stage),
+    const matchesStage = (r: any) => !r.target_stages?.length || r.target_stages.includes(stage);
+    // A service interruption is an operational notice, not product news: no
+    // workspace may hide one by turning announcements off or dismissing it.
+    const incidents = (rows ?? []).filter(
+      (r: any) => r.kind === "maintenance" && matchesStage(r),
     );
-    if (matching.length === 0) return [];
+    const news = (rows ?? []).filter((r: any) => r.kind !== "maintenance" && matchesStage(r));
+    if (optedOut || news.length === 0) return incidents;
     const { data: receipts } = await db
       .from("announcement_receipts")
       .select("announcement_id,dismissed_at")
@@ -303,7 +307,7 @@ export const getAnnouncements = createServerFn({ method: "GET" })
     const dismissed = new Set(
       (receipts ?? []).filter((r: any) => r.dismissed_at).map((r: any) => r.announcement_id),
     );
-    return matching.filter((r: any) => !dismissed.has(r.id));
+    return [...incidents, ...news.filter((r: any) => !dismissed.has(r.id))];
   });
 
 const AnnouncementAckSchema = z.object({
