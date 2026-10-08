@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, ExternalLink, KeyRound, Plus, RefreshCw, Trash2, Webhook } from "lucide-react";
+import { Clock, ShieldCheck, Copy, ExternalLink, KeyRound, Plus, RefreshCw, Trash2, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,10 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { API_SCOPES, WEBHOOK_EVENTS } from "@/lib/tenant-api.shared";
-import { createTenantApiKey, createTenantWebhook, getTenantApiSettings, revokeTenantApiKey, updateTenantWebhook } from "@/lib/tenant-api.functions";
+import { getApiAccessStatus, requestApiAccess, createTenantApiKey, createTenantWebhook, getTenantApiSettings, revokeTenantApiKey, updateTenantWebhook } from "@/lib/tenant-api.functions";
 
 function SecretBox({ value, label }: { value: string; label: string }) {
   useEffect(() => { const timer = setTimeout(() => location.reload(), 120_000); return () => clearTimeout(timer); }, []);
@@ -19,6 +20,31 @@ function SecretBox({ value, label }: { value: string; label: string }) {
 }
 
 export function TenantApiPanel() {
+  const loadStatus = useServerFn(getApiAccessStatus);
+  const status = useQuery({ queryKey: ["api-access-status"], queryFn: () => loadStatus() });
+  if (status.isLoading) return <Skeleton className="h-80" />;
+  if (status.error) return <Card className="p-6 text-sm text-muted-foreground">{(status.error as Error).message}</Card>;
+  if (status.data?.request?.status !== "approved") return <ApiAccessRequest request={status.data?.request ?? null} />;
+  return <ApprovedApiPanel />;
+}
+
+function ApiAccessRequest({ request }: { request: any }) {
+  const qc = useQueryClient(); const submit = useServerFn(requestApiAccess);
+  const [company, setCompany] = useState(""); const [website, setWebsite] = useState(""); const [useCase, setUseCase] = useState(""); const [reason, setReason] = useState(""); const [volume, setVolume] = useState("");
+  const m = useMutation({ mutationFn: () => submit({ data: { companyName: company, website, useCase, reason, expectedMonthlyVolume: volume ? Number(volume) : undefined } }), onSuccess: () => { toast.success("Request sent for review"); void qc.invalidateQueries({ queryKey: ["api-access-status"] }); }, onError: (e: Error) => toast.error(e.message) });
+  if (request?.status === "pending") return <Card className="space-y-2 p-6"><h3 className="flex items-center gap-2 font-semibold"><Clock className="size-4" /> API access request under review</h3><p className="text-sm text-muted-foreground">We received your request on {new Date(request.created_at).toLocaleDateString()}. Our team will review it and API keys and webhooks will appear here once approved.</p></Card>;
+  return <Card className="space-y-4 p-6">
+    <div><h3 className="flex items-center gap-2 font-semibold"><ShieldCheck className="size-4" /> Request API access</h3><p className="mt-1 text-sm text-muted-foreground">API access lets your own software send SMS through your verified numbers using your Xellvio credit. Tell us how you plan to use it — our team reviews every request.</p></div>
+    {request && (request.status === "rejected" || request.status === "revoked") && <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">Your previous request was {request.status === "revoked" ? "revoked" : "not approved"}.{request.admin_note ? ` Reason: ${request.admin_note}` : ""} You can submit a new request.</div>}
+    <div className="grid gap-3 md:grid-cols-2"><div className="space-y-1.5"><Label>Company / platform name</Label><Input value={company} onChange={(e) => setCompany(e.target.value)} maxLength={120} /></div><div className="space-y-1.5"><Label>Website (optional)</Label><Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" maxLength={300} /></div></div>
+    <div className="space-y-1.5"><Label>What will you send through the API?</Label><Textarea value={useCase} onChange={(e) => setUseCase(e.target.value)} placeholder="e.g. order confirmations and delivery updates from our store platform" maxLength={1000} /></div>
+    <div className="space-y-1.5"><Label>Why do you need API access?</Label><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. we want to send from our own CRM instead of the dashboard" maxLength={1000} /></div>
+    <div className="space-y-1.5 md:w-64"><Label>Expected messages per month</Label><Input type="number" min={0} value={volume} onChange={(e) => setVolume(e.target.value)} /></div>
+    <Button disabled={m.isPending || company.trim().length < 2 || useCase.trim().length < 10 || reason.trim().length < 10} onClick={() => m.mutate()}>Submit request</Button>
+  </Card>;
+}
+
+function ApprovedApiPanel() {
   const qc = useQueryClient(); const load = useServerFn(getTenantApiSettings); const createKey = useServerFn(createTenantApiKey); const revokeKey = useServerFn(revokeTenantApiKey); const createHook = useServerFn(createTenantWebhook); const updateHook = useServerFn(updateTenantWebhook);
   const settings = useQuery({ queryKey: ["tenant-api-settings"], queryFn: () => load() });
   const [keyName, setKeyName] = useState("Production"); const [scopes, setScopes] = useState<string[]>([...API_SCOPES]); const [issuedKey, setIssuedKey] = useState<string | null>(null);
