@@ -75,6 +75,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated.admin.accounts'
 import { Route as AuthenticatedAdminActivityRouteImport } from './routes/_authenticated.admin.activity'
+import { Route as AuthenticatedAdminApiAccessRouteImport } from './routes/_authenticated.admin.api-access'
 import { Route as AuthenticatedAdminAppsRouteImport } from './routes/_authenticated.admin.apps'
 import { Route as AuthenticatedAdminAuthorityRouteImport } from './routes/_authenticated.admin.authority'
 import { Route as AuthenticatedAdminBillingRouteImport } from './routes/_authenticated.admin.billing'
@@ -499,6 +500,12 @@ const AuthenticatedAdminActivityRoute =
   AuthenticatedAdminActivityRouteImport.update({
     id: '/activity',
     path: '/activity',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminApiAccessRoute =
+  AuthenticatedAdminApiAccessRouteImport.update({
+    id: '/api-access',
+    path: '/api-access',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminAppsRoute = AuthenticatedAdminAppsRouteImport.update({
@@ -1090,6 +1097,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/admin/api-access': typeof AuthenticatedAdminApiAccessRoute
   '/admin/apps': typeof AuthenticatedAdminAppsRoute
   '/admin/authority': typeof AuthenticatedAdminAuthorityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -1245,6 +1253,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/admin/api-access': typeof AuthenticatedAdminApiAccessRoute
   '/admin/apps': typeof AuthenticatedAdminAppsRoute
   '/admin/authority': typeof AuthenticatedAdminAuthorityRoute
   '/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -1404,6 +1413,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/activity': typeof AuthenticatedAdminActivityRoute
+  '/_authenticated/admin/api-access': typeof AuthenticatedAdminApiAccessRoute
   '/_authenticated/admin/apps': typeof AuthenticatedAdminAppsRoute
   '/_authenticated/admin/authority': typeof AuthenticatedAdminAuthorityRoute
   '/_authenticated/admin/billing': typeof AuthenticatedAdminBillingRoute
@@ -1564,6 +1574,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/accounts'
     | '/admin/activity'
+    | '/admin/api-access'
     | '/admin/apps'
     | '/admin/authority'
     | '/admin/billing'
@@ -1719,6 +1730,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/accounts'
     | '/admin/activity'
+    | '/admin/api-access'
     | '/admin/apps'
     | '/admin/authority'
     | '/admin/billing'
@@ -1877,6 +1889,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/activity'
+    | '/_authenticated/admin/api-access'
     | '/_authenticated/admin/apps'
     | '/_authenticated/admin/authority'
     | '/_authenticated/admin/billing'
@@ -2522,6 +2535,13 @@ declare module '@tanstack/react-router' {
       path: '/activity'
       fullPath: '/admin/activity'
       preLoaderRoute: typeof AuthenticatedAdminActivityRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/api-access': {
+      id: '/_authenticated/admin/api-access'
+      path: '/api-access'
+      fullPath: '/admin/api-access'
+      preLoaderRoute: typeof AuthenticatedAdminApiAccessRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/apps': {
@@ -3190,6 +3210,7 @@ const AuthenticatedAdminTelnyxRouteWithChildren =
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAccountsRoute: typeof AuthenticatedAdminAccountsRoute
   AuthenticatedAdminActivityRoute: typeof AuthenticatedAdminActivityRoute
+  AuthenticatedAdminApiAccessRoute: typeof AuthenticatedAdminApiAccessRoute
   AuthenticatedAdminAppsRoute: typeof AuthenticatedAdminAppsRoute
   AuthenticatedAdminAuthorityRoute: typeof AuthenticatedAdminAuthorityRoute
   AuthenticatedAdminBillingRoute: typeof AuthenticatedAdminBillingRoute
@@ -3218,6 +3239,7 @@ interface AuthenticatedAdminRouteChildren {
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAccountsRoute: AuthenticatedAdminAccountsRoute,
   AuthenticatedAdminActivityRoute: AuthenticatedAdminActivityRoute,
+  AuthenticatedAdminApiAccessRoute: AuthenticatedAdminApiAccessRoute,
   AuthenticatedAdminAppsRoute: AuthenticatedAdminAppsRoute,
   AuthenticatedAdminAuthorityRoute: AuthenticatedAdminAuthorityRoute,
   AuthenticatedAdminBillingRoute: AuthenticatedAdminBillingRoute,
