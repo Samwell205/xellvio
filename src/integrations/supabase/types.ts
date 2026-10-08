@@ -564,6 +564,57 @@ export type Database = {
           },
         ]
       }
+      api_access_requests: {
+        Row: {
+          account_id: string
+          admin_note: string | null
+          company_name: string
+          created_at: string
+          expected_monthly_volume: number | null
+          id: string
+          reason: string
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          use_case: string
+          website: string | null
+        }
+        Insert: {
+          account_id: string
+          admin_note?: string | null
+          company_name: string
+          created_at?: string
+          expected_monthly_volume?: number | null
+          id?: string
+          reason: string
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          use_case: string
+          website?: string | null
+        }
+        Update: {
+          account_id?: string
+          admin_note?: string | null
+          company_name?: string
+          created_at?: string
+          expected_monthly_volume?: number | null
+          id?: string
+          reason?: string
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          use_case?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       api_batches: {
         Row: {
           accepted_count: number
