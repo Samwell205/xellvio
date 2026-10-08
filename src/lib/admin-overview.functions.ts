@@ -7,155 +7,41 @@ async function ensureAdmin(supabase: any) {
   if (data !== true) throw new Error("Forbidden: admin only");
 }
 
-async function fetchAllRows<T = any>(builder: () => any, pageSize = 1000): Promise<T[]> {
-  const out: T[] = [];
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await builder().range(from, from + pageSize - 1);
-    if (error) throw new Error(error.message);
-    const rows = (data ?? []) as T[];
-    out.push(...rows);
-    if (rows.length < pageSize) break;
-  }
-  return out;
-}
-
+// The landing overview is operational, not an all-time accounting report.
+// Bounded windows and previews avoid transferring the entire SMS history.
 export const adminGetOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await ensureAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-
-    const since24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
-    const since7d = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
-
-    const [
-      accountsAll, accountsActive, accountsSuspended,
-      pendingReq, msgs24, msgs7d, msgsFailed24,
-      payments7d, allPayments, creditSum, lastSignups, lastMessagesRes, lastPayments,
-      smsSpendAll, ratesRes,
-    ] = await Promise.all([
-      supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }),
-      supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }).eq("onboarding_status", "active"),
-      supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }).eq("onboarding_status", "suspended"),
-      supabaseAdmin.from("number_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
-      supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h),
-      supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since7d),
-      supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h).in("status", ["failed", "undelivered"]),
-      supabaseAdmin.from("payments").select("amount,credits,currency,status,created_at,provider").gte("created_at", since7d),
-      fetchAllRows(() => supabaseAdmin.from("payments").select("amount,credits,currency,status,provider,created_at").order("created_at", { ascending: false })),
-      fetchAllRows(() => supabaseAdmin.from("accounts").select("credit_balance").order("id")),
-      supabaseAdmin.from("accounts").select("id,email,full_name,company,created_at").order("created_at", { ascending: false }).limit(6),
-      supabaseAdmin.from("messages").select("id,phone_e164,status,created_at,campaign_id,cost,country_code").order("created_at", { ascending: false }).limit(8),
-      supabaseAdmin.from("payments").select("id,amount,currency,status,provider,created_at,account_id").order("created_at", { ascending: false }).limit(6),
-      fetchAllRows(() =>
-        supabaseAdmin.from("messages")
-          .select("cost,segments_count,country_code,status,created_at,is_mms")
-          .in("status", ["sent", "delivered", "delivery_unconfirmed"])
-          .order("created_at", { ascending: false }),
-      ),
-      supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,passthrough_fee,mms_multiplier,mms_cost_multiplier"),
+    const since24h = new Date(Date.now() - 86400000).toISOString();
+    const since7d = new Date(Date.now() - 7 * 86400000).toISOString();
+    const signal = AbortSignal.timeout(12000);
+    const results = await Promise.all([
+      supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }).abortSignal(signal),
+      supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }).eq("onboarding_status", "suspended").abortSignal(signal),
+      supabaseAdmin.from("accounts").select("id", { count: "exact", head: true }).gte("created_at", since7d).abortSignal(signal),
+      supabaseAdmin.from("number_requests").select("id", { count: "exact", head: true }).eq("status", "pending").abortSignal(signal),
+      supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h).abortSignal(signal),
+      supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h).eq("status", "delivered").abortSignal(signal),
+      supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).gte("created_at", since24h).in("status", ["failed", "undelivered"]).abortSignal(signal),
+      supabaseAdmin.from("accounts").select("id,email,full_name,company,created_at").order("created_at", { ascending: false }).limit(5).abortSignal(signal),
+      supabaseAdmin.from("messages").select("id,phone_e164,status,created_at").order("created_at", { ascending: false }).limit(6).abortSignal(signal),
     ]);
-
-
-    const smsRows: any[] = smsSpendAll as any[];
-
-
-    const isPaid = (s: string) => s === "succeeded" || s === "approved" || s === "paid" || s === "finished" || s === "confirmed";
-    // Platform accounting is in credits (1 credit = 1 USD of sending power), which is
-    // what the wallet ledger stores. `payments.amount` is the amount charged in the
-    // payment's own currency (e.g. NGN via Paystack local checkout), so summing it
-    // mixes currencies and overstates income. Always aggregate `payments.credits`
-    // — the same column the finance page and the wallet ledger use.
-    const creditsOf = (p: any) => Number(p.credits ?? 0);
-    const paid7d = ((payments7d.data ?? []) as any[]).filter((p: any) => isPaid(p.status));
-    const revenue7d = paid7d.reduce((s: number, p: any) => s + creditsOf(p), 0);
-
-    const allPaid = (allPayments as any[]).filter((p: any) => isPaid(p.status));
-    const totalCollected = allPaid.reduce((s: number, p: any) => s + creditsOf(p), 0);
-    const collectedByProvider: Record<string, number> = {};
-    for (const p of allPaid) {
-      const k = (p.provider ?? "other") as string;
-      collectedByProvider[k] = (collectedByProvider[k] ?? 0) + creditsOf(p);
+    const failed = results.find(r => r.error);
+    if (failed?.error) {
+      console.error("[admin overview]", failed.error);
+      throw new Error("Overview is temporarily unavailable. Please retry.");
     }
-    const since30d = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
-    const collected30d = allPaid
-      .filter((p: any) => p.created_at >= since30d)
-      .reduce((s: number, p: any) => s + creditsOf(p), 0);
-
-    // Live sum of every tenant wallet (paginated — a >1000 tenant count previously
-    // silently truncated this total).
-    const totalCredits = (creditSum as any[]).reduce((s: number, r: any) => s + Number(r.credit_balance ?? 0), 0);
-
-    // SMS economics — MMS costs a multiple of SMS at the carrier, so the same
-    // multiplier the dispatcher and finance RPC apply is applied here too.
-    const rates = ratesRes.data ?? [];
-    const costByCc = new Map<string, { base: number; mms: number }>(
-      rates.map((r: any) => [
-        r.country_code,
-        {
-          base: Number(r.cost_price ?? 0) + Number(r.passthrough_fee ?? 0),
-          mms: Number(r.mms_cost_multiplier ?? r.mms_multiplier ?? 3),
-        },
-      ]),
-    );
-    const carrierCostOf = (m: any) => {
-      const r = costByCc.get(m.country_code ?? "");
-      if (!r) return 0;
-      return r.base * Number(m.segments_count ?? 1) * (m.is_mms ? r.mms : 1);
-    };
-    const tenantSmsSpend = smsRows.reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
-    const carrierSmsCost = smsRows.reduce((s: number, m: any) => s + carrierCostOf(m), 0);
-    const smsMargin = tenantSmsSpend - carrierSmsCost;
-    const messagesSentAllTime = smsRows.length;
-    const smsSpend30d = smsRows
-      .filter((m: any) => m.created_at >= since30d)
-      .reduce((s: number, m: any) => s + Number(m.cost ?? 0), 0);
-    const carrierCost30d = smsRows
-      .filter((m: any) => m.created_at >= since30d)
-      .reduce((s: number, m: any) => s + carrierCostOf(m), 0);
-
-    // Cash you should still be holding: credits received, less what the carrier has
-    // cost you, less the credit tenants have not spent yet (a real liability).
-    const estimatedProfit = totalCollected - carrierSmsCost - totalCredits;
-
-
+    const [accounts, suspended, newAccounts, requests, messages, delivered, failures, signups, recentMessages] = results;
     return {
-      tenants: {
-        total: accountsAll.count ?? 0,
-        active: accountsActive.count ?? 0,
-        suspended: accountsSuspended.count ?? 0,
-      },
-      messaging: {
-        sent24h: msgs24.count ?? 0,
-        sent7d: msgs7d.count ?? 0,
-        failed24h: msgsFailed24.count ?? 0,
-      },
-      revenue: { last7d: revenue7d, payments7d: paid7d.length },
-      credits: { totalBalance: totalCredits },
-      financials: {
-        totalCollected,
-        collected30d,
-        collectedByProvider,
-        tenantSmsSpend,
-        smsSpend30d,
-        carrierSmsCost,
-        carrierCost30d,
-        smsMargin,
-        estimatedProfit,
-        unusedCredits: totalCredits,
-        messagesSentAllTime,
-        paymentsCount: allPaid.length,
-      },
-      pendingNumberRequests: pendingReq.count ?? 0,
-      recent: {
-        signups: lastSignups.data ?? [],
-        messages: lastMessagesRes.data ?? [],
-        payments: lastPayments.data ?? [],
-      },
+      checkedAt: new Date().toISOString(),
+      tenants: { total: accounts.count ?? 0, suspended: suspended.count ?? 0, new7d: newAccounts.count ?? 0 },
+      messaging: { total24h: messages.count ?? 0, delivered24h: delivered.count ?? 0, failed24h: failures.count ?? 0 },
+      pendingNumberRequests: requests.count ?? 0,
+      recent: { signups: signups.data ?? [], messages: recentMessages.data ?? [] },
     };
   });
-
 
 export const adminListMessages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
