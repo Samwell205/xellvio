@@ -121,10 +121,13 @@ export async function screenMessageContent(
         // auto-suspend triggers. The AI classifier can false-positive on
         // legitimate event/party/rental wording (e.g. "delivery to door"),
         // so we leave room for admin review instead of immediate suspension.
+        // Impersonation/phishing/scam categories are never false-positive-
+        // tolerant: carriers flag the whole account for them, so they block.
+        const HARD_AI = ["phishing", "fraud_deceptive", "crypto_scam", "sexual", "hate_speech"];
         reasons.push({
           code: `category:${aiResult.category ?? "ai_flagged"}`,
           message: aiResult.reason ?? `AI review flagged prohibited content${aiResult.category ? ` (${aiResult.category})` : ""}.`,
-          score: 60,
+          score: HARD_AI.includes(String(aiResult.category)) ? 80 : 60,
           detail: "ai_confidence=high",
         });
       }
@@ -261,11 +264,11 @@ export async function screenMessageContent(
   let action: ScreeningResult["action"] =
     riskScore >= 70 ? "blocked" : riskScore >= 55 ? "held_for_review" : "passed";
 
-  // Review-queue candidates are NOT violations — they are "look at this later"
-  // signals. When the caller cannot wait for review (test sends), let the
-  // message through instead of hard-blocking on an advisory score.
+  // When the caller cannot wait for review (test sends, API, inbox replies),
+  // a held message is blocked — never sent unreviewed. Letting held content
+  // through is how impersonation texts reached the carrier.
   if (action === "held_for_review" && opts.skipReviewQueue) {
-    action = "passed";
+    action = "blocked";
   }
 
   // Advisory notes (e.g. AI review unavailable) go last so the real reason is shown first.
