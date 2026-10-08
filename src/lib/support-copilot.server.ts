@@ -7,14 +7,14 @@ export async function buildTenantSnapshot(accountId: string): Promise<string> {
       sb.from("accounts")
         .select("id, email, full_name, company, credit_balance, onboarding_status, sending_suspended_at, sending_suspended_reason, telnyx_phone_number, created_at")
         .eq("id", accountId).maybeSingle(),
-      sb.from("campaigns").select("id, name, status, paused_reason, created_at, body")
+      sb.from("campaigns").select("id, name, status, paused_reason, created_at, message_body")
         .eq("account_id", accountId).order("created_at", { ascending: false }).limit(10),
       sb.from("payments").select("provider, provider_reference, amount, currency, status, created_at, paid_at")
         .eq("account_id", accountId).order("created_at", { ascending: false }).limit(10),
       sb.from("number_requests").select("country, number_type, status, admin_notes, assigned_phone_number, area_code, created_at")
         .eq("account_id", accountId).order("created_at", { ascending: false }).limit(6),
       sb.from("numbers").select("phone_number, number_type, status").eq("account_id", accountId).limit(10),
-      sb.from("tenant_sending_suspensions").select("*").eq("account_id", accountId).order("created_at", { ascending: false }).limit(5),
+      sb.from("tenant_sending_suspensions").select("*").eq("account_id", accountId).order("suspended_at", { ascending: false }).limit(5),
     ]);
   if (!acct) return "Tenant account not found.";
 
@@ -46,12 +46,12 @@ export async function buildTenantSnapshot(accountId: string): Promise<string> {
       ? `SENDING ON HOLD since ${String(acct.sending_suspended_at).slice(0, 16)}: ${acct.sending_suspended_reason ?? "?"}`
       : "Sending: active (no hold)",
     "Hold history:",
-    ...((holds ?? []) as any[]).map((h) => `- ${String(h.created_at).slice(0, 16)} ${h.reason ?? h.trigger ?? ""} ${h.lifted_at ? `(lifted ${String(h.lifted_at).slice(0, 10)})` : "(active)"}`),
+    ...((holds ?? []) as any[]).map((h) => `- ${String(h.suspended_at).slice(0, 16)} ${h.reason ?? ""} ${h.lifted_at ? `(lifted ${String(h.lifted_at).slice(0, 10)})` : "(active)"}`),
     "Recent campaigns:",
     ...((camps ?? []) as any[]).map((c) => {
       const f = failBy[c.id];
       const fs = f ? ` | failures: ${Object.entries(f).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, n]) => `${n}× ${k}`).join("; ")}` : "";
-      return `- [${c.id}] "${c.name}" (${String(c.created_at).slice(0, 10)}) — ${c.status}${c.paused_reason ? ` (paused: ${c.paused_reason})` : ""}${fs}\n  text: ${String(c.body ?? "").slice(0, 200).replace(/\s+/g, " ")}`;
+      return `- [${c.id}] "${c.name}" (${String(c.created_at).slice(0, 10)}) — ${c.status}${c.paused_reason ? ` (paused: ${c.paused_reason})` : ""}${fs}\n  text: ${String(c.message_body ?? "").slice(0, 200).replace(/\s+/g, " ")}`;
     }),
     "Payments:",
     ...((pays ?? []) as any[]).map((p) => `- ${String(p.created_at).slice(0, 10)} ${p.provider} ${p.amount} ${p.currency} — ${p.status}${p.provider_reference ? ` (ref ${p.provider_reference})` : ""}`),
