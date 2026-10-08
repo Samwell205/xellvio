@@ -93,18 +93,28 @@ export const adminFinanceOverview = createServerFn({ method: "GET" })
       lastSnapshot: lastSnapshot ?? null,
       funding: (fundingRes.data ?? []).map((p: any) => ({ ...p, account_label: labels.get(p.account_id) ?? "—" })),
       attemptAudit,
+      computedAt: heavy.computedAt,
     };
   });
 
 export const adminFinanceTenants = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator(refreshValidator)
+  .handler(async ({ context, data: input }) => {
     const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
     if (!ok) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await (supabaseAdmin as any).rpc("admin_finance_tenants");
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    const { cachedReport } = await import("./admin-report-cache.server");
+    const r = await cachedReport(
+      "finance_tenants",
+      async () => {
+        const { data, error } = await (supabaseAdmin as any).rpc("admin_finance_tenants");
+        if (error) throw new Error(error.message);
+        return (data ?? []) as any[];
+      },
+      { refresh: input.refresh },
+    );
+    return r.value;
   });
 
 /**
@@ -114,13 +124,22 @@ export const adminFinanceTenants = createServerFn({ method: "GET" })
  */
 export const adminMarginAudit = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator(refreshValidator)
+  .handler(async ({ context, data: input }) => {
     const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
     if (!ok) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await (supabaseAdmin as any).rpc("admin_margin_audit");
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Array<{
+    const { cachedReport } = await import("./admin-report-cache.server");
+    const r = await cachedReport(
+      "finance_margins",
+      async () => {
+        const { data, error } = await (supabaseAdmin as any).rpc("admin_margin_audit");
+        if (error) throw new Error(error.message);
+        return (data ?? []) as any[];
+      },
+      { refresh: input.refresh },
+    );
+    return r.value as Array<{
       account_id: string;
       label: string;
       email: string;
