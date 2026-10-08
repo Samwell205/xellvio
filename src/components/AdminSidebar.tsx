@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2,
   Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, Megaphone, Phone, Scale, PhoneOutgoing, Send,
-  Blocks, Handshake, LineChart, Gauge, HeartHandshake,
+  Blocks, Handshake, KeyRound, LineChart, Gauge, HeartHandshake,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -29,6 +29,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
       { title: "User management", url: "/admin/users", icon: UserCog },
       { title: "Number requests", url: "/admin/number-requests", icon: PhoneCall },
       { title: "Tenant senders", url: "/admin/senders", icon: Radio },
+      { title: "API access", url: "/admin/api-access", icon: KeyRound },
     ],
   },
   {
