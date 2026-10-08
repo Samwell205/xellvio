@@ -1,39 +1,61 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { withTimeoutOr } from "./server-timeout";
+
+type RefreshInput = { refresh?: boolean } | undefined;
+const refreshValidator = (d: RefreshInput) => ({ refresh: !!d?.refresh });
 
 export const adminFinanceOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator(refreshValidator)
+  .handler(async ({ context, data: input }) => {
     const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
     if (!ok) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { cachedReport } = await import("./admin-report-cache.server");
     const admin = supabaseAdmin as any;
 
-    const [summaryRes, dailyRes, fundingRes, attemptsRes] = await Promise.all([
-      admin.rpc("admin_finance_summary"),
-      admin.rpc("admin_finance_daily", { _days: 30 }),
-      admin
-        .from("payments")
-        .select("id,account_id,provider,currency,amount,credits,status,created_at,paid_at,provider_reference")
-        .order("created_at", { ascending: false })
-        .limit(100),
-      admin.rpc("admin_attempt_audit"),
-    ]);
-    if (summaryRes.error) throw new Error(summaryRes.error.message);
+    // All-time totals scan the full message history: reuse a recent result.
+    const heavyPromise = cachedReport(
+      "finance_overview",
+      async () => {
+        const [summaryRes, dailyRes, attemptsRes] = await Promise.all([
+          admin.rpc("admin_finance_summary"),
+          admin.rpc("admin_finance_daily", { _days: 30 }),
+          admin.rpc("admin_attempt_audit"),
+        ]);
+        if (summaryRes.error) throw new Error(summaryRes.error.message);
+        return {
+          summary: summaryRes.data,
+          daily: dailyRes.data ?? [],
+          attempts: attemptsRes.data ?? {},
+        };
+      },
+      { refresh: input.refresh },
+    );
 
-    // Live carrier (provider) balance
-    let providerBalance: { ok: boolean; balance: number; currency: string; error?: string } = {
-      ok: false,
-      balance: 0,
-      currency: "USD",
-    };
-    try {
-      const { getBalance } = await import("./telnyx.server");
-      const b = await getBalance();
-      providerBalance = { ok: !!b.ok, balance: Number(b.balance ?? 0), currency: b.currency || "USD", error: (b as any).error };
-    } catch (e: any) {
-      providerBalance = { ok: false, balance: 0, currency: "USD", error: e?.message ?? "balance unavailable" };
-    }
+    const fundingPromise = admin
+      .from("payments")
+      .select("id,account_id,provider,currency,amount,credits,status,created_at,paid_at,provider_reference")
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    // Live carrier balance must never hold the page hostage.
+    const balancePromise = withTimeoutOr(
+      (async () => {
+        const { getBalance } = await import("./telnyx.server");
+        const b = await getBalance();
+        return { ok: !!b.ok, balance: Number(b.balance ?? 0), currency: b.currency || "USD", error: (b as any).error as string | undefined };
+      })(),
+      { ok: false, balance: 0, currency: "USD", error: "balance unavailable right now" },
+      6_000,
+      "carrier balance",
+    );
+
+    const [heavy, fundingRes, providerBalance] = await Promise.all([heavyPromise, fundingPromise, balancePromise]);
+    const summaryRes = { data: heavy.value.summary };
+    const dailyRes = { data: heavy.value.daily };
+    const attemptsRes = { data: heavy.value.attempts };
 
     const { data: lastSnapshot } = await admin
       .from("twilio_balance_snapshots")
@@ -71,18 +93,28 @@ export const adminFinanceOverview = createServerFn({ method: "GET" })
       lastSnapshot: lastSnapshot ?? null,
       funding: (fundingRes.data ?? []).map((p: any) => ({ ...p, account_label: labels.get(p.account_id) ?? "—" })),
       attemptAudit,
+      computedAt: heavy.computedAt,
     };
   });
 
 export const adminFinanceTenants = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator(refreshValidator)
+  .handler(async ({ context, data: input }) => {
     const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
     if (!ok) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await (supabaseAdmin as any).rpc("admin_finance_tenants");
-    if (error) throw new Error(error.message);
-    return data ?? [];
+    const { cachedReport } = await import("./admin-report-cache.server");
+    const r = await cachedReport(
+      "finance_tenants",
+      async () => {
+        const { data, error } = await (supabaseAdmin as any).rpc("admin_finance_tenants");
+        if (error) throw new Error(error.message);
+        return (data ?? []) as any[];
+      },
+      { refresh: input.refresh },
+    );
+    return r.value;
   });
 
 /**
@@ -92,13 +124,22 @@ export const adminFinanceTenants = createServerFn({ method: "GET" })
  */
 export const adminMarginAudit = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator(refreshValidator)
+  .handler(async ({ context, data: input }) => {
     const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
     if (!ok) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await (supabaseAdmin as any).rpc("admin_margin_audit");
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Array<{
+    const { cachedReport } = await import("./admin-report-cache.server");
+    const r = await cachedReport(
+      "finance_margins",
+      async () => {
+        const { data, error } = await (supabaseAdmin as any).rpc("admin_margin_audit");
+        if (error) throw new Error(error.message);
+        return (data ?? []) as any[];
+      },
+      { refresh: input.refresh },
+    );
+    return r.value as Array<{
       account_id: string;
       label: string;
       email: string;
