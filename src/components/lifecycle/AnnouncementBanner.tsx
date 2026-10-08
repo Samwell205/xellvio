@@ -1,14 +1,16 @@
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Megaphone, X } from "lucide-react";
+import { Megaphone, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getAnnouncements, acknowledgeAnnouncement } from "@/lib/lifecycle.functions";
 
 type Announcement = {
   id: string;
   title: string;
   body: string | null;
+  kind?: string | null;
   cta_label: string | null;
   cta_path: string | null;
 };
@@ -31,6 +33,31 @@ export function AnnouncementBanner() {
 
   const item = (list.data ?? [])[0];
   if (!item) return null;
+
+  // An interruption stays on screen until the team unpublishes it, so nobody
+  // can lose the warning by clicking it away or turning announcements off.
+  if (item.kind === "maintenance") {
+    return (
+      <Alert variant="destructive">
+        <TriangleAlert />
+        <AlertTitle>{item.title}</AlertTitle>
+        <AlertDescription>
+          {item.body}
+          {item.cta_path && item.cta_label && (
+            <Link
+              to={item.cta_path as never}
+              className="mt-2 inline-block"
+              onClick={() => ack({ data: { id: item.id, action: "clicked" } })}
+            >
+              <Button size="sm" variant="outline">
+                {item.cta_label}
+              </Button>
+            </Link>
+          )}
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="flex items-start gap-3 rounded-lg border bg-muted/40 px-4 py-3">
