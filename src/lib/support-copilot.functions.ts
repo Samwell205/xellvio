@@ -107,11 +107,14 @@ export const askCopilot = createServerFn({ method: "POST" })
       }
     }
 
-    const { buildTenantSnapshot, COPILOT_PROMPT } = await import("./support-copilot.server");
-    const snapshot = accountId ? await buildTenantSnapshot(accountId) : null;
+    const { buildTenantSnapshot, buildPlatformSnapshot, COPILOT_PROMPT } = await import("./support-copilot.server");
+    const [snapshot, platform] = await Promise.all([
+      accountId ? buildTenantSnapshot(accountId) : Promise.resolve(null),
+      buildPlatformSnapshot().catch((e) => `Platform check failed: ${e instanceof Error ? e.message : e}`),
+    ]);
     const system = `${COPILOT_PROMPT}\n\nToday: ${new Date().toISOString().slice(0, 10)}\n\n${
-      snapshot ? `TENANT ACCOUNT DATA (live):\n${snapshot}` : "No tenant is linked to this case yet. Answer generally and tell the admin to link the tenant for an account review."
-    }`;
+      snapshot ? `TENANT ACCOUNT DATA (live):\n${snapshot}` : "No tenant is linked to this case yet. If the question is about a specific tenant, tell the admin to link them."
+    }\n\nPLATFORM HEALTH (live):\n${platform}`;
 
     const history = (row.messages ?? []) as CopilotMessage[];
     const now = new Date().toISOString();
