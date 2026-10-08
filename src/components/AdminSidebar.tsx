@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2,
   Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, Megaphone, Phone, Scale, PhoneOutgoing, Send,
-  Blocks, Handshake, KeyRound, LineChart, Gauge, HeartHandshake,
+  Blocks, Handshake, KeyRound, LineChart, Gauge, HeartHandshake, Bot,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -20,6 +20,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any; e
       { title: "Activity log", url: "/admin/activity", icon: Activity },
       { title: "Compliance", url: "/admin/compliance", icon: ShieldOff },
       { title: "Review queue", url: "/admin/review-queue", icon: ClipboardList },
+      { title: "Support copilot", url: "/admin/support", icon: Bot },
     ],
   },
   {
