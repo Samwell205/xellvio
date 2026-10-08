@@ -92,6 +92,7 @@ import { Route as AuthenticatedAdminPerformanceRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminRatesRouteImport } from './routes/_authenticated.admin.rates'
 import { Route as AuthenticatedAdminReviewQueueRouteImport } from './routes/_authenticated.admin.review-queue'
 import { Route as AuthenticatedAdminSendersRouteImport } from './routes/_authenticated.admin.senders'
+import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated.admin.support'
 import { Route as AuthenticatedAdminTelnyxRouteImport } from './routes/_authenticated.admin.telnyx'
 import { Route as AuthenticatedAdminTollfreeAttemptsRouteImport } from './routes/_authenticated.admin.tollfree-attempts'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated.admin.users'
@@ -139,6 +140,8 @@ import { Route as TemplatesIndustryIndustryRouteImport } from './routes/template
 import { Route as TemplatesUseCaseGoalRouteImport } from './routes/templates.use-case.$goal'
 import { Route as AuthenticatedAdminCampaignsIndexRouteImport } from './routes/_authenticated.admin.campaigns.index'
 import { Route as AuthenticatedAdminCampaignsIdRouteImport } from './routes/_authenticated.admin.campaigns.$id'
+import { Route as AuthenticatedAdminSupportIndexRouteImport } from './routes/_authenticated.admin.support.index'
+import { Route as AuthenticatedAdminSupportCaseIdRouteImport } from './routes/_authenticated.admin.support.$caseId'
 import { Route as AuthenticatedAdminTelnyxAuditRouteImport } from './routes/_authenticated.admin.telnyx.audit'
 import { Route as AuthenticatedAdminTelnyxTfnRouteImport } from './routes/_authenticated.admin.telnyx.tfn'
 import { Route as AuthenticatedAppAppsIndexRouteImport } from './routes/_authenticated.app.apps.index'
@@ -601,6 +604,12 @@ const AuthenticatedAdminSendersRoute =
     path: '/senders',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminSupportRoute =
+  AuthenticatedAdminSupportRouteImport.update({
+    id: '/support',
+    path: '/support',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminTelnyxRoute =
   AuthenticatedAdminTelnyxRouteImport.update({
     id: '/telnyx',
@@ -863,6 +872,18 @@ const AuthenticatedAdminCampaignsIdRoute =
     path: '/campaigns/$id',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminSupportIndexRoute =
+  AuthenticatedAdminSupportIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminSupportRoute,
+  } as any)
+const AuthenticatedAdminSupportCaseIdRoute =
+  AuthenticatedAdminSupportCaseIdRouteImport.update({
+    id: '/$caseId',
+    path: '/$caseId',
+    getParentRoute: () => AuthenticatedAdminSupportRoute,
+  } as any)
 const AuthenticatedAdminTelnyxAuditRoute =
   AuthenticatedAdminTelnyxAuditRouteImport.update({
     id: '/audit',
@@ -1114,6 +1135,7 @@ export interface FileRoutesByFullPath {
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
   '/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/admin/senders': typeof AuthenticatedAdminSendersRoute
+  '/admin/support': typeof AuthenticatedAdminSupportRouteWithChildren
   '/admin/telnyx': typeof AuthenticatedAdminTelnyxRouteWithChildren
   '/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -1161,6 +1183,7 @@ export interface FileRoutesByFullPath {
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/templates/$category/': typeof TemplatesCategoryIndexRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
+  '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
@@ -1184,6 +1207,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
+  '/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
@@ -1315,6 +1339,7 @@ export interface FileRoutesByTo {
   '/marketplace/apps': typeof MarketplaceAppsIndexRoute
   '/templates/$category': typeof TemplatesCategoryIndexRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
+  '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
@@ -1338,6 +1363,7 @@ export interface FileRoutesByTo {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/campaigns': typeof AuthenticatedAdminCampaignsIndexRoute
+  '/admin/support': typeof AuthenticatedAdminSupportIndexRoute
   '/app/apps': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
@@ -1430,6 +1456,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/rates': typeof AuthenticatedAdminRatesRoute
   '/_authenticated/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/_authenticated/admin/senders': typeof AuthenticatedAdminSendersRoute
+  '/_authenticated/admin/support': typeof AuthenticatedAdminSupportRouteWithChildren
   '/_authenticated/admin/telnyx': typeof AuthenticatedAdminTelnyxRouteWithChildren
   '/_authenticated/admin/tollfree-attempts': typeof AuthenticatedAdminTollfreeAttemptsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
@@ -1477,6 +1504,7 @@ export interface FileRoutesById {
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/templates/$category/': typeof TemplatesCategoryIndexRoute
   '/_authenticated/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
+  '/_authenticated/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/_authenticated/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/_authenticated/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
@@ -1500,6 +1528,7 @@ export interface FileRoutesById {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/_authenticated/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
+  '/_authenticated/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/_authenticated/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/_authenticated/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
@@ -1591,6 +1620,7 @@ export interface FileRouteTypes {
     | '/admin/rates'
     | '/admin/review-queue'
     | '/admin/senders'
+    | '/admin/support'
     | '/admin/telnyx'
     | '/admin/tollfree-attempts'
     | '/admin/users'
@@ -1638,6 +1668,7 @@ export interface FileRouteTypes {
     | '/marketplace/apps/'
     | '/templates/$category/'
     | '/admin/campaigns/$id'
+    | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
     | '/app/apps/$slug'
@@ -1661,6 +1692,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/admin/campaigns/'
+    | '/admin/support/'
     | '/app/apps/'
     | '/app/automations/'
     | '/app/campaigns/'
@@ -1792,6 +1824,7 @@ export interface FileRouteTypes {
     | '/marketplace/apps'
     | '/templates/$category'
     | '/admin/campaigns/$id'
+    | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
     | '/app/apps/$slug'
@@ -1815,6 +1848,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/admin/campaigns'
+    | '/admin/support'
     | '/app/apps'
     | '/app/automations'
     | '/app/campaigns'
@@ -1906,6 +1940,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/rates'
     | '/_authenticated/admin/review-queue'
     | '/_authenticated/admin/senders'
+    | '/_authenticated/admin/support'
     | '/_authenticated/admin/telnyx'
     | '/_authenticated/admin/tollfree-attempts'
     | '/_authenticated/admin/users'
@@ -1953,6 +1988,7 @@ export interface FileRouteTypes {
     | '/marketplace/apps/'
     | '/templates/$category/'
     | '/_authenticated/admin/campaigns/$id'
+    | '/_authenticated/admin/support/$caseId'
     | '/_authenticated/admin/telnyx/audit'
     | '/_authenticated/admin/telnyx/tfn'
     | '/_authenticated/app/apps/$slug'
@@ -1976,6 +2012,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/_authenticated/admin/campaigns/'
+    | '/_authenticated/admin/support/'
     | '/_authenticated/app/apps/'
     | '/_authenticated/app/automations/'
     | '/_authenticated/app/campaigns/'
@@ -2656,6 +2693,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSendersRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/support': {
+      id: '/_authenticated/admin/support'
+      path: '/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/telnyx': {
       id: '/_authenticated/admin/telnyx'
       path: '/telnyx'
@@ -2985,6 +3029,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/support/': {
+      id: '/_authenticated/admin/support/'
+      path: '/'
+      fullPath: '/admin/support/'
+      preLoaderRoute: typeof AuthenticatedAdminSupportIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminSupportRoute
+    }
+    '/_authenticated/admin/support/$caseId': {
+      id: '/_authenticated/admin/support/$caseId'
+      path: '/$caseId'
+      fullPath: '/admin/support/$caseId'
+      preLoaderRoute: typeof AuthenticatedAdminSupportCaseIdRouteImport
+      parentRoute: typeof AuthenticatedAdminSupportRoute
+    }
     '/_authenticated/admin/telnyx/audit': {
       id: '/_authenticated/admin/telnyx/audit'
       path: '/audit'
@@ -3191,6 +3249,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminSupportRouteChildren {
+  AuthenticatedAdminSupportCaseIdRoute: typeof AuthenticatedAdminSupportCaseIdRoute
+  AuthenticatedAdminSupportIndexRoute: typeof AuthenticatedAdminSupportIndexRoute
+}
+
+const AuthenticatedAdminSupportRouteChildren: AuthenticatedAdminSupportRouteChildren =
+  {
+    AuthenticatedAdminSupportCaseIdRoute: AuthenticatedAdminSupportCaseIdRoute,
+    AuthenticatedAdminSupportIndexRoute: AuthenticatedAdminSupportIndexRoute,
+  }
+
+const AuthenticatedAdminSupportRouteWithChildren =
+  AuthenticatedAdminSupportRoute._addFileChildren(
+    AuthenticatedAdminSupportRouteChildren,
+  )
+
 interface AuthenticatedAdminTelnyxRouteChildren {
   AuthenticatedAdminTelnyxAuditRoute: typeof AuthenticatedAdminTelnyxAuditRoute
   AuthenticatedAdminTelnyxTfnRoute: typeof AuthenticatedAdminTelnyxTfnRoute
@@ -3227,6 +3301,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminRatesRoute: typeof AuthenticatedAdminRatesRoute
   AuthenticatedAdminReviewQueueRoute: typeof AuthenticatedAdminReviewQueueRoute
   AuthenticatedAdminSendersRoute: typeof AuthenticatedAdminSendersRoute
+  AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRouteWithChildren
   AuthenticatedAdminTelnyxRoute: typeof AuthenticatedAdminTelnyxRouteWithChildren
   AuthenticatedAdminTollfreeAttemptsRoute: typeof AuthenticatedAdminTollfreeAttemptsRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
@@ -3256,6 +3331,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminRatesRoute: AuthenticatedAdminRatesRoute,
   AuthenticatedAdminReviewQueueRoute: AuthenticatedAdminReviewQueueRoute,
   AuthenticatedAdminSendersRoute: AuthenticatedAdminSendersRoute,
+  AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRouteWithChildren,
   AuthenticatedAdminTelnyxRoute: AuthenticatedAdminTelnyxRouteWithChildren,
   AuthenticatedAdminTollfreeAttemptsRoute:
     AuthenticatedAdminTollfreeAttemptsRoute,
