@@ -24,7 +24,7 @@ function parse(content: string) {
   for (const m of content.matchAll(/ACTION:\s*(resume_campaign|lift_hold)\s+([0-9a-f-]{36})\s*\|?\s*(.*)/gi)) {
     actions.push({ action: m[1].toLowerCase() as Action["action"], target: m[2], reason: m[3]?.trim() ?? "" });
   }
-  const body = content.replace(/```reply\s*\n[\s\S]*?```/, "").replace(/^.*ACTION:.*$/gim, "").replace(/^#+\s*Reply to send\s*$/gim, "").trim();
+  const body = content.replace(/```reply\s*\n[\s\S]*?```/, "").replace(/^.*ACTION:.*$/gim, "").replace(/^\s*(#+\s*)?\**Reply to send\**:?\s*$/gim, "").trim();
   return { reply, actions, body };
 }
 
