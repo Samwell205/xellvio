@@ -48,6 +48,7 @@ export async function authenticateApiRequest(request: Request, scope: ApiScope):
   if (error || !data?.[0]) {
     const message = String(error?.message ?? "");
     if (message.includes("rate_limit_exceeded")) throw new ApiError(429, "rate_limit_exceeded", "Too many requests. Try again shortly.");
+    if (message.includes("api_access_not_approved")) throw new ApiError(403, "api_access_not_approved", "API access for this workspace has not been approved.");
     if (message.includes("account_suspended")) throw new ApiError(403, "account_suspended", "This workspace cannot send messages.");
     throw new ApiError(401, "invalid_api_key", "The API key is invalid, expired, or revoked.");
   }
