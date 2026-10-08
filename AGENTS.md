@@ -14,3 +14,4 @@
 - Dashboard lifecycle card visibility is centralized in src/lib/lifecycle/visibility.ts so prior dismissal state cannot hide required workspace guidance.
 - Tenant SMS API routes reuse the campaign queue and workspace API-key authentication; never add a direct carrier-send bypass because it would skip charging, compliance, and opt-out controls.
 - Announcements of kind "maintenance" are operational notices, not product news: they must always reach every workspace, so they bypass communication preferences and dismissal (src/lib/lifecycle.functions.ts getAnnouncements, src/components/lifecycle/AnnouncementBanner.tsx). Keep the banner's un-dismissible alert for them.
+- The admin Support copilot (src/lib/support-copilot.*, /admin/support) only executes allow-listed one-click actions after admin confirmation and re-validates them server-side, so AI output can never trigger arbitrary or refund changes.
