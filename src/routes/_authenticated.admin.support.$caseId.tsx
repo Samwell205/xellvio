@@ -104,8 +104,13 @@ function CaseView({ caseId }: { caseId: string }) {
             )}
           </div>
         )}
-        <span className="text-xs text-muted-foreground">Tip: if the pasted message contains the tenant's email, it links automatically.</span>
+        <span className="text-xs text-muted-foreground">Tip: the tenant links automatically when the message contains their email or sending number.</span>
       </header>
+      {!q.isLoading && !tenant && messages.length > 0 && (
+        <div className="border-b border-warning/40 bg-warning/10 px-4 py-2 text-sm">
+          No tenant is linked, so answers are generic. Link the tenant above, then ask again for an account-specific reply.
+        </div>
+      )}
 
       <div className="flex-1 space-y-6 overflow-y-auto p-6">
         {q.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
