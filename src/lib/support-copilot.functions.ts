@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export type CopilotMessage = { role: "user" | "assistant"; content: string; at: string };
+export type CopilotMessage = { role: "user" | "assistant"; content: string; at: string; images?: string[] };
 
 async function ensureAdmin(supabase: any) {
   const { data, error } = await supabase.rpc("has_role", { _role: "admin" });
@@ -89,19 +89,40 @@ export const setCaseTenant = createServerFn({ method: "POST" })
 
 export const askCopilot = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), message: z.string().trim().min(1).max(8000) }).parse(d))
+  .inputValidator((d: unknown) => z.object({
+      id: z.string().uuid(),
+      message: z.string().trim().max(8000).default(""),
+      images: z.array(z.string().regex(/^data:image\/(png|jpeg|webp|gif);base64,/).max(3_000_000)).max(4).default([]),
+    }).refine((v) => v.message.length > 0 || v.images.length > 0, "Add a message or a screenshot").parse(d))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase);
     const sb = await admin();
     const { data: row, error } = await sb.from("support_cases").select("*").eq("id", data.id).maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Case not found");
+    const userText = data.message || "Here is a screenshot from the tenant. Read it and handle it.";
 
     // Auto-detect the tenant from emails or phone numbers in the pasted message
     // (and earlier messages in this case).
     let accountId: string | null = row.account_id;
+    // Contact details inside screenshots: read them out first so the tenant can be linked.
+    let imageText = "";
+    if (!accountId && data.images.length) {
+      try {
+        const { getChatModel } = await import("./ai-provider.server");
+        const { streamText } = await import("ai");
+        const m = await getChatModel();
+        if (m) {
+          const r = streamText({ model: m, messages: [{ role: "user", content: [
+            { type: "text", text: "List every email address and phone number visible in these images, one per line. Output only the list, or NONE." },
+            ...data.images.map((url) => ({ type: "image" as const, image: url })),
+          ] }] });
+          imageText = (await r.text).slice(0, 2000);
+        }
+      } catch (e) { console.error("[copilot] screenshot read failed", e); }
+    }
     if (!accountId) {
-      const haystack = [data.message, ...((row.messages ?? []) as CopilotMessage[]).filter((m) => m.role === "user").map((m) => m.content)].join("\n");
+      const haystack = [userText, imageText, ...((row.messages ?? []) as CopilotMessage[]).filter((m) => m.role === "user").map((m) => m.content)].join("\n");
       const emails = Array.from(new Set((haystack.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) ?? []).map((e) => e.toLowerCase().replace(/[.,;:]+$/, "")))).slice(0, 10);
       for (const email of emails) {
         const { data: a } = await sb.from("accounts").select("id").or(`email.ilike.${email},contact_email.ilike.${email}`).limit(1).maybeSingle();
@@ -135,7 +156,7 @@ export const askCopilot = createServerFn({ method: "POST" })
 
     const history = (row.messages ?? []) as CopilotMessage[];
     const now = new Date().toISOString();
-    const msgs = [...history, { role: "user" as const, content: data.message, at: now }];
+    const msgs: CopilotMessage[] = [...history, { role: "user", content: userText, at: now, ...(data.images.length ? { images: data.images } : {}) }];
 
     const { getChatModel } = await import("./ai-provider.server");
     const { streamText } = await import("ai");
@@ -143,7 +164,20 @@ export const askCopilot = createServerFn({ method: "POST" })
     if (!model) throw new Error("AI is not configured");
     let reply: string;
     try {
-      const result = streamText({ model, system, messages: msgs.map(({ role, content }) => ({ role, content })) });
+      // Send screenshots only with the newest message; earlier ones are already
+      // summarised in the assistant's previous answers.
+      const last = msgs.length - 1;
+      const modelMessages: any[] = msgs.map((m, i) => {
+        if (m.role === "user" && m.images?.length) {
+          if (i !== last) return { role: "user", content: `${m.content}\n[${m.images.length} screenshot(s) were attached earlier]` };
+          return { role: "user", content: [
+            { type: "text", text: `${m.content}\n\n(The attached screenshot(s) come from the tenant or the admin. Read every visible detail — text, numbers, errors, emails — and use them.)` },
+            ...m.images.map((url) => ({ type: "image", image: url })),
+          ] };
+        }
+        return { role: m.role, content: m.content };
+      });
+      const result = streamText({ model, system, messages: modelMessages });
       reply = (await result.text).trim();
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e);
@@ -153,7 +187,7 @@ export const askCopilot = createServerFn({ method: "POST" })
     }
     if (!reply) reply = "Sorry, I couldn't produce an answer.";
     const next = [...msgs, { role: "assistant" as const, content: reply, at: new Date().toISOString() }];
-    const title = row.title === "New case" ? data.message.replace(/\s+/g, " ").slice(0, 60) : row.title;
+    const title = row.title === "New case" ? (data.message || "Screenshot case").replace(/\s+/g, " ").slice(0, 60) : row.title;
     const { error: uErr } = await sb.from("support_cases")
       .update({ messages: next, title, account_id: accountId, updated_at: new Date().toISOString() }).eq("id", data.id);
     if (uErr) throw new Error(uErr.message);
