@@ -18,13 +18,15 @@ export async function buildTenantSnapshot(accountId: string): Promise<string> {
     ]);
   if (!acct) return "Tenant account not found.";
 
-  const [{ data: senders }, { data: boughtTfns }, { data: ledger }] = await Promise.all([
+  const [{ data: senders }, { data: boughtTfns }, { data: ledger }, { data: apiReqs }, { data: apiKeys }] = await Promise.all([
     sb.from("sender_assets").select("phone_number, sender_kind, country_code, verification_status, friendly_rejection_reason, rejection_reason, is_shared, created_at, verified_at")
       .eq("account_id", accountId).order("created_at", { ascending: false }).limit(10),
     sb.from("verifier_tfns").select("phone_number, country, status, sold_at").eq("sold_to_account_id", accountId)
       .order("sold_at", { ascending: false }).limit(10),
     sb.from("credit_transactions").select("type, amount, balance_after, description, created_at").eq("account_id", accountId)
       .order("created_at", { ascending: false }).limit(12),
+    sb.from("api_access_requests").select("status, created_at").eq("account_id", accountId).order("created_at", { ascending: false }).limit(3),
+    sb.from("workspace_api_keys").select("rate_limit_per_minute, revoked_at, created_at").eq("account_id", accountId).limit(5),
   ]);
 
   const campIds = (camps ?? []).map((c: any) => c.id);
@@ -72,6 +74,8 @@ export async function buildTenantSnapshot(accountId: string): Promise<string> {
     ...((senders ?? []) as any[]).map((x) => `- ${x.phone_number ?? "?"} ${x.sender_kind ?? ""} ${x.country_code ?? ""} — ${x.verification_status ?? "?"}${x.is_shared ? " (shared)" : ""}${x.verified_at ? ` verified ${String(x.verified_at).slice(0, 10)}` : ""}${x.friendly_rejection_reason || x.rejection_reason ? ` (reason: ${String(x.friendly_rejection_reason || x.rejection_reason).slice(0, 150)})` : ""}`),
     "Pre-verified numbers purchased:",
     ...((boughtTfns ?? []) as any[]).map((t) => `- ${t.phone_number} ${t.country ?? ""} — ${t.status}, bought ${String(t.sold_at ?? "").slice(0, 16)}`),
+    `API access: ${((apiReqs ?? []) as any[]).map((r) => `${r.status} (requested ${String(r.created_at).slice(0, 10)})`).join(", ") || "never requested"}`,
+    `API keys: ${((apiKeys ?? []) as any[]).filter((k) => !k.revoked_at).map((k) => `active, ${k.rate_limit_per_minute} requests/min`).join("; ") || "none"}`,
     "Recent wallet activity:",
     ...((ledger ?? []) as any[]).map((l) => `- ${String(l.created_at).slice(0, 16)} ${l.type} ${Number(l.amount).toFixed(2)} → balance ${Number(l.balance_after ?? 0).toFixed(2)} ${String(l.description ?? "").slice(0, 80)}`),
     "Recent contact-form messages from this tenant:",
@@ -83,7 +87,10 @@ export const COPILOT_PROMPT = `You are the internal support copilot for Xellvio,
 
 Platform facts: 1 USD = 1 credit; card payments credit instantly; crypto needs ≥ $25 and credits after confirmation. Messages are charged per segment (160 GSM / 70 unicode). US sending needs a verified toll-free or 10DLC number; local verified numbers cost $100. Error meanings: 40001 landline; 30007/40002/40003/40010 carrier spam filtering (reword, name the business, no shorteners); 40008 destination route issue, NOT the tenant's fault and NOT fixed by registering a Danish sender; 40300/21610 opted out; 40310/21211/40011 bad number format; 40012/30003 unreachable; 30005/40013 number doesn't exist. "Sent" is not confirmed delivery; receipts can be delayed. Prohibited content includes prescription drugs (GLP-1, semaglutide, peptides, injections) unless licensed, phishing/impersonation of other brands (e.g. Coinbase, banks), gambling, loans/crypto scams.
 
+API facts: tenants must request API access and be approved by an admin before they can create keys. Each API key allows 120 requests per minute by default (admin-adjustable); over the limit returns HTTP 429 with code rate_limit_exceeded — retry after a short wait with exponential backoff. A batch request takes up to 1,000 recipients but one shared body; different bodies per recipient means one request per message. API sends go through the same queue, charging, screening and opt-out rules as campaigns. There is no fixed daily/monthly cap beyond account balance and compliance review. Shared toll-free numbers are used by several workspaces, so their carrier throughput (roughly a few messages/second, counted in segments) is shared and not guaranteed per tenant. If the account's recorded "Sending number on account" differs from the sender numbers they actually send from, trust the sender numbers and messages data.
+
 Hard rules:
+- Never invent limits, quotas, queue sizes or numbers that are not in these facts or the data. If unknown, say it will be confirmed.
 - Never promise or suggest refunds; refunds happen only if the owner decides. Never claim something was checked if it's not in the data.
 - Never name internal providers or vendors (e.g. Telnyx, Twilio, Flutterwave, NOWPayments) in the customer reply.
 - Never recommend lifting a sending hold when the hold was caused by prohibited, phishing or impersonation content.
