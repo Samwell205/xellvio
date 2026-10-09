@@ -97,13 +97,32 @@ export const askCopilot = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Case not found");
 
-    // Auto-detect tenant from an email address in the pasted message.
+    // Auto-detect the tenant from emails or phone numbers in the pasted message
+    // (and earlier messages in this case).
     let accountId: string | null = row.account_id;
     if (!accountId) {
-      const email = data.message.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)?.[0];
-      if (email) {
-        const { data: a } = await sb.from("accounts").select("id").ilike("email", email).maybeSingle();
-        if (a) accountId = a.id;
+      const haystack = [data.message, ...((row.messages ?? []) as CopilotMessage[]).filter((m) => m.role === "user").map((m) => m.content)].join("\n");
+      const emails = Array.from(new Set((haystack.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) ?? []).map((e) => e.toLowerCase().replace(/[.,;:]+$/, "")))).slice(0, 10);
+      for (const email of emails) {
+        const { data: a } = await sb.from("accounts").select("id").or(`email.ilike.${email},contact_email.ilike.${email}`).limit(1).maybeSingle();
+        if (a) { accountId = a.id; break; }
+        const { data: cm } = await sb.from("contact_messages").select("user_id").ilike("email", email).not("user_id", "is", null).limit(1).maybeSingle();
+        if ((cm as any)?.user_id) { accountId = (cm as any).user_id; break; }
+      }
+      if (!accountId) {
+        const phones = Array.from(new Set((haystack.match(/\+?\d[\d\s().-]{8,16}\d/g) ?? [])
+          .map((p) => p.replace(/\D/g, "")).filter((d) => d.length >= 10 && d.length <= 15)
+          .map((d) => (d.length === 10 ? `+1${d}` : `+${d}`)))).slice(0, 10);
+        for (const phone of phones) {
+          const [sa, acc, num, tfn] = await Promise.all([
+            sb.from("sender_assets").select("account_id").eq("phone_number", phone).not("account_id", "is", null).limit(1).maybeSingle(),
+            sb.from("accounts").select("id").eq("telnyx_phone_number", phone).limit(1).maybeSingle(),
+            sb.from("numbers").select("account_id").eq("phone_number", phone).limit(1).maybeSingle(),
+            sb.from("verifier_tfns").select("sold_to_account_id").eq("phone_number", phone).not("sold_to_account_id", "is", null).limit(1).maybeSingle(),
+          ]);
+          accountId = sa.data?.account_id ?? acc.data?.id ?? num.data?.account_id ?? tfn.data?.sold_to_account_id ?? null;
+          if (accountId) break;
+        }
       }
     }
 
