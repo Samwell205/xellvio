@@ -100,12 +100,29 @@ export const askCopilot = createServerFn({ method: "POST" })
     const { data: row, error } = await sb.from("support_cases").select("*").eq("id", data.id).maybeSingle();
     if (error) throw new Error(error.message);
     if (!row) throw new Error("Case not found");
+    const userText = data.message || "Here is a screenshot from the tenant. Read it and handle it.";
 
     // Auto-detect the tenant from emails or phone numbers in the pasted message
     // (and earlier messages in this case).
     let accountId: string | null = row.account_id;
+    // Contact details inside screenshots: read them out first so the tenant can be linked.
+    let imageText = "";
+    if (!accountId && data.images.length) {
+      try {
+        const { getChatModel } = await import("./ai-provider.server");
+        const { streamText } = await import("ai");
+        const m = await getChatModel();
+        if (m) {
+          const r = streamText({ model: m, messages: [{ role: "user", content: [
+            { type: "text", text: "List every email address and phone number visible in these images, one per line. Output only the list, or NONE." },
+            ...data.images.map((url) => ({ type: "image" as const, image: url })),
+          ] }] });
+          imageText = (await r.text).slice(0, 2000);
+        }
+      } catch (e) { console.error("[copilot] screenshot read failed", e); }
+    }
     if (!accountId) {
-      const haystack = [userText, ...((row.messages ?? []) as CopilotMessage[]).filter((m) => m.role === "user").map((m) => m.content)].join("\n");
+      const haystack = [userText, imageText, ...((row.messages ?? []) as CopilotMessage[]).filter((m) => m.role === "user").map((m) => m.content)].join("\n");
       const emails = Array.from(new Set((haystack.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) ?? []).map((e) => e.toLowerCase().replace(/[.,;:]+$/, "")))).slice(0, 10);
       for (const email of emails) {
         const { data: a } = await sb.from("accounts").select("id").or(`email.ilike.${email},contact_email.ilike.${email}`).limit(1).maybeSingle();
@@ -139,7 +156,6 @@ export const askCopilot = createServerFn({ method: "POST" })
 
     const history = (row.messages ?? []) as CopilotMessage[];
     const now = new Date().toISOString();
-    const userText = data.message || "Here is a screenshot from the tenant. Read it and handle it.";
     const msgs: CopilotMessage[] = [...history, { role: "user", content: userText, at: now, ...(data.images.length ? { images: data.images } : {}) }];
 
     const { getChatModel } = await import("./ai-provider.server");
