@@ -106,8 +106,6 @@ export const askCopilot = createServerFn({ method: "POST" })
       for (const email of emails) {
         const { data: a } = await sb.from("accounts").select("id").or(`email.ilike.${email},contact_email.ilike.${email}`).limit(1).maybeSingle();
         if (a) { accountId = a.id; break; }
-        const { data: cm } = await sb.from("contact_messages").select("user_id").ilike("email", email).not("user_id", "is", null).limit(1).maybeSingle();
-        if ((cm as any)?.user_id) { accountId = (cm as any).user_id; break; }
       }
       if (!accountId) {
         const phones = Array.from(new Set((haystack.match(/\+?\d[\d\s().-]{8,16}\d/g) ?? [])
