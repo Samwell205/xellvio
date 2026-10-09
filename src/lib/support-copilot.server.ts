@@ -18,6 +18,15 @@ export async function buildTenantSnapshot(accountId: string): Promise<string> {
     ]);
   if (!acct) return "Tenant account not found.";
 
+  const [{ data: senders }, { data: boughtTfns }, { data: ledger }] = await Promise.all([
+    sb.from("sender_assets").select("phone_number, sender_kind, country_code, verification_status, friendly_rejection_reason, rejection_reason, is_shared, created_at, verified_at")
+      .eq("account_id", accountId).order("created_at", { ascending: false }).limit(10),
+    sb.from("verifier_tfns").select("phone_number, country, status, sold_at").eq("sold_to_account_id", accountId)
+      .order("sold_at", { ascending: false }).limit(10),
+    sb.from("credit_transactions").select("type, amount, balance_after, description, created_at").eq("account_id", accountId)
+      .order("created_at", { ascending: false }).limit(12),
+  ]);
+
   const campIds = (camps ?? []).map((c: any) => c.id);
   const [{ data: fails }, { data: contacts }] = await Promise.all([
     campIds.length
@@ -59,6 +68,12 @@ export async function buildTenantSnapshot(accountId: string): Promise<string> {
     ...((reqs ?? []) as any[]).map((r) => `- ${String(r.created_at).slice(0, 10)} ${r.country} ${r.number_type}${r.area_code ? ` area ${r.area_code}` : ""} — ${r.status}${r.assigned_phone_number ? ` → ${r.assigned_phone_number}` : ""}${r.admin_notes ? ` (note: ${String(r.admin_notes).slice(0, 150)})` : ""}`),
     "Numbers:",
     ...((nums ?? []) as any[]).map((n) => `- ${n.phone_number} ${n.number_type} ${n.status}`),
+    "Sender numbers / registrations (what the tenant actually sends from):",
+    ...((senders ?? []) as any[]).map((x) => `- ${x.phone_number ?? "?"} ${x.sender_kind ?? ""} ${x.country_code ?? ""} — ${x.verification_status ?? "?"}${x.is_shared ? " (shared)" : ""}${x.verified_at ? ` verified ${String(x.verified_at).slice(0, 10)}` : ""}${x.friendly_rejection_reason || x.rejection_reason ? ` (reason: ${String(x.friendly_rejection_reason || x.rejection_reason).slice(0, 150)})` : ""}`),
+    "Pre-verified numbers purchased:",
+    ...((boughtTfns ?? []) as any[]).map((t) => `- ${t.phone_number} ${t.country ?? ""} — ${t.status}, bought ${String(t.sold_at ?? "").slice(0, 16)}`),
+    "Recent wallet activity:",
+    ...((ledger ?? []) as any[]).map((l) => `- ${String(l.created_at).slice(0, 16)} ${l.type} ${Number(l.amount).toFixed(2)} → balance ${Number(l.balance_after ?? 0).toFixed(2)} ${String(l.description ?? "").slice(0, 80)}`),
     "Recent contact-form messages from this tenant:",
     ...((contacts ?? []) as any[]).map((c) => `- ${String(c.created_at).slice(0, 10)} [${c.topic}] ${String(c.message).slice(0, 300)}`),
   ].join("\n");
@@ -73,6 +88,8 @@ Hard rules:
 - Never name internal providers or vendors (e.g. Telnyx, Twilio, Flutterwave, NOWPayments) in the customer reply.
 - Never recommend lifting a sending hold when the hold was caused by prohibited, phishing or impersonation content.
 - If data is missing to answer, say what to check.
+- When TENANT ACCOUNT DATA is present, base the reply on it: mention the tenant's real numbers, purchases, balance and status, and don't describe purchases they've already made as future steps.
+- When no tenant is linked, start "What's going on" with "No tenant account linked — answer is generic" and keep the reply generic.
 
 Always answer in this exact structure:
 ## What's going on
