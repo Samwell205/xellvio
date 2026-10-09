@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
-import { Copy, Link2, Loader2, Send, Wrench, X } from "lucide-react";
+import { Copy, ImagePlus, Link2, Loader2, Send, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,6 +28,18 @@ function parse(content: string) {
   return { reply, actions, body };
 }
 
+// Shrink screenshots in the browser so they upload fast and stay readable.
+async function toDataUrl(file: File): Promise<string> {
+  const src = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file); });
+  const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  const max = 2000;
+  const scale = Math.min(1, max / Math.max(img.width, img.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.85);
+}
+
 function CasePage() {
   const { caseId } = Route.useParams();
   return <CaseView key={caseId} caseId={caseId} />;
@@ -43,7 +55,21 @@ function CaseView({ caseId }: { caseId: string }) {
   const setTenantFn = useServerFn(setCaseTenant);
   const searchFn = useServerFn(searchTenants);
   const [text, setText] = useState("");
-  const [pending, setPending] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ text: string; images: string[] } | null>(null);
+  const [images, setImages] = useState<string[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const addFiles = async (files: FileList | File[]) => {
+    const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (!list.length) return;
+    try {
+      const urls = await Promise.all(list.map(toDataUrl));
+      setImages((cur) => {
+        const next = [...cur, ...urls].slice(0, 4);
+        if (cur.length + urls.length > 4) toast.message("Up to 4 screenshots per message");
+        return next;
+      });
+    } catch { toast.error("Couldn't read that image"); }
+  };
   const [search, setSearch] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -55,10 +81,10 @@ function CaseView({ caseId }: { caseId: string }) {
   });
 
   const ask = useMutation({
-    mutationFn: (message: string) => askFn({ data: { id: caseId, message } }),
-    onMutate: (m) => { setPending(m); setText(""); },
+    mutationFn: (v: { text: string; images: string[] }) => askFn({ data: { id: caseId, message: v.text, images: v.images } }),
+    onMutate: (v) => { setPending(v); setText(""); setImages([]); },
     onSuccess: () => { void qc.invalidateQueries({ queryKey: key }); void qc.invalidateQueries({ queryKey: ["support-cases"] }); },
-    onError: (e: Error, m) => { toast.error(e.message); setText(m); },
+    onError: (e: Error, v) => { toast.error(e.message); setText(v.text); setImages(v.images); },
     onSettled: () => { setPending(null); taRef.current?.focus(); },
   });
   const link = useMutation({
@@ -76,7 +102,7 @@ function CaseView({ caseId }: { caseId: string }) {
   useEffect(() => { taRef.current?.focus(); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length, pending]);
 
-  const send = () => { const t = text.trim(); if (t && !ask.isPending) ask.mutate(t); };
+  const send = () => { const t = text.trim(); if ((t || images.length) && !ask.isPending) ask.mutate({ text: t, images }); };
   const tenant = q.data?.tenant;
 
   return (
@@ -118,25 +144,59 @@ function CaseView({ caseId }: { caseId: string }) {
           <p className="text-sm text-muted-foreground">Paste the tenant's message below. You can also ask things like "review this account" or "why did their last campaign fail?".</p>
         )}
         {messages.map((m, i) => m.role === "user"
-          ? <div key={i} className="ml-auto max-w-[75%] whitespace-pre-wrap rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground">{m.content}</div>
+          ? <UserBubble key={i} text={m.content} images={m.images} />
           : <AssistantMessage key={i} content={m.content} onAction={(a) => { if (confirm(`${a.action === "lift_hold" ? "Lift the sending hold" : "Resume this campaign"}?\n\n${a.reason}`)) act.mutate(a); }} busy={act.isPending} />)}
         {pending && <>
-          <div className="ml-auto max-w-[75%] whitespace-pre-wrap rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground">{pending}</div>
+          <UserBubble text={pending.text} images={pending.images} />
           <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" /> Reviewing the account and drafting a reply…</div>
         </>}
         <div ref={endRef} />
       </div>
 
-      <div className="border-t border-border p-3">
+      <div className="border-t border-border p-3"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); void addFiles(e.dataTransfer.files); }}>
+        {images.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {images.map((src, i) => (
+              <div key={i} className="relative">
+                <img src={src} alt={`Screenshot ${i + 1}`} className="h-16 w-24 rounded-md border border-border object-cover" />
+                <button aria-label="Remove screenshot" onClick={() => setImages((c) => c.filter((_, j) => j !== i))}
+                  className="absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-foreground text-background"><X className="size-3" /></button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex items-end gap-2 rounded-xl border border-border bg-background p-2">
-          <Textarea ref={taRef} rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the tenant's message or ask a question…"
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
+            onChange={(e) => { if (e.target.files) void addFiles(e.target.files); e.target.value = ""; }} />
+          <Button size="icon" variant="ghost" type="button" aria-label="Attach screenshot" title="Attach screenshot (or paste / drop one)" onClick={() => fileRef.current?.click()}>
+            <ImagePlus className="size-4" />
+          </Button>
+          <Textarea ref={taRef} rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the tenant's message or a screenshot, or ask a question…"
+            onPaste={(e) => { const f = Array.from(e.clipboardData.files); if (f.length) { e.preventDefault(); void addFiles(f); } }}
             className="min-h-0 resize-none border-0 shadow-none focus-visible:ring-0"
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} />
-          <Button size="icon" onClick={send} disabled={ask.isPending || !text.trim()} aria-label="Send">
+          <Button size="icon" onClick={send} disabled={ask.isPending || (!text.trim() && !images.length)} aria-label="Send">
             {ask.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function UserBubble({ text, images }: { text: string; images?: string[] }) {
+  return (
+    <div className="ml-auto max-w-[75%] space-y-2">
+      {images?.length ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          {images.map((src, i) => (
+            <a key={i} href={src} target="_blank" rel="noreferrer"><img src={src} alt={`Screenshot ${i + 1}`} className="max-h-48 rounded-lg border border-border" /></a>
+          ))}
+        </div>
+      ) : null}
+      <div className="whitespace-pre-wrap rounded-2xl bg-primary px-4 py-3 text-sm text-primary-foreground">{text}</div>
     </div>
   );
 }
