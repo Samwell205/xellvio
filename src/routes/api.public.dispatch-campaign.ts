@@ -1485,16 +1485,22 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-         const { dispatchPendingWebhooks } = await import("@/lib/tenant-api.server");
-         const { data: dueWebhookAccounts } = await supabaseAdmin
-           .from("api_webhook_events")
-           .select("account_id")
-           .in("status", ["pending", "retrying"])
-           .lte("available_at", new Date().toISOString())
-           .limit(6);
-         for (const accountId of new Set((dueWebhookAccounts ?? []).map((row) => row.account_id))) {
-           await dispatchPendingWebhooks(accountId, 6);
-         }
+        // Tenant webhook deliveries run alongside sending (accounts in
+        // parallel), never ahead of it, so a slow tenant URL can't stall
+        // campaign dispatch or receipt reconciliation for everyone.
+        const webhookWork = (async () => {
+          const { dispatchPendingWebhooks } = await import("@/lib/tenant-api.server");
+          const { data: dueWebhookAccounts } = await supabaseAdmin
+            .from("api_webhook_events")
+            .select("account_id")
+            .in("status", ["pending", "retrying"])
+            .lte("available_at", new Date().toISOString())
+            .limit(6);
+          const ids = [...new Set((dueWebhookAccounts ?? []).map((row) => row.account_id as string))];
+          await Promise.allSettled(ids.map((id) => dispatchPendingWebhooks(id, 6)));
+        })().catch((e) => console.error("[dispatch] webhook delivery failed", e));
+        const finishWebhooks = () =>
+          Promise.race([webhookWork, new Promise((r) => setTimeout(r, 12_000))]);
 
         // Dedicated receipt-reconciliation mode. Runs on its own cron schedule
         // so pulling final delivery receipts never competes with the sending
@@ -1510,16 +1516,17 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             minAgeMs: 90_000,
             budgetMs: 40_000,
           });
+          await finishWebhooks();
           return Response.json({ mode: "reconcile", ...result });
         }
-
-
 
         // Campaign-level leases (acquired inside runDispatchTick) let several
         // scheduler ticks send for different campaigns at the same time. A
         // single global lock used to serialize every tenant's sending, which
         // is what made large campaigns crawl for hours.
-        return await runDispatchTick(supabaseAdmin);
+        const res = await runDispatchTick(supabaseAdmin);
+        await finishWebhooks();
+        return res;
       },
     },
   },
