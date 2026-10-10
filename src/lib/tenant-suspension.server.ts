@@ -42,14 +42,25 @@ export async function suspendTenantSending(opts: {
     .maybeSingle();
   if (!acct) throw new Error("Account not found");
 
-  // Flip Telnyx off first so no in-flight sends slip through. Non-fatal if the
-  // API errors — the DB flag still blocks the dispatcher.
+  // Flip the carrier profile off only when this tenant is its sole user.
+  // Shared profiles (pool toll-free / local 10DLC) serve other workspaces, so
+  // disabling them would cut everyone off — the DB flag below already blocks
+  // this tenant in the dispatcher.
   let telnyxOk = true;
   let telnyxError: string | undefined;
-  if (acct.telnyx_messaging_profile_id) {
-    const r = await telnyxPatchProfileEnabled(acct.telnyx_messaging_profile_id, false);
-    telnyxOk = r.ok;
-    telnyxError = r.error;
+  const profileId = acct.telnyx_messaging_profile_id;
+  if (profileId) {
+    const [{ count: otherAccounts }, { count: otherSenders }] = await Promise.all([
+      supabaseAdmin.from("accounts").select("id", { count: "exact", head: true })
+        .eq("telnyx_messaging_profile_id", profileId).neq("id", opts.tenantAccountId),
+      supabaseAdmin.from("sender_assets").select("id", { count: "exact", head: true })
+        .eq("telnyx_messaging_profile_id", profileId).neq("account_id", opts.tenantAccountId),
+    ]);
+    if (!otherAccounts && !otherSenders) {
+      const r = await telnyxPatchProfileEnabled(profileId, false);
+      telnyxOk = r.ok;
+      telnyxError = r.error;
+    }
   }
 
   const nowIso = new Date().toISOString();
