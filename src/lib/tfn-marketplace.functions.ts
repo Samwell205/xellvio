@@ -66,6 +66,11 @@ export const getTfnMarketplaceOffer = createServerFn({ method: "GET" })
     return { available_count, price_usd: settings.buyerPriceUsd };
   });
 
+function pickLeastUsed<T extends { phone_number: string }>(items: T[], counts: Map<string, number>): T {
+  const min = Math.min(...items.map((n) => counts.get(n.phone_number) ?? 0));
+  const tied = items.filter((n) => (counts.get(n.phone_number) ?? 0) === min);
+  return tied[Math.floor(Math.random() * tied.length)];
+}
 
 async function claimFromPool(
   userId: string,
@@ -75,7 +80,14 @@ async function claimFromPool(
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const available = await listAvailablePoolNumbers();
   if (available.length === 0) return null;
-  const pick = available[0];
+  // Spread tenants across verified numbers: pick randomly among the
+  // least-used numbers instead of always handing out the first one.
+  const { data: att } = await supabaseAdmin
+    .from("sender_assets").select("phone_number").eq("sender_kind", "toll_free")
+    .in("phone_number", available.map((n) => n.phone_number));
+  const counts = new Map<string, number>();
+  for (const a of att ?? []) counts.set(a.phone_number as string, (counts.get(a.phone_number as string) ?? 0) + 1);
+  const pick = pickLeastUsed(available, counts);
 
   // Shared pool: the same verified TFN can be assigned to multiple tenants.
   // Do NOT delete the pool row and do NOT delete other tenants' sender_assets
