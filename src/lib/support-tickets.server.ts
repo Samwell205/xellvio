@@ -24,7 +24,8 @@ export function ticketUrl(t: Pick<TicketRow, "access_token">) {
 /** Reply-To address that routes email replies back into the ticket. */
 export function replyAddress(t: Pick<TicketRow, "access_token">): string | undefined {
   const base = process.env.SUPPORT_INBOUND_ADDRESS; // e.g. support@reply.xellvio.com
-  if (!base || !base.includes("@")) return undefined;
+  // No inbound mailbox wired to the app yet: send email replies to the owner's Outlook inbox.
+  if (!base || !base.includes("@")) return "admin@xellvio.com";
   const [local, domain] = base.split("@");
   return `${local}+t-${t.access_token}@${domain}`;
 }
