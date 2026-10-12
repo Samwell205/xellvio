@@ -39,6 +39,8 @@ export interface SendInternalArgs {
   templateData?: Record<string, any>;
   includeUnsubscribe?: boolean;
   sendImmediately?: boolean;
+  /** Reply-To address (immediate sends only). */
+  replyTo?: string;
 }
 
 function classifyEmailError(error: unknown): string {
@@ -60,6 +62,7 @@ export async function sendBrandedEmail(
     templateData = {},
     includeUnsubscribe = true,
     sendImmediately = false,
+    replyTo,
   } = args;
 
   const template: TemplateEntry | undefined = TEMPLATES[templateName as string];
@@ -156,6 +159,7 @@ export async function sendBrandedEmail(
           label: templateName,
           idempotency_key: idempotencyKey,
           message_id: idempotencyKey,
+          ...(replyTo ? { reply_to: replyTo } : {}),
           ...(unsubscribeToken ? { unsubscribe_token: unsubscribeToken } : {}),
         },
       );

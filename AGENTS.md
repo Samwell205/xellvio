@@ -19,3 +19,5 @@
 - Admin routes share the theme-scoped admin shell and searchable grouped navigation; keep advanced tools discoverable without crowding core operations.
 - The admin landing overview uses bounded operational reads, never full-history row downloads; all-time financial analysis belongs on the dedicated finance pages.
 - All-time admin finance reports are served from `admin_report_cache` (src/lib/admin-report-cache.server.ts) with a short TTL and an explicit "Recalculate now"; they scan full message history and must not run on every page view.
+
+- Support tickets (src/lib/support-tickets.server.ts, /admin/tickets, /app/support, /support/t/$token) are the only support channel: contact-form submissions, in-app requests and inbound email replies all create or append to tickets; closed tickets never accept replies (a reply opens a new linked ticket) so every conversation has one clear lifecycle.

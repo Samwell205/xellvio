@@ -134,6 +134,7 @@ import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.t
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as MarketplaceAppsIndexRouteImport } from './routes/marketplace.apps.index'
 import { Route as MarketplaceAppsSlugRouteImport } from './routes/marketplace.apps.$slug'
+import { Route as SupportTTokenRouteImport } from './routes/support.t.$token'
 import { Route as TemplatesCategoryIndexRouteImport } from './routes/templates.$category.index'
 import { Route as TemplatesCategorySlugRouteImport } from './routes/templates.$category.$slug'
 import { Route as TemplatesIndustryIndustryRouteImport } from './routes/templates.industry.$industry'
@@ -144,6 +145,8 @@ import { Route as AuthenticatedAdminSupportIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminSupportCaseIdRouteImport } from './routes/_authenticated.admin.support.$caseId'
 import { Route as AuthenticatedAdminTelnyxAuditRouteImport } from './routes/_authenticated.admin.telnyx.audit'
 import { Route as AuthenticatedAdminTelnyxTfnRouteImport } from './routes/_authenticated.admin.telnyx.tfn'
+import { Route as AuthenticatedAdminTicketsIndexRouteImport } from './routes/_authenticated.admin.tickets.index'
+import { Route as AuthenticatedAdminTicketsIdRouteImport } from './routes/_authenticated.admin.tickets.$id'
 import { Route as AuthenticatedAppAppsIndexRouteImport } from './routes/_authenticated.app.apps.index'
 import { Route as AuthenticatedAppAppsSlugRouteImport } from './routes/_authenticated.app.apps.$slug'
 import { Route as AuthenticatedAppAutomationsIndexRouteImport } from './routes/_authenticated.app.automations.index'
@@ -153,6 +156,8 @@ import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authe
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
+import { Route as AuthenticatedAppSupportIndexRouteImport } from './routes/_authenticated.app.support.index'
+import { Route as AuthenticatedAppSupportIdRouteImport } from './routes/_authenticated.app.support.$id'
 import { Route as VerifierVerifyDashboardIndexRouteImport } from './routes/_verifier.verify.dashboard.index'
 import { Route as VerifierVerifyDashboardEarningsRouteImport } from './routes/_verifier.verify.dashboard.earnings'
 import { Route as VerifierVerifyDashboardNumbersRouteImport } from './routes/_verifier.verify.dashboard.numbers'
@@ -163,6 +168,8 @@ import { Route as ApiPublicCardWebhookRouteImport } from './routes/api/public/ca
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media.$'
 import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicSupportInboundRouteImport } from './routes/api.public.support.inbound'
+import { Route as ApiPublicSupportSweepRouteImport } from './routes/api.public.support.sweep'
 import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -839,6 +846,11 @@ const MarketplaceAppsSlugRoute = MarketplaceAppsSlugRouteImport.update({
   path: '/apps/$slug',
   getParentRoute: () => MarketplaceRoute,
 } as any)
+const SupportTTokenRoute = SupportTTokenRouteImport.update({
+  id: '/support/t/$token',
+  path: '/support/t/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TemplatesCategoryIndexRoute = TemplatesCategoryIndexRouteImport.update({
   id: '/templates/$category/',
   path: '/templates/$category/',
@@ -896,6 +908,18 @@ const AuthenticatedAdminTelnyxTfnRoute =
     path: '/tfn',
     getParentRoute: () => AuthenticatedAdminTelnyxRoute,
   } as any)
+const AuthenticatedAdminTicketsIndexRoute =
+  AuthenticatedAdminTicketsIndexRouteImport.update({
+    id: '/tickets/',
+    path: '/tickets/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminTicketsIdRoute =
+  AuthenticatedAdminTicketsIdRouteImport.update({
+    id: '/tickets/$id',
+    path: '/tickets/$id',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAppAppsIndexRoute =
   AuthenticatedAppAppsIndexRouteImport.update({
     id: '/apps/',
@@ -949,6 +973,18 @@ const AuthenticatedAppSegmentsNewRoute =
     id: '/new',
     path: '/new',
     getParentRoute: () => AuthenticatedAppSegmentsRoute,
+  } as any)
+const AuthenticatedAppSupportIndexRoute =
+  AuthenticatedAppSupportIndexRouteImport.update({
+    id: '/support/',
+    path: '/support/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppSupportIdRoute =
+  AuthenticatedAppSupportIdRouteImport.update({
+    id: '/support/$id',
+    path: '/support/$id',
+    getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const VerifierVerifyDashboardIndexRoute =
   VerifierVerifyDashboardIndexRouteImport.update({
@@ -1008,6 +1044,16 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicSupportInboundRoute = ApiPublicSupportInboundRouteImport.update({
+  id: '/api/public/support/inbound',
+  path: '/api/public/support/inbound',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSupportSweepRoute = ApiPublicSupportSweepRouteImport.update({
+  id: '/api/public/support/sweep',
+  path: '/api/public/support/sweep',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicV1SplatRoute = ApiPublicV1SplatRouteImport.update({
   id: '/api/public/v1/$',
   path: '/api/public/v1/$',
@@ -1175,6 +1221,7 @@ export interface FileRoutesByFullPath {
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
+  '/support/t/$token': typeof SupportTTokenRoute
   '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
   '/templates/industry/$industry': typeof TemplatesIndustryIndustryRoute
   '/templates/use-case/$goal': typeof TemplatesUseCaseGoalRoute
@@ -1186,11 +1233,13 @@ export interface FileRoutesByFullPath {
   '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
+  '/admin/tickets/$id': typeof AuthenticatedAdminTicketsIdRoute
   '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
+  '/app/support/$id': typeof AuthenticatedAppSupportIdRoute
   '/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
   '/verify/dashboard/numbers': typeof VerifierVerifyDashboardNumbersRoute
   '/verify/dashboard/settings': typeof VerifierVerifyDashboardSettingsRoute
@@ -1200,6 +1249,8 @@ export interface FileRoutesByFullPath {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
+  '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1208,10 +1259,12 @@ export interface FileRoutesByFullPath {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
   '/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
+  '/admin/tickets/': typeof AuthenticatedAdminTicketsIndexRoute
   '/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
+  '/app/support/': typeof AuthenticatedAppSupportIndexRoute
   '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
@@ -1331,6 +1384,7 @@ export interface FileRoutesByTo {
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
+  '/support/t/$token': typeof SupportTTokenRoute
   '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
   '/templates/industry/$industry': typeof TemplatesIndustryIndustryRoute
   '/templates/use-case/$goal': typeof TemplatesUseCaseGoalRoute
@@ -1342,11 +1396,13 @@ export interface FileRoutesByTo {
   '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
+  '/admin/tickets/$id': typeof AuthenticatedAdminTicketsIdRoute
   '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
+  '/app/support/$id': typeof AuthenticatedAppSupportIdRoute
   '/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
   '/verify/dashboard/numbers': typeof VerifierVerifyDashboardNumbersRoute
   '/verify/dashboard/settings': typeof VerifierVerifyDashboardSettingsRoute
@@ -1356,6 +1412,8 @@ export interface FileRoutesByTo {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
+  '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1364,10 +1422,12 @@ export interface FileRoutesByTo {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/campaigns': typeof AuthenticatedAdminCampaignsIndexRoute
   '/admin/support': typeof AuthenticatedAdminSupportIndexRoute
+  '/admin/tickets': typeof AuthenticatedAdminTicketsIndexRoute
   '/app/apps': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
+  '/app/support': typeof AuthenticatedAppSupportIndexRoute
   '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
@@ -1496,6 +1556,7 @@ export interface FileRoutesById {
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
+  '/support/t/$token': typeof SupportTTokenRoute
   '/templates/$category/$slug': typeof TemplatesCategorySlugRoute
   '/templates/industry/$industry': typeof TemplatesIndustryIndustryRoute
   '/templates/use-case/$goal': typeof TemplatesUseCaseGoalRoute
@@ -1507,11 +1568,13 @@ export interface FileRoutesById {
   '/_authenticated/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/_authenticated/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
+  '/_authenticated/admin/tickets/$id': typeof AuthenticatedAdminTicketsIdRoute
   '/_authenticated/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
   '/_authenticated/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
+  '/_authenticated/app/support/$id': typeof AuthenticatedAppSupportIdRoute
   '/_verifier/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
   '/_verifier/verify/dashboard/numbers': typeof VerifierVerifyDashboardNumbersRoute
   '/_verifier/verify/dashboard/settings': typeof VerifierVerifyDashboardSettingsRoute
@@ -1521,6 +1584,8 @@ export interface FileRoutesById {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
+  '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -1529,10 +1594,12 @@ export interface FileRoutesById {
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/_authenticated/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
   '/_authenticated/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
+  '/_authenticated/admin/tickets/': typeof AuthenticatedAdminTicketsIndexRoute
   '/_authenticated/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/_authenticated/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
+  '/_authenticated/app/support/': typeof AuthenticatedAppSupportIndexRoute
   '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/_authenticated/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
@@ -1660,6 +1727,7 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
+    | '/support/t/$token'
     | '/templates/$category/$slug'
     | '/templates/industry/$industry'
     | '/templates/use-case/$goal'
@@ -1671,11 +1739,13 @@ export interface FileRouteTypes {
     | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
+    | '/admin/tickets/$id'
     | '/app/apps/$slug'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
+    | '/app/support/$id'
     | '/verify/dashboard/earnings'
     | '/verify/dashboard/numbers'
     | '/verify/dashboard/settings'
@@ -1685,6 +1755,8 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/support/inbound'
+    | '/api/public/support/sweep'
     | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1693,10 +1765,12 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/admin/campaigns/'
     | '/admin/support/'
+    | '/admin/tickets/'
     | '/app/apps/'
     | '/app/automations/'
     | '/app/campaigns/'
     | '/app/segments/'
+    | '/app/support/'
     | '/verify/dashboard/'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
@@ -1816,6 +1890,7 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
+    | '/support/t/$token'
     | '/templates/$category/$slug'
     | '/templates/industry/$industry'
     | '/templates/use-case/$goal'
@@ -1827,11 +1902,13 @@ export interface FileRouteTypes {
     | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
+    | '/admin/tickets/$id'
     | '/app/apps/$slug'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
     | '/app/segments/new'
+    | '/app/support/$id'
     | '/verify/dashboard/earnings'
     | '/verify/dashboard/numbers'
     | '/verify/dashboard/settings'
@@ -1841,6 +1918,8 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/support/inbound'
+    | '/api/public/support/sweep'
     | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1849,10 +1928,12 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/admin/campaigns'
     | '/admin/support'
+    | '/admin/tickets'
     | '/app/apps'
     | '/app/automations'
     | '/app/campaigns'
     | '/app/segments'
+    | '/app/support'
     | '/verify/dashboard'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
@@ -1980,6 +2061,7 @@ export interface FileRouteTypes {
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
+    | '/support/t/$token'
     | '/templates/$category/$slug'
     | '/templates/industry/$industry'
     | '/templates/use-case/$goal'
@@ -1991,11 +2073,13 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/support/$caseId'
     | '/_authenticated/admin/telnyx/audit'
     | '/_authenticated/admin/telnyx/tfn'
+    | '/_authenticated/admin/tickets/$id'
     | '/_authenticated/app/apps/$slug'
     | '/_authenticated/app/automations/$id'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/segments/new'
+    | '/_authenticated/app/support/$id'
     | '/_verifier/verify/dashboard/earnings'
     | '/_verifier/verify/dashboard/numbers'
     | '/_verifier/verify/dashboard/settings'
@@ -2005,6 +2089,8 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/support/inbound'
+    | '/api/public/support/sweep'
     | '/api/public/v1/$'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -2013,10 +2099,12 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/send'
     | '/_authenticated/admin/campaigns/'
     | '/_authenticated/admin/support/'
+    | '/_authenticated/admin/tickets/'
     | '/_authenticated/app/apps/'
     | '/_authenticated/app/automations/'
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/segments/'
+    | '/_authenticated/app/support/'
     | '/_verifier/verify/dashboard/'
     | '/_authenticated/app/campaigns/$id/report'
     | '/_authenticated/app/use-template/$category/$slug'
@@ -2093,6 +2181,7 @@ export interface RootRouteChildren {
   ApiPublicTelnyxInboundRoute: typeof ApiPublicTelnyxInboundRoute
   ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  SupportTTokenRoute: typeof SupportTTokenRoute
   TemplatesCategorySlugRoute: typeof TemplatesCategorySlugRoute
   TemplatesIndustryIndustryRoute: typeof TemplatesIndustryIndustryRoute
   TemplatesUseCaseGoalRoute: typeof TemplatesUseCaseGoalRoute
@@ -2102,6 +2191,8 @@ export interface RootRouteChildren {
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiPublicSupportInboundRoute: typeof ApiPublicSupportInboundRoute
+  ApiPublicSupportSweepRoute: typeof ApiPublicSupportSweepRoute
   ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -2987,6 +3078,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketplaceAppsSlugRouteImport
       parentRoute: typeof MarketplaceRoute
     }
+    '/support/t/$token': {
+      id: '/support/t/$token'
+      path: '/support/t/$token'
+      fullPath: '/support/t/$token'
+      preLoaderRoute: typeof SupportTTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/templates/$category/': {
       id: '/templates/$category/'
       path: '/templates/$category'
@@ -3057,6 +3155,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminTelnyxTfnRouteImport
       parentRoute: typeof AuthenticatedAdminTelnyxRoute
     }
+    '/_authenticated/admin/tickets/': {
+      id: '/_authenticated/admin/tickets/'
+      path: '/tickets'
+      fullPath: '/admin/tickets/'
+      preLoaderRoute: typeof AuthenticatedAdminTicketsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/tickets/$id': {
+      id: '/_authenticated/admin/tickets/$id'
+      path: '/tickets/$id'
+      fullPath: '/admin/tickets/$id'
+      preLoaderRoute: typeof AuthenticatedAdminTicketsIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/app/apps/': {
       id: '/_authenticated/app/apps/'
       path: '/apps'
@@ -3119,6 +3231,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/segments/new'
       preLoaderRoute: typeof AuthenticatedAppSegmentsNewRouteImport
       parentRoute: typeof AuthenticatedAppSegmentsRoute
+    }
+    '/_authenticated/app/support/': {
+      id: '/_authenticated/app/support/'
+      path: '/support'
+      fullPath: '/app/support/'
+      preLoaderRoute: typeof AuthenticatedAppSupportIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/support/$id': {
+      id: '/_authenticated/app/support/$id'
+      path: '/support/$id'
+      fullPath: '/app/support/$id'
+      preLoaderRoute: typeof AuthenticatedAppSupportIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
     }
     '/_verifier/verify/dashboard/': {
       id: '/_verifier/verify/dashboard/'
@@ -3188,6 +3314,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/payments/webhook'
       fullPath: '/api/public/payments/webhook'
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/support/inbound': {
+      id: '/api/public/support/inbound'
+      path: '/api/public/support/inbound'
+      fullPath: '/api/public/support/inbound'
+      preLoaderRoute: typeof ApiPublicSupportInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/support/sweep': {
+      id: '/api/public/support/sweep'
+      path: '/api/public/support/sweep'
+      fullPath: '/api/public/support/sweep'
+      preLoaderRoute: typeof ApiPublicSupportSweepRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/v1/$': {
@@ -3308,7 +3448,9 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminVerifiersRoute: typeof AuthenticatedAdminVerifiersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAdminCampaignsIdRoute: typeof AuthenticatedAdminCampaignsIdRoute
+  AuthenticatedAdminTicketsIdRoute: typeof AuthenticatedAdminTicketsIdRoute
   AuthenticatedAdminCampaignsIndexRoute: typeof AuthenticatedAdminCampaignsIndexRoute
+  AuthenticatedAdminTicketsIndexRoute: typeof AuthenticatedAdminTicketsIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -3339,7 +3481,9 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminVerifiersRoute: AuthenticatedAdminVerifiersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedAdminCampaignsIdRoute: AuthenticatedAdminCampaignsIdRoute,
+  AuthenticatedAdminTicketsIdRoute: AuthenticatedAdminTicketsIdRoute,
   AuthenticatedAdminCampaignsIndexRoute: AuthenticatedAdminCampaignsIndexRoute,
+  AuthenticatedAdminTicketsIndexRoute: AuthenticatedAdminTicketsIndexRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
@@ -3418,8 +3562,10 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAppsSlugRoute: typeof AuthenticatedAppAppsSlugRoute
   AuthenticatedAppAutomationsIdRoute: typeof AuthenticatedAppAutomationsIdRoute
+  AuthenticatedAppSupportIdRoute: typeof AuthenticatedAppSupportIdRoute
   AuthenticatedAppAppsIndexRoute: typeof AuthenticatedAppAppsIndexRoute
   AuthenticatedAppAutomationsIndexRoute: typeof AuthenticatedAppAutomationsIndexRoute
+  AuthenticatedAppSupportIndexRoute: typeof AuthenticatedAppSupportIndexRoute
   AuthenticatedAppUseTemplateCategorySlugRoute: typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
 
@@ -3448,8 +3594,10 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAppsSlugRoute: AuthenticatedAppAppsSlugRoute,
   AuthenticatedAppAutomationsIdRoute: AuthenticatedAppAutomationsIdRoute,
+  AuthenticatedAppSupportIdRoute: AuthenticatedAppSupportIdRoute,
   AuthenticatedAppAppsIndexRoute: AuthenticatedAppAppsIndexRoute,
   AuthenticatedAppAutomationsIndexRoute: AuthenticatedAppAutomationsIndexRoute,
+  AuthenticatedAppSupportIndexRoute: AuthenticatedAppSupportIndexRoute,
   AuthenticatedAppUseTemplateCategorySlugRoute:
     AuthenticatedAppUseTemplateCategorySlugRoute,
 }
@@ -3600,6 +3748,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicTelnyxInboundRoute: ApiPublicTelnyxInboundRoute,
   ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  SupportTTokenRoute: SupportTTokenRoute,
   TemplatesCategorySlugRoute: TemplatesCategorySlugRoute,
   TemplatesIndustryIndustryRoute: TemplatesIndustryIndustryRoute,
   TemplatesUseCaseGoalRoute: TemplatesUseCaseGoalRoute,
@@ -3609,6 +3758,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiPublicSupportInboundRoute: ApiPublicSupportInboundRoute,
+  ApiPublicSupportSweepRoute: ApiPublicSupportSweepRoute,
   ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
