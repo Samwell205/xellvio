@@ -5615,6 +5615,118 @@ export type Database = {
         }
         Relationships: []
       }
+      support_ticket_messages: {
+        Row: {
+          author: string
+          author_user_id: string | null
+          body: string
+          created_at: string
+          id: string
+          internal: boolean
+          ticket_id: string
+          via: string
+        }
+        Insert: {
+          author: string
+          author_user_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          internal?: boolean
+          ticket_id: string
+          via?: string
+        }
+        Update: {
+          author?: string
+          author_user_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          internal?: boolean
+          ticket_id?: string
+          via?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          access_token: string
+          account_id: string | null
+          closed_at: string | null
+          created_at: string
+          id: string
+          last_admin_reply_at: string | null
+          last_customer_reply_at: string | null
+          legacy_contact_id: string | null
+          number: number
+          previous_ticket_id: string | null
+          reminder_sent_at: string | null
+          requester_email: string
+          requester_name: string | null
+          source: string
+          status: string
+          subject: string
+          topic: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string
+          account_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_admin_reply_at?: string | null
+          last_customer_reply_at?: string | null
+          legacy_contact_id?: string | null
+          number?: number
+          previous_ticket_id?: string | null
+          reminder_sent_at?: string | null
+          requester_email: string
+          requester_name?: string | null
+          source?: string
+          status?: string
+          subject?: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          account_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          last_admin_reply_at?: string | null
+          last_customer_reply_at?: string | null
+          legacy_contact_id?: string | null
+          number?: number
+          previous_ticket_id?: string | null
+          reminder_sent_at?: string | null
+          requester_email?: string
+          requester_name?: string | null
+          source?: string
+          status?: string
+          subject?: string
+          topic?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_previous_ticket_id_fkey"
+            columns: ["previous_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string

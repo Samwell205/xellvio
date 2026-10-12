@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, Building2, Workflow, Sparkles, FormInput, LayoutTemplate, ListTree } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, Building2, Workflow, Sparkles, FormInput, LayoutTemplate, ListTree, LifeBuoy } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
@@ -60,6 +60,7 @@ const items: Entry[] = [
 
 const advancedItems: Entry[] = [
   { title: "Team", url: "/app/team", icon: UserPlus, perm: "team" },
+  { title: "Support", url: "/app/support", icon: LifeBuoy },
 ];
 
 const navigationSections = [

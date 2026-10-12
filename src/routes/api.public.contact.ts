@@ -25,58 +25,38 @@ export const Route = createFileRoute("/api/public/contact")({
         }
         const { name, email, topic, message, user_agent } = parsed.data;
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: row, error } = await supabaseAdmin
-          .from("contact_messages")
-          .insert({ name, email, topic, message, user_agent: user_agent ?? null })
-          .select("id")
-          .maybeSingle();
-        if (error) {
-          console.error("[contact] insert failed", error);
+        void user_agent;
+        // Every contact submission becomes a support ticket (auto-reply + private link).
+        let ticket: { id: string; number: number };
+        try {
+          const { createTicket } = await import("@/lib/support-tickets.server");
+          ticket = await createTicket({ email, name, subject: topic, topic, message, source: "contact" });
+        } catch (error) {
+          console.error("[contact] ticket create failed", error);
           return Response.json({ error: "Could not send your message" }, { status: 500 });
         }
 
-        const key = `contact-${row?.id ?? Date.now()}`;
-        const subject = `New contact message — ${topic}`;
-        const lines = [
-          `From: ${name} <${email}>`,
-          `Topic: ${topic}`,
-          "",
-          message,
-        ];
-
         try {
-          const [{ ADMIN_NOTIFY_EMAIL, sendAdminSms }, { sendAdminPush }, { sendBrandedEmail }] =
-            await Promise.all([
-              import("@/lib/admin-notify.server"),
-              import("@/lib/admin-push.server"),
-              import("@/lib/email/send-internal.server"),
-            ]);
-
+          const [{ ADMIN_NOTIFY_EMAIL, sendAdminSms }, { sendBrandedEmail }] = await Promise.all([
+            import("@/lib/admin-notify.server"),
+            import("@/lib/email/send-internal.server"),
+          ]);
           await Promise.all([
             sendBrandedEmail({
               templateName: "generic",
               recipientEmail: ADMIN_NOTIFY_EMAIL,
-              idempotencyKey: `${key}-admin-email`,
+              idempotencyKey: `ticket-${ticket.id}-admin-email`,
               includeUnsubscribe: false,
               sendImmediately: true,
               templateData: {
-                subject,
-                heading: "New contact message",
-                body: lines.join("\n"),
-                ctaText: "Open contact inbox",
-                ctaUrl: "https://xellvio.com/admin/messages",
+                subject: `New ticket #${ticket.number} — ${topic}`,
+                heading: `New support ticket #${ticket.number}`,
+                body: [`From: ${name} <${email}>`, `Topic: ${topic}`, "", message].join("\n"),
+                ctaText: "Open ticket",
+                ctaUrl: `https://xellvio.com/admin/tickets/${ticket.id}`,
               },
             }).catch((e) => console.error("[contact] admin email failed", e)),
-            sendAdminPush({
-              title: `New message — ${topic}`,
-              body: `${name}: ${message.slice(0, 120)}`,
-              url: "/admin/messages",
-              tag: key,
-            }).catch(() => {}),
-            sendAdminSms(
-              `Xellvio: new contact message from ${name} (${email}) — ${topic}: ${message.slice(0, 200)}`,
-            ).catch(() => {}),
+            sendAdminSms(`Xellvio: new ticket #${ticket.number} from ${name} (${email}) — ${topic}: ${message.slice(0, 200)}`).catch(() => {}),
           ]);
         } catch (e) {
           console.error("[contact] notify failed", e);

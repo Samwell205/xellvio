@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2, Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, Megaphone, Scale, PhoneOutgoing, Send, Blocks, Handshake, KeyRound, LineChart, Gauge, HeartHandshake, Bot, ChevronDown, Search, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2, Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, Megaphone, Scale, PhoneOutgoing, Send, Blocks, Handshake, KeyRound, LineChart, Gauge, HeartHandshake, Bot, Ticket, ChevronDown, Search, type LucideIcon } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ const groups: { label: string; items: Item[] }[] = [
   { label: "Messaging", items: [
     { title: "Campaigns", url: "/admin/campaigns", icon: Megaphone },
     { title: "Message monitor", url: "/admin/messaging", icon: MessageSquareText },
-    { title: "Contact inbox", url: "/admin/messages", icon: Mail },
+    { title: "Support tickets", url: "/admin/tickets", icon: Ticket },
     { title: "Tenant notices", url: "/admin/email", icon: Send },
     { title: "Compliance", url: "/admin/compliance", icon: ShieldOff },
   ] },

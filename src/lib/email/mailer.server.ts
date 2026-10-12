@@ -20,6 +20,7 @@ export interface MailPayload {
   message_id?: string;
   unsubscribe_token?: string | null;
   run_id?: string;
+  reply_to?: string;
 }
 
 export function mailerProvider(): "resend" | "lovable" | "none" {
@@ -82,6 +83,7 @@ export async function sendMail(payload: MailPayload): Promise<void> {
         subject: payload.subject,
         html: url ? withUnsubscribeFooter(payload.html, url) : payload.html,
         ...(payload.text ? { text: payload.text } : {}),
+        ...(payload.reply_to ? { reply_to: payload.reply_to } : {}),
         ...(Object.keys(headers).length ? { headers } : {}),
         ...(payload.label
           ? {
