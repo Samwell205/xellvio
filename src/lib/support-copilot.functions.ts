@@ -217,3 +217,50 @@ export const runCopilotAction = createServerFn({ method: "POST" })
     if (uErr) throw new Error(uErr.message);
     return { ok: true, message: "Campaign resumed." };
   });
+
+// Voice notes: admin records audio in the copilot composer; we transcribe it so
+// the text can be reviewed and sent to the copilot like a typed message.
+export const transcribeCopilotVoiceNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    audioBase64: z.string().min(100).max(14_000_000),
+    mimeType: z.string().regex(/^audio\/[a-z0-9.+-]+(;.*)?$/i),
+  }).parse(input))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase);
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Voice transcription is not configured.");
+    const bytes = Buffer.from(data.audioBase64, "base64");
+    const type = data.mimeType.split(";")[0];
+    const ext = type.includes("mp4") ? "m4a" : type.includes("ogg") ? "ogg" : type.includes("wav") ? "wav" : "webm";
+    const form = new FormData();
+    form.append("model", "openai/gpt-transcribe");
+    form.append("file", new File([bytes], `voice-note.${ext}`, { type }));
+    form.append("response_format", "json");
+    form.append("stream", "true");
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
+      method: "POST", headers: { Authorization: `Bearer ${apiKey}` }, body: form,
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[copilot-voice] transcription failed ${res.status}: ${body.slice(0, 300)}`);
+      if (res.status === 402) throw new Error("AI credits are used up. Top up to transcribe voice notes.");
+      if (res.status === 429) throw new Error("Too many requests right now. Try again in a moment.");
+      throw new Error(`Could not transcribe the voice note (${res.status}).`);
+    }
+    const raw = await res.text();
+    let deltas = ""; let done = "";
+    for (const line of raw.split("\n")) {
+      if (!line.startsWith("data:")) continue;
+      const payload = line.slice(5).trim(); if (!payload || payload === "[DONE]") continue;
+      try {
+        const ev = JSON.parse(payload);
+        if (ev.type === "transcript.text.delta" && ev.delta) deltas += ev.delta;
+        if (ev.type === "transcript.text.done" && ev.text) done = ev.text;
+        if (ev.type === "error") throw new Error(ev.error?.message ?? "Transcription failed");
+      } catch (e) { if (e instanceof Error && e.message !== "Unexpected end of JSON input" && !(e instanceof SyntaxError)) throw e; }
+    }
+    const text = (done || deltas).trim();
+    if (!text) throw new Error("No speech was detected in the voice note.");
+    return { text };
+  });
