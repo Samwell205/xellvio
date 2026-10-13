@@ -1548,14 +1548,14 @@ function RecipientActivity({
                             title={
                               m.status === "delivery_unconfirmed"
                                 ? "Delivery could not be confirmed by the recipient carrier."
-                                : m.failure_reason
+                                : tenantSafeReason(m.failure_reason)
                             }
                           >
                             {m.status === "delivery_unconfirmed"
                               ? "Delivery could not be confirmed by the recipient carrier."
-                              : m.failure_reason.length > 120
-                                ? m.failure_reason.slice(0, 120) + "…"
-                                : m.failure_reason}
+                              : tenantSafeReason(m.failure_reason).length > 120
+                                ? tenantSafeReason(m.failure_reason).slice(0, 120) + "…"
+                                : tenantSafeReason(m.failure_reason)}
                           </div>
                         )}
                         {!m.failure_reason && m.status === "delivery_unconfirmed" && (
