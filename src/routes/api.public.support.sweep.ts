@@ -6,8 +6,10 @@ export const Route = createFileRoute("/api/public/support/sweep")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const secret = process.env.SUPPORT_SWEEP_SECRET;
         const token = request.headers.get("authorization")?.replace("Bearer ", "");
-        if (!token) return new Response("Unauthorized", { status: 401 });
+        // Fail closed: without a configured secret, nobody may trigger the sweep.
+        if (!secret || !token || token !== secret) return new Response("Unauthorized", { status: 401 });
         const { sweepTickets } = await import("@/lib/support-tickets.server");
         return Response.json(await sweepTickets());
       },
