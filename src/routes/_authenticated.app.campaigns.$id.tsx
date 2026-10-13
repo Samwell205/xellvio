@@ -1548,14 +1548,14 @@ function RecipientActivity({
                             title={
                               m.status === "delivery_unconfirmed"
                                 ? "Delivery could not be confirmed by the recipient carrier."
-                                : m.failure_reason
+                                : tenantSafeReason(m.failure_reason)
                             }
                           >
                             {m.status === "delivery_unconfirmed"
                               ? "Delivery could not be confirmed by the recipient carrier."
-                              : m.failure_reason.length > 120
-                                ? m.failure_reason.slice(0, 120) + "…"
-                                : m.failure_reason}
+                              : tenantSafeReason(m.failure_reason).length > 120
+                                ? tenantSafeReason(m.failure_reason).slice(0, 120) + "…"
+                                : tenantSafeReason(m.failure_reason)}
                           </div>
                         )}
                         {!m.failure_reason && m.status === "delivery_unconfirmed" && (
@@ -2356,4 +2356,12 @@ function ProgTile({
       <div className="text-xl font-bold mt-1 tabular-nums">{value.toLocaleString()}</div>
     </div>
   );
+}
+
+// Older stored failure reasons may name the upstream provider; never show it to tenants.
+function tenantSafeReason(reason: string): string {
+  if (/telnyx/i.test(reason) && /balance|insufficient|unauthori[sz]ed|api key|account (is )?(disabled|suspended)/i.test(reason)) {
+    return "Sending is temporarily unavailable. Please contact support.";
+  }
+  return reason.replace(/telnyx/gi, "carrier");
 }

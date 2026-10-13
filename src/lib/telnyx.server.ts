@@ -195,8 +195,18 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
     if (res.ok) return json as T;
 
     const first = json?.errors?.[0];
-    const detail = first?.detail || first?.title || json?.error || text.slice(0, 300);
-    const err = new Error(`Telnyx ${res.status}: ${detail}`);
+    const rawDetail = String(first?.detail || first?.title || json?.error || text.slice(0, 300));
+    // Error text can reach tenants (campaign failure reasons, test sends, API).
+    // Never name the upstream provider; platform-side account/funding problems
+    // become a neutral "contact support" message.
+    const platformSide =
+      res.status === 401 || res.status === 402 ||
+      /balance|insufficient|fund|payment|account (is )?(disabled|suspended)|unauthori[sz]ed|api key/i.test(rawDetail);
+    const detail = platformSide
+      ? "Sending is temporarily unavailable. Please contact support."
+      : rawDetail.replace(/telnyx/gi, "carrier");
+    const err = new Error(platformSide ? detail : `Carrier ${res.status}: ${detail}`);
+    (err as any).providerDetail = rawDetail;
     (err as any).telnyxStatus = res.status;
     (err as any).telnyxCode = first?.code ?? null;
     (err as any).telnyxResponse = json;
