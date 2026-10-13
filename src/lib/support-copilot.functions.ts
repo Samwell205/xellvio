@@ -209,13 +209,25 @@ export const runCopilotAction = createServerFn({ method: "POST" })
       await resumeTenantSending({ tenantAccountId: data.target, liftedBy: context.userId });
       return { ok: true, message: "Sending hold lifted." };
     }
-    const { data: c, error } = await sb.from("campaigns").select("id, status, account_id").eq("id", data.target).maybeSingle();
+    const isPaused = (s: string) => s === "paused" || s.startsWith("paused_");
+    // Sending must be allowed again before a campaign can resume.
+    const { data: acct } = await sb.from("accounts").select("sending_suspended_at").eq("id", row.account_id).maybeSingle();
+    if (acct?.sending_suspended_at) throw new Error("This tenant's sending is still on hold. Lift the hold first, then resume.");
+    let { data: c, error } = await sb.from("campaigns").select("id, name, status, account_id").eq("id", data.target).maybeSingle();
     if (error) throw new Error(error.message);
-    if (!c || c.account_id !== row.account_id) throw new Error("Campaign not found for this tenant.");
-    if (!["paused", "paused_by_user"].includes(c.status)) throw new Error(`Campaign is "${c.status}", not paused.`);
-    const { error: uErr } = await sb.from("campaigns").update({ status: "sending", paused_reason: null, paused_at: null }).eq("id", c.id);
+    // The AI can quote the wrong ID; fall back to this tenant's single paused campaign.
+    if (!c || c.account_id !== row.account_id || !isPaused(c.status)) {
+      const { data: paused } = await sb.from("campaigns").select("id, name, status, account_id")
+        .eq("account_id", row.account_id).or("status.eq.paused,status.like.paused_%").order("updated_at", { ascending: false }).limit(2);
+      if (paused?.length === 1) c = paused[0];
+      else if (!paused?.length) {
+        if (c && c.account_id === row.account_id) throw new Error(`Nothing to resume — that campaign is already "${c.status}".`);
+        throw new Error("This tenant has no paused campaign to resume.");
+      } else throw new Error("This tenant has more than one paused campaign. Resume the right one from Campaigns.");
+    }
+    const { error: uErr } = await sb.from("campaigns").update({ status: "sending", paused_reason: null, paused_at: null }).eq("id", c!.id);
     if (uErr) throw new Error(uErr.message);
-    return { ok: true, message: "Campaign resumed." };
+    return { ok: true, message: `Campaign "${c!.name ?? "campaign"}" resumed — sending continues within a minute.` };
   });
 
 // Voice notes: admin records audio in the copilot composer; we transcribe it so
