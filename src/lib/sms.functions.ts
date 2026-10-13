@@ -189,6 +189,6 @@ export const sendTestSms = createServerFn({ method: "POST" })
         country: asset.country_code as string,
       };
     } catch (e: any) {
-      throw new Error(e?.message ?? "Telnyx send failed");
+      throw new Error(String(e?.message ?? "Send failed. Please contact support.").replace(/telnyx/gi, "carrier"));
     }
   });
