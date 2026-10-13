@@ -43,6 +43,13 @@
       "when": 1791804954536,
       "tag": "0005_support_tickets",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791878380387,
+      "tag": "0006_support_tickets_sweep_cron",
+      "breakpoints": true
     }
   ]
 }
