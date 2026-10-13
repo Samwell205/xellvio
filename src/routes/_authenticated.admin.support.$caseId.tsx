@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { Copy, ImagePlus, Link2, Loader2, Send, Wrench, X } from "lucide-react";
+import { VoiceNoteButton } from "@/components/support/VoiceNoteButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -173,6 +174,7 @@ function CaseView({ caseId }: { caseId: string }) {
           <Button size="icon" variant="ghost" type="button" aria-label="Attach screenshot" title="Attach screenshot (or paste / drop one)" onClick={() => fileRef.current?.click()}>
             <ImagePlus className="size-4" />
           </Button>
+          <VoiceNoteButton onText={(t) => { setText((c) => (c.trim() ? `${c.trim()}\n\n${t}` : t)); taRef.current?.focus(); }} />
           <Textarea ref={taRef} rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the tenant's message or a screenshot, or ask a question…"
             onPaste={(e) => { const f = Array.from(e.clipboardData.files); if (f.length) { e.preventDefault(); void addFiles(f); } }}
             className="min-h-0 resize-none border-0 shadow-none focus-visible:ring-0"
