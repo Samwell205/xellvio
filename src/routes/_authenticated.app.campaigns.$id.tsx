@@ -2357,3 +2357,11 @@ function ProgTile({
     </div>
   );
 }
+
+// Older stored failure reasons may name the upstream provider; never show it to tenants.
+function tenantSafeReason(reason: string): string {
+  if (/telnyx/i.test(reason) && /balance|insufficient|unauthori[sz]ed|api key|account (is )?(disabled|suspended)/i.test(reason)) {
+    return "Sending is temporarily unavailable. Please contact support.";
+  }
+  return reason.replace(/telnyx/gi, "carrier");
+}
