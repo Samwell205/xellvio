@@ -36,3 +36,26 @@ export async function getChatModel(): Promise<LanguageModel | null> {
 
   return null;
 }
+
+/** Gateway model used as a backup when the primary provider fails. */
+export function getGatewayModel(): LanguageModel | null {
+  const key = process.env.LOVABLE_API_KEY;
+  return key ? createLovableAiGatewayProvider(key)(GATEWAY_FALLBACK_MODEL) : null;
+}
+
+/** Generate text with the primary model; on failure retry once on the gateway. */
+export async function generateWithFallback(args: Record<string, unknown>): Promise<string> {
+  const { generateText } = await import("ai");
+  const primary = await getChatModel();
+  if (!primary) throw new Error("AI is not configured");
+  try {
+    const r = await generateText({ ...(args as any), model: primary });
+    return r.text;
+  } catch (e) {
+    console.error("[ai] primary model failed", e instanceof Error ? e.message : e);
+    const backup = aiProvider() === "anthropic" ? getGatewayModel() : null;
+    if (!backup) throw e;
+    const r = await generateText({ ...(args as any), model: backup });
+    return r.text;
+  }
+}
