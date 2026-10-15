@@ -176,7 +176,7 @@ export const askCopilot = createServerFn({ method: "POST" })
       const m = e instanceof Error ? e.message : String(e);
       console.error("[copilot] reply failed", m);
       if (/429|rate.?limit/i.test(m)) throw new Error("Too many requests — try again in a moment.");
-      if (/402|credit/i.test(m)) throw new Error("AI credits are used up. Top up in Settings → Plans & credits.");
+      if (/402|credit|payment required/i.test(m)) throw new Error("AI credits are used up. Top up in Settings → Plans & credits.");
       throw new Error("The assistant had a problem. Please try again.");
     }
     if (!reply) reply = "Sorry, I couldn't produce an answer.";
