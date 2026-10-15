@@ -109,15 +109,12 @@ export const askCopilot = createServerFn({ method: "POST" })
     let imageText = "";
     if (!accountId && data.images.length) {
       try {
-        const { getChatModel } = await import("./ai-provider.server");
-        const { streamText } = await import("ai");
-        const m = await getChatModel();
-        if (m) {
-          const r = streamText({ model: m, messages: [{ role: "user", content: [
+        const { generateWithFallback } = await import("./ai-provider.server");
+        {
+          imageText = (await generateWithFallback({ messages: [{ role: "user", content: [
             { type: "text", text: "List every email address and phone number visible in these images, one per line. Output only the list, or NONE." },
             ...data.images.map((url) => ({ type: "image" as const, image: url })),
-          ] }] });
-          imageText = (await r.text).slice(0, 2000);
+          ] }] })).slice(0, 2000);
         }
       } catch (e) { console.error("[copilot] screenshot read failed", e); }
     }
@@ -158,10 +155,7 @@ export const askCopilot = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
     const msgs: CopilotMessage[] = [...history, { role: "user", content: userText, at: now, ...(data.images.length ? { images: data.images } : {}) }];
 
-    const { getChatModel } = await import("./ai-provider.server");
-    const { streamText } = await import("ai");
-    const model = await getChatModel();
-    if (!model) throw new Error("AI is not configured");
+    const { generateWithFallback } = await import("./ai-provider.server");
     let reply: string;
     try {
       // Send screenshots only with the newest message; earlier ones are already
@@ -177,10 +171,10 @@ export const askCopilot = createServerFn({ method: "POST" })
         }
         return { role: m.role, content: m.content };
       });
-      const result = streamText({ model, system, messages: modelMessages });
-      reply = (await result.text).trim();
+      reply = (await generateWithFallback({ system, messages: modelMessages })).trim();
     } catch (e) {
       const m = e instanceof Error ? e.message : String(e);
+      console.error("[copilot] reply failed", m);
       if (/429|rate.?limit/i.test(m)) throw new Error("Too many requests — try again in a moment.");
       if (/402|credit/i.test(m)) throw new Error("AI credits are used up. Top up in Settings → Plans & credits.");
       throw new Error("The assistant had a problem. Please try again.");
