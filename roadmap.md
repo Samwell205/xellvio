@@ -1,5 +1,10 @@
 # Roadmap
 
+## Bandwidth messaging connection
+- [ ] Connect the authorized Bandwidth account securely and verify its messaging application and approved numbers.
+- [ ] Integrate number-specific sending, delivery receipts and replies through existing compliance and charging controls.
+- [ ] Verify one approved test send before enabling customer traffic; do not restart waiting campaigns automatically.
+
 ## Admin experience refresh
 - [x] Redesign the shared admin shell and navigation with theme-aware styling and motion.
 - [x] Replace the crowded overview with focused operational panels and remove its full-history loading bottleneck.
