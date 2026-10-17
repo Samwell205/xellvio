@@ -1,5 +1,10 @@
 # Roadmap
 
+## Additional approved Telnyx account
+- [x] Create a messaging profile using the separately stored secondary credential (created and read back disabled; original connection unchanged).
+- [ ] Connect an approved sending number and account-specific sending/webhooks without replacing the original account — new account currently has no numbers; needs a number selection and purchase/port authorization.
+- [ ] Verify a user-authorized test send and receipt before claiming sending is ready.
+
 ## Bandwidth messaging connection
 - [ ] Connect the authorized Bandwidth account securely and verify its messaging application and approved numbers.
 - [ ] Integrate number-specific sending, delivery receipts and replies through existing compliance and charging controls.
