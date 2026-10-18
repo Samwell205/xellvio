@@ -3,7 +3,7 @@
 // goes through this module. No Twilio anywhere.
 
 const TELNYX_API = "https://api.telnyx.com/v2";
-import { usesSecondaryConnection, SECONDARY_WORKSPACE_ID, SECONDARY_PROFILE_ID, SECONDARY_ACTIVATED_AT } from "./telnyx-connection";
+import { usesSecondaryConnection, SECONDARY_WORKSPACE_ID, SECONDARY_PROFILE_ID, SECONDARY_ACTIVATED_AT, INTERNATIONAL_FAILOVER_AT, isNanpNumber, routeOutbound } from "./telnyx-connection";
 
 function apiKey(profileId?: string): string {
   const key = usesSecondaryConnection(profileId)
@@ -544,8 +544,12 @@ export async function sendMessage(opts: {
    */
   idempotencyKey?: string;
 }): Promise<SendMessageResult> {
+  {
+    const route = routeOutbound({ to: opts.to, from: opts.from, messagingProfileId: opts.messagingProfileId });
+    if (!route.ok) throw new Error(route.error);
+    opts = { ...opts, from: route.from, messagingProfileId: route.messagingProfileId };
+  }
   if (usesSecondaryConnection(opts.messagingProfileId)) {
-    if (opts.accountId !== SECONDARY_WORKSPACE_ID) throw new Error("This sending connection is unavailable for this workspace.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: hold } = await supabaseAdmin.from("platform_settings").select("value").eq("key", "carrier_secondary_messaging_hold_at").maybeSingle();
     if (hold?.value) throw new Error("Sending is temporarily unavailable. Please contact support.");
@@ -619,9 +623,11 @@ export async function createAlphanumericSenderId(opts: {
 
 export async function getMessage(id: string): Promise<any> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: message } = await supabaseAdmin.from("messages").select("sent_at,campaigns!inner(account_id)").eq("provider_message_id", id).maybeSingle();
+  const { data: message } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).maybeSingle();
   const accountId = (message as any)?.campaigns?.account_id;
-  const secondary = accountId === SECONDARY_WORKSPACE_ID && Date.parse(message?.sent_at ?? "") >= Date.parse(SECONDARY_ACTIVATED_AT);
+  const sentAt = Date.parse(message?.sent_at ?? "");
+  const secondary = (accountId === SECONDARY_WORKSPACE_ID && sentAt >= Date.parse(SECONDARY_ACTIVATED_AT)) ||
+    (sentAt >= Date.parse(INTERNATIONAL_FAILOVER_AT) && !isNanpNumber((message as any)?.phone_e164));
   const res = await telnyx<{ data: any }>(`/messages/${id}`, { connectionProfileId: secondary ? SECONDARY_PROFILE_ID : undefined });
   return res.data;
 }
