@@ -3,6 +3,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { verify as verifyEd25519 } from "crypto";
+import { webhookPublicKey } from "@/lib/telnyx-webhook-key.server";
 
 function verifyTelnyxSignature(rawBody: string, signature: string | null, timestamp: string | null, publicKeyBase64: string): boolean {
   if (!signature || !timestamp) return false;
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/api/public/telnyx-inbound")({
         const raw = await request.text();
         const sig = request.headers.get("telnyx-signature-ed25519");
         const ts = request.headers.get("telnyx-timestamp");
-        const pub = process.env.TELNYX_PUBLIC_KEY;
+        const pub = webhookPublicKey(raw);
 
         // Fail closed: without the signing key we cannot tell a real carrier
         // webhook from a forged one, so nothing is processed.
