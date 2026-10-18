@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Reopen only Samuel's workspace for testing
+- [ ] Enable the new connection only for Samuel's workspace, preserve existing sender names, and leave old campaigns paused; user will run the Denmark test personally.
 - [x] Read back samueldurosinmi69@gmail.com: workspace active, no account or sending suspension; existing sending profile still uses the original connection.
 - [ ] Restore working test sending only for this workspace — blocked because the original connection returns 401/10009 (account blocked), secondary number verification remains "Waiting For Telnyx", and secondary account-specific routing is not implemented.
 - [ ] Confirm Denmark delivery with an authorized test after a usable sending connection is available; no delivery claim or automatic retry.

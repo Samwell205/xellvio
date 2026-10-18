@@ -3,10 +3,13 @@
 // goes through this module. No Twilio anywhere.
 
 const TELNYX_API = "https://api.telnyx.com/v2";
+import { usesSecondaryConnection } from "./telnyx-connection";
 
-function apiKey(): string {
-  const key = process.env.TELNYX_API_KEY;
-  if (!key) throw new Error("TELNYX_API_KEY is not configured");
+function apiKey(profileId?: string): string {
+  const key = usesSecondaryConnection(profileId)
+    ? process.env.TELNYX_SECONDARY_INACTIVE_API_KEY
+    : process.env.TELNYX_API_KEY;
+  if (!key) throw new Error("Sending connection is not configured");
   return key;
 }
 
@@ -133,7 +136,7 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
     if (s) url += (url.includes("?") ? "&" : "?") + s;
   }
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${apiKey()}`,
+    Authorization: `Bearer ${apiKey(opts.body?.messaging_profile_id ?? String(opts.query?.["filter[messaging_profile_id]"] ?? "") || (path.match(/^\/messaging_profiles\/([^/?]+)/)?.[1]))}`,
     "Content-Type": "application/json",
     Accept: "application/json",
   };
