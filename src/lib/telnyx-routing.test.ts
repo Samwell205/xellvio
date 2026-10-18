@@ -11,7 +11,7 @@ describe("actual message connection selection", () => {
   it("sends Denmark with the new key and preserves the sender name", async () => {
     vi.stubEnv("TELNYX_SECONDARY_INACTIVE_API_KEY", "secondary-test-key");
     vi.stubEnv("TELNYX_API_KEY", "primary-test-key");
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: { id: "test", to: [] } }), { status: 200 }));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _options?: RequestInit) => new Response(JSON.stringify({ data: { id: "test", to: [] } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     await sendMessage({ accountId: SECONDARY_WORKSPACE_ID, messagingProfileId: SECONDARY_PROFILE_ID, from: "BYENSOPTUR", to: "+4512345678", text: "Test", idempotencyKey: "test-denmark" });
     const options = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
@@ -26,7 +26,7 @@ describe("actual message connection selection", () => {
   });
   it("keeps other profiles on the original key", async () => {
     vi.stubEnv("TELNYX_API_KEY", "primary-test-key");
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: { id: "test", to: [] } }), { status: 200 }));
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _options?: RequestInit) => new Response(JSON.stringify({ data: { id: "test", to: [] } }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
     await sendMessage({ messagingProfileId: "40019f2a-14c7-4447-8b7b-d4cb04511b5a", to: "+4512345678", text: "Test" });
     const options = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
