@@ -3,9 +3,9 @@
 ## Additional approved Telnyx account
 - [x] Create a messaging profile using the separately stored secondary credential (created and read back disabled; original connection unchanged).
 - [x] Replace the secondary credential with the new account's key and public key; read back live: profile "House Of Ignis" (4001a150-a55c-460f-ae5d-02acca3f97a7) enabled, active US toll-free number +18337642473 attached to it. The profile created under the previous key no longer applies.
+- [x] Ran the user-authorized test send from +18337642473 to +17699692461: accepted and queued, then delivery_failed with carrier error 40329 "Tollfree number is not verified" — sending is NOT ready.
+- [ ] Complete toll-free A2P verification for +18337642473 (no verification record on the new account) — needs the user's business details and go-ahead, then re-test to a mobile (the test number is a wireline).
 - [ ] Wire account-specific sending and webhook verification so the new number uses the new credential and the original account is untouched — needs the user's go-ahead before any customer traffic.
-- [ ] Confirm toll-free A2P verification for +18337642473 (no verification record found on the new account) before customer traffic.
-- [ ] Verify a user-authorized test send and receipt before claiming sending is ready.
 
 ## Bandwidth messaging connection
 - [ ] Help locate Bandwidth messaging credentials and confirm direct API access — user cannot find the required details; needs dashboard guidance before secure collection.
