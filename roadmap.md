@@ -6,6 +6,7 @@
 - [ ] Verify a user-authorized test send and receipt before claiming sending is ready.
 
 ## Bandwidth messaging connection
+- [ ] Help locate Bandwidth messaging credentials and confirm direct API access — user cannot find the required details; needs dashboard guidance before secure collection.
 - [ ] Connect the authorized Bandwidth account securely and verify its messaging application and approved numbers.
 - [ ] Integrate number-specific sending, delivery receipts and replies through existing compliance and charging controls.
 - [ ] Verify one approved test send before enabling customer traffic; do not restart waiting campaigns automatically.
