@@ -3,7 +3,7 @@
 // goes through this module. No Twilio anywhere.
 
 const TELNYX_API = "https://api.telnyx.com/v2";
-import { usesSecondaryConnection } from "./telnyx-connection";
+import { usesSecondaryConnection, SECONDARY_WORKSPACE_ID, SECONDARY_PROFILE_ID, SECONDARY_ACTIVATED_AT } from "./telnyx-connection";
 
 function apiKey(profileId?: string): string {
   const key = usesSecondaryConnection(profileId)
@@ -31,6 +31,7 @@ export function statusWebhookFailoverUrl(): string {
 }
 
 type TelnyxOpts = {
+  connectionProfileId?: string;
   method?: string;
   body?: any;
   query?: Record<string, string | number | undefined>;
@@ -136,7 +137,7 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
     if (s) url += (url.includes("?") ? "&" : "?") + s;
   }
   const headers: Record<string, string> = {
-    Authorization: `Bearer ${apiKey(opts.body?.messaging_profile_id || String(opts.query?.["filter[messaging_profile_id]"] ?? "") || path.match(/^\/messaging_profiles\/([^/?]+)/)?.[1])}`,
+    Authorization: `Bearer ${apiKey(opts.connectionProfileId || opts.body?.messaging_profile_id || String(opts.query?.["filter[messaging_profile_id]"] ?? "") || path.match(/^\/messaging_profiles\/([^/?]+)/)?.[1])}`,
     "Content-Type": "application/json",
     Accept: "application/json",
   };
@@ -529,6 +530,7 @@ export async function reassignNumberToProfile(opts: {
 export type SendMessageResult = { id: string; to: Array<{ phone_number: string; status: string }>; parts?: number };
 
 export async function sendMessage(opts: {
+  accountId?: string;
   to: string;
   text: string;
   from?: string;
@@ -542,6 +544,12 @@ export async function sendMessage(opts: {
    */
   idempotencyKey?: string;
 }): Promise<SendMessageResult> {
+  if (usesSecondaryConnection(opts.messagingProfileId)) {
+    if (opts.accountId !== SECONDARY_WORKSPACE_ID) throw new Error("This sending connection is unavailable for this workspace.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: hold } = await supabaseAdmin.from("platform_settings").select("value").eq("key", "carrier_secondary_messaging_hold_at").maybeSingle();
+    if (hold?.value) throw new Error("Sending is temporarily unavailable. Please contact support.");
+  }
   // The carrier rejects anything that is not a single E.164 number (error
   // 10002 "Invalid destination number"). Fail fast locally so every send
   // path — campaigns, inbox replies, flows — flags the bad contact instead
@@ -610,7 +618,11 @@ export async function createAlphanumericSenderId(opts: {
 }
 
 export async function getMessage(id: string): Promise<any> {
-  const res = await telnyx<{ data: any }>(`/messages/${id}`);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: message } = await supabaseAdmin.from("messages").select("sent_at,campaigns!inner(account_id)").eq("provider_message_id", id).maybeSingle();
+  const accountId = (message as any)?.campaigns?.account_id;
+  const secondary = accountId === SECONDARY_WORKSPACE_ID && Date.parse(message?.sent_at ?? "") >= Date.parse(SECONDARY_ACTIVATED_AT);
+  const res = await telnyx<{ data: any }>(`/messages/${id}`, { connectionProfileId: secondary ? SECONDARY_PROFILE_ID : undefined });
   return res.data;
 }
 
