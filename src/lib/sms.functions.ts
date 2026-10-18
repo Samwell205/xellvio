@@ -115,7 +115,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
         .eq("id", userId)
         .maybeSingle();
       messagingProfileId = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
-        ? acct!.telnyx_messaging_profile_id
+        ? acct?.telnyx_messaging_profile_id
         : null;
     }
     if (!messagingProfileId) {
@@ -169,6 +169,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
         "send_test_sms",
         { userId, messagingProfileId },
         () => sendMessage({
+          accountId: userId,
           to: data.to,
           text: testText,
           from: asset.phone_number ?? undefined,

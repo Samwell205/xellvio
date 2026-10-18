@@ -257,6 +257,7 @@ export const sendReply = createServerFn({ method: "POST" })
       "send_reply",
       { userId: accountId, messagingProfileId: asset.telnyx_messaging_profile_id ?? null },
       () => sendMessage({
+        accountId,
         to: data.phone,
         text: data.body,
         from: asset.phone_number ?? undefined,

@@ -480,6 +480,7 @@ async function sendOneMessage(
       "send_message",
       { userId: campaign.account_id, messagingProfileId },
       () => sendMessage({
+        accountId: campaign.account_id,
         to: m.phone_e164,
         text: messageBody,
         from: fromNumber ?? undefined,
@@ -1738,6 +1739,15 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         }
 
         const runOneCampaign = async (c: any): Promise<any> => {
+          const { secondaryCampaignMaySend, SECONDARY_WORKSPACE_ID } = await import("@/lib/telnyx-connection");
+          if (!secondaryCampaignMaySend(c.account_id, c.created_at)) {
+            await supabaseAdmin.from("campaigns").update({ status: "paused", paused_reason: "Create a new campaign to use the new sending connection.", paused_at: new Date().toISOString() }).eq("id", c.id);
+            return { skipped: "previous_connection_campaign" };
+          }
+          if (c.account_id === SECONDARY_WORKSPACE_ID) {
+            const { data: hold } = await supabaseAdmin.from("platform_settings").select("value").eq("key", "carrier_secondary_messaging_hold_at").maybeSingle();
+            if (hold?.value) return { skipped: "secondary_connection_held" };
+          }
           const { data: acct } = await supabaseAdmin
             .from("accounts")
             .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted, gorgias_enabled")
