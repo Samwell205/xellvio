@@ -545,6 +545,21 @@ export async function sendMessage(opts: {
   idempotencyKey?: string;
 }): Promise<SendMessageResult> {
   {
+    // Last line of defence on EVERY send path: prohibited content never
+    // reaches the carrier, and the workspace is suspended immediately.
+    const { keywordScan } = await import("./content-scanner");
+    const scan = keywordScan(String(opts.text ?? ""));
+    if (scan.confidence === "keyword" && !scan.allowed) {
+      if (opts.accountId) {
+        try {
+          const { suspendTenantSending } = await import("./tenant-suspension.server");
+          await suspendTenantSending({ tenantAccountId: opts.accountId, reason: `Auto-suspended at send: prohibited content (${scan.category}).`, suspendedBy: null });
+        } catch (e) { console.error("[send] auto-suspend failed", e); }
+      }
+      throw new Error("Message blocked: prohibited content. Sending has been suspended for this workspace.");
+    }
+  }
+  {
     const route = routeOutbound({ to: opts.to, from: opts.from, messagingProfileId: opts.messagingProfileId });
     if (!route.ok) throw new Error(route.error);
     opts = { ...opts, from: route.from, messagingProfileId: route.messagingProfileId };

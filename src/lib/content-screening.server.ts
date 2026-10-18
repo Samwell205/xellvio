@@ -79,7 +79,9 @@ export async function screenMessageContent(
     reasons.push({
       code: `category:${scan.category}`,
       message: scan.reason ?? `Prohibited category: ${scan.category}`,
-      score: isBlock ? 80 : 40,
+      // Anything a content rule matches is blocked; only "block" rules
+      // (score 80) also suspend the workspace.
+      score: isBlock ? 80 : 70,
       detail: scan.details,
     });
   } else if (body.trim()) {
@@ -99,8 +101,9 @@ export async function screenMessageContent(
         reasons.push({
           code: "ai_scan_unavailable",
           message:
-            "AI content review did not run for this message — it was screened by keyword rules only.",
-          score: 0,
+            "This message could not be safety-checked right now, so it was not sent. Please try again in a few minutes.",
+          // Fail closed: a message nobody could safety-check is never sent.
+          score: 70,
           detail: `ai_unavailable=${aiResult.unavailableCode ?? "unknown"}`,
         });
         try {
@@ -127,12 +130,18 @@ export async function screenMessageContent(
         reasons.push({
           code: `category:${aiResult.category ?? "ai_flagged"}`,
           message: aiResult.reason ?? `AI review flagged prohibited content${aiResult.category ? ` (${aiResult.category})` : ""}.`,
-          score: HARD_AI.includes(String(aiResult.category)) ? 80 : 60,
+          score: HARD_AI.includes(String(aiResult.category)) ? 100 : 75,
           detail: "ai_confidence=high",
         });
       }
     } catch (e) {
-      console.error("[screening] AI review failed, failing open", e);
+      console.error("[screening] AI review failed, failing closed", e);
+      reasons.push({
+        code: "ai_scan_unavailable",
+        message: "This message could not be safety-checked right now, so it was not sent. Please try again in a few minutes.",
+        score: 70,
+        detail: "ai_exception",
+      });
     }
   }
 
@@ -342,7 +351,7 @@ export async function screenMessageContent(
       if (hardCategoryHit) {
         const cat = reasons.find((r) => r.code.startsWith("category:"))?.code.replace("category:", "");
         suspendReason = `Auto-suspended: prohibited content category (${cat ?? "SHAFT/phishing"}).`;
-      } else {
+      } else if (!reasons.some((r) => r.code === "ai_scan_unavailable")) {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
         const { count: recentBlocks } = await supabaseAdmin
           .from("content_screening_log")
