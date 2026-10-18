@@ -3,7 +3,7 @@
 // goes through this module. No Twilio anywhere.
 
 const TELNYX_API = "https://api.telnyx.com/v2";
-import { usesSecondaryConnection, SECONDARY_WORKSPACE_ID, SECONDARY_PROFILE_ID, SECONDARY_ACTIVATED_AT } from "./telnyx-connection";
+import { usesSecondaryConnection, SECONDARY_WORKSPACE_ID, SECONDARY_PROFILE_ID, SECONDARY_ACTIVATED_AT, INTERNATIONAL_FAILOVER_AT, isNanpNumber, routeOutbound } from "./telnyx-connection";
 
 function apiKey(profileId?: string): string {
   const key = usesSecondaryConnection(profileId)
@@ -544,8 +544,12 @@ export async function sendMessage(opts: {
    */
   idempotencyKey?: string;
 }): Promise<SendMessageResult> {
+  {
+    const route = routeOutbound({ to: opts.to, from: opts.from, messagingProfileId: opts.messagingProfileId });
+    if (!route.ok) throw new Error(route.error);
+    opts = { ...opts, from: route.from, messagingProfileId: route.messagingProfileId };
+  }
   if (usesSecondaryConnection(opts.messagingProfileId)) {
-    if (opts.accountId !== SECONDARY_WORKSPACE_ID) throw new Error("This sending connection is unavailable for this workspace.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: hold } = await supabaseAdmin.from("platform_settings").select("value").eq("key", "carrier_secondary_messaging_hold_at").maybeSingle();
     if (hold?.value) throw new Error("Sending is temporarily unavailable. Please contact support.");
