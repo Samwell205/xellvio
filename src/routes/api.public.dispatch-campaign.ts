@@ -1566,7 +1566,8 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           .from("review_queue")
           .select("id, campaign_id")
           .eq("status", "pending")
-          .or(`auto_approve_at.lte.${nowExpiry},risk_score.lt.55`);
+          // Held content is never auto-approved by time: it waits for an admin.
+          .lt("risk_score", 55);
         for (const r of expiredReviews ?? []) {
           await supabaseAdmin.from("review_queue")
             .update({ status: "auto_approved", resolved_at: nowExpiry })

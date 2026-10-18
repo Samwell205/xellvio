@@ -173,9 +173,25 @@ const KEYWORD_PATTERNS: Array<{
     ],
   },
   {
-    category: "phishing",
-    severity: "flag",
+    // Impersonating financial, crypto or big-tech brands is the pattern that
+    // gets the whole carrier account blocked, so it is a hard block.
+    category: "brand_impersonation",
+    severity: "block",
     patterns: [
+      /\b(coinbase|binance|kraken|metamask|trust ?wallet|blockchain\.com|crypto\.com|ledger live|exodus wallet|phantom wallet)\b/gi,
+      /\b(seed phrase|recovery phrase|secret phrase|private key|wallet (connect|verification|verify|sync|validation))\b/gi,
+      /\b(paypal|cash ?app|venmo|zelle|chase|wells fargo|bank of america|citibank|capital one|amex|american express|apple id|icloud|amazon|netflix|microsoft|outlook|gmail|usps|fedex|dhl|ups|irs|hmrc)\b[\s\S]{0,160}\b(verify|confirm|unlock|suspend(ed)?|lock(ed)?|restrict(ed)?|compromised|unauthori[sz]ed|sign[- ]?in|log[- ]?in|login|security|reactivate|validate|update your)\b/gi,
+      /\b(verify|confirm|unlock|suspend(ed)?|lock(ed)?|restrict(ed)?|compromised|unauthori[sz]ed|sign[- ]?in attempt|login attempt|reactivate|validate)\b[\s\S]{0,160}\b(paypal|cash ?app|venmo|zelle|chase|wells fargo|bank of america|citibank|capital one|amex|american express|apple id|icloud|amazon|netflix|microsoft|outlook|gmail|usps|fedex|dhl|ups|irs|hmrc)\b/gi,
+    ],
+  },
+  {
+    category: "phishing",
+    severity: "block",
+    patterns: [
+      /\b(your|the) (account|wallet|card|payment|withdrawal|transfer)\b[\s\S]{0,60}\b(has been|was|is|will be) (suspended|locked|restricted|compromised|frozen|disabled|on hold)\b/gi,
+      /\b(unauthori[sz]ed|unusual|suspicious) (login|sign[- ]?in|transaction|withdrawal|access|activity|charge)\b/gi,
+      /\b(confirm|verify) your (identity|account|wallet|card|details|information|login)\b/gi,
+      /\b(account (locked|suspended|frozen|restricted)|login to (restore|unlock|secure)|secure your (account|wallet|funds))\b/gi,
       /\b(verify your account|suspicious activity|account locked|click here to verify|update your payment)\b/gi,
       /\burgent action required\b/gi,
       // Carriers commonly reject unsolicited filing/compliance notices that
