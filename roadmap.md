@@ -1,5 +1,10 @@
 # Roadmap
 
+## Reopen only Samuel's workspace for testing
+- [x] Read back samueldurosinmi69@gmail.com: workspace active, no account or sending suspension; existing sending profile still uses the original connection.
+- [ ] Restore working test sending only for this workspace — blocked because the original connection returns 401/10009 (account blocked), secondary number verification remains "Waiting For Telnyx", and secondary account-specific routing is not implemented.
+- [ ] Confirm Denmark delivery with an authorized test after a usable sending connection is available; no delivery claim or automatic retry.
+
 ## Additional approved Telnyx account
 - [x] Create a messaging profile using the separately stored secondary credential (created and read back disabled; original connection unchanged).
 - [x] Replace the secondary credential with the new account's key and public key; read back live: profile "House Of Ignis" (4001a150-a55c-460f-ae5d-02acca3f97a7) enabled, active US toll-free number +18337642473 attached to it. The profile created under the previous key no longer applies.
