@@ -1,10 +1,10 @@
 # Roadmap
 
 ## Reopen only Samuel's workspace for testing
-- [ ] Enable the new connection only for Samuel's workspace, preserve existing sender names, and leave old campaigns paused; user will run the Denmark test personally.
+- [x] Enable the new connection for Samuel's Denmark sender BYENSOPTUR, preserve the original connection for other senders/workspaces, and leave old campaigns paused; user will run the Denmark test personally.
 - [x] Read back samueldurosinmi69@gmail.com: workspace active, no account or sending suspension; existing sending profile still uses the original connection.
-- [ ] Restore working test sending only for this workspace — blocked because the original connection returns 401/10009 (account blocked), secondary number verification remains "Waiting For Telnyx", and secondary account-specific routing is not implemented.
-- [ ] Confirm Denmark delivery with an authorized test after a usable sending connection is available; no delivery claim or automatic retry.
+- [x] Wire Denmark test and new campaign sending to the additional connection with workspace ownership checks, existing screening, opt-outs, and account checks. Verified authenticated sender/test controls; no SMS sent.
+- [ ] Confirm Denmark delivery — user explicitly wants to perform the test personally; updated app must be published before production uses the new routing. Other existing sender assets still use their original connection.
 
 ## Additional approved Telnyx account
 - [x] Create a messaging profile using the separately stored secondary credential (created and read back disabled; original connection unchanged).
@@ -12,7 +12,7 @@
 - [x] Ran the user-authorized test send from +18337642473 to +17699692461: accepted and queued, then delivery_failed with carrier error 40329 "Tollfree number is not verified" — sending is NOT ready.
 - [x] Submitted toll-free verification for +18337642473 as SAMWELL (sole proprietor, General Marketing, 100,000/month): request f63bc2fb-2c05-5886-b96c-a1c4b227ffd5, read back as "Waiting For Telnyx". Deliberately no webhookUrl — the status route verifies signatures with the original account's key, so status must be polled until account-specific keys are wired.
 - [ ] Poll request f63bc2fb-2c05-5886-b96c-a1c4b227ffd5 to a verified decision, then re-test delivery to a mobile (the earlier test number was a wireline) before claiming sending is ready.
-- [ ] Wire account-specific sending and webhook verification so the new number uses the new credential and the original account is untouched — needs the user's go-ahead before any customer traffic.
+- [x] Wire profile-specific sending and webhook verification; new profile enabled with Denmark allowed and delivery webhook read back. Toll-free number remains unverified and is not activated as a sending asset.
 
 ## Bandwidth messaging connection
 - [ ] Help locate Bandwidth messaging credentials and confirm direct API access — user cannot find the required details; needs dashboard guidance before secure collection.
