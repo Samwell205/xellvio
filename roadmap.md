@@ -2,7 +2,9 @@
 
 ## Additional approved Telnyx account
 - [x] Create a messaging profile using the separately stored secondary credential (created and read back disabled; original connection unchanged).
-- [ ] Connect an approved sending number and account-specific sending/webhooks without replacing the original account — new account currently has no numbers; needs a number selection and purchase/port authorization.
+- [x] Replace the secondary credential with the new account's key and public key; read back live: profile "House Of Ignis" (4001a150-a55c-460f-ae5d-02acca3f97a7) enabled, active US toll-free number +18337642473 attached to it. The profile created under the previous key no longer applies.
+- [ ] Wire account-specific sending and webhook verification so the new number uses the new credential and the original account is untouched — needs the user's go-ahead before any customer traffic.
+- [ ] Confirm toll-free A2P verification for +18337642473 (no verification record found on the new account) before customer traffic.
 - [ ] Verify a user-authorized test send and receipt before claiming sending is ready.
 
 ## Bandwidth messaging connection
