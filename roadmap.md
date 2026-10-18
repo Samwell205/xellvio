@@ -6,6 +6,10 @@
 - [x] Wire Denmark test and new campaign sending to the additional connection with workspace ownership checks, existing screening, opt-outs, and account checks. Verified authenticated sender/test controls; no SMS sent.
 - [ ] Confirm Denmark delivery — user explicitly wants to perform the test personally; updated app must be published before production uses the new routing. Other existing sender assets still use their original connection.
 
+## International sending for all tenants
+- [x] Route all workspaces' non-US/Canada traffic through the new connection; US/Canada paused; old campaigns stay paused; notice updated.
+- [ ] Publish so production uses it; confirm first real deliveries.
+
 ## Additional approved Telnyx account
 - [x] Create a messaging profile using the separately stored secondary credential (created and read back disabled; original connection unchanged).
 - [x] Replace the secondary credential with the new account's key and public key; read back live: profile "House Of Ignis" (4001a150-a55c-460f-ae5d-02acca3f97a7) enabled, active US toll-free number +18337642473 attached to it. The profile created under the previous key no longer applies.

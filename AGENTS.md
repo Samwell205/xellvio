@@ -21,4 +21,5 @@
 - All-time admin finance reports are served from `admin_report_cache` (src/lib/admin-report-cache.server.ts) with a short TTL and an explicit "Recalculate now"; they scan full message history and must not run on every page view.
 
 - Support tickets (src/lib/support-tickets.server.ts, /admin/tickets, /app/support, /support/t/$token) are the only support channel: contact-form submissions, in-app requests and inbound email replies all create or append to tickets; closed tickets never accept replies (a reply opens a new linked ticket) so every conversation has one clear lifecycle.
+- While the original connection is blocked, src/lib/telnyx-connection.ts routeOutbound sends every workspace's non +1 traffic through the additional connection using the tenant's own sender name and refuses +1 before any carrier call; campaigns created before the failover time stay paused.
 - Additional messaging connections route by server-owned messaging profile IDs in src/lib/telnyx-connection.ts, with matching webhook keys and workspace-scoped sender assets; never replace the default credential or automatically resume old campaigns when activating a connection.

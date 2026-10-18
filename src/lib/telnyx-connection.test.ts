@@ -5,7 +5,8 @@ describe("additional messaging connection isolation", () => {
   it("never restarts this workspace's campaigns created before activation", () => {
     expect(secondaryCampaignMaySend(SECONDARY_WORKSPACE_ID, "2026-09-21T19:58:35Z")).toBe(false);
     expect(secondaryCampaignMaySend(SECONDARY_WORKSPACE_ID, "2026-10-18T21:00:00Z")).toBe(true);
-    expect(secondaryCampaignMaySend("another-workspace", "2026-09-21T19:58:35Z")).toBe(true);
+    expect(secondaryCampaignMaySend("another-workspace", "2026-09-21T19:58:35Z")).toBe(false);
+    expect(secondaryCampaignMaySend("another-workspace", "2026-10-18T22:00:00Z")).toBe(true);
   });
   it("routes the new profile to the additional connection", () => {
     expect(usesSecondaryConnection("4001a150-a55c-460f-ae5d-02acca3f97a7")).toBe(true);
