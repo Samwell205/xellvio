@@ -1535,6 +1535,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 
 
 async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
+        let primaryConnectionHeld = false;
         // Carrier-wide hold: messaging was disabled on the carrier account
         // (error 40314). Pause every send for 30 minutes after the latest such
         // rejection; campaigns stay queued and resume on their own once the
@@ -1544,7 +1545,7 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
             .from("platform_settings").select("value").eq("key", "carrier_messaging_hold_at").maybeSingle();
           const heldAt = hold?.value ? Date.parse(String(hold.value)) : NaN;
           if (Number.isFinite(heldAt) && Date.now() - heldAt < 30 * 60 * 1000) {
-            return Response.json({ ok: true, held: "carrier_messaging_disabled" });
+            primaryConnectionHeld = true;
           }
         }
 
@@ -1740,6 +1741,7 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
 
         const runOneCampaign = async (c: any): Promise<any> => {
           const { secondaryCampaignMaySend, SECONDARY_WORKSPACE_ID } = await import("@/lib/telnyx-connection");
+          if (primaryConnectionHeld && c.account_id !== SECONDARY_WORKSPACE_ID) return { skipped: "primary_connection_held" };
           if (!secondaryCampaignMaySend(c.account_id, c.created_at)) {
             await supabaseAdmin.from("campaigns").update({ status: "paused", paused_reason: "Create a new campaign to use the new sending connection.", paused_at: new Date().toISOString() }).eq("id", c.id);
             return { skipped: "previous_connection_campaign" };
