@@ -11,6 +11,9 @@
 - [ ] Integrate number-specific sending, delivery receipts and replies through existing compliance and charging controls.
 - [ ] Verify one approved test send before enabling customer traffic; do not restart waiting campaigns automatically.
 
+## GoHighLevel messaging connection
+- [ ] User has not created a GoHighLevel account yet — blocked until signup; then confirm a paid plan with SMS enabled, a registered sending number, and API access before collecting credentials.
+
 ## Admin experience refresh
 - [x] Redesign the shared admin shell and navigation with theme-aware styling and motion.
 - [x] Replace the crowded overview with focused operational panels and remove its full-history loading bottleneck.
