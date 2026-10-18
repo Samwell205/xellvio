@@ -14,6 +14,7 @@ export const PROHIBITED_CATEGORIES = [
   "crypto_scam",
   "get_rich_quick",
   "fraud_deceptive",
+  "brand_impersonation",
   "phishing",
 ] as const;
 
