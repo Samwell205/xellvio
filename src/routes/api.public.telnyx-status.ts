@@ -10,6 +10,8 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { verify as verifyEd25519 } from "crypto";
+import { webhookPublicKey } from "@/lib/telnyx-webhook-key.server";
+import { usesSecondaryConnection } from "@/lib/telnyx-connection";
 
 const STOP_WORDS = ["STOP", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "STOPALL"];
 const RESUB_WORDS = ["START", "UNSTOP", "YES"];
@@ -120,7 +122,7 @@ async function handleStatus(payload: any) {
     await supabaseAdmin
       .from("platform_settings")
       .upsert(
-        { key: "carrier_messaging_hold_at", value: new Date().toISOString() as any, updated_at: new Date().toISOString() },
+        { key: usesSecondaryConnection(p.messaging_profile_id) ? "carrier_secondary_messaging_hold_at" : "carrier_messaging_hold_at", value: new Date().toISOString() as any, updated_at: new Date().toISOString() },
         { onConflict: "key" },
       );
   }
@@ -184,7 +186,7 @@ export const Route = createFileRoute("/api/public/telnyx-status")({
         const raw = await request.text();
         const sig = request.headers.get("telnyx-signature-ed25519");
         const ts = request.headers.get("telnyx-timestamp");
-        const pub = process.env.TELNYX_PUBLIC_KEY;
+        const pub = webhookPublicKey(raw);
 
         // Fail closed: without the signing key every request is unauthenticated.
         if (!pub) {
