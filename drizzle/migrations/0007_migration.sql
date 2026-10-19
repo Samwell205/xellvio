@@ -1,0 +1,1 @@
+UPDATE public.lifecycle_announcements SET expires_at = now(), updated_at = now() WHERE id = '30763668-cd56-47b5-a4dc-a9c16d22826d';
