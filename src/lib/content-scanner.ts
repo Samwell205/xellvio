@@ -181,8 +181,8 @@ const KEYWORD_PATTERNS: Array<{
     patterns: [
       /\b(coinbase|binance|kraken|metamask|trust ?wallet|blockchain\.com|crypto\.com|ledger live|exodus wallet|phantom wallet)\b/gi,
       /\b(seed phrase|recovery phrase|secret phrase|private key|wallet (connect|verification|verify|sync|validation))\b/gi,
-      /\b(paypal|cash ?app|venmo|zelle|chase|wells fargo|bank of america|citibank|capital one|amex|american express|apple id|icloud|amazon|netflix|microsoft|outlook|gmail|usps|fedex|dhl|ups|irs|hmrc)\b[\s\S]{0,160}\b(verify|confirm|unlock|suspend(ed)?|lock(ed)?|restrict(ed)?|compromised|unauthori[sz]ed|sign[- ]?in|log[- ]?in|login|security|reactivate|validate|update your)\b/gi,
-      /\b(verify|confirm|unlock|suspend(ed)?|lock(ed)?|restrict(ed)?|compromised|unauthori[sz]ed|sign[- ]?in attempt|login attempt|reactivate|validate)\b[\s\S]{0,160}\b(paypal|cash ?app|venmo|zelle|chase|wells fargo|bank of america|citibank|capital one|amex|american express|apple id|icloud|amazon|netflix|microsoft|outlook|gmail|usps|fedex|dhl|ups|irs|hmrc)\b/gi,
+      /(?<![\w-])(paypal|cash ?app|venmo|zelle|chase|wells fargo|bank of america|citibank|capital one|amex|american express|apple id|icloud|amazon|netflix|microsoft|outlook|gmail|usps|fedex|dhl|ups|irs|hmrc)(?![\w-])[\s\S]{0,160}\b(verify|unlock|suspended|locked|restricted|compromised|unauthori[sz]ed|reactivate|validate)\b/gi,
+      /\b(verify|unlock|suspended|locked|restricted|compromised|unauthori[sz]ed|reactivate|validate)\b[\s\S]{0,160}(?<![\w-])(paypal|cash ?app|venmo|zelle|chase|wells fargo|bank of america|citibank|capital one|amex|american express|apple id|icloud|amazon|netflix|microsoft|outlook|gmail|usps|fedex|dhl|ups|irs|hmrc)(?![\w-])/gi,
     ],
   },
   {
@@ -191,9 +191,19 @@ const KEYWORD_PATTERNS: Array<{
     patterns: [
       /\b(your|the) (account|wallet|card|payment|withdrawal|transfer)\b[\s\S]{0,60}\b(has been|was|is|will be) (suspended|locked|restricted|compromised|frozen|disabled|on hold)\b/gi,
       /\b(unauthori[sz]ed|unusual|suspicious) (login|sign[- ]?in|transaction|withdrawal|access|activity|charge)\b/gi,
-      /\b(confirm|verify) your (identity|account|wallet|card|details|information|login)\b/gi,
-      /\b(account (locked|suspended|frozen|restricted)|login to (restore|unlock|secure)|secure your (account|wallet|funds))\b/gi,
-      /\b(verify your account|suspicious activity|account locked|click here to verify|update your payment)\b/gi,
+      /\bverify your (identity|account|wallet|card|login)\b/gi,
+      /\b(account (locked|suspended|frozen|restricted)|login to (restore|unlock|secure)|secure your (wallet|funds))\b/gi,
+      /\b(click here to verify)\b/gi,
+    ],
+  },
+  {
+    // Ordinary businesses use this wording too: hold for review, never
+    // a hard block or automatic suspension.
+    category: "phishing",
+    severity: "flag",
+    patterns: [
+      /\bconfirm your (identity|account|card|details|information|login)\b/gi,
+      /\b(suspicious activity|update your payment)\b/gi,
       /\burgent action required\b/gi,
       // Carriers commonly reject unsolicited filing/compliance notices that
       // combine an action command with a link, even when the destination is a
