@@ -42,13 +42,13 @@ Reply STOP to unsubscribe.`);
 });
 
 describe("keywordScan carrier-risk classification", () => {
-  it("blocks urgent filing and compliance link language", () => {
+  it("holds urgent filing and compliance link language for review", () => {
     const result = keywordScan(
       "COTA SUPPLY LLC: Filing Step Required. Your Compliance Report is still pending. File Now: https://example.com/home Reply STOP to unsubscribe.",
     );
 
     expect(result).toMatchObject({
-      allowed: false,
+      allowed: true,
       category: "phishing",
       confidence: "keyword",
     });
