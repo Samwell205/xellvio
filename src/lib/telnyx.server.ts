@@ -3,7 +3,7 @@
 // goes through this module. No Twilio anywhere.
 
 const TELNYX_API = "https://api.telnyx.com/v2";
-import { usesSecondaryConnection, SECONDARY_WORKSPACE_ID, SECONDARY_PROFILE_ID, SECONDARY_ACTIVATED_AT, INTERNATIONAL_FAILOVER_AT, isNanpNumber, routeOutbound } from "./telnyx-connection";
+import { usesSecondaryConnection, SECONDARY_WORKSPACE_ID, SECONDARY_PROFILE_ID, SECONDARY_ACTIVATED_AT, sentDuringFailover, routeOutbound } from "./telnyx-connection";
 
 function apiKey(profileId?: string): string {
   const key = usesSecondaryConnection(profileId)
@@ -642,7 +642,7 @@ export async function getMessage(id: string): Promise<any> {
   const accountId = (message as any)?.campaigns?.account_id;
   const sentAt = Date.parse(message?.sent_at ?? "");
   const secondary = (accountId === SECONDARY_WORKSPACE_ID && sentAt >= Date.parse(SECONDARY_ACTIVATED_AT)) ||
-    (sentAt >= Date.parse(INTERNATIONAL_FAILOVER_AT) && !isNanpNumber((message as any)?.phone_e164));
+    sentDuringFailover(sentAt, (message as any)?.phone_e164);
   const res = await telnyx<{ data: any }>(`/messages/${id}`, { connectionProfileId: secondary ? SECONDARY_PROFILE_ID : undefined });
   return res.data;
 }
