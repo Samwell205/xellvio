@@ -28,7 +28,7 @@ const ROWS: Array<{ key: keyof Prefs; label: string; hint: string }> = [
   {
     key: "announcements",
     label: "In-app announcements",
-    hint: "Notices shown inside your workspace.",
+    hint: "Notices shown inside your business.",
   },
   { key: "promotional", label: "Offers", hint: "Plan and credit offers relevant to your usage." },
 ];
@@ -61,7 +61,7 @@ export function CommPrefsCard() {
       <div className="font-semibold">Email & message preferences</div>
       <p className="text-sm text-muted-foreground mt-1">
         Account, billing, delivery and compliance notices are always sent — they're part of running
-        your workspace.
+        your business.
       </p>
       <div className="mt-4 space-y-4">
         {ROWS.map((row) => (

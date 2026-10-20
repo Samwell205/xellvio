@@ -7,7 +7,7 @@ import { API_SCOPES, WEBHOOK_EVENTS } from "./tenant-api.shared";
 
 async function adminContext(userId: string) {
   const acting = await resolveActingAccount(userId);
-  if (!acting.isOwner && acting.role !== "admin") throw new Error("Only workspace owners and admins can manage API access.");
+  if (!acting.isOwner && acting.role !== "admin") throw new Error("Only business owners and admins can manage API access.");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return { acting, db: supabaseAdmin };
 }
@@ -20,7 +20,7 @@ async function latestRequest(db: any, accountId: string) {
 async function approvedContext(userId: string) {
   const ctx = await adminContext(userId);
   const req = await latestRequest(ctx.db, ctx.acting.accountId);
-  if (req?.status !== "approved") throw new Error("API access has not been approved for this workspace yet.");
+  if (req?.status !== "approved") throw new Error("API access has not been approved for this business yet.");
   return ctx;
 }
 

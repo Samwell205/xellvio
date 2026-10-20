@@ -105,7 +105,7 @@ function MarketplaceHome() {
             {
               icon: ShieldCheck,
               title: "Secure by design",
-              body: "Tokens are encrypted server-side, scoped per workspace and fully audited.",
+              body: "Tokens are encrypted server-side, scoped per business and fully audited.",
             },
             {
               icon: Layers,
@@ -195,7 +195,7 @@ function MarketplaceHome() {
           </h2>
           <p className="mt-3 max-w-xl text-muted-foreground">
             Define actions and triggers, test in a sandbox, submit for review and reach every
-            Xellvio workspace.
+            Xellvio account.
           </p>
           <Button asChild className="mt-6 rounded-full">
             <Link to="/marketplace/developers">Open the developer portal</Link>

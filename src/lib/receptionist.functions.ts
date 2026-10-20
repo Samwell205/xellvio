@@ -46,7 +46,7 @@ export const setReceptionistEnabled = createServerFn({ method: "POST" }).middlew
     const p = (platform?.configuration ?? {}) as Record<string,unknown>, c = receptionistConfigSchema.parse(settings?.configuration ?? {});
     if (!canActivateReceptionist({ pricingApproved: p.pricingApproved === true, voiceVerified: settings?.provision_status === "verified", numberAssigned: Boolean(settings?.voice_number && settings.assistant_id && settings.voice_application_id), testVerified: true, businessReady: Boolean(c.businessName && c.businessInformation && c.greeting) })) throw new Error("Calling cannot be enabled until pricing, your phone line, and a pilot call are verified.");
     const { data: account } = await supabaseAdmin.from("accounts").select("sending_suspended_at,suspended_at,onboarding_status").eq("id", acting.accountId).single();
-    if (!account || account.suspended_at || account.onboarding_status === "suspended" || account.sending_suspended_at) throw new Error("This workspace is not eligible for calling.");
+    if (!account || account.suspended_at || account.onboarding_status === "suspended" || account.sending_suspended_at) throw new Error("This business is not eligible for calling.");
   }
   const { data: row, error } = await supabaseAdmin.from("receptionist_settings").update({ enabled: data.enabled, updated_at: new Date().toISOString() }).eq("account_id", acting.accountId).select("account_id").maybeSingle();
   if (error || !row) throw new Error("Save your receptionist setup first.");

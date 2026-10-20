@@ -276,7 +276,7 @@ export const INDUSTRIES: Industry[] = [
     faq: [
       { q: "Can I alert only buyers in one area?", a: "Yes. Store area and budget as contact fields and build a segment on them." },
       { q: "Can I include a link to the listing?", a: "Yes, and it's shortened automatically so clicks are tracked per campaign." },
-      { q: "Do replies come to me?", a: "Replies land in the Xellvio inbox for your workspace, with unread counts." },
+      { q: "Do replies come to me?", a: "Replies land in the Xellvio inbox for your business, with unread counts." },
     ],
   },
   {
@@ -288,7 +288,7 @@ export const INDUSTRIES: Industry[] = [
     h1: "Run client SMS programmes from one platform",
     blurb: "Deliver client messaging with clean reporting.",
     intro:
-      "Agencies need repeatable process and defensible numbers. Xellvio gives you reusable templates and automations, isolated data per workspace, and exportable reports for every client review.",
+      "Agencies need repeatable process and defensible numbers. Xellvio gives you reusable templates and automations, isolated data per business, and exportable reports for every client review.",
     problems: [
       "Rebuilding the same campaign structure for each client.",
       "Reporting assembled by hand from partial data.",
@@ -298,7 +298,7 @@ export const INDUSTRIES: Industry[] = [
       "The work is operational: standardise the build, keep client data separated, and produce delivery, click and spend numbers that hold up in a review.",
     capabilities: [
       { title: "Reusable templates", text: "Landing pages, forms and automations you can apply to a new client in minutes." },
-      { title: "Separated workspaces", text: "Each account's contacts and campaigns are isolated at the database level." },
+      { title: "Separated businesses", text: "Each account's contacts and campaigns are isolated at the database level." },
       { title: "Role-based access", text: "Invite team members with only the permissions their job needs." },
       { title: "Exportable reporting", text: "Delivery, clicks and spend as CSV for client reporting." },
       { title: "Cost transparency", text: "Per-country rates and per-campaign spend for accurate recharging." },
@@ -315,7 +315,7 @@ export const INDUSTRIES: Industry[] = [
     ],
     related: [rel.reporting, rel.automations, rel.audiences, rel.email],
     faq: [
-      { q: "Can I keep client data separate?", a: "Yes. Each workspace's data is isolated at the database level and only reachable by its own users." },
+      { q: "Can I keep client data separate?", a: "Yes. Each business's data is isolated at the database level and only reachable by its own users." },
       { q: "Can I limit what staff can see?", a: "Yes. Team invitations grant specific areas, so campaign staff needn't have billing access." },
       { q: "Can I export reports for clients?", a: "Yes. Campaign and audience reports export as CSV." },
     ],

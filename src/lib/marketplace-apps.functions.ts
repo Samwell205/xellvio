@@ -101,7 +101,7 @@ export const connectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { db, acting } = await ctx(context.userId);
     if (!acting.isOwner && acting.role !== "admin") {
-      throw new Error("Only workspace owners and admins can connect apps.");
+      throw new Error("Only business owners and admins can connect apps.");
     }
     const { encryptToken } = await import("@/lib/tenant-crypto.server");
 
@@ -276,7 +276,7 @@ export const disconnectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { db, acting } = await ctx(context.userId);
     if (!acting.isOwner && acting.role !== "admin") {
-      throw new Error("Only workspace owners and admins can disconnect apps.");
+      throw new Error("Only business owners and admins can disconnect apps.");
     }
     const { data: install } = await db
       .from("app_installations")

@@ -13,7 +13,7 @@ async function assertCampaignControl(userId: string, campaignId: string) {
   const acting = await resolveActingAccount(userId);
   assertPermission(acting, "campaigns");
   if (!acting.isOwner && !["admin", "editor"].includes(acting.role)) {
-    throw new Error("Read-only team members cannot change campaigns. Ask the workspace owner for edit access.");
+    throw new Error("Read-only team members cannot change campaigns. Ask the business owner for edit access.");
   }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: owned } = await supabaseAdmin

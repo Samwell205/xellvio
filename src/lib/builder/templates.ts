@@ -295,7 +295,7 @@ const PAGE_SPECS: PageSpec[] = [
     theme: preset("saas"),
     eyebrow: "New",
     headline: "Messaging that actually converts",
-    sub: "Send campaigns, automate replies and track revenue in one clean workspace.",
+    sub: "Send campaigns, automate replies and track revenue in one clean business.",
     cta: "Start free",
     splitHero: true,
     benefits: [

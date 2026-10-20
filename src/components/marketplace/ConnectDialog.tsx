@@ -250,7 +250,7 @@ export function ConnectDialog({
 
         {step === 1 && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Choose what {app.name} may do inside this workspace.</p>
+            <p className="text-sm text-muted-foreground">Choose what {app.name} may do inside this business.</p>
             {[
               { label: "Sync contacts and customers", value: syncContacts, set: setSyncContacts },
               { label: "Sync orders, payments and invoices", value: syncOrders, set: setSyncOrders },

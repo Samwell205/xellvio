@@ -34,7 +34,7 @@ export default function Generic({
       {ctaText && ctaUrl ? <CTA href={ctaUrl}>{ctaText}</CTA> : null}
       <Hr style={divider} />
       <Text style={{ ...muted, margin: "18px 0 0" }}>
-        You are receiving this because of activity on your Xellvio workspace. Manage what we send you in{" "}
+        You are receiving this because of activity on your Xellvio account. Manage what we send you in{" "}
         <Link href="https://www.xellvio.com/app/settings/notifications" style={link}>
           Settings → Communication preferences
         </Link>.

@@ -16,9 +16,9 @@ const GUIDES: Record<string, SetupGuide> = {
   /* ── First-party ───────────────────────────────────────────────────────── */
   "xellvio-connect": {
     steps: [
-      "Sign in to the other Xellvio workspace you want to link.",
-      "Open Apps → Xellvio Connect in that workspace.",
-      "Click Create workspace key and copy the key that starts with xvw_live_.",
+      "Sign in to the other Xellvio account you want to link.",
+      "Open Apps → Xellvio Connect in that business.",
+      "Click Create business key and copy the key that starts with xvw_live_.",
       "Come back here and paste it below. The key only allows contact syncing.",
     ],
   },
@@ -159,9 +159,9 @@ const GUIDES: Record<string, SetupGuide> = {
   /* ── Messaging ────────────────────────────────────────────────────────── */
   slack: {
     steps: [
-      "Go to api.slack.com/apps and click Create New App → From scratch. Name it “Xellvio” and pick your workspace.",
+      "Go to api.slack.com/apps and click Create New App → From scratch. Name it “Xellvio” and pick your business.",
       "Open Incoming Webhooks and switch Activate Incoming Webhooks on.",
-      "Click Add New Webhook to Workspace, choose the channel and allow it.",
+      "Click Add New Webhook to Business, choose the channel and allow it.",
       "Copy the webhook URL (https://hooks.slack.com/services/…) and paste it below.",
     ],
     docsUrl: "https://api.slack.com/messaging/webhooks",
@@ -245,14 +245,14 @@ const GUIDES: Record<string, SetupGuide> = {
   intercom: {
     steps: [
       "Go to developers.intercom.com and open your developer hub.",
-      "Create an app for your workspace, then open Authentication.",
+      "Create an app for your business, then open Authentication.",
       "Copy the access token with read access to contacts.",
     ],
   },
   notion: {
     steps: [
       "Go to notion.so/my-integrations and click New integration.",
-      "Name it “Xellvio”, pick your workspace and submit.",
+      "Name it “Xellvio”, pick your business and submit.",
       "Copy the Internal Integration Token (ntn_…).",
       "In Notion open the page or database you want to share, click … → Connections → Xellvio.",
     ],

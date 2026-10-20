@@ -11,7 +11,7 @@ async function validateSender(accountId: string, sender?: string) {
   if (!sender) return;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin.from("sender_assets").select("id").eq("account_id", accountId).eq("verification_status", "verified").or(`phone_number.eq.${sender},sender_id.eq.${sender}`).limit(1).maybeSingle();
-  if (!data) throw new ApiError(422, "sender_not_available", "The requested sender is not verified for this workspace.");
+  if (!data) throw new ApiError(422, "sender_not_available", "The requested sender is not verified for this business.");
 }
 
 async function queueBatch(request: Request, single: boolean) {
@@ -23,7 +23,7 @@ async function queueBatch(request: Request, single: boolean) {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: acct } = await supabaseAdmin.from("accounts").select("credit_balance").eq("id", auth.accountId).maybeSingle();
     const balance = Number(acct?.credit_balance ?? 0);
-    if (!(balance > 0)) throw new ApiError(402, "insufficient_credit", "This workspace has no SMS credit left. Top up your Xellvio balance to send.");
+    if (!(balance > 0)) throw new ApiError(402, "insufficient_credit", "This business has no SMS credit left. Top up your Xellvio balance to send.");
   }
   const { screenMessageContent } = await import("@/lib/content-screening.server");
   const screened = await screenMessageContent(body, auth.accountId, { context: "campaign", plannedRecipients: recipients.length, skipReviewQueue: true });

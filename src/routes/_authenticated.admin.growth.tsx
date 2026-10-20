@@ -151,7 +151,7 @@ function GrowthPage() {
               label="Median time to first value"
               value={d.activation.median_hours_to_activation === null ? "—" : `${d.activation.median_hours_to_activation}h`}
             />
-            <Stat label="Active workspaces" value={d.funnel[8]?.count ?? 0} />
+            <Stat label="Active businesses" value={d.funnel[8]?.count ?? 0} />
             <Stat label="Events recorded" value={d.events_recorded} hint="visitor + product events in window" />
           </div>
 
@@ -323,7 +323,7 @@ function GrowthPage() {
           <Card className="p-4">
             <h2 className="text-sm font-semibold mb-3">Template acquisition</h2>
             <DataTable
-              columns={["Template", "Type", "Views", "Previews", "Imports", "Workspaces", "Activated", "View → import"]}
+              columns={["Template", "Type", "Views", "Previews", "Imports", "Businesses", "Activated", "View → import"]}
               rows={d.templates.map((t) => [
                 t.slug,
                 t.type,
@@ -341,7 +341,7 @@ function GrowthPage() {
         {/* ---------------- activation ---------------- */}
         <TabsContent value="activation" className="space-y-4 pt-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="New workspaces" value={d.activation.new_users} />
+            <Stat label="New businesses" value={d.activation.new_users} />
             <Stat label="Activated" value={d.activation.activated_users} hint={pct(d.activation.activation_rate)} />
             <Stat
               label="Median time to activation"
@@ -355,7 +355,7 @@ function GrowthPage() {
           <Card className="p-4">
             <h2 className="text-sm font-semibold mb-3">Which milestone activated them first</h2>
             <DataTable
-              columns={["Milestone", "Workspaces"]}
+              columns={["Milestone", "Businesses"]}
               rows={d.activation.by_event.map((e) => [e.label, e.count])}
             />
           </Card>
@@ -370,7 +370,7 @@ function GrowthPage() {
               </div>
               <div>
                 <div className="text-xs text-muted-foreground mb-2">Goal chosen at setup</div>
-                <DataTable columns={["Goal", "Workspaces"]} rows={d.onboarding.goals.map((g) => [g.goal, g.count])} />
+                <DataTable columns={["Goal", "Businesses"]} rows={d.onboarding.goals.map((g) => [g.goal, g.count])} />
               </div>
             </div>
           </Card>
@@ -387,7 +387,7 @@ function GrowthPage() {
           </Card>
           <Card className="p-4">
             <h2 className="text-sm font-semibold mb-3">Customer segments</h2>
-            <DataTable columns={["Segment", "Workspaces"]} rows={d.segments.map((s) => [s.label, s.count])} />
+            <DataTable columns={["Segment", "Businesses"]} rows={d.segments.map((s) => [s.label, s.count])} />
             <p className="mt-2 text-xs text-muted-foreground">Aggregate only — no individual customer details here.</p>
           </Card>
         </TabsContent>
@@ -503,7 +503,7 @@ function ConfigSection({
       <div>
         <h2 className="text-sm font-semibold">What counts as activation</h2>
         <p className="text-xs text-muted-foreground">
-          Activation is a real outcome, not a created account. Pick the milestones that mean a workspace felt the value.
+          Activation is a real outcome, not a created account. Pick the milestones that mean a business felt the value.
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -518,8 +518,8 @@ function ConfigSection({
         ))}
       </div>
       <div>
-        <h3 className="text-sm font-semibold">North star: monthly active value-creating workspaces</h3>
-        <p className="text-xs text-muted-foreground mb-2">Which activity proves a workspace created value this month.</p>
+        <h3 className="text-sm font-semibold">North star: monthly active value-creating businesses</h3>
+        <p className="text-xs text-muted-foreground mb-2">Which activity proves a business created value this month.</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {ACTIVATION_EVENTS.map((e) => (
             <label key={e.key} className="flex items-center gap-2 rounded-lg border border-border p-2">

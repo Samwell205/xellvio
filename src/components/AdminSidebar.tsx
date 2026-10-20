@@ -68,7 +68,7 @@ export function AdminSidebar() {
   return <Sidebar collapsible="icon" className="admin-navigation border-r border-border">
     <SidebarHeader className="border-b border-border px-4 py-6 group-data-[collapsible=icon]:px-2">
       <Logo iconOnly={collapsed} className="text-foreground font-display" />
-      {!collapsed && <div className="mt-2 flex items-center gap-2 text-[10px] font-semibold text-muted-foreground"><ShieldCheck className="size-3" /> ADMIN WORKSPACE</div>}
+      {!collapsed && <div className="mt-2 flex items-center gap-2 text-[10px] font-semibold text-muted-foreground"><ShieldCheck className="size-3" /> ADMIN CONSOLE</div>}
     </SidebarHeader>
     <SidebarContent className="gap-1 px-2 py-4">
       {!collapsed && <div className="relative mx-2 mb-4"><Search className="absolute left-3 top-3 size-3.5 text-muted-foreground" /><Input aria-label="Find an admin page" placeholder="Find a page…" className="h-9 pl-9 text-xs bg-background" value={search} onChange={e => setSearch(e.target.value)} /></div>}
@@ -85,7 +85,7 @@ export function AdminSidebar() {
       {search && ![...primary, ...groups.flatMap(g => g.items)].some(matches) && <p className="p-4 text-xs text-muted-foreground">No pages found.</p>}
     </SidebarContent>
     <SidebarFooter className="border-t border-border p-3">
-      {!collapsed && <Button asChild variant="outline" className="mb-2 justify-start"><Link to="/app"><Building2 className="size-4" />Tenant workspace</Link></Button>}
+      {!collapsed && <Button asChild variant="outline" className="mb-2 justify-start"><Link to="/app"><Building2 className="size-4" />Tenant business</Link></Button>}
       <SidebarMenu><SidebarMenuItem><SidebarMenuButton tooltip="Sign out" onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}><LogOut className="size-4" />{!collapsed && <span>Sign out</span>}</SidebarMenuButton></SidebarMenuItem></SidebarMenu>
     </SidebarFooter>
   </Sidebar>;

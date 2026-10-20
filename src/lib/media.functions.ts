@@ -114,7 +114,7 @@ export const confirmMediaUpload = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const accountId = await acct(context.userId);
-    if (!data.path.startsWith(`${accountId}/`)) throw new Error("Upload path does not belong to this workspace");
+    if (!data.path.startsWith(`${accountId}/`)) throw new Error("Upload path does not belong to this business");
 
     const row = {
       account_id: accountId,

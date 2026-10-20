@@ -54,7 +54,7 @@ export const Route = createFileRoute("/templates/")({
     pageHead({
       path: "/templates",
       title: "Free SMS, Landing Page and Form Templates",
-      description: `Browse ${TEMPLATE_LIBRARY.length} free Xellvio templates: landing pages, sign-up forms and SMS automations. Preview any template, then open it in your workspace and publish it.`,
+      description: `Browse ${TEMPLATE_LIBRARY.length} free Xellvio templates: landing pages, sign-up forms and SMS automations. Preview any template, then open it in your business and publish it.`,
       keywords: ["sms templates", "landing page templates", "sign up form templates", "sms automation templates"],
     }),
   component: TemplatesHub,
@@ -125,7 +125,7 @@ function TemplatesHub() {
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
               {TEMPLATE_LIBRARY.length} free templates that ship inside Xellvio. Preview one here, then open it in your
-              workspace — it arrives as an editable draft, not a locked design.
+              business — it arrives as an editable draft, not a locked design.
             </p>
 
             <div className="mt-9 max-w-xl">

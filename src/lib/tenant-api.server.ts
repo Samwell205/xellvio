@@ -37,7 +37,7 @@ export async function authenticateApiRequest(request: Request, scope: ApiScope):
   const requestId = request.headers.get("x-request-id")?.slice(0, 100) || crypto.randomUUID();
   const auth = request.headers.get("authorization") ?? "";
   const key = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  if (!key.startsWith("xv_api_")) throw new ApiError(401, "invalid_api_key", "Provide a valid workspace API key.");
+  if (!key.startsWith("xv_api_")) throw new ApiError(401, "invalid_api_key", "Provide a valid business API key.");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await (supabaseAdmin.rpc as any)("authenticate_workspace_api_key", {
     _key_hash: await hashSecret(key),
@@ -48,8 +48,8 @@ export async function authenticateApiRequest(request: Request, scope: ApiScope):
   if (error || !data?.[0]) {
     const message = String(error?.message ?? "");
     if (message.includes("rate_limit_exceeded")) throw new ApiError(429, "rate_limit_exceeded", "Too many requests. Try again shortly.");
-    if (message.includes("api_access_not_approved")) throw new ApiError(403, "api_access_not_approved", "API access for this workspace has not been approved.");
-    if (message.includes("account_suspended")) throw new ApiError(403, "account_suspended", "This workspace cannot send messages.");
+    if (message.includes("api_access_not_approved")) throw new ApiError(403, "api_access_not_approved", "API access for this business has not been approved.");
+    if (message.includes("account_suspended")) throw new ApiError(403, "account_suspended", "This business cannot send messages.");
     throw new ApiError(401, "invalid_api_key", "The API key is invalid, expired, or revoked.");
   }
   const row = data[0];

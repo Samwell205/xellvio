@@ -215,7 +215,7 @@ function AppDetailPage() {
           <TabsContent value="setup" className="mt-5 space-y-4">
             <p className="whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">
               {a.setup_guide ||
-                `Connect ${a.name} from your workspace, authorise access, then choose what it may sync.`}
+                `Connect ${a.name} from your business, authorise access, then choose what it may sync.`}
             </p>
             <div className="flex flex-wrap gap-3">
               {a.documentation_url && (
@@ -298,7 +298,7 @@ function AppDetailPage() {
           <div className="rounded-2xl border bg-muted/40 p-5 text-sm text-muted-foreground">
             <ShieldCheck className="size-5 text-primary" />
             <p className="mt-2">
-              Xellvio encrypts every credential, scopes access to one workspace and logs every
+              Xellvio encrypts every credential, scopes access to one business and logs every
               request this app makes.
             </p>
           </div>

@@ -196,7 +196,7 @@ function AuthPage() {
           </p>
           {search.invite && (
             <div className="mt-4 rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-              You have a workspace invite for{" "}
+              You have a business invite for{" "}
               <span className="font-medium text-foreground">{search.invite}</span>. Sign in or
               create an account with this email to accept it.
             </div>

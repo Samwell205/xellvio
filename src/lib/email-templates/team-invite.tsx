@@ -17,12 +17,12 @@ export default function TeamInvite({ inviterName, workspaceName, inviteUrl, role
         {inviterName} invited you to join {workspaceName}
       </Heading>
       <Text style={p}>
-        You've been added to the {workspaceName} workspace on Xellvio. Accept the invitation to
+        You've been added to the {workspaceName} business on Xellvio. Accept the invitation to
         start sending and tracking campaigns with your team.
       </Text>
       <DetailRows
         rows={[
-          { label: "Workspace", value: workspaceName },
+          { label: "Business", value: workspaceName },
           { label: "Your role", value: role },
         ]}
       />
@@ -47,7 +47,7 @@ function TeamInviteCompat(d: Record<string, any>) {
   return (
     <TeamInvite
       inviterName={String(d.inviterName ?? "A teammate")}
-      workspaceName={String(d.workspaceName ?? "Xellvio workspace")}
+      workspaceName={String(d.workspaceName ?? "Xellvio account")}
       inviteUrl={String(d.inviteUrl ?? d.acceptUrl ?? "https://www.xellvio.com/auth")}
       role={String(d.role ?? "member")}
     />
@@ -56,7 +56,7 @@ function TeamInviteCompat(d: Record<string, any>) {
 
 export const template = {
   component: TeamInviteCompat,
-  subject: "You've been invited to a Xellvio workspace",
+  subject: "You've been invited to a Xellvio account",
   displayName: "Team invitation",
   previewData: {
     inviterName: "Alex",

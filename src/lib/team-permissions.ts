@@ -45,7 +45,7 @@ export const PRESETS: { id: PresetId; label: string; description: string; permis
   {
     id: "owner_admin",
     label: "Admin — full access",
-    description: "Everything the workspace owner can do, including billing and team management.",
+    description: "Everything the business owner can do, including billing and team management.",
     permissions: Object.fromEntries(PERMISSION_KEYS.map((k) => [k, true])),
   },
   {

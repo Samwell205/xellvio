@@ -13,7 +13,7 @@ export async function queueReceptionistFollowUp(accountId: string, leadId: strin
   const { data: suppression, error: suppressionError } = await supabaseAdmin.from("suppressions").select("phone_e164").eq("account_id",accountId).eq("phone_e164",lead.phone_e164).maybeSingle();
   if (suppressionError) throw suppressionError;
   if (!canFollowUp({ enabled:settingsResult.data.enabled && config.smsFollowUp,consent:lead.sms_consent,consentEvidence:lead.consent_evidence,suppressed:Boolean(suppression) })) return { status:"skipped" };
-  if (!config.smsText || !account || account.suspended_at || account.sending_suspended_at || account.credit_balance <= 0 || !account.tos_current_version_accepted) throw new Error("This workspace is not eligible for an SMS follow-up.");
+  if (!config.smsText || !account || account.suspended_at || account.sending_suspended_at || account.credit_balance <= 0 || !account.tos_current_version_accepted) throw new Error("This business is not eligible for an SMS follow-up.");
   const { screenMessageContent } = await import("@/lib/content-screening.server");
   const body = `${config.smsText}\nReply STOP to opt out.`;
   const result = await screenMessageContent(body,accountId,{context:"campaign",plannedRecipients:1,skipReviewQueue:true});
