@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { textingPath } from "@/lib/receptionist/shared";
+import { AssistedNumberPanel } from "./AssistedNumberPanel";
 import {
   buyReceptionistNumber,
   getReceptionistNumberRequirements,
@@ -241,6 +242,7 @@ export function PhoneLinePanel({ data, onChange }: {
             )}
           </div>
         )}
+        <AssistedNumberPanel country={data.numberCountry ?? country} numberType={(data.numberType as NumType | null) ?? type} phoneNumber={data.number ?? picked?.phoneNumber} isOwner={data.isOwner} />
       </div>
 
       <Dialog open={confirm} onOpenChange={setConfirm}>
