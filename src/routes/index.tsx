@@ -93,12 +93,12 @@ function Channels() {
   );
 }
 
-const HOME_TITLE = "Xellvio: SMS Marketing & Customer Messaging Platform";
-const HOME_DESCRIPTION =
+export const HOME_TITLE = "Xellvio: SMS Marketing & Customer Messaging Platform";
+export const HOME_DESCRIPTION =
   "Xellvio is the customer messaging platform that unifies SMS, email, automations, AI and reporting — send bulk campaigns to 190+ countries, reply in a shared inbox and track every click and conversion.";
 
 /** Rendered by <FAQ /> below and mirrored into FAQPage structured data. */
-const HOME_FAQS = [
+export const HOME_FAQS = [
   {
     q: "What is Xellvio?",
     a: "Xellvio is a customer messaging platform for growing businesses. It brings SMS and email campaigns, automations, a two-way inbox, sign-up forms, landing pages and reporting into one place, so every message can react to what a customer actually does.",
