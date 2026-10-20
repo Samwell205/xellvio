@@ -7,6 +7,7 @@ import { countryFromPhone } from "@/lib/country-from-phone";
 import { keywordScan } from "@/lib/content-scanner";
 import { publicCampaignMediaUrl } from "@/lib/campaign-media";
 import { STOPPED_AS_SENT } from "@/lib/campaign-stop";
+import {DISPATCH_RUN_MS,DISPATCH_PLAN_ROWS,DISPATCH_CONNECTIONS,DISPATCH_SEND_RESERVE_MS,queuedPersistedIds,canStartDispatchSend} from "@/lib/dispatch-reliability";
 
 const PLAN_INSERT_CHUNK = 500;
 // Recipients enriched + inserted per invocation. Bounds planning CPU cost to
@@ -17,7 +18,7 @@ const PLAN_INSERT_CHUNK = 500;
 // Prepare the largest page supported by unplanned_recipients_page. Planning
 // only 2,000 rows per scheduler wave made a 100k audience appear "skipped"
 // for too long even though those recipients were simply waiting to be queued.
-const PLAN_BATCH_SIZE = 5_000;
+const PLAN_BATCH_SIZE = DISPATCH_PLAN_ROWS;
 // Keep at least this many queued rows ready; above it, ticks send instead of plan.
 const PLAN_BACKLOG_TARGET = 12_000;
 // Keep each dispatcher invocation small enough to always finish inside the
@@ -42,11 +43,11 @@ const DELIVER_PER_WORKER = 12_000;
 // Keep total concurrent carrier calls below the database connection ceiling.
 // Keep this well below the database connection ceiling because several
 // staggered dispatcher invocations can overlap during a large campaign.
-const DELIVER_CONCURRENCY = 120;
+const DELIVER_CONCURRENCY = DISPATCH_CONNECTIONS;
 
 // Soft wall-clock budget for one invocation. Anything left over is picked up by
 // the next scheduled run instead of risking a mid-flight cancellation.
-const RUN_BUDGET_MS = 32_000;
+const RUN_BUDGET_MS = DISPATCH_RUN_MS;
 // Observed average end-to-end time for one message (carrier submit + status
 // writes). Used to size each slot's claim to the time actually left.
 const EST_SEND_MS = 1_100;
@@ -58,7 +59,7 @@ const EST_SEND_MS = 1_100;
 const LEASE_SHARDS = 12;
 // How many send slots run concurrently inside one invocation (across all
 // campaigns and lease shards).
-const CAMPAIGN_CONCURRENCY = 12;
+const CAMPAIGN_CONCURRENCY = 1;
 // Sentinel used when the lock helper is unavailable and we send unguarded.
 const UNGUARDED_LEASE = "__unguarded__";
 
@@ -861,25 +862,27 @@ async function planCampaign(
   // in-memory `planned` exclusion set above is ever wrong for any reason.
   // Relies on the messages_campaign_profile_unique constraint.
   const allRows = [...queuedRows, ...failedRows];
+  const persistedRows: Array<{id:string;status:string}> = [];
   for (let i = 0; i < allRows.length; i += PLAN_INSERT_CHUNK) {
     const chunk = allRows.slice(i, i + PLAN_INSERT_CHUNK);
-    const { error: insErr } = await supabaseAdmin
+    const { data: insertedRows, error: insErr } = await supabaseAdmin
       .from("messages")
-      .upsert(chunk, { onConflict: "campaign_id,profile_id", ignoreDuplicates: true });
-    if (!insErr) continue;
+      .upsert(chunk, { onConflict: "campaign_id,profile_id", ignoreDuplicates: true }).select("id,status");
+    if (!insErr) { persistedRows.push(...(insertedRows ?? [])); continue; }
     // A contact deleted while the campaign was being planned breaks the
     // profile foreign key for that one row. Never fail the whole campaign for
     // it: retry the chunk row-by-row and skip only the orphaned recipients.
     const isFk = /foreign key|23503/i.test(insErr.message);
     if (!isFk) throw new Error(`Failed to insert message batch: ${insErr.message}`);
     for (const row of chunk) {
-      const { error: rowErr } = await supabaseAdmin
+      const { data: insertedRow, error: rowErr } = await supabaseAdmin
         .from("messages")
-        .upsert([row], { onConflict: "campaign_id,profile_id", ignoreDuplicates: true });
+        .upsert([row], { onConflict: "campaign_id,profile_id", ignoreDuplicates: true }).select("id,status");
       if (rowErr && !/foreign key|23503/i.test(rowErr.message)) {
         throw new Error(`Failed to insert message batch: ${rowErr.message}`);
       }
       if (rowErr) console.error("[dispatch] skipped orphaned recipient", row.profile_id);
+      else persistedRows.push(...(insertedRow ?? []));
     }
   }
 
@@ -888,26 +891,24 @@ async function planCampaign(
   // This MUST succeed: a message whose short code has no row goes out with a
   // dead link ("Link not found or expired") for the recipient. Retry each
   // chunk, then row-by-row, and only give up on a single row as a last resort.
-  const queuedIds = new Set(queuedRows.map((r) => r.id));
+  const queuedIds = queuedPersistedIds(persistedRows);
   const linksToInsert = linkRows.filter((l) => queuedIds.has(l.message_id));
   const LINK_CHUNK = 200;
   for (let i = 0; i < linksToInsert.length; i += LINK_CHUNK) {
     const chunk = linksToInsert.slice(i, i + LINK_CHUNK);
     let inserted = false;
-    for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
+    for (let attempt = 0; attempt < 1 && !inserted; attempt++) {
       const { error } = await supabaseAdmin.from("link_clicks").insert(chunk);
       if (!error) { inserted = true; break; }
       console.error("[dispatch] link_clicks chunk insert failed", error.message);
-      await new Promise((r) => setTimeout(r, 200 * (attempt + 1)));
     }
     if (inserted) continue;
     // Chunk-level failure: never let it kill the whole batch of links.
     for (const row of chunk) {
       let ok = false;
-      for (let attempt = 0; attempt < 3 && !ok; attempt++) {
+      for (let attempt = 0; attempt < 1 && !ok; attempt++) {
         const { error } = await supabaseAdmin.from("link_clicks").insert([row]);
         if (!error) { ok = true; break; }
-        await new Promise((r) => setTimeout(r, 150));
       }
       if (!ok) {
         // Last resort: don't send a dead link — cancel this recipient's message.
@@ -1138,8 +1139,8 @@ async function deliverPending(
   // timeout, which aborted the whole tick and left campaigns idle for hours.
   // 500 still timed out under contention, so start smaller and shrink further
   // whenever the database cancels the claim instead of abandoning the queue.
-  const MAX_CLAIM_CHUNK = 150;
-  const MIN_CLAIM_CHUNK = 15;
+  const MAX_CLAIM_CHUNK = DISPATCH_CONNECTIONS;
+  const MIN_CLAIM_CHUNK = 1;
   let claimChunk = MAX_CLAIM_CHUNK;
   let claimTimeouts = 0;
   // Adaptive in-flight limit: drops when the carrier rate-limits us, recovers
@@ -1154,7 +1155,7 @@ async function deliverPending(
   // `sending`, where they were later misreported as dispatch timeouts.
   const sink = createStatusSink(supabaseAdmin, 50);
 
-  while (claimedTotal < claimLimit && Date.now() < hardDeadline - 3_000) {
+  while (claimedTotal < claimLimit && canStartDispatchSend(hardDeadline)) {
     const want = Math.min(claimChunk, claimLimit - claimedTotal);
     const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
       _campaign_id: campaign.id,
@@ -1181,7 +1182,7 @@ async function deliverPending(
     claimedTotal += rows.length;
     let rateLimitHits = 0;
     await runWithConcurrency(rows, effectiveConcurrency, async (m: any) => {
-      if (Date.now() >= hardDeadline) { unsent.push(m.id); return; }
+      if (!canStartDispatchSend(hardDeadline)) { unsent.push(m.id); return; }
       const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
       if (r.ok) { sent++; debited += r.debited; }
       else if (r.rateLimited) { rateLimitHits++; }
@@ -1261,7 +1262,7 @@ async function processCampaign(
   let recipients: any[] = [];
   let hasMore = true;
   let planningLookupSucceeded = !shouldPlan;
-  if (shouldPlan) {
+  if (shouldPlan && (!limits?.deadlineAt || limits.deadlineAt-Date.now() > DISPATCH_SEND_RESERVE_MS)) {
     try {
       const page = await loadNextUnplannedBatch(
         supabaseAdmin, campaign.id, campaign.account_id,
@@ -1469,6 +1470,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const startedAt = Date.now();
         const apiKey = request.headers.get("apikey");
         const validApiKeys = new Set([
           process.env.SUPABASE_PUBLISHABLE_KEY,
@@ -1500,8 +1502,9 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           const ids = [...new Set((dueWebhookAccounts ?? []).map((row) => row.account_id as string))];
           await Promise.allSettled(ids.map((id) => dispatchPendingWebhooks(id, 6)));
         })().catch((e) => console.error("[dispatch] webhook delivery failed", e));
-        const finishWebhooks = () =>
-          Promise.race([webhookWork, new Promise((r) => setTimeout(r, 12_000))]);
+        const waitUntil=(request as Request & {waitUntil?: (work:Promise<unknown>)=>void}).waitUntil;
+        if(waitUntil) waitUntil(webhookWork);
+        const finishWebhooks = async () => { if(!waitUntil) await webhookWork; };
 
         // Dedicated receipt-reconciliation mode. Runs on its own cron schedule
         // so pulling final delivery receipts never competes with the sending
@@ -1513,9 +1516,9 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             // slice: a low ceiling let messages hit the give-up cutoff before
             // their real status was ever fetched.
             maxPerRun: 3_000,
-            concurrency: 40,
+            concurrency: DISPATCH_CONNECTIONS,
             minAgeMs: 90_000,
-            budgetMs: 40_000,
+            budgetMs: Math.max(1000,RUN_BUDGET_MS-(Date.now()-startedAt)),
           });
           await finishWebhooks();
           return Response.json({ mode: "reconcile", ...result });
@@ -1525,7 +1528,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         // scheduler ticks send for different campaigns at the same time. A
         // single global lock used to serialize every tenant's sending, which
         // is what made large campaigns crawl for hours.
-        const res = await runDispatchTick(supabaseAdmin);
+        const res = await runDispatchTick(supabaseAdmin, startedAt);
         await finishWebhooks();
         return res;
       },
@@ -1534,7 +1537,8 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
 });
 
 
-async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
+async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<Response> {
+        const budgetLeft = () => RUN_BUDGET_MS - (Date.now() - startedAt);
         let primaryConnectionHeld = false;
         // Carrier-wide hold: messaging was disabled on the carrier account
         // (error 40314). Pause every send for 30 minutes after the latest such
@@ -1690,8 +1694,6 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           .limit(20);
         if (error) return Response.json({ error: error.message }, { status: 500 });
 
-        const startedAt = Date.now();
-        const budgetLeft = () => RUN_BUDGET_MS - (Date.now() - startedAt);
 
         const results: any[] = [];
         let deferred = 0;
@@ -1741,6 +1743,7 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
         }
 
         const runOneCampaign = async (c: any): Promise<any> => {
+          if(budgetLeft() < DISPATCH_SEND_RESERVE_MS) return {skipped:"request_budget"};
           const { secondaryCampaignMaySend } = await import("@/lib/telnyx-connection");
                     if (!secondaryCampaignMaySend(c.account_id, c.created_at)) {
             await supabaseAdmin.from("campaigns").update({ status: "paused", paused_reason: "Create a new campaign to use the new sending connection.", paused_at: new Date().toISOString() }).eq("id", c.id);
@@ -1866,7 +1869,7 @@ async function runDispatchTick(supabaseAdmin: any): Promise<Response> {
           { length: Math.min(CAMPAIGN_CONCURRENCY, queue.length) },
           async () => {
             while (cursor < queue.length) {
-              if (budgetLeft() < 6_000) {
+              if (budgetLeft() < DISPATCH_SEND_RESERVE_MS) {
                 deferred += queue.length - cursor;
                 cursor = queue.length;
                 break;
