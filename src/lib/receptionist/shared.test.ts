@@ -34,7 +34,19 @@ describe("receptionist safeguards", () => {
   });
 });
 import { describe as d2, it as i2, expect as e2 } from "vitest";
-import { buildInstructions } from "./provision.server";
+import { buildInstructions, parseNumberRequirements } from "./provision.server";
+describe("carrier paperwork gates", () => {
+  it("reads all carrier requirements from the documented response", () => {
+    const result = parseNumberRequirements({data:[{regulatory_requirements:[{id:"website",name:"Company website",field_type:"textual"},{id:"proof",name:"Proof of address",field_type:"document"},{id:"address",name:"Physical address",field_type:"address_id"}]}]});
+    expect(result.map(r => r.kind)).toEqual(["textual","document","address"]);
+  });
+  it("never treats an unknown response as no paperwork", () => {
+    expect(() => parseNumberRequirements({data:[{requirement_types:[]}]})).toThrow();
+  });
+  it("requires support for unsupported carrier actions", () => {
+    expect(() => parseNumberRequirements({data:[{regulatory_requirements:[{id:"action",name:"Manual check",field_type:"action"}]}]})).toThrow();
+  });
+});
 d2("receptionist agent instructions", () => {
   i2("names the business and forbids invented bookings", () => {
     const t = buildInstructions({ ...defaultReceptionistConfig(), businessName: "Acme Plumbing", businessInformation: "Boiler repairs", calendarId: "primary" });

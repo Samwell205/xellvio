@@ -1,5 +1,6 @@
 // Server-only: voice number search/purchase, call application and AI agent setup.
 import { receptionistConfigSchema, requirementNumberType, type ReceptionistConfig } from "./shared";
+import { z } from "zod";
 
 const API = "https://api.telnyx.com/v2";
 export const WEBHOOK_ORIGIN = "https://xellvio.com";
@@ -130,15 +131,24 @@ export type RequirementField = {
   id: string; name: string; kind: "textual" | "address" | "document" | "action";
   description: string; example: string | null;
 };
+export function parseNumberRequirements(raw: unknown): RequirementField[] {
+  const parsed = z.object({data: z.array(z.object({regulatory_requirements: z.array(z.object({
+    id: z.string().min(1), name: z.string(), field_type: z.string(), description: z.string().nullable().optional(), example: z.string().nullable().optional(),
+  }))}))}).parse(raw);
+  const fields = new Map<string, RequirementField>();
+  for (const row of parsed.data) for (const field of row.regulatory_requirements) {
+    const kind = field.field_type === "address_id" ? "address" : field.field_type;
+    if (kind !== "textual" && kind !== "address" && kind !== "document") throw new Error("This number requires an additional carrier check. Please contact support before purchasing.");
+    fields.set(field.id, {id:field.id, name:field.name, kind, description:field.description ?? "", example:field.example ?? null});
+  }
+  return [...fields.values()];
+}
 
 /** Regulatory paperwork the carrier needs before this country + number type can be activated. */
 export async function getNumberRequirements(country: string, type: string): Promise<RequirementField[]> {
   const q = new URLSearchParams({ "filter[country_code]": country, "filter[phone_number_type]": requirementNumberType(type), "filter[action]": "ordering" });
-  const r = await telnyx(`/requirements?${q}`);
-  const first = (r.data ?? [])[0];
-  return ((first?.requirement_types ?? first?.requirements_types ?? []) as any[]).map((t) => ({
-    id: String(t.id), name: String(t.name ?? "Requirement"), kind: t.type, description: String(t.description ?? ""), example: t.example ?? null,
-  }));
+  const r = await telnyx(`/regulatory_requirements?${q}`);
+  return parseNumberRequirements(r);
 }
 
 export type PaperworkValue =
@@ -152,7 +162,7 @@ export async function submitPaperwork(accountId: string, country: string, type: 
   const regulatory: { requirement_id: string; field_value: string }[] = [];
   for (const req of required) {
     const v = values.find((x) => x.requirementId === req.id);
-    if (!v) throw new Error(`Please complete: ${req.name}`);
+    if (!v || v.kind !== req.kind) throw new Error(`Please complete: ${req.name}`);
     if (v.kind === "textual") regulatory.push({ requirement_id: req.id, field_value: v.text });
     if (v.kind === "address") {
       const a = v.address;
@@ -161,11 +171,13 @@ export async function submitPaperwork(accountId: string, country: string, type: 
         locality: a.city, administrative_area: a.region || undefined, postal_code: a.postalCode, country_code: a.country,
         customer_reference: `xellvio-${accountId}`,
       } });
-      regulatory.push({ requirement_id: req.id, field_value: String(r.data?.id) });
+      if (!r.data?.id) throw new Error("The address could not be saved. Please try again.");
+      regulatory.push({ requirement_id: req.id, field_value: String(r.data.id) });
     }
     if (v.kind === "document") {
       const r = await telnyx("/documents", { method: "POST", body: { file: v.file.base64, filename: v.file.name, customer_reference: `xellvio-${accountId}` } });
-      regulatory.push({ requirement_id: req.id, field_value: String(r.data?.id) });
+      if (!r.data?.id) throw new Error("The document could not be uploaded. Please try again.");
+      regulatory.push({ requirement_id: req.id, field_value: String(r.data.id) });
     }
   }
   const g = await telnyx("/requirement_groups", { method: "POST", body: {
@@ -175,9 +187,10 @@ export async function submitPaperwork(accountId: string, country: string, type: 
   const groupId = String(g.data?.id ?? g.id ?? "");
   if (!groupId) throw new Error("Your documents were uploaded but could not be saved. Please try again.");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  await supabaseAdmin.from("receptionist_settings").upsert({
+  const { error: saveError } = await supabaseAdmin.from("receptionist_settings").upsert({
     account_id: accountId, requirement_group_id: groupId, number_country: country, number_type: type, updated_at: new Date().toISOString(),
   }, { onConflict: "account_id" });
+  if (saveError) throw new Error("Your paperwork was submitted but could not be saved. Please contact support.");
   return { groupId };
 }
 
@@ -210,7 +223,7 @@ export async function purchaseVoiceNumber(accountId: string, phoneNumber: string
   const status = String(order.data?.status ?? "pending");
   const reqMet = order.data?.requirements_met !== false;
   const ordered = ((order.data?.phone_numbers ?? []) as { phone_number?: string }[]).map((n) => n.phone_number);
-  if (!orderId || (ordered.length && !ordered.includes(phoneNumber))) {
+  if (!orderId || !ordered.includes(phoneNumber)) {
     throw new Error("The phone line service did not confirm the exact number you chose. You have not been charged.");
   }
 
