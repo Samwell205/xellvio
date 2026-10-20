@@ -137,7 +137,7 @@ function OnboardingPage() {
       </div>
 
       <div className="flex items-center gap-3 text-sm">
-        <StepBadge n={1} active={step === 1} done={status !== "signup"} label="Business profile" />
+        <StepBadge n={1} active={step === 1} done={profileDone} label="Business profile" />
         <div className="h-px flex-1 bg-border" />
         <StepBadge
           n={2}
