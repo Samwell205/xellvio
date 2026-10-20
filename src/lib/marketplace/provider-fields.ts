@@ -67,15 +67,15 @@ export const PROVIDER_SPECS: Record<string, ProviderSpec> = {
   "xellvio-connect": {
     connectMode: "xellvio_workspace",
     capabilities: caps(true, true),
-    syncLabel: "Pull contacts from the linked workspace",
-    hint: "Paste a workspace key created in the Xellvio workspace you want to link.",
+    syncLabel: "Pull contacts from the linked business",
+    hint: "Paste a business key created in the Xellvio account you want to link.",
     fields: [
       {
         key: "workspace_key",
-        label: "Workspace key",
+        label: "Business key",
         placeholder: "xvw_live_…",
         secret: true,
-        help: "Created in the other workspace under Apps → Xellvio Connect.",
+        help: "Created in the other business under Apps → Xellvio Connect.",
       },
     ],
   },
@@ -349,7 +349,7 @@ export function fallbackFields(authType: string, appName: string): ProviderField
       return [
         { key: "client_id", label: "Client ID" },
         { key: "client_secret", label: "Client secret", secret: true },
-        { key: "account_id", label: "Account reference", placeholder: "Workspace, store or location id", optional: true },
+        { key: "account_id", label: "Account reference", placeholder: "Business, store or location id", optional: true },
       ];
     case "none":
       return [];

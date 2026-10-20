@@ -29,3 +29,4 @@
 - Receptionist assistant actions authenticate with a server-generated call-scoped token and recheck active-call, workspace and pricing gates; event signatures are not assumed to authenticate assistant tool requests.
 - Receptionist voice numbers, the shared call application and per-tenant AI agents are provisioned only through src/lib/receptionist/provision.server.ts; prices come from receptionist_platform_settings so UI, purchase and per-call charging stay in sync.
 - Tenant owners must complete the business profile (see getMySession profileComplete) before the /app dashboard renders, and the UI shows the business name rather than "workspace".
+- Calling-number monthly fees are charged by the database function charge_receptionist_number_renewals (hourly pg_cron), not an HTTP route, so a public caller can never trigger charges; failed renewals mark the number past_due and inbound calls are refused until paid.

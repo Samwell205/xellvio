@@ -34,7 +34,7 @@ async function loadConnection(userId: string, installationId: string): Promise<L
     .select("id, app_id, workspace_id, apps ( slug, name ), app_connections ( id, settings, credentials_encrypted )")
     .eq("id", installationId)
     .maybeSingle();
-  if (!install || install.workspace_id !== acting.accountId) throw new Error("App not found in this workspace.");
+  if (!install || install.workspace_id !== acting.accountId) throw new Error("App not found in this business.");
   const conn = (install.app_connections ?? [])[0];
   if (!conn) throw new Error("This app is not connected yet.");
 
@@ -193,7 +193,7 @@ export const sendViaConnection = createServerFn({ method: "POST" })
         .select("credit_balance, sending_suspended_at")
         .eq("id", c.accountId)
         .maybeSingle();
-      if (acct?.sending_suspended_at) throw new Error("Sending is suspended on this workspace.");
+      if (acct?.sending_suspended_at) throw new Error("Sending is suspended on this business.");
 
       const { calculateSegments } = await import("@/lib/sms-segments");
       const { data: rates } = await c.db
@@ -285,11 +285,11 @@ export const listWorkspaceKeys = createServerFn({ method: "GET" })
 
 export const createWorkspaceKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ name: z.string().trim().min(1).max(80).default("Workspace key") }).parse(d))
+  .inputValidator((d: unknown) => z.object({ name: z.string().trim().min(1).max(80).default("Business key") }).parse(d))
   .handler(async ({ data, context }) => {
     const { db, acting } = await ctx(context.userId);
     if (!acting.isOwner && acting.role !== "admin") {
-      throw new Error("Only workspace owners and admins can create workspace keys.");
+      throw new Error("Only business owners and admins can create business keys.");
     }
     const { hashWorkspaceKey } = await import("@/lib/marketplace/providers.server");
     const secret = `xvw_live_${randomBytes(24).toString("hex")}`;
@@ -311,7 +311,7 @@ export const revokeWorkspaceKey = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { db, acting } = await ctx(context.userId);
     if (!acting.isOwner && acting.role !== "admin") {
-      throw new Error("Only workspace owners and admins can revoke workspace keys.");
+      throw new Error("Only business owners and admins can revoke business keys.");
     }
     const { error } = await db
       .from("workspace_api_keys")

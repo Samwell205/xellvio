@@ -338,7 +338,7 @@ function MemberRow({
             <AlertDialogHeader>
               <AlertDialogTitle>Remove team member?</AlertDialogTitle>
               <AlertDialogDescription>
-                {member.invited_email} will lose access to your workspace immediately.
+                {member.invited_email} will lose access to your business immediately.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

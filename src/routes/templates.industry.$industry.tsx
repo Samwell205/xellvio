@@ -62,7 +62,7 @@ function IndustryCollection() {
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
               {items.length} templates chosen for {label.toLowerCase()} — pages and forms to collect the contact, and
-              automations to follow up. Everything stays editable once it is in your workspace.
+              automations to follow up. Everything stays editable once it is in your business.
             </p>
           </div>
         </section>
@@ -76,7 +76,7 @@ function IndustryCollection() {
 
         <ChannelCta
           title={`Launch your first ${label.toLowerCase()} template`}
-          body="Create a free account and the template opens in your workspace, ready to edit."
+          body="Create a free account and the template opens in your business, ready to edit."
           cta={{ label: "Start free", to: "/auth" }}
         />
       </main>

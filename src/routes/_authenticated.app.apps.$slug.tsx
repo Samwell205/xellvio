@@ -256,7 +256,7 @@ function WorkspaceAppDetail() {
             <CardContent className="space-y-4 text-sm text-muted-foreground">
               <p>
                 {a.setup_guide ||
-                  `Authorise ${a.name}, then choose what it may sync with this workspace.`}
+                  `Authorise ${a.name}, then choose what it may sync with this business.`}
               </p>
               <ol className="space-y-2.5">
                 {guideFor(a.slug, a.auth_type).steps.map((s: string, i: number) => (
@@ -285,7 +285,7 @@ function WorkspaceAppDetail() {
           <div className="rounded-2xl border bg-muted/40 p-5 text-sm text-muted-foreground">
             <ShieldCheck className="size-5 text-primary" />
             <p className="mt-2">
-              Credentials are encrypted server-side and scoped to this workspace only. Every request
+              Credentials are encrypted server-side and scoped to this business only. Every request
               is logged under Activity.
             </p>
           </div>

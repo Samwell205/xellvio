@@ -89,7 +89,7 @@ const apiEndpoints = [
   ["GET", "/messages/{id}", "Read message status and failure details"],
   ["GET", "/batches/{id}", "Read batch totals and recipient results"],
   ["GET", "/replies", "Read inbound replies with cursor pagination"],
-  ["GET", "/senders", "List verified workspace senders"],
+  ["GET", "/senders", "List verified business senders"],
   ["GET", "/suppressions/{phone}", "Check whether a number opted out"],
 ];
 
@@ -209,7 +209,7 @@ function DocsPage() {
             <Card className="p-6">
               <h2 className="text-xl font-semibold">REST API reference</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Base URL: <code>https://xellvio.com/api/public/v1</code>. Create workspace keys under Settings → API &amp; webhooks. Keys are shown once, can be scoped, and can be revoked immediately.
+                Base URL: <code>https://xellvio.com/api/public/v1</code>. Create business keys under Settings → API &amp; webhooks. Keys are shown once, can be scoped, and can be revoked immediately.
               </p>
               <div className="mt-5 divide-y rounded-md border">
                 {apiEndpoints.map(([method, path, detail]) => (
@@ -220,7 +220,7 @@ function DocsPage() {
                 ))}
               </div>
               <div className="mt-5 space-y-2 text-sm text-muted-foreground">
-                <p><strong className="text-foreground">Authentication:</strong> send the workspace key as a Bearer token from a secure server.</p>
+                <p><strong className="text-foreground">Authentication:</strong> send the business key as a Bearer token from a secure server.</p>
                 <p><strong className="text-foreground">Idempotency:</strong> every POST send requires a unique <code>Idempotency-Key</code>. Replaying the same body returns the original result without creating another charge or message.</p>
                 <p><strong className="text-foreground">Consent:</strong> every recipient requires <code>consent_confirmed: true</code>. Suppressed numbers are always rejected.</p>
                 <p><strong className="text-foreground">Limits:</strong> 120 API requests per minute per key by default; bulk requests accept 1–1,000 recipients. Carrier throughput depends on the verified sender and destination route.</p>

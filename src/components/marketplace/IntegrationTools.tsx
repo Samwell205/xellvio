@@ -150,7 +150,7 @@ export function WorkspaceKeysCard() {
   const keys = useQuery({ queryKey: ["workspace-keys"], queryFn: () => listFn() });
 
   const create = useMutation({
-    mutationFn: () => createFn({ data: { name: name.trim() || "Workspace key" } }),
+    mutationFn: () => createFn({ data: { name: name.trim() || "Business key" } }),
     onSuccess: (r: any) => {
       setFresh(r.key);
       setName("");
@@ -172,16 +172,16 @@ export function WorkspaceKeysCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <KeyRound className="size-4 text-primary" /> Keys for linking this workspace
+          <KeyRound className="size-4 text-primary" /> Keys for linking this business
         </CardTitle>
         <CardDescription>
-          Create a key here, then paste it in the other Xellvio workspace to let it pull contacts from this one.
+          Create a key here, then paste it in the other Xellvio account to let it pull contacts from this one.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
           <Input
-            placeholder="Key name, e.g. Agency workspace"
+            placeholder="Key name, e.g. Agency business"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="max-w-xs"

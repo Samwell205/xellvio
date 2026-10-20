@@ -29,7 +29,7 @@ export async function sendTeamInviteEmail(args: TeamInviteEmailArgs) {
     templateData: {
       inviterName:
         args.inviter?.full_name || args.inviter?.company || args.inviter?.email || "A teammate",
-      workspaceName: args.inviter?.company || args.inviter?.full_name || "Xellvio workspace",
+      workspaceName: args.inviter?.company || args.inviter?.full_name || "Xellvio account",
       role: args.role,
       acceptUrl,
     },

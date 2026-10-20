@@ -13,7 +13,7 @@ export const FUNNEL_STAGES = [
   { key: "cta_click", label: "CTA clicks", help: "Clicked a start / get started / use template style call to action." },
   { key: "signup_started", label: "Signup started", help: "Opened the signup form and began filling it in." },
   { key: "signup_completed", label: "Signup completed", help: "Account successfully created." },
-  { key: "onboarding_started", label: "Onboarding started", help: "Began workspace setup." },
+  { key: "onboarding_started", label: "Onboarding started", help: "Began business setup." },
   { key: "activated", label: "Activated users", help: "Completed a real first outcome you defined as activation." },
   { key: "active", label: "Active users", help: "Kept using Xellvio after activating." },
   { key: "paying", label: "Paying customers", help: "Paid for credits or a plan." },
@@ -280,7 +280,7 @@ export const PRIVACY_RULES = [
   "No names, emails, phone numbers or message content are stored in the visitor event log.",
   "Visit identifiers are random, stored only in the browser, and reset when the visit ends.",
   "IP addresses are never stored — only a country, taken from the request edge.",
-  "Reporting is aggregate; individual workspaces appear only where an admin already has access.",
+  "Reporting is aggregate; individual businesses appear only where an admin already has access.",
 ];
 
 /** Sub-100 sample sizes make percentages misleading; callers use this to hide rates. */

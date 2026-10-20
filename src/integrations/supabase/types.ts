@@ -5301,8 +5301,11 @@ export type Database = {
           assistant_id: string | null
           configuration: Json
           enabled: boolean
+          number_billing_status: string
           number_charged_at: string | null
+          number_last_renewal_error: string | null
           number_order_id: string | null
+          number_renews_at: string | null
           number_type: string | null
           provision_status: string
           test_verified_at: string | null
@@ -5315,8 +5318,11 @@ export type Database = {
           assistant_id?: string | null
           configuration?: Json
           enabled?: boolean
+          number_billing_status?: string
           number_charged_at?: string | null
+          number_last_renewal_error?: string | null
           number_order_id?: string | null
+          number_renews_at?: string | null
           number_type?: string | null
           provision_status?: string
           test_verified_at?: string | null
@@ -5329,8 +5335,11 @@ export type Database = {
           assistant_id?: string | null
           configuration?: Json
           enabled?: boolean
+          number_billing_status?: string
           number_charged_at?: string | null
+          number_last_renewal_error?: string | null
           number_order_id?: string | null
+          number_renews_at?: string | null
           number_type?: string | null
           provision_status?: string
           test_verified_at?: string | null
@@ -7433,6 +7442,7 @@ export type Database = {
       campaign_report_summary: { Args: { _campaign_id: string }; Returns: Json }
       can_read_app: { Args: { _app_id: string }; Returns: boolean }
       can_write_app: { Args: { _app_id: string }; Returns: boolean }
+      charge_receptionist_number_renewals: { Args: never; Returns: number }
       claim_account_invites: { Args: never; Returns: number }
       claim_and_sell_verified_tfn: {
         Args: {

@@ -118,7 +118,7 @@ function TemplateDetail() {
                 </Link>
               </div>
               <p className="mt-4 text-xs text-muted-foreground">
-                Free to use. Sign in or create an account and the template is copied straight into your workspace as an
+                Free to use. Sign in or create an account and the template is copied straight into your business as an
                 editable draft.
               </p>
 
@@ -273,7 +273,7 @@ function TemplateDetail() {
                 Use the {template.label.toLowerCase()} template in Xellvio
               </h2>
               <p className="mt-4 max-w-xl text-ink-foreground/70">
-                Create your free account and the template lands in your workspace, ready to edit and publish.
+                Create your free account and the template lands in your business, ready to edit and publish.
               </p>
               <Link
                 to={authPath(template).to}

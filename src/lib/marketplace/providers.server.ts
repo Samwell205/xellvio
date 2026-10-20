@@ -687,19 +687,19 @@ export const RUNTIMES: Record<string, ProviderRuntime> = {
         .select("id, account_id, name, revoked_at")
         .eq("key_hash", hash)
         .maybeSingle();
-      if (!key || key.revoked_at) throw new Error("That workspace key is not valid or has been revoked.");
-      if (key.account_id === ctx.accountId) throw new Error("This key belongs to the workspace you are already in.");
+      if (!key || key.revoked_at) throw new Error("That business key is not valid or has been revoked.");
+      if (key.account_id === ctx.accountId) throw new Error("This key belongs to the business you are already in.");
       const { data: acct } = await ctx.db.from("accounts").select("id, name").eq("id", key.account_id).maybeSingle();
       await ctx.db.from("workspace_api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", key.id);
       return {
         accountId: key.account_id,
-        accountLabel: acct?.name ?? "Linked Xellvio workspace",
-        note: "Workspace key verified.",
+        accountLabel: acct?.name ?? "Linked Xellvio account",
+        note: "Business key verified.",
       };
     },
     sync: async (_creds, ctx) => {
       const sourceId = String(ctx.settings["linked_account_id"] ?? "");
-      if (!sourceId) throw new Error("This connection is not linked to a workspace yet. Reconnect it.");
+      if (!sourceId) throw new Error("This connection is not linked to a business yet. Reconnect it.");
       const { data: rows, error } = await ctx.db
         .from("profiles")
         .select("phone_e164, first_name, last_name")
@@ -726,7 +726,7 @@ export const RUNTIMES: Record<string, ProviderRuntime> = {
         .eq("account_id", ctx.accountId)
         .eq("phone_number", phone)
         .maybeSingle();
-      if (!asset) throw new Error("That number is not on this workspace.");
+      if (!asset) throw new Error("That number is not on this business.");
       if (asset.verification_status !== "verified") throw new Error("That number is not verified for sending yet.");
       return { accountId: phone, accountLabel: `${phone} (${asset.sender_kind ?? "number"})`, note: "Sending number verified." };
     },
@@ -882,7 +882,7 @@ export const RUNTIMES: Record<string, ProviderRuntime> = {
 
   // ── First-party, nothing to authorise ────────────────────────────────────
   "xellvio-website-leads": {
-    verify: async () => ({ accountLabel: "This workspace", note: "Website lead capture enabled." }),
+    verify: async () => ({ accountLabel: "This business", note: "Website lead capture enabled." }),
   },
 };
 

@@ -16,7 +16,7 @@ export const Route = createFileRoute("/connect")({
       path: "/connect",
       title: "Connect an AI Assistant to Xellvio",
       description:
-        "Connect ChatGPT, Claude or any MCP-compatible AI assistant to your Xellvio workspace and manage contacts, campaigns and reports in natural language.",
+        "Connect ChatGPT, Claude or any MCP-compatible AI assistant to your Xellvio account and manage contacts, campaigns and reports in natural language.",
     }),
   component: ConnectPage,
 });
@@ -46,7 +46,7 @@ function ConnectPage() {
               Connect an AI assistant to Xellvio
             </h1>
             <p className="mt-5 text-lg text-muted-foreground max-w-2xl mx-auto">
-              Link ChatGPT, Claude, or Claude Code to your Xellvio workspace and manage campaigns,
+              Link ChatGPT, Claude, or Claude Code to your Xellvio account and manage campaigns,
               check delivery reports, and review replies with natural language.
             </p>
           </div>

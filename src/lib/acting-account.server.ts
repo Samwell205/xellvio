@@ -80,13 +80,13 @@ export function assertPermission(acting: ActingAccount, key: PermissionKey): voi
   if (acting.isOwner) return;
   if (acting.permissions[key]) return;
   throw new Error(
-    `You don't have permission to access this area. Ask the workspace owner to enable "${key}" for your account.`,
+    `You don't have permission to access this area. Ask the business owner to enable "${key}" for your account.`,
   );
 }
 
 /** Throw if the acting user is not the workspace owner. */
 export function assertOwner(acting: ActingAccount): void {
   if (!acting.isOwner) {
-    throw new Error("Only the workspace owner can perform this action.");
+    throw new Error("Only the business owner can perform this action.");
   }
 }

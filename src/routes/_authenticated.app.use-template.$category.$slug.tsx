@@ -31,7 +31,7 @@ function UseTemplate() {
     run({ data: { category, slug } })
       .then((res) => {
         trackProduct("template_imported", { name: res.name });
-        toast.success(`${res.name} added to your workspace as a draft`);
+        toast.success(`${res.name} added to your business as a draft`);
         navigate({ to: res.to, replace: true });
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Could not add that template."));
@@ -56,7 +56,7 @@ function UseTemplate() {
           <div>
             <h1 className="text-lg font-semibold">Adding {tpl?.label ?? "your template"}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              We're copying it into your workspace as an editable draft — nothing goes live until you publish it.
+              We're copying it into your business as an editable draft — nothing goes live until you publish it.
             </p>
           </div>
         </>

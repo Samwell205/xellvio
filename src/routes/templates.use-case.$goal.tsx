@@ -21,7 +21,7 @@ export const Route = createFileRoute("/templates/use-case/$goal")({
     return pageHead({
       path,
       title: `Templates to ${label.toLowerCase()}`,
-      description: `${items.length} free Xellvio templates to ${label.toLowerCase()} — landing pages, sign-up forms and SMS automations you can preview here and publish from your workspace.`,
+      description: `${items.length} free Xellvio templates to ${label.toLowerCase()} — landing pages, sign-up forms and SMS automations you can preview here and publish from your business.`,
       breadcrumbs: [
         { name: "Home", path: "/" },
         { name: "Templates", path: "/templates" },
@@ -56,7 +56,7 @@ function GoalCollection() {
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
               {items.length} templates built for one job: {label.toLowerCase()}. Preview any of them, then open it in your
-              workspace as an editable draft.
+              business as an editable draft.
             </p>
           </div>
         </section>
@@ -70,7 +70,7 @@ function GoalCollection() {
 
         <ChannelCta
           title="Pick one and launch it this week"
-          body="Create a free account and the template lands in your workspace, ready to edit and publish."
+          body="Create a free account and the template lands in your business, ready to edit and publish."
           cta={{ label: "Start free", to: "/auth" }}
         />
       </main>

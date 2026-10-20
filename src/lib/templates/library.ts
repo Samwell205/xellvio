@@ -192,14 +192,14 @@ const AUTOMATION_CUSTOMISE = [
 ];
 
 const PAGE_STEPS = [
-  "Open the template — it lands in your workspace as an editable draft.",
+  "Open the template — it lands in your business as an editable draft.",
   "Replace the copy, images and consent wording with your own.",
   "Point the form at the list you want new contacts added to.",
   "Publish, then send traffic to the page from ads, social or SMS.",
 ];
 
 const FORM_STEPS = [
-  "Open the template — it lands in your workspace as an editable draft.",
+  "Open the template — it lands in your business as an editable draft.",
   "Set the fields you need and edit the consent wording.",
   "Choose the list every submission should join.",
   "Publish, then embed the form or share its link.",

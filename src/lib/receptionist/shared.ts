@@ -4,6 +4,7 @@ export const receptionistConfigSchema = z.object({
   businessName: z.string().trim().max(120).default(""),
   greeting: z.string().trim().max(1000).default(""),
   businessInformation: z.string().trim().max(12000).default(""),
+  agentInstructions: z.string().trim().max(4000).default(""),
   phoneMode: z.enum(["forwarding", "dedicated"]).default("forwarding"),
   handoffNumber: z.union([z.literal(""), z.string().regex(/^\+[1-9]\d{6,14}$/)]).default(""),
   timezone: z.string().max(80).refine(value => { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; } }, "Choose a valid timezone").default("America/New_York"),

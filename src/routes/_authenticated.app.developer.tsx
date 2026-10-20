@@ -39,7 +39,7 @@ export const Route = createFileRoute("/_authenticated/app/developer")({
         content: "Create, test, submit and monitor your Xellvio marketplace integrations.",
       },
       { property: "og:title", content: "Developer portal — Xellvio" },
-      { property: "og:description", content: "Build integrations for every Xellvio workspace." },
+      { property: "og:description", content: "Build integrations for every Xellvio account." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -67,7 +67,7 @@ function DeveloperPortal() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Developer portal</h1>
           <p className="text-sm text-muted-foreground">
-            Publish an integration to every Xellvio workspace — actions, triggers, webhooks and
+            Publish an integration to every Xellvio account — actions, triggers, webhooks and
             analytics.
           </p>
         </div>
@@ -85,7 +85,7 @@ function DeveloperPortal() {
               { label: "Apps", value: stats?.totalApps ?? 0 },
               { label: "Published", value: stats?.publishedApps ?? 0 },
               { label: "Installs", value: stats?.totalInstalls ?? 0 },
-              { label: "Active workspaces", value: stats?.activeWorkspaces ?? 0 },
+              { label: "Active businesses", value: stats?.activeWorkspaces ?? 0 },
               { label: "API requests", value: stats?.apiRequests ?? 0 },
               { label: "Webhook events", value: stats?.webhookEvents ?? 0 },
               { label: "Errors", value: stats?.errors ?? 0 },

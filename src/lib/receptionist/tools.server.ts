@@ -36,7 +36,7 @@ export async function runCallTool(callId: string, action: string, raw: unknown) 
     supabaseAdmin.from("accounts").select("suspended_at,sending_suspended_at,onboarding_status").eq("id",call.account_id).single(),
     supabaseAdmin.from("receptionist_platform_settings").select("configuration").eq("id",true).maybeSingle(),
   ]);
-  if (accountError || platformError || !account || account.suspended_at || account.sending_suspended_at || account.onboarding_status === "suspended" || (platform?.configuration as Record<string,unknown> | null)?.pricingApproved !== true) throw new Error("Call actions are unavailable for this workspace.");
+  if (accountError || platformError || !account || account.suspended_at || account.sending_suspended_at || account.onboarding_status === "suspended" || (platform?.configuration as Record<string,unknown> | null)?.pricingApproved !== true) throw new Error("Call actions are unavailable for this business.");
   if (action==="capture_lead") {
     const input = leadSchema.parse(raw);
     const evidence = input.smsConsent && input.consentEvidence ? input.consentEvidence : null;

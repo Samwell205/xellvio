@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/app/apps/")({
       { title: "App Marketplace — Xellvio" },
       {
         name: "description",
-        content: "Discover, connect and manage the integrations powering your Xellvio workspace.",
+        content: "Discover, connect and manage the integrations powering your Xellvio account.",
       },
       { property: "og:title", content: "App Marketplace — Xellvio" },
       {
@@ -92,7 +92,7 @@ function WorkspaceApps() {
           {!!recs.data?.length && (
             <section>
               <h2 className="flex items-center gap-2 font-semibold">
-                <Sparkles className="size-4 text-primary" /> Recommended for your workspace
+                <Sparkles className="size-4 text-primary" /> Recommended for your business
               </h2>
               <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {recs.data.map((r) => (

@@ -349,7 +349,7 @@ function SettingsPage() {
       {tab === "account" && (
         <div className="space-y-6">
           <Card className="space-y-3 p-6">
-            <h3 className="font-semibold">Workspace</h3>
+            <h3 className="font-semibold">Business</h3>
             <p className="text-sm text-muted-foreground">
               Invite teammates and choose exactly what each person can open.
             </p>

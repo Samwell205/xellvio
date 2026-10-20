@@ -61,7 +61,7 @@ export type TenantEvent = (typeof TENANT_EVENTS)[number];
 export const EVENT_LABELS: Partial<Record<TenantEvent, string>> = {
   ACCOUNT_CREATED: "Account created",
   FIRST_LOGIN: "First login",
-  WORKSPACE_COMPLETED: "Workspace completed",
+  WORKSPACE_COMPLETED: "Business completed",
   AUDIENCE_CREATED: "Audience created",
   CONTACT_IMPORTED: "Contacts imported",
   FIRST_CONTACT_ADDED: "First contact added",
@@ -91,7 +91,7 @@ export const EVENT_LABELS: Partial<Record<TenantEvent, string>> = {
 export const CHECKLIST_STEPS = [
   {
     key: "workspace",
-    label: "Complete your workspace",
+    label: "Complete your business",
     href: "/app/onboarding",
     field: "workspace_completed_at",
   },

@@ -44,7 +44,7 @@ function AdminOverview() {
     </header>
     {q.isError && <div role="alert" className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"><AlertTriangle className="size-5 shrink-0 text-destructive" /><div className="flex-1">Overview could not load. Your admin tools are still available.</div><Button variant="outline" size="sm" onClick={() => void q.refetch()}>Retry</Button></div>}
     <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Platform metrics">
-      <Metric icon={Building2} label="Total tenants" value={d?.tenants.total} detail={d ? `${d.tenants.new7d} joined in the last 7 days` : "Tenant workspaces"} />
+      <Metric icon={Building2} label="Total tenants" value={d?.tenants.total} detail={d ? `${d.tenants.new7d} joined in the last 7 days` : "Tenant businesses"} />
       <Metric icon={MessageSquareText} label="Messages · 24h" value={d?.messaging.total24h} detail="Created in the last 24 hours" />
       <Metric icon={CheckCheck} label="Delivered · 24h" value={d?.messaging.delivered24h} detail="Confirmed delivery receipts" tone="text-admin-signal" />
       <Metric icon={AlertTriangle} label="Failures · 24h" value={d?.messaging.failed24h} detail="Failed and undelivered messages" tone="text-coral" />

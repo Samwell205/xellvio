@@ -556,7 +556,7 @@ export async function sendMessage(opts: {
           await suspendTenantSending({ tenantAccountId: opts.accountId, reason: `Auto-suspended at send: prohibited content (${scan.category}).`, suspendedBy: null });
         } catch (e) { console.error("[send] auto-suspend failed", e); }
       }
-      throw new Error("Message blocked: prohibited content. Sending has been suspended for this workspace.");
+      throw new Error("Message blocked: prohibited content. Sending has been suspended for this business.");
     }
   }
   {

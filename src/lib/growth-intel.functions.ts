@@ -623,7 +623,7 @@ async function computeOverview(db: any, data: { days: number }) {
       return northStarEvents.some((k) => w.milestones[k]);
     });
     const northStar = {
-      label: "Monthly active value-creating workspaces",
+      label: "Monthly active value-creating businesses",
       value: northStarWorkspaces.length,
       definition: northStarEvents,
       window_days: data.days,
@@ -688,13 +688,13 @@ async function computeOverview(db: any, data: { days: number }) {
     }
     if (activation.activation_rate !== null && activation.activation_rate < 30) {
       insights.push({
-        text: `${INSIGHT_LANGUAGE.fact} ${activation.activated_users} of ${activation.new_users} new workspaces reached a first outcome. ${INSIGHT_LANGUAGE.action}: the onboarding path and time to first value.`,
+        text: `${INSIGHT_LANGUAGE.fact} ${activation.activated_users} of ${activation.new_users} new businesses reached a first outcome. ${INSIGHT_LANGUAGE.action}: the onboarding path and time to first value.`,
         kind: "opportunity",
       });
     }
     if (activation.median_hours_to_activation !== null) {
       insights.push({
-        text: `${INSIGHT_LANGUAGE.fact} half of activated workspaces got there within ${activation.median_hours_to_activation} hours of signing up.`,
+        text: `${INSIGHT_LANGUAGE.fact} half of activated businesses got there within ${activation.median_hours_to_activation} hours of signing up.`,
         kind: "fact",
       });
     }
@@ -927,8 +927,8 @@ export const growthAsk = createServerFn({ method: "POST" })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (/429|rate.?limit/i.test(message)) throw new Error("AI is busy right now — try again in a moment.");
-      if (/402|credit|quota/i.test(message)) throw new Error("AI credits are exhausted for this workspace.");
-      if (/403/i.test(message)) throw new Error("AI is disabled for this workspace.");
+      if (/402|credit|quota/i.test(message)) throw new Error("AI credits are exhausted for this business.");
+      if (/403/i.test(message)) throw new Error("AI is disabled for this business.");
       throw new Error(`AI error: ${message.slice(0, 200)}`);
     }
   });

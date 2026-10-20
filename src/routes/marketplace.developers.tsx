@@ -39,7 +39,7 @@ const STEPS = [
   {
     icon: Rocket,
     title: "Submit and publish",
-    body: "Our team reviews your app, then it appears for every Xellvio workspace.",
+    body: "Our team reviews your app, then it appears for every Xellvio account.",
   },
 ];
 
@@ -53,7 +53,7 @@ function DevelopersPage() {
             <Code2 className="size-3.5 text-primary" /> Developer platform
           </span>
           <h1 className="mt-6 max-w-3xl text-balance text-4xl font-semibold tracking-tight md:text-5xl">
-            Build an integration once. Reach every Xellvio workspace.
+            Build an integration once. Reach every Xellvio account.
           </h1>
           <p className="mt-5 max-w-2xl text-muted-foreground md:text-lg">
             Xellvio maps every app onto one canonical data model — contacts, orders, payments,
@@ -97,7 +97,7 @@ function DevelopersPage() {
               {[
                 "Scoped API keys with one-time secrets and instant revocation",
                 "Webhook delivery with retries and full request logging",
-                "Install, usage and error analytics per workspace",
+                "Install, usage and error analytics per business",
                 "Versioning and changelogs your customers can see",
                 "Review workflow so published apps stay trustworthy",
               ].map((x) => (

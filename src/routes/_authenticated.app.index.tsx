@@ -29,12 +29,12 @@ export const Route = createFileRoute("/_authenticated/app/")({
       { title: "Dashboard — Xellvio" },
       {
         name: "description",
-        content: "Track workspace SMS performance, setup progress, delivery alerts, and campaign activity in Xellvio.",
+        content: "Track business SMS performance, setup progress, delivery alerts, and campaign activity in Xellvio.",
       },
       { property: "og:title", content: "Dashboard — Xellvio" },
       {
         property: "og:description",
-        content: "Track workspace SMS performance, setup progress, delivery alerts, and campaign activity in Xellvio.",
+        content: "Track business SMS performance, setup progress, delivery alerts, and campaign activity in Xellvio.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

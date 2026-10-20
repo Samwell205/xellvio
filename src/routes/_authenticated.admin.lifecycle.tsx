@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/admin/lifecycle")({
   component: LifecyclePage,
 });
 
-const TABS = ["Overview", "Templates", "Announcements", "Workspace timeline"] as const;
+const TABS = ["Overview", "Templates", "Announcements", "Business timeline"] as const;
 
 function LifecyclePage() {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Overview");
@@ -37,7 +37,7 @@ function LifecyclePage() {
       <div>
         <h1 className="text-2xl font-extrabold">Customer success</h1>
         <p className="text-sm text-muted-foreground">
-          Real onboarding progress, lifecycle stages and the messages workspaces received.
+          Real onboarding progress, lifecycle stages and the messages businesses received.
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -55,7 +55,7 @@ function LifecyclePage() {
       {tab === "Overview" && <Overview />}
       {tab === "Templates" && <Templates />}
       {tab === "Announcements" && <Announcements />}
-      {tab === "Workspace timeline" && <Timeline />}
+      {tab === "Business timeline" && <Timeline />}
     </div>
   );
 }
@@ -88,7 +88,7 @@ function Overview() {
     mutationFn: () => runNow(),
     onSuccess: (r: any) => {
       toast.success(
-        `Checked ${r.checked} workspaces — ${r.reminders} reminders, ${r.reengagement} re-engagement, ${r.celebrations} celebrations`,
+        `Checked ${r.checked} businesses — ${r.reminders} reminders, ${r.reengagement} re-engagement, ${r.celebrations} celebrations`,
       );
       qc.invalidateQueries({ queryKey: ["admin-lifecycle"] });
     },
@@ -105,7 +105,7 @@ function Overview() {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat icon={Users} label="Workspaces tracked" value={d.totals.workspaces} />
+        <Stat icon={Users} label="Businesses tracked" value={d.totals.workspaces} />
         <Stat icon={Rocket} label="Sent a first campaign" value={d.totals.activated} />
         <Stat icon={Gauge} label="Activation rate" value={activationRate} />
         <Stat icon={Gauge} label="Average progress" value={`${d.totals.avg_progress}%`} />
@@ -189,7 +189,7 @@ function Overview() {
         <div className="font-semibold">Needs attention</div>
         {d.at_risk.length === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            No workspaces are currently at risk or inactive.
+            No businesses are currently at risk or inactive.
           </p>
         ) : (
           <ul className="mt-3 space-y-2 text-sm">
@@ -231,7 +231,7 @@ function Templates() {
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         Every lifecycle message is editable here. Messages are only sent when the matching goal is
-        still open, and workspaces that opted out are always skipped.
+        still open, and businesses that opted out are always skipped.
       </p>
       {(list.data ?? []).map((t: any) => {
         const d = { ...t, ...(draft[t.key] ?? {}) };
@@ -445,7 +445,7 @@ function Timeline() {
   return (
     <div className="space-y-4">
       <Card className="p-5 space-y-3">
-        <Label className="text-xs">Workspace ID</Label>
+        <Label className="text-xs">Business ID</Label>
         <div className="flex gap-2">
           <Input value={id} onChange={(e) => setId(e.target.value)} placeholder="account id" />
           <Button size="sm" onClick={() => setAccountId(id.trim())}>
