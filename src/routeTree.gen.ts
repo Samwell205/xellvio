@@ -51,6 +51,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
+import { Route as ApiAccountAssistantRouteImport } from './routes/api.account-assistant'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
 import { Route as CompareIndexRouteImport } from './routes/compare.index'
 import { Route as CompareSlugRouteImport } from './routes/compare.$slug'
@@ -396,6 +397,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const ApiAccountAssistantRoute = ApiAccountAssistantRouteImport.update({
+  id: '/api/account-assistant',
+  path: '/api/account-assistant',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSetupSmsRoute = ApiSetupSmsRouteImport.update({
   id: '/api/setup-sms',
@@ -1196,6 +1202,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/api/account-assistant': typeof ApiAccountAssistantRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -1370,6 +1377,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api/account-assistant': typeof ApiAccountAssistantRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -1547,6 +1555,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/api/account-assistant': typeof ApiAccountAssistantRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -1726,6 +1735,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin'
     | '/app'
+    | '/api/account-assistant'
     | '/api/setup-sms'
     | '/compare/$slug'
     | '/email/unsubscribe'
@@ -1900,6 +1910,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/api/account-assistant'
     | '/api/setup-sms'
     | '/compare/$slug'
     | '/email/unsubscribe'
@@ -2076,6 +2087,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
     | '/_authenticated/app'
+    | '/api/account-assistant'
     | '/api/setup-sms'
     | '/compare/$slug'
     | '/email/unsubscribe'
@@ -2254,6 +2266,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  ApiAccountAssistantRoute: typeof ApiAccountAssistantRoute
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
   CompareSlugRoute: typeof CompareSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
@@ -2602,6 +2615,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/account-assistant': {
+      id: '/api/account-assistant'
+      path: '/api/account-assistant'
+      fullPath: '/api/account-assistant'
+      preLoaderRoute: typeof ApiAccountAssistantRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/setup-sms': {
       id: '/api/setup-sms'
@@ -3894,6 +3914,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  ApiAccountAssistantRoute: ApiAccountAssistantRoute,
   ApiSetupSmsRoute: ApiSetupSmsRoute,
   CompareSlugRoute: CompareSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
