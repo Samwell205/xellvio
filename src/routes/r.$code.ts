@@ -22,10 +22,11 @@ async function trackAndRedirect(code:string,request:Request):Promise<Response> {
       if(!link.message_id) return;
       const {error:auditError}=await supabaseAdmin.from("events").insert({message_id:link.message_id,type:"clicked",payload:{short_code:code,url:link.url,ua:request.headers.get("user-agent"),ip:request.headers.get("cf-connecting-ip")??request.headers.get("x-forwarded-for"),campaign_id:link.campaign_id}}).abortSignal(signal);
       if(auditError) console.error("[shortlink] audit failed",auditError.message);
-      const {data:msg}=await supabaseAdmin.from("messages").select("account_id,phone_e164").eq("id",link.message_id).abortSignal(signal).maybeSingle();
-      if(msg?.account_id && msg.phone_e164 && !signal.aborted){
+      const {data:msg}=await supabaseAdmin.from("messages").select("campaign_id,phone_e164").eq("id",link.message_id).abortSignal(signal).maybeSingle();
+      const {data:campaign}=msg?.campaign_id ? await supabaseAdmin.from("campaigns").select("account_id").eq("id",msg.campaign_id).abortSignal(signal).maybeSingle():{data:null};
+      if(campaign?.account_id && msg?.phone_e164 && !signal.aborted){
         const {fireAutomationTrigger}=await import("@/lib/automation-engine.server");
-        await fireAutomationTrigger({accountId:msg.account_id,phone:msg.phone_e164,type:"trigger.link_clicked",payload:{url:link.url}});
+        await fireAutomationTrigger({accountId:campaign.account_id,phone:msg.phone_e164,type:"trigger.link_clicked",payload:{url:link.url}});
       }
     },
   });
