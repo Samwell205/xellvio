@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Public account-creation links (Oct 20)
-- [ ] Correct public Sign up destinations and test desktop, mobile menu and account-creation page; preserve Log in destinations.
+- [x] Correct public Sign up/account-creation destinations; browser-tested all three desktop homepage links, mobile menu and 29 destinations across 12 public pages. Signup form opens, Log in stays unchanged, and no runtime errors occurred. Not published in this task.
 
 ## Restricted voice pilot and publishing (Oct 20)
 - [x] Pilot email corrected by owner to samueldurosinmi69@gmail.com; reserve voice for its verified owner identity, including receptionist and website voice. Incorrect previous email is denied; SMS/text assistant stays available.
