@@ -29,7 +29,6 @@ describe("receptionist safeguards", () => {
 });
 import { describe as d2, it as i2, expect as e2 } from "vitest";
 import { buildInstructions } from "./provision.server";
-import { defaultReceptionistConfig } from "./shared";
 d2("receptionist agent instructions", () => {
   i2("names the business and forbids invented bookings", () => {
     const t = buildInstructions({ ...defaultReceptionistConfig(), businessName: "Acme Plumbing", businessInformation: "Boiler repairs" });
