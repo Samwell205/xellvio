@@ -1,5 +1,5 @@
 // Server-only: voice number search/purchase, call application and AI agent setup.
-import { receptionistConfigSchema, assistantGreeting, requirementNumberType, type ReceptionistConfig } from "./shared";
+import { receptionistConfigSchema, assistantGreeting, assistantRuntimeSettings, requirementNumberType, type ReceptionistConfig } from "./shared";
 import { z } from "zod";
 
 const API = "https://api.telnyx.com/v2";
@@ -109,6 +109,7 @@ export function buildInstructions(config: ReceptionistConfig) {
 export async function upsertAssistant(accountId: string, rawConfig: unknown, existingId: string | null) {
   const config = receptionistConfigSchema.parse(rawConfig);
   const body = {
+    ...assistantRuntimeSettings(config),
     name: (config.assistantName || `Xellvio ${accountId.slice(0, 8)} ${config.businessName}`).slice(0, 120),
     instructions: buildInstructions(config),
     greeting: assistantGreeting(config),
