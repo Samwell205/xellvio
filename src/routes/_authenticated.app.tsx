@@ -54,6 +54,12 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
     if (target !== pathname) navigate({ to: target, replace: true });
   }, [session, allowed, pathname, navigate]);
 
+  useEffect(() => {
+    if (session?.isOwner && !(session as any).profileComplete && pathname !== "/app/onboarding") {
+      navigate({ to: "/app/onboarding", replace: true });
+    }
+  }, [session, pathname, navigate]);
+
   // Don't render page content until permissions are known (avoids a flash of
   // restricted pages on refresh).
   if (isLoading || !session) {
@@ -62,7 +68,6 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
 
   // Owners must finish their business profile before reaching the dashboard.
   if (session.isOwner && !(session as any).profileComplete && pathname !== "/app/onboarding") {
-    navigate({ to: "/app/onboarding", replace: true });
     return skeletonFor(pathname);
   }
   if (allowed) return <>{children}</>;
