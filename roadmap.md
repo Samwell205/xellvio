@@ -1,5 +1,12 @@
 # Roadmap
 
+## Voice-enabled website account assistant (Oct 20)
+- [ ] Add contact-file inspection/import and campaign drafting through existing ownership, consent and screening controls; consequential sends require exact-content confirmation.
+- [ ] Preserve user-supplied STOP wording without appending a duplicate opt-out line across SMS paths.
+- [ ] Add two-way website voice with verified task outcomes and immediate Stop cleanup.
+- [ ] Add documented advanced receptionist settings and safe assistant configuration actions.
+- [ ] Verify uploads, draft read-back, confirmation/credit checks and real voice conversation; paid telephony pilot requires an approved number and destination.
+
 ## AI receptionist, follow-ups and bookings for all tenants
 - [x] Build tenant-specific setup, call/lead/appointment views, encrypted owner calendar connection and guarded call-action handlers; verified signed-in setup save/read-back and unsigned-event rejection.
 - [ ] Complete live assistant provisioning, human handoff and missed-call follow-up behavior — blocked on approved voice pricing and an authorized pilot; current call tools and SMS queue helper must pass the pilot before activation.
