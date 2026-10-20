@@ -41,3 +41,12 @@ d2("receptionist agent instructions", () => {
     e2(t).toContain("Do not book appointments");
   });
 });
+
+import { describe as d3, it as i3, expect as e3 } from "vitest";
+import { textingPath } from "./shared";
+d3("texting readiness follows carrier rules", () => {
+  i3("US toll-free needs toll-free verification", () => e3(textingPath("US", "toll-free", true)).toBe("tollfree_verification"));
+  i3("US local needs 10DLC registration", () => e3(textingPath("US", "local", true)).toBe("tendlc_registration"));
+  i3("UK mobile texts once active", () => e3(textingPath("GB", "mobile", true)).toBe("ready"));
+  i3("calls-only numbers never text", () => e3(textingPath("GB", "toll-free", false)).toBe("calls_only"));
+});
