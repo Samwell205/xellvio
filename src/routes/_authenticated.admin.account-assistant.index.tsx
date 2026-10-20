@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { AssistantThreads } from "@/components/AccountAssistant";
+export const Route=createFileRoute("/_authenticated/admin/account-assistant/")({head:()=>({meta:[{title:"Admin account assistant — Xellvio"},{name:"description",content:"Saved account assistant conversations for the Xellvio owner."},{property:"og:title",content:"Admin account assistant — Xellvio"},{property:"og:description",content:"Saved account assistant conversations."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:()=> <main className="flex min-h-[70vh]"><AssistantThreads admin/><section className="p-8"><h1 className="text-2xl font-semibold">Your conversations</h1></section></main>});

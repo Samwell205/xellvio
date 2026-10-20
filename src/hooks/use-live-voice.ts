@@ -32,6 +32,7 @@ export function useLiveVoice(
   options: {
     url?: string;
     onEvent?: (event: LiveEvent) => void | Promise<void>;
+    getToken?: () => Promise<string>;
   } = {},
 ) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -72,6 +73,7 @@ export function useLiveVoice(
     const voice = createLiveVoice({
       url: endpoint.href,
       audio,
+      getToken: () => latest.current.getToken?.() ?? Promise.reject(new Error("Sign in to use voice.")),
       onEvent(event) {
         if (!mounted.current || controller.current !== voice) return;
         if (event.type === "app.connected") {
@@ -123,6 +125,7 @@ type LiveOptions = {
   url: string;
   audio: HTMLAudioElement;
   onEvent: (event: LiveEvent) => void;
+  getToken: () => Promise<string>;
 };
 
 function createLiveVoice(options: LiveOptions) {
@@ -349,9 +352,13 @@ function createLiveVoice(options: LiveOptions) {
       if (!sdp) throw new Error("Missing voice session offer");
       socket = new WebSocket(options.url);
       deadline = setTimeout(() => fail("Voice session did not start"), 50_000);
-      socket.onopen = () => {
+      socket.onopen = async () => {
         if (!starting()) return release();
-        send({ type: "app.start", sdp });
+        try {
+          const token = await options.getToken();
+          if (!starting()) return release();
+          send({ type: "app.start", sdp, token });
+        } catch (error) { fail(error instanceof Error ? error.message : "Sign in to use voice."); }
       };
       socket.onmessage = ({ data }) => {
         try {

@@ -13,6 +13,7 @@ import {
 
 import { scanCampaignContent } from "@/lib/content-scanner.functions";
 import { calculateSegments } from "@/lib/sms-segments";
+import { withSmsOptOut } from "@/lib/sms-optout";
 import { prepareMmsImage } from "@/lib/mms-image";
 import { publicCampaignMediaUrl } from "@/lib/campaign-media";
 import { countryFromPhone } from "@/lib/country-from-phone";
@@ -62,7 +63,7 @@ import { trackProduct } from "@/lib/growth/track";
 const TRACKED_SHORT_URL = /^https?:\/\/[a-zA-Z0-9.-]+\/r\/[a-zA-Z0-9]{4,16}$/;
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/new")({
-  head: () => ({ meta: [{ title: "New campaign — Xellvio" }] }),
+  head: () => ({ meta: [{ title: "New campaign — Xellvio" }, { name: "description", content: "Prepare and review your business SMS campaign in Xellvio." }, { property: "og:title", content: "New campaign — Xellvio" }, { property: "og:description", content: "Prepare and review your business SMS campaign." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   validateSearch: (s: Record<string, unknown>) =>
     z.object({ id: z.string().uuid().optional() }).parse(s),
   component: NewCampaignPage,
@@ -88,7 +89,6 @@ type State = {
   trackLinks: boolean;
 };
 
-const STOP_LINE = "\nReply STOP to unsubscribe.";
 
 function senderDisplayName(
   sender:
@@ -178,7 +178,7 @@ function NewCampaignPage() {
           exclude: aud.exclude ?? [],
           profileIds: aud.profile_ids ?? [],
           listIds: aud.list_ids ?? [],
-          body: (data.message_body ?? "").replace(STOP_LINE, ""),
+          body: data.message_body ?? "",
           mediaUrl: data.media_url ?? "",
           sendMode: (data.send_mode as any) ?? "now",
           scheduleAt: data.schedule_at ? new Date(data.schedule_at).toISOString().slice(0, 16) : "",
@@ -348,7 +348,7 @@ function NewCampaignPage() {
   };
 
   const bodyWithStop = useMemo(
-    () => (s.body.toUpperCase().includes("STOP") ? s.body : s.body + STOP_LINE),
+    () => withSmsOptOut(s.body),
     [s.body],
   );
   const callShortlink = useServerFn(createPreviewShortlink);

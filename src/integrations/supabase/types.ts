@@ -205,6 +205,33 @@ export type Database = {
           },
         ]
       }
+      account_assistant_threads: {
+        Row: {
+          created_at: string
+          id: string
+          messages: Json
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          messages?: Json
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          messages?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       account_members: {
         Row: {
           accepted_at: string | null
@@ -7642,6 +7669,15 @@ export type Database = {
           rendered_body: string
           segments_count: number
         }[]
+      }
+      confirm_assistant_operation: {
+        Args: {
+          _account_id: string
+          _consent?: boolean
+          _id: string
+          _user_id: string
+        }
+        Returns: Json
       }
       create_api_sms_batch: {
         Args: {

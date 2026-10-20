@@ -51,6 +51,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
+import { Route as ApiAccountAssistantRouteImport } from './routes/api.account-assistant'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
 import { Route as CompareIndexRouteImport } from './routes/compare.index'
 import { Route as CompareSlugRouteImport } from './routes/compare.$slug'
@@ -140,6 +141,8 @@ import { Route as TemplatesCategoryIndexRouteImport } from './routes/templates.$
 import { Route as TemplatesCategorySlugRouteImport } from './routes/templates.$category.$slug'
 import { Route as TemplatesIndustryIndustryRouteImport } from './routes/templates.industry.$industry'
 import { Route as TemplatesUseCaseGoalRouteImport } from './routes/templates.use-case.$goal'
+import { Route as AuthenticatedAdminAccountAssistantIndexRouteImport } from './routes/_authenticated.admin.account-assistant.index'
+import { Route as AuthenticatedAdminAccountAssistantThreadIdRouteImport } from './routes/_authenticated.admin.account-assistant.$threadId'
 import { Route as AuthenticatedAdminCampaignsIndexRouteImport } from './routes/_authenticated.admin.campaigns.index'
 import { Route as AuthenticatedAdminCampaignsIdRouteImport } from './routes/_authenticated.admin.campaigns.$id'
 import { Route as AuthenticatedAdminSupportIndexRouteImport } from './routes/_authenticated.admin.support.index'
@@ -150,6 +153,8 @@ import { Route as AuthenticatedAdminTicketsIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminTicketsIdRouteImport } from './routes/_authenticated.admin.tickets.$id'
 import { Route as AuthenticatedAppAppsIndexRouteImport } from './routes/_authenticated.app.apps.index'
 import { Route as AuthenticatedAppAppsSlugRouteImport } from './routes/_authenticated.app.apps.$slug'
+import { Route as AuthenticatedAppAssistantIndexRouteImport } from './routes/_authenticated.app.assistant.index'
+import { Route as AuthenticatedAppAssistantThreadIdRouteImport } from './routes/_authenticated.app.assistant.$threadId'
 import { Route as AuthenticatedAppAutomationsIndexRouteImport } from './routes/_authenticated.app.automations.index'
 import { Route as AuthenticatedAppAutomationsIdRouteImport } from './routes/_authenticated.app.automations.$id'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
@@ -396,6 +401,11 @@ const AuthenticatedAppRoute = AuthenticatedAppRouteImport.update({
   id: '/app',
   path: '/app',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const ApiAccountAssistantRoute = ApiAccountAssistantRouteImport.update({
+  id: '/api/account-assistant',
+  path: '/api/account-assistant',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSetupSmsRoute = ApiSetupSmsRouteImport.update({
   id: '/api/setup-sms',
@@ -886,6 +896,18 @@ const TemplatesUseCaseGoalRoute = TemplatesUseCaseGoalRouteImport.update({
   path: '/templates/use-case/$goal',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminAccountAssistantIndexRoute =
+  AuthenticatedAdminAccountAssistantIndexRouteImport.update({
+    id: '/account-assistant/',
+    path: '/account-assistant/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAccountAssistantThreadIdRoute =
+  AuthenticatedAdminAccountAssistantThreadIdRouteImport.update({
+    id: '/account-assistant/$threadId',
+    path: '/account-assistant/$threadId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminCampaignsIndexRoute =
   AuthenticatedAdminCampaignsIndexRouteImport.update({
     id: '/campaigns/',
@@ -944,6 +966,18 @@ const AuthenticatedAppAppsSlugRoute =
   AuthenticatedAppAppsSlugRouteImport.update({
     id: '/apps/$slug',
     path: '/apps/$slug',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppAssistantIndexRoute =
+  AuthenticatedAppAssistantIndexRouteImport.update({
+    id: '/assistant/',
+    path: '/assistant/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppAssistantThreadIdRoute =
+  AuthenticatedAppAssistantThreadIdRouteImport.update({
+    id: '/assistant/$threadId',
+    path: '/assistant/$threadId',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppAutomationsIndexRoute =
@@ -1196,6 +1230,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/app': typeof AuthenticatedAppRouteWithChildren
+  '/api/account-assistant': typeof ApiAccountAssistantRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -1285,12 +1320,14 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/templates/$category/': typeof TemplatesCategoryIndexRoute
+  '/admin/account-assistant/$threadId': typeof AuthenticatedAdminAccountAssistantThreadIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/admin/tickets/$id': typeof AuthenticatedAdminTicketsIdRoute
   '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
+  '/app/assistant/$threadId': typeof AuthenticatedAppAssistantThreadIdRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1317,10 +1354,12 @@ export interface FileRoutesByFullPath {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/admin/account-assistant/': typeof AuthenticatedAdminAccountAssistantIndexRoute
   '/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
   '/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/admin/tickets/': typeof AuthenticatedAdminTicketsIndexRoute
   '/app/apps/': typeof AuthenticatedAppAppsIndexRoute
+  '/app/assistant/': typeof AuthenticatedAppAssistantIndexRoute
   '/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/receptionist/': typeof AuthenticatedAppReceptionistIndexRoute
@@ -1370,6 +1409,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/api/account-assistant': typeof ApiAccountAssistantRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -1456,12 +1496,14 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps': typeof MarketplaceAppsIndexRoute
   '/templates/$category': typeof TemplatesCategoryIndexRoute
+  '/admin/account-assistant/$threadId': typeof AuthenticatedAdminAccountAssistantThreadIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/admin/tickets/$id': typeof AuthenticatedAdminTicketsIdRoute
   '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
+  '/app/assistant/$threadId': typeof AuthenticatedAppAssistantThreadIdRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1488,10 +1530,12 @@ export interface FileRoutesByTo {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/admin/account-assistant': typeof AuthenticatedAdminAccountAssistantIndexRoute
   '/admin/campaigns': typeof AuthenticatedAdminCampaignsIndexRoute
   '/admin/support': typeof AuthenticatedAdminSupportIndexRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsIndexRoute
   '/app/apps': typeof AuthenticatedAppAppsIndexRoute
+  '/app/assistant': typeof AuthenticatedAppAssistantIndexRoute
   '/app/automations': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/receptionist': typeof AuthenticatedAppReceptionistIndexRoute
@@ -1547,6 +1591,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
+  '/api/account-assistant': typeof ApiAccountAssistantRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -1636,12 +1681,14 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/templates/$category/': typeof TemplatesCategoryIndexRoute
+  '/_authenticated/admin/account-assistant/$threadId': typeof AuthenticatedAdminAccountAssistantThreadIdRoute
   '/_authenticated/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/_authenticated/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
   '/_authenticated/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/_authenticated/admin/tickets/$id': typeof AuthenticatedAdminTicketsIdRoute
   '/_authenticated/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
+  '/_authenticated/app/assistant/$threadId': typeof AuthenticatedAppAssistantThreadIdRoute
   '/_authenticated/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1668,10 +1715,12 @@ export interface FileRoutesById {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/_authenticated/admin/account-assistant/': typeof AuthenticatedAdminAccountAssistantIndexRoute
   '/_authenticated/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
   '/_authenticated/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/_authenticated/admin/tickets/': typeof AuthenticatedAdminTicketsIndexRoute
   '/_authenticated/app/apps/': typeof AuthenticatedAppAppsIndexRoute
+  '/_authenticated/app/assistant/': typeof AuthenticatedAppAssistantIndexRoute
   '/_authenticated/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/receptionist/': typeof AuthenticatedAppReceptionistIndexRoute
@@ -1726,6 +1775,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/admin'
     | '/app'
+    | '/api/account-assistant'
     | '/api/setup-sms'
     | '/compare/$slug'
     | '/email/unsubscribe'
@@ -1815,12 +1865,14 @@ export interface FileRouteTypes {
     | '/app/'
     | '/marketplace/apps/'
     | '/templates/$category/'
+    | '/admin/account-assistant/$threadId'
     | '/admin/campaigns/$id'
     | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
     | '/admin/tickets/$id'
     | '/app/apps/$slug'
+    | '/app/assistant/$threadId'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -1847,10 +1899,12 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/admin/account-assistant/'
     | '/admin/campaigns/'
     | '/admin/support/'
     | '/admin/tickets/'
     | '/app/apps/'
+    | '/app/assistant/'
     | '/app/automations/'
     | '/app/campaigns/'
     | '/app/receptionist/'
@@ -1900,6 +1954,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/api/account-assistant'
     | '/api/setup-sms'
     | '/compare/$slug'
     | '/email/unsubscribe'
@@ -1986,12 +2041,14 @@ export interface FileRouteTypes {
     | '/app'
     | '/marketplace/apps'
     | '/templates/$category'
+    | '/admin/account-assistant/$threadId'
     | '/admin/campaigns/$id'
     | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
     | '/admin/telnyx/tfn'
     | '/admin/tickets/$id'
     | '/app/apps/$slug'
+    | '/app/assistant/$threadId'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -2018,10 +2075,12 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/admin/account-assistant'
     | '/admin/campaigns'
     | '/admin/support'
     | '/admin/tickets'
     | '/app/apps'
+    | '/app/assistant'
     | '/app/automations'
     | '/app/campaigns'
     | '/app/receptionist'
@@ -2076,6 +2135,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
     | '/_authenticated/app'
+    | '/api/account-assistant'
     | '/api/setup-sms'
     | '/compare/$slug'
     | '/email/unsubscribe'
@@ -2165,12 +2225,14 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/marketplace/apps/'
     | '/templates/$category/'
+    | '/_authenticated/admin/account-assistant/$threadId'
     | '/_authenticated/admin/campaigns/$id'
     | '/_authenticated/admin/support/$caseId'
     | '/_authenticated/admin/telnyx/audit'
     | '/_authenticated/admin/telnyx/tfn'
     | '/_authenticated/admin/tickets/$id'
     | '/_authenticated/app/apps/$slug'
+    | '/_authenticated/app/assistant/$threadId'
     | '/_authenticated/app/automations/$id'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
@@ -2197,10 +2259,12 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/_authenticated/admin/account-assistant/'
     | '/_authenticated/admin/campaigns/'
     | '/_authenticated/admin/support/'
     | '/_authenticated/admin/tickets/'
     | '/_authenticated/app/apps/'
+    | '/_authenticated/app/assistant/'
     | '/_authenticated/app/automations/'
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/receptionist/'
@@ -2254,6 +2318,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  ApiAccountAssistantRoute: typeof ApiAccountAssistantRoute
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
   CompareSlugRoute: typeof CompareSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
@@ -2602,6 +2667,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app'
       preLoaderRoute: typeof AuthenticatedAppRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/account-assistant': {
+      id: '/api/account-assistant'
+      path: '/api/account-assistant'
+      fullPath: '/api/account-assistant'
+      preLoaderRoute: typeof ApiAccountAssistantRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/setup-sms': {
       id: '/api/setup-sms'
@@ -3226,6 +3298,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemplatesUseCaseGoalRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/account-assistant/': {
+      id: '/_authenticated/admin/account-assistant/'
+      path: '/account-assistant'
+      fullPath: '/admin/account-assistant/'
+      preLoaderRoute: typeof AuthenticatedAdminAccountAssistantIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/account-assistant/$threadId': {
+      id: '/_authenticated/admin/account-assistant/$threadId'
+      path: '/account-assistant/$threadId'
+      fullPath: '/admin/account-assistant/$threadId'
+      preLoaderRoute: typeof AuthenticatedAdminAccountAssistantThreadIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/campaigns/': {
       id: '/_authenticated/admin/campaigns/'
       path: '/campaigns'
@@ -3294,6 +3380,20 @@ declare module '@tanstack/react-router' {
       path: '/apps/$slug'
       fullPath: '/app/apps/$slug'
       preLoaderRoute: typeof AuthenticatedAppAppsSlugRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/assistant/': {
+      id: '/_authenticated/app/assistant/'
+      path: '/assistant'
+      fullPath: '/app/assistant/'
+      preLoaderRoute: typeof AuthenticatedAppAssistantIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/assistant/$threadId': {
+      id: '/_authenticated/app/assistant/$threadId'
+      path: '/assistant/$threadId'
+      fullPath: '/app/assistant/$threadId'
+      preLoaderRoute: typeof AuthenticatedAppAssistantThreadIdRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
     '/_authenticated/app/automations/': {
@@ -3610,8 +3710,10 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminVerifiersRoute: typeof AuthenticatedAdminVerifiersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminAccountAssistantThreadIdRoute: typeof AuthenticatedAdminAccountAssistantThreadIdRoute
   AuthenticatedAdminCampaignsIdRoute: typeof AuthenticatedAdminCampaignsIdRoute
   AuthenticatedAdminTicketsIdRoute: typeof AuthenticatedAdminTicketsIdRoute
+  AuthenticatedAdminAccountAssistantIndexRoute: typeof AuthenticatedAdminAccountAssistantIndexRoute
   AuthenticatedAdminCampaignsIndexRoute: typeof AuthenticatedAdminCampaignsIndexRoute
   AuthenticatedAdminTicketsIndexRoute: typeof AuthenticatedAdminTicketsIndexRoute
 }
@@ -3644,8 +3746,12 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminVerifiersRoute: AuthenticatedAdminVerifiersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAdminAccountAssistantThreadIdRoute:
+    AuthenticatedAdminAccountAssistantThreadIdRoute,
   AuthenticatedAdminCampaignsIdRoute: AuthenticatedAdminCampaignsIdRoute,
   AuthenticatedAdminTicketsIdRoute: AuthenticatedAdminTicketsIdRoute,
+  AuthenticatedAdminAccountAssistantIndexRoute:
+    AuthenticatedAdminAccountAssistantIndexRoute,
   AuthenticatedAdminCampaignsIndexRoute: AuthenticatedAdminCampaignsIndexRoute,
   AuthenticatedAdminTicketsIndexRoute: AuthenticatedAdminTicketsIndexRoute,
 }
@@ -3725,12 +3831,14 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppTollFreeVerificationRoute: typeof AuthenticatedAppTollFreeVerificationRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAppsSlugRoute: typeof AuthenticatedAppAppsSlugRoute
+  AuthenticatedAppAssistantThreadIdRoute: typeof AuthenticatedAppAssistantThreadIdRoute
   AuthenticatedAppAutomationsIdRoute: typeof AuthenticatedAppAutomationsIdRoute
   AuthenticatedAppReceptionistAppointmentsRoute: typeof AuthenticatedAppReceptionistAppointmentsRoute
   AuthenticatedAppReceptionistCallsRoute: typeof AuthenticatedAppReceptionistCallsRoute
   AuthenticatedAppReceptionistLeadsRoute: typeof AuthenticatedAppReceptionistLeadsRoute
   AuthenticatedAppSupportIdRoute: typeof AuthenticatedAppSupportIdRoute
   AuthenticatedAppAppsIndexRoute: typeof AuthenticatedAppAppsIndexRoute
+  AuthenticatedAppAssistantIndexRoute: typeof AuthenticatedAppAssistantIndexRoute
   AuthenticatedAppAutomationsIndexRoute: typeof AuthenticatedAppAutomationsIndexRoute
   AuthenticatedAppReceptionistIndexRoute: typeof AuthenticatedAppReceptionistIndexRoute
   AuthenticatedAppSupportIndexRoute: typeof AuthenticatedAppSupportIndexRoute
@@ -3761,6 +3869,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
     AuthenticatedAppTollFreeVerificationRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAppsSlugRoute: AuthenticatedAppAppsSlugRoute,
+  AuthenticatedAppAssistantThreadIdRoute:
+    AuthenticatedAppAssistantThreadIdRoute,
   AuthenticatedAppAutomationsIdRoute: AuthenticatedAppAutomationsIdRoute,
   AuthenticatedAppReceptionistAppointmentsRoute:
     AuthenticatedAppReceptionistAppointmentsRoute,
@@ -3770,6 +3880,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
     AuthenticatedAppReceptionistLeadsRoute,
   AuthenticatedAppSupportIdRoute: AuthenticatedAppSupportIdRoute,
   AuthenticatedAppAppsIndexRoute: AuthenticatedAppAppsIndexRoute,
+  AuthenticatedAppAssistantIndexRoute: AuthenticatedAppAssistantIndexRoute,
   AuthenticatedAppAutomationsIndexRoute: AuthenticatedAppAutomationsIndexRoute,
   AuthenticatedAppReceptionistIndexRoute:
     AuthenticatedAppReceptionistIndexRoute,
@@ -3894,6 +4005,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  ApiAccountAssistantRoute: ApiAccountAssistantRoute,
   ApiSetupSmsRoute: ApiSetupSmsRoute,
   CompareSlugRoute: CompareSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,

@@ -2,6 +2,8 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { stepCountIs, streamText, tool, type ModelMessage } from "ai";
 import process from "node:process";
 import { z } from "zod";
+import { accountAssistantTools, ACCOUNT_ASSISTANT_PROMPT } from "./account-assistant.server";
+import { createLovableAiGatewayRunIdFetch } from "./account-ai-run-id.server";
 
 export type LiveConfig = {
   baseURL: string;
@@ -9,10 +11,11 @@ export type LiveConfig = {
   liveModel: string;
   backendModel: string;
   openingInstructions?: string;
+  userId?: string;
 };
 
 // Fill from co-loaded knowledge: the gateway URL, the Live model and the resolved chat model.
-const liveSettings = { baseURL: "", liveModel: "", backendModel: "" };
+const liveSettings = { baseURL: "https://ai.gateway.lovable.dev", liveModel: "openai/gpt-live-1", backendModel: "openai/gpt-6-astra" };
 
 export type LiveSocket = {
   readonly readyState: number;
@@ -111,14 +114,14 @@ export function handleLiveRequest(request: Request): Response {
   return new Response(null, response);
 }
 
-const conversationInstructions = `You are Mira, a calm learning companion.
+const conversationInstructions = `You are the Xellvio business account assistant.
 Speak naturally in brief replies. Ask a focused question when details are unclear.
 Backchannel policy: Use moderate listening sounds without taking over.
 Interruption policy: Stop your answer and listen when the user interrupts.
 Delegation policy:
-Backend tools: Reason through questions and plan study sessions across days.
-Delegate to the backend when: The user wants a study schedule or careful reasoning,
-or a correction changes a question already being worked on.
+Backend tools: Read allowed account details and prepare campaign or business-agent drafts for on-screen confirmation. Never send or purchase anything.
+Delegate to the backend when: The user asks about their account or wants a campaign or agent draft,
+or a correction changes a question already being worked on. Never claim drafts are sent or calling is active. Never name infrastructure providers. Ask the user to confirm pending actions on screen; spoken approval alone does not execute changes.
 Do not delegate to the backend when: Greeting, clarifying a question, or repeating
 a still-current answer. Wait for the backend result before presenting its answer.`;
 
@@ -153,11 +156,14 @@ async function answerQuestion(
   signal: AbortSignal,
   consumeInput: () => void,
   onPlan: (plan: ReturnType<typeof planStudySchedule>) => void,
+  onRunId: (id: string) => void,
 ) {
   signal.throwIfAborted();
+  const runFetch = createLovableAiGatewayRunIdFetch(correlation.runID || undefined);
   const provider = createOpenAI({
     baseURL: gatewayAPIBase(config.baseURL),
     apiKey: config.key,
+    fetch: runFetch.fetch,
     headers: {
       "Lovable-API-Key": config.key,
       "X-Lovable-AIG-SDK": "vercel-ai-sdk",
@@ -180,7 +186,7 @@ async function answerQuestion(
       responseCursor = step.response.messages.length;
     },
     headers: {
-      "X-Lovable-AIG-Run-ID": correlation.runID,
+      ...(correlation.runID ? {"X-Lovable-AIG-Run-ID": correlation.runID} : {}),
       "X-Lovable-AIG-Metadata": JSON.stringify({
         live_session_id: correlation.sessionID,
         delegation_id: correlation.delegationID,
@@ -199,33 +205,17 @@ async function answerQuestion(
           : {}),
       },
     },
-    system:
-      "Help a spoken learning companion answer the latest user question. " +
-      "Transcripts may be incomplete or corrected. Use the latest correction. " +
-      "Continue from completed tool results; do not repeat completed actions. " +
-      "Return verified facts and useful next steps in at most 150 words. " +
-      "To display a study schedule for the current request, call plan_study_schedule with its total minutes and days. " +
-      "Ask for missing details instead of guessing. The tool only calculates a draft plan; " +
-      "it does not save calendar events. You have no other tools.",
+    system: ACCOUNT_ASSISTANT_PROMPT + " This is a spoken conversation. Use the latest correction and keep replies brief.",
     messages,
-    tools: {
-      plan_study_schedule: tool({
-        description: "Distribute a total study time evenly across days and return a draft schedule.",
-        inputSchema: studyScheduleInput,
-        execute: async (args) => {
-          signal.throwIfAborted();
-          const plan = planStudySchedule(args);
-          onPlan(plan);
-          return plan;
-        },
-      }),
-    },
+    tools: config.userId ? accountAssistantTools(config.userId) : {},
   });
   let completed = false;
   let stepCompleted = false;
   let failed = false;
   // Drain through HTTP EOF so successful work is not recorded as cancelled by the Gateway.
   for await (const part of result.fullStream) {
+    const issuedRunId = runFetch.getRunId();
+    if (issuedRunId) onRunId(issuedRunId);
     if (part.type === "start-step") stepCompleted = false;
     if (part.type === "raw" && part.rawValue && typeof part.rawValue === "object" && "type" in part.rawValue) {
       if (part.rawValue.type === "response.completed") stepCompleted = true;
@@ -274,7 +264,7 @@ export function bindLiveConnection(
   connect: LiveConnector,
 ): void {
   const config = { ...configuration };
-  const runID = crypto.randomUUID();
+  let runID = "";
   const setupAbort = new AbortController();
   let gateway: LiveSocket | undefined;
   let sessionID: string | undefined;
@@ -431,7 +421,7 @@ export function bindLiveConnection(
     const pending = pendingDelegations[0];
     const event = pending?.event;
     const id = event?.delegation?.id;
-    if (!pending || !event || !id || closing || task) return;
+    if (!pending || !event || !id || !sessionID || closing || task) return;
     if (!transcripts.some(({ role, text }) => role === "user" && text.trim())) return;
     const controller = new AbortController();
     task = controller;
@@ -452,6 +442,7 @@ export function bindLiveConnection(
         (plan) => {
           pending.plan = plan;
         },
+        (id) => { runID = id; },
       );
       if (closing || controller.signal.aborted) return;
       if (taskRevision !== revision) return;
@@ -488,7 +479,8 @@ export function bindLiveConnection(
       }
       if (closing) return;
       if (event.type === "gateway.session.created") {
-        sessionID = event.session?.id;
+        if (typeof event.session?.id !== "string" || !event.session.id.trim()) throw new Error("Voice session was not established");
+        sessionID = event.session.id;
         clearTimeout(startupTimer);
         requestGreeting();
       }
@@ -575,7 +567,6 @@ export function bindLiveConnection(
       {
         "Lovable-API-Key": config.key,
         "X-Lovable-AIG-SDK": "fetch",
-        "X-Lovable-AIG-Run-ID": runID,
       },
       setupAbort.signal,
     );
@@ -616,7 +607,14 @@ export function bindLiveConnection(
         }
         starting = true;
         execution.waitUntil(
-          startSession(event.sdp).catch((error) => {
+          (async () => {
+            if (typeof event.token !== "string" || event.token.length > 12000) throw new Error("Sign in to use voice.");
+            const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+            const auth=await supabaseAdmin.auth.getUser(event.token);
+            if(auth.error || !auth.data.user) throw new Error("Sign in again to use voice.");
+            config.userId=auth.data.user.id;
+            await startSession(event.sdp);
+          })().catch((error) => {
             if (!closing)
               emit({
                 type: "app.error",

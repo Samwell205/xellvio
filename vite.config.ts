@@ -6,6 +6,7 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
+import { liveVoiceDev } from "./live-vite-plugin";
 import path from "node:path";
 import { loadEnv, type ConfigEnv } from "vite";
 
@@ -45,7 +46,7 @@ export default async function config(env: ConfigEnv) {
       server: { entry: "server" },
     },
     vite: {
-      plugins: [mcpPlugin()],
+      plugins: [mcpPlugin(), liveVoiceDev()],
       define: {
         "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(supabaseUrl),
         "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(supabasePublishableKey),
@@ -55,7 +56,6 @@ export default async function config(env: ConfigEnv) {
         alias: {
           "entities/lib/decode.js": path.resolve(__dirname, "node_modules/entities/lib/decode.js"),
           "entities/lib/encode.js": path.resolve(__dirname, "node_modules/entities/lib/encode.js"),
-          entities: path.resolve(__dirname, "node_modules/entities"),
         },
       },
     },

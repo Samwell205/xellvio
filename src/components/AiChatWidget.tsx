@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { MessageCircle, Send, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useServerFn } from "@tanstack/react-start";
-import { useRouterState } from "@tanstack/react-router";
+import { useRouterState, Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 import { chatWithSupportBot } from "@/lib/chat.functions";
 import { cn } from "@/lib/utils";
 
@@ -140,7 +141,9 @@ export function AiChatWidget() {
     }
   }
 
-  if (hidden) return null;
+  if (hidden || pathname.startsWith("/app/assistant") || pathname.startsWith("/admin/account-assistant")) return null;
+  if (pathname.startsWith("/admin")) return <Button asChild className="fixed bottom-5 right-5 z-50 shadow-lg"><Link to="/admin/account-assistant"><MessageCircle/>Account assistant</Link></Button>;
+  if (pathname.startsWith("/app/")) return <Button asChild className="fixed bottom-5 right-5 z-50 shadow-lg"><Link to="/app/assistant"><MessageCircle/>Assistant</Link></Button>;
 
   return (
     <>

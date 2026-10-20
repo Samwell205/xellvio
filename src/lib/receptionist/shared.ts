@@ -3,6 +3,9 @@ import { z } from "zod";
 export const receptionistConfigSchema = z.object({
   businessName: z.string().trim().max(120).default(""),
   assistantName: z.string().trim().max(120).default(""),
+  model: z.enum(["", "moonshotai/Kimi-K2.6", "moonshotai/Kimi-K2.5"]).default(""),
+  voice: z.enum(["", "Telnyx.Ultra.Asher", "Telnyx.Ultra.Callie", "Telnyx.Ultra.Clara"]).default(""),
+  voiceSpeed: z.number().min(0.6).max(1.5).default(1),
   greetingMode: z.enum(["assistant_first", "caller_first", "generated"]).default("assistant_first"),
   tags: z.array(z.string().trim().min(1).max(40).regex(/^[a-zA-Z0-9 _-]+$/)).max(12).default([]),
   greeting: z.string().trim().max(1000).default(""),
@@ -25,6 +28,9 @@ export const receptionistConfigSchema = z.object({
 }).refine(c => c.closeTime > c.openTime, { message: "Closing time must be later than opening time", path: ["closeTime"] });
 export type ReceptionistConfig = z.infer<typeof receptionistConfigSchema>;
 export function defaultReceptionistConfig(): ReceptionistConfig { return receptionistConfigSchema.parse({}); }
+export function assistantRuntimeSettings(config: ReceptionistConfig) {
+  return {...(config.model ? {model:config.model} : {}),...(config.voice ? {voice_settings:{voice:config.voice,voice_speed:config.voiceSpeed}} : {})};
+}
 export function assistantGreeting(config: ReceptionistConfig) {
   if (config.greetingMode === "caller_first") return "";
   if (config.greetingMode === "generated") return "<assistant-speaks-first-with-model-generated-message>";

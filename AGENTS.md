@@ -26,10 +26,11 @@
 - Additional messaging connections route by server-owned messaging profile IDs in src/lib/telnyx-connection.ts, with matching webhook keys and workspace-scoped sender assets; never replace the default credential or automatically resume old campaigns when activating a connection.
 - Receptionist functions enforce business access; encrypted calendar credentials use owner auth IDs and owner-only connect/book/disconnect. Paid activation requires approved pricing, phone verification and a pilot.
 - Assistant actions require server-generated call-scoped tokens and active-call, ownership and pricing checks; event signatures alone do not authenticate tool requests.
-- Voice provisioning uses receptionist/provision.server.ts and shared pricing; receptionist_assistants stores separate business agents, with one selected agent mirrored into phone settings. Switching requires paused/ended calls and resets pilot approval.
+- Voice provisioning uses shared pricing and allow-listed model/voice overrides; empty selections preserve defaults. Separate agents mirror the selected one into phone settings; switching requires paused/ended calls and resets pilot approval.
 - Tenant owners must complete the business profile (see getMySession profileComplete) before the /app dashboard renders, and the UI shows the business name rather than "workspace".
 - Calling-number monthly fees are charged by the database function charge_receptionist_number_renewals (hourly pg_cron), not an HTTP route, so a public caller can never trigger charges; failed renewals mark the number past_due and inbound calls are refused until paid.
 
 - Number purchases first load the carrier's live regulatory requirements for the country and type, collect them into a carrier requirement group, and attach it to the order; texting readiness comes from textingPath in src/lib/receptionist/shared.ts so the UI never promises texts before carrier verification.
 - Inbound voice reuses saved instructions, server-owned transfer destinations and startup-failure cleanup; billing excludes ringing time.
 - Assisted number requests atomically create tickets and debit credits; retries reuse open requests and admin completion requires the exact carrier-approved number, without bypassing SMS or pilot gates.
+- Account assistant uses route-owned persisted threads and transactional, on-screen-confirmed proposals; campaigns remain drafts until the existing launch review. Website voice shares authenticated tools through a persistent relay; model output never authorizes mutations.
