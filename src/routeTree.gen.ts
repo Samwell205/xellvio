@@ -185,6 +185,7 @@ import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lova
 import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 import { Route as AuthenticatedAppUseTemplateCategorySlugRouteImport } from './routes/_authenticated.app.use-template.$category.$slug'
 import { Route as ApiPublicOauthCalendarReturnRouteImport } from './routes/api/public/oauth/calendar/return'
+import { Route as ApiPublicVoiceToolsCallIdActionRouteImport } from './routes/api/public/voice/tools/$callId/$action'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -1147,6 +1148,12 @@ const ApiPublicOauthCalendarReturnRoute =
     path: '/api/public/oauth/calendar/return',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicVoiceToolsCallIdActionRoute =
+  ApiPublicVoiceToolsCallIdActionRouteImport.update({
+    id: '/api/public/voice/tools/$callId/$action',
+    path: '/api/public/voice/tools/$callId/$action',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -1323,6 +1330,7 @@ export interface FileRoutesByFullPath {
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
+  '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1493,6 +1501,7 @@ export interface FileRoutesByTo {
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
+  '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1672,6 +1681,7 @@ export interface FileRoutesById {
   '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/_authenticated/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
+  '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1850,6 +1860,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
     | '/api/public/oauth/calendar/return'
+    | '/api/public/voice/tools/$callId/$action'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -2020,6 +2031,7 @@ export interface FileRouteTypes {
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
     | '/api/public/oauth/calendar/return'
+    | '/api/public/voice/tools/$callId/$action'
   id:
     | '__root__'
     | '/'
@@ -2198,6 +2210,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/campaigns/$id/report'
     | '/_authenticated/app/use-template/$category/$slug'
     | '/api/public/oauth/calendar/return'
+    | '/api/public/voice/tools/$callId/$action'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2291,6 +2304,7 @@ export interface RootRouteChildren {
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
   LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
   ApiPublicOauthCalendarReturnRoute: typeof ApiPublicOauthCalendarReturnRoute
+  ApiPublicVoiceToolsCallIdActionRoute: typeof ApiPublicVoiceToolsCallIdActionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -3527,6 +3541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOauthCalendarReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/voice/tools/$callId/$action': {
+      id: '/api/public/voice/tools/$callId/$action'
+      path: '/api/public/voice/tools/$callId/$action'
+      fullPath: '/api/public/voice/tools/$callId/$action'
+      preLoaderRoute: typeof ApiPublicVoiceToolsCallIdActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -3923,6 +3944,7 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
   LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
   ApiPublicOauthCalendarReturnRoute: ApiPublicOauthCalendarReturnRoute,
+  ApiPublicVoiceToolsCallIdActionRoute: ApiPublicVoiceToolsCallIdActionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
