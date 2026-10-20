@@ -1,5 +1,5 @@
 // Server-only: voice number search/purchase, call application and AI agent setup.
-import { receptionistConfigSchema, type ReceptionistConfig } from "./shared";
+import { receptionistConfigSchema, requirementNumberType, type ReceptionistConfig } from "./shared";
 
 const API = "https://api.telnyx.com/v2";
 export const WEBHOOK_ORIGIN = "https://xellvio.com";
