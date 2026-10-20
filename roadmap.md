@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Restricted voice pilot and publishing (Oct 20)
-- [ ] Confirm Samuel Durosinmi's tenant email and which voice surfaces should be restricted.
+- [x] Pilot email confirmed: samueldurosinmi64@gmail.com (no registered auth account found); reserve voice for its verified owner identity, including receptionist and website voice. SMS/text assistant stays available.
 - [ ] Enforce pilot access and show Coming soon for other tenants; test allowed and blocked access.
 - [ ] Run a current security scan, then request publishing with the restrictions included.
 

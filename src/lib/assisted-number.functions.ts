@@ -15,6 +15,8 @@ export const listMyAssistedNumbers = createServerFn({ method: "GET" }).middlewar
 export const submitAssistedNumber = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => assistedRequestSchema.parse(input)).handler(async ({ context, data }) => {
   const { resolveActingAccount, assertOwner } = await import("./acting-account.server");
   const acting = await resolveActingAccount(context.userId); assertOwner(acting);
+  const { assertVoicePilotAccess } = await import("./voice-rollout.server");
+  await assertVoicePilotAccess(context.userId, acting.accountId);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: id, error } = await supabaseAdmin.rpc("submit_assisted_number_request", { _account_id: acting.accountId, _requested_by: context.userId, _country: data.country, _number_type: data.numberType, _requested_number: data.phoneNumber, _purpose: data.purpose });
   if (error) throw new Error(error.message.includes("Insufficient balance") ? "You need $100 in credits to request assisted verification." : "Your request could not be submitted. No assistance fee was taken.");

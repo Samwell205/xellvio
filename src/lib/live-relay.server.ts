@@ -613,6 +613,8 @@ export function bindLiveConnection(
             const auth=await supabaseAdmin.auth.getUser(event.token);
             if(auth.error || !auth.data.user) throw new Error("Sign in again to use voice.");
             config.userId=auth.data.user.id;
+            const { assertVoicePilotAccess } = await import("./voice-rollout.server");
+            await assertVoicePilotAccess(config.userId);
             await startSession(event.sdp);
           })().catch((error) => {
             if (!closing)

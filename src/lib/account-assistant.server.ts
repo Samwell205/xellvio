@@ -31,6 +31,8 @@ export async function proposeCampaign(userId: string, input: unknown) {
 export async function proposeAgent(userId: string, input: unknown) {
   const args = draftAgentSchema.parse(input);
   const { acting, db } = await assistantAccess(userId); assertOwner(acting); assertPermission(acting,"settings");
+  const { assertVoicePilotAccess } = await import("./voice-rollout.server");
+  await assertVoicePilotAccess(userId, acting.accountId);
   const settings = await db.from("receptionist_settings").select("configuration").eq("account_id",acting.accountId).maybeSingle();
   if (settings.error) throw new Error("Business details could not be loaded.");
   const existing = receptionistConfigSchema.parse(settings.data?.configuration ?? {});
@@ -69,7 +71,7 @@ export async function confirmOperation(userId:string, id:string, consent:boolean
   if (op.error) throw new Error("Action not found.");
   if (op.data.kind === "contact_import") assertPermission(acting,"audience");
   else if (op.data.kind === "campaign_draft") assertPermission(acting,"campaigns");
-  else { assertOwner(acting); assertPermission(acting,"settings"); }
+  else { assertOwner(acting); assertPermission(acting,"settings"); const {assertVoicePilotAccess}=await import("./voice-rollout.server"); await assertVoicePilotAccess(userId,acting.accountId); }
   const result = await db.rpc("confirm_assistant_operation",{_id:id,_user_id:userId,_account_id:acting.accountId,_consent:consent});
   if (result.error) throw new Error(result.error.message);
   return result.data;

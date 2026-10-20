@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { receptionistConfigSchema, answeredCallSeconds, assistantGreeting } from "./shared";
+import { hasVoicePilotAccount } from "../voice-rollout.server";
 export async function voiceRequest(path: string, body: Record<string,unknown>) {
   const key = process.env['TELNYX_API_KEY'];
   if (!key) throw new Error("Calling is not configured.");
@@ -25,7 +26,7 @@ export async function handleVoiceEvent(raw: unknown) {
       if (!p.to || !p.from || !/^\+[1-9]\d{6,14}$/.test(p.from) || !p.connection_id) throw new Error("Invalid inbound call mapping");
       const { data: settings, error } = await supabaseAdmin.from("receptionist_settings").select("account_id,enabled,assistant_id,voice_application_id,configuration,provision_status,test_verified_at,number_billing_status").eq("voice_number",p.to).eq("voice_application_id",p.connection_id).maybeSingle();
       if (error) throw error;
-      if (!settings?.enabled || !settings.assistant_id || settings.provision_status !== "verified" || settings.number_billing_status === "past_due") {
+      if (!settings?.enabled || !settings.assistant_id || settings.provision_status !== "verified" || settings.number_billing_status === "past_due" || !await hasVoicePilotAccount(settings.account_id)) {
         await voiceRequest(`/calls/${encodeURIComponent(callId)}/actions/hangup`, { command_id: `${event.id}-inactive` });
       } else {
         const { data: account } = await supabaseAdmin.from("accounts").select("suspended_at,onboarding_status,sending_suspended_at").eq("id",settings.account_id).single();

@@ -7,6 +7,8 @@ import {assistantEditSchema} from "./assistant-controls";
 async function access(userId: string, owner = false) {
   const { resolveActingAccount, assertPermission, assertOwner } = await import("../acting-account.server");
   const acting = await resolveActingAccount(userId);
+  const { assertVoicePilotAccess } = await import("../voice-rollout.server");
+  await assertVoicePilotAccess(userId, acting.accountId);
   assertPermission(acting, "settings");
   if (owner) assertOwner(acting);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

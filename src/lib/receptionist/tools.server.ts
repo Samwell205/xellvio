@@ -31,6 +31,8 @@ export async function runCallTool(callId: string, action: string, raw: unknown) 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: call,error } = await supabaseAdmin.from("receptionist_calls").select("id,account_id,call_control_id,from_number,ended_at,started_at,status").eq("id",callId).single();
   if (error || !call || call.ended_at || Date.now()-Date.parse(call.started_at)>3600000) throw new Error("This call is no longer active.");
+  const { hasVoicePilotAccount } = await import("../voice-rollout.server");
+  if (!await hasVoicePilotAccount(call.account_id)) throw new Error("AI voice is coming soon for your business.");
   const { data: settings } = await supabaseAdmin.from("receptionist_settings").select("enabled,configuration,number_billing_status").eq("account_id",call.account_id).single();
   if (!settings?.enabled || settings.number_billing_status === "past_due") throw new Error("The receptionist is paused.");
   const [{data:account,error:accountError},{data:platform,error:platformError}] = await Promise.all([
