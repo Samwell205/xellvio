@@ -31,8 +31,13 @@ import { describe as d2, it as i2, expect as e2 } from "vitest";
 import { buildInstructions } from "./provision.server";
 d2("receptionist agent instructions", () => {
   i2("names the business and forbids invented bookings", () => {
-    const t = buildInstructions({ ...defaultReceptionistConfig(), businessName: "Acme Plumbing", businessInformation: "Boiler repairs" });
+    const t = buildInstructions({ ...defaultReceptionistConfig(), businessName: "Acme Plumbing", businessInformation: "Boiler repairs", calendarId: "primary" });
     e2(t).toContain("Acme Plumbing");
     e2(t).toContain("Only say an appointment is booked after the booking tool confirms it.");
+  });
+  i2("follows the business's own instructions and does not book without a calendar", () => {
+    const t = buildInstructions({ ...defaultReceptionistConfig(), businessName: "Cafe", agentInstructions: "Take catering orders" });
+    e2(t).toContain("Take catering orders");
+    e2(t).toContain("Do not book appointments");
   });
 });
