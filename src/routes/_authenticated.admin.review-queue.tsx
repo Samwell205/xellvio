@@ -55,7 +55,6 @@ function ReviewQueuePage() {
           Borderline messages holding for admin approval. Pending items never auto-approve. Messages
           blocked outright for prohibited content, and account sending holds, are not listed here —
           lift account holds from Tenant accounts.
-          if untouched.
         </p>
       </div>
       <div className="flex gap-2">
