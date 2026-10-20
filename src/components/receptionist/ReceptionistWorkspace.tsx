@@ -20,7 +20,7 @@ const views = [{ key: "setup", name: "Receptionist", to: "/app/receptionist", ic
 const dateLabel = (date: string, timezone: string) => new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short", timeZone: timezone }).format(new Date(date));
 function Field({ name, children }: { name: string; children: React.ReactNode }) { return <div className="space-y-2"><Label>{name}</Label>{children}</div>; }
 
-export function ReceptionistWorkspace({ view }: { view: View }) {
+export function ReceptionistWorkspace({ view, pilot = false }: { view: View; pilot?: boolean }) {
   const { data } = useSuspenseQuery(receptionistQuery);
   const qc = useQueryClient();
   const [config, setConfig] = useState<ReceptionistConfig>(data.config);
@@ -72,7 +72,7 @@ export function ReceptionistWorkspace({ view }: { view: View }) {
       <div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><Bot className="h-4 w-4"/> Xellvio Voice</div><h1 className="text-3xl font-semibold">AI Receptionist</h1></div>
       <div className="flex items-center gap-3"><Badge variant={data.enabled ? "default" : "secondary"}>{data.enabled ? "Active" : pendingSetup ? "Setup required" : "Paused"}</Badge><Button variant="outline" size="icon" aria-label="Refresh receptionist" onClick={() => refresh()}><RefreshCw className="h-4 w-4"/></Button>{data.enabled && data.isOwner && <Button variant="outline" onClick={async () => { try { await enable({ data: { enabled: false } }); toast.success("Receptionist paused"); refresh(); } catch(e) { toast.error(e instanceof Error ? e.message : "Could not pause"); } }}><Pause className="h-4 w-4"/>Pause</Button>}</div>
     </header>
-    <nav aria-label="Receptionist pages" className="flex gap-1 overflow-x-auto border-b pb-3">{views.map(v => <Button key={v.key} variant={view === v.key ? "secondary" : "ghost"} asChild><Link to={v.to}><v.icon className="h-4 w-4"/>{v.name}</Link></Button>)}</nav>
+    {!pilot && <nav aria-label="Receptionist pages" className="flex gap-1 overflow-x-auto border-b pb-3">{views.map(v => <Button key={v.key} variant={view === v.key ? "secondary" : "ghost"} asChild><Link to={v.to}><v.icon className="h-4 w-4"/>{v.name}</Link></Button>)}</nav>}
     {view === "setup" && <>
       <section className="grid grid-cols-1 gap-6 border-b pb-7 md:grid-cols-3">
         {[{ icon: Bot, title: "Business profile", done: Boolean(data.config.businessName && data.config.businessInformation), value: data.config.businessName || "Not configured" }, { icon: Phone, title: "Phone line", done: Boolean(data.number && data.testVerified), value: data.number || "Awaiting phone setup" }, { icon: CalendarDays, title: "Calendar", done: data.calendarConnected && Boolean(data.config.calendarId), value: data.reconnectRequired ? "Reconnect required" : data.calendarConnected ? "Google Calendar connected" : "Not connected" }].map(item => <div key={item.title} className="flex items-start gap-3"><div className="rounded-md bg-muted p-3"><item.icon className="h-5 w-5"/></div><div className="min-w-0"><div className="flex items-center gap-2 text-sm font-medium">{item.title}{item.done && <Check className="h-4 w-4 text-primary"/>}</div><p className="mt-1 break-words text-sm text-muted-foreground">{item.value}</p></div></div>)}

@@ -1,7 +1,7 @@
 import { loadConnection } from "./connections.server";
 import { appointmentInputSchema, isWithinBusinessHours, receptionistConfigSchema } from "./shared";
 
-export const GOOGLE_CALENDAR_SCOPES = ["https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.calendarlist.readonly"];
+export const GOOGLE_CALENDAR_SCOPES = ["https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.freebusy", "https://www.googleapis.com/auth/calendar.calendarlist.readonly"];
 export async function calendarRequest(userId: string, path: string, init?: RequestInit) {
   const connection = await loadConnection(userId);
   if (!connection || connection.reconnectRequired) throw new Error("Reconnect Google Calendar before booking appointments.");
