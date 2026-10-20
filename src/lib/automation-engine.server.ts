@@ -92,8 +92,8 @@ function tagsOf(contact: Json | null): string[] {
   return Array.isArray(raw) ? raw.map((t) => String(t).toLowerCase()) : [];
 }
 
-async function logEvent(run: Json, node: GraphNode | null, outcome: string, detail?: string) {
-  const db = await admin();
+async function logEvent(run: Json, node: GraphNode | null, outcome: string, detail?: string, suppliedDb?:any) {
+  const db = suppliedDb ?? await admin();
   await db.from("automation_run_events").insert({
     run_id: run.id,
     account_id: run.account_id,
@@ -242,7 +242,7 @@ export async function startRun(opts: {
   // A duplicate means the contact is already travelling through this automation.
   if (error || !run) return null;
 
-  await logEvent(run, null, "entered", `Started on ${opts.startNodeKey}`);
+  await logEvent(run, null, "entered", `Started on ${opts.startNodeKey}`,db);
   if (first && !opts.deferExecution) await advanceRun(run, graph);
   return run;
 }

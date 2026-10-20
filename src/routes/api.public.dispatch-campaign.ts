@@ -1908,19 +1908,8 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
         await Promise.all(campaignWorkers);
 
 
-        // Recovery and reconciliation are best-effort housekeeping. Run them
-        // only after outbound work so they can never consume the send budget.
-        let recoveredInbound: { checked: number; processed: number } | { checked: number; processed: number; error: string } = { checked: 0, processed: 0 };
-        if (budgetLeft() > RUN_BUDGET_MS) {
-          try {
-            const { recoverRecentTelnyxInboundMessages } = await import("@/lib/telnyx-inbound-routing.server");
-            recoveredInbound = await recoverRecentTelnyxInboundMessages(50);
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            console.error("[dispatch] inbound recovery failed", message);
-            recoveredInbound = { checked: 0, processed: 0, error: message };
-          }
-        }
+        // Inbound recovery has its own handler; never scan it during outbound dispatch.
+        const recoveredInbound = { checked: 0, processed: 0, skipped: true };
         // Tail work must fit inside whatever is left of this invocation's
         // budget, otherwise the runtime kills the request (502) after the sends
         // already happened. The dedicated reconcile cron does the bulk work.
