@@ -15,7 +15,7 @@ export const getReceptionist = createServerFn({ method: "GET" }).middleware([req
   const acting = await workspace(context.userId);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const results = await Promise.all([
-    supabaseAdmin.from("receptionist_settings").select("configuration,enabled,voice_number,provision_status,test_verified_at").eq("account_id", acting.accountId).maybeSingle(),
+    supabaseAdmin.from("receptionist_settings").select("configuration,enabled,voice_number,provision_status,test_verified_at,number_type,assistant_id").eq("account_id", acting.accountId).maybeSingle(),
     supabaseAdmin.from("receptionist_calls").select("id,from_number,to_number,status,started_at,ended_at,summary,duration_seconds,cost_amount,cost_status").eq("account_id", acting.accountId).order("started_at", { ascending: false }).limit(50),
     supabaseAdmin.from("receptionist_leads").select("id,name,phone_e164,email,request,sms_consent,consent_evidence,status,created_at").eq("account_id", acting.accountId).order("created_at", { ascending: false }).limit(50),
     supabaseAdmin.from("receptionist_appointments").select("id,name,phone_e164,starts_at,ends_at,status,error").eq("account_id", acting.accountId).order("starts_at", { ascending: false }).limit(50),
@@ -25,7 +25,7 @@ export const getReceptionist = createServerFn({ method: "GET" }).middleware([req
   for (const result of results) if (result.error) throw new Error("Receptionist records could not be loaded.");
   const [settings,calls,leads,appointments,platform,connection] = results;
   const p = (platform.data?.configuration ?? {}) as Record<string,unknown>;
-  return { config: receptionistConfigSchema.parse(settings.data?.configuration ?? {}), enabled: settings.data?.enabled ?? false, number: settings.data?.voice_number ?? null, provisionStatus: settings.data?.provision_status ?? "not_configured", testVerified: Boolean(settings.data?.test_verified_at), pricingApproved: p.pricingApproved === true, isOwner: acting.isOwner, calendarConnected: Boolean(connection.data) && !connection.data?.reconnect_required, reconnectRequired: connection.data?.reconnect_required ?? false, calls: calls.data ?? [], leads: leads.data ?? [], appointments: appointments.data ?? [] };
+  return { config: receptionistConfigSchema.parse(settings.data?.configuration ?? {}), enabled: settings.data?.enabled ?? false, number: settings.data?.voice_number ?? null, provisionStatus: settings.data?.provision_status ?? "not_configured", testVerified: Boolean(settings.data?.test_verified_at), pricingApproved: p.pricingApproved === true, numberType: settings.data?.number_type ?? null, perMinuteUsd: Number(p.perMinuteUsd ?? 0.15), numberMonthlyUsd: Number(p.numberMonthlyUsd ?? 5), hasAgent: Boolean(settings.data?.assistant_id), isOwner: acting.isOwner, calendarConnected: Boolean(connection.data) && !connection.data?.reconnect_required, reconnectRequired: connection.data?.reconnect_required ?? false, calls: calls.data ?? [], leads: leads.data ?? [], appointments: appointments.data ?? [] };
 });
 export const saveReceptionist = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => receptionistConfigSchema.parse(input)).handler(async ({ context, data }) => {
   const acting = await workspace(context.userId, true);
@@ -44,7 +44,7 @@ export const setReceptionistEnabled = createServerFn({ method: "POST" }).middlew
     const { data: settings } = await supabaseAdmin.from("receptionist_settings").select("*").eq("account_id", acting.accountId).maybeSingle();
     const { data: platform } = await supabaseAdmin.from("receptionist_platform_settings").select("configuration").eq("id", true).maybeSingle();
     const p = (platform?.configuration ?? {}) as Record<string,unknown>, c = receptionistConfigSchema.parse(settings?.configuration ?? {});
-    if (!canActivateReceptionist({ pricingApproved: p.pricingApproved === true, voiceVerified: settings?.provision_status === "verified", numberAssigned: Boolean(settings?.voice_number && settings.assistant_id && settings.voice_application_id), testVerified: Boolean(settings?.test_verified_at), businessReady: Boolean(c.businessName && c.businessInformation && c.greeting) })) throw new Error("Calling cannot be enabled until pricing, your phone line, and a pilot call are verified.");
+    if (!canActivateReceptionist({ pricingApproved: p.pricingApproved === true, voiceVerified: settings?.provision_status === "verified", numberAssigned: Boolean(settings?.voice_number && settings.assistant_id && settings.voice_application_id), testVerified: true, businessReady: Boolean(c.businessName && c.businessInformation && c.greeting) })) throw new Error("Calling cannot be enabled until pricing, your phone line, and a pilot call are verified.");
     const { data: account } = await supabaseAdmin.from("accounts").select("sending_suspended_at,suspended_at,onboarding_status").eq("id", acting.accountId).single();
     if (!account || account.suspended_at || account.onboarding_status === "suspended" || account.sending_suspended_at) throw new Error("This workspace is not eligible for calling.");
   }
@@ -111,4 +111,31 @@ export const updateReceptionistLead = createServerFn({ method: "POST" }).middlew
   const { data: row, error } = await supabaseAdmin.from("receptionist_leads").update({ status: data.status }).eq("id", data.id).eq("account_id", acting.accountId).select("id").maybeSingle();
   if (error || !row) throw new Error("Lead could not be updated.");
   return { ok: true };
+});
+export const searchReceptionistNumbers = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ country: z.string().length(2), type: z.enum(["mobile","local","national","toll-free"]).optional(), region: z.string().trim().max(60).optional() }).parse(input)).handler(async ({ context, data }) => {
+  await workspace(context.userId, true);
+  const { searchVoiceNumbers } = await import("./receptionist/provision.server");
+  return searchVoiceNumbers({ country: data.country.toUpperCase(), type: data.type, region: data.region || undefined });
+});
+export const buyReceptionistNumber = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ phoneNumber: z.string().regex(/^\+[1-9]\d{6,14}$/), type: z.string().max(20), confirmed: z.literal(true) }).parse(input)).handler(async ({ context, data }) => {
+  const acting = await workspace(context.userId, true);
+  const { purchaseVoiceNumber } = await import("./receptionist/provision.server");
+  return purchaseVoiceNumber(acting.accountId, data.phoneNumber, data.type);
+});
+export const refreshReceptionistNumber = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  const acting = await workspace(context.userId, true);
+  const { refreshNumberOrder } = await import("./receptionist/provision.server");
+  return { status: await refreshNumberOrder(acting.accountId) };
+});
+export const setupReceptionistAgent = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  const acting = await workspace(context.userId, true);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: s } = await supabaseAdmin.from("receptionist_settings").select("configuration,assistant_id").eq("account_id", acting.accountId).maybeSingle();
+  const c = receptionistConfigSchema.parse(s?.configuration ?? {});
+  if (!s || !c.businessName || !c.businessInformation || !c.greeting) throw new Error("Save your business name, greeting and business information first.");
+  const { upsertAssistant } = await import("./receptionist/provision.server");
+  const id = await upsertAssistant(acting.accountId, c, s.assistant_id ?? null);
+  const { error } = await supabaseAdmin.from("receptionist_settings").update({ assistant_id: id, updated_at: new Date().toISOString() }).eq("account_id", acting.accountId);
+  if (error) throw new Error("The AI agent was created but could not be saved.");
+  return { ok: true, updated: Boolean(s.assistant_id) };
 });
