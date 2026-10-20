@@ -23,10 +23,10 @@ import { ContextualTip } from "@/components/lifecycle/ContextualTip";
 import { CONTEXTUAL_TIPS } from "@/lib/lifecycle/taxonomy";
 
 export const Route = createFileRoute("/_authenticated/app")({
-  beforeLoad: async () => {
+  beforeLoad: async ({location}) => {
     // Admins use a dedicated admin console and don't have tenant SMS/campaign UI.
     // Cached for the session so this RPC isn't repeated on every navigation.
-    if (await getCachedIsAdmin()) throw redirect({ to: "/admin" });
+    if (await getCachedIsAdmin() && !location.pathname.startsWith("/app/assistant")) throw redirect({ to: "/admin" });
   },
   pendingComponent: RouteFallback,
   component: AppShell,
