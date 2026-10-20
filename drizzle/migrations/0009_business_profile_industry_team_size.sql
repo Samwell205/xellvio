@@ -1,0 +1,2 @@
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS industry text, ADD COLUMN IF NOT EXISTS team_size text;
+ALTER TABLE public.receptionist_settings ADD COLUMN IF NOT EXISTS number_type text, ADD COLUMN IF NOT EXISTS number_order_id text, ADD COLUMN IF NOT EXISTS number_charged_at timestamptz;
