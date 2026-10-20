@@ -148,6 +148,10 @@ export async function purchaseVoiceNumber(accountId: string, phoneNumber: string
   const orderId = String(order.data?.id ?? "");
   const status = String(order.data?.status ?? "pending");
   const reqMet = order.data?.requirements_met !== false;
+  const ordered = ((order.data?.phone_numbers ?? []) as { phone_number?: string }[]).map((n) => n.phone_number);
+  if (!orderId || (ordered.length && !ordered.includes(phoneNumber))) {
+    throw new Error("The phone line service did not confirm the exact number you chose. You have not been charged.");
+  }
 
   const { error: debitErr } = await supabaseAdmin.rpc("debit_account", {
     _account_id: accountId,
