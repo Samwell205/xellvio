@@ -113,7 +113,7 @@ function ReviewQueuePage() {
                     <div className="text-xs text-muted-foreground">
                       {new Date(r.created_at).toLocaleString()}
                       {isPending && (
-                        <> · auto-approves {new Date(r.auto_approve_at).toLocaleString()}</>
+                        <> · awaiting admin decision</>
                       )}
                     </div>
                   </div>
