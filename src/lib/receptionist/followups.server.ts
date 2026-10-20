@@ -1,4 +1,5 @@
 import { canFollowUp, receptionistConfigSchema } from "./shared";
+import { withSmsOptOut } from "../sms-optout";
 
 /** Called only after a verified, call-bound lead operation has stored explicit permission evidence. */
 export async function queueReceptionistFollowUp(accountId: string, leadId: string) {
@@ -15,7 +16,7 @@ export async function queueReceptionistFollowUp(accountId: string, leadId: strin
   if (!canFollowUp({ enabled:settingsResult.data.enabled && config.smsFollowUp,consent:lead.sms_consent,consentEvidence:lead.consent_evidence,suppressed:Boolean(suppression) })) return { status:"skipped" };
   if (!config.smsText || !account || account.suspended_at || account.sending_suspended_at || account.credit_balance <= 0 || !account.tos_current_version_accepted) throw new Error("This business is not eligible for an SMS follow-up.");
   const { screenMessageContent } = await import("@/lib/content-screening.server");
-  const body = `${config.smsText}\nReply STOP to opt out.`;
+  const body = withSmsOptOut(config.smsText, "Reply STOP to opt out.");
   const result = await screenMessageContent(body,accountId,{context:"campaign",plannedRecipients:1,skipReviewQueue:true});
   if (!result.passed) throw new Error("The SMS follow-up was blocked by content screening.");
   // Stable campaign ID makes retries return the same queued campaign rather than sending twice.

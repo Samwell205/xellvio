@@ -1471,6 +1471,42 @@ export type Database = {
           },
         ]
       }
+      assistant_operations: {
+        Row: {
+          account_id: string
+          arguments: Json
+          created_at: string
+          expires_at: string
+          id: string
+          kind: string
+          outcome: Json | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          arguments: Json
+          created_at?: string
+          expires_at?: string
+          id?: string
+          kind: string
+          outcome?: Json | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          arguments?: Json
+          created_at?: string
+          expires_at?: string
+          id?: string
+          kind?: string
+          outcome?: Json | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       assisted_number_requests: {
         Row: {
           account_id: string
