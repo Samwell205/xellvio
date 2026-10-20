@@ -99,6 +99,13 @@
       "when": 1792510935130,
       "tag": "0013_multiple_business_voice_assistants",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792512215456,
+      "tag": "0014_account_assistant_operations",
+      "breakpoints": true
     }
   ]
 }
