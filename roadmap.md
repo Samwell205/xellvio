@@ -1,7 +1,8 @@
 # Roadmap
 
 ## AI receptionist, follow-ups and bookings for all tenants
-- [ ] Build tenant-specific receptionist setup, calls/leads, SMS follow-ups and appointment booking; support unanswered-call forwarding and dedicated voice numbers where available.
+- [x] Build tenant-specific setup, call/lead/appointment views, encrypted owner calendar connection and guarded call-action handlers; verified signed-in setup save/read-back and unsigned-event rejection.
+- [ ] Complete live assistant provisioning, human handoff and missed-call follow-up behavior — blocked on approved voice pricing and an authorized pilot; current call tools and SMS queue helper must pass the pilot before activation.
 - [ ] Verify hosted voice capabilities and account access before provisioning or activating paid calling; establish owner-approved tenant pricing before enabling paid usage.
 - [ ] Link a per-user calendar client and verify tenant-isolated availability, confirmed bookings, cancellation and reconnect behavior.
 - [ ] Verify a real authorized call through lead capture, compliant SMS follow-up, team alert and calendar read-back before enabling tenant traffic.

@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, Building2, Workflow, Sparkles, FormInput, LayoutTemplate, ListTree, LifeBuoy } from "lucide-react";
+import { LayoutDashboard, Megaphone, Settings, LogOut, Users, ShieldOff, Filter, Wallet, Calculator, MessageSquareText, ChevronDown, Inbox, UserPlus, ShieldCheck, Building2, Workflow, Sparkles, FormInput, LayoutTemplate, ListTree, LifeBuoy, Bot } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
@@ -67,7 +67,7 @@ const navigationSections = [
   { title: "Overview", entries: items.slice(0, 1) },
   { title: "Messaging", entries: items.slice(1, 4) },
   { title: "Audience", entries: items.slice(4, 5) },
-  { title: "Automation", entries: items.slice(5, 7) },
+  { title: "Automation", entries: [...items.slice(5, 7), { title: "AI Receptionist", url: "/app/receptionist", icon: Bot, perm: "settings" as PermissionKey }] },
   { title: "Website", entries: items.slice(7, 8) },
 ];
 
