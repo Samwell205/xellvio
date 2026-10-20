@@ -137,7 +137,12 @@ export const saveBusinessProfile = createServerFn({ method: "POST" })
         terms_url: data.terms_url || null,
         contact_email: data.contact_email,
         phone: data.phone,
-        onboarding_status: "profile_complete",
+        // Never move an account that is already further along back to an earlier stage.
+        onboarding_status: await (async () => {
+          const { data: cur } = await supabaseAdmin.from("accounts").select("onboarding_status").eq("id", userId).maybeSingle();
+          const s = cur?.onboarding_status;
+          return !s || s === "signup" ? "profile_complete" : s;
+        })(),
       }, { onConflict: "id" });
     if (error) throw error;
     return { ok: true };
