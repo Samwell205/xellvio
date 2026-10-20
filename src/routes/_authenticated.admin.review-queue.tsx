@@ -52,8 +52,9 @@ function ReviewQueuePage() {
       <div>
         <h1 className="text-2xl font-extrabold">Compliance review queue</h1>
         <p className="text-sm text-muted-foreground">
-          Flagged messages holding for admin approval. Pending items auto-approve after 15 minutes
-          if untouched.
+          Borderline messages holding for admin approval. Pending items never auto-approve. Messages
+          blocked outright for prohibited content, and account sending holds, are not listed here —
+          lift account holds from Tenant accounts.
         </p>
       </div>
       <div className="flex gap-2">
@@ -111,7 +112,7 @@ function ReviewQueuePage() {
                     <div className="text-xs text-muted-foreground">
                       {new Date(r.created_at).toLocaleString()}
                       {isPending && (
-                        <> · auto-approves {new Date(r.auto_approve_at).toLocaleString()}</>
+                        <> · awaiting admin decision</>
                       )}
                     </div>
                   </div>

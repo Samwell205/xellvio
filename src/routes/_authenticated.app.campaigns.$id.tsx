@@ -878,7 +878,7 @@ function CampaignReport() {
             <div className="text-xs mt-1 text-muted-foreground">
               {(progress?.total ?? 0) > 0
                 ? "Messages already handed to the carrier keep being delivered — the counters below are live. Remaining recipients resume automatically once the hold clears."
-                : "Nothing has been sent or charged. It releases automatically within 15 minutes if no issue is found. To send sooner, edit the wording — urgent “compliance / filing / step required + act now” phrasing is rejected by mobile carriers even when the business is legitimate."}
+                : "Nothing has been sent or charged. Held messages are not released automatically. Edit the wording and create a new campaign — urgent “compliance / filing / step required + act now” phrasing is rejected by mobile carriers even when the business is legitimate."}
             </div>
           </div>
         </div>
