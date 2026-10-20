@@ -62,7 +62,7 @@ export function PhoneLinePanel({ data, onChange }: {
   data: {
     isOwner: boolean; number: string | null; numberType: string | null; numberCountry?: string | null; provisionStatus: string;
     regulatoryNotes?: string | null; billingStatus?: string; renewsAt?: string | null;
-    hasAgent: boolean; testVerified?: boolean; perMinuteUsd: number; numberMonthlyUsd: number; config: { businessName: string; phoneMode: string };
+    hasAgent: boolean; enabled: boolean; testVerified?: boolean; perMinuteUsd: number; numberMonthlyUsd: number; config: { businessName: string; phoneMode: string };
   };
   onChange: () => Promise<unknown> | void;
 }) {
@@ -110,7 +110,7 @@ export function PhoneLinePanel({ data, onChange }: {
     onError: (e: Error) => toast.error(e.message),
   });
   const buyMut = useMutation({
-    mutationFn: () => buy({ data: { phoneNumber: picked!.phoneNumber, type, country, confirmed: true } }),
+    mutationFn: () => { if (!picked) throw new Error("Choose a number first"); return buy({ data: { phoneNumber: picked.phoneNumber, type, country, confirmed: true } }); },
     onSuccess: async (r) => { setConfirm(false); setResults([]); setPicked(null); toast.success(r.status === "verified" ? `${r.phoneNumber} is active` : `${r.phoneNumber} ordered — ${STATUS[r.status] ?? r.status}`); await onChange(); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -134,21 +134,21 @@ export function PhoneLinePanel({ data, onChange }: {
       </div>
 
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4">
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-primary/10 p-2.5"><Bot className="size-5 text-primary" /></div>
             <div>
               <p className="font-medium">AI phone agent</p>
-              <p className="text-sm text-muted-foreground">{data.hasAgent ? "Live with your latest saved details. Update after any change." : "Save your business details below, then create the agent."}</p>
+              <p className="text-sm text-muted-foreground">{data.hasAgent ? "Created. Update after saving changes to business details." : "Save your business details below, then create the agent."}</p>
             </div>
           </div>
-          <Button type="button" disabled={!data.isOwner || agentMut.isPending} onClick={() => agentMut.mutate()}>
+          <Button type="button" disabled={!data.isOwner || data.enabled || agentMut.isPending} onClick={() => agentMut.mutate()}>
             {agentMut.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}{data.hasAgent ? "Update agent" : "Create AI agent"}
           </Button>
         </div>
 
         {data.number ? <ActiveNumber data={data} refreshing={refreshMut.isPending} onRefresh={() => refreshMut.mutate()} /> : (
-          <div className="space-y-5 rounded-xl border bg-card p-5">
+          <div className="space-y-5 rounded-lg border bg-card p-5">
             <div className="flex flex-wrap gap-x-6 gap-y-2">
               <StepHeader n={1} title="Choose a number" active={step === 1} done={step > 1} />
               <StepHeader n={2} title="Business paperwork" active={step === 2} done={step > 2} />
@@ -163,11 +163,11 @@ export function PhoneLinePanel({ data, onChange }: {
             </div>
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
               {TYPES.map((t) => (
-                <button key={t.value} type="button" onClick={() => { setType(t.value); setResults([]); setPicked(null); }}
-                  className={cn("rounded-lg border p-3 text-left transition-colors hover:border-primary/60", type === t.value && "border-primary bg-primary/5 ring-1 ring-primary")}>
+                <Button key={t.value} variant="outline" aria-pressed={type === t.value} type="button" onClick={() => { setType(t.value); setResults([]); setPicked(null); }}
+                  className={cn("h-auto flex-col items-start whitespace-normal rounded-lg border p-3 text-left transition-colors hover:border-primary/60", type === t.value && "border-primary bg-primary/5 ring-1 ring-primary")}>
                   <div className="text-sm font-medium">{t.title}</div>
                   <div className="mt-0.5 text-xs text-muted-foreground">{t.hint}</div>
-                </button>
+                </Button>
               ))}
             </div>
             <Button type="button" variant="outline" className="w-full sm:w-auto" disabled={!data.isOwner || searchMut.isPending} onClick={() => searchMut.mutate()}>
@@ -177,8 +177,8 @@ export function PhoneLinePanel({ data, onChange }: {
             {results.length > 0 && (
               <div className="max-h-80 divide-y overflow-auto rounded-lg border">
                 {results.map((n) => (
-                  <button key={n.phoneNumber} type="button" onClick={() => pickMut.mutate(n)} disabled={pickMut.isPending}
-                    className={cn("flex w-full items-center justify-between gap-3 p-3 text-left text-sm hover:bg-muted/50", picked?.phoneNumber === n.phoneNumber && "bg-primary/5")}>
+                  <Button key={n.phoneNumber} variant="ghost" type="button" onClick={() => pickMut.mutate(n)} disabled={pickMut.isPending}
+                    className={cn("flex h-auto w-full items-center justify-between gap-3 rounded-none p-3 text-left text-sm hover:bg-muted/50", picked?.phoneNumber === n.phoneNumber && "bg-primary/5")}>
                     <div>
                       <div className="font-mono">{n.phoneNumber}</div>
                       <div className="mt-1 flex flex-wrap gap-1.5">
@@ -188,7 +188,7 @@ export function PhoneLinePanel({ data, onChange }: {
                       </div>
                     </div>
                     {picked?.phoneNumber === n.phoneNumber ? <Check className="size-4 text-primary" /> : <span className="text-xs text-muted-foreground">${n.monthlyUsd.toFixed(2)}/mo</span>}
-                  </button>
+                  </Button>
                 ))}
               </div>
             )}
@@ -199,7 +199,7 @@ export function PhoneLinePanel({ data, onChange }: {
                   <ShieldCheck className="mt-0.5 size-4 text-primary" />
                   <div>
                     <p className="text-sm font-medium">{reqs.paperworkDone ? "Paperwork saved for this number type" : "The carrier needs these details before this number can be used"}</p>
-                    <p className="text-xs text-muted-foreground">These rules are set by the country's telecoms regulator. They're checked by the carrier, usually within 1–3 business days.</p>
+                    <p className="text-xs text-muted-foreground">These rules are set by the country's telecoms regulator. Approval times depend on the country, number type and documents.</p>
                   </div>
                 </div>
                 {!reqs.paperworkDone && (
@@ -267,9 +267,9 @@ export function PhoneLinePanel({ data, onChange }: {
 function texting(country: string, type: string, canText: boolean) {
   const p = textingPath(country, type, canText);
   if (p === "calls_only") return "This number takes calls only — it can't send texts.";
-  if (p === "tollfree_verification") return "Texts switch on after toll-free verification is approved (usually a few days).";
+  if (p === "tollfree_verification") return "Texts switch on after toll-free verification is approved (approval time varies).";
   if (p === "tendlc_registration") return "Texts need a business (10DLC) registration first — our team will help.";
-  return "Texts work as soon as the number is active.";
+  return "SMS capability is available; messaging setup and any required verification must be completed first.";
 }
 
 function ActiveNumber({ data, refreshing, onRefresh }: { data: any; refreshing: boolean; onRefresh: () => void }) {
@@ -281,11 +281,11 @@ function ActiveNumber({ data, refreshing, onRefresh }: { data: any; refreshing: 
   const stages = [
     { title: "Number ordered", done: true, note: "Reserved for your business" },
     { title: "Carrier checks", done: active, note: active ? "Approved" : STATUS[data.provisionStatus] ?? "In progress", warn: data.provisionStatus === "documents_rejected" || data.provisionStatus === "number_failed" },
-    { title: "Calls", done: active && data.hasAgent, note: !active ? "Waiting for carrier checks" : data.hasAgent ? (data.testVerified ? "Answering — test call passed" : "Ready — make a test call") : "Create your AI agent" },
-    { title: "Texts", done: active && path === "ready", note: path === "calls_only" ? "Not available on this number type" : !active ? "Waiting for carrier checks" : path === "ready" ? "Ready" : path === "tollfree_verification" ? "Needs toll-free verification" : "Needs business registration" },
+    { title: "Calls", done: active && data.hasAgent && data.enabled, note: !active ? "Waiting for carrier checks" : data.hasAgent ? (data.enabled ? "Answering calls" : data.testVerified ? "Paused — test call verified" : "Pilot verification required") : "Create your AI agent" },
+    { title: "Texts", done: false, note: path === "calls_only" ? "Not available on this number type" : !active ? "Waiting for carrier checks" : path === "ready" ? "Complete messaging setup" : path === "tollfree_verification" ? "Needs toll-free verification" : "Needs business registration" },
   ];
   return (
-    <div className="space-y-4 rounded-xl border bg-card p-5">
+    <div className="space-y-4 rounded-lg border bg-card p-5">
       <div className="flex flex-wrap items-center gap-3">
         <Phone className="size-5 text-primary" />
         <span className="font-mono text-lg">{data.number}</span>
@@ -310,20 +310,7 @@ function ActiveNumber({ data, refreshing, onRefresh }: { data: any; refreshing: 
       <div className="rounded-md bg-muted/50 p-3 text-sm">
         <p className="flex items-center gap-2 font-medium"><PhoneForwarded className="size-4" />Send missed calls here (keep your existing number)</p>
         <p className="mt-1 text-muted-foreground">Forward <b>unanswered or busy</b> calls from your usual phone to <span className="font-mono">{data.number}</span>. Or give customers this number directly.</p>
-        {country === "GB" || country === "IE" ? (
-          <ul className="mt-2 space-y-1 font-mono text-xs">
-            <li>**61*{data.number}# — when unanswered</li>
-            <li>**67*{data.number}# — when busy</li>
-            <li>**62*{data.number}# — when unreachable</li>
-            <li>##002# — cancel all forwarding</li>
-          </ul>
-        ) : (
-          <ul className="mt-2 space-y-1 font-mono text-xs">
-            <li>*71{data.number?.replace("+1", "")} — AT&T / Verizon: when unanswered or busy</li>
-            <li>**61*{data.number}# — T-Mobile: when unanswered</li>
-            <li>*73 — cancel (AT&T / Verizon)</li>
-          </ul>
-        )}
+        <p className="mt-2 text-xs text-muted-foreground">Ask your phone provider to enable conditional forwarding for unanswered, busy or unreachable calls. Dial codes vary by provider and phone plan.</p>
         <p className="mt-2 text-xs text-muted-foreground">Landlines and office phone systems: turn on "forward on no answer" in your provider's settings.</p>
       </div>
     </div>

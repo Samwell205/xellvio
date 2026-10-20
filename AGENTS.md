@@ -32,3 +32,4 @@
 - Calling-number monthly fees are charged by the database function charge_receptionist_number_renewals (hourly pg_cron), not an HTTP route, so a public caller can never trigger charges; failed renewals mark the number past_due and inbound calls are refused until paid.
 
 - Number purchases first load the carrier's live regulatory requirements for the country and type, collect them into a carrier requirement group, and attach it to the order; texting readiness comes from textingPath in src/lib/receptionist/shared.ts so the UI never promises texts before carrier verification.
+- Inbound voice uses the same business instruction builder as assistant provisioning; handoff destinations are server-owned, startup failure closes the call, and billing excludes ringing time so stored settings and actual calls cannot diverge.

@@ -86,9 +86,12 @@ Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout 
 - [ ] Resend "batch 2" (6f6ace6d) 4,792 recipients blocked by carrier 40314 — waiting on carrier to re-enable messaging
 
 ## AI receptionist rollout (Oct 20)
+- [x] Improve business-specific agent choices; share saved instructions with live call setup, add guarded team transfer and startup-failure handling, exclude ringing time from answered-minute fees; 24 safeguard tests, signed-in save/read-back and live UK number selection/paperwork display passed. Live call remains unverified.
 - [x] Business profile (name, website, address, phone, industry, team size) required before dashboard
 - [x] Calling numbers on sale ($5/mo, $0.15/min); UK mobile = calls+texts, other UK types calls-only
 - [x] AI voice agent create/update; call forwarding instructions
-- [ ] Monthly $5 renewal charge (only first month charged at purchase today)
+- [x] Implement monthly renewal charging and past-due call gating; real renewal debit still requires an authorized funded-number test.
 - [ ] Publish, then make a real test call (needs owner)
-- [ ] Google Calendar OAuth app published + client linked (needs owner)
+- [x] Verify Google Calendar client linked with offline access enabled.
+- [ ] Verify Google OAuth app production status and complete real Calendar consent, booking/cancellation read-back (needs owner consent).
+- [ ] Complete live number purchase and document submission; exact-number order guard and regulatory response parsing implemented, not a real purchased-line test.
