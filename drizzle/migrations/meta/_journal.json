@@ -57,6 +57,13 @@
       "when": 1792438684221,
       "tag": "0007_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792502465094,
+      "tag": "0008_add_tenant_ai_receptionist",
+      "breakpoints": true
     }
   ]
 }

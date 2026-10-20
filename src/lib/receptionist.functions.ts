@@ -1,0 +1,112 @@
+import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { receptionistConfigSchema, canActivateReceptionist, appointmentInputSchema } from "./receptionist/shared";
+
+async function workspace(userId: string, ownerOnly = false) {
+  const { resolveActingAccount, assertPermission, assertOwner } = await import("./acting-account.server");
+  const acting = await resolveActingAccount(userId);
+  assertPermission(acting, "settings");
+  if (ownerOnly) assertOwner(acting);
+  return acting;
+}
+export const getReceptionist = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  const acting = await workspace(context.userId);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const results = await Promise.all([
+    supabaseAdmin.from("receptionist_settings").select("configuration,enabled,voice_number,provision_status,test_verified_at").eq("account_id", acting.accountId).maybeSingle(),
+    supabaseAdmin.from("receptionist_calls").select("id,from_number,to_number,status,started_at,ended_at,summary,duration_seconds,cost_amount,cost_status").eq("account_id", acting.accountId).order("started_at", { ascending: false }).limit(50),
+    supabaseAdmin.from("receptionist_leads").select("id,name,phone_e164,email,request,sms_consent,consent_evidence,status,created_at").eq("account_id", acting.accountId).order("created_at", { ascending: false }).limit(50),
+    supabaseAdmin.from("receptionist_appointments").select("id,name,phone_e164,starts_at,ends_at,status,error").eq("account_id", acting.accountId).order("starts_at", { ascending: false }).limit(50),
+    supabaseAdmin.from("receptionist_platform_settings").select("configuration").eq("id", true).maybeSingle(),
+    supabaseAdmin.from("app_user_connections").select("reconnect_required").eq("user_id", acting.accountId).eq("connector_id", "google_calendar").maybeSingle(),
+  ]);
+  for (const result of results) if (result.error) throw new Error("Receptionist records could not be loaded.");
+  const [settings,calls,leads,appointments,platform,connection] = results;
+  const p = (platform.data?.configuration ?? {}) as Record<string,unknown>;
+  return { config: receptionistConfigSchema.parse(settings.data?.configuration ?? {}), enabled: settings.data?.enabled ?? false, number: settings.data?.voice_number ?? null, provisionStatus: settings.data?.provision_status ?? "not_configured", testVerified: Boolean(settings.data?.test_verified_at), pricingApproved: p.pricingApproved === true, isOwner: acting.isOwner, calendarConnected: Boolean(connection.data) && !connection.data?.reconnect_required, reconnectRequired: connection.data?.reconnect_required ?? false, calls: calls.data ?? [], leads: leads.data ?? [], appointments: appointments.data ?? [] };
+});
+export const saveReceptionist = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => receptionistConfigSchema.parse(input)).handler(async ({ context, data }) => {
+  const acting = await workspace(context.userId, true);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: current, error: readError } = await supabaseAdmin.from("receptionist_settings").select("enabled").eq("account_id", acting.accountId).maybeSingle();
+  if (readError) throw readError;
+  if (current?.enabled) throw new Error("Pause your receptionist before changing its business instructions.");
+  const { error } = await supabaseAdmin.from("receptionist_settings").upsert({ account_id: acting.accountId, configuration: data, test_verified_at: null, updated_at: new Date().toISOString() });
+  if (error) throw new Error("Your settings could not be saved.");
+  return { ok: true };
+});
+export const setReceptionistEnabled = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ enabled: z.boolean() }).parse(input)).handler(async ({ context, data }) => {
+  const acting = await workspace(context.userId, true);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  if (data.enabled) {
+    const { data: settings } = await supabaseAdmin.from("receptionist_settings").select("*").eq("account_id", acting.accountId).maybeSingle();
+    const { data: platform } = await supabaseAdmin.from("receptionist_platform_settings").select("configuration").eq("id", true).maybeSingle();
+    const p = (platform?.configuration ?? {}) as Record<string,unknown>, c = receptionistConfigSchema.parse(settings?.configuration ?? {});
+    if (!canActivateReceptionist({ pricingApproved: p.pricingApproved === true, voiceVerified: settings?.provision_status === "verified", numberAssigned: Boolean(settings?.voice_number && settings.assistant_id && settings.voice_application_id), testVerified: Boolean(settings?.test_verified_at), businessReady: Boolean(c.businessName && c.businessInformation && c.greeting) })) throw new Error("Calling cannot be enabled until pricing, your phone line, and a pilot call are verified.");
+    const { data: account } = await supabaseAdmin.from("accounts").select("sending_suspended_at,suspended_at,onboarding_status").eq("id", acting.accountId).single();
+    if (!account || account.suspended_at || account.onboarding_status === "suspended" || account.sending_suspended_at) throw new Error("This workspace is not eligible for calling.");
+  }
+  const { data: row, error } = await supabaseAdmin.from("receptionist_settings").update({ enabled: data.enabled, updated_at: new Date().toISOString() }).eq("account_id", acting.accountId).select("account_id").maybeSingle();
+  if (error || !row) throw new Error("Save your receptionist setup first.");
+  return { ok: true };
+});
+export const startReceptionistCalendar = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  const acting = await workspace(context.userId, true);
+  const clientAPIKey = process.env['GOOGLE_CALENDAR_APP_USER_CONNECTOR_CLIENT_API_KEY'];
+  if (!clientAPIKey) throw new Error("Google Calendar setup is not available yet.");
+  const request = getRequest(), url = new URL(request.url);
+  const forwardedHost = url.hostname === "localhost" ? request.headers.get("x-forwarded-host") : null;
+  const origin = forwardedHost ? `https://${forwardedHost}` : url.origin;
+  const { loadConnection } = await import("./receptionist/connections.server");
+  const connection = await loadConnection(acting.accountId);
+  const { authorizeAppUserOAuth } = await import("@/integrations/lovable/appUserConnector");
+  const { GOOGLE_CALENDAR_SCOPES } = await import("./receptionist/calendar.server");
+  try { return await authorizeAppUserOAuth({ gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectorId: "google_calendar", appUserId: context.userId, clientAPIKey, returnUrl: `${origin}/api/public/oauth/calendar/return`, connectionAPIKey: connection?.key, credentialsConfiguration: { scopes: GOOGLE_CALENDAR_SCOPES } }); }
+  catch (err) { console.error("Calendar authorization failed", err); throw new Error("Google Calendar connection could not start. Please contact support."); }
+});
+export const completeReceptionistCalendar = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ code: z.string().min(1).max(2048) }).parse(input)).handler(async ({ context, data }) => {
+  const acting = await workspace(context.userId, true);
+  const { exchangeAppUserOAuthCode } = await import("@/integrations/lovable/appUserConnector");
+  const { saveConnection } = await import("./receptionist/connections.server");
+  const result = await exchangeAppUserOAuthCode("https://connector-gateway.lovable.dev", data.code);
+  if (result.connectorId !== "google_calendar") throw new Error("Unexpected calendar connection.");
+  await saveConnection(acting.accountId, result.connectionAPIKey);
+  return { ok: true };
+});
+export const getReceptionistCalendars = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  const acting = await workspace(context.userId, true);
+  const { listWritableCalendars } = await import("./receptionist/calendar.server");
+  return listWritableCalendars(acting.accountId);
+});
+export const disconnectReceptionistCalendar = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+  const acting = await workspace(context.userId, true);
+  const { loadConnection } = await import("./receptionist/connections.server");
+  const connection = await loadConnection(acting.accountId);
+  if (connection) {
+    const { disconnectAppUser } = await import("@/integrations/lovable/appUserConnector");
+    await disconnectAppUser({ gatewayBaseUrl: "https://connector-gateway.lovable.dev", connectorId: "google_calendar", connectionAPIKey: connection.key });
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("app_user_connections").delete().eq("user_id", acting.accountId).eq("connector_id", "google_calendar");
+    if (error) throw error;
+  }
+  return { ok: true };
+});
+export const createReceptionistAppointment = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => appointmentInputSchema.parse(input)).handler(async ({ context, data }) => {
+  const acting = await workspace(context.userId, true);
+  const { bookAppointment } = await import("./receptionist/calendar.server");
+  return bookAppointment(acting.accountId, data);
+});
+export const cancelReceptionistAppointment = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input)).handler(async ({ context, data }) => {
+  const acting = await workspace(context.userId, true);
+  const { cancelAppointment } = await import("./receptionist/calendar.server");
+  return cancelAppointment(acting.accountId, data.id);
+});
+export const updateReceptionistLead = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["new","contacted","qualified","closed"]) }).parse(input)).handler(async ({ context, data }) => {
+  const acting = await workspace(context.userId);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: row, error } = await supabaseAdmin.from("receptionist_leads").update({ status: data.status }).eq("id", data.id).eq("account_id", acting.accountId).select("id").maybeSingle();
+  if (error || !row) throw new Error("Lead could not be updated.");
+  return { ok: true };
+});

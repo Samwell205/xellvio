@@ -20,6 +20,7 @@ const ROUTE_PERMS: { prefix: string; exact?: boolean; perm: PermissionKey }[] = 
   { prefix: "/app/toll-free-verification", perm: "setup_sms" },
   { prefix: "/app/team", perm: "team" },
   { prefix: "/app/settings", perm: "settings" },
+  { prefix: "/app/receptionist", perm: "settings" },
   { prefix: "/app/billing", perm: "billing" },
   { prefix: "/app/checkout", perm: "billing" },
 ];

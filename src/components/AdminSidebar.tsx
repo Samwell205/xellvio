@@ -27,6 +27,7 @@ const groups: { label: string; items: Item[] }[] = [
     { title: "Number requests", url: "/admin/number-requests", icon: PhoneCall },
     { title: "Tenant senders", url: "/admin/senders", icon: Radio },
     { title: "API access", url: "/admin/api-access", icon: KeyRound },
+    { title: "Receptionist pilot", url: "/admin/receptionist", icon: Bot },
     { title: "Verifier marketplace", url: "/admin/verifiers", icon: ShieldCheck },
   ] },
   { label: "Finance", items: [

@@ -90,6 +90,7 @@ import { Route as AuthenticatedAdminMessagingRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminNumberRequestsRouteImport } from './routes/_authenticated.admin.number-requests'
 import { Route as AuthenticatedAdminPerformanceRouteImport } from './routes/_authenticated.admin.performance'
 import { Route as AuthenticatedAdminRatesRouteImport } from './routes/_authenticated.admin.rates'
+import { Route as AuthenticatedAdminReceptionistRouteImport } from './routes/_authenticated.admin.receptionist'
 import { Route as AuthenticatedAdminReviewQueueRouteImport } from './routes/_authenticated.admin.review-queue'
 import { Route as AuthenticatedAdminSendersRouteImport } from './routes/_authenticated.admin.senders'
 import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated.admin.support'
@@ -154,6 +155,10 @@ import { Route as AuthenticatedAppAutomationsIdRouteImport } from './routes/_aut
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
+import { Route as AuthenticatedAppReceptionistIndexRouteImport } from './routes/_authenticated.app.receptionist.index'
+import { Route as AuthenticatedAppReceptionistAppointmentsRouteImport } from './routes/_authenticated.app.receptionist.appointments'
+import { Route as AuthenticatedAppReceptionistCallsRouteImport } from './routes/_authenticated.app.receptionist.calls'
+import { Route as AuthenticatedAppReceptionistLeadsRouteImport } from './routes/_authenticated.app.receptionist.leads'
 import { Route as AuthenticatedAppSegmentsIndexRouteImport } from './routes/_authenticated.app.segments.index'
 import { Route as AuthenticatedAppSegmentsNewRouteImport } from './routes/_authenticated.app.segments.new'
 import { Route as AuthenticatedAppSupportIndexRouteImport } from './routes/_authenticated.app.support.index'
@@ -171,6 +176,7 @@ import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/publi
 import { Route as ApiPublicSupportInboundRouteImport } from './routes/api.public.support.inbound'
 import { Route as ApiPublicSupportSweepRouteImport } from './routes/api.public.support.sweep'
 import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
+import { Route as ApiPublicVoiceEventsRouteImport } from './routes/api/public/voice/events'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -178,6 +184,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 import { Route as AuthenticatedAppUseTemplateCategorySlugRouteImport } from './routes/_authenticated.app.use-template.$category.$slug'
+import { Route as ApiPublicOauthCalendarReturnRouteImport } from './routes/api/public/oauth/calendar/return'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -599,6 +606,12 @@ const AuthenticatedAdminRatesRoute = AuthenticatedAdminRatesRouteImport.update({
   path: '/rates',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminReceptionistRoute =
+  AuthenticatedAdminReceptionistRouteImport.update({
+    id: '/receptionist',
+    path: '/receptionist',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminReviewQueueRoute =
   AuthenticatedAdminReviewQueueRouteImport.update({
     id: '/review-queue',
@@ -962,6 +975,30 @@ const AuthenticatedAppCampaignsNewRoute =
     path: '/new',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const AuthenticatedAppReceptionistIndexRoute =
+  AuthenticatedAppReceptionistIndexRouteImport.update({
+    id: '/receptionist/',
+    path: '/receptionist/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppReceptionistAppointmentsRoute =
+  AuthenticatedAppReceptionistAppointmentsRouteImport.update({
+    id: '/receptionist/appointments',
+    path: '/receptionist/appointments',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppReceptionistCallsRoute =
+  AuthenticatedAppReceptionistCallsRouteImport.update({
+    id: '/receptionist/calls',
+    path: '/receptionist/calls',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppReceptionistLeadsRoute =
+  AuthenticatedAppReceptionistLeadsRouteImport.update({
+    id: '/receptionist/leads',
+    path: '/receptionist/leads',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppSegmentsIndexRoute =
   AuthenticatedAppSegmentsIndexRouteImport.update({
     id: '/',
@@ -1059,6 +1096,11 @@ const ApiPublicV1SplatRoute = ApiPublicV1SplatRouteImport.update({
   path: '/api/public/v1/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicVoiceEventsRoute = ApiPublicVoiceEventsRouteImport.update({
+  id: '/api/public/voice/events',
+  path: '/api/public/voice/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -1098,6 +1140,12 @@ const AuthenticatedAppUseTemplateCategorySlugRoute =
     id: '/use-template/$category/$slug',
     path: '/use-template/$category/$slug',
     getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const ApiPublicOauthCalendarReturnRoute =
+  ApiPublicOauthCalendarReturnRouteImport.update({
+    id: '/api/public/oauth/calendar/return',
+    path: '/api/public/oauth/calendar/return',
+    getParentRoute: () => rootRouteImport,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -1179,6 +1227,7 @@ export interface FileRoutesByFullPath {
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
   '/admin/performance': typeof AuthenticatedAdminPerformanceRoute
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/admin/receptionist': typeof AuthenticatedAdminReceptionistRoute
   '/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/admin/senders': typeof AuthenticatedAdminSendersRoute
   '/admin/support': typeof AuthenticatedAdminSupportRouteWithChildren
@@ -1238,6 +1287,9 @@ export interface FileRoutesByFullPath {
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
+  '/app/receptionist/appointments': typeof AuthenticatedAppReceptionistAppointmentsRoute
+  '/app/receptionist/calls': typeof AuthenticatedAppReceptionistCallsRoute
+  '/app/receptionist/leads': typeof AuthenticatedAppReceptionistLeadsRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/app/support/$id': typeof AuthenticatedAppSupportIdRoute
   '/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
@@ -1252,6 +1304,7 @@ export interface FileRoutesByFullPath {
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
+  '/api/public/voice/events': typeof ApiPublicVoiceEventsRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1263,11 +1316,13 @@ export interface FileRoutesByFullPath {
   '/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
+  '/app/receptionist/': typeof AuthenticatedAppReceptionistIndexRoute
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/app/support/': typeof AuthenticatedAppSupportIndexRoute
   '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
+  '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1345,6 +1400,7 @@ export interface FileRoutesByTo {
   '/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
   '/admin/performance': typeof AuthenticatedAdminPerformanceRoute
   '/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/admin/receptionist': typeof AuthenticatedAdminReceptionistRoute
   '/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/admin/senders': typeof AuthenticatedAdminSendersRoute
   '/admin/telnyx': typeof AuthenticatedAdminTelnyxRouteWithChildren
@@ -1401,6 +1457,9 @@ export interface FileRoutesByTo {
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
+  '/app/receptionist/appointments': typeof AuthenticatedAppReceptionistAppointmentsRoute
+  '/app/receptionist/calls': typeof AuthenticatedAppReceptionistCallsRoute
+  '/app/receptionist/leads': typeof AuthenticatedAppReceptionistLeadsRoute
   '/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/app/support/$id': typeof AuthenticatedAppSupportIdRoute
   '/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
@@ -1415,6 +1474,7 @@ export interface FileRoutesByTo {
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
+  '/api/public/voice/events': typeof ApiPublicVoiceEventsRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1426,11 +1486,13 @@ export interface FileRoutesByTo {
   '/app/apps': typeof AuthenticatedAppAppsIndexRoute
   '/app/automations': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
+  '/app/receptionist': typeof AuthenticatedAppReceptionistIndexRoute
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
   '/app/support': typeof AuthenticatedAppSupportIndexRoute
   '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
+  '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1514,6 +1576,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/number-requests': typeof AuthenticatedAdminNumberRequestsRoute
   '/_authenticated/admin/performance': typeof AuthenticatedAdminPerformanceRoute
   '/_authenticated/admin/rates': typeof AuthenticatedAdminRatesRoute
+  '/_authenticated/admin/receptionist': typeof AuthenticatedAdminReceptionistRoute
   '/_authenticated/admin/review-queue': typeof AuthenticatedAdminReviewQueueRoute
   '/_authenticated/admin/senders': typeof AuthenticatedAdminSendersRoute
   '/_authenticated/admin/support': typeof AuthenticatedAdminSupportRouteWithChildren
@@ -1573,6 +1636,9 @@ export interface FileRoutesById {
   '/_authenticated/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
+  '/_authenticated/app/receptionist/appointments': typeof AuthenticatedAppReceptionistAppointmentsRoute
+  '/_authenticated/app/receptionist/calls': typeof AuthenticatedAppReceptionistCallsRoute
+  '/_authenticated/app/receptionist/leads': typeof AuthenticatedAppReceptionistLeadsRoute
   '/_authenticated/app/segments/new': typeof AuthenticatedAppSegmentsNewRoute
   '/_authenticated/app/support/$id': typeof AuthenticatedAppSupportIdRoute
   '/_verifier/verify/dashboard/earnings': typeof VerifierVerifyDashboardEarningsRoute
@@ -1587,6 +1653,7 @@ export interface FileRoutesById {
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
+  '/api/public/voice/events': typeof ApiPublicVoiceEventsRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -1598,11 +1665,13 @@ export interface FileRoutesById {
   '/_authenticated/app/apps/': typeof AuthenticatedAppAppsIndexRoute
   '/_authenticated/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
+  '/_authenticated/app/receptionist/': typeof AuthenticatedAppReceptionistIndexRoute
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/_authenticated/app/support/': typeof AuthenticatedAppSupportIndexRoute
   '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/_authenticated/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
+  '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1685,6 +1754,7 @@ export interface FileRouteTypes {
     | '/admin/number-requests'
     | '/admin/performance'
     | '/admin/rates'
+    | '/admin/receptionist'
     | '/admin/review-queue'
     | '/admin/senders'
     | '/admin/support'
@@ -1744,6 +1814,9 @@ export interface FileRouteTypes {
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
+    | '/app/receptionist/appointments'
+    | '/app/receptionist/calls'
+    | '/app/receptionist/leads'
     | '/app/segments/new'
     | '/app/support/$id'
     | '/verify/dashboard/earnings'
@@ -1758,6 +1831,7 @@ export interface FileRouteTypes {
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
     | '/api/public/v1/$'
+    | '/api/public/voice/events'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1769,11 +1843,13 @@ export interface FileRouteTypes {
     | '/app/apps/'
     | '/app/automations/'
     | '/app/campaigns/'
+    | '/app/receptionist/'
     | '/app/segments/'
     | '/app/support/'
     | '/verify/dashboard/'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
+    | '/api/public/oauth/calendar/return'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1851,6 +1927,7 @@ export interface FileRouteTypes {
     | '/admin/number-requests'
     | '/admin/performance'
     | '/admin/rates'
+    | '/admin/receptionist'
     | '/admin/review-queue'
     | '/admin/senders'
     | '/admin/telnyx'
@@ -1907,6 +1984,9 @@ export interface FileRouteTypes {
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
+    | '/app/receptionist/appointments'
+    | '/app/receptionist/calls'
+    | '/app/receptionist/leads'
     | '/app/segments/new'
     | '/app/support/$id'
     | '/verify/dashboard/earnings'
@@ -1921,6 +2001,7 @@ export interface FileRouteTypes {
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
     | '/api/public/v1/$'
+    | '/api/public/voice/events'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -1932,11 +2013,13 @@ export interface FileRouteTypes {
     | '/app/apps'
     | '/app/automations'
     | '/app/campaigns'
+    | '/app/receptionist'
     | '/app/segments'
     | '/app/support'
     | '/verify/dashboard'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
+    | '/api/public/oauth/calendar/return'
   id:
     | '__root__'
     | '/'
@@ -2019,6 +2102,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/number-requests'
     | '/_authenticated/admin/performance'
     | '/_authenticated/admin/rates'
+    | '/_authenticated/admin/receptionist'
     | '/_authenticated/admin/review-queue'
     | '/_authenticated/admin/senders'
     | '/_authenticated/admin/support'
@@ -2078,6 +2162,9 @@ export interface FileRouteTypes {
     | '/_authenticated/app/automations/$id'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
+    | '/_authenticated/app/receptionist/appointments'
+    | '/_authenticated/app/receptionist/calls'
+    | '/_authenticated/app/receptionist/leads'
     | '/_authenticated/app/segments/new'
     | '/_authenticated/app/support/$id'
     | '/_verifier/verify/dashboard/earnings'
@@ -2092,6 +2179,7 @@ export interface FileRouteTypes {
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
     | '/api/public/v1/$'
+    | '/api/public/voice/events'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -2103,11 +2191,13 @@ export interface FileRouteTypes {
     | '/_authenticated/app/apps/'
     | '/_authenticated/app/automations/'
     | '/_authenticated/app/campaigns/'
+    | '/_authenticated/app/receptionist/'
     | '/_authenticated/app/segments/'
     | '/_authenticated/app/support/'
     | '/_verifier/verify/dashboard/'
     | '/_authenticated/app/campaigns/$id/report'
     | '/_authenticated/app/use-template/$category/$slug'
+    | '/api/public/oauth/calendar/return'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2194,11 +2284,13 @@ export interface RootRouteChildren {
   ApiPublicSupportInboundRoute: typeof ApiPublicSupportInboundRoute
   ApiPublicSupportSweepRoute: typeof ApiPublicSupportSweepRoute
   ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
+  ApiPublicVoiceEventsRoute: typeof ApiPublicVoiceEventsRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
   LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
+  ApiPublicOauthCalendarReturnRoute: typeof ApiPublicOauthCalendarReturnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -2770,6 +2862,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRatesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/receptionist': {
+      id: '/_authenticated/admin/receptionist'
+      path: '/receptionist'
+      fullPath: '/admin/receptionist'
+      preLoaderRoute: typeof AuthenticatedAdminReceptionistRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/review-queue': {
       id: '/_authenticated/admin/review-queue'
       path: '/review-queue'
@@ -3218,6 +3317,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsNewRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/_authenticated/app/receptionist/': {
+      id: '/_authenticated/app/receptionist/'
+      path: '/receptionist'
+      fullPath: '/app/receptionist/'
+      preLoaderRoute: typeof AuthenticatedAppReceptionistIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/receptionist/appointments': {
+      id: '/_authenticated/app/receptionist/appointments'
+      path: '/receptionist/appointments'
+      fullPath: '/app/receptionist/appointments'
+      preLoaderRoute: typeof AuthenticatedAppReceptionistAppointmentsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/receptionist/calls': {
+      id: '/_authenticated/app/receptionist/calls'
+      path: '/receptionist/calls'
+      fullPath: '/app/receptionist/calls'
+      preLoaderRoute: typeof AuthenticatedAppReceptionistCallsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/receptionist/leads': {
+      id: '/_authenticated/app/receptionist/leads'
+      path: '/receptionist/leads'
+      fullPath: '/app/receptionist/leads'
+      preLoaderRoute: typeof AuthenticatedAppReceptionistLeadsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/segments/': {
       id: '/_authenticated/app/segments/'
       path: '/'
@@ -3337,6 +3464,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1SplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/voice/events': {
+      id: '/api/public/voice/events'
+      path: '/api/public/voice/events'
+      fullPath: '/api/public/voice/events'
+      preLoaderRoute: typeof ApiPublicVoiceEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
       path: '/lovable/email/auth/preview'
@@ -3385,6 +3519,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/use-template/$category/$slug'
       preLoaderRoute: typeof AuthenticatedAppUseTemplateCategorySlugRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/oauth/calendar/return': {
+      id: '/api/public/oauth/calendar/return'
+      path: '/api/public/oauth/calendar/return'
+      fullPath: '/api/public/oauth/calendar/return'
+      preLoaderRoute: typeof ApiPublicOauthCalendarReturnRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -3439,6 +3580,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminNumberRequestsRoute: typeof AuthenticatedAdminNumberRequestsRoute
   AuthenticatedAdminPerformanceRoute: typeof AuthenticatedAdminPerformanceRoute
   AuthenticatedAdminRatesRoute: typeof AuthenticatedAdminRatesRoute
+  AuthenticatedAdminReceptionistRoute: typeof AuthenticatedAdminReceptionistRoute
   AuthenticatedAdminReviewQueueRoute: typeof AuthenticatedAdminReviewQueueRoute
   AuthenticatedAdminSendersRoute: typeof AuthenticatedAdminSendersRoute
   AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRouteWithChildren
@@ -3471,6 +3613,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminNumberRequestsRoute: AuthenticatedAdminNumberRequestsRoute,
   AuthenticatedAdminPerformanceRoute: AuthenticatedAdminPerformanceRoute,
   AuthenticatedAdminRatesRoute: AuthenticatedAdminRatesRoute,
+  AuthenticatedAdminReceptionistRoute: AuthenticatedAdminReceptionistRoute,
   AuthenticatedAdminReviewQueueRoute: AuthenticatedAdminReviewQueueRoute,
   AuthenticatedAdminSendersRoute: AuthenticatedAdminSendersRoute,
   AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRouteWithChildren,
@@ -3562,9 +3705,13 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAppsSlugRoute: typeof AuthenticatedAppAppsSlugRoute
   AuthenticatedAppAutomationsIdRoute: typeof AuthenticatedAppAutomationsIdRoute
+  AuthenticatedAppReceptionistAppointmentsRoute: typeof AuthenticatedAppReceptionistAppointmentsRoute
+  AuthenticatedAppReceptionistCallsRoute: typeof AuthenticatedAppReceptionistCallsRoute
+  AuthenticatedAppReceptionistLeadsRoute: typeof AuthenticatedAppReceptionistLeadsRoute
   AuthenticatedAppSupportIdRoute: typeof AuthenticatedAppSupportIdRoute
   AuthenticatedAppAppsIndexRoute: typeof AuthenticatedAppAppsIndexRoute
   AuthenticatedAppAutomationsIndexRoute: typeof AuthenticatedAppAutomationsIndexRoute
+  AuthenticatedAppReceptionistIndexRoute: typeof AuthenticatedAppReceptionistIndexRoute
   AuthenticatedAppSupportIndexRoute: typeof AuthenticatedAppSupportIndexRoute
   AuthenticatedAppUseTemplateCategorySlugRoute: typeof AuthenticatedAppUseTemplateCategorySlugRoute
 }
@@ -3594,9 +3741,17 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAppsSlugRoute: AuthenticatedAppAppsSlugRoute,
   AuthenticatedAppAutomationsIdRoute: AuthenticatedAppAutomationsIdRoute,
+  AuthenticatedAppReceptionistAppointmentsRoute:
+    AuthenticatedAppReceptionistAppointmentsRoute,
+  AuthenticatedAppReceptionistCallsRoute:
+    AuthenticatedAppReceptionistCallsRoute,
+  AuthenticatedAppReceptionistLeadsRoute:
+    AuthenticatedAppReceptionistLeadsRoute,
   AuthenticatedAppSupportIdRoute: AuthenticatedAppSupportIdRoute,
   AuthenticatedAppAppsIndexRoute: AuthenticatedAppAppsIndexRoute,
   AuthenticatedAppAutomationsIndexRoute: AuthenticatedAppAutomationsIndexRoute,
+  AuthenticatedAppReceptionistIndexRoute:
+    AuthenticatedAppReceptionistIndexRoute,
   AuthenticatedAppSupportIndexRoute: AuthenticatedAppSupportIndexRoute,
   AuthenticatedAppUseTemplateCategorySlugRoute:
     AuthenticatedAppUseTemplateCategorySlugRoute,
@@ -3761,11 +3916,13 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSupportInboundRoute: ApiPublicSupportInboundRoute,
   ApiPublicSupportSweepRoute: ApiPublicSupportSweepRoute,
   ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,
+  ApiPublicVoiceEventsRoute: ApiPublicVoiceEventsRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
   LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
+  ApiPublicOauthCalendarReturnRoute: ApiPublicOauthCalendarReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

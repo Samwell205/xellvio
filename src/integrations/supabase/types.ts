@@ -1283,6 +1283,36 @@ export type Database = {
           },
         ]
       }
+      app_user_connections: {
+        Row: {
+          connection_key_ciphertext: string
+          connector_id: string
+          created_at: string
+          id: string
+          reconnect_required: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connection_key_ciphertext: string
+          connector_id: string
+          created_at?: string
+          id?: string
+          reconnect_required?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connection_key_ciphertext?: string
+          connector_id?: string
+          created_at?: string
+          id?: string
+          reconnect_required?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_versions: {
         Row: {
           app_id: string
@@ -4959,6 +4989,349 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      receptionist_appointments: {
+        Row: {
+          account_id: string
+          calendar_id: string
+          call_id: string | null
+          created_at: string
+          email: string | null
+          ends_at: string
+          error: string | null
+          event_id: string | null
+          id: string
+          idempotency_key: string
+          name: string
+          phone_e164: string
+          starts_at: string
+          status: string
+        }
+        Insert: {
+          account_id: string
+          calendar_id: string
+          call_id?: string | null
+          created_at?: string
+          email?: string | null
+          ends_at: string
+          error?: string | null
+          event_id?: string | null
+          id?: string
+          idempotency_key: string
+          name: string
+          phone_e164: string
+          starts_at: string
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          calendar_id?: string
+          call_id?: string | null
+          created_at?: string
+          email?: string | null
+          ends_at?: string
+          error?: string | null
+          event_id?: string | null
+          id?: string
+          idempotency_key?: string
+          name?: string
+          phone_e164?: string
+          starts_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receptionist_appointments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receptionist_appointments_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: false
+            referencedRelation: "receptionist_calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receptionist_calls: {
+        Row: {
+          account_id: string
+          answered_at: string | null
+          call_control_id: string
+          call_session_id: string | null
+          cost_amount: number | null
+          cost_status: string
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          from_number: string
+          id: string
+          started_at: string
+          status: string
+          summary: string | null
+          to_number: string
+          transcript: Json | null
+        }
+        Insert: {
+          account_id: string
+          answered_at?: string | null
+          call_control_id: string
+          call_session_id?: string | null
+          cost_amount?: number | null
+          cost_status?: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          from_number: string
+          id?: string
+          started_at?: string
+          status?: string
+          summary?: string | null
+          to_number: string
+          transcript?: Json | null
+        }
+        Update: {
+          account_id?: string
+          answered_at?: string | null
+          call_control_id?: string
+          call_session_id?: string | null
+          cost_amount?: number | null
+          cost_status?: string
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          from_number?: string
+          id?: string
+          started_at?: string
+          status?: string
+          summary?: string | null
+          to_number?: string
+          transcript?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receptionist_calls_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receptionist_events: {
+        Row: {
+          attempts: number
+          call_control_id: string | null
+          created_at: string
+          error: string | null
+          event_id: string
+          event_type: string
+          payload: Json
+          processed_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          call_control_id?: string | null
+          created_at?: string
+          error?: string | null
+          event_id: string
+          event_type: string
+          payload: Json
+          processed_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          call_control_id?: string | null
+          created_at?: string
+          error?: string | null
+          event_id?: string
+          event_type?: string
+          payload?: Json
+          processed_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      receptionist_jobs: {
+        Row: {
+          account_id: string
+          attempts: number
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          lead_id: string
+          outcome: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          lead_id: string
+          outcome?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          lead_id?: string
+          outcome?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receptionist_jobs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receptionist_jobs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "receptionist_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receptionist_leads: {
+        Row: {
+          account_id: string
+          call_id: string
+          consent_evidence: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+          phone_e164: string
+          raw_payload: Json
+          request: string
+          sms_consent: boolean
+          status: string
+        }
+        Insert: {
+          account_id: string
+          call_id: string
+          consent_evidence?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone_e164: string
+          raw_payload: Json
+          request: string
+          sms_consent?: boolean
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          call_id?: string
+          consent_evidence?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone_e164?: string
+          raw_payload?: Json
+          request?: string
+          sms_consent?: boolean
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receptionist_leads_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receptionist_leads_call_id_fkey"
+            columns: ["call_id"]
+            isOneToOne: true
+            referencedRelation: "receptionist_calls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      receptionist_platform_settings: {
+        Row: {
+          configuration: Json
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          configuration?: Json
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          configuration?: Json
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      receptionist_settings: {
+        Row: {
+          account_id: string
+          assistant_id: string | null
+          configuration: Json
+          enabled: boolean
+          provision_status: string
+          test_verified_at: string | null
+          updated_at: string
+          voice_application_id: string | null
+          voice_number: string | null
+        }
+        Insert: {
+          account_id: string
+          assistant_id?: string | null
+          configuration?: Json
+          enabled?: boolean
+          provision_status?: string
+          test_verified_at?: string | null
+          updated_at?: string
+          voice_application_id?: string | null
+          voice_number?: string | null
+        }
+        Update: {
+          account_id?: string
+          assistant_id?: string | null
+          configuration?: Json
+          enabled?: boolean
+          provision_status?: string
+          test_verified_at?: string | null
+          updated_at?: string
+          voice_application_id?: string | null
+          voice_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receptionist_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       review_queue: {
         Row: {
