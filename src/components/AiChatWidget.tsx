@@ -141,7 +141,8 @@ export function AiChatWidget() {
     }
   }
 
-  if (hidden || pathname.startsWith("/app/assistant")) return null;
+  if (hidden || pathname.startsWith("/app/assistant") || pathname.startsWith("/admin/account-assistant")) return null;
+  if (pathname.startsWith("/admin")) return <Button asChild className="fixed bottom-5 right-5 z-50 shadow-lg"><Link to="/admin/account-assistant"><MessageCircle/>Account assistant</Link></Button>;
   if (pathname.startsWith("/app/")) return <Button asChild className="fixed bottom-5 right-5 z-50 shadow-lg"><Link to="/app/assistant"><MessageCircle/>Assistant</Link></Button>;
 
   return (

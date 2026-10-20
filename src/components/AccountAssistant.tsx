@@ -16,10 +16,10 @@ import { Tool, ToolHeader, ToolContent } from "@/components/ai-elements/tool";
 import { useLiveVoice } from "@/hooks/use-live-voice";
 import { listAssistantThreads, newAssistantThread, inspectAssistantFile, listAssistantOperations, confirmAssistantAction, cancelAssistantAction, saveStoppedAssistantMessage } from "@/lib/account-assistant.functions";
 import { toast } from "sonner";
-export function AssistantThreads() {
+export function AssistantThreads({admin=false}:{admin?:boolean}) {
   const create=useServerFn(newAssistantThread), navigate=useNavigate();
   const {data=[]}=useQuery({queryKey:["assistant-threads"],queryFn:()=>listAssistantThreads()});
-  return <aside className="flex w-full flex-col gap-2 border-b p-4 md:w-60 md:border-b-0 md:border-r"><Button onClick={async()=>{try{const r=await create();await navigate({to:"/app/assistant/$threadId",params:{threadId:r.id}});}catch(e){toast.error(e instanceof Error?e.message:"Could not create conversation.");}}}><Plus/>New conversation</Button><nav aria-label="Assistant conversations" className="max-h-64 space-y-1 overflow-y-auto md:max-h-none">{data.map(t=><Button key={t.id} variant="ghost" className="h-auto w-full justify-start whitespace-normal py-3 text-left" asChild><Link to="/app/assistant/$threadId" params={{threadId:t.id}}>{t.title}</Link></Button>)}</nav></aside>;
+  return <aside className="flex w-full flex-col gap-2 border-b p-4 md:w-60 md:border-b-0 md:border-r"><Button onClick={async()=>{try{const r=await create();await navigate({to:admin?"/admin/account-assistant/$threadId":"/app/assistant/$threadId",params:{threadId:r.id}});}catch(e){toast.error(e instanceof Error?e.message:"Could not create conversation.");}}}><Plus/>New conversation</Button><nav aria-label="Assistant conversations" className="max-h-64 space-y-1 overflow-y-auto md:max-h-none">{data.map(t=><Button key={t.id} variant="ghost" className="h-auto w-full justify-start whitespace-normal py-3 text-left" asChild><Link to={admin?"/admin/account-assistant/$threadId":"/app/assistant/$threadId"} params={{threadId:t.id}}>{t.title}</Link></Button>)}</nav></aside>;
 }
 export function AccountAssistant({threadId,initialMessages}:{threadId:string;initialMessages:UIMessage[]}) {
   const qc=useQueryClient(); const inputRef=useRef<HTMLTextAreaElement>(null); const fileRef=useRef<HTMLInputElement>(null);
