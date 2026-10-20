@@ -99,7 +99,10 @@ function OnboardingPage() {
   }, [account.data]);
 
   const status = account.data?.onboarding_status ?? "signup";
-  const step: 1 | 2 = useMemo(() => (status === "signup" ? 1 : 2), [status]);
+  const a = account.data as any;
+  // Same rule as the dashboard gate: show the form until every required detail is saved.
+  const profileDone = status === "active" || Boolean(a && a.legal_business_name && a.website_url && a.business_address && a.phone && a.industry && a.team_size);
+  const step: 1 | 2 = useMemo(() => (profileDone ? 2 : 1), [profileDone]);
 
   const save = useMutation({
     mutationFn: async () => {
