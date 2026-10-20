@@ -6,7 +6,7 @@ export {
   getLovableAiGatewayRunId,
   getLovableAiGatewayResponseHeaders,
   withLovableAiGatewayRunIdHeader,
-} from "./account-ai-run-id-id.server.ts";
+} from "./account-ai-run-id.server.ts";
 
 export function createLovableAiGatewayProvider(
   lovableApiKey: string,
