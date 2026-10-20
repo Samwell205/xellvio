@@ -15,7 +15,7 @@ export const getReceptionist = createServerFn({ method: "GET" }).middleware([req
   const acting = await workspace(context.userId);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const results = await Promise.all([
-    supabaseAdmin.from("receptionist_settings").select("configuration,enabled,voice_number,provision_status,test_verified_at,number_type,assistant_id").eq("account_id", acting.accountId).maybeSingle(),
+    supabaseAdmin.from("receptionist_settings").select("configuration,enabled,voice_number,provision_status,test_verified_at,number_type,number_country,assistant_id,regulatory_notes,number_billing_status,number_renews_at").eq("account_id", acting.accountId).maybeSingle(),
     supabaseAdmin.from("receptionist_calls").select("id,from_number,to_number,status,started_at,ended_at,summary,duration_seconds,cost_amount,cost_status").eq("account_id", acting.accountId).order("started_at", { ascending: false }).limit(50),
     supabaseAdmin.from("receptionist_leads").select("id,name,phone_e164,email,request,sms_consent,consent_evidence,status,created_at").eq("account_id", acting.accountId).order("created_at", { ascending: false }).limit(50),
     supabaseAdmin.from("receptionist_appointments").select("id,name,phone_e164,starts_at,ends_at,status,error").eq("account_id", acting.accountId).order("starts_at", { ascending: false }).limit(50),
@@ -25,7 +25,7 @@ export const getReceptionist = createServerFn({ method: "GET" }).middleware([req
   for (const result of results) if (result.error) throw new Error("Receptionist records could not be loaded.");
   const [settings,calls,leads,appointments,platform,connection] = results;
   const p = (platform.data?.configuration ?? {}) as Record<string,unknown>;
-  return { config: receptionistConfigSchema.parse(settings.data?.configuration ?? {}), enabled: settings.data?.enabled ?? false, number: settings.data?.voice_number ?? null, provisionStatus: settings.data?.provision_status ?? "not_configured", testVerified: Boolean(settings.data?.test_verified_at), pricingApproved: p.pricingApproved === true, numberType: settings.data?.number_type ?? null, perMinuteUsd: Number(p.perMinuteUsd ?? 0.15), numberMonthlyUsd: Number(p.numberMonthlyUsd ?? 5), hasAgent: Boolean(settings.data?.assistant_id), isOwner: acting.isOwner, calendarConnected: Boolean(connection.data) && !connection.data?.reconnect_required, reconnectRequired: connection.data?.reconnect_required ?? false, calls: calls.data ?? [], leads: leads.data ?? [], appointments: appointments.data ?? [] };
+  return { config: receptionistConfigSchema.parse(settings.data?.configuration ?? {}), enabled: settings.data?.enabled ?? false, number: settings.data?.voice_number ?? null, provisionStatus: settings.data?.provision_status ?? "not_configured", testVerified: Boolean(settings.data?.test_verified_at), pricingApproved: p.pricingApproved === true, numberType: settings.data?.number_type ?? null, numberCountry: settings.data?.number_country ?? (settings.data?.voice_number?.startsWith("+44") ? "GB" : settings.data?.voice_number?.startsWith("+1") ? "US" : null), regulatoryNotes: settings.data?.regulatory_notes ?? null, billingStatus: settings.data?.number_billing_status ?? "current", renewsAt: settings.data?.number_renews_at ?? null, perMinuteUsd: Number(p.perMinuteUsd ?? 0.15), numberMonthlyUsd: Number(p.numberMonthlyUsd ?? 5), hasAgent: Boolean(settings.data?.assistant_id), isOwner: acting.isOwner, calendarConnected: Boolean(connection.data) && !connection.data?.reconnect_required, reconnectRequired: connection.data?.reconnect_required ?? false, calls: calls.data ?? [], leads: leads.data ?? [], appointments: appointments.data ?? [] };
 });
 export const saveReceptionist = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => receptionistConfigSchema.parse(input)).handler(async ({ context, data }) => {
   const acting = await workspace(context.userId, true);
@@ -117,10 +117,34 @@ export const searchReceptionistNumbers = createServerFn({ method: "POST" }).midd
   const { searchVoiceNumbers } = await import("./receptionist/provision.server");
   return searchVoiceNumbers({ country: data.country.toUpperCase(), type: data.type, region: data.region || undefined });
 });
-export const buyReceptionistNumber = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ phoneNumber: z.string().regex(/^\+[1-9]\d{6,14}$/), type: z.string().max(20), confirmed: z.literal(true) }).parse(input)).handler(async ({ context, data }) => {
+const numberTypeSchema = z.enum(["mobile","local","national","toll-free"]);
+export const getReceptionistNumberRequirements = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ country: z.string().length(2), type: numberTypeSchema }).parse(input)).handler(async ({ context, data }) => {
+  const acting = await workspace(context.userId, true);
+  const { getNumberRequirements } = await import("./receptionist/provision.server");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const country = data.country.toUpperCase();
+  const [requirements, { data: s }] = await Promise.all([
+    getNumberRequirements(country, data.type),
+    supabaseAdmin.from("receptionist_settings").select("requirement_group_id,number_country,number_type").eq("account_id", acting.accountId).maybeSingle(),
+  ]);
+  return { requirements, paperworkDone: Boolean(s?.requirement_group_id && s.number_country === country && s.number_type === data.type) };
+});
+const addressSchema = z.object({ firstName: z.string().trim().min(1).max(80), lastName: z.string().trim().min(1).max(80), businessName: z.string().trim().min(1).max(160), street: z.string().trim().min(3).max(200), city: z.string().trim().min(1).max(100), region: z.string().trim().max(100), postalCode: z.string().trim().min(2).max(20), country: z.string().length(2) });
+const paperworkValue = z.discriminatedUnion("kind", [
+  z.object({ requirementId: z.string().min(1).max(64), kind: z.literal("textual"), text: z.string().trim().min(2).max(2000) }),
+  z.object({ requirementId: z.string().min(1).max(64), kind: z.literal("address"), address: addressSchema }),
+  z.object({ requirementId: z.string().min(1).max(64), kind: z.literal("document"), file: z.object({ name: z.string().min(1).max(200), base64: z.string().min(10).max(11_000_000) }) }),
+]);
+export const submitReceptionistPaperwork = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ country: z.string().length(2), type: numberTypeSchema, values: z.array(paperworkValue).max(20) }).parse(input)).handler(async ({ context, data }) => {
+  const acting = await workspace(context.userId, true);
+  const { submitPaperwork } = await import("./receptionist/provision.server");
+  await submitPaperwork(acting.accountId, data.country.toUpperCase(), data.type, data.values);
+  return { ok: true };
+});
+export const buyReceptionistNumber = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ phoneNumber: z.string().regex(/^\+[1-9]\d{6,14}$/), type: numberTypeSchema, country: z.string().length(2), confirmed: z.literal(true) }).parse(input)).handler(async ({ context, data }) => {
   const acting = await workspace(context.userId, true);
   const { purchaseVoiceNumber } = await import("./receptionist/provision.server");
-  return purchaseVoiceNumber(acting.accountId, data.phoneNumber, data.type);
+  return purchaseVoiceNumber(acting.accountId, data.phoneNumber, data.type, data.country.toUpperCase());
 });
 export const refreshReceptionistNumber = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   const acting = await workspace(context.userId, true);
