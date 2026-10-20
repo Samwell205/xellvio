@@ -124,6 +124,7 @@ export function SmsCalculator({ rates }: { rates?: CountryRate[] }) {
 
             <Link
               to="/auth"
+              search={{ mode: "signup" }}
               className="mt-6 w-full inline-flex items-center justify-center bg-foreground text-background hover:bg-foreground/90 rounded-xl px-5 py-3 font-semibold transition-colors"
             >
               Start free
