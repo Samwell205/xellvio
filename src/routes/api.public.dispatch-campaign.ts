@@ -340,7 +340,7 @@ async function writeWithRetry(
   table: string,
   patch: Record<string, any>,
   match: Record<string, any>,
-  attempts = 4,
+  attempts = 2,
 ): Promise<void> {
   let lastError: any = null;
   for (let i = 0; i < attempts; i++) {
@@ -376,6 +376,7 @@ function createStatusSink(supabaseAdmin: any, chunk = 200): StatusSink & { drain
         await writeWithRetry(supabaseAdmin, "messages", patch, { id });
       } catch (e) {
         console.error("[dispatch] fallback status write failed", id, e);
+        throw e;
       }
     }
   };
@@ -482,6 +483,7 @@ async function sendOneMessage(
       { userId: campaign.account_id, messagingProfileId },
       () => sendMessage({
         accountId: campaign.account_id,
+        boundedDispatch:true,
         to: m.phone_e164,
         text: messageBody,
         from: fromNumber ?? undefined,
@@ -1487,7 +1489,9 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
           return Response.json({ error: "Telnyx not configured" }, { status: 500 });
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { supabaseAdmin: rawAdmin } = await import("@/integrations/supabase/client.server");
+        const { boundedDatabase }=await import("@/lib/bounded-database.server");
+        const supabaseAdmin=boundedDatabase(rawAdmin,2000);
         // Tenant webhook deliveries run alongside sending (accounts in
         // parallel), never ahead of it, so a slow tenant URL can't stall
         // campaign dispatch or receipt reconciliation for everyone.
@@ -1500,7 +1504,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             .lte("available_at", new Date().toISOString())
             .limit(6);
           const ids = [...new Set((dueWebhookAccounts ?? []).map((row) => row.account_id as string))];
-          await Promise.allSettled(ids.map((id) => dispatchPendingWebhooks(id, 6)));
+          for(const id of ids) await dispatchPendingWebhooks(id,1);
         })().catch((e) => console.error("[dispatch] webhook delivery failed", e));
         const waitUntil=(request as Request & {waitUntil?: (work:Promise<unknown>)=>void}).waitUntil;
         if(waitUntil) waitUntil(webhookWork);

@@ -15,7 +15,7 @@ export async function redirectTrackedLink(code: string, request: Request, depend
   if (request.method !== "HEAD") {
     const work = dependencies.record(code, link, request, AbortSignal.timeout(5000)).catch(error => console.error("[shortlink] click tracking failed", error instanceof Error ? error.message : "unknown"));
     const waitUntil = (request as Request & {waitUntil?: (work: Promise<unknown>) => void}).waitUntil;
-    // The published runtime supplies waitUntil. Local adapters without it retain
+    // Our server entry attaches execution-context waitUntil when available. Adapters without it retain
     // counting by awaiting bounded work, never by detaching an unowned promise.
     if (waitUntil) waitUntil(work);
     else await work;

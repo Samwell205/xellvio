@@ -40,6 +40,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      if (ctx && typeof ctx === "object" && "waitUntil" in ctx && typeof ctx.waitUntil === "function") {
+        Object.defineProperty(request,"waitUntil",{value:ctx.waitUntil.bind(ctx),configurable:true});
+      }
       if (new URL(request.url).pathname === "/api/live") {
         const {handleLiveRequest}=await import("./lib/live-relay.server");
         return handleLiveRequest(request);
