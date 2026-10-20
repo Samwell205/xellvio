@@ -4,7 +4,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone } from "@/lib/country-from-phone";
-import { keywordScan } from "@/lib/content-scanner";
+import { keywordScan, isPersonalizationOnlyBlock } from "@/lib/content-scanner";
 import { publicCampaignMediaUrl } from "@/lib/campaign-media";
 import { STOPPED_AS_SENT } from "@/lib/campaign-stop";
 import {DISPATCH_RUN_MS,DISPATCH_PLAN_ROWS,DISPATCH_CONNECTIONS,DISPATCH_SEND_RESERVE_MS,queuedPersistedIds,canStartDispatchSend} from "@/lib/dispatch-reliability";
@@ -475,6 +475,18 @@ async function sendOneMessage(
     if (!messagingProfileId && !fromNumber) {
       await recordStatus(supabaseAdmin, sink, m.id,
         { status: "failed", error_code: "no_sender", failure_reason: "No sender available" });
+      return { ok: false, shaft: false, debited: 0 };
+    }
+
+    // A contact's own name/fields can match a blocked phrase even though the
+    // screened template is clean. Skip just that recipient and flag it,
+    // instead of letting the send-time check suspend the whole account.
+    if (typeof campaign.message_body === "string" && isPersonalizationOnlyBlock(campaign.message_body, messageBody)) {
+      await recordStatus(supabaseAdmin, sink, m.id, {
+        status: "failed",
+        error_code: "personalization_flagged",
+        failure_reason: "Skipped: this contact's saved details contain restricted wording. Edit the contact and retry.",
+      });
       return { ok: false, shaft: false, debited: 0 };
     }
 

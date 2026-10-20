@@ -238,3 +238,16 @@ export function keywordScan(text: string): ScanResult {
 
   return { allowed: true, confidence: "none" };
 }
+
+/**
+ * True when the campaign template itself is clean but one recipient's
+ * personalised text trips a hard keyword block (e.g. a contact saved as
+ * "… Concealed Carry Training"). Only that recipient should be skipped;
+ * the template's own content was already screened.
+ */
+export function isPersonalizationOnlyBlock(template: string, rendered: string): boolean {
+  const t = keywordScan(template);
+  if (t.confidence === "keyword" && !t.allowed) return false;
+  const r = keywordScan(rendered);
+  return r.confidence === "keyword" && !r.allowed;
+}
