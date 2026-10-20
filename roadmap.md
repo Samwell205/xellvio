@@ -86,7 +86,7 @@ Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout 
 - [ ] Resend "batch 2" (6f6ace6d) 4,792 recipients blocked by carrier 40314 — waiting on carrier to re-enable messaging
 
 ## AI receptionist rollout (Oct 20)
-- [x] Improve business-specific agent choices; share saved instructions with live call setup, add guarded team transfer and startup-failure handling, exclude ringing time from answered-minute fees; 21 safeguard tests and signed-in save/read-back passed. Live call remains unverified.
+- [x] Improve business-specific agent choices; share saved instructions with live call setup, add guarded team transfer and startup-failure handling, exclude ringing time from answered-minute fees; 24 safeguard tests, signed-in save/read-back and live UK number selection/paperwork display passed. Live call remains unverified.
 - [x] Business profile (name, website, address, phone, industry, team size) required before dashboard
 - [x] Calling numbers on sale ($5/mo, $0.15/min); UK mobile = calls+texts, other UK types calls-only
 - [x] AI voice agent create/update; call forwarding instructions
