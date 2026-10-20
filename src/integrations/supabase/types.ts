@@ -7735,6 +7735,18 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      delete_receptionist_assistant: {
+        Args: { _account_id: string; _assistant_id: string }
+        Returns: undefined
+      }
+      edit_receptionist_assistant: {
+        Args: {
+          _account_id: string
+          _assistant_id: string
+          _configuration: Json
+        }
+        Returns: undefined
+      }
       eligible_country_counts: {
         Args: { _account_id: string; _audience: Json }
         Returns: {

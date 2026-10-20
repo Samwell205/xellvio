@@ -120,6 +120,13 @@
       "when": 1792512617612,
       "tag": "0016_confirm_assistant_draft_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792514949978,
+      "tag": "0017_independent_assistant_controls",
+      "breakpoints": true
     }
   ]
 }
