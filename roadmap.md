@@ -3,7 +3,7 @@
 ## Restricted voice pilot and publishing (Oct 20)
 - [x] Pilot email confirmed: samueldurosinmi64@gmail.com (no registered auth account found); reserve voice for its verified owner identity, including receptionist and website voice. SMS/text assistant stays available.
 - [x] Enforce pilot access in receptionist actions, assistant drafts, relay startup and call tools; signed-in non-pilot UI and direct action denial verified. Exact-email allow/deny tests pass; real Samuel sign-in awaits account registration.
-- [ ] Request publishing with restrictions included — current security scan complete, no critical findings; allowed-account live test waits for Samuel's registration.
+- [x] Current security scan complete with no critical findings; publishing requested with restricted voice rollout. Deployment completion and Samuel's live access remain unverified until deployment and his account registration.
 
 ## Monitoring fixes and multiple-assistant launch validation (Oct 20)
 - [x] Repair four claimed monitoring findings: indexed redirect, request-entry budget/bounded calls, persisted link IDs and orphan-contact batch recovery; targeted safeguards and live redirect checked (no paid dispatch run).
