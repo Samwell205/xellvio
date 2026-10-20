@@ -90,7 +90,7 @@ Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout 
 - [ ] Match advanced assistant controls: workflow editor, model/voice catalogs, managed knowledge sources, versions, browser/outbound test calls, widgets and simulation — not implemented in this increment; pricing and real-call validation must precede paid availability.
 - [x] Read back current prices: $5/month number, $0.15 per rounded-up answered minute, $100 assisted verification and $50 verified toll-free product; SMS uses existing destination rates. No distinct advanced-feature prices are configured.
 - [x] Add $100 assisted chosen-number verification requests, atomic credit debit and linked support tickets, 24-hour handling target, admin queue/status/notes/exact-number ordering; 28 tests pass and signed-in confirmation checked. Carrier approval is not guaranteed.
-- [ ] Verify a funded assisted request and admin fulfilment end-to-end — blocked on approval to take an actual $100 debit and an admin test session; current injected session is a non-admin business account.
+- [ ] Verify a funded assisted request and admin fulfilment end-to-end — requires an authorized $100 debit and a real number order; signed-in admin access is now verified.
 - [x] Improve business-specific agent choices; share saved instructions with live call setup, add guarded team transfer and startup-failure handling, exclude ringing time from answered-minute fees; 24 safeguard tests, signed-in save/read-back and live UK number selection/paperwork display passed. Live call remains unverified.
 - [x] Business profile (name, website, address, phone, industry, team size) required before dashboard
 - [x] Calling numbers on sale ($5/mo, $0.15/min); UK mobile = calls+texts, other UK types calls-only
