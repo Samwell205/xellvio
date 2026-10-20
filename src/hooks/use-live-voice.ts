@@ -352,10 +352,13 @@ function createLiveVoice(options: LiveOptions) {
       if (!sdp) throw new Error("Missing voice session offer");
       socket = new WebSocket(options.url);
       deadline = setTimeout(() => fail("Voice session did not start"), 50_000);
-      socket.onopen = () => {
+      socket.onopen = async () => {
         if (!starting()) return release();
-        const token = await options.getToken();
-        send({ type: "app.start", sdp, token });
+        try {
+          const token = await options.getToken();
+          if (!starting()) return release();
+          send({ type: "app.start", sdp, token });
+        } catch (error) { fail(error instanceof Error ? error.message : "Sign in to use voice."); }
       };
       socket.onmessage = ({ data }) => {
         try {

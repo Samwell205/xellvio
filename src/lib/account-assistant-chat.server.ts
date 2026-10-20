@@ -17,7 +17,7 @@ export async function handleAccountAssistantChat(request:Request) {
     const thread=await db.from("account_assistant_threads").select("id,messages").eq("id",input.threadId).eq("user_id",userId).single();
     if(thread.error) return Response.json({message:"Conversation not found."},{status:404});
     const tools=accountAssistantTools(userId);
-    const messages=await validateUIMessages({messages:input.messages,tools});
+    const messages=await validateUIMessages({messages:input.messages});
     // Store the optimistic user turn before generating, so cancellation cannot lose it.
     const save=await db.from("account_assistant_threads").update({messages:messages as never,title:messages.find(m=>m.role==="user")?.parts.filter(p=>p.type==="text").map(p=>p.text).join(" ").slice(0,80)||"New conversation",updated_at:new Date().toISOString()}).eq("id",input.threadId).eq("user_id",userId);
     if(save.error) throw new Error("Your message could not be saved.");
