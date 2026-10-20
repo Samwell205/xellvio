@@ -11,9 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { PhoneCall } from "lucide-react";
 import { adminListNumberRequests, adminReviewNumberRequest } from "@/lib/number-requests.functions";
+import { AdminAssistedNumbers } from "@/components/receptionist/AdminAssistedNumbers";
 
 export const Route = createFileRoute("/_authenticated/admin/number-requests")({
-  head: () => ({ meta: [{ title: "Admin · Number requests — Xellvio" }] }),
+  head: () => ({ meta: [{ title: "Number requests & assisted verification — Xellvio Admin" }, { name: "description", content: "Manage paid number assistance, carrier verification progress and business number requests." }, { property: "og:title", content: "Number requests — Xellvio Admin" }, { property: "og:description", content: "Manage business number requests and assisted verification." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: AdminNumberRequestsPage,
 });
 
@@ -44,12 +45,15 @@ function AdminNumberRequestsPage() {
     <div className="space-y-6 max-w-5xl">
       <div>
         <h1 className="text-2xl font-extrabold flex items-center gap-2">
-          <PhoneCall className="size-6" /> US/Canada number requests
+          <PhoneCall className="size-6" /> Number requests
         </h1>
         <p className="text-sm text-muted-foreground">
-          Review customer requests for toll-free, 10DLC, and short code numbers.
+          Manage assisted calling-number requests across countries and existing messaging-number requests.
         </p>
       </div>
+
+      <AdminAssistedNumbers />
+      <h2 className="text-xl font-semibold">US/Canada messaging-number requests</h2>
 
       {list.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
       {!list.isLoading && items.length === 0 && (

@@ -29,14 +29,12 @@ async function admin(client: { rpc: Function }) {
 export const adminListAssistedNumbers = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
   await admin(context.supabase);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin.from("assisted_number_requests").select("*, accounts:account_id(email,full_name,contact_email), receptionist:account_id(configuration,voice_number,provision_status,requirement_group_id,assistant_id,number_billing_status)").order("created_at", { ascending: false }).limit(100);
-  // Receptionist settings are not a direct foreign-key relation; load bounded account rows separately.
-  if (error) {
-    const result = await supabaseAdmin.from("assisted_number_requests").select("*, accounts:account_id(email,full_name,contact_email)").order("created_at", { ascending: false }).limit(100);
-    if (result.error) throw new Error("Assisted requests could not be loaded.");
-    return result.data ?? [];
-  }
-  return data ?? [];
+  const { data, error } = await supabaseAdmin.from("assisted_number_requests").select("*, accounts:account_id(email,full_name,contact_email)").order("created_at", { ascending: false }).limit(100);
+  if (error) throw new Error("Assisted requests could not be loaded.");
+  if (!data?.length) return [];
+  const settings = await supabaseAdmin.from("receptionist_settings").select("account_id,configuration,voice_number,provision_status,requirement_group_id,assistant_id,number_billing_status").in("account_id", data.map((r) => r.account_id));
+  if (settings.error) throw new Error("Business phone details could not be loaded.");
+  return data.map((r) => ({ ...r, receptionist: settings.data?.find((s) => s.account_id === r.account_id) ?? null }));
 });
 
 export const adminUpdateAssistedNumber = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["pending","in_review","documents_needed","carrier_pending","completed","rejected"]), notes: z.string().trim().max(2000) }).parse(input)).handler(async ({ context, data }) => {
