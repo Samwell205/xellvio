@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PhoneLinePanel } from "./PhoneLinePanel";
 import { Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -66,7 +67,7 @@ export function ReceptionistWorkspace({ view, pilot = false }: { view: View; pil
     // This form explicitly names the browser timezone; business-hour validation uses the saved business timezone on the server.
     return book({ data: { ...booking, startsAt: new Date(booking.startsAt).toISOString(), confirmed: true, idempotencyKey: crypto.randomUUID() } });
   }, onSuccess: (result) => { if (result.status === "confirmed") { toast.success("Appointment confirmed in Google Calendar"); setBookOpen(false); setBooking({ name:"",phone:"",email:"",startsAt:"" }); } else toast.info("Appointment confirmation needs checking"); refresh(); }, onError: (e) => { toast.error(e.message); refresh(); } });
-  const pendingSetup = !data.number || !data.testVerified || !data.pricingApproved;
+  const pendingSetup = !data.number || !data.hasAgent || data.provisionStatus !== "verified";
   return <main className="mx-auto w-full max-w-6xl space-y-7 p-4 md:p-8">
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div><div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground"><Bot className="h-4 w-4"/> Xellvio Voice</div><h1 className="text-3xl font-semibold">AI Receptionist</h1></div>
@@ -78,7 +79,8 @@ export function ReceptionistWorkspace({ view, pilot = false }: { view: View; pil
         {[{ icon: Bot, title: "Business profile", done: Boolean(data.config.businessName && data.config.businessInformation), value: data.config.businessName || "Not configured" }, { icon: Phone, title: "Phone line", done: Boolean(data.number && data.testVerified), value: data.number || "Awaiting phone setup" }, { icon: CalendarDays, title: "Calendar", done: data.calendarConnected && Boolean(data.config.calendarId), value: data.reconnectRequired ? "Reconnect required" : data.calendarConnected ? "Google Calendar connected" : "Not connected" }].map(item => <div key={item.title} className="flex items-start gap-3"><div className="rounded-md bg-muted p-3"><item.icon className="h-5 w-5"/></div><div className="min-w-0"><div className="flex items-center gap-2 text-sm font-medium">{item.title}{item.done && <Check className="h-4 w-4 text-primary"/>}</div><p className="mt-1 break-words text-sm text-muted-foreground">{item.value}</p></div></div>)}
       </section>
       {pendingSetup && <section className="flex flex-wrap items-center justify-between gap-4 border-l-2 border-primary bg-muted/40 px-4 py-3"><div><p className="font-medium">Your receptionist is not answering calls yet.</p><p className="mt-1 text-sm text-muted-foreground">Phone setup, calling prices and a verified test call are required before activation.</p></div><Button variant="outline" asChild><Link to="/app/support">Phone setup<ArrowUpRight className="h-4 w-4"/></Link></Button></section>}
-      {!data.isOwner && <p className="text-sm text-muted-foreground">Only the workspace owner can change receptionist settings or connect a calendar.</p>}
+      {!data.isOwner && <p className="text-sm text-muted-foreground">Only the business owner can change receptionist settings or connect a calendar.</p>}
+      <PhoneLinePanel data={data as any} onChange={refresh}/>
       <form onSubmit={e => { e.preventDefault(); mutate.mutate(); }} className="space-y-9">
         <fieldset disabled={!data.isOwner || data.enabled} className="space-y-9 disabled:opacity-70">
           <section className="grid gap-6 border-b pb-8 md:grid-cols-[220px_1fr]"><div><h2 className="text-lg font-semibold">Business & greeting</h2></div><div className="space-y-5"><Field name="Business name"><Input aria-label="Business name" value={config.businessName} onChange={e => change("businessName",e.target.value)} maxLength={120}/></Field><Field name="Opening greeting"><Textarea aria-label="Opening greeting" value={config.greeting} onChange={e => change("greeting",e.target.value)} placeholder="Thank you for calling. I’m the AI assistant for…" rows={3} maxLength={1000}/></Field><Field name="Services, prices & common questions"><Textarea aria-label="Business information" value={config.businessInformation} onChange={e => change("businessInformation",e.target.value)} rows={6} maxLength={12000}/></Field></div></section>
