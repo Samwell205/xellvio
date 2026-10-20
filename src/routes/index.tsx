@@ -223,6 +223,7 @@ function Hero() {
           <div className="mt-9 flex flex-wrap gap-3">
             <Link
               to="/auth"
+              search={{ mode: "signup" }}
               className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground rounded-full px-5 py-3 font-semibold hover:bg-primary/90 transition-colors"
             >
               Sign up <ArrowRight className="size-4" />
@@ -702,7 +703,7 @@ function CTA() {
               Start free with 50 credits. No card required.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/auth">
+              <Link to="/auth" search={{ mode: "signup" }}>
                 <Button
                   size="lg"
                   className="rounded-full bg-card text-foreground hover:bg-card/90 font-semibold px-6"
