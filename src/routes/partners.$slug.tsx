@@ -137,7 +137,7 @@ function PartnerPage() {
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <Button asChild>
-                    <Link to="/auth">Create an account</Link>
+                    <Link to="/auth" search={{ mode: "signup" }}>Create an account</Link>
                   </Button>
                   <Button asChild variant="outline">
                     <Link to="/pricing">See pricing</Link>
