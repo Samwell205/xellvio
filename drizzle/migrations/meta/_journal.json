@@ -113,6 +113,13 @@
       "when": 1792512537928,
       "tag": "0015_account_assistant_threads",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792512617612,
+      "tag": "0016_confirm_assistant_draft_actions",
+      "breakpoints": true
     }
   ]
 }

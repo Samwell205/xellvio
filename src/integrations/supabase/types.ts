@@ -7670,6 +7670,15 @@ export type Database = {
           segments_count: number
         }[]
       }
+      confirm_assistant_operation: {
+        Args: {
+          _account_id: string
+          _consent?: boolean
+          _id: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       create_api_sms_batch: {
         Args: {
           _account_id: string
