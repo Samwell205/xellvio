@@ -26,7 +26,7 @@
 - Additional messaging connections route by server-owned messaging profile IDs in src/lib/telnyx-connection.ts, with matching webhook keys and workspace-scoped sender assets; never replace the default credential or automatically resume old campaigns when activating a connection.
 - Receptionist functions enforce business access; encrypted calendar credentials use owner auth IDs and owner-only connect/book/disconnect. Paid activation requires approved pricing, phone verification and a pilot.
 - Assistant actions require server-generated call-scoped tokens and active-call, ownership and pricing checks; event signatures alone do not authenticate tool requests.
-- Voice provisioning uses shared pricing and allow-listed model/voice overrides; empty selections preserve defaults. Separate agents mirror the selected one into phone settings; switching requires paused/ended calls and resets pilot approval.
+- Voice uses shared pricing and allow-listed overrides. Owner-authorized transactional edits/deletion keep assistants separate; selected edits/switches require ended calls and reset pilot approval.
 - Tenant owners must complete the business profile (see getMySession profileComplete) before the /app dashboard renders, and the UI shows the business name rather than "workspace".
 - Calling-number monthly fees are charged by the database function charge_receptionist_number_renewals (hourly pg_cron), not an HTTP route, so a public caller can never trigger charges; failed renewals mark the number past_due and inbound calls are refused until paid.
 
@@ -34,3 +34,4 @@
 - Inbound voice reuses saved instructions, server-owned transfer destinations and startup-failure cleanup; billing excludes ringing time.
 - Assisted number requests atomically create tickets and debit credits; retries reuse open requests and admin completion requires the exact carrier-approved number, without bypassing SMS or pilot gates.
 - Account assistant uses route-owned persisted threads and transactional, on-screen-confirmed proposals; campaigns remain drafts until the existing launch review. Website voice shares authenticated tools through a persistent relay; model output never authorizes mutations.
+- Short links use indexed destinations and context-owned tracking; dispatch uses persisted message IDs and bounded requests to avoid orphan links and timeout losses.

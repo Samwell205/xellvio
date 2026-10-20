@@ -643,14 +643,14 @@ export async function createAlphanumericSenderId(opts: {
   return res.data;
 }
 
-export async function getMessage(id: string): Promise<any> {
+export async function getMessage(id: string, boundedDispatch=false): Promise<any> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: message } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).maybeSingle();
+  const { data: message } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
   const accountId = (message as any)?.campaigns?.account_id;
   const sentAt = Date.parse(message?.sent_at ?? "");
   const secondary = (accountId === SECONDARY_WORKSPACE_ID && sentAt >= Date.parse(SECONDARY_ACTIVATED_AT)) ||
     sentDuringFailover(sentAt, (message as any)?.phone_e164);
-  const res = await telnyx<{ data: any }>(`/messages/${id}`, { connectionProfileId: secondary ? SECONDARY_PROFILE_ID : undefined });
+  const res = await telnyx<{ data: any }>(`/messages/${id}`, { connectionProfileId: secondary ? SECONDARY_PROFILE_ID : undefined,...(boundedDispatch?{maxAttempts:1,timeoutMs:6000}:{}) });
   return res.data;
 }
 

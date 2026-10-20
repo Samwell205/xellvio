@@ -876,16 +876,14 @@ async function planCampaign(
     // it: retry the chunk row-by-row and skip only the orphaned recipients.
     const isFk = /foreign key|23503/i.test(insErr.message);
     if (!isFk) throw new Error(`Failed to insert message batch: ${insErr.message}`);
-    for (const row of chunk) {
-      const { data: insertedRow, error: rowErr } = await supabaseAdmin
-        .from("messages")
-        .upsert([row], { onConflict: "campaign_id,profile_id", ignoreDuplicates: true }).select("id,status");
-      if (rowErr && !/foreign key|23503/i.test(rowErr.message)) {
-        throw new Error(`Failed to insert message batch: ${rowErr.message}`);
-      }
-      if (rowErr) console.error("[dispatch] skipped orphaned recipient", row.profile_id);
-      else persistedRows.push(...(insertedRow ?? []));
-    }
+    const {data:profiles,error:profileError}=await supabaseAdmin.from("profiles").select("id").eq("account_id",campaign.account_id).in("id",chunk.map((row:any)=>row.profile_id));
+    if(profileError) throw new Error("Recipient availability could not be checked.");
+    const available=new Set((profiles??[]).map((row:any)=>row.id));
+    const valid=chunk.filter((row:any)=>available.has(row.profile_id));
+    if(!valid.length) continue;
+    const {data:retried,error:retryError}=await supabaseAdmin.from("messages").upsert(valid,{onConflict:"campaign_id,profile_id",ignoreDuplicates:true}).select("id,status");
+    if(retryError) throw new Error("Recipient planning deferred after contact changes.");
+    persistedRows.push(...(retried??[]));
   }
 
   // Insert link_clicks rows only for messages that actually got queued (not
@@ -905,22 +903,14 @@ async function planCampaign(
       console.error("[dispatch] link_clicks chunk insert failed", error.message);
     }
     if (inserted) continue;
-    // Chunk-level failure: never let it kill the whole batch of links.
-    for (const row of chunk) {
-      let ok = false;
-      for (let attempt = 0; attempt < 1 && !ok; attempt++) {
-        const { error } = await supabaseAdmin.from("link_clicks").insert([row]);
-        if (!error) { ok = true; break; }
-      }
-      if (!ok) {
-        // Last resort: don't send a dead link — cancel this recipient's message.
-        console.error("[dispatch] shortlink row unrecoverable, cancelling message", row.message_id);
-        await supabaseAdmin
-          .from("messages")
-          .update({ status: "failed", error_code: "shortlink_failed", failure_reason: "Tracking link could not be created." })
-          .eq("id", row.message_id)
-          .eq("status", "queued");
-      }
+    // A response may be lost after insertion. Read back exact codes before
+    // failing only messages with genuinely missing destinations, in one write.
+    const {data:existing,error:readError}=await supabaseAdmin.from("link_clicks").select("short_code,message_id").in("short_code",chunk.map((row:any)=>row.short_code));
+    const found=new Set((existing??[]).map((row:any)=>`${row.short_code}:${row.message_id}`));
+    const missing=chunk.filter((row:any)=>readError||!found.has(`${row.short_code}:${row.message_id}`)).map((row:any)=>row.message_id);
+    if(missing.length) {
+      const {error}=await supabaseAdmin.from("messages").update({status:"failed",error_code:"shortlink_failed",failure_reason:"Tracking link could not be created."}).in("id",missing).eq("status","queued");
+      if(error) throw new Error("Tracking-link failure could not be recorded.");
     }
   }
 
@@ -1346,7 +1336,7 @@ async function reconcileStaleCarrierReceipts(
     .eq("status", "sent")
     .lt("sent_at", giveUpCutoff)
     .order("sent_at", { ascending: true, nullsFirst: false })
-    .limit(5_000);
+    .limit(250);
   const staleIds = ((staleRows ?? []) as Array<{ id: string }>).map((r) => r.id);
   if (staleIds.length > 0) {
     const checkedIds: string[] = [];
@@ -1423,14 +1413,14 @@ async function reconcileStaleCarrierReceipts(
   let stillAwaiting = 0;
   let checked = 0;
   let skipped = 0;
-  await runWithConcurrency(toCheck, opts.concurrency ?? 20, async (m) => {
-    if (Date.now() >= deadline) {
+  await runWithConcurrency(toCheck, Math.min(DISPATCH_CONNECTIONS,opts.concurrency ?? DISPATCH_CONNECTIONS), async (m) => {
+    if (!canStartDispatchSend(deadline)) {
       skipped += 1;
       return;
     }
     checked += 1;
     try {
-      const j = await getMessage(m.provider_message_id);
+      const j = await getMessage(m.provider_message_id,true);
       const first = Array.isArray(j?.to) ? j.to[0] : null;
       const rawStatus = first?.status ?? j?.status ?? "";
       const errCode = first?.errors?.[0]?.code ?? j?.errors?.[0]?.code ?? null;
@@ -1495,7 +1485,8 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
         // Tenant webhook deliveries run alongside sending (accounts in
         // parallel), never ahead of it, so a slow tenant URL can't stall
         // campaign dispatch or receipt reconciliation for everyone.
-        const webhookWork = (async () => {
+        const waitUntil=(request as Request & {waitUntil?: (work:Promise<unknown>)=>void}).waitUntil;
+        const webhookWork = waitUntil ? (async () => {
           const { dispatchPendingWebhooks } = await import("@/lib/tenant-api.server");
           const { data: dueWebhookAccounts } = await supabaseAdmin
             .from("api_webhook_events")
@@ -1505,8 +1496,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             .limit(6);
           const ids = [...new Set((dueWebhookAccounts ?? []).map((row) => row.account_id as string))];
           for(const id of ids) await dispatchPendingWebhooks(id,1);
-        })().catch((e) => console.error("[dispatch] webhook delivery failed", e));
-        const waitUntil=(request as Request & {waitUntil?: (work:Promise<unknown>)=>void}).waitUntil;
+        })().catch((e) => console.error("[dispatch] webhook delivery failed", e)) : Promise.resolve();
         if(waitUntil) waitUntil(webhookWork);
         const finishWebhooks = async () => { if(!waitUntil) await webhookWork; };
 
@@ -1565,27 +1555,7 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
 
         const nowIso = new Date().toISOString();
 
-        // ── Auto-approve expired review-queue entries and any advisory-only
-        // score below the current review threshold. The latter is a fail-safe
-        // for campaigns held by an older worker version while deployments roll
-        // over, so a low-risk message cannot remain stranded for hours.
-        const nowExpiry = new Date().toISOString();
-        const { data: expiredReviews } = await supabaseAdmin
-          .from("review_queue")
-          .select("id, campaign_id")
-          .eq("status", "pending")
-          // Held content is never auto-approved by time: it waits for an admin.
-          .lt("risk_score", 55);
-        for (const r of expiredReviews ?? []) {
-          await supabaseAdmin.from("review_queue")
-            .update({ status: "auto_approved", resolved_at: nowExpiry })
-            .eq("id", r.id);
-          if (r.campaign_id) {
-            await supabaseAdmin.from("campaigns")
-              .update({ status: "queued", paused_reason: null })
-              .eq("id", r.campaign_id).eq("status", "paused");
-          }
-        }
+        // Content holds require explicit review; elapsed time and scores never release them.
 
         // ── Self-heal: campaigns paused only because the per-campaign
         // compliance confirmation was not visible yet (a tick raced the
