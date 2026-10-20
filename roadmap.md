@@ -1,5 +1,10 @@
 # Roadmap
 
+## Monitoring fixes and multiple-assistant launch validation (Oct 20)
+- [x] Repair four claimed monitoring findings: indexed redirect, request-entry budget/bounded calls, persisted link IDs and orphan-contact batch recovery; targeted safeguards and live redirect checked (no paid dispatch run).
+- [x] Independent assistant edit/copy/select/archive/restore/delete checked in signed-in owner UI; settings read back separately; temporary QA records removed.
+- [ ] Real call with routing, caller details and notifications — live settings have no number or deployed assistant, and call history is empty; requires a carrier-approved pilot number and consenting caller. No approval gates bypassed.
+
 ## Voice-enabled website account assistant (Oct 20)
 - [x] Add contact-file inspection/import proposals and campaign drafting through ownership, consent and screening controls; drafts use the existing launch review.
 - [x] Preserve user-supplied STOP wording without appending a duplicate opt-out line; safeguard tests pass.

@@ -37,6 +37,8 @@ type TelnyxOpts = {
   query?: Record<string, string | number | undefined>;
   /** Stable key so a retried write is never executed twice by the provider. */
   idempotencyKey?: string;
+  maxAttempts?: number;
+  timeoutMs?: number;
 };
 
 // ---------- Pacing + rate-limit handling ----------
@@ -52,7 +54,7 @@ type TelnyxOpts = {
 // off as `dispatch_timeout` two minutes later. Keep the gate wide enough for
 // verified high-throughput senders, and let the dispatcher size its claims from
 // `gateThroughputPerSecond()` below so it never claims more than can be sent.
-const MAX_CONCURRENCY = Math.max(1, Number(process.env.TELNYX_MAX_CONCURRENCY ?? 60));
+const MAX_CONCURRENCY = 6;
 const MIN_INTERVAL_MS = Math.max(0, Number(process.env.TELNYX_MIN_INTERVAL_MS ?? 4));
 const MAX_ATTEMPTS = Math.max(1, Number(process.env.TELNYX_MAX_ATTEMPTS ?? 5));
 /** Hard per-request ceiling so one stalled provider call cannot hang the run. */
@@ -84,7 +86,7 @@ async function acquireSlot(): Promise<void> {
     // hung until the runtime killed it (502). Waiting is capped; on expiry we
     // proceed anyway, briefly exceeding the soft concurrency cap instead of
     // deadlocking the run.
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve,reject) => {
       let settled = false;
       const waiter = () => {
         if (settled) return;
@@ -97,16 +99,18 @@ async function acquireSlot(): Promise<void> {
         settled = true;
         const idx = waiters.indexOf(waiter);
         if (idx >= 0) waiters.splice(idx, 1);
-        resolve();
-      }, SLOT_WAIT_TIMEOUT_MS);
+        reject(new Error("Sending is temporarily busy. Please retry."));
+      }, Math.min(SLOT_WAIT_TIMEOUT_MS,2000));
       waiters.push(waiter);
     });
   }
   active += 1;
+  const pacingDeadline=Date.now()+2000;
   // Respect any provider-requested cooldown and the minimum spacing.
   for (;;) {
     const wait = Math.max(cooldownUntil - Date.now(), lastStart + MIN_INTERVAL_MS - Date.now());
     if (wait <= 0) break;
+    if(Date.now()+wait>pacingDeadline) { releaseSlot(); throw new Error("Sending is temporarily busy. Please retry."); }
     await sleep(wait);
   }
   lastStart = Date.now();
@@ -157,20 +161,21 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
   if (opts.body !== undefined) init.body = JSON.stringify(opts.body);
 
   let lastError: any = null;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+  const attempts=opts.maxAttempts ?? MAX_ATTEMPTS;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
     await acquireSlot();
     let res: Response;
     // Abort a call that stalls: an unbounded fetch used to hold its gate slot
     // forever and hang the whole invocation.
     const controller = new AbortController();
-    const abortTimer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const abortTimer = setTimeout(() => controller.abort(), opts.timeoutMs ?? REQUEST_TIMEOUT_MS);
     try {
       res = await fetch(url, { ...init, signal: controller.signal });
     } catch (e) {
       clearTimeout(abortTimer);
       releaseSlot();
       lastError = e;
-      if (attempt + 1 >= MAX_ATTEMPTS) break;
+      if (attempt + 1 >= attempts) break;
       await sleep(retryDelayMs(attempt, null));
       continue;
     }
@@ -183,7 +188,7 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
       clearTimeout(abortTimer);
       releaseSlot();
       lastError = e;
-      if (attempt + 1 >= MAX_ATTEMPTS) break;
+      if (attempt + 1 >= attempts) break;
       await sleep(retryDelayMs(attempt, null));
       continue;
     }
@@ -217,7 +222,7 @@ async function telnyx<T = any>(path: string, opts: TelnyxOpts = {}): Promise<T> 
     lastError = err;
 
     const retryable = res.status === 429 || res.status >= 500;
-    if (!retryable || attempt + 1 >= MAX_ATTEMPTS) throw err;
+    if (!retryable || attempt + 1 >= attempts) throw err;
 
     const delay = retryDelayMs(attempt, retryAfter);
     if (res.status === 429) {
@@ -543,6 +548,7 @@ export async function sendMessage(opts: {
    * twice and charging twice.
    */
   idempotencyKey?: string;
+  boundedDispatch?: boolean;
 }): Promise<SendMessageResult> {
   {
     // Last line of defence on EVERY send path: prohibited content never
@@ -590,6 +596,7 @@ export async function sendMessage(opts: {
     method: "POST",
     body,
     idempotencyKey: opts.idempotencyKey,
+    ...(opts.boundedDispatch ? {maxAttempts:1,timeoutMs:6000}:{}),
   });
   return res.data;
 }
@@ -636,14 +643,14 @@ export async function createAlphanumericSenderId(opts: {
   return res.data;
 }
 
-export async function getMessage(id: string): Promise<any> {
+export async function getMessage(id: string, boundedDispatch=false): Promise<any> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: message } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).maybeSingle();
+  const { data: message } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
   const accountId = (message as any)?.campaigns?.account_id;
   const sentAt = Date.parse(message?.sent_at ?? "");
   const secondary = (accountId === SECONDARY_WORKSPACE_ID && sentAt >= Date.parse(SECONDARY_ACTIVATED_AT)) ||
     sentDuringFailover(sentAt, (message as any)?.phone_e164);
-  const res = await telnyx<{ data: any }>(`/messages/${id}`, { connectionProfileId: secondary ? SECONDARY_PROFILE_ID : undefined });
+  const res = await telnyx<{ data: any }>(`/messages/${id}`, { connectionProfileId: secondary ? SECONDARY_PROFILE_ID : undefined,...(boundedDispatch?{maxAttempts:1,timeoutMs:6000}:{}) });
   return res.data;
 }
 

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { receptionistConfigSchema } from "./shared";
+import {assistantEditSchema} from "./assistant-controls";
 
 async function access(userId: string, owner = false) {
   const { resolveActingAccount, assertPermission, assertOwner } = await import("../acting-account.server");
@@ -51,5 +52,17 @@ export const archiveAssistant=createServerFn({method:"POST"}).middleware([requir
   if(settings.data?.selected_assistant_id===data.id) throw new Error("Select a different assistant before archiving this one.");
   const result=await db.from("receptionist_assistants").update({archived_at:data.archived?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq("id",data.id).eq("account_id",acting.accountId).select("id").single();
   if(result.error) throw new Error("Assistant could not be updated.");
+  return {ok:true};
+});
+export const editAssistant=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((input:unknown)=>assistantEditSchema.parse(input)).handler(async({context,data})=>{
+  const {acting,db}=await access(context.userId,true);
+  const {error}=await db.rpc("edit_receptionist_assistant",{_account_id:acting.accountId,_assistant_id:data.id,_configuration:data.configuration});
+  if(error) throw new Error("Settings could not be saved. Pause calling and wait for active calls to end before editing the selected assistant.");
+  return {ok:true};
+});
+export const deleteAssistant=createServerFn({method:"POST"}).middleware([requireSupabaseAuth]).inputValidator((input:unknown)=>z.object({id:z.string().uuid()}).parse(input)).handler(async({context,data})=>{
+  const {acting,db}=await access(context.userId,true);
+  const {error}=await db.rpc("delete_receptionist_assistant",{_account_id:acting.accountId,_assistant_id:data.id});
+  if(error) throw new Error("Archive an unselected assistant before deleting it.");
   return {ok:true};
 });
