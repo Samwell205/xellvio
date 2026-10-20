@@ -5303,11 +5303,14 @@ export type Database = {
           enabled: boolean
           number_billing_status: string
           number_charged_at: string | null
+          number_country: string | null
           number_last_renewal_error: string | null
           number_order_id: string | null
           number_renews_at: string | null
           number_type: string | null
           provision_status: string
+          regulatory_notes: string | null
+          requirement_group_id: string | null
           test_verified_at: string | null
           updated_at: string
           voice_application_id: string | null
@@ -5320,11 +5323,14 @@ export type Database = {
           enabled?: boolean
           number_billing_status?: string
           number_charged_at?: string | null
+          number_country?: string | null
           number_last_renewal_error?: string | null
           number_order_id?: string | null
           number_renews_at?: string | null
           number_type?: string | null
           provision_status?: string
+          regulatory_notes?: string | null
+          requirement_group_id?: string | null
           test_verified_at?: string | null
           updated_at?: string
           voice_application_id?: string | null
@@ -5337,11 +5343,14 @@ export type Database = {
           enabled?: boolean
           number_billing_status?: string
           number_charged_at?: string | null
+          number_country?: string | null
           number_last_renewal_error?: string | null
           number_order_id?: string | null
           number_renews_at?: string | null
           number_type?: string | null
           provision_status?: string
+          regulatory_notes?: string | null
+          requirement_group_id?: string | null
           test_verified_at?: string | null
           updated_at?: string
           voice_application_id?: string | null
