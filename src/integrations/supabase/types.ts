@@ -1471,6 +1471,78 @@ export type Database = {
           },
         ]
       }
+      assisted_number_requests: {
+        Row: {
+          account_id: string
+          admin_notes: string | null
+          charged_at: string
+          country: string
+          created_at: string
+          fee_usd: number
+          id: string
+          number_type: string
+          purpose: string
+          requested_by: string
+          requested_number: string
+          reviewed_by: string | null
+          status: string
+          target_at: string
+          ticket_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          admin_notes?: string | null
+          charged_at?: string
+          country: string
+          created_at?: string
+          fee_usd?: number
+          id?: string
+          number_type: string
+          purpose: string
+          requested_by: string
+          requested_number: string
+          reviewed_by?: string | null
+          status?: string
+          target_at?: string
+          ticket_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          admin_notes?: string | null
+          charged_at?: string
+          country?: string
+          created_at?: string
+          fee_usd?: number
+          id?: string
+          number_type?: string
+          purpose?: string
+          requested_by?: string
+          requested_number?: string
+          reviewed_by?: string | null
+          status?: string
+          target_at?: string
+          ticket_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assisted_number_requests_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assisted_number_requests_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       authority_assets: {
         Row: {
           asset_type: string
@@ -7676,6 +7748,17 @@ export type Database = {
       release_dispatch_lock:
         | { Args: never; Returns: undefined }
         | { Args: { _name: string }; Returns: undefined }
+      submit_assisted_number_request: {
+        Args: {
+          _account_id: string
+          _country: string
+          _number_type: string
+          _purpose: string
+          _requested_by: string
+          _requested_number: string
+        }
+        Returns: string
+      }
       topup_account: {
         Args: { _account_id: string; _amount: number; _description: string }
         Returns: number
