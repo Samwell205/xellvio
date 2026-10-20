@@ -30,8 +30,8 @@ async function admin() {
   return supabaseAdmin as any;
 }
 
-export async function loadGraph(automationId: string): Promise<Graph> {
-  const db = await admin();
+export async function loadGraph(automationId: string, suppliedDb?: any): Promise<Graph> {
+  const db = suppliedDb ?? await admin();
   const [{ data: nodes }, { data: edges }] = await Promise.all([
     db.from("automation_nodes").select("node_key,type,label,configuration,disabled").eq("automation_id", automationId),
     db
@@ -165,9 +165,13 @@ export async function fireAutomationTrigger(ev: {
   formId?: string | null;
   eventName?: string | null;
   payload?: Json;
+  signal?: AbortSignal;
+  deferExecution?: boolean;
 }) {
   try {
-    const db = await admin();
+    const rawDb = await admin();
+    const {boundedDatabase}=await import("./bounded-database.server");
+    const db=ev.signal ? boundedDatabase(rawDb,2000,ev.signal):rawDb;
     const { data: automations } = await db
       .from("automations")
       .select("id")
@@ -177,7 +181,8 @@ export async function fireAutomationTrigger(ev: {
 
     let started = 0;
     for (const a of automations) {
-      const graph = await loadGraph(a.id);
+      if(ev.signal?.aborted) break;
+      const graph = await loadGraph(a.id,db);
       const trigger = graph.nodes.find((n) => !n.disabled && triggerMatches(n, ev));
       if (!trigger) continue;
       const ok = await startRun({
@@ -187,6 +192,8 @@ export async function fireAutomationTrigger(ev: {
         startNodeKey: trigger.node_key,
         graph,
         context: { trigger: ev.type, ...(ev.payload ?? {}) },
+        db,
+        deferExecution:ev.deferExecution,
       });
       if (ok) started += 1;
     }
@@ -204,8 +211,10 @@ export async function startRun(opts: {
   graph?: Graph;
   context?: Json;
   test?: boolean;
+  db?: any;
+  deferExecution?: boolean;
 }) {
-  const db = await admin();
+  const db = opts.db ?? await admin();
   const graph = opts.graph ?? (await loadGraph(opts.automationId));
   const first = nextKey(graph, opts.startNodeKey, "out");
 
@@ -234,7 +243,7 @@ export async function startRun(opts: {
   if (error || !run) return null;
 
   await logEvent(run, null, "entered", `Started on ${opts.startNodeKey}`);
-  if (first) await advanceRun(run, graph);
+  if (first && !opts.deferExecution) await advanceRun(run, graph);
   return run;
 }
 

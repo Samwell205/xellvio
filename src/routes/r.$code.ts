@@ -26,7 +26,7 @@ async function trackAndRedirect(code:string,request:Request):Promise<Response> {
       const {data:campaign}=msg?.campaign_id ? await supabaseAdmin.from("campaigns").select("account_id").eq("id",msg.campaign_id).abortSignal(signal).maybeSingle():{data:null};
       if(campaign?.account_id && msg?.phone_e164 && !signal.aborted){
         const {fireAutomationTrigger}=await import("@/lib/automation-engine.server");
-        await fireAutomationTrigger({accountId:campaign.account_id,phone:msg.phone_e164,type:"trigger.link_clicked",payload:{url:link.url}});
+        await fireAutomationTrigger({accountId:campaign.account_id,phone:msg.phone_e164,type:"trigger.link_clicked",payload:{url:link.url},signal,deferExecution:true});
       }
     },
   });

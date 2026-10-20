@@ -1570,6 +1570,7 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
             .ilike("paused_reason", "Missing per-campaign compliance%")
             .limit(50);
           for (const sc of stuckAcceptance ?? []) {
+            if(budgetLeft()<DISPATCH_SEND_RESERVE_MS) break;
             const { count: has } = await supabaseAdmin
               .from("campaign_tos_acceptances")
               .select("id", { count: "exact", head: true })
@@ -1635,6 +1636,7 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
             .order("updated_at", { ascending: false })
             .limit(10);
           for (const c of recentDone ?? []) {
+            if(budgetLeft()<DISPATCH_SEND_RESERVE_MS) break;
             // User-stopped campaigns are final — never plan more recipients.
             if (c.paused_reason === STOPPED_AS_SENT) continue;
             if (await hasUnplannedRecipients(supabaseAdmin, c)) {
@@ -1909,7 +1911,7 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
         // Recovery and reconciliation are best-effort housekeeping. Run them
         // only after outbound work so they can never consume the send budget.
         let recoveredInbound: { checked: number; processed: number } | { checked: number; processed: number; error: string } = { checked: 0, processed: 0 };
-        if (budgetLeft() > 18_000) {
+        if (budgetLeft() > RUN_BUDGET_MS) {
           try {
             const { recoverRecentTelnyxInboundMessages } = await import("@/lib/telnyx-inbound-routing.server");
             recoveredInbound = await recoverRecentTelnyxInboundMessages(50);
@@ -1923,11 +1925,11 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
         // budget, otherwise the runtime kills the request (502) after the sends
         // already happened. The dedicated reconcile cron does the bulk work.
         const reconcileBudget = budgetLeft() - 4_000;
-        const reconciled = reconcileBudget > 6_000
+        const reconciled = reconcileBudget > DISPATCH_SEND_RESERVE_MS
           ? await reconcileStaleCarrierReceipts(supabaseAdmin, {
               maxPerRun: 300,
-              concurrency: 20,
-              budgetMs: Math.min(reconcileBudget, 12_000),
+              concurrency: DISPATCH_CONNECTIONS,
+              budgetMs: reconcileBudget,
             })
           : { checked: 0, updated: 0, stillAwaiting: 0, expired: 0, skipped: true };
         return Response.json({ processed: results.length, deferred, recoveredInbound, reconciled, results });
