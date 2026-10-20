@@ -19,6 +19,10 @@ export const submitAssistedNumber = createServerFn({ method: "POST" }).middlewar
   const { data: id, error } = await supabaseAdmin.rpc("submit_assisted_number_request", { _account_id: acting.accountId, _requested_by: context.userId, _country: data.country, _number_type: data.numberType, _requested_number: data.phoneNumber, _purpose: data.purpose });
   if (error) throw new Error(error.message.includes("Insufficient balance") ? "You need $100 in credits to request assisted verification." : "Your request could not be submitted. No assistance fee was taken.");
   const { data: row } = await supabaseAdmin.from("assisted_number_requests").select("ticket_id").eq("id", id).single();
+  if (row?.ticket_id) {
+    const { notifyTicketOpened } = await import("./support-tickets.server");
+    await notifyTicketOpened(row.ticket_id);
+  }
   return { id, ticketId: row?.ticket_id };
 });
 
@@ -52,4 +56,16 @@ export const adminUpdateAssistedNumber = createServerFn({ method: "POST" }).midd
   const { error } = await supabaseAdmin.from("assisted_number_requests").update({ status: data.status, admin_notes: data.notes || null, reviewed_by: context.userId, updated_at: new Date().toISOString() }).eq("id", data.id).eq("status", request.status);
   if (error) throw new Error("Request could not be updated.");
   return { ok: true };
+});
+
+export const adminOrderAssistedNumber = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => z.object({ id: z.string().uuid(), confirmed: z.literal(true) }).parse(input)).handler(async ({ context, data }) => {
+  await admin(context.supabase);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: request, error } = await supabaseAdmin.from("assisted_number_requests").select("*").eq("id", data.id).single();
+  if (error || !request || ["completed", "rejected"].includes(request.status)) throw new Error("No open request found.");
+  const { purchaseVoiceNumber } = await import("./receptionist/provision.server");
+  const result = await purchaseVoiceNumber(request.account_id, request.requested_number, request.number_type, request.country);
+  const { error: saveError } = await supabaseAdmin.from("assisted_number_requests").update({ status: "carrier_pending", reviewed_by: context.userId, updated_at: new Date().toISOString() }).eq("id", request.id);
+  if (saveError) throw new Error("Number ordered; refresh the request before continuing.");
+  return result;
 });

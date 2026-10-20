@@ -83,6 +83,16 @@ export async function createTicket(input: {
   return t;
 }
 
+/** Notify for a ticket atomically created by a paid-request database operation. */
+export async function notifyTicketOpened(ticketId: string) {
+  const sb = await db();
+  const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
+  if (!t) return;
+  await email(t, "opened", t.subject, `Ticket #${t.number} is open`,
+    "Your $100 assisted number-verification request has been received. Our support handling target is 24 hours. Carrier approval and number availability remain subject to checks; we will request any required documents through this ticket.");
+  await notifyAdmin(t, "Paid assisted number-verification request awaiting review.");
+}
+
 export async function customerReply(ticketId: string, body: string, via: "web" | "email" = "web") {
   const sb = await db();
   const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
