@@ -114,7 +114,7 @@ function FeaturesPage() {
           <div className="mx-auto max-w-3xl text-center px-4">
             <h2 className="text-3xl font-extrabold">Try it free today</h2>
             <p className="mt-2 text-muted-foreground">50 credits, no card required.</p>
-            <Link to="/auth" className="inline-block mt-6">
+            <Link to="/auth" search={{ mode: "signup" }} className="inline-block mt-6">
               <Button size="lg">
                 Start free <ArrowRight className="size-4 ml-1" />
               </Button>

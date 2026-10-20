@@ -71,7 +71,7 @@ export function MarketingNav() {
             <Search className="size-4" />
           </Link>
           <Link to="/auth" className="px-3 text-sm font-medium text-foreground/80 hover:text-foreground">Log in</Link>
-          <Link to="/auth" search={{ mode: "signup" } as never}>
+          <Link to="/auth" search={{ mode: "signup" }}>
             <Button className="rounded-full px-5">Sign up</Button>
           </Link>
           <Link to="/contact">
@@ -186,7 +186,7 @@ export function MarketingNav() {
             <ThemeToggleLabelled className="mt-2 rounded-xl border border-border px-4 py-3" />
             <div className="pt-2 grid gap-2">
               <Link to="/auth" onClick={() => setMobileOpen(false)} className="rounded-full border border-border px-4 py-2.5 text-center text-sm font-medium">Log in</Link>
-              <Link to="/auth" onClick={() => setMobileOpen(false)} className="rounded-full bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground">Sign up</Link>
+              <Link to="/auth" search={{ mode: "signup" }} onClick={() => setMobileOpen(false)} className="rounded-full bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground">Sign up</Link>
               <Link to="/contact" onClick={() => setMobileOpen(false)} className="rounded-full border border-border px-4 py-2.5 text-center text-sm font-medium">Get a demo</Link>
             </div>
           </div>

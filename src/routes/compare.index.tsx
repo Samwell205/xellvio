@@ -95,6 +95,7 @@ function CompareHub() {
             <div className="mt-9 flex flex-wrap gap-3">
               <Link
                 to="/auth"
+                search={{ mode: "signup" }}
                 className="inline-flex items-center gap-1.5 rounded-full bg-ink px-6 py-3 font-semibold text-ink-foreground transition-transform hover:-translate-y-0.5"
               >
                 Start free <ArrowRight className="size-4" />

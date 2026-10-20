@@ -32,7 +32,7 @@ function AboutPage() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg">
-              <Link to="/auth">Get started</Link>
+              <Link to="/auth" search={{ mode: "signup" }}>Get started</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/contact">Talk to us</Link>
@@ -90,7 +90,7 @@ function AboutPage() {
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button asChild size="lg">
-              <Link to="/auth">Create free account</Link>
+              <Link to="/auth" search={{ mode: "signup" }}>Create free account</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/pricing">See pricing</Link>

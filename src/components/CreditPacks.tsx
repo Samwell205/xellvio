@@ -108,7 +108,7 @@ export function CreditPacks() {
             >
               Pay
             </Button>
-            <Link to="/auth" className="block text-center text-xs text-muted-foreground mt-2 hover:underline">
+            <Link to="/auth" search={{ mode: "signup" }} className="block text-center text-xs text-muted-foreground mt-2 hover:underline">
               New here? Create a free account
             </Link>
           </div>

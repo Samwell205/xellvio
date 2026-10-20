@@ -78,6 +78,7 @@ export function ChannelHero({
           <div className="mt-9 flex flex-wrap gap-3">
             <Link
               to={primary.to}
+              search={primary.to === "/auth" ? { mode: "signup" } : undefined}
               className="inline-flex items-center gap-1.5 rounded-full bg-ink px-6 py-3 font-semibold text-ink-foreground transition-transform hover:-translate-y-0.5"
             >
               {primary.label} <ArrowRight className="size-4" />
@@ -250,6 +251,7 @@ export function ChannelCta({ title, body, cta }: { title: string; body: string; 
           <div className="mt-9 flex flex-wrap gap-3">
             <Link
               to={cta.to}
+              search={cta.to === "/auth" ? { mode: "signup" } : undefined}
               className="inline-flex items-center gap-1.5 rounded-full bg-lime px-6 py-3 font-semibold text-lime-foreground transition-transform hover:-translate-y-0.5"
             >
               {cta.label} <ArrowRight className="size-4" />
