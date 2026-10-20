@@ -27,3 +27,12 @@ describe("receptionist safeguards", () => {
     expect(intervalsOverlap("2026-10-21T13:00Z", "2026-10-21T14:00Z", "2026-10-21T14:00Z", "2026-10-21T14:30Z")).toBe(false);
   });
 });
+import { describe as d2, it as i2, expect as e2 } from "vitest";
+import { buildInstructions } from "./provision.server";
+d2("receptionist agent instructions", () => {
+  i2("names the business and forbids invented bookings", () => {
+    const t = buildInstructions({ ...defaultReceptionistConfig(), businessName: "Acme Plumbing", businessInformation: "Boiler repairs" });
+    e2(t).toContain("Acme Plumbing");
+    e2(t).toContain("Only say an appointment is booked after the booking tool confirms it.");
+  });
+});

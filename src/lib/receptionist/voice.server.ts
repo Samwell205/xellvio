@@ -25,7 +25,7 @@ export async function handleVoiceEvent(raw: unknown) {
       if (!p.to || !p.from || !/^\+[1-9]\d{6,14}$/.test(p.from) || !p.connection_id) throw new Error("Invalid inbound call mapping");
       const { data: settings, error } = await supabaseAdmin.from("receptionist_settings").select("account_id,enabled,assistant_id,voice_application_id,configuration,provision_status,test_verified_at").eq("voice_number",p.to).eq("voice_application_id",p.connection_id).maybeSingle();
       if (error) throw error;
-      if (!settings?.enabled || !settings.assistant_id || settings.provision_status !== "verified" || !settings.test_verified_at) {
+      if (!settings?.enabled || !settings.assistant_id || settings.provision_status !== "verified") {
         await voiceRequest(`/calls/${encodeURIComponent(callId)}/actions/hangup`, { command_id: `${event.id}-inactive` });
       } else {
         const { data: account } = await supabaseAdmin.from("accounts").select("suspended_at,onboarding_status,sending_suspended_at").eq("id",settings.account_id).single();
@@ -54,6 +54,8 @@ export async function handleVoiceEvent(raw: unknown) {
           const duration = Math.max(0,Math.round((Date.parse(event.occurred_at)-Date.parse(call.started_at))/1000));
           const { error: updateError } = await supabaseAdmin.from("receptionist_calls").update({ status:"ended",ended_at:event.occurred_at,duration_seconds:duration }).eq("id",call.id);
           if (updateError) throw updateError;
+          if (call.status === "answered" || (event.payload as any).call_answered_at || duration > 0) { const { chargeCall } = await import("./provision.server"); await chargeCall(call.id, call.account_id, duration); }
+          await supabaseAdmin.from("receptionist_settings").update({ test_verified_at: new Date().toISOString() }).eq("account_id", call.account_id).is("test_verified_at", null);
         }
         if (event.event_type === "call.conversation.ended") {
           // Stop the call leg as well as the assistant to prevent silence accumulating billable minutes.

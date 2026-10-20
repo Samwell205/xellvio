@@ -108,16 +108,18 @@ export const saveBusinessProfile = createServerFn({ method: "POST" })
     terms_url?: string;
     contact_email: string;
     phone?: string;
+    industry?: string;
+    team_size?: string;
   }) => data)
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const required = ["legal_business_name", "business_address", "business_reg_number", "website_url", "privacy_policy_url", "terms_url", "contact_email", "phone"] as const;
+    const required = ["legal_business_name", "business_address", "website_url", "contact_email", "phone", "industry", "team_size"] as const;
     for (const k of required) {
       if (!data[k] || !String(data[k]).trim()) throw new Error(`${k.replace(/_/g, " ")} is required`);
     }
     if (!/^https?:\/\//.test(data.website_url.trim())) throw new Error("website url must include http:// or https://");
-    if (!/^https:\/\//.test(String(data.privacy_policy_url).trim())) throw new Error("privacy policy url must start with https://");
-    if (!/^https:\/\//.test(String(data.terms_url).trim())) throw new Error("terms url must start with https://");
+    if (data.privacy_policy_url && !/^https:\/\//.test(String(data.privacy_policy_url).trim())) throw new Error("privacy policy url must start with https://");
+    if (data.terms_url && !/^https:\/\//.test(String(data.terms_url).trim())) throw new Error("terms url must start with https://");
     if (!/^\+[1-9][0-9]{6,14}$/.test(String(data.phone).trim())) throw new Error("business phone must be E.164, e.g. +15551234567");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
@@ -126,10 +128,13 @@ export const saveBusinessProfile = createServerFn({ method: "POST" })
         id: userId,
         legal_business_name: data.legal_business_name,
         business_address: data.business_address,
-        business_reg_number: data.business_reg_number,
+        business_reg_number: data.business_reg_number || null,
+        industry: data.industry ?? null,
+        team_size: data.team_size ?? null,
+        company: data.legal_business_name,
         website_url: data.website_url,
-        privacy_policy_url: data.privacy_policy_url ?? null,
-        terms_url: data.terms_url ?? null,
+        privacy_policy_url: data.privacy_policy_url || null,
+        terms_url: data.terms_url || null,
         contact_email: data.contact_email,
         phone: data.phone,
         onboarding_status: "profile_complete",

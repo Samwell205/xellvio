@@ -27,3 +27,5 @@
 - Receptionist data uses authenticated, workspace-scoped server functions; calendar credentials are encrypted per owner and paid activation requires verified pricing, phone configuration and a pilot call, so setup cannot silently enable untested billable traffic.
 - Receptionist calendar keys use the workspace owner's auth ID (the account ID in this application's identity model); only owners can connect, book or disconnect, so teammate sessions cannot replace workspace credentials.
 - Receptionist assistant actions authenticate with a server-generated call-scoped token and recheck active-call, workspace and pricing gates; event signatures are not assumed to authenticate assistant tool requests.
+- Receptionist voice numbers, the shared call application and per-tenant AI agents are provisioned only through src/lib/receptionist/provision.server.ts; prices come from receptionist_platform_settings so UI, purchase and per-call charging stay in sync.
+- Tenant owners must complete the business profile (see getMySession profileComplete) before the /app dashboard renders, and the UI shows the business name rather than "workspace".

@@ -312,6 +312,7 @@ export type Database = {
           gorgias_enabled: boolean
           growth_goal: string | null
           id: string
+          industry: string | null
           is_seller: boolean
           last_seen_at: string | null
           last_seen_city: string | null
@@ -344,6 +345,7 @@ export type Database = {
           sms_consent_disclosures_version: string | null
           sms_target_countries: string[] | null
           suspended_at: string | null
+          team_size: string | null
           telnyx_messaging_profile_created_at: string | null
           telnyx_messaging_profile_id: string | null
           telnyx_number_id: string | null
@@ -377,6 +379,7 @@ export type Database = {
           gorgias_enabled?: boolean
           growth_goal?: string | null
           id: string
+          industry?: string | null
           is_seller?: boolean
           last_seen_at?: string | null
           last_seen_city?: string | null
@@ -409,6 +412,7 @@ export type Database = {
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
           suspended_at?: string | null
+          team_size?: string | null
           telnyx_messaging_profile_created_at?: string | null
           telnyx_messaging_profile_id?: string | null
           telnyx_number_id?: string | null
@@ -442,6 +446,7 @@ export type Database = {
           gorgias_enabled?: boolean
           growth_goal?: string | null
           id?: string
+          industry?: string | null
           is_seller?: boolean
           last_seen_at?: string | null
           last_seen_city?: string | null
@@ -474,6 +479,7 @@ export type Database = {
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
           suspended_at?: string | null
+          team_size?: string | null
           telnyx_messaging_profile_created_at?: string | null
           telnyx_messaging_profile_id?: string | null
           telnyx_number_id?: string | null
@@ -5295,6 +5301,9 @@ export type Database = {
           assistant_id: string | null
           configuration: Json
           enabled: boolean
+          number_charged_at: string | null
+          number_order_id: string | null
+          number_type: string | null
           provision_status: string
           test_verified_at: string | null
           updated_at: string
@@ -5306,6 +5315,9 @@ export type Database = {
           assistant_id?: string | null
           configuration?: Json
           enabled?: boolean
+          number_charged_at?: string | null
+          number_order_id?: string | null
+          number_type?: string | null
           provision_status?: string
           test_verified_at?: string | null
           updated_at?: string
@@ -5317,6 +5329,9 @@ export type Database = {
           assistant_id?: string | null
           configuration?: Json
           enabled?: boolean
+          number_charged_at?: string | null
+          number_order_id?: string | null
+          number_type?: string | null
           provision_status?: string
           test_verified_at?: string | null
           updated_at?: string

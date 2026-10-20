@@ -84,3 +84,11 @@ Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout 
 ## Sep 29
 - [ ] Switch International card checkout from Stripe to Flutterwave (no Flutterwave branding on site) — waiting on user's go-ahead + Flutterwave secret key/hash
 - [ ] Resend "batch 2" (6f6ace6d) 4,792 recipients blocked by carrier 40314 — waiting on carrier to re-enable messaging
+
+## AI receptionist rollout (Oct 20)
+- [x] Business profile (name, website, address, phone, industry, team size) required before dashboard
+- [x] Calling numbers on sale ($5/mo, $0.15/min); UK mobile = calls+texts, other UK types calls-only
+- [x] AI voice agent create/update; call forwarding instructions
+- [ ] Monthly $5 renewal charge (only first month charged at purchase today)
+- [ ] Publish, then make a real test call (needs owner)
+- [ ] Google Calendar OAuth app published + client linked (needs owner)

@@ -153,7 +153,7 @@ export function AppSidebar() {
               <span>Working in</span>
             </div>
             <div className="mt-1 font-medium truncate">
-              {session.workspaceOwnerName || session.workspaceOwnerEmail || "shared workspace"}
+              {(session as any).businessName || session.workspaceOwnerName || session.workspaceOwnerEmail || "your business"}
             </div>
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">
               {session.role}
@@ -329,13 +329,13 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton className="h-12 px-2 rounded-lg data-[state=open]:bg-accent">
                   <span className="size-7 shrink-0 rounded-full bg-primary/15 text-primary grid place-items-center text-[11px] font-semibold">
-                    {(session?.workspaceOwnerName || session?.workspaceOwnerEmail || "X").slice(0, 2).toUpperCase()}
+                    {((session as any)?.businessName || session?.workspaceOwnerName || session?.workspaceOwnerEmail || "X").slice(0, 2).toUpperCase()}
                   </span>
                   {!collapsed && (
                     <>
                       <span className="min-w-0 text-left">
                         <span className="block truncate text-sm font-medium">
-                          {session?.workspaceOwnerName || session?.workspaceOwnerEmail || "My workspace"}
+                          {(session as any)?.businessName || session?.workspaceOwnerName || session?.workspaceOwnerEmail || "My business"}
                         </span>
                         <span className="block truncate text-[11px] text-muted-foreground capitalize">
                           {session?.role ?? ""}

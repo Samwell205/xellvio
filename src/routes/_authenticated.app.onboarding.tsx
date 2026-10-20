@@ -38,6 +38,8 @@ type Form = {
   terms_url: string;
   contact_email: string;
   phone: string;
+  industry: string;
+  team_size: string;
 };
 
 const empty: Form = {
@@ -49,6 +51,8 @@ const empty: Form = {
   terms_url: "",
   contact_email: "",
   phone: "",
+  industry: "",
+  team_size: "",
 };
 
 function OnboardingPage() {
@@ -66,7 +70,7 @@ function OnboardingPage() {
         await supabase
           .from("accounts")
           .select(
-            "id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,telnyx_phone_number",
+            "id,email,full_name,company,phone,legal_business_name,business_address,business_reg_number,website_url,privacy_policy_url,terms_url,contact_email,onboarding_status,telnyx_phone_number,industry,team_size",
           )
           .maybeSingle()
       ).data,
@@ -89,6 +93,8 @@ function OnboardingPage() {
       terms_url: account.data.terms_url ?? "",
       contact_email: account.data.contact_email ?? account.data.email ?? "",
       phone: account.data.phone ?? "",
+      industry: (account.data as any).industry ?? "",
+      team_size: (account.data as any).team_size ?? "",
     });
   }, [account.data]);
 
@@ -102,6 +108,7 @@ function OnboardingPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account"] });
       qc.invalidateQueries({ queryKey: ["provisioning-status"] });
+      qc.invalidateQueries({ queryKey: ["my-session"] });
       track({ event: "onboarding_step_completed", props: { step: "business_profile" } });
       toast.success("Business profile saved");
     },
@@ -119,10 +126,10 @@ function OnboardingPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold">Set up your business</h1>
+        <h1 className="text-2xl font-extrabold">Tell us about your business</h1>
         <p className="text-sm text-muted-foreground">
-          We need a few details to provision your sending account. This information is required by
-          carriers for SMS compliance.
+          A few details before you get started. Carriers need them for texting and calling, and
+          we use your business name across your account.
         </p>
       </div>
 
@@ -143,7 +150,7 @@ function OnboardingPage() {
         <Card className="p-6 space-y-4">
           <h3 className="font-semibold">Business details</h3>
           <Field
-            label="Legal business name"
+            label="Business name"
             required
             v={form.legal_business_name}
             on={(v) => setForm({ ...form, legal_business_name: v })}
@@ -161,8 +168,7 @@ function OnboardingPage() {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <Field
-              label="Business registration # (EIN / BRN)"
-              required
+              label="Business registration # (EIN / company number)"
               v={form.business_reg_number}
               on={(v) => setForm({ ...form, business_reg_number: v })}
             />
@@ -175,14 +181,12 @@ function OnboardingPage() {
             />
             <Field
               label="Privacy policy URL"
-              required
               v={form.privacy_policy_url}
               on={(v) => setForm({ ...form, privacy_policy_url: v })}
               placeholder="https://"
             />
             <Field
               label="Terms of service URL"
-              required
               v={form.terms_url}
               on={(v) => setForm({ ...form, terms_url: v })}
               placeholder="https://"
@@ -199,13 +203,14 @@ function OnboardingPage() {
               required
               v={form.phone}
               on={(v) => setForm({ ...form, phone: v })}
-              placeholder="+15551234567"
+              placeholder="+447700900123"
             />
+            <PickField label="Industry" v={form.industry} on={(v) => setForm({ ...form, industry: v })}
+              options={["Home services / trades","Retail & ecommerce","Restaurants & hospitality","Health & beauty","Professional services","Real estate","Fitness","Education","Agency / reseller","Other"]} />
+            <PickField label="Team size" v={form.team_size} on={(v) => setForm({ ...form, team_size: v })}
+              options={["Just me","2–10","11–50","51–200","200+"]} />
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => navigate({ to: "/app" })}>
-              Save for later
-            </Button>
             <Button onClick={() => save.mutate()} disabled={save.isPending}>
               {save.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
               Save and continue
@@ -214,7 +219,14 @@ function OnboardingPage() {
         </Card>
       )}
 
-      {step === 2 && <SenderStep provisioning={provisioning.data} />}
+      {step === 2 && (
+        <>
+          <SenderStep provisioning={provisioning.data} />
+          <div className="flex justify-end">
+            <Button onClick={() => navigate({ to: "/app" })}>Go to my dashboard</Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -492,5 +504,20 @@ function GoalPicker() {
         </div>
       )}
     </Card>
+  );
+}
+
+function PickField({ label, v, on, options }: { label: string; v: string; on: (v: string) => void; options: string[] }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="flex items-center justify-between gap-3">
+        <span>{label}</span>
+        <span className="text-xs italic text-muted-foreground">Required</span>
+      </Label>
+      <Select value={v} onValueChange={on}>
+        <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
+        <SelectContent>{options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+      </Select>
+    </div>
   );
 }
