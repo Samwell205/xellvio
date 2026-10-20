@@ -1,5 +1,10 @@
 # Roadmap
 
+## Restricted voice pilot and publishing (Oct 20)
+- [ ] Confirm Samuel Durosinmi's tenant email and which voice surfaces should be restricted.
+- [ ] Enforce pilot access and show Coming soon for other tenants; test allowed and blocked access.
+- [ ] Run a current security scan, then request publishing with the restrictions included.
+
 ## Monitoring fixes and multiple-assistant launch validation (Oct 20)
 - [x] Repair four claimed monitoring findings: indexed redirect, request-entry budget/bounded calls, persisted link IDs and orphan-contact batch recovery; targeted safeguards and live redirect checked (no paid dispatch run).
 - [x] Independent assistant edit/copy/select/archive/restore/delete checked in signed-in owner UI; settings read back separately; temporary QA records removed.
