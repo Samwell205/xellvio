@@ -1,15 +1,18 @@
 # Roadmap
 
 ## Voice-enabled website account assistant (Oct 20)
-- [ ] Add contact-file inspection/import and campaign drafting through existing ownership, consent and screening controls; consequential sends require exact-content confirmation.
-- [ ] Preserve user-supplied STOP wording without appending a duplicate opt-out line across SMS paths.
-- [ ] Add two-way website voice with verified task outcomes and immediate Stop cleanup.
-- [ ] Add documented advanced receptionist settings and safe assistant configuration actions.
-- [ ] Verify uploads, draft read-back, confirmation/credit checks and real voice conversation; paid telephony pilot requires an approved number and destination.
+- [x] Add contact-file inspection/import proposals and campaign drafting through ownership, consent and screening controls; drafts use the existing launch review.
+- [x] Preserve user-supplied STOP wording without appending a duplicate opt-out line; safeguard tests pass.
+- [x] Add documented model, voice and speed overrides plus confirmed business-agent drafts; selectors verified in the owner pilot screen without activating calling.
+- [x] Verify signed-in chat, saved-thread restoration, CSV counts, consent gating/cancel and business-agent draft save/read-back; 32 safeguard tests pass.
+- [ ] Verify two-way website voice, delegated tasks and Stop cleanup — test browser gathers zero audio-network candidates, so startup stops before contacting the voice service; needs a browser/network supporting WebRTC.
+- [ ] Verify actual consented import and campaign launch/credit checks — no contacts imported or paid SMS sent during this check; requires authorized opted-in test contacts and a send destination.
+- [ ] Complete remaining advanced workflow/knowledge controls and app-wide account actions — not implemented; current tools are limited to account reads and confirmed import/campaign/agent proposals.
+- [ ] Verify phone provisioning and real call/SMS/calendar/renewal outcomes — requires an approved number, destination and authorized paid pilot; website voice is separate from phone calling.
 
 ## AI receptionist, follow-ups and bookings for all tenants
 - [x] Build tenant-specific setup, call/lead/appointment views, encrypted owner calendar connection and guarded call-action handlers; verified signed-in setup save/read-back and unsigned-event rejection.
-- [ ] Complete live assistant provisioning, human handoff and missed-call follow-up behavior — blocked on approved voice pricing and an authorized pilot; current call tools and SMS queue helper must pass the pilot before activation.
+- [ ] Verify live assistant provisioning, human handoff and missed-call follow-up behavior — pricing is set; an approved number and authorized pilot remain required before activation.
 - [ ] Verify hosted voice capabilities and account access before provisioning or activating paid calling; establish owner-approved tenant pricing before enabling paid usage.
 - [ ] Link a per-user calendar client and verify tenant-isolated availability, confirmed bookings, cancellation and reconnect behavior.
 - [ ] Verify a real authorized call through lead capture, compliant SMS follow-up, team alert and calendar read-back before enabling tenant traffic.
