@@ -52,7 +52,9 @@ function ReviewQueuePage() {
       <div>
         <h1 className="text-2xl font-extrabold">Compliance review queue</h1>
         <p className="text-sm text-muted-foreground">
-          Flagged messages holding for admin approval. Pending items auto-approve after 15 minutes
+          Borderline messages holding for admin approval. Pending items never auto-approve. Messages
+          blocked outright for prohibited content, and account sending holds, are not listed here —
+          lift account holds from Tenant accounts.
           if untouched.
         </p>
       </div>
