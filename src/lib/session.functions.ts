@@ -11,6 +11,8 @@ export type SessionInfo = {
   workspaceOwnerId: string;
   workspaceOwnerName: string | null;
   workspaceOwnerEmail: string | null;
+  businessName: string | null;
+  profileComplete: boolean;
 };
 
 /**
@@ -21,7 +23,13 @@ export const getMySession = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SessionInfo> => {
     const acting = await resolveActingAccount(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: acct } = await supabaseAdmin.from("accounts").select("legal_business_name,company,website_url,business_address,phone,industry,team_size,onboarding_status").eq("id", acting.accountId).maybeSingle();
+    const businessName = acct?.legal_business_name || acct?.company || null;
+    const profileComplete = Boolean(acct && acct.legal_business_name && acct.website_url && acct.business_address && acct.phone && acct.industry && acct.team_size) || acct?.onboarding_status === "active";
     return {
+      businessName,
+      profileComplete,
       userId: acting.userId,
       isOwner: acting.isOwner,
       role: acting.role,

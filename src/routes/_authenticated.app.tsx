@@ -60,6 +60,11 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
     return skeletonFor(pathname);
   }
 
+  // Owners must finish their business profile before reaching the dashboard.
+  if (session.isOwner && !(session as any).profileComplete && pathname !== "/app/onboarding") {
+    navigate({ to: "/app/onboarding", replace: true });
+    return skeletonFor(pathname);
+  }
   if (allowed) return <>{children}</>;
 
   return (
@@ -67,8 +72,8 @@ function PermissionGuard({ children }: { children: React.ReactNode }) {
       <Lock className="size-6 mx-auto text-muted-foreground" />
       <h1 className="mt-3 text-lg font-semibold">You don't have access to this area</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Your access to this workspace doesn't include{" "}
-        {needed ? PERMISSION_LABELS[needed] : "this page"}. Ask the workspace owner to enable it.
+        Your access to this business doesn't include{" "}
+        {needed ? PERMISSION_LABELS[needed] : "this page"}. Ask the business owner to enable it.
       </p>
     </div>
   );
@@ -85,6 +90,7 @@ function AreaTip() {
 }
 
 function AppShell() {
+  const onboardingPath = useRouterState({ select: (st) => st.location.pathname }) === "/app/onboarding";
   // Ensure this tenant has a carrier messaging profile provisioned.
   // Idempotent: no-op if already set. Covers new signups AND existing users.
   const provisioned = useRef(false);
@@ -98,6 +104,13 @@ function AppShell() {
 
   const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
 
+  if (onboardingPath) {
+    return (
+      <div className="min-h-screen bg-muted/30 px-4 py-10">
+        <PermissionGuard><Outlet /></PermissionGuard>
+      </div>
+    );
+  }
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-muted/30">
