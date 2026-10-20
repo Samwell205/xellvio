@@ -1,7 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { canActivateReceptionist, canFollowUp, defaultReceptionistConfig, intervalsOverlap, isWithinBusinessHours } from "./shared";
+import { answeredCallSeconds, canActivateReceptionist, canFollowUp, defaultReceptionistConfig, intervalsOverlap, isWithinBusinessHours } from "./shared";
 
 describe("receptionist safeguards", () => {
+  it("excludes ringing time from answered-minute billing", () => {
+    expect(answeredCallSeconds("2026-10-20T10:00:30Z", "2026-10-20T10:01:31Z")).toBe(61);
+  });
+  it("does not bill unanswered calls", () => {
+    expect(answeredCallSeconds(null, "2026-10-20T10:01:31Z")).toBe(0);
+  });
   it("does not activate paid calling before approved pricing", () => {
     expect(canActivateReceptionist({ pricingApproved: false, voiceVerified: true, numberAssigned: true, testVerified: true, businessReady: true })).toBe(false);
   });

@@ -23,20 +23,37 @@ export function buildCallTools(callId: string, origin: string, rawConfig: unknow
     tools.push(tool("check_availability","Check a requested appointment start time in ISO 8601 with timezone offset. Never invent an available time.",{startsAt:{type:"string"}},["startsAt"]));
     tools.push(tool("book_appointment","Book only after the caller explicitly confirms the exact date, time, name and phone details. Say booked only when the tool returns status confirmed.",{name:{type:"string"},email:{type:"string"},startsAt:{type:"string"},confirmed:{type:"boolean"}},["name","email","startsAt","confirmed"]));
   }
+  if (config.handoffNumber) tools.push(tool("transfer_to_team", "Transfer to this business's saved team number when the caller asks for a human. The destination is fixed by the business; never ask the caller for a transfer destination.", {}, []));
   return tools;
 }
 const leadSchema = z.object({ name:z.string().trim().max(120),email:z.union([z.literal(""),z.string().email().max(254)]),request:z.string().trim().min(1).max(12000),smsConsent:z.boolean(),consentEvidence:z.string().trim().max(2000) });
 export async function runCallTool(callId: string, action: string, raw: unknown) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: call,error } = await supabaseAdmin.from("receptionist_calls").select("id,account_id,from_number,ended_at,started_at").eq("id",callId).single();
+  const { data: call,error } = await supabaseAdmin.from("receptionist_calls").select("id,account_id,call_control_id,from_number,ended_at,started_at,status").eq("id",callId).single();
   if (error || !call || call.ended_at || Date.now()-Date.parse(call.started_at)>3600000) throw new Error("This call is no longer active.");
-  const { data: settings } = await supabaseAdmin.from("receptionist_settings").select("enabled,configuration").eq("account_id",call.account_id).single();
-  if (!settings?.enabled) throw new Error("The receptionist is paused.");
+  const { data: settings } = await supabaseAdmin.from("receptionist_settings").select("enabled,configuration,number_billing_status").eq("account_id",call.account_id).single();
+  if (!settings?.enabled || settings.number_billing_status === "past_due") throw new Error("The receptionist is paused.");
   const [{data:account,error:accountError},{data:platform,error:platformError}] = await Promise.all([
     supabaseAdmin.from("accounts").select("suspended_at,sending_suspended_at,onboarding_status").eq("id",call.account_id).single(),
     supabaseAdmin.from("receptionist_platform_settings").select("configuration").eq("id",true).maybeSingle(),
   ]);
   if (accountError || platformError || !account || account.suspended_at || account.sending_suspended_at || account.onboarding_status === "suspended" || (platform?.configuration as Record<string,unknown> | null)?.pricingApproved !== true) throw new Error("Call actions are unavailable for this business.");
+  if (action === "transfer_to_team") {
+    z.object({}).strict().parse(raw);
+    const config = receptionistConfigSchema.parse(settings.configuration);
+    if (!config.handoffNumber) throw new Error("No team number is configured.");
+    const { data: claimed, error: claimError } = await supabaseAdmin.from("receptionist_calls").update({ status: "transferring" }).eq("id",call.id).eq("status","answered").is("ended_at",null).select("id").maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimed) return { status: "not_started", message: "A transfer is already in progress or the call is no longer answered." };
+    const { voiceRequest } = await import("./voice.server");
+    try {
+      await voiceRequest(`/calls/${encodeURIComponent(call.call_control_id)}/actions/transfer`, { to: config.handoffNumber, command_id: `${call.id}-team-transfer` });
+      return { status: "started" };
+    } catch (error) {
+      await supabaseAdmin.from("receptionist_calls").update({status:"answered"}).eq("id",call.id).eq("status","transferring").is("ended_at",null);
+      throw error;
+    }
+  }
   if (action==="capture_lead") {
     const input = leadSchema.parse(raw);
     const evidence = input.smsConsent && input.consentEvidence ? input.consentEvidence : null;

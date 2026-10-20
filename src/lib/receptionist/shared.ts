@@ -39,6 +39,12 @@ export function isWithinBusinessHours(start: string, end: string, config: Recept
   return a.date === b.date && config.weekdays.includes(a.day) && a.time >= config.openTime && b.time <= config.closeTime;
 }
 export function intervalsOverlap(a: string, b: string, c: string, d: string) { return Date.parse(a) < Date.parse(d) && Date.parse(c) < Date.parse(b); }
+/** Ringing time and unanswered calls are never answered-minute usage. */
+export function answeredCallSeconds(answeredAt: string | null, endedAt: string): number {
+  if (!answeredAt) return 0;
+  const seconds = (Date.parse(endedAt) - Date.parse(answeredAt)) / 1000;
+  return Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0;
+}
 export const appointmentInputSchema = z.object({
   name: z.string().trim().min(1).max(120), phone: z.string().regex(/^\+[1-9]\d{6,14}$/),
   email: z.union([z.literal(""), z.string().email().max(254)]).default(""),
