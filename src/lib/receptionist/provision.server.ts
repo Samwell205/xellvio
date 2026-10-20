@@ -1,5 +1,5 @@
 // Server-only: voice number search/purchase, call application and AI agent setup.
-import { receptionistConfigSchema, requirementNumberType, type ReceptionistConfig } from "./shared";
+import { receptionistConfigSchema, assistantGreeting, requirementNumberType, type ReceptionistConfig } from "./shared";
 import { z } from "zod";
 
 const API = "https://api.telnyx.com/v2";
@@ -17,9 +17,7 @@ async function telnyx(path: string, init: { method?: string; body?: unknown } = 
   const text = await res.text();
   if (!res.ok) {
     console.error(`Voice provider ${path} [${res.status}]: ${text}`);
-    let detail = "";
-    try { detail = JSON.parse(text)?.errors?.[0]?.detail ?? ""; } catch { /* ignore */ }
-    throw new Error(detail ? `Phone line request failed: ${detail}` : "The phone line service could not complete this action.");
+    throw new Error("The phone service could not complete this action. Please contact support with the action you were attempting.");
   }
   return text ? JSON.parse(text) : {};
 }
@@ -111,11 +109,11 @@ export function buildInstructions(config: ReceptionistConfig) {
 export async function upsertAssistant(accountId: string, rawConfig: unknown, existingId: string | null) {
   const config = receptionistConfigSchema.parse(rawConfig);
   const body = {
-    name: `Xellvio ${accountId.slice(0, 8)} ${config.businessName}`.slice(0, 120),
+    name: (config.assistantName || `Xellvio ${accountId.slice(0, 8)} ${config.businessName}`).slice(0, 120),
     instructions: buildInstructions(config),
-    greeting: config.greeting || `Thanks for calling ${config.businessName}. I'm the AI assistant — how can I help?`,
+    greeting: assistantGreeting(config),
     privacy_settings: { data_retention: config.retainTranscript },
-    tags: ["xellvio", `account:${accountId}`],
+    tags: ["xellvio", `account:${accountId}`, ...config.tags],
   };
   if (existingId) {
     await telnyx(`/ai/assistants/${encodeURIComponent(existingId)}`, { method: "POST", body });

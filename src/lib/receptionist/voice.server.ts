@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { receptionistConfigSchema, answeredCallSeconds } from "./shared";
+import { receptionistConfigSchema, answeredCallSeconds, assistantGreeting } from "./shared";
 export async function voiceRequest(path: string, body: Record<string,unknown>) {
   const key = process.env['TELNYX_API_KEY'];
   if (!key) throw new Error("Calling is not configured.");
@@ -40,7 +40,7 @@ export async function handleVoiceEvent(raw: unknown) {
           const config = receptionistConfigSchema.parse(settings.configuration);
           const { buildCallTools } = await import("./tools.server");
           const { buildInstructions } = await import("./provision.server");
-          await voiceRequest(`/calls/${encodeURIComponent(callId)}/actions/answer`, { command_id: `${event.id}-answer`, assistant: { id:settings.assistant_id, greeting:`I’m the AI assistant for ${config.businessName || "this business"}. ${config.greeting || "How can I help?"}`, instructions: `${buildInstructions(config)}\nSave caller requests using capture_lead. If an action fails, offer a human callback. Business timezone: ${config.timezone}.`, tools:buildCallTools(storedCall.id,"https://xellvio.com",config) } });
+          await voiceRequest(`/calls/${encodeURIComponent(callId)}/actions/answer`, { command_id: `${event.id}-answer`, assistant: { id:settings.assistant_id, greeting:assistantGreeting(config), instructions: `${buildInstructions(config)}\nSave caller requests using capture_lead. If an action fails, offer a human callback. Business timezone: ${config.timezone}.`, tools:buildCallTools(storedCall.id,"https://xellvio.com",config) } });
         }
       }
     } else {
