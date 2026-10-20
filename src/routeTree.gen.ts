@@ -151,6 +151,8 @@ import { Route as AuthenticatedAdminTicketsIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminTicketsIdRouteImport } from './routes/_authenticated.admin.tickets.$id'
 import { Route as AuthenticatedAppAppsIndexRouteImport } from './routes/_authenticated.app.apps.index'
 import { Route as AuthenticatedAppAppsSlugRouteImport } from './routes/_authenticated.app.apps.$slug'
+import { Route as AuthenticatedAppAssistantIndexRouteImport } from './routes/_authenticated.app.assistant.index'
+import { Route as AuthenticatedAppAssistantThreadIdRouteImport } from './routes/_authenticated.app.assistant.$threadId'
 import { Route as AuthenticatedAppAutomationsIndexRouteImport } from './routes/_authenticated.app.automations.index'
 import { Route as AuthenticatedAppAutomationsIdRouteImport } from './routes/_authenticated.app.automations.$id'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
@@ -952,6 +954,18 @@ const AuthenticatedAppAppsSlugRoute =
     path: '/apps/$slug',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const AuthenticatedAppAssistantIndexRoute =
+  AuthenticatedAppAssistantIndexRouteImport.update({
+    id: '/assistant/',
+    path: '/assistant/',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppAssistantThreadIdRoute =
+  AuthenticatedAppAssistantThreadIdRouteImport.update({
+    id: '/assistant/$threadId',
+    path: '/assistant/$threadId',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
 const AuthenticatedAppAutomationsIndexRoute =
   AuthenticatedAppAutomationsIndexRouteImport.update({
     id: '/automations/',
@@ -1298,6 +1312,7 @@ export interface FileRoutesByFullPath {
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/admin/tickets/$id': typeof AuthenticatedAdminTicketsIdRoute
   '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
+  '/app/assistant/$threadId': typeof AuthenticatedAppAssistantThreadIdRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1328,6 +1343,7 @@ export interface FileRoutesByFullPath {
   '/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/admin/tickets/': typeof AuthenticatedAdminTicketsIndexRoute
   '/app/apps/': typeof AuthenticatedAppAppsIndexRoute
+  '/app/assistant/': typeof AuthenticatedAppAssistantIndexRoute
   '/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/receptionist/': typeof AuthenticatedAppReceptionistIndexRoute
@@ -1470,6 +1486,7 @@ export interface FileRoutesByTo {
   '/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/admin/tickets/$id': typeof AuthenticatedAdminTicketsIdRoute
   '/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
+  '/app/assistant/$threadId': typeof AuthenticatedAppAssistantThreadIdRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1500,6 +1517,7 @@ export interface FileRoutesByTo {
   '/admin/support': typeof AuthenticatedAdminSupportIndexRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsIndexRoute
   '/app/apps': typeof AuthenticatedAppAppsIndexRoute
+  '/app/assistant': typeof AuthenticatedAppAssistantIndexRoute
   '/app/automations': typeof AuthenticatedAppAutomationsIndexRoute
   '/app/campaigns': typeof AuthenticatedAppCampaignsIndexRoute
   '/app/receptionist': typeof AuthenticatedAppReceptionistIndexRoute
@@ -1651,6 +1669,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/telnyx/tfn': typeof AuthenticatedAdminTelnyxTfnRoute
   '/_authenticated/admin/tickets/$id': typeof AuthenticatedAdminTicketsIdRoute
   '/_authenticated/app/apps/$slug': typeof AuthenticatedAppAppsSlugRoute
+  '/_authenticated/app/assistant/$threadId': typeof AuthenticatedAppAssistantThreadIdRoute
   '/_authenticated/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
@@ -1681,6 +1700,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/_authenticated/admin/tickets/': typeof AuthenticatedAdminTicketsIndexRoute
   '/_authenticated/app/apps/': typeof AuthenticatedAppAppsIndexRoute
+  '/_authenticated/app/assistant/': typeof AuthenticatedAppAssistantIndexRoute
   '/_authenticated/app/automations/': typeof AuthenticatedAppAutomationsIndexRoute
   '/_authenticated/app/campaigns/': typeof AuthenticatedAppCampaignsIndexRoute
   '/_authenticated/app/receptionist/': typeof AuthenticatedAppReceptionistIndexRoute
@@ -1831,6 +1851,7 @@ export interface FileRouteTypes {
     | '/admin/telnyx/tfn'
     | '/admin/tickets/$id'
     | '/app/apps/$slug'
+    | '/app/assistant/$threadId'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -1861,6 +1882,7 @@ export interface FileRouteTypes {
     | '/admin/support/'
     | '/admin/tickets/'
     | '/app/apps/'
+    | '/app/assistant/'
     | '/app/automations/'
     | '/app/campaigns/'
     | '/app/receptionist/'
@@ -2003,6 +2025,7 @@ export interface FileRouteTypes {
     | '/admin/telnyx/tfn'
     | '/admin/tickets/$id'
     | '/app/apps/$slug'
+    | '/app/assistant/$threadId'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
     | '/app/campaigns/new'
@@ -2033,6 +2056,7 @@ export interface FileRouteTypes {
     | '/admin/support'
     | '/admin/tickets'
     | '/app/apps'
+    | '/app/assistant'
     | '/app/automations'
     | '/app/campaigns'
     | '/app/receptionist'
@@ -2183,6 +2207,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/telnyx/tfn'
     | '/_authenticated/admin/tickets/$id'
     | '/_authenticated/app/apps/$slug'
+    | '/_authenticated/app/assistant/$threadId'
     | '/_authenticated/app/automations/$id'
     | '/_authenticated/app/campaigns/$id'
     | '/_authenticated/app/campaigns/new'
@@ -2213,6 +2238,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/support/'
     | '/_authenticated/admin/tickets/'
     | '/_authenticated/app/apps/'
+    | '/_authenticated/app/assistant/'
     | '/_authenticated/app/automations/'
     | '/_authenticated/app/campaigns/'
     | '/_authenticated/app/receptionist/'
@@ -3316,6 +3342,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppAppsSlugRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/assistant/': {
+      id: '/_authenticated/app/assistant/'
+      path: '/assistant'
+      fullPath: '/app/assistant/'
+      preLoaderRoute: typeof AuthenticatedAppAssistantIndexRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/_authenticated/app/assistant/$threadId': {
+      id: '/_authenticated/app/assistant/$threadId'
+      path: '/assistant/$threadId'
+      fullPath: '/app/assistant/$threadId'
+      preLoaderRoute: typeof AuthenticatedAppAssistantThreadIdRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/automations/': {
       id: '/_authenticated/app/automations/'
       path: '/automations'
@@ -3745,12 +3785,14 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppTollFreeVerificationRoute: typeof AuthenticatedAppTollFreeVerificationRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
   AuthenticatedAppAppsSlugRoute: typeof AuthenticatedAppAppsSlugRoute
+  AuthenticatedAppAssistantThreadIdRoute: typeof AuthenticatedAppAssistantThreadIdRoute
   AuthenticatedAppAutomationsIdRoute: typeof AuthenticatedAppAutomationsIdRoute
   AuthenticatedAppReceptionistAppointmentsRoute: typeof AuthenticatedAppReceptionistAppointmentsRoute
   AuthenticatedAppReceptionistCallsRoute: typeof AuthenticatedAppReceptionistCallsRoute
   AuthenticatedAppReceptionistLeadsRoute: typeof AuthenticatedAppReceptionistLeadsRoute
   AuthenticatedAppSupportIdRoute: typeof AuthenticatedAppSupportIdRoute
   AuthenticatedAppAppsIndexRoute: typeof AuthenticatedAppAppsIndexRoute
+  AuthenticatedAppAssistantIndexRoute: typeof AuthenticatedAppAssistantIndexRoute
   AuthenticatedAppAutomationsIndexRoute: typeof AuthenticatedAppAutomationsIndexRoute
   AuthenticatedAppReceptionistIndexRoute: typeof AuthenticatedAppReceptionistIndexRoute
   AuthenticatedAppSupportIndexRoute: typeof AuthenticatedAppSupportIndexRoute
@@ -3781,6 +3823,8 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
     AuthenticatedAppTollFreeVerificationRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
   AuthenticatedAppAppsSlugRoute: AuthenticatedAppAppsSlugRoute,
+  AuthenticatedAppAssistantThreadIdRoute:
+    AuthenticatedAppAssistantThreadIdRoute,
   AuthenticatedAppAutomationsIdRoute: AuthenticatedAppAutomationsIdRoute,
   AuthenticatedAppReceptionistAppointmentsRoute:
     AuthenticatedAppReceptionistAppointmentsRoute,
@@ -3790,6 +3834,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
     AuthenticatedAppReceptionistLeadsRoute,
   AuthenticatedAppSupportIdRoute: AuthenticatedAppSupportIdRoute,
   AuthenticatedAppAppsIndexRoute: AuthenticatedAppAppsIndexRoute,
+  AuthenticatedAppAssistantIndexRoute: AuthenticatedAppAssistantIndexRoute,
   AuthenticatedAppAutomationsIndexRoute: AuthenticatedAppAutomationsIndexRoute,
   AuthenticatedAppReceptionistIndexRoute:
     AuthenticatedAppReceptionistIndexRoute,
