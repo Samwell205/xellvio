@@ -86,6 +86,8 @@ Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout 
 - [ ] Resend "batch 2" (6f6ace6d) 4,792 recipients blocked by carrier 40314 — waiting on carrier to re-enable messaging
 
 ## AI receptionist rollout (Oct 20)
+- [ ] Support multiple named assistants per business, assistant list/create/copy/archive and independent settings synced to the carrier; extend the visible settings from supplied screenshots and verify assignment safety.
+- [ ] Audit voice pricing coverage; keep chosen rates and flag any unpriced advanced features rather than inventing charges.
 - [x] Add $100 assisted chosen-number verification requests, atomic credit debit and linked support tickets, 24-hour handling target, admin queue/status/notes/exact-number ordering; 28 tests pass and signed-in confirmation checked. Carrier approval is not guaranteed.
 - [ ] Verify a funded assisted request and admin fulfilment end-to-end — blocked on approval to take an actual $100 debit and an admin test session; current injected session is a non-admin business account.
 - [x] Improve business-specific agent choices; share saved instructions with live call setup, add guarded team transfer and startup-failure handling, exclude ringing time from answered-minute fees; 24 safeguard tests, signed-in save/read-back and live UK number selection/paperwork display passed. Live call remains unverified.
