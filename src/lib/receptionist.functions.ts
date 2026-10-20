@@ -4,15 +4,26 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { receptionistConfigSchema, canActivateReceptionist, appointmentInputSchema } from "./receptionist/shared";
 
-async function workspace(userId: string, ownerOnly = false) {
+async function workspace(userId: string, ownerOnly = false, allowComingSoon = false) {
   const { resolveActingAccount, assertPermission, assertOwner } = await import("./acting-account.server");
   const acting = await resolveActingAccount(userId);
   assertPermission(acting, "settings");
   if (ownerOnly) assertOwner(acting);
+  if (!allowComingSoon) {
+    const { assertVoicePilotAccess } = await import("./voice-rollout.server");
+    await assertVoicePilotAccess(userId, acting.accountId);
+  }
   return acting;
 }
 export const getReceptionist = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  const acting = await workspace(context.userId);
+  const acting = await workspace(context.userId, false, true);
+  const { hasVoicePilotAccess } = await import("./voice-rollout.server");
+  if (!await hasVoicePilotAccess(context.userId, acting.accountId)) return {
+    available: false, config: receptionistConfigSchema.parse({}), enabled: false, number: null,
+    provisionStatus: "not_configured", testVerified: false, pricingApproved: false, numberType: null, numberCountry: null,
+    regulatoryNotes: null, billingStatus: "current", renewsAt: null, perMinuteUsd: 0.15, numberMonthlyUsd: 5,
+    hasAgent: false, isOwner: acting.isOwner, calendarConnected: false, reconnectRequired: false, calls: [], leads: [], appointments: [],
+  };
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const results = await Promise.all([
     supabaseAdmin.from("receptionist_settings").select("configuration,enabled,voice_number,provision_status,test_verified_at,number_type,number_country,assistant_id,regulatory_notes,number_billing_status,number_renews_at").eq("account_id", acting.accountId).maybeSingle(),
@@ -25,7 +36,7 @@ export const getReceptionist = createServerFn({ method: "GET" }).middleware([req
   for (const result of results) if (result.error) throw new Error("Receptionist records could not be loaded.");
   const [settings,calls,leads,appointments,platform,connection] = results;
   const p = (platform.data?.configuration ?? {}) as Record<string,unknown>;
-  return { config: receptionistConfigSchema.parse(settings.data?.configuration ?? {}), enabled: settings.data?.enabled ?? false, number: settings.data?.voice_number ?? null, provisionStatus: settings.data?.provision_status ?? "not_configured", testVerified: Boolean(settings.data?.test_verified_at), pricingApproved: p.pricingApproved === true, numberType: settings.data?.number_type ?? null, numberCountry: settings.data?.number_country ?? (settings.data?.voice_number?.startsWith("+44") ? "GB" : settings.data?.voice_number?.startsWith("+1") ? "US" : null), regulatoryNotes: settings.data?.regulatory_notes ?? null, billingStatus: settings.data?.number_billing_status ?? "current", renewsAt: settings.data?.number_renews_at ?? null, perMinuteUsd: Number(p.perMinuteUsd ?? 0.15), numberMonthlyUsd: Number(p.numberMonthlyUsd ?? 5), hasAgent: Boolean(settings.data?.assistant_id), isOwner: acting.isOwner, calendarConnected: Boolean(connection.data) && !connection.data?.reconnect_required, reconnectRequired: connection.data?.reconnect_required ?? false, calls: calls.data ?? [], leads: leads.data ?? [], appointments: appointments.data ?? [] };
+  return { available: true, config: receptionistConfigSchema.parse(settings.data?.configuration ?? {}), enabled: settings.data?.enabled ?? false, number: settings.data?.voice_number ?? null, provisionStatus: settings.data?.provision_status ?? "not_configured", testVerified: Boolean(settings.data?.test_verified_at), pricingApproved: p.pricingApproved === true, numberType: settings.data?.number_type ?? null, numberCountry: settings.data?.number_country ?? (settings.data?.voice_number?.startsWith("+44") ? "GB" : settings.data?.voice_number?.startsWith("+1") ? "US" : null), regulatoryNotes: settings.data?.regulatory_notes ?? null, billingStatus: settings.data?.number_billing_status ?? "current", renewsAt: settings.data?.number_renews_at ?? null, perMinuteUsd: Number(p.perMinuteUsd ?? 0.15), numberMonthlyUsd: Number(p.numberMonthlyUsd ?? 5), hasAgent: Boolean(settings.data?.assistant_id), isOwner: acting.isOwner, calendarConnected: Boolean(connection.data) && !connection.data?.reconnect_required, reconnectRequired: connection.data?.reconnect_required ?? false, calls: calls.data ?? [], leads: leads.data ?? [], appointments: appointments.data ?? [] };
 });
 export const saveReceptionist = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((input: unknown) => receptionistConfigSchema.parse(input)).handler(async ({ context, data }) => {
   const acting = await workspace(context.userId, true);

@@ -35,6 +35,10 @@ const AGENT_PRESETS = [
 
 export function ReceptionistWorkspace({ view, pilot = false }: { view: View; pilot?: boolean }) {
   const { data } = useSuspenseQuery(receptionistQuery);
+  if (!data.available) return <main className="mx-auto w-full max-w-6xl space-y-5 p-4 md:p-8"><header className="border-b pb-6"><Bot className="mb-3 h-8 w-8 text-primary"/><h1 className="text-3xl font-semibold">AI Receptionist</h1></header><Badge variant="secondary">Coming soon</Badge></main>;
+  return <AvailableReceptionist view={view} pilot={pilot} data={data}/>;
+}
+function AvailableReceptionist({view,pilot,data}:{view:View;pilot:boolean;data:Awaited<ReturnType<typeof getReceptionist>>}) {
   const qc = useQueryClient();
   const [config, setConfig] = useState<ReceptionistConfig>(data.config);
   useEffect(() => { setConfig(data.config); }, [data.config]);
