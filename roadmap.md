@@ -1,5 +1,10 @@
 # Roadmap
 
+## Monitoring fixes and multiple-assistant launch validation (Oct 20)
+- [ ] Verify and resolve the four claimed Project monitoring findings before assistant changes.
+- [ ] Finish supported independent assistant configuration controls and test create/copy/edit/select/delete flows.
+- [ ] Check live pilot account/number readiness and run an authorized real call covering routing, caller details and notifications; never bypass approval gates.
+
 ## Voice-enabled website account assistant (Oct 20)
 - [x] Add contact-file inspection/import proposals and campaign drafting through ownership, consent and screening controls; drafts use the existing launch review.
 - [x] Preserve user-supplied STOP wording without appending a duplicate opt-out line; safeguard tests pass.
