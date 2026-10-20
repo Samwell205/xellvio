@@ -5134,6 +5134,50 @@ export type Database = {
           },
         ]
       }
+      receptionist_assistants: {
+        Row: {
+          account_id: string
+          archived_at: string | null
+          carrier_assistant_id: string | null
+          configuration: Json
+          created_at: string
+          id: string
+          name: string
+          sync_status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          archived_at?: string | null
+          carrier_assistant_id?: string | null
+          configuration?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          sync_status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          archived_at?: string | null
+          carrier_assistant_id?: string | null
+          configuration?: Json
+          created_at?: string
+          id?: string
+          name?: string
+          sync_status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receptionist_assistants_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receptionist_calls: {
         Row: {
           account_id: string
@@ -5383,6 +5427,7 @@ export type Database = {
           provision_status: string
           regulatory_notes: string | null
           requirement_group_id: string | null
+          selected_assistant_id: string | null
           test_verified_at: string | null
           updated_at: string
           voice_application_id: string | null
@@ -5403,6 +5448,7 @@ export type Database = {
           provision_status?: string
           regulatory_notes?: string | null
           requirement_group_id?: string | null
+          selected_assistant_id?: string | null
           test_verified_at?: string | null
           updated_at?: string
           voice_application_id?: string | null
@@ -5423,6 +5469,7 @@ export type Database = {
           provision_status?: string
           regulatory_notes?: string | null
           requirement_group_id?: string | null
+          selected_assistant_id?: string | null
           test_verified_at?: string | null
           updated_at?: string
           voice_application_id?: string | null
@@ -5434,6 +5481,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: true
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receptionist_settings_selected_assistant_id_fkey"
+            columns: ["selected_assistant_id"]
+            isOneToOne: false
+            referencedRelation: "receptionist_assistants"
             referencedColumns: ["id"]
           },
         ]
@@ -7748,6 +7802,10 @@ export type Database = {
       release_dispatch_lock:
         | { Args: never; Returns: undefined }
         | { Args: { _name: string }; Returns: undefined }
+      select_receptionist_assistant: {
+        Args: { _account_id: string; _assistant_id: string }
+        Returns: undefined
+      }
       submit_assisted_number_request: {
         Args: {
           _account_id: string
