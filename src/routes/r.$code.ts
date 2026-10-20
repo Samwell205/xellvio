@@ -1,151 +1,33 @@
-// Short-link click tracker. Recipients click e.g. https://xellvio.com/r/aB3xY9k1
-// We record the click and 302 redirect to the original URL.
+// Indexed short-link destination lookup; click work never blocks the hosted redirect.
 import { createFileRoute } from "@tanstack/react-router";
+import { redirectTrackedLink, type TrackedLink } from "@/lib/short-link.server";
 
-const SITE = (process.env.PUBLIC_BASE_URL || process.env.SITE_URL || "https://xellvio.com").replace(/\/+$/, "");
-
-/** A real HTML page (never a downloadable text file) when a code is unknown. */
 function notFoundResponse(): Response {
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>Link unavailable</title>
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b0b0f;color:#f5f5f7;font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:24px}
-.card{max-width:420px;text-align:center}h1{font-size:22px;margin:0 0 10px}p{margin:0 0 20px;color:#a1a1aa}
-a{display:inline-block;background:#f5f5f7;color:#0b0b0f;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:12px}</style>
-</head><body><div class="card"><h1>This link is no longer available</h1>
-<p>It may have expired or been typed incorrectly. If someone sent it to you, ask them for a fresh link.</p>
-<a href="${SITE}">Go to homepage</a></div></body></html>`;
-  return new Response(html, {
-    status: 404,
-    headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
-  });
+  const site=(process.env["PUBLIC_BASE_URL"] || process.env["SITE_URL"] || "https://xellvio.com").replace(/\/+$/, "");
+  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Link unavailable — Xellvio</title></head><body><main><h1>This link is no longer available</h1><p>If someone sent it to you, ask them for a fresh link.</p><a href="${site}">Go to homepage</a></main></body></html>`,{status:404,headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"}});
 }
 
-/** Recover a destination for a code whose tracking row went missing: find the
- * message that actually contains the code and reuse its campaign's link. */
-async function healMissingCode(code: string) {
-  if (!/^[A-Za-z0-9]{4,16}$/.test(code)) return null;
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: msg } = await supabaseAdmin
-    .from("messages")
-    .select("id,campaign_id,rendered_body")
-    .like("rendered_body", `%/r/${code}%`)
-    .limit(1)
-    .maybeSingle();
-  if (!msg?.campaign_id) return null;
-
-  const { data: camp } = await supabaseAdmin
-    .from("campaigns")
-    .select("message_body,account_id")
-    .eq("id", msg.campaign_id)
-    .maybeSingle();
-
-  // Recover the EXACT destination this code stood for: the dispatcher shortens
-  // every URL in the body in order, so the nth short code in the delivered text
-  // corresponds to the nth URL in the original campaign body. Guessing from a
-  // sibling link would send recipients to the wrong page.
-  const rendered = String((msg as any).rendered_body ?? "");
-  const codes = [...rendered.matchAll(/\/r\/([A-Za-z0-9]{4,16})/g)].map((m) => m[1]);
-  const position = codes.indexOf(code);
-  const originals = String((camp as any)?.message_body ?? "").match(/https?:\/\/[^\s<>()[\]"']+/g) ?? [];
-  const url = position >= 0 ? originals[position] ?? null : null;
-  if (!url) return null;
-
-  // Recreate the row so future clicks (and the report) count normally.
-  // account_id is NOT NULL, so skip the insert rather than fail silently.
-  const accountId = (camp as any)?.account_id ?? null;
-  if (accountId) {
-    await supabaseAdmin.from("link_clicks").insert({
-      short_code: code,
-      url,
-      message_id: (msg as any).id,
-      campaign_id: msg.campaign_id,
-      account_id: accountId,
-      clicks: 1,
-      first_click_at: new Date().toISOString(),
-      last_click_at: new Date().toISOString(),
-    } as any);
-  }
-
-  return { url, message_id: (msg as any).id, campaign_id: msg.campaign_id };
-}
-
-
-
-
-async function trackAndRedirect(code: string, request: Request): Promise<Response> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  // Atomic increment + fetch in one round-trip. This MUST be awaited: the
-  // serverless runtime cancels any in-flight work the moment the response is
-  // returned, so the previous fire-and-forget update silently lost clicks.
-  const { data: rows, error } = await (supabaseAdmin as any).rpc("record_link_click", {
-    _code: code,
-  });
-  let link = Array.isArray(rows) ? rows[0] : rows;
-
-  if (error || !link) {
-    // Fall back to a plain read so a counter failure never breaks the redirect.
-    const { data: fallback } = await supabaseAdmin
-      .from("link_clicks")
-      .select("url, message_id, campaign_id")
-      .eq("short_code", code)
-      .maybeSingle();
-    if (fallback) {
-      link = fallback;
-    } else {
-      // Self-heal: the code is in a real delivered message but its tracking row
-      // is missing. Recover the destination from the campaign that sent it so
-      // the recipient still lands on the right page.
-      const healed = await healMissingCode(code);
-      if (!healed) return notFoundResponse();
-      link = healed;
-    }
-  }
-
-
-  const ua = request.headers.get("user-agent") ?? null;
-  const ip = request.headers.get("cf-connecting-ip")
-    ?? request.headers.get("x-forwarded-for")
-    ?? null;
-  try {
-    await supabaseAdmin.from("events").insert({
-      message_id: link.message_id,
-      type: "clicked",
-      payload: { short_code: code, url: link.url, ua, ip, campaign_id: link.campaign_id },
-    });
-  } catch {
-    /* click audit is best-effort */
-  }
-
-  try {
-    const { data: msg } = await supabaseAdmin
-      .from("messages")
-      .select("account_id, phone_e164")
-      .eq("id", link.message_id)
-      .maybeSingle();
-    if ((msg as any)?.account_id && (msg as any)?.phone_e164) {
-      const { fireAutomationTrigger } = await import("@/lib/automation-engine.server");
-      await fireAutomationTrigger({
-        accountId: (msg as any).account_id,
-        phone: (msg as any).phone_e164,
-        type: "trigger.link_clicked",
-        payload: { url: link.url },
-      });
-    }
-  } catch {
-    /* automations never block the redirect */
-  }
-
-  return new Response(null, { status: 302, headers: { Location: link.url, "Cache-Control": "no-store" } });
-}
-
-export const Route = createFileRoute("/r/$code")({
-  server: {
-    handlers: {
-      GET: async ({ params, request }) => trackAndRedirect(params.code, request),
-      HEAD: async ({ params, request }) => trackAndRedirect(params.code, request),
+async function trackAndRedirect(code:string,request:Request):Promise<Response> {
+  const {supabaseAdmin}=await import("@/integrations/supabase/client.server");
+  return redirectTrackedLink(code,request,{
+    unavailable:notFoundResponse,
+    lookup:async (code,signal)=>{
+      const {data,error}=await supabaseAdmin.from("link_clicks").select("url,message_id,campaign_id").eq("short_code",code).abortSignal(signal).maybeSingle();
+      if(error) throw new Error(error.message);
+      return data as TrackedLink | null;
     },
-  },
-});
+    record:async(code,link,request,signal)=>{
+      const {error}=await supabaseAdmin.rpc("record_link_click",{_code:code}).abortSignal(signal);
+      if(error) throw new Error(error.message);
+      if(!link.message_id) return;
+      const {error:auditError}=await supabaseAdmin.from("events").insert({message_id:link.message_id,type:"clicked",payload:{short_code:code,url:link.url,ua:request.headers.get("user-agent"),ip:request.headers.get("cf-connecting-ip")??request.headers.get("x-forwarded-for"),campaign_id:link.campaign_id}}).abortSignal(signal);
+      if(auditError) console.error("[shortlink] audit failed",auditError.message);
+      const {data:msg}=await supabaseAdmin.from("messages").select("account_id,phone_e164").eq("id",link.message_id).abortSignal(signal).maybeSingle();
+      if(msg?.account_id && msg.phone_e164 && !signal.aborted){
+        const {fireAutomationTrigger}=await import("@/lib/automation-engine.server");
+        await fireAutomationTrigger({accountId:msg.account_id,phone:msg.phone_e164,type:"trigger.link_clicked",payload:{url:link.url}});
+      }
+    },
+  });
+}
+export const Route=createFileRoute("/r/$code")({server:{handlers:{GET:async({params,request})=>trackAndRedirect(params.code,request),HEAD:async({params,request})=>trackAndRedirect(params.code,request)}}});
