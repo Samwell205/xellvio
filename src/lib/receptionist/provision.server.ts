@@ -124,22 +124,81 @@ export async function upsertAssistant(accountId: string, rawConfig: unknown, exi
   return id;
 }
 
-/** Buy a voice number for the tenant, routed to the call application. Charges only after the order is accepted. */
-export async function purchaseVoiceNumber(accountId: string, phoneNumber: string, numberType: string) {
+export type RequirementField = {
+  id: string; name: string; kind: "textual" | "address" | "document" | "action";
+  description: string; example: string | null;
+};
+
+/** Regulatory paperwork the carrier needs before this country + number type can be activated. */
+export async function getNumberRequirements(country: string, type: string): Promise<RequirementField[]> {
+  const q = new URLSearchParams({ "filter[country_code]": country, "filter[phone_number_type]": requirementNumberType(type), "filter[action]": "ordering" });
+  const r = await telnyx(`/requirements?${q}`);
+  const first = (r.data ?? [])[0];
+  return ((first?.requirement_types ?? first?.requirements_types ?? []) as any[]).map((t) => ({
+    id: String(t.id), name: String(t.name ?? "Requirement"), kind: t.type, description: String(t.description ?? ""), example: t.example ?? null,
+  }));
+}
+
+export type PaperworkValue =
+  | { requirementId: string; kind: "textual"; text: string }
+  | { requirementId: string; kind: "address"; address: { firstName: string; lastName: string; businessName: string; street: string; city: string; region: string; postalCode: string; country: string } }
+  | { requirementId: string; kind: "document"; file: { name: string; base64: string } };
+
+/** Upload documents, create addresses and save one reusable paperwork pack for this business. */
+export async function submitPaperwork(accountId: string, country: string, type: string, values: PaperworkValue[]) {
+  const required = await getNumberRequirements(country, type);
+  const regulatory: { requirement_id: string; field_value: string }[] = [];
+  for (const req of required) {
+    const v = values.find((x) => x.requirementId === req.id);
+    if (!v) throw new Error(`Please complete: ${req.name}`);
+    if (v.kind === "textual") regulatory.push({ requirement_id: req.id, field_value: v.text });
+    if (v.kind === "address") {
+      const a = v.address;
+      const r = await telnyx("/addresses", { method: "POST", body: {
+        first_name: a.firstName, last_name: a.lastName, business_name: a.businessName, street_address: a.street,
+        locality: a.city, administrative_area: a.region || undefined, postal_code: a.postalCode, country_code: a.country,
+        customer_reference: `xellvio-${accountId}`,
+      } });
+      regulatory.push({ requirement_id: req.id, field_value: String(r.data?.id) });
+    }
+    if (v.kind === "document") {
+      const r = await telnyx("/documents", { method: "POST", body: { file: v.file.base64, filename: v.file.name, customer_reference: `xellvio-${accountId}` } });
+      regulatory.push({ requirement_id: req.id, field_value: String(r.data?.id) });
+    }
+  }
+  const g = await telnyx("/requirement_groups", { method: "POST", body: {
+    country_code: country, phone_number_type: requirementNumberType(type), action: "ordering",
+    customer_reference: `xellvio-${accountId}`, regulatory_requirements: regulatory,
+  } });
+  const groupId = String(g.data?.id ?? g.id ?? "");
+  if (!groupId) throw new Error("Your documents were uploaded but could not be saved. Please try again.");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin.from("receptionist_settings").upsert({
+    account_id: accountId, requirement_group_id: groupId, number_country: country, number_type: type, updated_at: new Date().toISOString(),
+  }, { onConflict: "account_id" });
+  return { groupId };
+}
+
+/** Buy the exact number the tenant picked, routed to the call application. */
+export async function purchaseVoiceNumber(accountId: string, phoneNumber: string, numberType: string, country: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const p = await readPlatform();
   if (!p.pricingApproved) throw new Error("Calling numbers are not on sale yet.");
-  const { data: existing } = await supabaseAdmin.from("receptionist_settings").select("voice_number").eq("account_id", accountId).maybeSingle();
+  const { data: existing } = await supabaseAdmin.from("receptionist_settings").select("voice_number,requirement_group_id,number_country,number_type").eq("account_id", accountId).maybeSingle();
   if (existing?.voice_number) throw new Error("This business already has a calling number.");
   const { data: acct } = await supabaseAdmin.from("accounts").select("credit_balance,telnyx_messaging_profile_id,suspended_at,onboarding_status").eq("id", accountId).single();
   if (!acct || acct.suspended_at || acct.onboarding_status === "suspended") throw new Error("This account cannot buy numbers right now.");
   if (Number(acct.credit_balance ?? 0) < p.numberMonthlyUsd) throw new Error(`You need at least $${p.numberMonthlyUsd.toFixed(2)} in credits to buy a calling number.`);
 
+  const required = await getNumberRequirements(country, numberType);
+  const groupMatches = existing?.requirement_group_id && existing.number_country === country && existing.number_type === numberType;
+  if (required.length && !groupMatches) throw new Error("This number type needs business paperwork first. Complete the paperwork step, then buy.");
+
   const appId = await ensureCallApplication();
   const order = await telnyx("/number_orders", {
     method: "POST",
     body: {
-      phone_numbers: [{ phone_number: phoneNumber }],
+      phone_numbers: [{ phone_number: phoneNumber, ...(groupMatches ? { requirement_group_id: existing!.requirement_group_id } : {}) }],
       connection_id: appId,
       ...(acct.telnyx_messaging_profile_id ? { messaging_profile_id: acct.telnyx_messaging_profile_id } : {}),
       customer_reference: `xellvio-voice-${accountId}`,
@@ -167,10 +226,10 @@ export async function purchaseVoiceNumber(accountId: string, phoneNumber: string
     voice_number: phoneNumber,
     voice_application_id: appId,
     number_type: numberType,
+    number_country: country,
     number_order_id: orderId,
     number_charged_at: debitErr ? null : new Date().toISOString(),
-    // Monthly renewal: charged hourly-checked by the database job once this date passes.
-    // If the first charge failed, renewal is due immediately so it is retried.
+    // Monthly renewal is charged by the hourly database job once this date passes.
     number_renews_at: debitErr ? new Date().toISOString() : addOneMonth(new Date()).toISOString(),
     number_billing_status: debitErr ? "past_due" : "current",
     provision_status: provision,
@@ -180,15 +239,22 @@ export async function purchaseVoiceNumber(accountId: string, phoneNumber: string
   return { phoneNumber, status: provision };
 }
 
-/** Refresh a pending number order. */
+/** Refresh a pending number order, including any paperwork review notes. */
 export async function refreshNumberOrder(accountId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: s } = await supabaseAdmin.from("receptionist_settings").select("number_order_id,provision_status").eq("account_id", accountId).maybeSingle();
   if (!s?.number_order_id || s.provision_status === "verified") return s?.provision_status ?? "not_configured";
   const r = await telnyx(`/number_orders/${encodeURIComponent(s.number_order_id)}`);
   const status = String(r.data?.status ?? "pending");
-  const next = status === "success" ? "verified" : r.data?.requirements_met === false ? "documents_needed" : status === "failure" ? "number_failed" : "number_pending";
-  await supabaseAdmin.from("receptionist_settings").update({ provision_status: next, updated_at: new Date().toISOString() }).eq("account_id", accountId);
+  let notes: string | null = null;
+  try {
+    const pn = await telnyx(`/number_order_phone_numbers?filter[number_order_id]=${encodeURIComponent(s.number_order_id)}`);
+    const reqs = ((pn.data ?? [])[0]?.regulatory_requirements ?? []) as any[];
+    const rejected = reqs.filter((x) => /reject|declin/i.test(String(x.status ?? "")));
+    if (rejected.length) notes = rejected.map((x) => `${x.field_type ?? "Requirement"}: ${x.comment ?? x.status_reason ?? "rejected"}`).join("\n");
+  } catch { /* status details are optional */ }
+  const next = status === "success" ? "verified" : notes ? "documents_rejected" : r.data?.requirements_met === false ? "documents_needed" : status === "failure" ? "number_failed" : "number_pending";
+  await supabaseAdmin.from("receptionist_settings").update({ provision_status: next, regulatory_notes: notes, updated_at: new Date().toISOString() }).eq("account_id", accountId);
   return next;
 }
 

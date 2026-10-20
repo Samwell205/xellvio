@@ -44,3 +44,15 @@ export const appointmentInputSchema = z.object({
   email: z.union([z.literal(""), z.string().email().max(254)]).default(""),
   startsAt: z.string().datetime({ offset: true }), confirmed: z.literal(true), idempotencyKey: z.string().uuid(),
 });
+/** Carrier requirement lookups use underscores for toll-free. */
+export function requirementNumberType(type: string) {
+  return type === "toll-free" ? "toll_free" : type;
+}
+
+export type TextingPath = "calls_only" | "ready" | "tollfree_verification" | "tendlc_registration";
+/** What a business must do before a number can send texts (mirrors carrier rules). */
+export function textingPath(country: string, type: string, canText: boolean): TextingPath {
+  if (!canText) return "calls_only";
+  if (country === "US" || country === "CA") return type === "toll-free" ? "tollfree_verification" : "tendlc_registration";
+  return "ready";
+}
