@@ -141,6 +141,8 @@ import { Route as TemplatesCategoryIndexRouteImport } from './routes/templates.$
 import { Route as TemplatesCategorySlugRouteImport } from './routes/templates.$category.$slug'
 import { Route as TemplatesIndustryIndustryRouteImport } from './routes/templates.industry.$industry'
 import { Route as TemplatesUseCaseGoalRouteImport } from './routes/templates.use-case.$goal'
+import { Route as AuthenticatedAdminAccountAssistantIndexRouteImport } from './routes/_authenticated.admin.account-assistant.index'
+import { Route as AuthenticatedAdminAccountAssistantThreadIdRouteImport } from './routes/_authenticated.admin.account-assistant.$threadId'
 import { Route as AuthenticatedAdminCampaignsIndexRouteImport } from './routes/_authenticated.admin.campaigns.index'
 import { Route as AuthenticatedAdminCampaignsIdRouteImport } from './routes/_authenticated.admin.campaigns.$id'
 import { Route as AuthenticatedAdminSupportIndexRouteImport } from './routes/_authenticated.admin.support.index'
@@ -894,6 +896,18 @@ const TemplatesUseCaseGoalRoute = TemplatesUseCaseGoalRouteImport.update({
   path: '/templates/use-case/$goal',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminAccountAssistantIndexRoute =
+  AuthenticatedAdminAccountAssistantIndexRouteImport.update({
+    id: '/account-assistant/',
+    path: '/account-assistant/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminAccountAssistantThreadIdRoute =
+  AuthenticatedAdminAccountAssistantThreadIdRouteImport.update({
+    id: '/account-assistant/$threadId',
+    path: '/account-assistant/$threadId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminCampaignsIndexRoute =
   AuthenticatedAdminCampaignsIndexRouteImport.update({
     id: '/campaigns/',
@@ -1306,6 +1320,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/templates/$category/': typeof TemplatesCategoryIndexRoute
+  '/admin/account-assistant/$threadId': typeof AuthenticatedAdminAccountAssistantThreadIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
@@ -1339,6 +1354,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/admin/account-assistant/': typeof AuthenticatedAdminAccountAssistantIndexRoute
   '/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
   '/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/admin/tickets/': typeof AuthenticatedAdminTicketsIndexRoute
@@ -1480,6 +1496,7 @@ export interface FileRoutesByTo {
   '/app': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps': typeof MarketplaceAppsIndexRoute
   '/templates/$category': typeof TemplatesCategoryIndexRoute
+  '/admin/account-assistant/$threadId': typeof AuthenticatedAdminAccountAssistantThreadIdRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
@@ -1513,6 +1530,7 @@ export interface FileRoutesByTo {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/admin/account-assistant': typeof AuthenticatedAdminAccountAssistantIndexRoute
   '/admin/campaigns': typeof AuthenticatedAdminCampaignsIndexRoute
   '/admin/support': typeof AuthenticatedAdminSupportIndexRoute
   '/admin/tickets': typeof AuthenticatedAdminTicketsIndexRoute
@@ -1663,6 +1681,7 @@ export interface FileRoutesById {
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/templates/$category/': typeof TemplatesCategoryIndexRoute
+  '/_authenticated/admin/account-assistant/$threadId': typeof AuthenticatedAdminAccountAssistantThreadIdRoute
   '/_authenticated/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/_authenticated/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
@@ -1696,6 +1715,7 @@ export interface FileRoutesById {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/_authenticated/admin/account-assistant/': typeof AuthenticatedAdminAccountAssistantIndexRoute
   '/_authenticated/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
   '/_authenticated/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/_authenticated/admin/tickets/': typeof AuthenticatedAdminTicketsIndexRoute
@@ -1845,6 +1865,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/marketplace/apps/'
     | '/templates/$category/'
+    | '/admin/account-assistant/$threadId'
     | '/admin/campaigns/$id'
     | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
@@ -1878,6 +1899,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/admin/account-assistant/'
     | '/admin/campaigns/'
     | '/admin/support/'
     | '/admin/tickets/'
@@ -2019,6 +2041,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/marketplace/apps'
     | '/templates/$category'
+    | '/admin/account-assistant/$threadId'
     | '/admin/campaigns/$id'
     | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
@@ -2052,6 +2075,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/admin/account-assistant'
     | '/admin/campaigns'
     | '/admin/support'
     | '/admin/tickets'
@@ -2201,6 +2225,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/'
     | '/marketplace/apps/'
     | '/templates/$category/'
+    | '/_authenticated/admin/account-assistant/$threadId'
     | '/_authenticated/admin/campaigns/$id'
     | '/_authenticated/admin/support/$caseId'
     | '/_authenticated/admin/telnyx/audit'
@@ -2234,6 +2259,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/_authenticated/admin/account-assistant/'
     | '/_authenticated/admin/campaigns/'
     | '/_authenticated/admin/support/'
     | '/_authenticated/admin/tickets/'
@@ -3272,6 +3298,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TemplatesUseCaseGoalRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/account-assistant/': {
+      id: '/_authenticated/admin/account-assistant/'
+      path: '/account-assistant'
+      fullPath: '/admin/account-assistant/'
+      preLoaderRoute: typeof AuthenticatedAdminAccountAssistantIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/account-assistant/$threadId': {
+      id: '/_authenticated/admin/account-assistant/$threadId'
+      path: '/account-assistant/$threadId'
+      fullPath: '/admin/account-assistant/$threadId'
+      preLoaderRoute: typeof AuthenticatedAdminAccountAssistantThreadIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/campaigns/': {
       id: '/_authenticated/admin/campaigns/'
       path: '/campaigns'
@@ -3670,8 +3710,10 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedAdminVerifiersRoute: typeof AuthenticatedAdminVerifiersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminAccountAssistantThreadIdRoute: typeof AuthenticatedAdminAccountAssistantThreadIdRoute
   AuthenticatedAdminCampaignsIdRoute: typeof AuthenticatedAdminCampaignsIdRoute
   AuthenticatedAdminTicketsIdRoute: typeof AuthenticatedAdminTicketsIdRoute
+  AuthenticatedAdminAccountAssistantIndexRoute: typeof AuthenticatedAdminAccountAssistantIndexRoute
   AuthenticatedAdminCampaignsIndexRoute: typeof AuthenticatedAdminCampaignsIndexRoute
   AuthenticatedAdminTicketsIndexRoute: typeof AuthenticatedAdminTicketsIndexRoute
 }
@@ -3704,8 +3746,12 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedAdminVerifiersRoute: AuthenticatedAdminVerifiersRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAdminAccountAssistantThreadIdRoute:
+    AuthenticatedAdminAccountAssistantThreadIdRoute,
   AuthenticatedAdminCampaignsIdRoute: AuthenticatedAdminCampaignsIdRoute,
   AuthenticatedAdminTicketsIdRoute: AuthenticatedAdminTicketsIdRoute,
+  AuthenticatedAdminAccountAssistantIndexRoute:
+    AuthenticatedAdminAccountAssistantIndexRoute,
   AuthenticatedAdminCampaignsIndexRoute: AuthenticatedAdminCampaignsIndexRoute,
   AuthenticatedAdminTicketsIndexRoute: AuthenticatedAdminTicketsIndexRoute,
 }
