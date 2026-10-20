@@ -156,6 +156,7 @@ async function answerQuestion(
   signal: AbortSignal,
   consumeInput: () => void,
   onPlan: (plan: ReturnType<typeof planStudySchedule>) => void,
+  onRunId: (id: string) => void,
 ) {
   signal.throwIfAborted();
   const runFetch = createLovableAiGatewayRunIdFetch(correlation.runID || undefined);
@@ -213,6 +214,8 @@ async function answerQuestion(
   let failed = false;
   // Drain through HTTP EOF so successful work is not recorded as cancelled by the Gateway.
   for await (const part of result.fullStream) {
+    const issuedRunId = runFetch.getRunId();
+    if (issuedRunId) onRunId(issuedRunId);
     if (part.type === "start-step") stepCompleted = false;
     if (part.type === "raw" && part.rawValue && typeof part.rawValue === "object" && "type" in part.rawValue) {
       if (part.rawValue.type === "response.completed") stepCompleted = true;
@@ -261,7 +264,7 @@ export function bindLiveConnection(
   connect: LiveConnector,
 ): void {
   const config = { ...configuration };
-  const runID = "";
+  let runID = "";
   const setupAbort = new AbortController();
   let gateway: LiveSocket | undefined;
   let sessionID: string | undefined;
@@ -418,7 +421,7 @@ export function bindLiveConnection(
     const pending = pendingDelegations[0];
     const event = pending?.event;
     const id = event?.delegation?.id;
-    if (!pending || !event || !id || closing || task) return;
+    if (!pending || !event || !id || !sessionID || closing || task) return;
     if (!transcripts.some(({ role, text }) => role === "user" && text.trim())) return;
     const controller = new AbortController();
     task = controller;
@@ -439,6 +442,7 @@ export function bindLiveConnection(
         (plan) => {
           pending.plan = plan;
         },
+        (id) => { runID = id; },
       );
       if (closing || controller.signal.aborted) return;
       if (taskRevision !== revision) return;
@@ -475,7 +479,8 @@ export function bindLiveConnection(
       }
       if (closing) return;
       if (event.type === "gateway.session.created") {
-        sessionID = event.session?.id;
+        if (typeof event.session?.id !== "string" || !event.session.id.trim()) throw new Error("Voice session was not established");
+        sessionID = event.session.id;
         clearTimeout(startupTimer);
         requestGreeting();
       }

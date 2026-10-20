@@ -89,7 +89,6 @@ type State = {
   trackLinks: boolean;
 };
 
-const STOP_LINE = "\nReply STOP to unsubscribe.";
 
 function senderDisplayName(
   sender:

@@ -6,7 +6,7 @@ import { createLovableAiGatewayRunIdFetch, withLovableAiGatewayRunIdHeader } fro
 export async function handleAccountAssistantChat(request:Request) {
   try {
     if(Number(request.headers.get("content-length") ?? 0)>300000) return Response.json({message:"Conversation is too large."},{status:413});
-    const token=request.headers.get("authorization")?.replace(/^Bearer\s+/i,"");
+    const token=request.headers.get("authorization")?.match(/^Bearer\s+(\S{1,12000})$/i)?.[1];
     if(!token) return Response.json({message:"Sign in to use your account assistant."},{status:401});
     const {supabaseAdmin:db}=await import("@/integrations/supabase/client.server");
     const auth=await db.auth.getUser(token);
