@@ -9,7 +9,8 @@ function tokenForCall(callId: string) {
 }
 export function verifyCallToolToken(callId: string, token: string | null) {
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return false;
-  return timingSafeEqual(Buffer.from(token),Buffer.from(tokenForCall(callId)));
+  try { return timingSafeEqual(Buffer.from(token),Buffer.from(tokenForCall(callId))); }
+  catch { return false; }
 }
 export function buildCallTools(callId: string, origin: string, rawConfig: unknown) {
   const config = receptionistConfigSchema.parse(rawConfig);
@@ -31,6 +32,11 @@ export async function runCallTool(callId: string, action: string, raw: unknown) 
   if (error || !call || call.ended_at || Date.now()-Date.parse(call.started_at)>3600000) throw new Error("This call is no longer active.");
   const { data: settings } = await supabaseAdmin.from("receptionist_settings").select("enabled,configuration").eq("account_id",call.account_id).single();
   if (!settings?.enabled) throw new Error("The receptionist is paused.");
+  const [{data:account,error:accountError},{data:platform,error:platformError}] = await Promise.all([
+    supabaseAdmin.from("accounts").select("suspended_at,sending_suspended_at,onboarding_status").eq("id",call.account_id).single(),
+    supabaseAdmin.from("receptionist_platform_settings").select("configuration").eq("id",true).maybeSingle(),
+  ]);
+  if (accountError || platformError || !account || account.suspended_at || account.sending_suspended_at || account.onboarding_status === "suspended" || (platform?.configuration as Record<string,unknown> | null)?.pricingApproved !== true) throw new Error("Call actions are unavailable for this workspace.");
   if (action==="capture_lead") {
     const input = leadSchema.parse(raw);
     const evidence = input.smsConsent && input.consentEvidence ? input.consentEvidence : null;

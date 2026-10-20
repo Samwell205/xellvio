@@ -72,7 +72,9 @@ export const completeReceptionistCalendar = createServerFn({ method: "POST" }).m
   const { saveConnection } = await import("./receptionist/connections.server");
   const result = await exchangeAppUserOAuthCode("https://connector-gateway.lovable.dev", data.code);
   if (result.connectorId !== "google_calendar") throw new Error("Unexpected calendar connection.");
-  await saveConnection(acting.accountId, result.connectionAPIKey);
+  // Owner-only operation: workspace account IDs are the owner's auth ID.
+  // Persist the authenticated identity explicitly, never a teammate identity.
+  await saveConnection(context.userId, result.connectionAPIKey);
   return { ok: true };
 });
 export const getReceptionistCalendars = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
