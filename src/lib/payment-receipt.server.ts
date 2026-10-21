@@ -22,7 +22,7 @@ export async function notifyPaymentReceipt(
 
   const { data: account } = await supabaseAdmin
     .from("accounts")
-    .select("email,full_name,company,credit_balance")
+    .select("email,contact_email,full_name,company,credit_balance")
     .eq("id", payment.account_id)
     .maybeSingle();
 
@@ -31,12 +31,12 @@ export async function notifyPaymentReceipt(
   const paid = `${Number(payment.amount).toFixed(2)} ${currency}`;
   const credits = `$${Number(payment.credits).toFixed(2)}`;
 
-  if (account?.email) {
+  if (account?.contact_email || account?.email) {
     try {
       const { sendBrandedEmail } = await import("@/lib/email/send-internal.server");
       await sendBrandedEmail({
         templateName: "generic",
-        recipientEmail: account.email,
+        recipientEmail: account.contact_email || account.email,
         idempotencyKey: `payment-receipt-${reference}`,
         includeUnsubscribe: false,
         sendImmediately: true,

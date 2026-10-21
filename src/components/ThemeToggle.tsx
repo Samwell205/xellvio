@@ -1,4 +1,5 @@
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Monitor } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
 
@@ -7,8 +8,7 @@ import { cn } from "@/lib/utils";
  * highlighted, the other side is the mode you'd switch to.
  */
 export function ThemeToggle({ className }: { className?: string }) {
-  const { resolvedTheme, ready, setTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  const { theme, setTheme } = useTheme();
 
   return (
     <div
@@ -19,38 +19,35 @@ export function ThemeToggle({ className }: { className?: string }) {
         className,
       )}
     >
-      <span
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute top-1 bottom-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-background shadow-sm",
-          ready && "transition-transform duration-300 ease-out",
-          isDark && "translate-x-full",
-        )}
-      />
-      <button
+      <Button
+        size="icon" variant={theme === "light" ? "secondary" : "ghost"}
         type="button"
-        aria-pressed={!isDark}
+        aria-pressed={theme === "light"}
+        title="Light appearance"
         aria-label="Light appearance"
         onClick={() => setTheme("light")}
         className={cn(
           "relative z-10 grid size-7 place-items-center rounded-full transition-colors",
-          isDark ? "text-muted-foreground hover:text-foreground" : "text-foreground",
         )}
       >
         <Sun className="size-4" />
-      </button>
-      <button
+      </Button>
+      <Button
+        size="icon" variant={theme === "dark" ? "secondary" : "ghost"}
         type="button"
-        aria-pressed={isDark}
+        aria-pressed={theme === "dark"}
+        title="Dark appearance"
         aria-label="Dark appearance"
         onClick={() => setTheme("dark")}
         className={cn(
           "relative z-10 grid size-7 place-items-center rounded-full transition-colors",
-          isDark ? "text-foreground" : "text-muted-foreground hover:text-foreground",
         )}
       >
         <Moon className="size-4" />
-      </button>
+      </Button>
+      <Button size="icon" variant={theme === "system" ? "secondary" : "ghost"} className="size-7 rounded-full" aria-label="System appearance" title="Match my device" aria-pressed={theme === "system"} onClick={() => setTheme("system")}>
+        <Monitor className="size-4" />
+      </Button>
     </div>
   );
 }
