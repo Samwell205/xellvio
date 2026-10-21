@@ -203,41 +203,11 @@ export const runCopilotAction = createServerFn({ method: "POST" })
       await resumeTenantSending({ tenantAccountId: data.target, liftedBy: context.userId });
       return { ok: true, message: "Account sending restored. Campaigns paused by the hold are sending again; blocked or user-paused ones stay stopped." };
     }
-    const isPaused = (s: string) => s === "paused" || s.startsWith("paused_");
-    // Sending must be allowed again before a campaign can resume.
-    const { data: acct } = await sb.from("accounts").select("sending_suspended_at").eq("id", row.account_id).maybeSingle();
-    if (acct?.sending_suspended_at) throw new Error("This tenant's sending is still on hold. Lift the hold first, then resume.");
-    let { data: c, error } = await sb.from("campaigns").select("id, name, status, account_id").eq("id", data.target).maybeSingle();
-    if (error) throw new Error(error.message);
-    // The AI can quote the wrong ID; fall back to this tenant's single paused campaign.
-    if (!c || c.account_id !== row.account_id || !isPaused(c.status)) {
-      const { data: paused } = await sb.from("campaigns").select("id, name, status, account_id")
-        .eq("account_id", row.account_id).or("status.eq.paused,status.like.paused_%").order("updated_at", { ascending: false }).limit(2);
-      if (paused?.length === 1) c = paused[0];
-      else if (!paused?.length) {
-        if (c && c.account_id === row.account_id) throw new Error(`Nothing to resume — that campaign is already "${c.status}".`);
-        throw new Error("This tenant has no paused campaign to resume.");
-      } else throw new Error("This tenant has more than one paused campaign. Resume the right one from Campaigns.");
-    }
-    // Deliberate resume re-screens the current wording; a blocked or held
-    // result keeps the campaign stopped.
-    const { data: live, error: bodyErr } = await sb.from("campaigns").select("id, account_id, status, message_body")
-      .eq("id", c!.id).eq("account_id", row.account_id).maybeSingle();
-    if (bodyErr || !live || typeof live.message_body !== "string" || !live.message_body.trim()) {
-      throw new Error("Could not read this campaign's message, so it stays paused.");
-    }
-    if (!isPaused(live.status)) throw new Error(`Nothing to resume — that campaign is already "${live.status}".`);
-    const { screenMessageContent } = await import("./content-screening.server");
-    const screen = await screenMessageContent(live.message_body, row.account_id, { campaignId: live.id, context: "campaign_resume", skipReviewQueue: true });
-    if (screen.action !== "passed") throw new Error(`Campaign stays paused: screening ${screen.action === "blocked" ? "blocked" : "held"} this message. ${screen.blockedReasons[0] ?? ""}`.trim());
-    // Only the exact owned, still-paused row with the screened body may resume.
-    const { data: updated, error: uErr } = await sb.from("campaigns")
-      .update({ status: "sending", paused_reason: null, paused_at: null })
-      .eq("id", live.id).eq("account_id", row.account_id).eq("status", live.status).eq("message_body", live.message_body)
-      .select("id");
-    if (uErr) throw new Error(uErr.message);
-    if (!updated || updated.length !== 1) throw new Error("The campaign changed before it could resume, so it stays paused. Review it and try again.");
-    return { ok: true, message: `Campaign "${c!.name ?? "campaign"}" resumed — sending continues within a minute.` };
+    // Exact campaign + the case's tenant only; never substitute another campaign.
+    const { checkedResumeCampaign } = await import("./campaign-resume.server");
+    const r = await checkedResumeCampaign(sb, { campaignId: data.target, expectedAccountId: row.account_id });
+    if (!r.ok) throw new Error(r.message);
+    return { ok: true, message: r.message };
   });
 
 // Voice notes: admin records audio in the copilot composer; we transcribe it so
