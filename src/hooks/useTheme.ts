@@ -8,9 +8,9 @@ import {
   type ThemeChoice,
 } from "@/lib/theme";
 
-/** Read and change the site appearance. Safe during SSR (starts on "system"). */
+/** Read and change the site appearance. Safe during SSR (starts on "light"). */
 export function useTheme() {
-  const [choice, setChoice] = useState<ThemeChoice>("system");
+  const [choice, setChoice] = useState<ThemeChoice>("light");
   const [resolved, setResolved] = useState<ResolvedTheme>("light");
   const [ready, setReady] = useState(false);
 
