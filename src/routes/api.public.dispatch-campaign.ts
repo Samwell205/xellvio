@@ -682,11 +682,20 @@ async function runWithConcurrency<T>(items: T[], limit: number, fn: (item: T) =>
 async function beginCampaignIfNeeded(
   supabaseAdmin: any, campaign: any, firstBatchRecipients: number,
 ): Promise<{ ok: true } | { ok: false; reason?: string }> {
+  const guard = await import("@/lib/dispatch-campaign-guard");
+  // Exactly one slot screens a given campaign revision. Concurrent or stale
+  // slots must not screen again — every duplicate audit row used to count as
+  // a separate repeat-abuse strike.
+  if (!guard.isDispatchableStatus(await guard.currentCampaignStatus(supabaseAdmin, campaign.id))) {
+    return { ok: false, reason: "campaign_not_dispatchable" };
+  }
+  const claim = await guard.claimInitialScreening(supabaseAdmin, campaign.id, campaign.message_body ?? "");
+  if (claim === "busy") return { ok: false, reason: "screening_in_progress" };
+
   // ── Legacy fast keyword scan (kept for backwards compat with the badge).
   const preScan = keywordScan(campaign.message_body ?? "");
   if (!preScan.allowed) {
-    await supabaseAdmin.from("campaigns")
-      .update({ status: "blocked_content", paused_reason: preScan.reason }).eq("id", campaign.id);
+    await guard.updateIfDispatchable(supabaseAdmin, campaign.id, { status: "blocked_content", paused_reason: preScan.reason });
     await flagAccountForReview(supabaseAdmin, campaign.account_id, "content_violation_dispatch", preScan.reason ?? "");
     return { ok: false, reason: "blocked_content" };
   }
@@ -713,11 +722,10 @@ async function beginCampaignIfNeeded(
     context: "campaign_plan",
   });
   if (screen.action === "blocked") {
-    await supabaseAdmin.from("campaigns")
-      .update({
+    await guard.updateIfDispatchable(supabaseAdmin, campaign.id, {
         status: "blocked_content",
         paused_reason: `Blocked by screening (risk ${screen.riskScore}/100): ${screen.blockedReasons[0] ?? "policy violation"}`,
-      }).eq("id", campaign.id);
+      });
     return { ok: false, reason: "blocked_by_screening" };
   }
   if (screen.action === "held_for_review") {
@@ -731,12 +739,11 @@ async function beginCampaignIfNeeded(
       .in("status", ["approved", "auto_approved"])
       .limit(1);
     if (!approved?.length) {
-      await supabaseAdmin.from("campaigns")
-        .update({
+      await guard.updateIfDispatchable(supabaseAdmin, campaign.id, {
           status: "paused",
           paused_reason: `Held for review (risk ${screen.riskScore}/100). ${screen.blockedReasons.slice(0, 2).join(" · ")}`,
           paused_at: new Date().toISOString(),
-        }).eq("id", campaign.id);
+        });
       return { ok: false, reason: "held_for_review" };
     }
   }
@@ -1543,9 +1550,15 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
 
         const runOneCampaign = async (c: any): Promise<any> => {
           if(budgetLeft() < DISPATCH_SEND_RESERVE_MS) return {skipped:"request_budget"};
+          // The work list is a snapshot fanned into many lease slots. Honour the
+          // campaign's CURRENT state so a stale/overlapping slot never acts on a
+          // campaign that has since been blocked, paused, cancelled or finished.
+          const guard = await import("@/lib/dispatch-campaign-guard");
+          const liveStatus = await guard.currentCampaignStatus(supabaseAdmin, c.id);
+          if (!guard.isDispatchableStatus(liveStatus)) return { skipped: "campaign_not_dispatchable", status: liveStatus };
           const { secondaryCampaignMaySend } = await import("@/lib/telnyx-connection");
                     if (!secondaryCampaignMaySend(c.account_id, c.created_at)) {
-            await supabaseAdmin.from("campaigns").update({ status: "paused", paused_reason: "Create a new campaign to use the new sending connection.", paused_at: new Date().toISOString() }).eq("id", c.id);
+            await guard.updateIfDispatchable(supabaseAdmin, c.id, { status: "paused", paused_reason: "Create a new campaign to use the new sending connection.", paused_at: new Date().toISOString() });
             return { skipped: "previous_connection_campaign" };
           }
           {
@@ -1557,9 +1570,8 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
             .select("telnyx_messaging_profile_id, telnyx_phone_number, onboarding_status, sending_suspended_at, tos_current_version_accepted, gorgias_enabled")
             .eq("id", c.account_id).maybeSingle();
           if (acct?.onboarding_status === "suspended" || acct?.sending_suspended_at) {
-            await supabaseAdmin.from("campaigns")
-              .update({ status: "paused", paused_reason: "Tenant sending suspended", paused_at: new Date().toISOString() })
-              .eq("id", c.id);
+            // Conditional: never overwrite blocked_content or another stop state.
+            await guard.updateIfDispatchable(supabaseAdmin, c.id, { status: "paused", paused_reason: "Tenant sending suspended", paused_at: new Date().toISOString() });
             return { error: "tenant_sending_suspended" };
           }
           // ── ToS gate: tenant must have accepted the current version.

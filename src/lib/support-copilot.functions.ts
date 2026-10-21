@@ -201,7 +201,7 @@ export const runCopilotAction = createServerFn({ method: "POST" })
       if (data.target !== row.account_id) throw new Error("That account isn't the tenant on this case.");
       const { resumeTenantSending } = await import("./tenant-suspension.server");
       await resumeTenantSending({ tenantAccountId: data.target, liftedBy: context.userId });
-      return { ok: true, message: "Sending hold lifted." };
+      return { ok: true, message: "Account sending restored. Paused campaigns stay stopped — resume each one separately after review." };
     }
     const isPaused = (s: string) => s === "paused" || s.startsWith("paused_");
     // Sending must be allowed again before a campaign can resume.
@@ -219,7 +219,13 @@ export const runCopilotAction = createServerFn({ method: "POST" })
         throw new Error("This tenant has no paused campaign to resume.");
       } else throw new Error("This tenant has more than one paused campaign. Resume the right one from Campaigns.");
     }
-    const { error: uErr } = await sb.from("campaigns").update({ status: "sending", paused_reason: null, paused_at: null }).eq("id", c!.id);
+    // Deliberate resume re-screens the current wording; a blocked or held
+    // result keeps the campaign stopped.
+    const { data: body } = await sb.from("campaigns").select("message_body").eq("id", c!.id).maybeSingle();
+    const { screenMessageContent } = await import("./content-screening.server");
+    const screen = await screenMessageContent(body?.message_body ?? "", row.account_id, { campaignId: c!.id, context: "campaign_resume", skipReviewQueue: true });
+    if (screen.action !== "passed") throw new Error(`Campaign stays paused: screening ${screen.action === "blocked" ? "blocked" : "held"} this message. ${screen.blockedReasons[0] ?? ""}`.trim());
+    const { error: uErr } = await sb.from("campaigns").update({ status: "sending", paused_reason: null, paused_at: null }).eq("id", c!.id).eq("status", c!.status);
     if (uErr) throw new Error(uErr.message);
     return { ok: true, message: `Campaign "${c!.name ?? "campaign"}" resumed — sending continues within a minute.` };
   });

@@ -97,7 +97,7 @@ export async function suspendTenantSending(opts: {
 export async function resumeTenantSending(opts: {
   tenantAccountId: string;
   liftedBy?: string | null;
-}): Promise<{ ok: boolean; telnyxOk: boolean; telnyxError?: string }> {
+}): Promise<{ ok: boolean; telnyxOk: boolean; telnyxError?: string; campaignsLeftPaused: number }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: acct } = await supabaseAdmin
     .from("accounts")
@@ -125,14 +125,14 @@ export async function resumeTenantSending(opts: {
     .eq("account_id", opts.tenantAccountId)
     .is("lifted_at", null);
 
-  // Wake every campaign that was halted only because of the suspension, so
-  // lifting the hold actually resumes the remaining recipients.
-  await supabaseAdmin
+  // Restore-only: lifting the account hold NEVER requeues campaigns or
+  // recipient queues. Each paused campaign must be resumed deliberately (and
+  // re-screened) on its own, so a lift cannot restart a blocked-content loop.
+  const { count: campaignsLeftPaused } = await supabaseAdmin
     .from("campaigns")
-    .update({ status: "queued", paused_reason: null, paused_at: null })
+    .select("id", { count: "exact", head: true })
     .eq("account_id", opts.tenantAccountId)
-    .eq("status", "paused")
-    .or("paused_reason.eq.Tenant sending suspended,paused_reason.like.Sending suspended:*");
+    .eq("status", "paused");
 
-  return { ok: true, telnyxOk, telnyxError };
+  return { ok: true, telnyxOk, telnyxError, campaignsLeftPaused: campaignsLeftPaused ?? 0 };
 }
