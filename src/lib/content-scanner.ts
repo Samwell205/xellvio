@@ -37,7 +37,8 @@ export interface ScanResult {
 }
 
 const CONTEST_OR_BONUS_REGEX = /\b(?:contest|competition|matching bonus|match(?:ing)? reward)\b/i;
-const EXPLICIT_GAMBLING_REGEX = /\b(?:bet(?:ting)?|wager(?:ing)?|gambl(?:e|ing)|casino|sportsbook|odds|stake|jackpot|lottery|slots?|poker|roulette|blackjack|free spins?|deposit bonus|no deposit bonus)\b/i;
+const EXPLICIT_GAMBLING_REGEX =
+  /\b(?:bet(?:ting)?|wager(?:ing)?|gambl(?:e|ing)|casino|sportsbook|odds|stake|jackpot|lottery|slots?|poker|roulette|blackjack|free spins?|deposit bonus|no deposit bonus)\b/i;
 
 /**
  * Community contests and ordinary loyalty bonuses are not gambling merely
@@ -169,9 +170,7 @@ const KEYWORD_PATTERNS: Array<{
   {
     category: "hate_speech",
     severity: "block",
-    patterns: [
-      /\b(kkk|nazi|white supremacist|hate group|terrorist|radicalize|violence against)\b/gi,
-    ],
+    patterns: [/\b(kkk|nazi|white supremacist|hate group|terrorist|radicalize|violence against)\b/gi],
   },
   {
     // Impersonating financial, crypto or big-tech brands is the pattern that
@@ -214,7 +213,6 @@ const KEYWORD_PATTERNS: Array<{
       // Linked company-information demands must not depend on a fresh AI
       // opinion or a tracking code. Hold them consistently for safety review;
       // this is a flag, not evidence for an immediate hard-category suspension.
-      /\bbusiness information needed\b[\s\S]{0,180}\bcomplete your company details\b[\s\S]{0,180}(?:https?:\/\/|www\.)[^\s]+/gi,
     ],
   },
 ];
