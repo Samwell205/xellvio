@@ -67,7 +67,7 @@ export const getCampaignRecipientsExport = createServerFn({ method: "POST" })
       .select("id,phone_e164,country_code,status,error_code,failure_reason,sent_at,delivered_at,created_at")
       .eq("campaign_id", data.campaignId);
     if (data.filter === "delivered") q = q.eq("status", "delivered");
-    else if (data.filter === "failed") q = q.in("status", ["failed", "undelivered", "delivery_unconfirmed"]);
+    else if (data.filter === "failed") q = q.in("status", ["failed", "undelivered"]);
     else if (data.filter === "not_delivered") q = q.eq("status", "delivery_unconfirmed");
     else if (data.filter === "sent_awaiting") q = q.eq("status", "sent");
 
@@ -122,7 +122,7 @@ export const getCampaignRecipientsExport = createServerFn({ method: "POST" })
       return {
         phone_e164: m.phone_e164,
         country_code: m.country_code,
-        status: m.status === "delivery_unconfirmed" ? "failed" : m.status,
+        status: m.status,
         error_code: m.error_code,
         failure_reason:
           m.status === "delivery_unconfirmed"

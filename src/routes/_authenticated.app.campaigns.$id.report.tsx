@@ -48,7 +48,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id/report")({
-  head: () => ({ meta: [{ title: "Campaign report — Xellvio" }] }),
+  head: () => ({ meta: [{ title: "Campaign summary — Xellvio" }, { name: "description", content: "Delivery, failure, receipt and cost summary for your SMS campaign." }, { property: "og:title", content: "Campaign summary — Xellvio" }, { property: "og:description", content: "Review confirmed campaign results and unconfirmed receipts." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: ReportPage,
   errorComponent: ({ error }) => (
     <div className="p-8">
@@ -116,7 +116,7 @@ function ReportPage() {
   const filterStatus = (s: string) => {
     if (s === "delivered") return "delivered";
     if (s === "failed" || s === "undelivered") return "failed";
-    if (s === "delivery_unconfirmed") return "failed";
+    if (s === "delivery_unconfirmed") return "delivery_unconfirmed";
     if (s === "sent") return "sent_awaiting";
     return s;
   };
@@ -140,8 +140,7 @@ function ReportPage() {
         return rows.filter(
           (x) =>
             x.status === "failed" ||
-            x.status === "undelivered" ||
-            x.status === "delivery_unconfirmed",
+            x.status === "undelivered",
         );
       case "not_delivered":
         return rows.filter((x) => x.status === "delivery_unconfirmed");
@@ -433,6 +432,7 @@ function ReportPage() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <Stat icon={<Clock className="size-4" />} label="Unconfirmed" value={r.totals.delivery_unconfirmed.toLocaleString()} sub="Not a confirmed failure" />
         <Stat
           icon={<Send className="size-4" />}
           label="Sent to carrier"

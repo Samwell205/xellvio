@@ -55,7 +55,8 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
 
     return campaigns.map((c: any) => {
       const a: any = acctMap.get(c.account_id);
-      const s = stats.get(c.id)!;
+      const s = stats.get(c.id);
+      if (!s) throw new Error("Campaign totals unavailable");
       const finalized = s.delivered + s.failed + s.unconfirmed + s.sent;
       return {
         id: c.id,
@@ -69,7 +70,7 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
         account_email: a?.email ?? null,
         total: s.total,
         delivered: s.delivered,
-        failed: s.failed + s.unconfirmed,
+        failed: s.failed,
         unconfirmed: s.unconfirmed,
         sent_awaiting: s.sent,
         queued: s.queued,
@@ -178,7 +179,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       if (r.is_mms) { cur.mms_count += 1; mmsCount += 1; }
       if (r.status === "delivered") cur.delivered += 1;
       if (r.status === "delivery_unconfirmed") cur.unconfirmed += 1;
-      if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") cur.failed += 1;
+      if (r.status === "failed" || r.status === "undelivered") cur.failed += 1;
       byCC.set(cc, cur);
 
 
@@ -186,7 +187,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         const k = byKind.get(r.sender_kind) ?? { used: 0, delivered: 0, failed: 0 };
         k.used += 1;
         if (r.status === "delivered") k.delivered += 1;
-        if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") k.failed += 1;
+        if (r.status === "failed" || r.status === "undelivered") k.failed += 1;
         byKind.set(r.sender_kind, k);
       }
 
@@ -198,7 +199,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       if (r.status === "sent") totals.awaiting_delivery += 1;
       if (r.status === "delivered") totals.delivered += 1;
       if (r.status === "delivery_unconfirmed") totals.delivery_unconfirmed += 1;
-      if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") totals.failed += 1;
+      if (r.status === "failed" || r.status === "undelivered") totals.failed += 1;
       if (r.status === "queued" || r.status === "sending" || r.status === "pending") totals.queued += 1;
       if (r.error_code === "insufficient_balance") totals.not_sent_insufficient += 1;
       if (r.error_code === "40008") totals.carrier_rejected += 1;
@@ -209,11 +210,11 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         const t = timelineMap.get(hour) ?? { sent: 0, delivered: 0, failed: 0 };
         if (r.status === "sent" || r.status === "delivered") t.sent += 1;
         if (r.status === "delivered") t.delivered += 1;
-      if (r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") t.failed += 1;
+      if (r.status === "failed" || r.status === "undelivered") t.failed += 1;
         timelineMap.set(hour, t);
       }
 
-      if ((r.status === "failed" || r.status === "undelivered" || r.status === "delivery_unconfirmed") && failures.length < 500) {
+      if ((r.status === "failed" || r.status === "undelivered") && failures.length < 500) {
         failures.push({
           phone_e164: r.phone_e164,
           country_code: r.country_code,

@@ -1326,65 +1326,9 @@ async function reconcileStaleCarrierReceipts(
   // long, which used to lose the whole run's work. We stop early instead and
   // let the next cron tick continue where this one left off.
   const deadline = Date.now() + (opts.budgetMs ?? 20_000);
-  // Many US/CA MMS and international carriers never return a final delivery
-  // receipt at all — the carrier accepted and finalized the message and simply
-  // stays silent. Real receipts land within minutes, so after 1 hour with no
-  // receipt we preserve the provider's unconfirmed result internally;
-  // user-facing reports classify that terminal outcome as failed.
-  //
-  // Only give up on a message we actually asked the provider about at least
-  // once: writing off rows this run never had time to check turned delivered
-  // messages into reported failures on large campaigns. Rows still unchecked
-  // stay 'sent' until a later run reaches them, with a hard backstop so nothing
-  // waits forever.
-  const giveUpCutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const hardGiveUpCutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
-  const UNCONFIRMED_REASON = "Carrier accepted the message but never returned a delivery receipt.";
-  let expired = 0;
-
-  const { data: staleRows } = await supabaseAdmin
-    .from("messages")
-    .select("id")
-    .eq("status", "sent")
-    .lt("sent_at", giveUpCutoff)
-    .order("sent_at", { ascending: true, nullsFirst: false })
-    .limit(250);
-  const staleIds = ((staleRows ?? []) as Array<{ id: string }>).map((r) => r.id);
-  if (staleIds.length > 0) {
-    const checkedIds: string[] = [];
-    for (let i = 0; i < staleIds.length; i += 500) {
-      const slice = staleIds.slice(i, i + 500);
-      const { data: checks } = await supabaseAdmin
-        .from("events")
-        .select("message_id")
-        .in("message_id", slice)
-        .eq("type", "reconcile:checked:sent");
-      const seen = new Set(((checks ?? []) as Array<{ message_id: string }>).map((c) => c.message_id));
-      checkedIds.push(...slice.filter((id) => seen.has(id)));
-    }
-    for (let i = 0; i < checkedIds.length; i += 500) {
-      const { data: rows } = await supabaseAdmin
-        .from("messages")
-        .update({ status: "delivery_unconfirmed", failure_reason: UNCONFIRMED_REASON })
-        .eq("status", "sent")
-        .in("id", checkedIds.slice(i, i + 500))
-        .select("id");
-      expired += (rows ?? []).length;
-    }
-  }
-
-  // Backstop: anything still 'sent' after 6 hours is finalized even if a
-  // provider lookup never succeeded for it.
-  const { data: backstopRows } = await supabaseAdmin
-    .from("messages")
-    .update({ status: "delivery_unconfirmed", failure_reason: UNCONFIRMED_REASON })
-    .eq("status", "sent")
-    .lt("sent_at", hardGiveUpCutoff)
-    .select("id");
-  expired += (backstopRows ?? []).length;
-
-
-
+  // A missing receipt or failed lookup is not a final carrier rejection.
+  // Keep sent messages pending and revisit aged-out rows from the old timer.
+  const expired = 0;
   const checkedRecentlyCutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString();
   const sentCutoff = new Date(Date.now() - (opts.minAgeMs ?? 3 * 60 * 1000)).toISOString();
   // Reconcile enough receipts to keep pace with large campaigns. The previous
@@ -1397,7 +1341,8 @@ async function reconcileStaleCarrierReceipts(
     const { data: candidates } = await supabaseAdmin
       .from("messages")
       .select("id, provider_message_id, status")
-      .eq("status", "sent")
+      .in("status", ["sent", "delivery_unconfirmed"])
+      .gte("sent_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
       .lt("sent_at", sentCutoff)
       .not("provider_message_id", "is", null)
       .filter("provider_message_id", "not.ilike", "SM%")
@@ -1411,7 +1356,7 @@ async function reconcileStaleCarrierReceipts(
       .from("events")
       .select("message_id")
       .in("message_id", ids)
-      .eq("type", "reconcile:checked:sent")
+      .in("type", ["reconcile:checked:sent", "reconcile:delivery_unconfirmed", "reconcile:error"])
       .gte("created_at", checkedRecentlyCutoff);
     const recentlyChecked = new Set((recentChecks ?? []).map((e: any) => e.message_id));
     toCheck.push(...rows.filter((r) => !recentlyChecked.has(r.id)).slice(0, maxPerRun - toCheck.length));
@@ -1448,14 +1393,16 @@ async function reconcileStaleCarrierReceipts(
         });
         return;
       }
+      if (m.status === "delivery_unconfirmed" && !["delivered", "undelivered", "failed", "delivery_unconfirmed"].includes(newStatus)) return;
       const update: any = { status: newStatus };
-      if (newStatus === "delivered") update.delivered_at = new Date().toISOString();
+      if (newStatus === "delivered") { update.delivered_at = new Date().toISOString(); update.error_code = null; update.failure_reason = null; }
       if (errCode) update.error_code = String(errCode);
       if (errDetail) update.failure_reason = String(errDetail).slice(0, 500);
       if (newStatus === "delivery_unconfirmed" && !errDetail) {
         update.failure_reason = "Carrier finalized the message without a delivery confirmation.";
       }
-      await supabaseAdmin.from("messages").update(update).eq("id", m.id);
+      const { error: writeError } = await supabaseAdmin.from("messages").update(update).eq("id", m.id).eq("status", m.status);
+      if (writeError) throw writeError;
       await supabaseAdmin.from("events").insert({ message_id: m.id, type: `reconcile:${newStatus}`, payload: j });
       updated += 1;
     } catch (e) {
