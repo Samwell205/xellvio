@@ -978,92 +978,10 @@ async function planCampaign(
   return { planned: queuedRows.length, skipped: failedRows.length, cost: totalCost };
 }
 
-// Carrier spam-filter circuit breaker.
-//
-// Telnyx 40002 arrives on the delivery receipt: the message is accepted, then
-// the recipient carrier's spam filter rejects it. When that happens to nearly
-// everything, the wording/link/sender is being filtered and continuing to send
-// only burns tenant credit on undeliverable traffic. Pause the campaign so the
-// tenant can change the content or sender and resume.
-const SPAM_BLOCK_MIN_SAMPLE = 20;
-const SPAM_BLOCK_RATIO = 0.2;
-const PREFLIGHT_AUDIENCE_MIN = 2_000;
-const PREFLIGHT_SAMPLE_SIZE = 25;
-const PREFLIGHT_WAIT_MS = 10 * 60 * 1000;
-
-async function carrierSpamBlockRate(supabaseAdmin: any, campaignId: string) {
-  const finalized = ["delivered", "failed", "undelivered"];
-  const [{ count: total }, { count: blocked }] = await Promise.all([
-    supabaseAdmin.from("messages").select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaignId).in("status", finalized),
-    supabaseAdmin.from("messages").select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaignId).eq("error_code", "40002"),
-  ]);
-  const t = total ?? 0, b = blocked ?? 0;
-  return { total: t, blocked: b, ratio: t > 0 ? b / t : 0 };
-}
-
-/**
- * Large campaigns are released in two stages. The first pass submits only a
- * small carrier canary, then waits for enough final delivery receipts. This is
- * the only reliable way to detect downstream carrier filtering before the
- * whole paid audience is submitted: a platform text scan cannot know every
- * carrier's private, changing spam rules.
- */
-async function carrierPreflight(
-  supabaseAdmin: any,
-  campaignId: string,
-): Promise<{ allowance: number | null; waiting: boolean; blocked: boolean }> {
-  const finalizedStatuses = ["delivered", "failed", "undelivered"];
-  const [{ count: audience }, { count: submitted }, { count: finalized }, { count: blocked }, { data: firstSubmitted }] = await Promise.all([
-    supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId),
-    supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId).not("provider_message_id", "is", null),
-    supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId).in("status", finalizedStatuses),
-    supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId).eq("error_code", "40002"),
-    supabaseAdmin.from("messages").select("sent_at").eq("campaign_id", campaignId).not("provider_message_id", "is", null).order("sent_at", { ascending: true, nullsFirst: false }).limit(1).maybeSingle(),
-  ]);
-
-  if ((audience ?? 0) < PREFLIGHT_AUDIENCE_MIN) {
-    return { allowance: null, waiting: false, blocked: false };
-  }
-
-  const sent = submitted ?? 0;
-  const done = finalized ?? 0;
-  const spamBlocked = blocked ?? 0;
-  if (done >= SPAM_BLOCK_MIN_SAMPLE && spamBlocked / done >= SPAM_BLOCK_RATIO) {
-    const pct = Math.round((spamBlocked / done) * 100);
-    await supabaseAdmin.from("campaigns").update({
-      status: "paused",
-      paused_at: new Date().toISOString(),
-      paused_reason:
-        `Paused by carrier preflight: ${pct}% of the ${done} finalized test messages were rejected by recipient spam filters ` +
-        `(carrier code 40002). The remaining audience was not sent or charged. Edit the wording or link before resuming.`,
-    }).eq("id", campaignId).in("status", ["sending", "queued"]);
-    return { allowance: 0, waiting: false, blocked: true };
-  }
-
-  if (sent < PREFLIGHT_SAMPLE_SIZE) {
-    return { allowance: PREFLIGHT_SAMPLE_SIZE - sent, waiting: false, blocked: false };
-  }
-
-  if (done >= SPAM_BLOCK_MIN_SAMPLE) {
-    return { allowance: null, waiting: false, blocked: false };
-  }
-
-  const firstSentAt = firstSubmitted?.sent_at ? new Date(firstSubmitted.sent_at).getTime() : Date.now();
-  // Delivery receipts can simply be slow. Never pause a healthy campaign for
-  // that: once the wait window is over, release the rest of the audience. Real
-  // carrier filtering is still caught by the 40002 checks above and by
-  // carrierSpamBlockRate() as receipts keep arriving.
-  const waitExpired = Date.now() - firstSentAt >= PREFLIGHT_WAIT_MS;
-  if (waitExpired) {
-    console.warn(
-      `[dispatch] campaign ${campaignId}: only ${done} of ${sent} preflight receipts finalized in 10min — releasing remaining audience`,
-    );
-    return { allowance: null, waiting: false, blocked: false };
-  }
-  return { allowance: 0, waiting: true, blocked: false };
-}
+// Carrier spam-filter refusals (Telnyx 40002 on the receipt) are recorded as
+// message failures but never auto-pause a campaign: the platform owner chose
+// to let campaigns run to completion even when carriers filter the wording,
+// with the refusals visible in the campaign report.
 
 async function deliverPending(
   supabaseAdmin: any, campaign: any, sender: Sender,
@@ -1074,38 +992,6 @@ async function deliverPending(
   if (fresh?.status === "cancelled") {
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
-
-  const preflight = await carrierPreflight(supabaseAdmin, campaign.id);
-  if (preflight.blocked || preflight.waiting) {
-    const { count: pending } = await supabaseAdmin
-      .from("messages").select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
-    return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, throttled: true };
-  }
-
-  const spam = await carrierSpamBlockRate(supabaseAdmin, campaign.id);
-  if (spam.total >= SPAM_BLOCK_MIN_SAMPLE && spam.ratio >= SPAM_BLOCK_RATIO) {
-    // Blocked receipts can be counted from more than the sampled window, so
-    // cap both figures so the notice never reads above 100%.
-    const shownBlocked = Math.min(spam.blocked, spam.total);
-    const pct = Math.min(100, Math.round(spam.ratio * 100));
-    await supabaseAdmin.from("campaigns").update({
-      status: "paused",
-      paused_at: new Date().toISOString(),
-      paused_reason:
-        `Paused automatically: the recipient carriers' spam filter rejected ${pct}% of the messages sent so far ` +
-        `(${shownBlocked.toLocaleString()} of ${spam.total.toLocaleString()}, carrier code 40002). ` +
-        `Sending more of this exact message from this sender will keep being filtered. ` +
-        `Edit the wording, change or remove the link, or send from a different registered number, then resume.`,
-    }).eq("id", campaign.id).in("status", ["sending", "queued"]);
-    const { count: pending } = await supabaseAdmin
-      .from("messages").select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
-    console.warn(`[dispatch] campaign ${campaign.id} paused: ${pct}% carrier spam-blocked`);
-    return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, throttled: true };
-  }
-
-
 
   const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
   // The provider client paces every request through a shared gate, so the real
@@ -1129,8 +1015,7 @@ async function deliverPending(
     // Hard cap from the provider pacing gate, shared across lease slots.
     Math.floor((secondsLeft * gateRps) / LEASE_SHARDS),
   );
-  const preflightAllowance = preflight.allowance ?? Number.POSITIVE_INFINITY;
-  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick, budgetClaim, preflightAllowance));
+  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick, budgetClaim));
   if (claimLimit === 0) {
     const { count: pending } = await supabaseAdmin
       .from("messages").select("id", { count: "exact", head: true })
@@ -1638,28 +1523,7 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
         // allowed submission rate.
         const tenantUsed = new Map<string, number>();
 
-        // Try each lease slot in turn; the first free slot wins. Returns the
-        // acquired lease name, or null when every slot is busy.
         async function acquireCampaignLease(campaignId: string): Promise<string | null> {
-          // Before the carrier canary has been submitted, every parallel worker
-          // must contend for ONE shared lease. Without this, 12 lease shards can
-          // each observe zero submitted rows and each send a 25-message sample.
-          const [{ count: planned }, { count: submitted }] = await Promise.all([
-            supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId),
-            supabaseAdmin.from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId).not("provider_message_id", "is", null),
-          ]);
-          if ((planned ?? 0) >= PREFLIGHT_AUDIENCE_MIN && (submitted ?? 0) < PREFLIGHT_SAMPLE_SIZE) {
-            const name = `campaign:${campaignId}:preflight`;
-            const { data: got, error: lockError } = await (supabaseAdmin as any).rpc(
-              "try_acquire_dispatch_lock",
-              { _name: name },
-            );
-            if (lockError) {
-              console.error("[dispatch] preflight lock unavailable", lockError.message);
-              return null;
-            }
-            return got ? name : null;
-          }
           for (let shard = 0; shard < LEASE_SHARDS; shard += 1) {
             const name = `campaign:${campaignId}:${shard}`;
             const { data: got, error: lockError } = await (supabaseAdmin as any).rpc(
