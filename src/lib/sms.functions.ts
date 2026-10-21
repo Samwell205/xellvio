@@ -43,6 +43,13 @@ export const sendTestSms = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => TestSendSchema.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { resolveActingAccount, assertPermission } = await import("./acting-account.server");
+    const acting = await resolveActingAccount(userId);
+    assertPermission(acting, "campaigns");
+    if (!acting.isOwner && acting.role === "viewer") {
+      throw new Error("Read-only team members cannot send test messages. Ask the business owner for edit access.");
+    }
+    const accountId = acting.accountId;
 
     const sinceDay = startOfUtcDayIso();
     const { count: usedToday } = await supabase
@@ -66,7 +73,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
     const { data: allAssets, error: assetsError } = await supabase
       .from("sender_assets")
       .select("telnyx_messaging_profile_id,phone_number,sender_kind,country_code,verification_status")
-      .eq("account_id", userId);
+      .eq("account_id", accountId);
     if (assetsError) throw new Error(assetsError.message);
 
     function rank(a: any) {
@@ -112,7 +119,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
       const { data: acct } = await supabaseAdmin
         .from("accounts")
         .select("telnyx_messaging_profile_id")
-        .eq("id", userId)
+        .eq("id", accountId)
         .maybeSingle();
       messagingProfileId = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
         ? acct?.telnyx_messaging_profile_id
@@ -120,12 +127,12 @@ export const sendTestSms = createServerFn({ method: "POST" })
     }
     if (!messagingProfileId) {
       // Auto-provision a Telnyx Messaging Profile for this account on first use.
-      messagingProfileId = await ensureMessagingProfileForAccount(userId);
+      messagingProfileId = await ensureMessagingProfileForAccount(accountId);
     }
 
     // ── Opt-out firewall: an opted-out number must never be texted again.
     const { assertNotSuppressed } = await import("./suppression.server");
-    await assertNotSuppressed(userId, data.to);
+    await assertNotSuppressed(accountId, data.to);
 
     // ── Compliance firewall: screen every outbound message BEFORE Telnyx.
     const { screenMessageContent } = await import("./content-screening.server");
@@ -134,7 +141,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
     const { data: acct } = await supabaseAdmin
       .from("accounts")
       .select("tos_current_version_accepted, sending_suspended_at")
-      .eq("id", userId)
+      .eq("id", accountId)
       .maybeSingle();
     if (acct?.sending_suspended_at) {
       throw new Error("Your sending has been suspended by an admin. Contact support.");
@@ -142,7 +149,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
     if (acct?.tos_current_version_accepted !== TOS_CURRENT_VERSION) {
       throw new Error("Please accept the updated Terms of Service before sending.");
     }
-    const screen = await screenMessageContent(data.body, userId, {
+    const screen = await screenMessageContent(data.body, accountId, {
       phoneE164: data.to,
       context: "test_send",
       skipReviewQueue: true, // test sends can't wait 2h for review
@@ -167,9 +174,9 @@ export const sendTestSms = createServerFn({ method: "POST" })
     try {
       const result = await safeTelnyxCall(
         "send_test_sms",
-        { userId, messagingProfileId },
+        { userId: accountId, messagingProfileId },
         () => sendMessage({
-          accountId: userId,
+          accountId,
           to: data.to,
           text: testText,
           from: asset.phone_number ?? undefined,

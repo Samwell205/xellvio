@@ -1,5 +1,8 @@
 # Roadmap
 
+## Shared verified sender (Oct 21)
+- [x] Test SMS resolves sender/profile/opt-outs/compliance to the acting business, retaining per-user quotas and enforcing campaign edit permission. Eight regression tests pass; affected teammate's signed-in page and owner-scoped read show the verified US local number. No SMS sent; live test delivery is unverified and changes are not published.
+
 ## Campaign shared balance (Oct 21)
 - [ ] Correct campaign review balance, sender scope and draft ownership to the acting business; verify the affected teammate's saved campaign without sending messages.
 

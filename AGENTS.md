@@ -36,4 +36,4 @@
 - Account assistant uses route-owned persisted threads and transactional, on-screen-confirmed proposals; campaigns remain drafts until the existing launch review. Website voice shares authenticated tools through a persistent relay; model output never authorizes mutations.
 - Short links use indexed destinations and context-owned tracking; dispatch uses persisted message IDs and bounded requests to avoid orphan links and timeout losses.
 - Public signup CTAs use `/auth?mode=signup`.
-- Billing derives the owner from authenticated membership, checks billing permission, and stores the payer separately; team top-ups fund the shared balance.
+- Billing/test SMS use the acting business to avoid teammate mismatches: billing permission and separate payer; tests use business sender/profile/opt-outs/compliance, per-user quotas.
