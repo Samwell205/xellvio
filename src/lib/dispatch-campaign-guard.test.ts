@@ -22,7 +22,13 @@ function fakeDb(initialStatus: string) {
       update: (patch: any) => ({ eq: () => ({ in: async (_c: string, allowed: string[]) => {
         if (allowed.includes(campaign.status)) Object.assign(campaign, patch);
         return { error: null };
-   /** Fake with message counts for the tick-error path. */
+      } }) }),
+    }),
+  };
+  return db;
+}
+
+/** Fake with message counts for the tick-error path. */
 function withMessages(db: any, counts: { leftover: number; planned: number; handed: number }, statusAt?: () => void) {
   const base = db.from;
   db.from = (t: string) => t !== "messages" ? base(t) : ({
