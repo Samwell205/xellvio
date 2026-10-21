@@ -1015,8 +1015,7 @@ async function deliverPending(
     // Hard cap from the provider pacing gate, shared across lease slots.
     Math.floor((secondsLeft * gateRps) / LEASE_SHARDS),
   );
-  const preflightAllowance = preflight.allowance ?? Number.POSITIVE_INFINITY;
-  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick, budgetClaim, preflightAllowance));
+  const claimLimit = Math.max(0, Math.min(DELIVER_PER_WORKER, throttle.perTick, budgetClaim));
   if (claimLimit === 0) {
     const { count: pending } = await supabaseAdmin
       .from("messages").select("id", { count: "exact", head: true })
