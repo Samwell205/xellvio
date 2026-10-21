@@ -6,7 +6,7 @@ describe("Dispatch persistence and request budget",()=>{
     expect([...ids]).toEqual(["persisted"]);expect(ids.has("ignored-duplicate")).toBe(false);expect(ids.has("deleted-profile")).toBe(false);
   });
   it("does not begin a new carrier call without time for completion and status writes",()=>{
-    expect(canStartDispatchSend(24000,8000)).toBe(true);expect(canStartDispatchSend(24000,8001)).toBe(false);
+    expect(canStartDispatchSend(24000,16000)).toBe(true);expect(canStartDispatchSend(24000,16001)).toBe(false);
   });
   it("bounds planning and concurrent outbound work",()=>{
     expect(DISPATCH_PLAN_ROWS).toBe(250);expect(DISPATCH_CONNECTIONS).toBe(6);
