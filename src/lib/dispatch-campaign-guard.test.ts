@@ -91,9 +91,6 @@ describe("Dispatcher coordination (production helpers)", () => {
   });
 });
 
-c1", "x")).toBe("unguarded");
-  });
-});
 
 describe("Repeat-abuse counting", () => {
   it("collapses duplicate checks of one campaign revision into a single violation", () => {
