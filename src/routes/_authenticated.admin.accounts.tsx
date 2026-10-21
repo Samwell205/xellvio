@@ -71,7 +71,7 @@ function AdminAccountsPage() {
     mutationFn: (id: string) => resumeFn({ data: { accountId: id } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
-      toast.success("Account sending restored. Paused campaigns stay stopped until each one is resumed separately.");
+      toast.success("Account sending restored. Campaigns paused by the hold are sending again; blocked or user-paused ones stay stopped.");
     },
     onError: (e: Error) => toast.error(e.message),
   });

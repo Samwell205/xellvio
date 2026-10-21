@@ -201,7 +201,7 @@ export const runCopilotAction = createServerFn({ method: "POST" })
       if (data.target !== row.account_id) throw new Error("That account isn't the tenant on this case.");
       const { resumeTenantSending } = await import("./tenant-suspension.server");
       await resumeTenantSending({ tenantAccountId: data.target, liftedBy: context.userId });
-      return { ok: true, message: "Account sending restored. Paused campaigns stay stopped — resume each one separately after review." };
+      return { ok: true, message: "Account sending restored. Campaigns paused by the hold are sending again; blocked or user-paused ones stay stopped." };
     }
     const isPaused = (s: string) => s === "paused" || s.startsWith("paused_");
     // Sending must be allowed again before a campaign can resume.
