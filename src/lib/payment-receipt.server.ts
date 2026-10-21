@@ -12,10 +12,10 @@ export async function notifyPaymentReceipt(
 ) {
   const { data: payment } = await supabaseAdmin
     .from("payments")
-    .select("id,account_id,amount,credits,currency,metadata")
+    .select("id,account_id,status,amount,credits,currency,metadata")
     .eq("provider_reference", reference)
     .maybeSingle();
-  if (!payment) return;
+  if (!payment || payment.status !== "paid") return;
 
   // TFN purchases have their own flow and don't add credits.
   if ((payment.metadata as any)?.purpose === "tfn_purchase") return;
@@ -31,13 +31,22 @@ export async function notifyPaymentReceipt(
   const paid = `${Number(payment.amount).toFixed(2)} ${currency}`;
   const credits = `$${Number(payment.credits).toFixed(2)}`;
 
-  if (account?.contact_email || account?.email) {
+  const ownerEmail = account?.contact_email || account?.email;
+  const recipients = new Set<string>();
+  if (ownerEmail) recipients.add(ownerEmail.trim().toLowerCase());
+  const payerId = payment.metadata?.payer_user_id;
+  if (typeof payerId === "string" && payerId !== payment.account_id) {
+    const { data } = await supabaseAdmin.auth.admin.getUserById(payerId);
+    if (data?.user?.email) recipients.add(data.user.email.trim().toLowerCase());
+  }
+
+  for (const recipientEmail of recipients) {
     try {
       const { sendBrandedEmail } = await import("@/lib/email/send-internal.server");
       await sendBrandedEmail({
         templateName: "generic",
-        recipientEmail: account.contact_email || account.email,
-        idempotencyKey: `payment-receipt-${reference}`,
+        recipientEmail,
+        idempotencyKey: recipientEmail === ownerEmail?.trim().toLowerCase() ? `payment-receipt-${reference}` : `payment-receipt-${reference}-payer`,
         includeUnsubscribe: false,
         sendImmediately: true,
         templateData: {

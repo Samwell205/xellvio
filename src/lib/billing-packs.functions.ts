@@ -18,7 +18,6 @@ function siteOrigin(): string {
 export const listCreditPacks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const acting = await resolveBillingAccount(context.userId);
     const { data, error } = await context.supabase
       .from("credit_packs")
       .select("id,name,description,currency,price,credits,display_order,is_popular")
@@ -32,7 +31,6 @@ export const listCreditPacks = createServerFn({ method: "GET" })
 export const getBillingSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const acting = await resolveBillingAccount(context.userId);
     const { data, error } = await context.supabase.from("billing_settings").select("*").maybeSingle();
     if (error) throw new Error(error.message);
     return data;
