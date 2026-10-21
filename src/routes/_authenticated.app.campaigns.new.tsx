@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { useAccountId } from "@/hooks/useAccountId";
+import { readCampaignAccount } from "@/lib/campaign-account";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { getActiveCountryRatesRaw } from "@/lib/public-pricing.functions";
 import { createPreviewShortlink } from "@/lib/shortlinks.functions";
@@ -135,6 +137,7 @@ function renderPreviewWithLinks(text: string): ReactNode {
 
 function NewCampaignPage() {
   const navigate = useNavigate();
+  const accountId = useAccountId();
   const search = useSearch({ from: "/_authenticated/app/campaigns/new" });
   const editingCampaignId = search.id ?? null;
   const [step, setStep] = useState<StepIdx>(0);
@@ -218,13 +221,17 @@ function NewCampaignPage() {
   const rates = ratesQ.data ?? [];
 
   const accountQ = useQuery({
-    queryKey: ["account-balance"],
-    queryFn: async () =>
-      (await supabase.from("accounts").select("id,credit_balance").maybeSingle()).data,
+    queryKey: ["account-balance", accountId],
+    enabled: !!accountId,
+    queryFn: () => {
+      if (!accountId) throw new Error("Your business account is still loading.");
+      return readCampaignAccount(supabase, accountId);
+    },
   });
 
   const senderQ = useQuery({
-    queryKey: ["sender-assets-pending"],
+    queryKey: ["sender-assets-pending", accountId],
+    enabled: !!accountId,
     queryFn: async () =>
       (
         await supabase
@@ -232,6 +239,7 @@ function NewCampaignPage() {
           .select(
             "verification_status,country_code,sender_kind,phone_number,telnyx_messaging_profile_id,friendly_rejection_reason",
           )
+          .eq("account_id", accountId ?? "")
       ).data ?? [],
   });
   const senderList = senderQ.data ?? [];
@@ -480,7 +488,8 @@ function NewCampaignPage() {
   const totalCost = +breakdown.reduce((a, b) => a + b.subtotal, 0).toFixed(4);
   const balance = Number(accountQ.data?.credit_balance ?? 0);
   const balanceAfter = +(balance - totalCost).toFixed(4);
-  const insufficient = totalCost > balance && activeRecipientCount > 0;
+  const balanceReady = !!accountId && !!accountQ.data && !accountQ.isError;
+  const insufficient = balanceReady && totalCost > balance && activeRecipientCount > 0;
 
   // Block launch when any (non-excluded) recipient country has no verified sender.
   const missingSenderCountries = useMemo(
@@ -588,7 +597,7 @@ function NewCampaignPage() {
 
   const canNext = (() => {
     if (step === 0) return s.name.trim().length > 0 && hasAudience;
-    if (step === 1) return s.body.trim().length > 0 && !insufficient;
+    if (step === 1) return s.body.trim().length > 0 && balanceReady && !insufficient;
     if (step === 2) return s.sendMode !== "scheduled" || !!s.scheduleAt;
     if (step === 3) return s.testSent || testLimitReached;
     return true;
@@ -599,7 +608,7 @@ function NewCampaignPage() {
     messageBody = bodyWithStop,
   ): Promise<string | null> {
     if (!s.name.trim()) return null;
-    const { data: u } = await supabase.auth.getUser();
+    if (!accountId) throw new Error("Your business account is still loading. Please try again.");
     const launching = targetStatus === "queued" || targetStatus === "scheduled";
     // On launch, if the user excluded any country, narrow to explicit profile IDs
     // so the dispatcher only sends to recipients in the kept countries.
@@ -608,7 +617,7 @@ function NewCampaignPage() {
     const audiencePayload: any = { ...audience, excluded_countries: s.excludedCountries };
     void launching;
     const payload: any = {
-      account_id: u.user!.id,
+      account_id: accountId,
       name: s.name.trim(),
       audience: audiencePayload,
       message_body: messageBody,
@@ -679,6 +688,10 @@ function NewCampaignPage() {
   const [complianceAccepted, setComplianceAccepted] = useState(false);
 
   async function saveCampaign(launch: boolean) {
+    if (launch && !balanceReady) {
+      toast.error("Could not load your business balance. Please reload and try again.");
+      return;
+    }
     if (launch && insufficient) {
       toast.error(
         `Insufficient balance — top up before launching. Contact support if you need help.`,
@@ -1213,6 +1226,7 @@ function NewCampaignPage() {
 
       {step === 4 && (
         <Card className="p-5 space-y-4">
+          {!balanceReady && <p role="status" className="text-sm text-muted-foreground">{accountQ.isError ? "Could not load your business balance. Please reload and try again." : "Loading your business balance…"}</p>}
           <div className="grid md:grid-cols-2 gap-4 text-sm">
             <ReviewItem label="Name" value={s.name} />
             <ReviewItem
@@ -1313,7 +1327,7 @@ function NewCampaignPage() {
               </Button>
               <Button
                 onClick={() => saveCampaign(true)}
-                disabled={saving || insufficient || hasMissingSender || !complianceAccepted}
+                disabled={saving || !balanceReady || insufficient || hasMissingSender || !complianceAccepted}
               >
                 {s.sendMode === "now" ? "Launch now" : "Schedule"}
               </Button>

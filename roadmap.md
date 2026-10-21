@@ -1,5 +1,8 @@
 # Roadmap
 
+## Campaign shared balance (Oct 21)
+- [ ] Correct campaign review balance, sender scope and draft ownership to the acting business; verify the affected teammate's saved campaign without sending messages.
+
 ## Team funding and appearance (Oct 21)
 - [x] Resolve shared billing reads and checkout attribution to the owner with billing permission. Corrected the reported $30 + $25 allocation once, moving the existing $55 rather than adding credits; signed-in owner and teammate both see $55 and both receipts.
 - [x] Default new visitors to light appearance, including dark devices; preserve explicit light/dark/system choices and expose all three controls. Browser default and four tests pass.
