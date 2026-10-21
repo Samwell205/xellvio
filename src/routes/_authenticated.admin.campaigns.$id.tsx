@@ -5,7 +5,93 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowLeft, Download, FileDown } from "lucide-react";
-import { adminGetCampaignReport } from "@/lib/admin-campaigns.functions";
+import { adminGetCampaignReport, adminCheckAndResumeCampaign } from "@/lib/admin-campaigns.functions";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+const RESUMABLE = ["paused", "paused_by_user"];
+
+function CampaignPauseStatus({ campaign, account, onDone }: {
+  campaign: { id: string; status: string; paused_reason?: string | null; paused_at?: string | null };
+  account: { id: string | null; onboarding_status?: string | null; sending_suspended_at?: string | null; sending_suspended_reason?: string | null };
+  onDone: () => void;
+}) {
+  const resume = useServerFn(adminCheckAndResumeCampaign);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const resumable = RESUMABLE.includes(campaign.status) && !!account.id;
+  const showPanel = resumable || !!campaign.paused_reason || !!account.sending_suspended_at;
+  if (!showPanel && !result) return null;
+
+  async function run() {
+    if (!account.id) return;
+    setBusy(true);
+    setResult(null);
+    try {
+      const r = await resume({ data: { campaignId: campaign.id, accountId: account.id } });
+      setResult({ ok: r.ok, message: r.message });
+      if (r.ok) toast.success(r.message);
+      onDone();
+    } catch (e: any) {
+      setResult({ ok: false, message: e?.message ?? "Could not check this campaign." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="p-4 space-y-2">
+      <div className="grid gap-1 text-sm sm:grid-cols-2">
+        <div>
+          <span className="text-muted-foreground">Current pause: </span>
+          <span className="font-medium">{campaign.paused_reason ?? (RESUMABLE.includes(campaign.status) ? "Paused (no reason recorded)" : "—")}</span>
+          {campaign.paused_at && <span className="text-muted-foreground"> · {new Date(campaign.paused_at).toLocaleString()}</span>}
+        </div>
+        <div>
+          <span className="text-muted-foreground">Account: </span>
+          <span className="font-medium">{account.onboarding_status ?? "unknown"}</span>
+          <span className="text-muted-foreground"> · Sending hold: </span>
+          <span className="font-medium">
+            {account.sending_suspended_at
+              ? `On since ${new Date(account.sending_suspended_at).toLocaleString()}${account.sending_suspended_reason ? ` — ${account.sending_suspended_reason}` : ""}`
+              : "None"}
+          </span>
+        </div>
+      </div>
+      {resumable && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button size="sm" disabled={busy}>
+              {busy && <Loader2 className="size-4 mr-1 animate-spin" />}
+              Check and resume
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Check and resume this campaign?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This runs a fresh content check on the campaign's current message. Only if the check allows it,
+                the remaining messages are queued and sent through the normal sender with normal charges and opt-outs.
+                If the check blocks or flags it, or the account is on hold, the campaign stays paused.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={run}>Check and resume</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+      {result && (
+        <p role="status" className={`text-sm ${result.ok ? "text-primary" : "text-destructive"}`}>
+          {result.ok ? "Resumed: " : "Stayed paused: "}{result.message}
+        </p>
+      )}
+    </Card>
+  );
+}
 import { formatUSD } from "@/lib/money";
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
 import { adminRecoverCampaignReceipts } from "@/lib/reconcile-messages.functions";
@@ -227,6 +313,13 @@ function AdminCampaignReportPage() {
           </Button>
         </div>
       </div>
+
+      <CampaignPauseStatus
+        campaign={c}
+        account={r.account}
+        onDone={() => q.refetch()}
+      />
+
 
       <Card className="p-4">
         <div className="flex gap-4 items-start">
