@@ -97,7 +97,7 @@ export async function suspendTenantSending(opts: {
 export async function resumeTenantSending(opts: {
   tenantAccountId: string;
   liftedBy?: string | null;
-}): Promise<{ ok: boolean; telnyxOk: boolean; telnyxError?: string; campaignsLeftPaused: number }> {
+}): Promise<{ ok: boolean; telnyxOk: boolean; telnyxError?: string; campaignsResumed: number; campaignsLeftPaused: number }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: acct } = await supabaseAdmin
     .from("accounts")
@@ -125,14 +125,31 @@ export async function resumeTenantSending(opts: {
     .eq("account_id", opts.tenantAccountId)
     .is("lifted_at", null);
 
-  // Restore-only: lifting the account hold NEVER requeues campaigns or
-  // recipient queues. Each paused campaign must be resumed deliberately (and
-  // re-screened) on its own, so a lift cannot restart a blocked-content loop.
+  // Owner rule: an active account must not keep campaigns that only the hold
+  // paused. Requeue exactly those (status still "paused" + hold reason); the
+  // dispatcher re-screens content before planning, so blocked wording stays
+  // blocked. Campaigns paused by the user, held for review or blocked for
+  // content are untouched.
+  const { data: resumed } = await supabaseAdmin
+    .from("campaigns")
+    .update({ status: "queued", paused_reason: null, paused_at: null })
+    .eq("account_id", opts.tenantAccountId)
+    .eq("status", "paused")
+    .or(HOLD_PAUSE_FILTER)
+    .select("id");
+
   const { count: campaignsLeftPaused } = await supabaseAdmin
     .from("campaigns")
     .select("id", { count: "exact", head: true })
     .eq("account_id", opts.tenantAccountId)
     .eq("status", "paused");
 
-  return { ok: true, telnyxOk, telnyxError, campaignsLeftPaused: campaignsLeftPaused ?? 0 };
+  return {
+    ok: true, telnyxOk, telnyxError,
+    campaignsResumed: resumed?.length ?? 0,
+    campaignsLeftPaused: campaignsLeftPaused ?? 0,
+  };
 }
+
+/** paused_reason values written only by an account sending hold. */
+export const HOLD_PAUSE_FILTER = "paused_reason.eq.Tenant sending suspended,paused_reason.like.Sending suspended:*";
