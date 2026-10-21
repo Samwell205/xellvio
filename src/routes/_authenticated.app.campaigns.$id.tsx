@@ -87,7 +87,7 @@ import { useCanViewCosts } from "@/hooks/useCanViewCosts";
 import { formatUSD } from "@/lib/money";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
-  head: () => ({ meta: [{ title: "Campaign report — Xellvio" }] }),
+  head: () => ({ meta: [{ title: "Campaign delivery — Xellvio" }, { name: "description", content: "Campaign delivery receipts, confirmed failures and unconfirmed messages." }, { property: "og:title", content: "Campaign delivery — Xellvio" }, { property: "og:description", content: "Track campaign results and recover delivery receipts." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: CampaignReport,
 });
 
@@ -97,8 +97,19 @@ function CampaignReport() {
   const queryClient = useQueryClient();
   const reconcileFn = useServerFn(reconcileCampaignMessages);
   const reconcileM = useMutation({
-    mutationFn: () => reconcileFn({ data: { campaignId: id } }),
+    mutationFn: async () => {
+      let after: string | undefined;
+      const totals = { checked: 0, updated: 0, errors: 0 };
+      for (let page = 0; page < 1000; page++) {
+        const result = await reconcileFn({ data: { campaignId: id, after } });
+        totals.checked += result.checked; totals.updated += result.updated; totals.errors += result.errors;
+        if (result.done || !result.nextCursor || result.nextCursor === after) break;
+        after = result.nextCursor;
+      }
+      return totals;
+    },
     onSuccess: (r) => {
+      if (r.errors > 0) toast.warning(`${r.errors} receipt checks were unavailable; these messages remain unconfirmed.`);
       toast.success(
         r.updated > 0
           ? `Refreshed ${r.updated} of ${r.checked} pending message${r.checked === 1 ? "" : "s"}.`
@@ -217,7 +228,6 @@ function CampaignReport() {
       deliveryUnconfirmed: Number(s.delivery_unconfirmed ?? 0),
       failed:
         Number(s.failed ?? 0) +
-        Number(s.delivery_unconfirmed ?? 0) +
         Number(s.sent_with_error ?? 0),
     };
   }, [summaryQ.data]);
@@ -254,7 +264,7 @@ function CampaignReport() {
         sent: ["sent"],
         delivered: ["delivered"],
         unconfirmed: ["delivery_unconfirmed"],
-        failed: ["failed", "undelivered", "delivery_unconfirmed"],
+        failed: ["failed", "undelivered"],
         skipped: ["skipped"],
         queued: ["queued", "pending", "sending"],
       };
@@ -575,7 +585,7 @@ function CampaignReport() {
     const delivered = progress?.delivered ?? 0;
     const deliveryUnconfirmed = progress?.deliveryUnconfirmed ?? 0;
     const failed = progress?.failed ?? 0;
-    const sent = awaitingDelivery + delivered + failed;
+    const sent = awaitingDelivery + delivered + failed + deliveryUnconfirmed;
     // Eligible recipients without a message row are still being planned; they
     // have not been skipped. Calling this gap "skipped" made an active large
     // campaign look like most of its audience had been discarded.
@@ -606,8 +616,8 @@ function CampaignReport() {
       byCountry[r.country ?? "—"] = {
         total: Number(r.messages ?? 0),
         delivered: Number(r.delivered ?? 0),
-        unconfirmed: 0,
-        failed: Number(r.failed ?? 0) + Number(r.delivery_unconfirmed ?? r.unconfirmed ?? 0),
+        unconfirmed: Number(r.delivery_unconfirmed ?? r.unconfirmed ?? 0),
+        failed: Number(r.failed ?? 0),
       };
     }
 
@@ -716,7 +726,7 @@ function CampaignReport() {
               size="sm"
               onClick={() => reconcileM.mutate()}
               disabled={reconcileM.isPending}
-              title="Fetch the latest carrier delivery status for messages still marked as sent or queued."
+              title="Recover delivery receipts without resending messages or charging credit."
             >
               <RefreshCw className={`size-3 mr-1 ${reconcileM.isPending ? "animate-spin" : ""}`} />
               {reconcileM.isPending ? "Refreshing…" : "Refresh statuses"}
@@ -1417,6 +1427,7 @@ function RecipientActivity({
     { key: "sent", label: "Accepted", count: stats.awaitingDelivery },
     { key: "delivered", label: "Delivered", count: stats.delivered },
     { key: "failed", label: "Failed", count: stats.failed },
+    { key: "unconfirmed", label: "Unconfirmed", count: stats.deliveryUnconfirmed },
     ...(stats.pendingPlanning > 0
       ? [{ key: "skipped", label: "Preparing", count: stats.pendingPlanning }]
       : []),

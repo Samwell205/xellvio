@@ -8,9 +8,12 @@ import { Loader2, ArrowLeft, Download, FileDown } from "lucide-react";
 import { adminGetCampaignReport } from "@/lib/admin-campaigns.functions";
 import { formatUSD } from "@/lib/money";
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
+import { adminRecoverCampaignReceipts } from "@/lib/reconcile-messages.functions";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/campaigns/$id")({
-  head: () => ({ meta: [{ title: "Campaign report — Admin" }] }),
+  head: () => ({ meta: [{ title: "Campaign operations — Xellvio Admin" }, { name: "description", content: "Campaign delivery receipts and financial review." }, { property: "og:title", content: "Campaign operations — Xellvio Admin" }, { property: "og:description", content: "Review delivery outcomes and recover receipts without resending." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: AdminCampaignReportPage,
 });
 
@@ -45,6 +48,9 @@ function Stat({
 function AdminCampaignReportPage() {
   const { id } = Route.useParams();
   const fn = useServerFn(adminGetCampaignReport);
+  const recover = useServerFn(adminRecoverCampaignReceipts);
+  const [recovering, setRecovering] = useState(false);
+  const [recoveryProgress, setRecoveryProgress] = useState(0);
   const q = useQuery({
     queryKey: ["admin", "campaign-report", id],
     queryFn: () => fn({ data: { campaignId: id } }),
@@ -77,8 +83,28 @@ function AdminCampaignReportPage() {
   }
 
   const r = q.data;
-  const c = r.campaign!;
+  const c = r.campaign;
+  if (!c) return <div>Campaign not found.</div>;
   const t = r.totals;
+
+  async function recoverReceipts() {
+    setRecovering(true);
+    setRecoveryProgress(0);
+    let after: string | undefined;
+    let checked = 0, updated = 0, errors = 0;
+    try {
+      for (let page = 0; page < 1000; page++) {
+        const result = await recover({ data: { campaignId: id, after } });
+        checked += result.checked; updated += result.updated; errors += result.errors;
+        setRecoveryProgress(checked);
+        if (result.done || !result.nextCursor || result.nextCursor === after) break;
+        after = result.nextCursor;
+      }
+      toast.success(`Checked ${checked.toLocaleString()} receipts; updated ${updated.toLocaleString()} results. No messages resent.`);
+      if (errors) toast.warning(`${errors.toLocaleString()} lookups remain unavailable. Run recovery again later.`);
+    } catch { toast.error('Receipt recovery stopped. Saved results are retained; you can retry.'); }
+    finally { setRecovering(false); await q.refetch(); }
+  }
 
   function exportCsv() {
     downloadCsv(
@@ -186,7 +212,11 @@ function AdminCampaignReportPage() {
             <span>{new Date(c.created_at).toLocaleString()}</span>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" disabled={recovering} onClick={recoverReceipts}>
+            <Loader2 className={`size-4 mr-1 ${recovering ? 'animate-spin' : ''}`} />
+            {recovering ? `Checking ${recoveryProgress.toLocaleString()}…` : 'Recover receipts'}
+          </Button>
           <Button variant="outline" size="sm" onClick={exportCsv}>
             <FileDown className="size-4 mr-1" />
             CSV
@@ -247,6 +277,7 @@ function AdminCampaignReportPage() {
         />
         <Stat label="Delivered" value={t.delivered.toLocaleString()} tone="ok" />
         <Stat label="Failed" value={t.failed.toLocaleString()} tone="bad" />
+        <Stat label="Unconfirmed" value={t.delivery_unconfirmed.toLocaleString()} hint="Not a confirmed failure" />
         <Stat label="Awaiting" value={(t.awaiting_delivery + t.queued).toLocaleString()} />
       </div>
 

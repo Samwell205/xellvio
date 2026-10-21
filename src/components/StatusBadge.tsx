@@ -42,7 +42,7 @@ const map: Record<Status, { label: string; cls: string; Icon: React.ComponentTyp
   approved: { label: "Approved", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   active: { label: "Active", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   delivered: { label: "Delivered", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
-  delivery_unconfirmed: { label: "Failed", cls: "bg-destructive/15 text-destructive border-destructive/30", Icon: AlertTriangle },
+  delivery_unconfirmed: { label: "Unconfirmed", cls: "bg-warning/15 text-warning-foreground border-warning/30", Icon: Clock },
   completed: { label: "Completed", cls: "bg-success/15 text-success border-success/30", Icon: CheckCircle2 },
   sent: { label: "Sent", cls: "bg-primary/15 text-primary border-primary/30", Icon: CheckCircle2 },
   running: { label: "Running", cls: "bg-primary/15 text-primary border-primary/30", Icon: Loader2 },

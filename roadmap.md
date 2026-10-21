@@ -1,5 +1,9 @@
 # Roadmap
 
+## Campaign receipt recovery (Oct 21)
+- [x] Repair incorrect delivery-lookup connection selection; completed signed-in admin recovery for campaign 4b459f06-932b-489e-897d-60475a4ff719. Final read: 15,733 delivered, 3,027 explicit failures, 2,593 carrier-finalized unconfirmed. Zero retries; charged amount $338.6440 and balance $32.2592 unchanged. Application changes not published in this task.
+- [x] Keep unconfirmed delivery distinct from confirmed failures in campaign totals, reports, recipient badges and exports; 12 safeguard tests pass and signed-in recovery/read-back verified. Remaining unconfirmed outcomes need new carrier evidence, not an automatic resend.
+
 ## Public account-creation links (Oct 20)
 - [x] Correct public Sign up/account-creation destinations; browser-tested all three desktop homepage links, mobile menu and 29 destinations across 12 public pages. Signup form opens, Log in stays unchanged, and no runtime errors occurred. Not published in this task.
 

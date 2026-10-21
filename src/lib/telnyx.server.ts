@@ -3,7 +3,7 @@
 // goes through this module. No Twilio anywhere.
 
 const TELNYX_API = "https://api.telnyx.com/v2";
-import { usesSecondaryConnection, SECONDARY_WORKSPACE_ID, SECONDARY_PROFILE_ID, SECONDARY_ACTIVATED_AT, sentDuringFailover, routeOutbound } from "./telnyx-connection";
+import { usesSecondaryConnection, SECONDARY_PROFILE_ID, sentDuringFailover, routeOutbound } from "./telnyx-connection";
 
 function apiKey(profileId?: string): string {
   const key = usesSecondaryConnection(profileId)
@@ -645,13 +645,28 @@ export async function createAlphanumericSenderId(opts: {
 
 export async function getMessage(id: string, boundedDispatch=false): Promise<any> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: message } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
-  const accountId = (message as any)?.campaigns?.account_id;
+  const { data: message, error } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
+  if (error || !message) throw new Error("Delivery connection could not be resolved. Please retry.");
   const sentAt = Date.parse(message?.sent_at ?? "");
-  const secondary = (accountId === SECONDARY_WORKSPACE_ID && sentAt >= Date.parse(SECONDARY_ACTIVATED_AT)) ||
-    sentDuringFailover(sentAt, (message as any)?.phone_e164);
-  const res = await telnyx<{ data: any }>(`/messages/${id}`, { connectionProfileId: secondary ? SECONDARY_PROFILE_ID : undefined,...(boundedDispatch?{maxAttempts:1,timeoutMs:6000}:{}) });
-  return res.data;
+  // Workspace identity and current profile are not evidence of the connection
+  // used for a historical send. Only the recorded failover window is reliable.
+  const secondary = sentDuringFailover(sentAt, (message as any)?.phone_e164);
+  // Account settings can change after a send. A 404 is the only safe signal
+  // to try the other server-owned connection; never replay a POST or mask 401.
+  const profiles = secondary ? [SECONDARY_PROFILE_ID, undefined] : [undefined, SECONDARY_PROFILE_ID];
+  for (let i = 0; i < profiles.length; i++) {
+    if (profiles[i] === SECONDARY_PROFILE_ID && !process.env.TELNYX_SECONDARY_INACTIVE_API_KEY) continue;
+    try {
+      const res = await telnyx<{ data: any }>(`/messages/${encodeURIComponent(id)}`, {
+        connectionProfileId: profiles[i], ...(boundedDispatch ? { maxAttempts: 1, timeoutMs: 2500 } : {}),
+      });
+      if (res.data?.id !== id) throw new Error("Delivery receipt did not match the requested message.");
+      return res.data;
+    } catch (error: any) {
+      if (error?.telnyxStatus !== 404 || i === profiles.length - 1) throw error;
+    }
+  }
+  throw new Error("Delivery receipt is not available on the configured connections.");
 }
 
 /** Fetch recent inbound webhook payloads for replay after a failed delivery. */
