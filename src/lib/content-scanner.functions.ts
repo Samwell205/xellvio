@@ -19,17 +19,22 @@ export const scanCampaignContent = createServerFn({ method: "POST" })
       return keywordResult;
     }
 
-    // A keyword "flag" is an advisory match that the full dispatcher
-    // screening handles consistently. Do not send it through a second AI
-    // classifier here: that made the builder block content which the
-    // dispatcher had just approved and successfully launched.
+    // Full screening blocks keyword flags pending review. The builder must
+    // not call these approved or ask a second classifier for another opinion.
     if (keywordResult.confidence === "keyword") {
-      return keywordResult;
+      return { ...keywordResult, allowed: false };
     }
 
     // If keyword scan is clean but we want extra safety, run AI scan
     // We run AI on ALL messages to catch clever wording / obfuscation
     const aiResult = await aiScan(data.messageBody);
+    if (aiResult.unavailable) {
+      return {
+        ...aiResult,
+        allowed: false,
+        reason: "This message could not be safety-checked right now, so it was not approved. Please try again later.",
+      };
+    }
     if (!aiResult.allowed) {
       return aiResult;
     }

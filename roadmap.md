@@ -1,5 +1,8 @@
 # Roadmap
 
+## Consistent content screening (Oct 21)
+- [x] Confirmed alternating AI passes/blocks for the reported company-information demand. Shared deterministic review flag now blocks it consistently despite tracking-code changes; preview also rejects review flags/unavailable checks. Safeguard tests pass; authenticated preview check returns blocked. Affected tenant UI and real delivery unverified; no messages sent or account reinstated, and changes are not published.
+
 ## Shared verified sender (Oct 21)
 - [x] Test SMS resolves sender/profile/opt-outs/compliance to the acting business, retaining per-user quotas and enforcing campaign edit permission. Eight regression tests pass; affected teammate's signed-in page and owner-scoped read show the verified US local number. No SMS sent; live test delivery is unverified and changes are not published.
 
