@@ -24,17 +24,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAccountId } from "@/hooks/useAccountId";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_authenticated/app/billing")({
-  head: () => ({ meta: [{ title: "Billing — Xellvio" }] }),
+  head: () => ({ meta: [{ title: "Billing — Xellvio" }, { name: "description", content: "Manage your business balance, top-ups and payment history in Xellvio." }, { property: "og:title", content: "Billing — Xellvio" }, { property: "og:description", content: "Manage your business balance, top-ups and payment history in Xellvio." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: BillingPage,
 });
 
 function BillingPage() {
   const qc = useQueryClient();
+  const accountId = useAccountId();
   const account = useQuery({
-    queryKey: ["account-billing"],
+    queryKey: ["account-billing", accountId],
+    enabled: !!accountId,
     refetchInterval: 15_000,
     queryFn: async () =>
       (
@@ -43,17 +46,20 @@ function BillingPage() {
           .select(
             "id,credit_balance,auto_recharge_enabled,auto_recharge_threshold,auto_recharge_amount,contact_email,email",
           )
+          .eq("id", accountId ?? "")
           .maybeSingle()
       ).data,
   });
   const tx = useQuery({
-    queryKey: ["credit-transactions"],
+    queryKey: ["credit-transactions", accountId],
+    enabled: !!accountId,
     refetchInterval: 15_000,
     queryFn: async () =>
       (
         await supabase
           .from("credit_transactions")
           .select("id,type,amount,balance_after,description,created_at,campaign_id")
+          .eq("account_id", accountId ?? "")
           .order("created_at", { ascending: false })
           .limit(100)
       ).data ?? [],
@@ -68,7 +74,8 @@ function BillingPage() {
 
   const packs = useQuery({ queryKey: ["credit-packs"], queryFn: () => packsFn() });
   const payments = useQuery({
-    queryKey: ["my-payments"],
+    queryKey: ["my-payments", accountId],
+    enabled: !!accountId,
     queryFn: () => paymentsFn(),
     refetchInterval: 15_000,
   });
@@ -316,7 +323,7 @@ function BillingPage() {
                 Payment method
               </div>
               <div className="mt-1 text-lg font-semibold capitalize">
-                {lastPaid?.provider ?? "Card or crypto"}
+                {lastPaid?.provider === "nowpayments" ? "Crypto" : lastPaid ? "Card / Bank" : "Card or crypto"}
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
                 {lastPaid
@@ -358,7 +365,7 @@ function BillingPage() {
                   <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="p-3 text-left">When</th>
-                      <th className="p-3 text-left">Provider</th>
+                      <th className="p-3 text-left">Method</th>
                       <th className="p-3 text-left">Amount</th>
                       <th className="p-3 text-left">Credits</th>
                       <th className="p-3 text-left">Status</th>
@@ -366,12 +373,12 @@ function BillingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {payments.data!.map((p) => (
+                    {(payments.data ?? []).map((p) => (
                       <tr key={p.id} className="border-t">
                         <td className="p-3 text-xs text-muted-foreground">
                           {new Date(p.created_at).toLocaleString()}
                         </td>
-                        <td className="p-3 capitalize">{p.provider}</td>
+                        <td className="p-3 capitalize">{p.provider === "nowpayments" ? "Crypto" : "Card / Bank"}</td>
                         <td className="p-3 tabular-nums">
                           {formatMoney(Number(p.amount), p.currency)}
                         </td>
@@ -407,7 +414,7 @@ function BillingPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {tx.data!.map((t) => (
+                    {(tx.data ?? []).map((t) => (
                       <tr key={t.id} className="border-t">
                         <td className="p-3 text-xs text-muted-foreground">
                           {new Date(t.created_at).toLocaleString()}

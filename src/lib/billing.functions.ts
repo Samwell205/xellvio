@@ -1,3 +1,4 @@
+import { resolveBillingAccount } from "./billing-account.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -27,11 +28,13 @@ export const saveAutoRecharge = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("accounts").update({
+    const acting = await resolveBillingAccount(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("accounts").update({
       auto_recharge_enabled: data.enabled,
       auto_recharge_threshold: data.threshold,
       auto_recharge_amount: data.amount,
-    }).eq("id", context.userId);
+    }).eq("id", acting.accountId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

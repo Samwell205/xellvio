@@ -1,3 +1,4 @@
+import { resolveBillingAccount } from "./billing-account.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -17,6 +18,7 @@ function siteOrigin(): string {
 export const listCreditPacks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { data, error } = await context.supabase
       .from("credit_packs")
       .select("id,name,description,currency,price,credits,display_order,is_popular")
@@ -30,6 +32,7 @@ export const listCreditPacks = createServerFn({ method: "GET" })
 export const getBillingSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { data, error } = await context.supabase.from("billing_settings").select("*").maybeSingle();
     if (error) throw new Error(error.message);
     return data;
@@ -43,6 +46,7 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { data: pack, error: pErr } = await context.supabase
       .from("credit_packs")
       .select("id,name,currency,price,credits,is_active")
@@ -54,7 +58,7 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
     const { data: account } = await context.supabase
       .from("accounts")
       .select("contact_email,email,legal_business_name")
-      .eq("id", context.userId)
+      .eq("id", acting.accountId)
       .maybeSingle();
     const email = account?.contact_email || account?.email;
     if (!email) throw new Error("Add a contact email to your account first");
@@ -63,13 +67,14 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
       .insert({
-        account_id: context.userId,
+        account_id: acting.accountId,
         pack_id: pack.id,
         provider: "paystack",
         currency: pack.currency,
         amount: pack.price,
         credits: pack.credits,
         status: "pending",
+        metadata: { payer_user_id: context.userId },
       })
       .select("id")
       .single();
@@ -106,7 +111,7 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
         reference,
         callback_url,
         metadata: {
-          account_id: context.userId,
+          account_id: acting.accountId,
           payment_id: payment.id,
           pack_id: pack.id,
           pack_name: pack.name,
@@ -135,10 +140,11 @@ export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
     return { amount: Math.round(a * 100) / 100 };
   })
   .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { data: account } = await context.supabase
       .from("accounts")
       .select("contact_email,email")
-      .eq("id", context.userId)
+      .eq("id", acting.accountId)
       .maybeSingle();
     const email = account?.contact_email || account?.email;
     if (!email) throw new Error("Add a contact email to your account first");
@@ -147,13 +153,14 @@ export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
       .insert({
-        account_id: context.userId,
+        account_id: acting.accountId,
         pack_id: null,
         provider: "paystack",
         currency: "USD",
         amount: data.amount,
         credits: data.amount,
         status: "pending",
+        metadata: { payer_user_id: context.userId },
       })
       .select("id")
       .single();
@@ -182,7 +189,7 @@ export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
         reference,
         callback_url,
         metadata: {
-          account_id: context.userId,
+          account_id: acting.accountId,
           payment_id: payment.id,
           custom: true,
           original_currency: "USD",
@@ -207,10 +214,11 @@ export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
 export const initPaystackTfnCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { data: account } = await context.supabase
       .from("accounts")
       .select("contact_email,email")
-      .eq("id", context.userId)
+      .eq("id", acting.accountId)
       .maybeSingle();
     const email = account?.contact_email || account?.email;
     if (!email) throw new Error("Add a contact email to your account first");
@@ -238,14 +246,14 @@ export const initPaystackTfnCheckout = createServerFn({ method: "POST" })
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
       .insert({
-        account_id: context.userId,
+        account_id: acting.accountId,
         pack_id: null,
         provider: "paystack",
         currency: "USD",
         amount: priceUsd,
         credits: 0,
         status: "pending",
-        metadata: { purpose: "tfn_purchase", price_usd: priceUsd },
+        metadata: { payer_user_id: context.userId, purpose: "tfn_purchase", price_usd: priceUsd },
       })
       .select("id")
       .single();
@@ -271,7 +279,7 @@ export const initPaystackTfnCheckout = createServerFn({ method: "POST" })
         reference,
         callback_url,
         metadata: {
-          account_id: context.userId,
+          account_id: acting.accountId,
           payment_id: payment.id,
           purpose: "tfn_purchase",
           original_currency: "USD",
@@ -296,6 +304,7 @@ export const submitPayoneerPayment = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { data: pack, error: pErr } = await context.supabase
       .from("credit_packs").select("id,currency,price,credits,is_active").eq("id", data.packId).maybeSingle();
     if (pErr) throw new Error(pErr.message);
@@ -304,13 +313,14 @@ export const submitPayoneerPayment = createServerFn({ method: "POST" })
     const { data: payment, error } = await context.supabase
       .from("payments")
       .insert({
-        account_id: context.userId,
+        account_id: acting.accountId,
         pack_id: pack.id,
         provider: "payoneer",
         currency: pack.currency,
         amount: pack.price,
         credits: pack.credits,
         status: "pending",
+        metadata: { payer_user_id: context.userId },
         proof_url: data.proofPath ?? null,
         customer_note: data.note ?? null,
       })
@@ -324,10 +334,12 @@ export const submitPayoneerPayment = createServerFn({ method: "POST" })
 export const listMyPayments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    const acting = await resolveBillingAccount(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("payments")
       .select("id,provider,currency,amount,credits,status,paid_at,created_at,admin_note,provider_reference,pack_id,metadata")
-      .eq("account_id", context.userId)
+      .eq("account_id", acting.accountId)
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
@@ -342,6 +354,7 @@ export const verifyPaystack = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const res = await fetch(`${PAYSTACK_API}/transaction/verify/${encodeURIComponent(data.reference)}`, {
       headers: { Authorization: `Bearer ${paystackKey()}` },
     });
@@ -349,10 +362,14 @@ export const verifyPaystack = createServerFn({ method: "POST" })
     if (!res.ok || !json?.status) throw new Error(json?.message || "Verify failed");
     const status = json.data?.status as string;
     const meta = json.data?.metadata ?? {};
-    if (meta.account_id !== context.userId) throw new Error("Reference does not belong to this account");
+    if (meta.account_id !== acting.accountId) throw new Error("Reference does not belong to this account");
     if (status === "success") {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const result = await creditFromPayment(supabaseAdmin, data.reference);
+      if (result.ok) {
+        const { notifyPaymentReceipt } = await import("./payment-receipt.server");
+        await notifyPaymentReceipt(supabaseAdmin, data.reference, "bank/card");
+      }
       return { status, ...result };
     }
     return { status };

@@ -1,3 +1,4 @@
+import { resolveBillingAccount } from "./billing-account.server";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -48,6 +49,7 @@ export const createPaddleCheckout = createServerFn({ method: "POST" })
     return { amount: Math.round(a * 100) / 100 };
   })
   .handler(async ({ data, context }): Promise<CheckoutResult> => {
+    const acting = await resolveBillingAccount(context.userId);
     if (!isPaddleConfigured()) {
       return {
         error: "Card payments are not set up yet — please pay by Card / Bank or crypto.",
@@ -95,14 +97,14 @@ export const createPaddleCheckout = createServerFn({ method: "POST" })
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
       .insert({
-        account_id: context.userId,
+        account_id: acting.accountId,
         pack_id: packId,
         provider: "paddle",
         currency: "USD",
         amount: amountUsd,
         credits,
         status: "pending",
-        metadata: { label, custom: !packId, country: eligibility.country },
+        metadata: { payer_user_id: context.userId, label, custom: !packId, country: eligibility.country },
       })
       .select("id")
       .single();
@@ -128,14 +130,15 @@ export const createPaddleCheckout = createServerFn({ method: "POST" })
 export const verifyPaddlePayment = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { reference: string }) => d)
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: payment } = await supabaseAdmin
       .from("payments")
-      .select("status")
+      .select("status,account_id")
       .eq("provider_reference", data.reference)
       .maybeSingle();
-    if (!payment) return { status: "not_found" as const };
+    if (!payment || payment.account_id !== acting.accountId) return { status: "not_found" as const };
     if (payment.status === "paid") return { status: "success" as const };
     if (payment.status === "failed") return { status: "failed" as const };
     return { status: "pending" as const };

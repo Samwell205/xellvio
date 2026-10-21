@@ -1,3 +1,4 @@
+import { resolveBillingAccount } from "./billing-account.server";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -36,6 +37,7 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
     return { returnUrl: d.returnUrl, packId: d.packId };
   })
   .handler(async ({ data, context }): Promise<CheckoutResult> => {
+    const acting = await resolveBillingAccount(context.userId);
     const { isCardProcessorConfigured, createHostedPayment } = await import("@/lib/flw.server");
     if (!isCardProcessorConfigured()) {
       return { error: "Card payments are not set up yet — please pay by bank/card or crypto." };
@@ -76,14 +78,14 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
       .insert({
-        account_id: context.userId,
+        account_id: acting.accountId,
         pack_id: packId,
         provider: "flutterwave",
         currency: "USD",
         amount: amountUsd,
         credits,
         status: "pending",
-        metadata: { label, custom: !packId, country: eligibility.country },
+        metadata: { payer_user_id: context.userId, label, custom: !packId, country: eligibility.country },
       })
       .select("id")
       .single();
@@ -121,6 +123,7 @@ export const verifyCardPayment = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: payment } = await supabaseAdmin
       .from("payments")
@@ -128,7 +131,7 @@ export const verifyCardPayment = createServerFn({ method: "POST" })
       .eq("provider_reference", data.reference)
       .maybeSingle();
     if (!payment) throw new Error("Payment not found");
-    if (payment.account_id !== context.userId) throw new Error("Reference does not belong to this account");
+    if (payment.account_id !== acting.accountId) throw new Error("Reference does not belong to this account");
     if (payment.status === "paid") return { status: "success" as const };
     if (payment.status === "failed") return { status: "failed" as const };
     if (!data.reference.startsWith("icp_")) return { status: "pending" as const };
