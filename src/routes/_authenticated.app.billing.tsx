@@ -422,7 +422,7 @@ function BillingPage() {
                         <td className="p-3">
                           <TypeBadge type={t.type} />
                         </td>
-                        <td className="max-w-xs truncate p-3">{t.description ?? "—"}</td>
+                        <td className="max-w-xs truncate p-3">{(t.description ?? "—").replace(/NOWPayments/gi, "Crypto payment").replace(/Paystack|Flutterwave|Paddle/gi, "Card payment")}</td>
                         <td
                           className={`p-3 text-right font-medium tabular-nums ${t.type === "topup" || t.type === "refund" ? "text-success" : "text-destructive"}`}
                         >

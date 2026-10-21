@@ -18,7 +18,6 @@ function siteOrigin(): string {
 export const listCreditPacks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const acting = await resolveBillingAccount(context.userId);
     const { data, error } = await context.supabase
       .from("credit_packs")
       .select("id,name,description,currency,price,credits,display_order,is_popular")
@@ -32,7 +31,6 @@ export const listCreditPacks = createServerFn({ method: "GET" })
 export const getBillingSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const acting = await resolveBillingAccount(context.userId);
     const { data, error } = await context.supabase.from("billing_settings").select("*").maybeSingle();
     if (error) throw new Error(error.message);
     return data;
@@ -436,15 +434,17 @@ export async function creditFromPayment(supabaseAdmin: any, reference: string) {
     return { ok: true, tfn_assigned: assigned };
   }
 
-  await supabaseAdmin.rpc("topup_account", {
+  const { error: creditError } = await supabaseAdmin.rpc("topup_account", {
     _account_id: payment.account_id,
     _amount: payment.credits,
     _description: `Paystack ${payment.currency} ${payment.amount} — ${reference}`,
   });
-  await supabaseAdmin
+  if (creditError) throw new Error("Payment received but credits could not be applied. Please contact support.");
+  const { error: paidError } = await supabaseAdmin
     .from("payments")
     .update({ status: "paid", paid_at: new Date().toISOString() })
     .eq("id", payment.id);
+  if (paidError) throw new Error("Payment status could not be recorded. Please contact support.");
   return { ok: true };
 }
 
