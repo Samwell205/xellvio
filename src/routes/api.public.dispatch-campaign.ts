@@ -1143,7 +1143,7 @@ async function deliverPending(
   // timeout, which aborted the whole tick and left campaigns idle for hours.
   // 500 still timed out under contention, so start smaller and shrink further
   // whenever the database cancels the claim instead of abandoning the queue.
-  const MAX_CLAIM_CHUNK = DISPATCH_CONNECTIONS;
+  const MAX_CLAIM_CHUNK = DISPATCH_CONNECTIONS * 4;
   const MIN_CLAIM_CHUNK = 1;
   let claimChunk = MAX_CLAIM_CHUNK;
   let claimTimeouts = 0;
@@ -1767,8 +1767,8 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
           // The tenant allowance is a per-invocation total; each lease slot gets
           // a share of it so parallel slots add throughput without exceeding the
           // carrier-safe submission rate or claiming more than a slot can finish.
-          const slotPerTick = Math.max(20, Math.ceil(throttle.perTick / LEASE_SHARDS));
-          const slotConcurrency = Math.max(2, Math.ceil(throttle.concurrency / LEASE_SHARDS));
+          const slotPerTick = CAMPAIGN_CONCURRENCY === 1 ? throttle.perTick : Math.max(20, Math.ceil(throttle.perTick / LEASE_SHARDS));
+          const slotConcurrency = CAMPAIGN_CONCURRENCY === 1 ? throttle.concurrency : Math.max(2, Math.ceil(throttle.concurrency / LEASE_SHARDS));
           const used = tenantUsed.get(c.account_id) ?? 0;
           const perTick = Math.max(0, Math.min(slotPerTick, throttle.perTick - used));
           if (perTick === 0) {
