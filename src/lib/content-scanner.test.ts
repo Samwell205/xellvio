@@ -42,6 +42,17 @@ Reply STOP to unsubscribe.`);
 });
 
 describe("keywordScan carrier-risk classification", () => {
+  it.each([
+    "https://summitfieldgroup.com/home",
+    "https://xellvio.com/r/EtfNCnFH",
+    "https://xellvio.com/r/QbraQPmH",
+  ])("consistently flags the reported company-information demand regardless of tracking code: %s", (url) => {
+    const message = `{{first_name}}: Business Information Needed\n\nComplete Your Company Details\n\nReview your details: ${url}\n\nSTOP`;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      expect(keywordScan(message)).toMatchObject({ allowed: true, category: "phishing", confidence: "keyword" });
+    }
+  });
+
   it("holds urgent filing and compliance link language for review", () => {
     const result = keywordScan(
       "COTA SUPPLY LLC: Filing Step Required. Your Compliance Report is still pending. File Now: https://example.com/home Reply STOP to unsubscribe.",

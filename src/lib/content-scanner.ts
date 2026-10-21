@@ -211,6 +211,10 @@ const KEYWORD_PATTERNS: Array<{
       // than learning from thousands of paid 40002 delivery failures.
       /\b(?:filing|compliance)\s+(?:step|report|notice|status)\b[\s\S]{0,180}\b(?:file|submit|complete|review|act|click)\s+(?:now|here|today)\b/gi,
       /\b(?:file|submit|complete|review)\s+(?:now|here|today)\b[\s\S]{0,180}\b(?:filing|compliance)\s+(?:step|report|notice|status)\b/gi,
+      // Linked company-information demands must not depend on a fresh AI
+      // opinion or a tracking code. Hold them consistently for safety review;
+      // this is a flag, not evidence for an immediate hard-category suspension.
+      /\bbusiness information needed\b[\s\S]{0,180}\bcomplete your company details\b[\s\S]{0,180}(?:https?:\/\/|www\.)[^\s]+/gi,
     ],
   },
 ];
