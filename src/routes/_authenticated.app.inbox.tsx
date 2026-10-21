@@ -42,6 +42,7 @@ function InboxPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [checkedPhones, setCheckedPhones] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [leadsOnly, setLeadsOnly] = useState(false);
   const [draft, setDraft] = useState("");
   const [manualPhone, setManualPhone] = useState("");
   const [readMap, setReadMap] = useState<Record<string, string>>(() => {
@@ -167,7 +168,15 @@ function InboxPage() {
     };
   }, [qc]);
 
-  const filtered = (convos.data ?? []).filter((c) => (search ? c.phone.includes(search) : true));
+  const OPT_OUT = /^\s*(stop|stopall|unsubscribe|cancel|end|quit|optout|opt out|revoke)\s*\.?\s*$/i;
+  const leadCount = (convos.data ?? []).filter(
+    (c) => c.lastDirection === "inbound" && !OPT_OUT.test(c.lastBody ?? ""),
+  ).length;
+  const filtered = (convos.data ?? [])
+    .filter((c) => (search ? c.phone.includes(search) : true))
+    .filter((c) =>
+      leadsOnly ? c.lastDirection === "inbound" && !OPT_OUT.test(c.lastBody ?? "") : true,
+    );
   const allFilteredChecked =
     filtered.length > 0 && filtered.every((c) => checkedPhones.has(c.phone));
 
@@ -218,6 +227,14 @@ function InboxPage() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-8 h-9"
               />
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" className="flex-1" variant={leadsOnly ? "secondary" : "default"} onClick={() => setLeadsOnly(false)}>
+                All replies
+              </Button>
+              <Button size="sm" className="flex-1" variant={leadsOnly ? "default" : "secondary"} onClick={() => setLeadsOnly(true)}>
+                Leads ({leadCount})
+              </Button>
             </div>
             <div className="flex gap-2">
               <Input
