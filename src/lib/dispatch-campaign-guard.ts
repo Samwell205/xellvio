@@ -97,16 +97,47 @@ export async function recoverAfterTickError(db: any, campaignId: string, err: un
   return final;
 }
 
+type ViolationRow = { id: string; campaign_id: string | null; message_text: string | null; blocked_reasons?: unknown };
+
+function violationKey(r: ViolationRow): string {
+  // Exact campaign_id + exact stored text (no hashing, so different records never merge).
+  return r.campaign_id ? JSON.stringify(["c", r.campaign_id, r.message_text ?? ""]) : JSON.stringify(["r", r.id]);
+}
+
+function isEligible(r: ViolationRow): boolean {
+  return !(Array.isArray(r.blocked_reasons) && r.blocked_reasons.some((x: any) => x?.code === "ai_scan_unavailable"));
+}
+
 /**
  * Count distinct blocked violations for the repeat-abuse policy. Campaign
- * rows collapse to one per campaign + content revision (retries/workers of the
- * same submission are one violation); every non-campaign row (test sends,
- * replies) stays its own violation.
+ * rows collapse to one per exact campaign + message text (retries/workers of
+ * the same submission are one violation); every non-campaign row (test sends,
+ * replies) stays its own violation. Provider-unavailable rows are excluded.
  */
-export function distinctViolationCount(rows: Array<{ id: string; campaign_id: string | null; message_text: string | null }>): number {
+export function distinctViolationCount(rows: ViolationRow[]): number {
   const keys = new Set<string>();
-  for (const r of rows) {
-    keys.add(r.campaign_id ? `c:${r.campaign_id}:${contentRevisionKey(r.message_text ?? "")}` : `r:${r.id}`);
-  }
+  for (const r of rows) if (isEligible(r)) keys.add(violationKey(r));
   return keys.size;
+}
+
+/**
+ * Page through the window with stable ordering (created_at desc, id desc)
+ * until `threshold` distinct eligible violations are found or rows end.
+ * `fetchPage(offset, size)` returns one page of rows. Read-only.
+ */
+export async function countDistinctViolationsUpTo(
+  fetchPage: (offset: number, size: number) => Promise<ViolationRow[]>,
+  threshold: number,
+  pageSize = 500,
+): Promise<number> {
+  const keys = new Set<string>();
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await fetchPage(offset, pageSize);
+    for (const r of page) {
+      if (!isEligible(r)) continue;
+      keys.add(violationKey(r));
+      if (keys.size >= threshold) return keys.size;
+    }
+    if (page.length < pageSize) return keys.size;
+  }
 }
