@@ -99,7 +99,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     const [{ data: campaign, error: cErr }, { data: rates }] = await Promise.all([
       supabaseAdmin
         .from("campaigns")
-        .select("id,account_id,name,status,message_body,media_url,created_at")
+        .select("id,account_id,name,status,message_body,media_url,created_at,paused_reason,paused_at")
         .eq("id", data.campaignId)
         .maybeSingle(),
       supabaseAdmin.from("country_rates").select("country_code,cost_price,sell_price,mms_multiplier,mms_cost_multiplier,passthrough_fee"),
@@ -109,7 +109,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
 
     const { data: account } = await supabaseAdmin
       .from("accounts")
-      .select("id,email,company,legal_business_name,full_name")
+      .select("id,email,company,legal_business_name,full_name,onboarding_status,sending_suspended_at,sending_suspended_reason")
       .eq("id", (campaign as any).account_id)
       .maybeSingle();
 
@@ -279,7 +279,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         name: (campaign as any).name,
         status: (campaign as any).status,
         created_at: (campaign as any).created_at,
-        
+        paused_reason: (campaign as any).paused_reason ?? null,
+        paused_at: (campaign as any).paused_at ?? null,
         message_body: (campaign as any).message_body,
         media_url: (campaign as any).media_url ?? null,
       },
@@ -287,6 +288,9 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         id: acct?.id ?? null,
         label: acct ? (acct.legal_business_name || acct.company || acct.email) : "—",
         email: acct?.email ?? null,
+        onboarding_status: acct?.onboarding_status ?? null,
+        sending_suspended_at: acct?.sending_suspended_at ?? null,
+        sending_suspended_reason: acct?.sending_suspended_reason ?? null,
       },
       totals: {
         ...totals,
