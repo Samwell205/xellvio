@@ -722,11 +722,10 @@ async function beginCampaignIfNeeded(
     context: "campaign_plan",
   });
   if (screen.action === "blocked") {
-    await supabaseAdmin.from("campaigns")
-      .update({
+    await guard.updateIfDispatchable(supabaseAdmin, campaign.id, {
         status: "blocked_content",
         paused_reason: `Blocked by screening (risk ${screen.riskScore}/100): ${screen.blockedReasons[0] ?? "policy violation"}`,
-      }).eq("id", campaign.id);
+      });
     return { ok: false, reason: "blocked_by_screening" };
   }
   if (screen.action === "held_for_review") {
@@ -740,12 +739,11 @@ async function beginCampaignIfNeeded(
       .in("status", ["approved", "auto_approved"])
       .limit(1);
     if (!approved?.length) {
-      await supabaseAdmin.from("campaigns")
-        .update({
+      await guard.updateIfDispatchable(supabaseAdmin, campaign.id, {
           status: "paused",
           paused_reason: `Held for review (risk ${screen.riskScore}/100). ${screen.blockedReasons.slice(0, 2).join(" · ")}`,
           paused_at: new Date().toISOString(),
-        }).eq("id", campaign.id);
+        });
       return { ok: false, reason: "held_for_review" };
     }
   }
