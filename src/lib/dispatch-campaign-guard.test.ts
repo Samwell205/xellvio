@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   claimInitialScreening, updateIfDispatchable, reloadClaimedCampaign, recoverAfterTickError,
-  distinctViolationCount,
+  distinctViolationCount, countDistinctViolationsUpTo,
 } from "./dispatch-campaign-guard";
 
 /** Minimal fake DB: one campaign row + a dispatch_locks table with the same
@@ -115,5 +115,42 @@ describe("Repeat-abuse counting", () => {
       { id: "a", campaign_id: "c1", message_text: "v1" },
       { id: "b", campaign_id: "c1", message_text: "v2" },
     ])).toBe(2);
+  });
+});
+
+describe("Exact distinct-violation paging", () => {
+  it("bodies differing by one character are distinct; identical body+campaign merge", () => {
+    expect(distinctViolationCount([
+      { id: "a", campaign_id: "c1", message_text: "Hello A" },
+      { id: "b", campaign_id: "c1", message_text: "Hello B" },
+      { id: "c", campaign_id: "c1", message_text: "Hello A" },
+      { id: "d", campaign_id: "c2", message_text: "Hello A" },
+    ])).toBe(3);
+  });
+
+  it("finds 3 older distinct violations behind 600 newest duplicate rows", async () => {
+    const rows = [
+      ...Array.from({ length: 600 }, (_, i) => ({ id: `dup${i}`, campaign_id: "c1", message_text: "same" })),
+      { id: "o1", campaign_id: "c2", message_text: "x" },
+      { id: "o2", campaign_id: "c3", message_text: "y" },
+    ];
+    const pages: number[] = [];
+    const n = await countDistinctViolationsUpTo(async (o, s) => { pages.push(o); return rows.slice(o, o + s); }, 3);
+    expect(n).toBe(3);
+    expect(pages).toEqual([0, 500]);
+  });
+
+  it("stops scanning once the threshold is reached", async () => {
+    const rows = Array.from({ length: 2000 }, (_, i) => ({ id: `r${i}`, campaign_id: null, message_text: "t" }));
+    const pages: number[] = [];
+    expect(await countDistinctViolationsUpTo(async (o, s) => { pages.push(o); return rows.slice(o, o + s); }, 3)).toBe(3);
+    expect(pages).toEqual([0]);
+  });
+
+  it("excludes AI-unavailable rows while paging", async () => {
+    const un = { blocked_reasons: [{ code: "ai_scan_unavailable" }] };
+    const rows = [{ id: "a", campaign_id: null, message_text: "", ...un }, { id: "b", campaign_id: null, message_text: "", ...un },
+      { id: "c", campaign_id: "c1", message_text: "z" }];
+    expect(await countDistinctViolationsUpTo(async (o, s) => rows.slice(o, o + s), 3)).toBe(1);
   });
 });

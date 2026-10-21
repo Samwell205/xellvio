@@ -356,18 +356,20 @@ export async function screenMessageContent(
         // Every audit row is kept, but duplicate checks of the same campaign
         // submission (overlapping workers / retries) count as ONE violation.
         // Provider-unavailable decisions never reach this branch.
-        const { data: recentRows } = await supabaseAdmin
-          .from("content_screening_log")
-          .select("id, campaign_id, message_text, blocked_reasons")
-          .eq("account_id", tenantAccountId)
-          .eq("action_taken", "blocked")
-          .gte("created_at", sevenDaysAgo)
-          .order("created_at", { ascending: false })
-          .limit(500);
-        const { distinctViolationCount } = await import("./dispatch-campaign-guard");
-        const eligible = ((recentRows ?? []) as any[]).filter((r) =>
-          !(Array.isArray(r.blocked_reasons) && r.blocked_reasons.some((x: any) => x?.code === "ai_scan_unavailable")));
-        const recentBlocks = distinctViolationCount(eligible);
+        const { countDistinctViolationsUpTo } = await import("./dispatch-campaign-guard");
+        const recentBlocks = await countDistinctViolationsUpTo(async (offset, size) => {
+          const { data, error } = await supabaseAdmin
+            .from("content_screening_log")
+            .select("id, campaign_id, message_text, blocked_reasons")
+            .eq("account_id", tenantAccountId)
+            .eq("action_taken", "blocked")
+            .gte("created_at", sevenDaysAgo)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(offset, offset + size - 1);
+          if (error) throw error;
+          return (data ?? []) as any[];
+        }, 3);
         if (recentBlocks >= 3) {
           shouldSuspend = true;
           suspendReason = `Auto-suspended: ${recentBlocks} blocked messages in 7 days (repeat abuse).`;
