@@ -81,10 +81,21 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
         category: {
           type: "string",
           enum: [
-            "sexual", "hate_speech", "alcohol", "firearms", "tobacco",
-            "cannabis_cbd", "illegal_drugs", "gambling", "payday_loans",
-            "debt_collection", "crypto_scam", "get_rich_quick",
-            "fraud_deceptive", "phishing", "none",
+            "sexual",
+            "hate_speech",
+            "alcohol",
+            "firearms",
+            "tobacco",
+            "cannabis_cbd",
+            "illegal_drugs",
+            "gambling",
+            "payday_loans",
+            "debt_collection",
+            "crypto_scam",
+            "get_rich_quick",
+            "fraud_deceptive",
+            "phishing",
+            "none",
           ],
         },
         confidence: { type: "string", enum: ["high", "medium", "low"] },
@@ -132,14 +143,14 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
         "- ordinary account, document, application, renewal, payment and appointment notices a business sends to its own opted-in customers, when the sender is clearly identified and the wording does not resemble a regulatory/compliance demand\n" +
         "- general service businesses advertising quality guarantees, honest times, and customer service\n\n" +
         "CRITICAL DISTINCTIONS:\n" +
-        "- Urgency alone is NOT phishing or fraud. However, an unsolicited message combining filing/compliance language, a demand such as 'File Now' or 'Step Required', and a link is high-risk for carrier filtering. Return allowed=false with category phishing unless the text clearly identifies the sender and explains the recipient's existing relationship and specific transaction.\n" +
+        "- Urgency alone is NOT phishing or fraud.\n" +
         "- 'Delivery to door' / 'delivery to your door' is common language for restaurants, caterers, event rentals, and many legal services. Do NOT treat it as drug-trafficking language unless the message also explicitly mentions drugs, narcotics, controlled substances, or unmistakable drug-dealing context.\n" +
         "- 'Party', 'fest', 'event', 'selection', 'write to see', and similar phrases are normal for event/party services. Only block if the message clearly promotes illegal drugs, alcohol to minors, or unregulated controlled substances.\n" +
         "- For illegal_drugs, require explicit drug/narcotic terms (e.g. weed, cocaine, pills, MDMA, Xanax, oxycodone, 'no Rx', 'research chemicals') or clear drug-dealing context. Do not infer drug sales from generic delivery/party wording alone.\n\n" +
         "- 'Contest', 'group contest', 'bonus', or 'matching bonus' does NOT establish gambling by itself. For gambling, require an explicit wager, bet, casino/sportsbook, deposit bonus, paid game of chance, odds, or similar gambling context.\n\n" +
         "EXAMPLES OF ALLOWED MESSAGES (return allowed=true):\n" +
-        "- \"Er I trætte af lange ventetider, forsinkelser og dårlig kvalitet? Vi tilbyder kvalitetsgaranti og levering til døren! Ærlige tider og servicen er den bedste i byen. Der ingen fest uden os. Skriv for at se udvalget. Contact us: +45 81 91 17 11\" (Danish event/party service)\n" +
-        "- \"Tired of long waits and poor service? We offer quality guarantee and delivery to your door. Honest times and the best service in town. No party without us. Write to see our selection.\" (event/party service)\n\n" +
+        '- "Er I trætte af lange ventetider, forsinkelser og dårlig kvalitet? Vi tilbyder kvalitetsgaranti og levering til døren! Ærlige tider og servicen er den bedste i byen. Der ingen fest uden os. Skriv for at se udvalget. Contact us: +45 81 91 17 11" (Danish event/party service)\n' +
+        '- "Tired of long waits and poor service? We offer quality guarantee and delivery to your door. Honest times and the best service in town. No party without us. Write to see our selection." (event/party service)\n\n' +
         "- \"Hey champ, Today's group contest is live. Check the group for detail. You may also have a matching bonus available if you ain't use it yet!\" (free community contest; no wager or deposit)\n\n" +
         "Ambiguity is NOT grounds to block: only return allowed=false when the message itself clearly promotes a prohibited category in plain or lightly obfuscated wording. " +
         "If you are not confident, return allowed=true. Set confidence to 'high' only when the violation is unmistakable.",
@@ -175,7 +186,6 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
       confidence: "ai",
       reason: result.reason,
     };
-
   } catch (e: any) {
     const code = classifyFailure(e);
     console.error("[content-scanner] AI scan failed:", code ?? "error", e?.message ?? e);
