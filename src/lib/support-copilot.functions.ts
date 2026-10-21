@@ -221,12 +221,22 @@ export const runCopilotAction = createServerFn({ method: "POST" })
     }
     // Deliberate resume re-screens the current wording; a blocked or held
     // result keeps the campaign stopped.
-    const { data: body } = await sb.from("campaigns").select("message_body").eq("id", c!.id).maybeSingle();
+    const { data: live, error: bodyErr } = await sb.from("campaigns").select("id, account_id, status, message_body")
+      .eq("id", c!.id).eq("account_id", row.account_id).maybeSingle();
+    if (bodyErr || !live || typeof live.message_body !== "string" || !live.message_body.trim()) {
+      throw new Error("Could not read this campaign's message, so it stays paused.");
+    }
+    if (!isPaused(live.status)) throw new Error(`Nothing to resume — that campaign is already "${live.status}".`);
     const { screenMessageContent } = await import("./content-screening.server");
-    const screen = await screenMessageContent(body?.message_body ?? "", row.account_id, { campaignId: c!.id, context: "campaign_resume", skipReviewQueue: true });
+    const screen = await screenMessageContent(live.message_body, row.account_id, { campaignId: live.id, context: "campaign_resume", skipReviewQueue: true });
     if (screen.action !== "passed") throw new Error(`Campaign stays paused: screening ${screen.action === "blocked" ? "blocked" : "held"} this message. ${screen.blockedReasons[0] ?? ""}`.trim());
-    const { error: uErr } = await sb.from("campaigns").update({ status: "sending", paused_reason: null, paused_at: null }).eq("id", c!.id).eq("status", c!.status);
+    // Only the exact owned, still-paused row with the screened body may resume.
+    const { data: updated, error: uErr } = await sb.from("campaigns")
+      .update({ status: "sending", paused_reason: null, paused_at: null })
+      .eq("id", live.id).eq("account_id", row.account_id).eq("status", live.status).eq("message_body", live.message_body)
+      .select("id");
     if (uErr) throw new Error(uErr.message);
+    if (!updated || updated.length !== 1) throw new Error("The campaign changed before it could resume, so it stays paused. Review it and try again.");
     return { ok: true, message: `Campaign "${c!.name ?? "campaign"}" resumed — sending continues within a minute.` };
   });
 

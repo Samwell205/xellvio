@@ -691,6 +691,11 @@ async function beginCampaignIfNeeded(
   }
   const claim = await guard.claimInitialScreening(supabaseAdmin, campaign.id, campaign.message_body ?? "");
   if (claim === "busy") return { ok: false, reason: "screening_in_progress" };
+  if (claim === "unavailable") return { ok: false, reason: "screening_coordination_unavailable" };
+  // Reload inside the claim: never screen or plan an obsolete body/state.
+  const live = await guard.reloadClaimedCampaign(supabaseAdmin, campaign);
+  if (!live.ok) return { ok: false, reason: live.reason };
+  campaign = live.campaign;
 
   // ── Legacy fast keyword scan (kept for backwards compat with the badge).
   const preScan = keywordScan(campaign.message_body ?? "");
@@ -1695,40 +1700,11 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
               try {
                 results.push({ id: c.id, ...(await runOneCampaign(c)) });
               } catch (e: any) {
-                // A transient tick error (provider hiccup, DB timeout) must never
-                // abandon a campaign that still has work queued — marking it
-                // `failed` drops it out of the dispatch queue and strands every
-                // remaining recipient forever. Keep it `sending` so the next tick
-                // picks it up; only mark failed when nothing is left to send.
-                const { count: leftover } = await supabaseAdmin
-                  .from("messages").select("id", { count: "exact", head: true })
-                  .eq("campaign_id", c.id).in("status", ["queued", "sending"]);
-                const { count: everPlanned } = await supabaseAdmin
-                  .from("messages").select("id", { count: "exact", head: true })
-                  .eq("campaign_id", c.id);
-                const note = `Temporary send error, retrying: ${e?.message ?? e}`;
-                if ((leftover ?? 0) > 0) {
-                  await markSending(supabaseAdmin, c.id, note);
-                } else if ((everPlanned ?? 0) === 0) {
-                  // Nothing was ever planned: the tick blew up before a single
-                  // recipient row existed. Failing here strands the whole
-                  // campaign, so put it back in the queue for the next tick.
-                  await supabaseAdmin.from("campaigns")
-                    .update({ status: "queued", paused_reason: note }).eq("id", c.id);
-                } else {
-                  // Some recipients were already handed to the carrier, so the
-                  // campaign did send — finalize it as sent and keep the error
-                  // as a note instead of showing the tenant a red "Failed".
-                  const { count: handedOff } = await supabaseAdmin
-                    .from("messages").select("id", { count: "exact", head: true })
-                    .eq("campaign_id", c.id)
-                    .in("status", ["sent", "delivered", "delivery_unconfirmed", "undelivered"]);
-                  await supabaseAdmin.from("campaigns")
-                    .update({
-                      status: (handedOff ?? 0) > 0 ? "sent" : "failed",
-                      paused_reason: e?.message ?? "Send failed",
-                    })
-                    .eq("id", c.id);
+                // Conditional recovery: never resurrects a blocked/paused/
+                // cancelled/finalized campaign (see dispatch-campaign-guard).
+                const { recoverAfterTickError } = await import("@/lib/dispatch-campaign-guard");
+                try { await recoverAfterTickError(supabaseAdmin, c.id, e); } catch (re: any) {
+                  console.error("[dispatch] tick-error recovery failed", c.id, re?.message ?? re);
                 }
                 console.error("[dispatch] campaign tick failed", c.id, e?.message ?? e);
                 results.push({ id: c.id, error: e.message, retryable: true });

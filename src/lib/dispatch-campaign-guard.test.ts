@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import {
-  claimInitialScreening, currentCampaignStatus, updateIfDispatchable, isDispatchableStatus,
+  claimInitialScreening, updateIfDispatchable, reloadClaimedCampaign, recoverAfterTickError,
   distinctViolationCount,
 } from "./dispatch-campaign-guard";
 
@@ -27,43 +28,75 @@ function fakeDb(initialStatus: string) {
   return db;
 }
 
-/** Mirrors the dispatcher slot order: live status → suspension pause →
- * one-time screening claim → screen → conditional block → provider send. */
-async function runSlot(db: any, deps: { screen: () => Promise<"blocked" | "passed">; send: () => void; suspended: () => boolean }) {
-  if (!isDispatchableStatus(await currentCampaignStatus(db, "c1"))) return "skip";
-  if (deps.suspended()) { await updateIfDispatchable(db, "c1", { status: "paused", paused_reason: "Tenant sending suspended" }); return "suspended"; }
-  if ((await claimInitialScreening(db, "c1", "body")) === "busy") return "busy";
-  const r = await deps.screen();
-  if (r === "blocked") { await updateIfDispatchable(db, "c1", { status: "blocked_content", paused_reason: "Blocked" }); return "blocked"; }
-  deps.send(); return "sent";
+/** Fake with message counts for the tick-error path. */
+function withMessages(db: any, counts: { leftover: number; planned: number; handed: number }, statusAt?: () => void) {
+  const base = db.from;
+  db.from = (t: string) => t !== "messages" ? base(t) : ({
+    select: () => { let n = counts.planned; const q: any = {
+      eq: () => q,
+      in: (_c: string, v: string[]) => { n = v.includes("queued") ? counts.leftover : counts.handed; return q; },
+      then: (r: any) => { statusAt?.(); return r({ count: n, error: null }); },
+    }; return q; },
+  });
+  return db;
 }
 
-describe("Dispatcher honours current campaign state", () => {
-  it("12 stale slots of one snapshot screen once, stay blocked and never reach the provider", async () => {
+describe("Dispatcher coordination (production helpers)", () => {
+  it("coordination failure defers — no unguarded fallback", async () => {
+    expect(await claimInitialScreening({ rpc: async () => ({ data: null, error: { message: "down" } }) }, "c1", "x")).toBe("unavailable");
+    expect(await claimInitialScreening({ rpc: async () => { throw new Error("net"); } }, "c1", "x")).toBe("unavailable");
+  });
+
+  it("12 concurrent claims for one revision yield exactly one screener", async () => {
     const db = fakeDb("queued");
-    let suspended = false;
-    const screen = vi.fn(async () => { suspended = true; return "blocked" as const; });
-    const send = vi.fn();
-    await Promise.all(Array.from({ length: 12 }, () => runSlot(db, { screen, send, suspended: () => suspended })));
-    expect(screen).toHaveBeenCalledTimes(1);
-    expect(send).not.toHaveBeenCalled();
+    const r = await Promise.all(Array.from({ length: 12 }, () => claimInitialScreening(db, "c1", "body")));
+    expect(r.filter((x) => x === "claimed")).toHaveLength(1);
+  });
+
+  it("reload after claim refuses a stopped campaign or an edited body", async () => {
+    const stopped = fakeDb("blocked_content");
+    expect(await reloadClaimedCampaign(stopped, { id: "c1", message_body: null })).toEqual({ ok: false, reason: "campaign_not_dispatchable" });
+    const db: any = fakeDb("queued");
+    db.from = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: "c1", status: "queued", message_body: "new" } }) }) }) });
+    expect(await reloadClaimedCampaign(db, { id: "c1", message_body: "old" })).toEqual({ ok: false, reason: "campaign_body_changed" });
+    db.from = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { message: "x" } }) }) }) });
+    expect((await reloadClaimedCampaign(db, { id: "c1" })).ok).toBe(false);
+  });
+
+  it("tick error after a block preserves blocked_content (zero-row path cannot requeue)", async () => {
+    const db = withMessages(fakeDb("blocked_content"), { leftover: 0, planned: 0, handed: 0 });
+    expect(await recoverAfterTickError(db, "c1", new Error("boom"))).toBe("preserved");
     expect(db.campaign.status).toBe("blocked_content");
   });
 
-  it("an overlapping worker after suspension cannot overwrite blocked_content with paused", async () => {
+  it("stop landing during error recovery is still preserved by the conditional write", async () => {
+    const db: any = fakeDb("sending");
+    withMessages(db, { leftover: 0, planned: 0, handed: 0 }, () => { db.campaign.status = "paused_by_user"; });
+    await recoverAfterTickError(db, "c1", new Error("boom"));
+    expect(db.campaign.status).toBe("paused_by_user");
+  });
+
+  it("a genuinely dispatchable campaign with nothing planned is requeued for retry", async () => {
+    const db = withMessages(fakeDb("sending"), { leftover: 0, planned: 0, handed: 0 });
+    expect(await recoverAfterTickError(db, "c1", new Error("boom"))).toBe("queued");
+    expect(db.campaign.status).toBe("queued");
+  });
+
+  it("conditional update never overwrites a stopped state", async () => {
     const db = fakeDb("blocked_content");
-    const send = vi.fn();
-    expect(await runSlot(db, { screen: async () => "passed", send, suspended: () => true })).toBe("skip");
-    await updateIfDispatchable(db, "c1", { status: "paused", paused_reason: "Tenant sending suspended" });
+    await updateIfDispatchable(db, "c1", { status: "paused" });
     expect(db.campaign.status).toBe("blocked_content");
-    expect(send).not.toHaveBeenCalled();
   });
 
-  it("falls back to screening (not freezing) when the lock helper is unavailable", async () => {
-    const db = { rpc: async () => ({ data: null, error: { message: "missing" } }) };
-    expect(await claimInitialScreening(db, "c1", "x")).toBe("unguarded");
+  it("dispatcher is wired to these guards (fails if integration is removed)", () => {
+    const src = readFileSync("src/routes/api.public.dispatch-campaign.ts", "utf8");
+    expect(src).toMatch(/claim === "unavailable"\) return \{ ok: false/);
+    expect(src).toMatch(/reloadClaimedCampaign\(supabaseAdmin, campaign\)/);
+    expect(src).toMatch(/recoverAfterTickError\(supabaseAdmin, c\.id, e\)/);
+    expect(src).not.toMatch(/UNGUARDED_LEASE[^;]*screen/);
   });
 });
+
 
 describe("Repeat-abuse counting", () => {
   it("collapses duplicate checks of one campaign revision into a single violation", () => {
