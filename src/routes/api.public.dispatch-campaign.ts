@@ -993,38 +993,6 @@ async function deliverPending(
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
 
-  const preflight = await carrierPreflight(supabaseAdmin, campaign.id);
-  if (preflight.blocked || preflight.waiting) {
-    const { count: pending } = await supabaseAdmin
-      .from("messages").select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
-    return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, throttled: true };
-  }
-
-  const spam = await carrierSpamBlockRate(supabaseAdmin, campaign.id);
-  if (spam.total >= SPAM_BLOCK_MIN_SAMPLE && spam.ratio >= SPAM_BLOCK_RATIO) {
-    // Blocked receipts can be counted from more than the sampled window, so
-    // cap both figures so the notice never reads above 100%.
-    const shownBlocked = Math.min(spam.blocked, spam.total);
-    const pct = Math.min(100, Math.round(spam.ratio * 100));
-    await supabaseAdmin.from("campaigns").update({
-      status: "paused",
-      paused_at: new Date().toISOString(),
-      paused_reason:
-        `Paused automatically: the recipient carriers' spam filter rejected ${pct}% of the messages sent so far ` +
-        `(${shownBlocked.toLocaleString()} of ${spam.total.toLocaleString()}, carrier code 40002). ` +
-        `Sending more of this exact message from this sender will keep being filtered. ` +
-        `Edit the wording, change or remove the link, or send from a different registered number, then resume.`,
-    }).eq("id", campaign.id).in("status", ["sending", "queued"]);
-    const { count: pending } = await supabaseAdmin
-      .from("messages").select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
-    console.warn(`[dispatch] campaign ${campaign.id} paused: ${pct}% carrier spam-blocked`);
-    return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, throttled: true };
-  }
-
-
-
   const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
   // The provider client paces every request through a shared gate, so the real
   // ceiling is that gate, not the numbers above. Claiming past it is what left
