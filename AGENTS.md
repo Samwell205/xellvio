@@ -36,3 +36,4 @@
 - Short links use indexed destinations and context-owned tracking; dispatch uses persisted message IDs and bounded requests to avoid orphan links and timeout losses.
 - Public signup CTAs use `/auth?mode=signup`.
 - Billing/test SMS use the acting business to avoid teammate mismatches: billing permission and separate payer; tests use business sender/profile/opt-outs/compliance, per-user quotas.
+- Lifting an account sending hold is restore-only: it never requeues campaigns; dispatcher slots re-read live campaign status, write only via status-conditional updates, and claim initial screening once per campaign+content revision (try_acquire_dispatch_lock) so stale/overlapping workers can't duplicate abuse strikes.
