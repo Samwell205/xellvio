@@ -318,3 +318,16 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       attemptAudit,
     };
   });
+
+/** Admin-only deterministic "Check and resume" for the exact viewed campaign. */
+export const adminCheckAndResumeCampaign = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ campaignId: z.string().uuid(), accountId: z.string().uuid() }).parse(input))
+  .handler(async ({ context, data }) => {
+    const { data: isAdmin, error: roleError } = await context.supabase.rpc("has_role", { _role: "admin" });
+    if (roleError) throw new Error(roleError.message);
+    if (isAdmin !== true) throw new Error("Forbidden: admin only");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { checkedResumeCampaign } = await import("./campaign-resume.server");
+    return await checkedResumeCampaign(supabaseAdmin, { campaignId: data.campaignId, expectedAccountId: data.accountId });
+  });
