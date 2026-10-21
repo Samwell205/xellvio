@@ -22,7 +22,7 @@ function AdminCompliancePage() {
   const reinstate = useMutation({
     mutationFn: (accountId: string) => reinstateFn({ data: { accountId } }),
     onSuccess: () => {
-      toast.success("Account reinstated");
+      toast.success("Account reinstated. Paused campaigns stay stopped until each one is resumed separately.");
       qc.invalidateQueries({ queryKey: ["admin", "compliance"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to reinstate"),
