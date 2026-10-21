@@ -9,7 +9,7 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- International card payments use Flutterwave server-side (src/lib/flw.server.ts, webhook /api/public/card/webhook, refs icp_); never name the provider in UI — owner requirement.
+- International cards use flw.server.ts and /api/public/card/webhook (icp_); hide provider names in UI.
 - Toll-free registration uses one shared three-step wizard for tenant and verifier accounts so both submission experiences stay aligned with the carrier flow.
 - Dashboard lifecycle card visibility is centralized in src/lib/lifecycle/visibility.ts so prior dismissal state cannot hide required workspace guidance.
 - Tenant SMS API routes reuse the campaign queue and workspace API-key authentication; never add a direct carrier-send bypass because it would skip charging, compliance, and opt-out controls.
@@ -35,4 +35,5 @@
 - Assisted number requests atomically create tickets and debit credits; retries reuse open requests and admin completion requires the exact carrier-approved number, without bypassing SMS or pilot gates.
 - Account assistant uses route-owned persisted threads and transactional, on-screen-confirmed proposals; campaigns remain drafts until the existing launch review. Website voice shares authenticated tools through a persistent relay; model output never authorizes mutations.
 - Short links use indexed destinations and context-owned tracking; dispatch uses persisted message IDs and bounded requests to avoid orphan links and timeout losses.
-- Public signup CTAs set `/auth?mode=signup` to avoid the default sign-in view.
+- Public signup CTAs use `/auth?mode=signup`.
+- Billing derives the owner from authenticated membership, checks billing permission, and stores the payer separately; team top-ups fund the shared balance.

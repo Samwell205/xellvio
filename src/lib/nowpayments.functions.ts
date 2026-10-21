@@ -1,3 +1,4 @@
+import { resolveBillingAccount } from "./billing-account.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { CRYPTO_COIN_VALUES } from "@/lib/crypto-coins";
@@ -78,6 +79,7 @@ export const initNowPaymentsCheckout = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { data: pack, error: pErr } = await context.supabase
       .from("credit_packs")
       .select("id,name,currency,price,credits,is_active")
@@ -91,14 +93,14 @@ export const initNowPaymentsCheckout = createServerFn({ method: "POST" })
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
       .insert({
-        account_id: context.userId,
+        account_id: acting.accountId,
         pack_id: pack.id,
         provider: "nowpayments",
         currency: "USD",
         amount: pack.price,
         credits: pack.credits,
         status: "pending",
-        metadata: { coin: data.coin ?? null, pack_name: pack.name },
+        metadata: { payer_user_id: context.userId, coin: data.coin ?? null, pack_name: pack.name },
       })
       .select("id")
       .single();
@@ -114,7 +116,7 @@ export const initNowPaymentsCheckout = createServerFn({ method: "POST" })
       });
       await supabaseAdmin
         .from("payments")
-        .update({ provider_reference: reference, metadata: { coin: data.coin ?? null, pack_name: pack.name, np_invoice_id: inv.id } })
+        .update({ provider_reference: reference, metadata: { payer_user_id: context.userId, coin: data.coin ?? null, pack_name: pack.name, np_invoice_id: inv.id } })
         .eq("id", payment.id);
       return { invoice_url: inv.invoice_url, reference };
     } catch (e: any) {
@@ -135,18 +137,19 @@ export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
     return { amount: Math.round(a * 100) / 100, coin: d.coin };
   })
   .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
       .insert({
-        account_id: context.userId,
+        account_id: acting.accountId,
         pack_id: null,
         provider: "nowpayments",
         currency: "USD",
         amount: data.amount,
         credits: data.amount,
         status: "pending",
-        metadata: { coin: data.coin ?? null, custom: true },
+        metadata: { payer_user_id: context.userId, coin: data.coin ?? null, custom: true },
       })
       .select("id")
       .single();
@@ -162,7 +165,7 @@ export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
       });
       await supabaseAdmin
         .from("payments")
-        .update({ provider_reference: reference, metadata: { coin: data.coin ?? null, custom: true, np_invoice_id: inv.id } })
+        .update({ provider_reference: reference, metadata: { payer_user_id: context.userId, coin: data.coin ?? null, custom: true, np_invoice_id: inv.id } })
         .eq("id", payment.id);
       return { invoice_url: inv.invoice_url, reference };
     } catch (e: any) {
@@ -180,6 +183,7 @@ export const initNowPaymentsTfnCheckout = createServerFn({ method: "POST" })
     return { coin: d?.coin };
   })
   .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const { data: setting } = await supabaseAdmin
@@ -201,14 +205,14 @@ export const initNowPaymentsTfnCheckout = createServerFn({ method: "POST" })
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
       .insert({
-        account_id: context.userId,
+        account_id: acting.accountId,
         pack_id: null,
         provider: "nowpayments",
         currency: "USD",
         amount: priceUsd,
         credits: 0,
         status: "pending",
-        metadata: { purpose: "tfn_purchase", coin: data.coin ?? null, price_usd: priceUsd },
+        metadata: { payer_user_id: context.userId, purpose: "tfn_purchase", coin: data.coin ?? null, price_usd: priceUsd },
       })
       .select("id")
       .single();
@@ -227,7 +231,7 @@ export const initNowPaymentsTfnCheckout = createServerFn({ method: "POST" })
         .from("payments")
         .update({
           provider_reference: reference,
-          metadata: { purpose: "tfn_purchase", coin: data.coin ?? null, price_usd: priceUsd, np_invoice_id: inv.id },
+          metadata: { payer_user_id: context.userId, purpose: "tfn_purchase", coin: data.coin ?? null, price_usd: priceUsd, np_invoice_id: inv.id },
         })
         .eq("id", payment.id);
       return { invoice_url: inv.invoice_url, reference };
@@ -250,6 +254,7 @@ export const reconcileNowPayment = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
+    const acting = await resolveBillingAccount(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: payment } = await supabaseAdmin
       .from("payments")
@@ -258,7 +263,7 @@ export const reconcileNowPayment = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!payment) return { status: "not_found" as const };
     // Only the payer can trigger a manual reconcile from the client.
-    if (payment.account_id !== context.userId) return { status: "forbidden" as const };
+    if (payment.account_id !== acting.accountId) return { status: "forbidden" as const };
     if (payment.status === "paid") return { status: "already_paid" as const };
     const result = await reconcileOneNowPayment(payment as any);
     return result;

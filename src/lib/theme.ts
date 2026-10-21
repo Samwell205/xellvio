@@ -11,7 +11,7 @@ export type ResolvedTheme = "light" | "dark";
 export const THEME_STORAGE_KEY = "xellvio-theme";
 
 /** Inline script that runs before first paint so there is no flash of the wrong theme. */
-export const THEME_INIT_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}";var s=localStorage.getItem(k);var m=window.matchMedia("(prefers-color-scheme: dark)").matches;var d=s==="dark"||((!s||s==="system")&&m);document.documentElement.classList.toggle("dark",d);}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{var k="${THEME_STORAGE_KEY}";var s=localStorage.getItem(k);var m=window.matchMedia("(prefers-color-scheme: dark)").matches;var d=s==="dark"||(s==="system"&&m);document.documentElement.classList.toggle("dark",d);}catch(e){}})();`;
 
 export function systemTheme(): ResolvedTheme {
   if (typeof window === "undefined") return "light";
@@ -19,14 +19,14 @@ export function systemTheme(): ResolvedTheme {
 }
 
 export function storedTheme(): ThemeChoice {
-  if (typeof window === "undefined") return "system";
+  if (typeof window === "undefined") return "light";
   try {
     const v = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (v === "light" || v === "dark" || v === "system") return v;
   } catch {
-    /* storage blocked — fall back to system */
+    /* storage blocked — fall back to light */
   }
-  return "system";
+  return "light";
 }
 
 export function resolveTheme(choice: ThemeChoice): ResolvedTheme {
