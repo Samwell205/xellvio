@@ -71,7 +71,7 @@ function AdminAccountsPage() {
     mutationFn: (id: string) => resumeFn({ data: { accountId: id } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "accounts"] });
-      toast.success("Sending resumed");
+      toast.success("Account sending restored. Paused campaigns stay stopped until each one is resumed separately.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -218,9 +218,10 @@ function AdminAccountsPage() {
                               variant="outline"
                               onClick={() => resumeSending.mutate(a.id)}
                               disabled={resumeSending.isPending}
+                              title="Lift the account hold only. Paused campaigns are not restarted."
                             >
                               <PlayCircle className="size-3.5 mr-1.5" />
-                              Resume sending
+                              Restore sending
                             </Button>
                           ) : (
                             <Button
