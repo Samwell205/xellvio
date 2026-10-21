@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Team funding and appearance (Oct 21)
-- [ ] Resolve shared billing reads and top-up attribution to the business owner, preserving team permissions; investigate the reported paid top-up without duplicating credits.
-- [ ] Default new visitors to light appearance and preserve explicit theme choices.
-- [ ] Ensure card top-ups send branded payment confirmations; test shared billing and email safeguards.
+- [x] Resolve shared billing reads and checkout attribution to the owner with billing permission. Corrected the reported $30 + $25 allocation once, moving the existing $55 rather than adding credits; signed-in owner and teammate both see $55 and both receipts.
+- [x] Default new visitors to light appearance, including dark devices; preserve explicit light/dark/system choices and expose all three controls. Browser default and four tests pass.
+- [x] Card confirmation return now sends the branded receipt even if fulfillment won the race before the webhook; receipt keys deduplicate, paid status is required, and owner billing contact plus authenticated payer receive it. Eight tests pass. New paid checkout and real card email delivery not exercised; application changes require publishing.
 
 ## Campaign receipt recovery (Oct 21)
 - [x] Repair incorrect delivery-lookup connection selection; completed signed-in admin recovery for campaign 4b459f06-932b-489e-897d-60475a4ff719. Final read: 15,733 delivered, 3,027 explicit failures, 2,593 carrier-finalized unconfirmed. Zero retries; charged amount $338.6440 and balance $32.2592 unchanged. Application changes not published in this task.
