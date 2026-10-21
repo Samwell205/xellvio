@@ -21,7 +21,7 @@
 - All-time admin finance reports are served from `admin_report_cache` (src/lib/admin-report-cache.server.ts) with a short TTL and an explicit "Recalculate now"; they scan full message history and must not run on every page view.
 
 - Support tickets (src/lib/support-tickets.server.ts, /admin/tickets, /app/support, /support/t/$token) are the only support channel: contact-form submissions, in-app requests and inbound email replies all create or append to tickets; closed tickets never accept replies (a reply opens a new linked ticket) so every conversation has one clear lifecycle.
-- Content screening fails closed: any content-rule or AI flag blocks (never time-based auto-approval), hard categories suspend the workspace, and sendMessage re-runs the keyword scan before every carrier call so no send path can skip it.
+- Screening fails closed: preview rejects review flags/unavailable AI; shared keyword rules stabilize recurring risky demands. No timed approval; hard categories suspend; sendMessage rechecks keywords before each carrier call.
 - Sending preserves each tenant's profile/sender; additional connections use server-owned profile IDs and matching webhook keys. Never replace default credentials or resume old campaigns automatically.
 - Receipt recovery is lookup-only, bounded to six workers with stable ID cursors; accept exact matching final receipts, try the other server-owned connection only on 404, and keep unconfirmed distinct from failure. Never resend or change balances during recovery.
 - Voice rollout uses voice-rollout.server.ts verified identity gates for UI/RPC, relay and call tools; no admin bypass. Calendar is owner-only; paid activation still needs pricing, line approval and a pilot.
