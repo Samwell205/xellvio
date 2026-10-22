@@ -15,9 +15,11 @@ import { formatUSD } from "@/lib/money";
 export function AssistantCampaignLaunch({
   campaignId,
   onClose,
+  onLaunched,
 }: {
   campaignId: string;
   onClose: () => void;
+  onLaunched: () => void;
 }) {
   const prepare = useServerFn(prepareAssistantLaunch),
     confirm = useServerFn(confirmAssistantLaunch),
@@ -67,6 +69,7 @@ export function AssistantCampaignLaunch({
         data: { id: r.id, choice, consent, userAgent: navigator.userAgent.slice(0, 500) },
       });
       setLaunched(true);
+      onLaunched();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Nothing was launched. Try a fresh review.");
     } finally {
@@ -248,8 +251,8 @@ export function AssistantCampaignLaunch({
             </p>
           )}
           <Button variant="link" asChild>
-            <Link to="/app/campaigns/new" search={{ id: campaignId }}>
-              Review / edit
+            <Link to="/app/campaigns/$id" params={{ id: campaignId }}>
+              View campaign report
             </Link>
           </Button>
         </section>
