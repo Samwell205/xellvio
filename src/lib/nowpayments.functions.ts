@@ -157,9 +157,9 @@ export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
     const reference = `npm_${payment.id.replace(/-/g, "")}`;
     try {
       const inv = await createInvoice({
-        priceUsd: data.amount,
+        priceUsd: priced.amountUsd,
         orderId: reference,
-        orderDescription: `${data.amount} USD credits`,
+        orderDescription: `${priced.amountUsd} USD credits`,
         payCurrency: data.coin,
       });
       await supabaseAdmin

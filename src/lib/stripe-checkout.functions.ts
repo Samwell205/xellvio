@@ -78,8 +78,7 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
       credits = Number(pack.credits);
       label = `${pack.name} — ${credits} credits`;
     } else {
-      amountUsd = Number(data.amount);
-      credits = amountUsd;
+      ({ amountUsd, credits } = priceCustomTopUp(data.amount));
       label = `${amountUsd} USD credits`;
     }
 
