@@ -706,6 +706,22 @@ function NewCampaignPage() {
     JSON.stringify(s.excludedCountries),
   ]);
 
+  // Flush a pending autosave when leaving the page so the last edits are not
+  // lost to the debounce timer being cleared on unmount.
+  const flushSaveRef = useRef<() => void>(() => {});
+  flushSaveRef.current = () => {
+    if (autosaveTimer.current) {
+      clearTimeout(autosaveTimer.current);
+      autosaveTimer.current = null;
+      if (s.name.trim()) {
+        void persistCampaign("draft")
+          .then((id) => { if (id && mountedRef.current) setAutoSaved(new Date()); })
+          .catch(() => {});
+      }
+    }
+  };
+  useEffect(() => () => flushSaveRef.current(), []);
+
   const [complianceAccepted, setComplianceAccepted] = useState(false);
 
   async function saveCampaign(launch: boolean) {
