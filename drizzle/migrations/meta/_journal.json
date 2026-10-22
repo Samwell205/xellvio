@@ -155,6 +155,13 @@
       "when": 1792660130443,
       "tag": "0021_admin_approval_apps_and_confirmed_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792674863304,
+      "tag": "0022_assistant_account_edit_confirmation",
+      "breakpoints": true
     }
   ]
 }

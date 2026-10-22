@@ -7903,6 +7903,10 @@ export type Database = {
           segments_count: number
         }[]
       }
+      confirm_assistant_account_edit: {
+        Args: { _account_id: string; _id: string; _user_id: string }
+        Returns: Json
+      }
       confirm_assistant_operation: {
         Args: {
           _account_id: string
