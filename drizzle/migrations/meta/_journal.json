@@ -141,6 +141,13 @@
       "when": 1792658539361,
       "tag": "0019_remove_carrier_feedback_delays",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792659690845,
+      "tag": "0020_internal_job_secret_and_revoke_tfn_sale",
+      "breakpoints": true
     }
   ]
 }
