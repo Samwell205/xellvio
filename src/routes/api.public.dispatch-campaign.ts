@@ -1081,11 +1081,13 @@ async function deliverPending(
 
   while (claimedTotal < claimLimit && canStartDispatchSend(hardDeadline)) {
     const want = Math.min(claimChunk, claimLimit - claimedTotal);
-    const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
-      _campaign_id: campaign.id,
-      _limit: want,
-    });
-    if (qErr) {
+    // The ONLY claim path: spam_gate_claim locks the campaign/monitor rows,
+    // re-checks live status and account hold, and atomically bounds this paid
+    // claim to the gate allowance before invoking claim_campaign_messages.
+    // There is no fallback to the bare claim — a gate error defers the tick.
+    const claim = await claimGatedMessages(supabaseAdmin, campaign.id, want);
+    if (!claim.ok) {
+      const qErr = { message: claim.error };
       const timedOut = /statement timeout|canceling statement|57014/i.test(qErr.message ?? "");
       console.error("[dispatch] claim failed", qErr.message);
       // A statement timeout means the batch was too heavy for the database
