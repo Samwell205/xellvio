@@ -169,7 +169,10 @@ function NewCampaignPage() {
   // clobber newer in-progress typing or reset the step.
   const draftHydratedRef = useRef(!!editingCampaignId ? false : true);
   const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // Load existing draft when editing
   useQuery({
