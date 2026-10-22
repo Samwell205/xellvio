@@ -246,7 +246,7 @@ export async function processSpamGateEmailOutbox(
         if (statuses.includes("sent")) {
           await markOutbox(db, row.id, "sent", null);
           result.sent += 1;
-        } else if (statuses.some((s) => s === "failed" || s === "bounced")) {
+        } else if (statuses.some((s: string) => s === "failed" || s === "bounced")) {
           await markOutbox(db, row.id, "failed", "Email delivery failed");
           result.failedTerminal += 1;
         } else {
