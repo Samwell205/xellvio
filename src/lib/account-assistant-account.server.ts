@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { AREA_ACCESS, ACCOUNT_AREAS, EDIT_RULES, accountEditSchema, canUseAccountArea, type AccountArea } from "./account-assistant-catalog";
+import { AREA_ACCESS, ACCOUNT_AREAS, EDIT_RESOURCES, EDIT_RULES, accountEditSchema, canUseAccountArea, type AccountArea } from "./account-assistant-catalog";
 import { resolveActingAccount, assertOwner } from "./acting-account.server";
 import { withSmsOptOut } from "./sms-optout";
 
@@ -105,6 +105,6 @@ export async function confirmAccountEdit(userId: string, id: string) {
 export function accountManagementTools(userId: string) {
   return {
     read_account_area: tool({ description: "Read permitted account information for settings, billing, team, inbox, websites, forms, leads, audience, campaigns, automations, flows, numbers, receptionist, integrations or support. Results are bounded recent records, never all-time totals. targetId is a known resource UUID or null. No mutations.", inputSchema: z.object({ area: z.enum(ACCOUNT_AREAS), targetId: z.string().nullable() }).strict(), execute: ({ area, targetId }) => readAccountArea(userId, area, targetId ? z.string().uuid().parse(targetId) : null) }),
-    prepare_account_edit: tool({ description: "Prepare an exact on-screen-confirmed change. Settings: full_name/company/phone (owner). Contacts: first_name/last_name. Lists, websites/forms: name only. Draft campaigns: name/message_body. Automations/flows: name or status=paused only. Never modifies live page copy, publishes, activates, changes money or team roles. Does not execute the change.", inputSchema: z.object({ resource: z.string(), id: z.string(), field: z.string(), value: z.string() }).strict(), execute: args => prepareAccountEdit(userId,args) }),
+    prepare_account_edit: tool({ description: "Prepare an exact on-screen-confirmed change. Settings: full_name/company/phone (owner). Contacts: first_name/last_name. Lists, websites/forms: name only. Draft campaigns: name/message_body. Automations/flows: name or status=paused only. Never modifies live page copy, publishes, activates, changes money or team roles. Does not execute the change.", inputSchema: z.object({ resource: z.enum(EDIT_RESOURCES), id: z.string(), field: z.string(), value: z.string() }).strict(), execute: args => prepareAccountEdit(userId,args) }),
   };
 }
