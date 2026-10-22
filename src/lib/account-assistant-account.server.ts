@@ -3,6 +3,7 @@ import { z } from "zod";
 import { AREA_ACCESS, ACCOUNT_AREAS, EDIT_RESOURCES, EDIT_RULES, accountEditSchema, canUseAccountArea, type AccountArea } from "./account-assistant-catalog";
 import { resolveActingAccount, assertOwner } from "./acting-account.server";
 import { withSmsOptOut } from "./sms-optout";
+import { summarizeAssistantDelivery } from "./assistant-campaign-status";
 
 const TABLES = { settings: "accounts", contact: "profiles", list: "contact_lists", campaign: "campaigns", website: "landing_pages", form: "signup_forms", automation: "automations", flow: "sms_flows" } as const;
 const EDIT_COLUMNS = { settings: "id,full_name,company,phone", contact: "id,first_name,last_name", list: "id,name", campaign: "id,name,message_body,status", website: "id,name", form: "id,name", automation: "id,name,status", flow: "id,name,status" } as const;
@@ -102,8 +103,18 @@ export async function confirmAccountEdit(userId: string, id: string) {
   return result.data;
 }
 
+export async function readAssistantCampaignReport(userId: string, campaignId: string) {
+  const { acting, db } = await accountAreaAccess(userId, "campaigns");
+  const campaign = await db.from("campaigns").select("id,name,status,created_at").eq("id", campaignId).eq("account_id", acting.accountId).single();
+  if (campaign.error || !campaign.data) throw new Error("Campaign not found in your business.");
+  const result = await db.rpc("campaign_report_summary", { _campaign_id: campaignId });
+  if (result.error) throw new Error("Campaign delivery report could not be loaded.");
+  return { campaign: campaign.data, counts: summarizeAssistantDelivery(result.data), checkedAt: new Date().toISOString(), replies: null, optOuts: null, note: "Sending complete does not mean every recipient received the message. Awaiting delivery means a final receipt has not arrived. Replies and opt-outs are not campaign-attributed by this report." };
+}
+
 export function accountManagementTools(userId: string) {
   return {
+    campaign_delivery_report: tool({ description: "Read the live delivery report for a known campaign UUID from this business. Use for report, delivery, sent, received, failed or progress questions, after read_account_area identifies the exact campaign. Returns aggregate counts only, no recipient data. Awaiting receipts are not delivered or failed. Replies/opt-outs unavailable, never infer zero. No sends or mutations.", inputSchema: z.object({ campaignId: z.string().uuid() }).strict(), execute: ({ campaignId }) => readAssistantCampaignReport(userId, campaignId) }),
     read_account_area: tool({ description: "Read permitted account information for settings, billing, team, inbox, websites, forms, leads, audience, campaigns, automations, flows, numbers, receptionist, integrations or support. Results are bounded recent records, never all-time totals. targetId is a known resource UUID or null. No mutations.", inputSchema: z.object({ area: z.enum(ACCOUNT_AREAS), targetId: z.string().nullable() }).strict(), execute: ({ area, targetId }) => readAccountArea(userId, area, targetId ? z.string().uuid().parse(targetId) : null) }),
     prepare_account_edit: tool({ description: "Prepare an exact on-screen-confirmed change. Settings: full_name/company/phone (owner). Contacts: first_name/last_name. Lists, websites/forms: name only. Draft campaigns: name/message_body. Automations/flows: name or status=paused only. Never modifies live page copy, publishes, activates, changes money or team roles. Does not execute the change.", inputSchema: z.object({ resource: z.enum(EDIT_RESOURCES), id: z.string(), field: z.string(), value: z.string() }).strict(), execute: args => prepareAccountEdit(userId,args) }),
   };
