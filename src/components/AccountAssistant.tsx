@@ -426,9 +426,12 @@ export function AccountAssistant({
               out = op.outcome as Record<string, unknown> | null;
             const expired = Date.parse(op.expires_at) <= Date.now();
             return (
-              <article key={op.id} className="space-y-3 border-b py-4">
-                <div className="flex justify-between gap-3">
-                  <h2 className="font-semibold">
+              <article
+                key={op.id}
+                className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="min-w-0 font-semibold">
                     {String(op.campaign?.name ?? args.name ?? "Action")} ·{" "}
                     {op.status === "completed"
                       ? op.kind === "campaign_draft"
