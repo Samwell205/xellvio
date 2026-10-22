@@ -275,21 +275,9 @@ async function finalizeIfComplete(supabaseAdmin: any, campaign: any): Promise<vo
     await markSending(supabaseAdmin, campaign.id);
     return;
   }
-  // Receipt-side spam-gate conclusion: a monitored campaign whose sends all
-  // finished before the final carrier results arrived still gets its one
-  // honest incident notice if the spam threshold was met (nothing left to
-  // stop — the notice says so), and is marked concluded either way so no
-  // historical campaign ever receives a retroactive notice.
-  try {
-    const { count: total } = await supabaseAdmin
-      .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
-    if ((total ?? 0) > 25) {
-      const { concludeMonitoredCampaign } = await import("@/lib/carrier-spam-guard.server");
-      await concludeMonitoredCampaign(supabaseAdmin, campaign);
-    }
-  } catch (e) {
-    console.error("[dispatch] spam-gate conclusion failed", campaign.id, e);
-  }
+  // Spam-gate conclusion happens on the signature-verified message.finalized
+  // path (spam_gate_record_receipt), never here: finalizing because all sends
+  // were submitted must not end monitoring before late final receipts arrive.
   await supabaseAdmin.from("campaigns").update({ status: "sent" })
     .eq("id", campaign.id)
     .in("status", ["queued", "sending", "processing", "scheduled"]);
@@ -1023,20 +1011,19 @@ async function deliverPending(
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
 
-  // Spam gate: monitored campaigns only. Any gate-state failure defers the
-  // campaign — no paid claim or provider call while the gate is unknown.
-  let gateMode: "open" | "gated" = "open";
-  if (limits?.monitored) {
-    const { spamGatePrecheck } = await import("@/lib/carrier-spam-guard.server");
-    const gate = await spamGatePrecheck(supabaseAdmin, campaign);
-    if (gate.action !== "proceed") {
-      const { count: pending } = await supabaseAdmin
-        .from("messages").select("id", { count: "exact", head: true })
-        .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
-      return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, gated: gate.action };
-    }
-    gateMode = gate.mode;
+  // Spam gate: every campaign claims through spam_gate_claim (unenrolled
+  // pre-rollout campaigns are passed through unchanged by the SQL wrapper).
+  // Any gate-state failure defers the campaign — no paid claim or provider
+  // call while the gate is unknown.
+  const { spamGatePrecheck, spamGateState, claimGatedMessages } = await import("@/lib/carrier-spam-guard.server");
+  const gate = await spamGatePrecheck(supabaseAdmin, campaign);
+  if (gate.action !== "proceed") {
+    const { count: pending } = await supabaseAdmin
+      .from("messages").select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
+    return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, gated: gate.action };
   }
+  const gateMode: "open" | "gated" = gate.mode;
 
   const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
   // The provider client paces every request through a shared gate, so the real
