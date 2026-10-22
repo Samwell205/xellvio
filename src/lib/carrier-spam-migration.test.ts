@@ -65,7 +65,8 @@ describe("spam_gate_do_pause atomicity contract", () => {
 
   it("never resurrects stopped campaigns and records paused=false honestly", () => {
     expect(body).toMatch(/status IN \('queued','sending','processing','scheduled'\)/);
-    expect(body).toMatch(/\(stopped_id IS NOT NULL\)/);
+    expect(body).toMatch(/\(stopped_id IS NOT NULL AND EXISTS/);
+    expect(body).toMatch(/ms\.status = 'queued'/);
   });
 
   it("exactly one incident and one outbox row per campaign", () => {
