@@ -57,15 +57,13 @@ function AuthPage() {
   }, [retryAt]);
 
   useEffect(() => {
+    setMode(search.mode ?? "signin");
     const params = new URLSearchParams(window.location.search);
     if (params.has("error") || params.has("error_description")) {
       setErrorMsg("That sign-in link could not be completed. Try Google again, or sign in with your email and password.");
+    } else {
+      setErrorMsg(null);
     }
-  }, []);
-
-  useEffect(() => {
-    setMode(search.mode ?? "signin");
-    setErrorMsg(null);
   }, [search.mode]);
 
   useEffect(() => {
