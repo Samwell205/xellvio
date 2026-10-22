@@ -32,9 +32,17 @@ export function usesSecondaryConnection(profileId: string | null | undefined): b
   return profileId === SECONDARY_PROFILE_ID;
 }
 
-/** Original routing restored: each message uses the tenant's own sender and profile. */
+/** Original sending account, used for any sender still pointing at the temporary one. */
+export const ORIGINAL_PROFILE_ID = "40019f2a-14c7-4447-8b7b-d4cb04511b5a";
+
+/**
+ * Original routing restored: each message uses the tenant's own sender and profile.
+ * The temporary connection must never send again (owner decision 2026-10-22), so a
+ * sender still pointing at it is sent on the original account instead.
+ */
 export function routeOutbound(opts: { to: string; from?: string; messagingProfileId?: string }):
   | { ok: true; from?: string; messagingProfileId?: string }
   | { ok: false; error: string } {
-  return { ok: true, from: opts.from, messagingProfileId: opts.messagingProfileId };
+  const profile = usesSecondaryConnection(opts.messagingProfileId) ? ORIGINAL_PROFILE_ID : opts.messagingProfileId;
+  return { ok: true, from: opts.from, messagingProfileId: profile };
 }
