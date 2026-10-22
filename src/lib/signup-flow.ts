@@ -13,4 +13,4 @@ export function authCooldownSeconds(error: unknown): number {
 }
 
 export const EMAIL_CONFIRMATION_MESSAGE =
-  "Check your inbox and spam folder for your confirmation email. Confirm your email before signing in.";
+  "We emailed you a verification code. Check your inbox and spam folder, then type the code below.";
