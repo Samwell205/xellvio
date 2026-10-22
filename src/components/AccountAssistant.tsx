@@ -14,9 +14,12 @@ import {
   X,
   ArrowUpRight,
   Send,
+  ChevronDown,
+  ClipboardList,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { uploadCountry, uploadNeedsCountry } from "@/lib/assistant-upload";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
@@ -79,6 +82,7 @@ export function AccountAssistant({
   const [uploadReply, setUploadReply] = useState("");
   const [launchId, setLaunchId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState<boolean | null>(null);
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["assistant-actions"] });
     void qc.invalidateQueries({ queryKey: ["assistant-threads"] });
@@ -221,6 +225,14 @@ export function AccountAssistant({
     await sendMessage({ text });
     inputRef.current?.focus();
   }
+  const reviewOps = operations
+    .filter((op) => op.kind !== "campaign_launch")
+    .filter((op) => op.status === "pending" || op.status === "completed")
+    .slice(0, 6);
+  const awaitingReview = reviewOps.filter(
+    (op) => op.status === "pending" && Date.parse(op.expires_at) > Date.now(),
+  ).length;
+  const trayOpen = reviewOpen ?? awaitingReview > 0;
   return (
     <div className="assistant-chat assistant-arrive flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
@@ -383,19 +395,43 @@ export function AccountAssistant({
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
-      <section aria-label="Action review" className="max-h-80 overflow-y-auto border-t px-5">
-        {operations
-          .filter((op) => op.kind !== "campaign_launch")
-          .filter((op) => op.status === "pending" || op.status === "completed")
-          .slice(0, 6)
-          .map((op) => {
+      {reviewOps.length > 0 && (
+        <section aria-label="Action review" className="border-t bg-muted/20">
+          <button
+            type="button"
+            aria-expanded={trayOpen}
+            onClick={() => setReviewOpen(!trayOpen)}
+            className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-2.5 text-left"
+          >
+            <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+              <ClipboardList className="size-4 shrink-0 text-primary" />
+              Actions
+              <Badge variant="secondary" className="rounded-full px-2 text-[10px]">
+                {reviewOps.length}
+              </Badge>
+              {awaitingReview > 0 && (
+                <Badge className="rounded-full px-2 text-[10px]">
+                  {awaitingReview} to review
+                </Badge>
+              )}
+            </span>
+            <ChevronDown
+              className={`size-4 shrink-0 text-muted-foreground transition-transform ${trayOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {trayOpen && (
+            <div className="mx-auto max-h-72 w-full max-w-3xl space-y-3 overflow-y-auto px-4 pb-4 md:px-5">
+              {reviewOps.map((op) => {
             const args = op.arguments as Record<string, unknown>,
               out = op.outcome as Record<string, unknown> | null;
             const expired = Date.parse(op.expires_at) <= Date.now();
             return (
-              <article key={op.id} className="space-y-3 border-b py-4">
-                <div className="flex justify-between gap-3">
-                  <h2 className="font-semibold">
+              <article
+                key={op.id}
+                className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="min-w-0 font-semibold">
                     {String(op.campaign?.name ?? args.name ?? "Action")} ·{" "}
                     {op.status === "completed"
                       ? op.kind === "campaign_draft"
@@ -405,11 +441,11 @@ export function AccountAssistant({
                         ? "Expired"
                         : "Review"}
                   </h2>
-                  <span className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">
                     {op.kind === "campaign_draft" && op.status === "completed"
                       ? "campaign"
                       : op.kind.replaceAll("_", " ")}
-                  </span>
+                  </Badge>
                 </div>
                 {op.kind === "contact_import" ? (
                   <p className="text-sm">
@@ -550,29 +586,21 @@ export function AccountAssistant({
               </article>
             );
           })}
-      </section>
-      <footer className="mx-auto w-full max-w-3xl space-y-3 p-4 md:p-5">
-        <div className="flex flex-wrap gap-2">
-          <input
-            hidden
-            ref={fileRef}
-            type="file"
-            accept=".csv,.txt"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void fileChange(file);
-            }}
-          />
-          <Button
-            aria-label="Upload"
-            variant="outline"
-            disabled={fileBusy || generating || speaking || !!pendingUpload}
-            onClick={() => fileRef.current?.click()}
-          >
-            <Upload />
-            {fileBusy ? "Inspecting…" : "Upload"}
-          </Button>
-        </div>
+            </div>
+          )}
+        </section>
+      )}
+      <footer className="mx-auto w-full max-w-3xl p-4 md:p-5">
+        <input
+          hidden
+          ref={fileRef}
+          type="file"
+          accept=".csv,.txt"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void fileChange(file);
+          }}
+        />
         <PromptInput className="assistant-composer" onSubmit={submitInput}>
           <PromptInputTextarea
             ref={inputRef}
@@ -589,10 +617,23 @@ export function AccountAssistant({
             maxLength={8000}
           />
           <PromptInputFooter className="justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
+            <div className="flex min-w-0 items-center gap-1">
+              <Button
+                type="button"
+                aria-label="Upload a contact list"
+                title="Upload a contact list (CSV or text)"
+                variant="ghost"
+                size="sm"
+                disabled={fileBusy || generating || speaking || !!pendingUpload}
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload />
+                {fileBusy ? "Inspecting…" : "Upload"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
               disabled={
                 generating || speaking || fileBusy || !!pendingUpload || !voiceAccess?.available
               }
@@ -608,7 +649,8 @@ export function AccountAssistant({
             >
               <Mic />
               {voiceAccess?.available ? "Voice instructions" : "Voice · Coming soon"}
-            </Button>
+              </Button>
+            </div>
             <PromptInputSubmit
               status={status}
               onStop={stop}
