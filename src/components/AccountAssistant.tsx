@@ -395,12 +395,33 @@ export function AccountAssistant({
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
-      <section aria-label="Action review" className="max-h-80 overflow-y-auto border-t px-5">
-        {operations
-          .filter((op) => op.kind !== "campaign_launch")
-          .filter((op) => op.status === "pending" || op.status === "completed")
-          .slice(0, 6)
-          .map((op) => {
+      {reviewOps.length > 0 && (
+        <section aria-label="Action review" className="border-t bg-muted/20">
+          <button
+            type="button"
+            aria-expanded={trayOpen}
+            onClick={() => setReviewOpen(!trayOpen)}
+            className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-2.5 text-left"
+          >
+            <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+              <ClipboardList className="size-4 shrink-0 text-primary" />
+              Actions
+              <Badge variant="secondary" className="rounded-full px-2 text-[10px]">
+                {reviewOps.length}
+              </Badge>
+              {awaitingReview > 0 && (
+                <Badge className="rounded-full px-2 text-[10px]">
+                  {awaitingReview} to review
+                </Badge>
+              )}
+            </span>
+            <ChevronDown
+              className={`size-4 shrink-0 text-muted-foreground transition-transform ${trayOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {trayOpen && (
+            <div className="mx-auto max-h-72 w-full max-w-3xl space-y-3 overflow-y-auto px-4 pb-4 md:px-5">
+              {reviewOps.map((op) => {
             const args = op.arguments as Record<string, unknown>,
               out = op.outcome as Record<string, unknown> | null;
             const expired = Date.parse(op.expires_at) <= Date.now();
