@@ -48,6 +48,66 @@ function classifyFailure(e: any): string | undefined {
   return undefined;
 }
 
+/**
+ * Normal scans finish in ~1s, but individual requests occasionally stall for
+ * 20s+ and get cut off. Start one request; if it has not answered within
+ * HEDGE_AFTER_MS, start a second identical one and use whichever answers
+ * first (the other is cancelled). Only fails if both fail or time out.
+ */
+const HEDGE_AFTER_MS = 4000;
+const ATTEMPT_TIMEOUT_MS = 15000;
+
+async function hedgedGenerate(model: any, args: Record<string, unknown>): Promise<string> {
+  const controllers: AbortController[] = [];
+  const attempt = () => {
+    const c = new AbortController();
+    controllers.push(c);
+    const t = setTimeout(() => c.abort(), ATTEMPT_TIMEOUT_MS);
+    return generateText({ ...(args as any), model, maxRetries: 0, abortSignal: c.signal })
+      .then((r) => r.text)
+      .finally(() => clearTimeout(t));
+  };
+  return new Promise<string>((resolve, reject) => {
+    let pending = 0;
+    let settled = false;
+    let lastErr: unknown;
+    let hedge: ReturnType<typeof setTimeout> | undefined;
+    const run = () => {
+      pending++;
+      attempt().then(
+        (text) => {
+          if (settled) return;
+          settled = true;
+          if (hedge) clearTimeout(hedge);
+          controllers.forEach((c) => c.abort());
+          resolve(text);
+        },
+        (e) => {
+          lastErr = e;
+          pending--;
+          if (settled) return;
+          // Terminal provider errors fail identically; don't hedge them.
+          const terminal = classifyFailure(e);
+          if (!hedge && !terminal && controllers.length < 2) {
+            run();
+            return;
+          }
+          if (pending === 0 && (controllers.length >= 2 || terminal)) {
+            settled = true;
+            if (hedge) clearTimeout(hedge);
+            reject(lastErr);
+          }
+        },
+      );
+    };
+    run();
+    hedge = setTimeout(() => {
+      hedge = undefined;
+      if (!settled && controllers.length < 2) run();
+    }, HEDGE_AFTER_MS);
+  });
+}
+
 export async function aiScan(messageBody: string): Promise<ScanResult> {
   if (Date.now() < providerUnavailableUntil) {
     return {
@@ -104,15 +164,11 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
       required: ["allowed"],
     });
 
-    const { text } = await generateText({
-      model,
+    const callArgs = {
       // Content screening already fails open on any error — retrying buys
       // nothing (a persistent error like an exhausted billing balance fails
       // identically every time) and risks blowing the Cloudflare Worker's
       // CPU budget on retry overhead, which is exactly what happened here.
-      maxRetries: 0,
-      // Provider latency spikes (~20s) were cancelling legitimate scans; allow headroom.
-      timeout: 30000,
       system:
         "You are a content safety classifier for an SMS marketing platform that must comply with US/CA carrier (SHAFT) policies and Twilio's Acceptable Use Policy. " +
         "Block messages promoting any of these categories:\n" +
@@ -159,7 +215,8 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
         `Analyze this SMS campaign message for prohibited content.\n\n` +
         `Return ONLY a JSON object matching this schema (no markdown, no explanation):\n${jsonSchemaDescription}\n\n` +
         `Message:\n"""${messageBody}"""`,
-    });
+    };
+    const text = await hedgedGenerate(model, callArgs);
 
     // Extract and parse the JSON object from the model response.
     const jsonMatch = text.match(/\{[\s\S]*\}/);
