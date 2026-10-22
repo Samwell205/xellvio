@@ -470,8 +470,14 @@ describe("Atomic pause + incident + outbox", () => {
 
     const crashy = fakeDb({ messageCount: 30, crashDuringPause: true });
     await enrollCampaignForSpamGate(crashy, "c1");
-    await seedReceipts(crashy, 20, 4, { submitted: 20 });
-    await expect(claimGatedMessages(crashy, "c1", 24)).rejects.toThrow();
+    await seedReceipts(crashy, 19, 3, { submitted: 20 });
+    // the 20th finalized receipt (4th spam) crosses the threshold; the pause
+    // crashes mid-transaction
+    const r = await recordSpamGateReceipt(crashy, {
+      campaignId: "c1", messageId: "m20", providerMessageId: "pid-19",
+      errorCode: "40002", providerStatus: "undelivered", finalizedAt: new Date().toISOString(),
+    });
+    expect(r.ok).toBe(false);
     // nothing persisted: no pause, no incident, no outbox — retry will redo it
     expect(crashy.state.campaign.status).toBe("sending");
     expect(crashy.state.incident).toBeNull();

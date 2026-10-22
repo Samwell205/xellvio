@@ -148,16 +148,22 @@ export async function recordSpamGateReceipt(
     finalizedAt: string;
   },
 ): Promise<SpamGateReceiptResult> {
-  const { data, error } = await db.rpc("spam_gate_record_receipt", {
-    _campaign_id: args.campaignId,
-    _message_id: args.messageId,
-    _provider_message_id: args.providerMessageId,
-    _error_code: args.errorCode,
-    _provider_status: args.providerStatus,
-    _finalized_at: args.finalizedAt,
-  });
-  if (error) return { ok: false, error: String(error.message ?? error) };
-  return { ok: true, result: String(data ?? "recorded") };
+  try {
+    const { data, error } = await db.rpc("spam_gate_record_receipt", {
+      _campaign_id: args.campaignId,
+      _message_id: args.messageId,
+      _provider_message_id: args.providerMessageId,
+      _error_code: args.errorCode,
+      _provider_status: args.providerStatus,
+      _finalized_at: args.finalizedAt,
+    });
+    if (error) return { ok: false, error: String(error.message ?? error) };
+    return { ok: true, result: String(data ?? "recorded") };
+  } catch (e: any) {
+    // A mid-transaction crash rolls the whole receipt+pause+incident back;
+    // the caller defers (webhook redelivery) and nothing is half-applied.
+    return { ok: false, error: String(e?.message ?? e) };
+  }
 }
 
 // ── Durable incident email outbox ────────────────────────────────────────────
