@@ -45,6 +45,7 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
+  const [otp, setOtp] = useState("");
   const [retryAt, setRetryAt] = useState(0);
   const [retrySeconds, setRetrySeconds] = useState(0);
   const submitting = useRef(false);
@@ -178,6 +179,35 @@ function AuthPage() {
     }
   }
 
+  async function verifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!confirmationEmail || submitting.current) return;
+    submitting.current = true;
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const { error } = await supabase.auth.verifyOtp({ email: confirmationEmail, token: otp, type: "signup" });
+      if (error) throw error;
+      try {
+        const { ensureMyAccount } = await import("@/lib/account.functions");
+        await ensureMyAccount();
+        const { acceptTos } = await import("@/lib/tos.functions");
+        await acceptTos({ data: { userAgent: navigator.userAgent.slice(0, 500) } });
+      } catch {
+        /* modal will re-prompt if it failed */
+      }
+      trackProduct("signup_completed");
+      toast.success("Email confirmed — welcome!");
+      navigate({ href: destination });
+    } catch (err) {
+      setErrorMsg("That code is wrong or has expired. Check the latest email or tap Resend code.");
+      void err;
+    } finally {
+      submitting.current = false;
+      setLoading(false);
+    }
+  }
+
   async function handleGoogle() {
     setLoading(true);
     try {
@@ -269,9 +299,23 @@ function AuthPage() {
               <h2 className="font-semibold">Confirm your email</h2>
               <p className="text-sm text-muted-foreground">{EMAIL_CONFIRMATION_MESSAGE}</p>
               <p className="text-sm break-all">{confirmationEmail}</p>
+              <form onSubmit={verifyCode} className="space-y-2">
+                <Label htmlFor="otp">Verification code</Label>
+                <Input
+                  id="otp"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="Enter the code from the email"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                />
+                <Button type="submit" className="w-full" disabled={loading || otp.length < 6}>
+                  {loading && <Loader2 className="size-4 animate-spin mr-2" />}Verify and continue
+                </Button>
+              </form>
               {errorMsg && <p role="alert" className="text-sm text-destructive">{errorMsg}</p>}
-              <Button className="w-full" onClick={resendConfirmation} disabled={loading || retrySeconds > 0}>
-                {retrySeconds > 0 ? `Resend email in ${retrySeconds}s` : "Resend confirmation email"}
+              <Button variant="outline" className="w-full" onClick={resendConfirmation} disabled={loading || retrySeconds > 0}>
+                {retrySeconds > 0 ? `Resend code in ${retrySeconds}s` : "Resend code"}
               </Button>
               <Button variant="outline" className="w-full" onClick={() => { setConfirmationEmail(null); setMode("signin"); setErrorMsg(null); }}>
                 Back to sign in
