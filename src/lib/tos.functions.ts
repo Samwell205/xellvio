@@ -91,6 +91,16 @@ export const acceptCampaignTos = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Only accept terms for a campaign owned by the business the caller is acting for.
+    const { resolveActingAccount } = await import("./acting-account.server");
+    const acting = await resolveActingAccount(userId);
+    const { data: owned, error: ownErr } = await supabaseAdmin
+      .from("campaigns")
+      .select("id")
+      .eq("id", data.campaignId)
+      .eq("account_id", acting.accountId)
+      .maybeSingle();
+    if (ownErr || !owned) throw new Error("Campaign not found");
     await supabaseAdmin.from("campaign_tos_acceptances").upsert(
       {
         campaign_id: data.campaignId,

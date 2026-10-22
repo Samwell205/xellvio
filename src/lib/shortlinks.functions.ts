@@ -27,6 +27,16 @@ export const createPreviewShortlink = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const acting = await resolveActingAccount(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.campaignId) {
+      // A preview link may only be tied to a campaign of the caller's own business.
+      const { data: owned, error: ownErr } = await supabaseAdmin
+        .from("campaigns")
+        .select("id")
+        .eq("id", data.campaignId)
+        .eq("account_id", acting.accountId)
+        .maybeSingle();
+      if (ownErr || !owned) throw new Error("Campaign not found");
+    }
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = shortCode(8);
       const { error } = await supabaseAdmin.from("link_clicks").insert({
