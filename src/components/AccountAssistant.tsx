@@ -441,11 +441,11 @@ export function AccountAssistant({
                         ? "Expired"
                         : "Review"}
                   </h2>
-                  <span className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">
                     {op.kind === "campaign_draft" && op.status === "completed"
                       ? "campaign"
                       : op.kind.replaceAll("_", " ")}
-                  </span>
+                  </Badge>
                 </div>
                 {op.kind === "contact_import" ? (
                   <p className="text-sm">
