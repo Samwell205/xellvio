@@ -663,8 +663,16 @@ function NewCampaignPage() {
       status: targetStatus,
     };
     if (campaignId) {
-      const { error } = await supabase.from("campaigns").update(payload).eq("id", campaignId);
+      // Saves never touch a campaign that has left draft (launched, sent,
+      // cancelled); a late autosave must not revert a sent campaign to draft.
+      const { data: updated, error } = await supabase
+        .from("campaigns")
+        .update(payload)
+        .eq("id", campaignId)
+        .eq("status", "draft")
+        .select("id");
       if (error) throw error;
+      if (!updated?.length) return null;
       return campaignId;
     }
     const { data, error } = await supabase.from("campaigns").insert(payload).select("id").single();
