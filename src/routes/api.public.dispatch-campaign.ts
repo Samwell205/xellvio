@@ -1103,19 +1103,28 @@ async function deliverPending(
     }
     // A healthy claim lets the batch size creep back up.
     if (claimChunk < MAX_CLAIM_CHUNK) claimChunk = Math.min(MAX_CLAIM_CHUNK, claimChunk * 2);
-    const rows = batch ?? [];
+    const rows = claim.rows;
     if (rows.length === 0) break;
+    // Recheck the gate just before the provider calls in this chunk: a
+    // pause/cancel that landed after the claim must stop these sends. Any
+    // state read failure defers the whole chunk back to the queue.
+    const chunkState = await spamGateState(supabaseAdmin, campaign.id);
+    if (!chunkState || (chunkState.enrolled && chunkState.state !== "monitoring" && chunkState.state !== "released")) {
+      unsent.push(...rows.map((m: any) => m.id));
+      gateExhausted = true;
+      break;
+    }
     claimedTotal += rows.length;
     let rateLimitHits = 0;
     await runWithConcurrency(rows, effectiveConcurrency, async (m: any) => {
       if (gateExhausted || !canStartDispatchSend(hardDeadline)) { unsent.push(m.id); return; }
-      // Gated campaigns: each carrier submission needs one of the 25 initial
-      // gate slots BEFORE the paid claim/provider call. "full" waits for
-      // feedback; "unavailable" fails closed (no unguarded send).
+      // Gated campaigns (initial 25 submissions): recheck before EVERY
+      // provider call, so a pause landing mid-chunk stops the next call.
       if (gateMode === "gated") {
-        const { tryClaimGateSubmission } = await import("@/lib/carrier-spam-guard.server");
-        const slot = await tryClaimGateSubmission(supabaseAdmin, campaign.id);
-        if (slot !== "claimed") { gateExhausted = true; unsent.push(m.id); return; }
+        const st = await spamGateState(supabaseAdmin, campaign.id);
+        if (!st || (st.enrolled && st.state !== "monitoring" && st.state !== "released")) {
+          gateExhausted = true; unsent.push(m.id); return;
+        }
       }
       const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
       if (r.ok) { sent++; debited += r.debited; }
