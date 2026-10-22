@@ -145,6 +145,12 @@ function AuthPage() {
         navigate({ href: destination });
       }
     } catch (err) {
+      const e = err as { code?: string; message?: string };
+      if (mode === "signin" && (e?.code === "email_not_confirmed" || /email not confirmed/i.test(e?.message ?? ""))) {
+        setConfirmationEmail(email.trim());
+        setPassword("");
+        return;
+      }
       const seconds = authCooldownSeconds(err);
       if (seconds) setRetryAt(Date.now() + seconds * 1000);
       const message = friendlyAuthError(err);
