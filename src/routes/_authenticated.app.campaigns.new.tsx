@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountId } from "@/hooks/useAccountId";
 import { readCampaignAccount } from "@/lib/campaign-account";
+import { assistantLaunchStep } from "@/lib/assistant-launch";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { getActiveCountryRatesRaw } from "@/lib/public-pricing.functions";
 import { createPreviewShortlink } from "@/lib/shortlinks.functions";
@@ -68,7 +69,7 @@ const TRACKED_SHORT_URL = /^https?:\/\/[a-zA-Z0-9.-]+\/r\/[a-zA-Z0-9]{4,16}$/;
 export const Route = createFileRoute("/_authenticated/app/campaigns/new")({
   head: () => ({ meta: [{ title: "New campaign — Xellvio" }, { name: "description", content: "Prepare and review your business SMS campaign in Xellvio." }, { property: "og:title", content: "New campaign — Xellvio" }, { property: "og:description", content: "Prepare and review your business SMS campaign." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   validateSearch: (s: Record<string, unknown>) =>
-    z.object({ id: z.string().uuid().optional() }).parse(s),
+    z.object({ id: z.string().uuid().optional(), launch: z.boolean().optional() }).parse(s),
   component: NewCampaignPage,
 });
 
@@ -141,6 +142,7 @@ function NewCampaignPage() {
   const accountId = useAccountId();
   const search = useSearch({ from: "/_authenticated/app/campaigns/new" });
   const editingCampaignId = search.id ?? null;
+  const quickLaunch = search.launch === true && !!editingCampaignId;
   const [step, setStep] = useState<StepIdx>(0);
   const [campaignId, setCampaignId] = useState<string | null>(editingCampaignId);
   const [s, setS] = useState<State>({
@@ -175,6 +177,7 @@ function NewCampaignPage() {
         .maybeSingle();
       if (data) {
         const aud: any = data.audience ?? {};
+        setStep(assistantLaunchStep({ requested: quickLaunch, status: data.status, name: data.name ?? "", body: data.message_body ?? "", hasAudience: [aud.include, aud.profile_ids, aud.list_ids].some(ids => Array.isArray(ids) && ids.length > 0) }));
         setS((prev) => ({
           ...prev,
           name: data.name ?? "",
@@ -762,10 +765,10 @@ function NewCampaignPage() {
         <div>
           <h1 className="text-2xl font-extrabold flex items-center gap-2">
             <Megaphone className="size-6" />
-            {campaignId ? "Edit campaign" : "New campaign"}
+            {quickLaunch ? "Send campaign" : campaignId ? "Edit campaign" : "New campaign"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            5-step builder. Drafts autosave as you go.
+            {quickLaunch ? "Final confirmation" : "Campaign draft"}
           </p>
         </div>
         {autoSaved && (
@@ -815,7 +818,7 @@ function NewCampaignPage() {
         </Card>
       )}
 
-      <Stepper step={step} />
+      {!quickLaunch && <Stepper step={step} />}
 
       {step === 0 && (
         <Card className="p-5 sm:p-6 space-y-6">
@@ -1163,8 +1166,7 @@ function NewCampaignPage() {
                   <>Daily test limit reached. You can proceed without another test today.</>
                 ) : (
                   <>
-                    A test send is <b>required</b> before launch. Large campaigns also start with a
-                    25-recipient carrier check before the remaining audience is released.
+                    A test send is <b>required</b> before launch.
                   </>
                 )}
               </div>
@@ -1302,7 +1304,7 @@ function NewCampaignPage() {
               className="mt-0.5"
             />
             <span className="leading-snug">
-              <strong>Required before launch —</strong> I confirm that every recipient in this
+              <strong>Required before launch —</strong> Normal sending charges and opt-outs apply. I confirm that every recipient in this
               campaign has opted in to receive SMS from me, that the message content complies with
               the Xellvio Acceptable Use Policy and carrier SHAFT rules, and that I accept full
               liability for any carrier penalties, fines, or number suspensions that arise from this
@@ -1318,7 +1320,7 @@ function NewCampaignPage() {
           disabled={step === 0}
           onClick={() => setStep((step - 1) as StepIdx)}
         >
-          <ChevronLeft className="size-4 mr-1" /> Back
+          <ChevronLeft className="size-4 mr-1" /> {quickLaunch && step === 3 ? "Edit details" : "Back"}
         </Button>
         <div className="flex gap-2">
           {step === 4 ? (
@@ -1328,9 +1330,9 @@ function NewCampaignPage() {
               </Button>
               <Button
                 onClick={() => saveCampaign(true)}
-                disabled={saving || !balanceReady || insufficient || hasMissingSender || !complianceAccepted}
+                disabled={saving || !balanceReady || insufficient || hasMissingSender || !complianceAccepted || (!s.testSent && !testLimitReached)}
               >
-                {s.sendMode === "now" ? "Launch now" : "Schedule"}
+                {saving ? "Checking…" : s.sendMode === "now" ? "Confirm & send" : "Confirm & schedule"}
               </Button>
             </>
           ) : (
