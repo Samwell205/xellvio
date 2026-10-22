@@ -1,3 +1,4 @@
+import { priceCustomTopUp } from "@/lib/custom-topup";
 import { resolveBillingAccount } from "./billing-account.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -129,14 +130,12 @@ export const initNowPaymentsCheckout = createServerFn({ method: "POST" })
 export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { amount: number; coin?: string }) => {
-    const a = Number(d?.amount);
-    if (!Number.isFinite(a)) throw new Error("amount required");
-    if (a < 5) throw new Error("Minimum is $5");
-    if (a > 10000) throw new Error("Maximum is $10,000");
+    priceCustomTopUp(d?.amount);
     if (d.coin && !ALLOWED_COINS.includes(d.coin)) throw new Error("Unsupported coin");
-    return { amount: Math.round(a * 100) / 100, coin: d.coin };
+    return { amount: Number(d.amount), coin: d.coin };
   })
   .handler(async ({ data, context }) => {
+    const priced = priceCustomTopUp(data.amount);
     const acting = await resolveBillingAccount(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: payment, error: payErr } = await supabaseAdmin
@@ -146,8 +145,8 @@ export const initNowPaymentsCheckoutCustom = createServerFn({ method: "POST" })
         pack_id: null,
         provider: "nowpayments",
         currency: "USD",
-        amount: data.amount,
-        credits: data.amount,
+        amount: priced.amountUsd,
+        credits: priced.credits,
         status: "pending",
         metadata: { payer_user_id: context.userId, coin: data.coin ?? null, custom: true },
       })

@@ -1,3 +1,4 @@
+import { priceCustomTopUp } from "@/lib/custom-topup";
 import { resolveBillingAccount } from "./billing-account.server";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
@@ -44,10 +45,7 @@ export const createCardCreditCheckout = createServerFn({ method: "POST" })
     if (!trusted && !local) throw new Error("Invalid return URL");
     d = { ...d, returnUrl: `${ru.origin}${ru.pathname}` };
     if (!d.packId) {
-      const a = Number(d.amount);
-      if (!Number.isFinite(a) || a < 5) throw new Error("Minimum is $5");
-      if (a > 10000) throw new Error("Maximum is $10,000");
-      return { returnUrl: d.returnUrl, amount: Math.round(a * 100) / 100 };
+      return { returnUrl: d.returnUrl, amount: priceCustomTopUp(d.amount).amountUsd };
     }
     return { returnUrl: d.returnUrl, packId: d.packId };
   })
