@@ -33,7 +33,7 @@
 - Inbound voice reuses saved instructions, server-owned transfer destinations and startup-failure cleanup; billing excludes ringing time.
 - Assisted number requests atomically create tickets and debit credits; retries reuse open requests and admin completion requires the exact carrier-approved number, without bypassing SMS or pilot gates.
 - Account assistant uses route-owned persisted threads and transactional, on-screen-confirmed proposals; campaigns remain drafts until the existing launch review. Website voice shares authenticated tools through a persistent relay; model output never authorizes mutations.
-- Assistant campaign send shortcuts reuse the campaign builder's test and final-confirmation stages via validated search state; never auto-launch from chat or bypass normal screening, sender, credit and consent checks.
+- Assistant campaign sending uses an in-conversation test choice and exact final review with authenticated, expiry-bound transactional queueing; reuse test SMS and normal dispatch, never auto-launch from model output or bypass screening, sender, credit or consent checks. Advanced media/tracking drafts retain the builder's exact-preview flow.
 - Short links use indexed destinations and context-owned tracking; dispatch uses persisted message IDs and bounded requests to avoid orphan links and timeout losses.
 - Public signup CTAs use `/auth?mode=signup`.
 - Billing/test SMS use the acting business to avoid teammate mismatches: billing permission and separate payer; tests use business sender/profile/opt-outs/compliance, per-user quotas.

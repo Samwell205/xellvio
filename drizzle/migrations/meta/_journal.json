@@ -162,6 +162,13 @@
       "when": 1792674863304,
       "tag": "0022_assistant_account_edit_confirmation",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792676236813,
+      "tag": "0023_assistant_campaign_launch_confirmation",
+      "breakpoints": true
     }
   ]
 }

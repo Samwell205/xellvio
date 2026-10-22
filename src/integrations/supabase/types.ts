@@ -7907,6 +7907,17 @@ export type Database = {
         Args: { _account_id: string; _id: string; _user_id: string }
         Returns: Json
       }
+      confirm_assistant_campaign_launch: {
+        Args: {
+          _account_id: string
+          _choice: string
+          _id: string
+          _tos_version: string
+          _user_agent: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       confirm_assistant_operation: {
         Args: {
           _account_id: string
