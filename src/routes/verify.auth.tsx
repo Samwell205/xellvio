@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { pageHead } from "@/lib/seo";
+import { EMAIL_CONFIRMATION_MESSAGE, signupNeedsConfirmation } from "@/lib/signup-flow";
 
 export const Route = createFileRoute("/verify/auth")({
   head: () =>
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/verify/auth")({
       title: "Verifier sign in",
       description: "Sign in to the Xellvio verification program.",
       robots: "noindex",
+      image: null,
     }),
   validateSearch: (s: Record<string, unknown>) =>
     z.object({ tab: z.enum(["signin", "signup"]).optional() }).parse(s),
@@ -36,6 +38,7 @@ function VerifierAuth() {
   const [busy, setBusy] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
+  const [confirmationPending, setConfirmationPending] = useState(false);
 
   async function sendResetEmail() {
     if (!forgotEmail) return;
@@ -82,17 +85,18 @@ function VerifierAuth() {
         toast.error("Passwords do not match.");
         return;
       }
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email: signupEmail,
         password: signupPassword,
-        options: { data: { full_name: signupName } },
+        options: { data: { full_name: signupName }, emailRedirectTo: `${window.location.origin}/verify/auth` },
       });
       if (signUpError) throw signUpError;
-      const { error } = await supabase.auth.signInWithPassword({
-        email: signupEmail,
-        password: signupPassword,
-      });
-      if (error) throw error;
+      if (signupNeedsConfirmation(data)) {
+        setConfirmationPending(true);
+        setSignupPassword("");
+        setSignupPasswordConfirm("");
+        return;
+      }
       toast.success("Welcome!");
       navigate({ to: "/verify/dashboard" });
     } catch (e: any) {
@@ -190,6 +194,7 @@ function VerifierAuth() {
               </TabsContent>
 
               <TabsContent value="signup" className="space-y-3 pt-4">
+                {confirmationPending && <p role="status" className="text-sm">{EMAIL_CONFIRMATION_MESSAGE}</p>}
                 <div>
                   <Label>Full name</Label>
                   <Input
@@ -231,7 +236,7 @@ function VerifierAuth() {
                 <Button
                   className="w-full"
                   disabled={
-                    busy || !signupName || !signupEmail || !signupPassword || !signupPasswordConfirm
+                    busy || confirmationPending || !signupName || !signupEmail || !signupPassword || !signupPasswordConfirm
                   }
                   onClick={signUp}
                 >

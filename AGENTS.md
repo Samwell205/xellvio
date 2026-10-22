@@ -36,6 +36,7 @@
 - Assistant campaign sending uses an in-conversation test choice and exact final review with authenticated, expiry-bound transactional queueing; reuse test SMS and normal dispatch, never auto-launch from model output or bypass screening, sender, credit or consent checks. Advanced media/tracking drafts retain the builder's exact-preview flow.
 - Short links use indexed destinations and context-owned tracking; dispatch uses persisted message IDs and bounded requests to avoid orphan links and timeout losses.
 - Public signup CTAs use `/auth?mode=signup`.
+- Signup uses the returned auth session; without one, show email confirmation rather than attempting password sign-in. Email-triggering signup requests are never automatically retried, and resend controls honor service cooldowns.
 - Billing/test SMS use the acting business to avoid teammate mismatches: billing permission and separate payer; tests use business sender/profile/opt-outs/compliance, per-user quotas.
 - Lifting a sending hold requeues only campaigns that hold paused (HOLD_PAUSE_FILTER, owner rule) and they are re-screened; dispatcher slots re-read live status, use status-conditional writes, and claim screening once per campaign+content (dispatch-campaign-guard.ts) so stale workers can't add abuse strikes.
 

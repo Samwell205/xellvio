@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { withAuthRetry, friendlyAuthError, clearStaleSession } from "@/lib/auth-retry";
 import { pageHead } from "@/lib/seo";
 import { trackProduct } from "@/lib/growth/track";
+import { authCooldownSeconds, EMAIL_CONFIRMATION_MESSAGE, signupNeedsConfirmation } from "@/lib/signup-flow";
 
 export const Route = createFileRoute("/auth")({
   head: () =>
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/auth")({
       title: "Sign in",
       description: "Sign in or create your Xellvio account.",
       robots: "noindex",
+      image: null,
     }),
   validateSearch: (
     search: Record<string, unknown>,
@@ -42,10 +44,26 @@ function AuthPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
+  const [retryAt, setRetryAt] = useState(0);
+  const [retrySeconds, setRetrySeconds] = useState(0);
+  const submitting = useRef(false);
+
+  useEffect(() => {
+    const update = () => setRetrySeconds(Math.max(0, Math.ceil((retryAt - Date.now()) / 1000)));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [retryAt]);
 
   useEffect(() => {
     setMode(search.mode ?? "signin");
-    setErrorMsg(null);
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("error") || params.has("error_description")) {
+      setErrorMsg("That sign-in link could not be completed. Try Google again, or sign in with your email and password.");
+    } else {
+      setErrorMsg(null);
+    }
   }, [search.mode]);
 
   useEffect(() => {
@@ -60,6 +78,7 @@ function AuthPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submitting.current || Date.now() < retryAt) return;
     setErrorMsg(null);
     if (mode === "signup") {
       if (!termsAccepted) {
@@ -77,24 +96,30 @@ function AuthPage() {
         return;
       }
     }
+    submitting.current = true;
     setLoading(true);
     try {
       // A locally stored session with a dead refresh token makes supabase-js fire
       // failing refresh calls that surface as "Failed to fetch" during sign-in.
       await clearStaleSession();
       if (mode === "signup") {
-        const { error: signUpError } = await withAuthRetry(() =>
-          supabase.auth.signUp({
+        // Signup sends an email: never automatically repeat an ambiguous request.
+        const { data: signupData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
-            options: { data: { full_name: name } },
-          }),
-        );
+            options: {
+              data: { full_name: name },
+              emailRedirectTo: `${window.location.origin}/auth?redirect=${encodeURIComponent(destination)}`,
+            },
+          });
         if (signUpError) throw signUpError;
-        const { error } = await withAuthRetry(() =>
-          supabase.auth.signInWithPassword({ email, password }),
-        );
-        if (error) throw error;
+        if (signupNeedsConfirmation(signupData)) {
+          setConfirmationEmail(email.trim());
+          setRetryAt(Date.now() + 60_000);
+          setPassword("");
+          setConfirmPassword("");
+          return;
+        }
         // Ensure the accounts row exists BEFORE recording ToS acceptance —
         // otherwise the accounts.update in acceptTos matches 0 rows and the
         // re-acceptance modal fires immediately for brand-new signups.
@@ -119,10 +144,36 @@ function AuthPage() {
         navigate({ href: destination });
       }
     } catch (err) {
+      const seconds = authCooldownSeconds(err);
+      if (seconds) setRetryAt(Date.now() + seconds * 1000);
       const message = friendlyAuthError(err);
       setErrorMsg(message);
       toast.error(message);
     } finally {
+      submitting.current = false;
+      setLoading(false);
+    }
+  }
+
+  async function resendConfirmation() {
+    if (!confirmationEmail || submitting.current || Date.now() < retryAt) return;
+    submitting.current = true;
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup", email: confirmationEmail,
+        options: { emailRedirectTo: `${window.location.origin}/auth?redirect=${encodeURIComponent(destination)}` },
+      });
+      if (error) throw error;
+      setRetryAt(Date.now() + 60_000);
+      toast.success("Confirmation email sent. Check your inbox and spam folder.");
+    } catch (error) {
+      const seconds = authCooldownSeconds(error);
+      if (seconds) setRetryAt(Date.now() + seconds * 1000);
+      setErrorMsg(friendlyAuthError(error));
+    } finally {
+      submitting.current = false;
       setLoading(false);
     }
   }
@@ -213,7 +264,20 @@ function AuthPage() {
           <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
             <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />
           </div>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {confirmationEmail ? (
+            <div className="space-y-4" role="status">
+              <h2 className="font-semibold">Confirm your email</h2>
+              <p className="text-sm text-muted-foreground">{EMAIL_CONFIRMATION_MESSAGE}</p>
+              <p className="text-sm break-all">{confirmationEmail}</p>
+              {errorMsg && <p role="alert" className="text-sm text-destructive">{errorMsg}</p>}
+              <Button className="w-full" onClick={resendConfirmation} disabled={loading || retrySeconds > 0}>
+                {retrySeconds > 0 ? `Resend email in ${retrySeconds}s` : "Resend confirmation email"}
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => { setConfirmationEmail(null); setMode("signin"); setErrorMsg(null); }}>
+                Back to sign in
+              </Button>
+            </div>
+          ) : <form onSubmit={handleSubmit} className="space-y-4">
             {errorMsg && (
               <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
                 {errorMsg}
@@ -348,18 +412,20 @@ function AuthPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={loading || passwordMismatch || (mode === "signup" && !termsAccepted)}
+              disabled={loading || retrySeconds > 0 || passwordMismatch || (mode === "signup" && !termsAccepted)}
             >
               {loading && <Loader2 className="size-4 animate-spin mr-2" />}
-              {mode === "signin" ? "Sign in" : "Create account"}
+              {retrySeconds > 0 ? `Try again in ${retrySeconds}s` : mode === "signin" ? "Sign in" : "Create account"}
             </Button>
-          </form>
+          </form>}
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "signin" ? "No account?" : "Have an account?"}{" "}
             <button
               type="button"
               onClick={() => {
                 setMode(mode === "signin" ? "signup" : "signin");
+                setConfirmationEmail(null);
+                setErrorMsg(null);
               }}
               className="text-primary font-medium hover:underline"
             >
