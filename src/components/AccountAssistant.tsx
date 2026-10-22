@@ -586,29 +586,21 @@ export function AccountAssistant({
               </article>
             );
           })}
-      </section>
-      <footer className="mx-auto w-full max-w-3xl space-y-3 p-4 md:p-5">
-        <div className="flex flex-wrap gap-2">
-          <input
-            hidden
-            ref={fileRef}
-            type="file"
-            accept=".csv,.txt"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) void fileChange(file);
-            }}
-          />
-          <Button
-            aria-label="Upload"
-            variant="outline"
-            disabled={fileBusy || generating || speaking || !!pendingUpload}
-            onClick={() => fileRef.current?.click()}
-          >
-            <Upload />
-            {fileBusy ? "Inspecting…" : "Upload"}
-          </Button>
-        </div>
+            </div>
+          )}
+        </section>
+      )}
+      <footer className="mx-auto w-full max-w-3xl p-4 md:p-5">
+        <input
+          hidden
+          ref={fileRef}
+          type="file"
+          accept=".csv,.txt"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void fileChange(file);
+          }}
+        />
         <PromptInput className="assistant-composer" onSubmit={submitInput}>
           <PromptInputTextarea
             ref={inputRef}
