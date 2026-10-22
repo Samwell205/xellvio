@@ -2475,6 +2475,221 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_spam_email_outbox: {
+        Row: {
+          account_id: string
+          attempts: number
+          campaign_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          next_retry_at: string | null
+          payload: Json | null
+          queue_message_id: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          attempts?: number
+          campaign_id: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          next_retry_at?: string | null
+          payload?: Json | null
+          queue_message_id?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          attempts?: number
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          next_retry_at?: string | null
+          payload?: Json | null
+          queue_message_id?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_spam_email_outbox_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaign_spam_incidents"
+            referencedColumns: ["campaign_id"]
+          },
+        ]
+      }
+      campaign_spam_incidents: {
+        Row: {
+          account_id: string
+          campaign_id: string
+          created_at: string
+          finalized: number
+          kind: string
+          paused: boolean
+          recipient_email: string | null
+          remaining_count: number | null
+          spam: number
+          submission_state: string
+          submitted_count: number
+        }
+        Insert: {
+          account_id: string
+          campaign_id: string
+          created_at?: string
+          finalized: number
+          kind: string
+          paused: boolean
+          recipient_email?: string | null
+          remaining_count?: number | null
+          spam: number
+          submission_state: string
+          submitted_count: number
+        }
+        Update: {
+          account_id?: string
+          campaign_id?: string
+          created_at?: string
+          finalized?: number
+          kind?: string
+          paused?: boolean
+          recipient_email?: string | null
+          remaining_count?: number | null
+          spam?: number
+          submission_state?: string
+          submitted_count?: number
+        }
+        Relationships: []
+      }
+      campaign_spam_monitors: {
+        Row: {
+          account_id: string
+          campaign_id: string
+          enrolled_at: string
+          expected_total: number | null
+          finalized_count: number
+          spam_count: number
+          state: string
+          submitted_count: number
+          updated_at: string
+          waiting_since: string | null
+        }
+        Insert: {
+          account_id: string
+          campaign_id: string
+          enrolled_at?: string
+          expected_total?: number | null
+          finalized_count?: number
+          spam_count?: number
+          state?: string
+          submitted_count?: number
+          updated_at?: string
+          waiting_since?: string | null
+        }
+        Update: {
+          account_id?: string
+          campaign_id?: string
+          enrolled_at?: string
+          expected_total?: number | null
+          finalized_count?: number
+          spam_count?: number
+          state?: string
+          submitted_count?: number
+          updated_at?: string
+          waiting_since?: string | null
+        }
+        Relationships: []
+      }
+      campaign_spam_receipt_invalidations: {
+        Row: {
+          campaign_id: string
+          id: string
+          message_id: string
+        }
+        Insert: {
+          campaign_id: string
+          id?: string
+          message_id: string
+        }
+        Update: {
+          campaign_id?: string
+          id?: string
+          message_id?: string
+        }
+        Relationships: []
+      }
+      campaign_spam_receipts: {
+        Row: {
+          campaign_id: string
+          error_code: string | null
+          finalized_at: string | null
+          message_id: string
+          provider_message_id: string
+          provider_status: string | null
+          recorded_at: string
+        }
+        Insert: {
+          campaign_id: string
+          error_code?: string | null
+          finalized_at?: string | null
+          message_id: string
+          provider_message_id: string
+          provider_status?: string | null
+          recorded_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          error_code?: string | null
+          finalized_at?: string | null
+          message_id?: string
+          provider_message_id?: string
+          provider_status?: string | null
+          recorded_at?: string
+        }
+        Relationships: []
+      }
+      campaign_spam_reservations: {
+        Row: {
+          attempt_number: number
+          campaign_id: string
+          message_id: string
+          reserved_at: string
+        }
+        Insert: {
+          attempt_number: number
+          campaign_id: string
+          message_id: string
+          reserved_at?: string
+        }
+        Update: {
+          attempt_number?: number
+          campaign_id?: string
+          message_id?: string
+          reserved_at?: string
+        }
+        Relationships: []
+      }
+      campaign_spam_rollout: {
+        Row: {
+          activated_at: string
+          singleton: boolean
+        }
+        Insert: {
+          activated_at?: string
+          singleton?: boolean
+        }
+        Update: {
+          activated_at?: string
+          singleton?: boolean
+        }
+        Relationships: []
+      }
       campaign_test_sends: {
         Row: {
           created_at: string
@@ -7889,6 +8104,99 @@ export type Database = {
       select_receptionist_assistant: {
         Args: { _account_id: string; _assistant_id: string }
         Returns: undefined
+      }
+      spam_gate_can_send: { Args: { _campaign_id: string }; Returns: boolean }
+      spam_gate_claim: {
+        Args: { _campaign_id: string; _limit: number }
+        Returns: {
+          attempt_number: number
+          cost: number
+          country_code: string
+          force_sms: boolean
+          id: string
+          phone_e164: string
+          rendered_body: string
+          segments_count: number
+        }[]
+      }
+      spam_gate_do_pause: {
+        Args: { _campaign_id: string; _kind: string }
+        Returns: undefined
+      }
+      spam_gate_enroll: { Args: { _campaign_id: string }; Returns: boolean }
+      spam_gate_outbox_due: {
+        Args: { _limit: number }
+        Returns: {
+          account_id: string
+          attempts: number
+          campaign_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          next_retry_at: string | null
+          payload: Json | null
+          queue_message_id: number | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "campaign_spam_email_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      spam_gate_outbox_enqueue: {
+        Args: { _outbox_id: string; _payload: Json }
+        Returns: number
+      }
+      spam_gate_outbox_mark: {
+        Args: {
+          _error: string
+          _expected_status: string
+          _outbox_id: string
+          _retry_delay_seconds: number
+          _status: string
+        }
+        Returns: boolean
+      }
+      spam_gate_record_receipt: {
+        Args: {
+          _campaign_id: string
+          _error_code: string
+          _finalized_at: string
+          _message_id: string
+          _provider_message_id: string
+          _provider_status: string
+        }
+        Returns: string
+      }
+      spam_gate_refresh: { Args: { _campaign_id: string }; Returns: undefined }
+      spam_gate_resume_timeout: {
+        Args: {
+          _account_id: string
+          _body: string
+          _campaign_id: string
+          _status: string
+        }
+        Returns: boolean
+      }
+      spam_gate_set_expected_total: {
+        Args: { _campaign_id: string; _total: number }
+        Returns: undefined
+      }
+      spam_gate_state: {
+        Args: { _campaign_id: string }
+        Returns: {
+          enrolled: boolean
+          expected_total: number
+          finalized_count: number
+          outstanding_count: number
+          spam_count: number
+          state: string
+          submitted_count: number
+          waiting_since: string
+        }[]
       }
       submit_assisted_number_request: {
         Args: {
