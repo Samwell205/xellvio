@@ -1,3 +1,4 @@
+import { priceCustomTopUp } from "@/lib/custom-topup";
 import { resolveBillingAccount } from "./billing-account.server";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
@@ -43,10 +44,7 @@ export const createPaddleCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { packId?: string; amount?: number }) => {
     if (d.packId) return { packId: d.packId };
-    const a = Number(d.amount);
-    if (!Number.isFinite(a) || a < 5) throw new Error("Minimum is $5");
-    if (a > 10000) throw new Error("Maximum is $10,000");
-    return { amount: Math.round(a * 100) / 100 };
+    return { amount: priceCustomTopUp(d.amount).amountUsd };
   })
   .handler(async ({ data, context }): Promise<CheckoutResult> => {
     const acting = await resolveBillingAccount(context.userId);
@@ -86,11 +84,10 @@ export const createPaddleCheckout = createServerFn({ method: "POST" })
       if (!priceId) return { error: "This pack is not available for card checkout" };
       quantity = 1;
     } else {
-      amountUsd = Number((data as { amount: number }).amount);
-      credits = amountUsd;
+      ({ amountUsd, credits } = priceCustomTopUp((data as { amount: number }).amount));
       label = `${amountUsd} USD credits`;
       priceId = "price_custom_credit";
-      quantity = Math.round(amountUsd);
+      quantity = amountUsd;
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
