@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountId } from "@/hooks/useAccountId";
 import { readCampaignAccount } from "@/lib/campaign-account";
-import { assistantLaunchStep } from "@/lib/assistant-launch";
+import { assistantLaunchStep, campaignDraftResumeStep } from "@/lib/assistant-launch";
 import { sendTestSms, getTestSendUsage } from "@/lib/sms.functions";
 import { getActiveCountryRatesRaw } from "@/lib/public-pricing.functions";
 import { createPreviewShortlink } from "@/lib/shortlinks.functions";
@@ -164,6 +164,13 @@ function NewCampaignPage() {
     trackLinks: false,
   });
 
+  // True once a draft has been applied to the form. When autosave creates the
+  // draft it also writes ?id= into the URL; the resulting refetch must not
+  // clobber newer in-progress typing or reset the step.
+  const draftHydratedRef = useRef(!!editingCampaignId ? false : true);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   // Load existing draft when editing
   useQuery({
     queryKey: ["campaign-draft", editingCampaignId],
@@ -175,9 +182,13 @@ function NewCampaignPage() {
         .select("*")
         .eq("id", editingCampaignId)
         .maybeSingle();
-      if (data) {
+      if (data && !draftHydratedRef.current) {
+        draftHydratedRef.current = true;
         const aud: any = data.audience ?? {};
-        setStep(assistantLaunchStep({ requested: quickLaunch, status: data.status, name: data.name ?? "", body: data.message_body ?? "", hasAudience: [aud.include, aud.profile_ids, aud.list_ids].some(ids => Array.isArray(ids) && ids.length > 0) }));
+        const hasAudience = [aud.include, aud.profile_ids, aud.list_ids].some(ids => Array.isArray(ids) && ids.length > 0);
+        setStep(quickLaunch
+          ? assistantLaunchStep({ requested: true, status: data.status, name: data.name ?? "", body: data.message_body ?? "", hasAudience })
+          : campaignDraftResumeStep({ status: data.status, name: data.name ?? "", body: data.message_body ?? "", hasAudience, sendMode: data.send_mode ?? "now", scheduleAt: data.schedule_at ?? null }));
         setS((prev) => ({
           ...prev,
           name: data.name ?? "",
