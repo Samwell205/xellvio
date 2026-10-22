@@ -127,6 +127,13 @@
       "when": 1792514949978,
       "tag": "0017_independent_assistant_controls",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792655369207,
+      "tag": "0018_campaign_spam_monitor_gate",
+      "breakpoints": true
     }
   ]
 }
