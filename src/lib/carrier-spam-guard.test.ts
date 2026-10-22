@@ -34,7 +34,7 @@ const DISPATCHABLE = ["queued", "sending", "processing", "scheduled"];
 
 type FakeOpts = {
   campaignStatus?: string;
-  account?: { email?: string | null; contact_email?: string | null; sending_suspended_at?: string | null; onboarding_status?: string } | null;
+  account?: { id?: string; email?: string | null; contact_email?: string | null; sending_suspended_at?: string | null; onboarding_status?: string } | null;
   accountError?: boolean;
   suppressed?: string[];
   messageCount?: number; // queued messages available to claim
