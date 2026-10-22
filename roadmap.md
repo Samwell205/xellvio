@@ -1,5 +1,8 @@
 # Roadmap
 
+## Business assistant design (Oct 22)
+- [ ] Polish the assistant welcome, saved conversations and chat with theme-aware styling and reduced-motion support; verify signed-in presentation without sends or publication.
+
 ## Consistent content screening (Oct 21)
 - [x] Confirmed alternating AI passes/blocks for the reported company-information demand. Shared deterministic review flag now blocks it consistently despite tracking-code changes; preview also rejects review flags/unavailable checks. Safeguard tests pass; authenticated preview check returns blocked. Affected tenant UI and real delivery unverified; no messages sent or account reinstated, and changes are not published.
 

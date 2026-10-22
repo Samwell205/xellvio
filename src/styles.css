@@ -356,3 +356,33 @@
   .admin-metric, .admin-nav-item { transition: none; }
   .admin-metric:hover, .admin-nav-item:hover { transform: none; }
 }
+
+/* Business assistant: graphite, clean surfaces and a quiet live signal. */
+:root {
+  --assistant-shadow: 0 12px 32px -20px color-mix(in oklab, var(--foreground) 24%, transparent);
+  --assistant-mark-surface: var(--chat-launcher-surface);
+  --assistant-mark-foreground: var(--chat-launcher-foreground);
+  --assistant-mark-signal: var(--lime);
+}
+.assistant-workspace { font-family: var(--font-dash); letter-spacing: 0; }
+.assistant-workspace h1, .assistant-workspace h2 { letter-spacing: 0; }
+.assistant-mark { position: relative; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 20px; background: var(--assistant-mark-surface); color: var(--assistant-mark-foreground); box-shadow: var(--assistant-shadow); }
+.assistant-signal { position: absolute; right: -8px; bottom: -5px; height: 26px; width: 43px; display: flex; align-items: center; justify-content: center; gap: 4px; border: 3px solid var(--background); border-radius: 7px; background: var(--assistant-mark-signal); }
+.assistant-signal i { width: 3px; height: 8px; background: var(--assistant-mark-surface); border-radius: 2px; animation: assistant-wave 1.8s ease-in-out infinite; }
+.assistant-signal i:nth-child(2) { animation-delay: .16s; }
+.assistant-signal i:nth-child(3) { animation-delay: .32s; }
+.assistant-composer { box-shadow: var(--assistant-shadow); border-radius: 8px; }
+.assistant-start, .assistant-recent, .assistant-thread-link { transition: transform .2s ease, border-color .2s ease, background-color .2s ease; }
+.assistant-start:hover { transform: translateY(-2px); }
+.assistant-recent:hover { border-color: var(--primary); transform: translateY(-2px); }
+.assistant-thread-link:hover { transform: translateX(2px); }
+@keyframes assistant-wave { 0%, 100% { transform: scaleY(.6); } 50% { transform: scaleY(1.35); } }
+@keyframes assistant-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.assistant-arrive { animation: assistant-arrive .5s cubic-bezier(.2,.8,.2,1) both; }
+.assistant-home > .assistant-arrive:nth-child(2) { animation-delay: .08s; }
+.assistant-home > .assistant-arrive:nth-child(3) { animation-delay: .16s; }
+@media (prefers-reduced-motion: reduce) {
+ .assistant-arrive, .assistant-signal i { animation: none; }
+ .assistant-start, .assistant-recent, .assistant-thread-link { transition: none; }
+ .assistant-start:hover, .assistant-recent:hover, .assistant-thread-link:hover { transform: none; }
+}
