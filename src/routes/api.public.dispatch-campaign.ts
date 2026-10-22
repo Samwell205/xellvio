@@ -1002,36 +1002,24 @@ async function planCampaign(
   return { planned: queuedRows.length, skipped: failedRows.length, cost: totalCost };
 }
 
-// Carrier spam-filter refusals (Telnyx 40002 on the receipt) are recorded as
-// message failures. Owner policy (2026-10-22, superseding the earlier
-// never-auto-pause rule): newly monitored campaigns (>25 recipients) release
-// at most 25 initial submissions, then wait for carrier feedback; once >=20
-// distinct finalized receipts exist and >=20% are 40002 spam refusals, the
-// remaining sends are paused and the tenant is notified once. See
-// src/lib/carrier-spam-guard.server.ts. Content screening is unchanged.
+// Carrier feedback is passive: signed final 40002 receipts can pause remaining
+// work and notify the tenant. Dispatch never waits for feedback or applies an
+// additional initial-burst/outstanding cap. Existing sender/provider pacing stays.
 
 async function deliverPending(
   supabaseAdmin: any, campaign: any, sender: Sender,
   limits?: { perTick: number; concurrency: number; deadlineAt?: number },
-): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean; throttled?: boolean; gated?: string }> {
+): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean; throttled?: boolean }> {
   const { data: fresh, error: freshError } = await supabaseAdmin
     .from("campaigns").select("status").eq("id", campaign.id).maybeSingle();
   if (freshError || !fresh || !["queued", "sending", "processing", "scheduled"].includes(fresh.status)) {
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
 
-  // Spam gate: every campaign claims through spam_gate_claim (unenrolled
-  // pre-rollout campaigns are passed through unchanged by the SQL wrapper).
-  // Any gate-state failure defers the campaign — no paid claim or provider
-  // call while the gate is unknown.
-  const { spamGatePrecheck, canSendClaimedCampaignMessage, claimGatedMessages } = await import("@/lib/carrier-spam-guard.server");
-  const gate = await spamGatePrecheck(supabaseAdmin, campaign);
-  if (gate.action !== "proceed") {
-    const { count: pending } = await supabaseAdmin
-      .from("messages").select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
-    return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, gated: gate.action };
-  }
+  // One authoritative check per existing claim chunk: live campaign/account
+  // holds and confirmed carrier incidents stop subsequent chunks. This adds no
+  // per-message RPC or delivery-feedback wait.
+  const { claimGatedMessages } = await import("@/lib/carrier-spam-guard.server");
 
   const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
   // The provider client paces every request through a shared gate, so the real
@@ -1077,9 +1065,6 @@ async function deliverPending(
   let effectiveConcurrency = concurrency;
   let sent = 0, failed = 0, debited = 0, shaftErrors = 0;
   let claimedTotal = 0;
-  // Set when the spam gate runs out of initial slots (or its state becomes
-  // unreadable) mid-tick: stop claiming and hand everything back to queued.
-  let gateExhausted = false;
   const unsent: string[] = [];
   const hardDeadline = limits?.deadlineAt ?? Date.now() + RUN_BUDGET_MS;
   // Flush smaller batches so an externally interrupted worker loses at most a
@@ -1090,8 +1075,8 @@ async function deliverPending(
   while (claimedTotal < claimLimit && canStartDispatchSend(hardDeadline)) {
     const want = Math.min(claimChunk, claimLimit - claimedTotal);
     // The ONLY claim path: spam_gate_claim locks the campaign/monitor rows,
-    // re-checks live status and account hold, and atomically bounds this paid
-    // claim to the gate allowance before invoking claim_campaign_messages.
+    // re-checks live status/account holds and confirmed incident flags before
+    // invoking claim_campaign_messages with the original requested chunk size.
     // There is no fallback to the bare claim — a gate error defers the tick.
     const claim = await claimGatedMessages(supabaseAdmin, campaign.id, want);
     if (!claim.ok) {
@@ -1114,28 +1099,14 @@ async function deliverPending(
     const rows = claim.rows;
     if (rows.length === 0) break;
     claimedTotal += rows.length;
-    // Recheck the gate just before the provider calls in this chunk: a
-    // pause/cancel that landed after the claim must stop these sends. Any
-    // state read failure defers the whole chunk back to the queue.
-    if (!(await canSendClaimedCampaignMessage(supabaseAdmin, campaign.id))) {
-      unsent.push(...rows.map((m: any) => m.id));
-      gateExhausted = true;
-      break;
-    }
     let rateLimitHits = 0;
     await runWithConcurrency(rows, effectiveConcurrency, async (m: any) => {
-      if (gateExhausted || !canStartDispatchSend(hardDeadline)) { unsent.push(m.id); return; }
-      // Recheck all monitored phases before every call, including the
-      // released phase. Calls already in flight may finish after a pause.
-      if (!(await canSendClaimedCampaignMessage(supabaseAdmin, campaign.id))) {
-        gateExhausted = true; unsent.push(m.id); return;
-      }
+      if (!canStartDispatchSend(hardDeadline)) { unsent.push(m.id); return; }
       const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
       if (r.ok) { sent++; debited += r.debited; }
       else if (r.rateLimited) { rateLimitHits++; }
       else { failed++; if (r.shaft) shaftErrors++; }
     });
-    if (gateExhausted) break;
     if (rateLimitHits > 0) {
       // The carrier told us we are pushing too fast. Halve the in-flight
       // requests and pause briefly instead of hammering it — the requeued
@@ -1236,16 +1207,19 @@ async function processCampaign(
     ? await planCampaign(supabaseAdmin, campaign, rates, recipients, isFirstBatch)
     : { planned: 0, skipped: 0, cost: 0 };
 
-  // Planning finished: record the true recipient total so the spam gate's
-  // initial-25 cap applies only to campaigns with more than 25 recipients.
-  if (!hasMore) {
+  // Read authoritative metadata only after a real final planning batch.
+  // Ordinary delivery ticks with no newly planned recipients never add this
+  // campaign-count query. Failure affects notice wording, never send pacing.
+  if (shouldPlan && planningLookupSucceeded && !hasMore && recipients.length > 0) {
     try {
-      const { count: total } = await supabaseAdmin
+      const { count: total, error: totalError } = await supabaseAdmin
         .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
-      const { setSpamGateExpectedTotal } = await import("@/lib/carrier-spam-guard.server");
-      await setSpamGateExpectedTotal(supabaseAdmin, campaign.id, total ?? 0);
+      if (!totalError && total != null) {
+        const { setSpamGateExpectedTotal } = await import("@/lib/carrier-spam-guard.server");
+        await setSpamGateExpectedTotal(supabaseAdmin, campaign.id, total);
+      }
     } catch (e) {
-      console.error("[dispatch] spam-gate expected-total failed (stays capped — safe)", campaign.id, e);
+      console.error("[dispatch] incident planning metadata unavailable", campaign.id, e);
     }
   }
 

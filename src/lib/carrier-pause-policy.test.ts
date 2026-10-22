@@ -1,10 +1,5 @@
-// Owner rule (2026-10-22, superseding the earlier never-auto-pause decision):
-// repeated carrier spam-filter refusals (40002) pause the REMAINING sends of
-// a newly monitored campaign and notify the tenant — after an initial gated
-// burst of 25 submissions and at least 20 distinct finalized receipts at a
-// >=20% spam ratio. Landline/invalid failures never trigger it, unknown
-// feedback never counts as spam, and these pauses never auto-resume when an
-// account hold is lifted. Guarded here against accidental removal.
+// Owner rule: monitor signed final carrier receipts passively. Repeated 40002
+// results pause remaining sends and notify the tenant; no feedback wait/cap.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -13,7 +8,8 @@ const routeSrc = readFileSync(resolve(__dirname, "../routes/api.public.dispatch-
 
 describe("Carrier spam-rejection pause policy", () => {
   it("the dispatcher is wired to the spam gate (fails if the integration is removed)", () => {
-    expect(routeSrc).toMatch(/spamGatePrecheck\(supabaseAdmin, campaign\)/);
+    expect(routeSrc).not.toMatch(/spamGatePrecheck|spam_gate_can_send|canSendClaimedCampaignMessage/);
+    expect(routeSrc).not.toMatch(/spamGateState\(/);
     // every paid claim goes through the wrapper — never the bare claim
     expect(routeSrc).toMatch(/claimGatedMessages\(supabaseAdmin, campaign\.id/);
     expect(routeSrc).not.toMatch(/rpc\("claim_campaign_messages"/);
@@ -35,8 +31,10 @@ describe("Carrier spam-rejection pause policy", () => {
 
   it("gate thresholds are the owner-chosen values", async () => {
     const g = await import("./carrier-spam-guard");
-    expect(g.SPAM_GATE_MIN_RECIPIENTS).toBe(26); // gate applies above 25 recipients
-    expect(g.SPAM_GATE_INITIAL_SUBMISSIONS).toBe(25);
+    expect("SPAM_GATE_MIN_RECIPIENTS" in g).toBe(false);
+    expect("SPAM_GATE_INITIAL_SUBMISSIONS" in g).toBe(false);
+    expect("SPAM_GATE_OUTSTANDING_ALLOWANCE" in g).toBe(false);
+    expect("SPAM_GATE_FEEDBACK_WAIT_MS" in g).toBe(false);
     expect(g.SPAM_GATE_MIN_FINALIZED).toBe(20);
     expect(g.SPAM_GATE_SPAM_CODE).toBe("40002");
     expect(g.SPAM_GATE_SPAM_RATIO).toBe(0.2);

@@ -64,11 +64,9 @@ export async function checkedResumeCampaign(
     if (verdict.decision === "pause_spam") {
       return { ok: false, code: "carrier_spam_hold", message: `Carrier feedback has arrived and ${st.spam} of ${st.finalized} final results were rejected as spam, so this campaign stays paused.` };
     }
-    if (verdict.decision === "wait") {
-      return { ok: false, code: "carrier_spam_hold", message: `Only ${st.finalized} final carrier results are in so far. The campaign stays paused until enough feedback arrives.` };
-    }
-    // Enough feedback, below the spam threshold: fall through to the normal
-    // fresh content check and the exact-row resume below.
+    // This is an explicit manual resume of a legacy feedback timeout. Missing
+    // feedback no longer delays it; fresh screening and the atomic final check
+    // below still refuse current content/account changes or confirmed spam.
   }
   if (typeof live.message_body !== "string" || !live.message_body.trim()) {
     return { ok: false, code: "read_failed", message: "Could not read this campaign's message, so it stays paused." };

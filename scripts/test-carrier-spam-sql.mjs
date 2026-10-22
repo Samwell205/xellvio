@@ -2,28 +2,31 @@ import {setup} from './tests/carrier-spam-sql/setup.mjs';
 import {readFile,writeFile} from 'node:fs/promises';
 import {seedCampaign,scalar,assert,randomUUID} from './tests/carrier-spam-sql/fixture-helpers.mjs';
 import {createHash} from 'node:crypto';
-const migrationPath=process.argv[2]||new URL('../db-proposals/20261022-campaign-spam-monitor.sql',import.meta.url);
+const migrationPath=process.argv[2]||new URL('../db-proposals/20261022-remove-carrier-feedback-delays.sql',import.meta.url);
+const baseMigrationSQL=await readFile(new URL('../drizzle/migrations/0018_campaign_spam_monitor_gate.sql',import.meta.url),'utf8');
 const migrationSQL=await readFile(migrationPath,'utf8');
+const baseMigrationSha256=createHash('sha256').update(baseMigrationSQL).digest('hex');
 const migrationSha256=createHash('sha256').update(migrationSQL).digest('hex');
 const report=[];
 async function run(name,fn,{realCutoff=false}={}){
  const db=await setup();
- try{await db.exec(migrationSQL); if(!realCutoff&&await scalar(db,`SELECT to_regclass('public.campaign_spam_rollout') IS NOT NULL`))await db.query(`UPDATE campaign_spam_rollout SET activated_at=clock_timestamp()-interval '1 second'`); await fn(db); report.push({name,pass:true});console.log('PASS '+name)}
+ try{await db.exec(baseMigrationSQL); await db.exec(migrationSQL); if(!realCutoff&&await scalar(db,`SELECT to_regclass('public.campaign_spam_rollout') IS NOT NULL`))await db.query(`UPDATE campaign_spam_rollout SET activated_at=clock_timestamp()-interval '1 second'`); await fn(db); report.push({name,pass:true});console.log('PASS '+name)}
  catch(e){report.push({name,pass:false,error:e.message,detail:e.detail,where:e.where});console.log('FAIL '+name+': '+e.message)}
  finally{await db.close()}
 }
 async function enrolled(db,opts){const c=await seedCampaign(db,opts);assert.equal(await scalar(db,'SELECT spam_gate_enroll($1)',[c.campaignId]),true);await db.query('SELECT spam_gate_set_expected_total($1,$2)',[c.campaignId,opts?.size||479]);return c}
-async function claim(db,id,n=500){return (await db.query('SELECT * FROM spam_gate_claim($1,$2)',[id,n])).rows}
+async function claim(db,id,n=25){return (await db.query('SELECT * FROM spam_gate_claim($1,$2)',[id,n])).rows}
 async function providers(db,id){await db.query(`UPDATE messages SET provider_message_id='pid-'||id::text,status='sent' WHERE campaign_id=$1 AND charged_at IS NOT NULL`,[id]);return (await db.query('SELECT id,provider_message_id FROM messages WHERE campaign_id=$1 AND provider_message_id IS NOT NULL ORDER BY created_at',[id])).rows}
 async function receipt(db,c,m,error=null){return scalar(db,'SELECT spam_gate_record_receipt($1,$2,$3,$4,$5,now())',[c,m.id,m.provider_message_id,error,error?'undelivered':'delivered'])}
 async function state(db,c){return (await db.query('SELECT * FROM spam_gate_state($1)',[c])).rows[0]}
 
-await run('12 queued worker calls cap TOTAL paid claims at25 of479',async db=>{
+await run('requested chunks submit all479 without waiting for receipts',async db=>{
  const {campaignId,accountId}=await enrolled(db);
  const rows=await Promise.all(Array.from({length:12},()=>claim(db,campaignId,100)));
- assert.equal(rows.flat().length,25);assert.equal(await scalar(db,'SELECT count(*)::integer FROM message_send_attempts'),25);
- assert.equal(Number(await scalar(db,'SELECT SUM(amount) FROM credit_transactions')),0.3875);
- assert.equal(Number(await scalar(db,'SELECT credit_balance FROM accounts WHERE id=$1',[accountId])),999.6125);
+ assert.equal(rows.flat().length,479);assert.equal(await scalar(db,'SELECT count(*)::integer FROM message_send_attempts'),479);
+ assert.equal(Number(await scalar(db,'SELECT SUM(amount) FROM credit_transactions')),7.4245);
+ assert.equal(Number(await scalar(db,'SELECT credit_balance FROM accounts WHERE id=$1',[accountId])),992.5755);
+ assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),0);
 });
 await run('20 finals with4 spam atomically pause incident andoutbox',async db=>{
  const {campaignId}=await enrolled(db);await claim(db,campaignId);const ms=await providers(db,campaignId);
@@ -32,16 +35,19 @@ await run('20 finals with4 spam atomically pause incident andoutbox',async db=>{
  assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),1);
  assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_email_outbox'),1);
 });
-await run('20 finals with3 spam releases andbounds250 outstanding',async db=>{
+await run('healthy feedback adds no250 outstanding limit',async db=>{
  const {campaignId}=await enrolled(db);await claim(db,campaignId);const ms=await providers(db,campaignId);
  for(let i=0;i<20;i++)await receipt(db,campaignId,ms[i],i<3?'40002':null);
- assert.equal((await claim(db,campaignId)).length,245);assert.equal((await claim(db,campaignId)).length,0);
- const s=await state(db,campaignId);assert.equal(s.state,'released');assert.equal(s.submitted_count-s.finalized_count,250);
+ assert.equal((await claim(db,campaignId,400)).length,400);assert.equal((await claim(db,campaignId,400)).length,54);
+ const s=await state(db,campaignId);assert.equal(s.state,'released');assert.equal(s.submitted_count,479);
+ assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),0);
 });
-await run('feedbacktimeout stopsremainder after10minutes anddoesnotchargeexcess',async db=>{
- const {campaignId}=await enrolled(db);await claim(db,campaignId);await claim(db,campaignId);
+await run('missing feedback and historical wait timestamp do not pause later chunks',async db=>{
+ const {campaignId}=await enrolled(db);await claim(db,campaignId);
  await db.query(`UPDATE campaign_spam_monitors SET waiting_since=now()-interval '11 minutes' WHERE campaign_id=$1`,[campaignId]);
- await claim(db,campaignId);assert.equal((await state(db,campaignId)).state,'paused_timeout');assert.equal(await scalar(db,'SELECT count(*)::integer FROM message_send_attempts'),25);
+ assert.equal((await claim(db,campaignId,400)).length,400);
+ assert.equal(await scalar(db,'SELECT status FROM campaigns WHERE id=$1',[campaignId]),'sending');
+ assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),0);
 });
 await run('pauseorcancelbefore nextchunk preventsnewpaidclaims',async db=>{
  const {campaignId}=await enrolled(db);assert.equal((await claim(db,campaignId,5)).length,5);
@@ -113,7 +119,7 @@ await run('enqueue+outboxmarkrollback anddurablesingleretry',async db=>{
 await run('40001and40012 alone donottrigger spampause',async db=>{
  const {campaignId}=await enrolled(db);await claim(db,campaignId);const ms=await providers(db,campaignId);
  for(let i=0;i<20;i++)await receipt(db,campaignId,ms[i],i%2?'40001':'40012');
- assert.equal((await claim(db,campaignId)).length,245);assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),0);
+ assert.equal((await claim(db,campaignId,400)).length,400);assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),0);
 });
 await run('later badwave beyond1000 retainedfinalfacts stilltriggers',async db=>{
  const {campaignId}=await enrolled(db,{size:1400});
@@ -155,9 +161,9 @@ await run('emptycontactemail fallbacks trimmedaccountemail andsuppressionvisibil
 });
 await run('newSQLRPCs andprivatepause are denied totenantroles',async db=>{
  const rows=(await db.query(`SELECT p.proname,has_function_privilege('authenticated',p.oid,'EXECUTE') AS tenant,has_function_privilege('anon',p.oid,'EXECUTE') AS anon,has_function_privilege('service_role',p.oid,'EXECUTE') AS service FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.proname LIKE 'spam_gate_%'`)).rows;
- const expected=[...migrationSQL.matchAll(/CREATE(?: OR REPLACE)? FUNCTION public\.(spam_gate_\w+)\(/g)].map(x=>x[1]).sort();assert.deepEqual(rows.map(x=>x.proname).sort(),expected);for(const r of rows){assert.equal(r.tenant,false,r.proname);assert.equal(r.anon,false,r.proname);assert.equal(r.service,!['spam_gate_do_pause','spam_gate_refresh','spam_gate_invalidate_provider'].includes(r.proname),r.proname)}
+ const expected=[...new Set([...(baseMigrationSQL+'\n'+migrationSQL).matchAll(/CREATE(?: OR REPLACE)? FUNCTION public\.(spam_gate_\w+)\(/g)].map(x=>x[1]))].sort();assert.deepEqual(rows.map(x=>x.proname).sort(),expected);for(const r of rows){assert.equal(r.tenant,false,r.proname);assert.equal(r.anon,false,r.proname);assert.equal(r.service,!['spam_gate_do_pause','spam_gate_refresh','spam_gate_invalidate_provider'].includes(r.proname),r.proname)}
 });
-await run('full25budget allowsstale prepaidrecovery withoutnewdebit',async db=>{
+await run('original prepaid recovery retains unique attempts without new debit',async db=>{
  const {campaignId}=await enrolled(db);await claim(db,campaignId);
  await db.query(`UPDATE messages SET dispatch_started_at=now()-interval '6 minutes' WHERE campaign_id=$1 AND charged_at IS NOT NULL`,[campaignId]);
  assert.equal((await claim(db,campaignId)).length,25);assert.equal(await scalar(db,'SELECT count(*)::integer FROM message_send_attempts'),25);
@@ -172,20 +178,20 @@ await run('cancelandmanualpause winbefore20thfinal andcreateno carrierincident',
   assert.equal(await scalar(db,'SELECT status FROM campaigns WHERE id=$1',[campaignId]),status);
  }
 });
-await run('timeoutdeliberateresume updatesmonitorandcampaignatomically afterhealthyfeedback',async db=>{
- const {campaignId,accountId}=await enrolled(db);await claim(db,campaignId);const ms=await providers(db,campaignId);await claim(db,campaignId);
- await db.query(`UPDATE campaign_spam_monitors SET waiting_since=now()-interval '11 minutes' WHERE campaign_id=$1`,[campaignId]);await claim(db,campaignId);
- assert.equal((await state(db,campaignId)).state,'paused_timeout');
- for(let i=0;i<20;i++)await receipt(db,campaignId,ms[i]);
+await run('explicit checked legacy timeout resume needs no minimum feedback',async db=>{
+ const {campaignId,accountId}=await enrolled(db);await claim(db,campaignId);
+ await db.query(`UPDATE campaign_spam_monitors SET state='paused_timeout',waiting_since=now()-interval '11 minutes' WHERE campaign_id=$1`,[campaignId]);
+ await db.query(`UPDATE campaigns SET status='paused',paused_reason='Paused: carrier feedback unavailable. Remaining sends stayed stopped.' WHERE id=$1`,[campaignId]);
+ assert.equal((await claim(db,campaignId,400)).length,0);
  assert.equal(await scalar(db,`SELECT spam_gate_resume_timeout($1,$2,'','paused')`,[campaignId,accountId]),true);
  assert.equal(await scalar(db,'SELECT status FROM campaigns WHERE id=$1',[campaignId]),'sending');assert.equal((await state(db,campaignId)).state,'released');
- assert.equal((await claim(db,campaignId)).length,245);
+ assert.equal((await claim(db,campaignId,400)).length,400);
 });
-await run('deliveryunconfirmed withoutfinalfact remainswithin250outstanding',async db=>{
- const {campaignId}=await enrolled(db,{size:1000});await claim(db,campaignId);const ms=await providers(db,campaignId);
- for(let i=0;i<20;i++)await receipt(db,campaignId,ms[i]);assert.equal((await claim(db,campaignId)).length,245);
- await db.query(`UPDATE messages SET status='delivery_unconfirmed',provider_message_id=COALESCE(provider_message_id,'unconfirmed-'||id::text) WHERE campaign_id=$1 AND charged_at IS NOT NULL AND id<>ALL($2::uuid[])`,[campaignId,ms.slice(0,20).map(x=>x.id)]);
- assert.equal((await claim(db,campaignId)).length,0);
+await run('unconfirmed provider results do not throttle the next requested chunk',async db=>{
+ const {campaignId}=await enrolled(db,{size:1000});await claim(db,campaignId);
+ await db.query(`UPDATE messages SET status='delivery_unconfirmed',provider_message_id='unconfirmed-'||id::text WHERE campaign_id=$1 AND charged_at IS NOT NULL`,[campaignId]);
+ assert.equal((await claim(db,campaignId,500)).length,500);
+ assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),0);
 });
 await run('actual2minrolloutdefault excludeslaunchbeforecutoff andallowsaftercutoff',async db=>{
  const seconds=Number(await scalar(db,`SELECT EXTRACT(EPOCH FROM activated_at-clock_timestamp()) FROM campaign_spam_rollout`));assert.ok(seconds>110&&seconds<=121);
@@ -219,29 +225,65 @@ await run('account hold appearingduringpaidclaim rollsbackallwork andreturnsnoro
   await db.exec('DROP TRIGGER inject_hold ON accounts; DROP FUNCTION inject_hold_during_debit()');
  }
 });
-await run('exhaustedinitial25 prepaidrecovery obeysalreadyelapsedfeedbacktimeout',async db=>{
- const {campaignId}=await enrolled(db);await claim(db,campaignId);
- await db.query(`UPDATE messages SET dispatch_started_at=now()-interval '6 minutes' WHERE campaign_id=$1 AND charged_at IS NOT NULL`,[campaignId]);
- await db.query(`UPDATE campaign_spam_monitors SET waiting_since=now()-interval '11 minutes' WHERE campaign_id=$1`,[campaignId]);
- assert.equal((await claim(db,campaignId)).length,0);assert.equal((await state(db,campaignId)).state,'paused_timeout');
- assert.equal(await scalar(db,'SELECT count(*)::integer FROM message_send_attempts'),25);
+await run('original RPC maximum remains1000 without a new carrier cap',async db=>{
+ const {campaignId}=await enrolled(db,{size:1200});
+ assert.equal((await claim(db,campaignId,1500)).length,1000);
+ assert.equal((await claim(db,campaignId,1500)).length,200);
+ assert.equal(await scalar(db,'SELECT count(*)::integer FROM message_send_attempts'),1200);
 });
-await run('freshhealthyreleasedcapacity resetsstalewait beforeallowancerefill',async db=>{
- const {campaignId}=await enrolled(db,{size:1000});await claim(db,campaignId);const ms=await providers(db,campaignId);
- for(let i=0;i<20;i++)await receipt(db,campaignId,ms[i]);assert.equal((await claim(db,campaignId)).length,245);
- await db.query(`UPDATE campaign_spam_monitors SET waiting_since=now()-interval '11 minutes' WHERE campaign_id=$1`,[campaignId]);
- for(let i=20;i<25;i++)await receipt(db,campaignId,ms[i]);
- assert.equal((await claim(db,campaignId)).length,5);assert.equal((await claim(db,campaignId)).length,0);
- const s=await state(db,campaignId);assert.equal(s.state,'released');assert.ok(new Date(s.waiting_since).getTime()>Date.now()-60000);
+await run('ordinary claims never run the full receipt refresh',async db=>{
+ const {campaignId}=await enrolled(db,{size:1000});
+ await db.exec(`CREATE OR REPLACE FUNCTION public.spam_gate_refresh(_campaign_id uuid) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$ BEGIN RAISE EXCEPTION 'unexpected full receipt refresh'; END $$;`);
+ assert.equal((await claim(db,campaignId,500)).length,500);assert.equal((await claim(db,campaignId,500)).length,500);
 });
-await run('timeoutresume missingreason failsclosed afterhealthyfeedback',async db=>{
- const {campaignId,accountId}=await enrolled(db);await claim(db,campaignId);const ms=await providers(db,campaignId);
- await db.query(`UPDATE campaign_spam_monitors SET waiting_since=now()-interval '11 minutes' WHERE campaign_id=$1`,[campaignId]);await claim(db,campaignId);
- for(let i=0;i<20;i++)await receipt(db,campaignId,ms[i]);await db.query('UPDATE campaigns SET paused_reason=NULL WHERE id=$1',[campaignId]);
+await run('legacy timeout resume missing reason fails closed',async db=>{
+ const {campaignId,accountId}=await enrolled(db);
+ await db.query(`UPDATE campaign_spam_monitors SET state='paused_timeout' WHERE campaign_id=$1`,[campaignId]);
+ await db.query(`UPDATE campaigns SET status='paused',paused_reason=NULL WHERE id=$1`,[campaignId]);
  assert.equal(await scalar(db,`SELECT spam_gate_resume_timeout($1,$2,'','paused')`,[campaignId,accountId]),false);
  assert.equal((await state(db,campaignId)).state,'paused_timeout');assert.equal(await scalar(db,'SELECT status FROM campaigns WHERE id=$1',[campaignId]),'paused');
 });
-const summary={migrationPath:String(migrationPath),migrationSha256,limitation:'Single-connection PGlite serializes requests; Promise.all workers do NOT prove multi-session lock behavior. pgmq is a transactional table stub, not an external service. No provider/mail/network calls or production database connections. Most synthetic fixtures move cutoff into the past; dedicated cutoff test checks actual default.',results:report};
+await run('amendment never resumes existing spam or feedback-timeout holds',async db=>{
+ for(const hold of ['paused_spam','paused_timeout']){
+  const {campaignId}=await enrolled(db);
+  await db.query('UPDATE campaign_spam_monitors SET state=$1 WHERE campaign_id=$2',[hold,campaignId]);
+  await db.query(`UPDATE campaigns SET status='paused',paused_reason='Existing deliberate hold' WHERE id=$1`,[campaignId]);
+  await db.exec(migrationSQL);
+  assert.equal(await scalar(db,'SELECT status FROM campaigns WHERE id=$1',[campaignId]),'paused');
+  assert.equal((await state(db,campaignId)).state,hold);assert.equal((await claim(db,campaignId,400)).length,0);
+ }
+});
+await run('confirmed spam during manual pause stops a later resumed chunk',async db=>{
+ const {campaignId}=await enrolled(db);await claim(db,campaignId);const ms=await providers(db,campaignId);
+ for(let i=0;i<19;i++)await receipt(db,campaignId,ms[i],i<4?'40002':null);
+ await db.query(`UPDATE campaigns SET status='paused_by_user' WHERE id=$1`,[campaignId]);await receipt(db,campaignId,ms[19]);
+ assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),0);
+ await db.query(`UPDATE campaigns SET status='sending' WHERE id=$1`,[campaignId]);
+ assert.equal((await claim(db,campaignId,400)).length,0);assert.equal((await state(db,campaignId)).state,'paused_spam');
+ assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),1);
+});
+await run('rare retry invalidation corrects superseded spam facts before claim',async db=>{
+ const {campaignId}=await enrolled(db);await claim(db,campaignId);const ms=await providers(db,campaignId);
+ for(let i=0;i<19;i++)await receipt(db,campaignId,ms[i],i<4?'40002':null);
+ await db.query(`UPDATE campaigns SET status='paused_by_user' WHERE id=$1`,[campaignId]);await receipt(db,campaignId,ms[19]);
+ await db.query(`UPDATE messages SET provider_message_id='new-retry-id' WHERE id=$1`,[ms[0].id]);
+ await db.query(`UPDATE campaigns SET status='sending' WHERE id=$1`,[campaignId]);
+ assert.equal((await claim(db,campaignId,400)).length,400);
+ const s=await state(db,campaignId);assert.equal(s.finalized_count,19);assert.equal(s.spam_count,3);
+ assert.equal(await scalar(db,'SELECT count(*)::integer FROM campaign_spam_incidents'),0);
+});
+await run('legacy timeout manual resume refuses known spam and active account holds',async db=>{
+ const {campaignId,accountId}=await enrolled(db);await claim(db,campaignId);const ms=await providers(db,campaignId);
+ await db.query(`UPDATE campaigns SET status='paused',paused_reason='Paused: carrier feedback unavailable. Remaining sends stayed stopped.' WHERE id=$1`,[campaignId]);
+ await db.query(`UPDATE campaign_spam_monitors SET state='paused_timeout' WHERE campaign_id=$1`,[campaignId]);
+ await db.query('UPDATE accounts SET sending_suspended_at=now() WHERE id=$1',[accountId]);
+ assert.equal(await scalar(db,`SELECT spam_gate_resume_timeout($1,$2,'','paused')`,[campaignId,accountId]),false);
+ await db.query('UPDATE accounts SET sending_suspended_at=NULL WHERE id=$1',[accountId]);
+ for(let i=0;i<20;i++)await receipt(db,campaignId,ms[i],i<4?'40002':null);
+ assert.equal(await scalar(db,`SELECT spam_gate_resume_timeout($1,$2,'','paused')`,[campaignId,accountId]),false);
+ assert.equal(await scalar(db,'SELECT status FROM campaigns WHERE id=$1',[campaignId]),'paused');
+});
+const summary={migrationPath:String(migrationPath),baseMigrationSha256,migrationSha256,limitation:'Single-connection PGlite serializes requests; Promise.all workers do NOT prove multi-session lock behavior. pgmq is a transactional table stub, not an external service. No provider/mail/network calls or production database connections. Most synthetic fixtures move cutoff into the past; dedicated cutoff test checks actual default.',results:report};
 if(process.env.CARRIER_SPAM_SQL_REPORT)await writeFile(process.env.CARRIER_SPAM_SQL_REPORT,JSON.stringify(summary,null,2));
-console.log(JSON.stringify({migrationSha256,passed:report.filter(x=>x.pass).length,failed:report.filter(x=>!x.pass).length,limitation:summary.limitation}));
+console.log(JSON.stringify({baseMigrationSha256,migrationSha256,passed:report.filter(x=>x.pass).length,failed:report.filter(x=>!x.pass).length,limitation:summary.limitation}));
 process.exitCode=report.some(x=>!x.pass)?1:0;

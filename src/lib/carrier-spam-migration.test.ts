@@ -7,7 +7,8 @@ import { resolve } from "node:path";
 import { SPAM_PAUSE_REASON, FEEDBACK_TIMEOUT_REASON } from "./carrier-spam-guard";
 
 const sql = readFileSync(resolve(__dirname, "../../db-proposals/20261022-campaign-spam-monitor.sql"), "utf8");
-const code = sql.replace(/--[^\n]*/g, ""); // Comments must not satisfy contracts.
+const amendment = readFileSync(resolve(__dirname, "../../db-proposals/20261022-remove-carrier-feedback-delays.sql"), "utf8");
+const code = (sql + "\n" + amendment).replace(/--[^\n]*/g, ""); // Comments must not satisfy contracts.
 const compact = (value: string) => value.replace(/\s+/g, "");
 const functions = new Map<string, string>(
   [...code.matchAll(/CREATE(?: OR REPLACE)? FUNCTION public\.(\w+)\([\s\S]*?AS \$function\$([\s\S]*?)\$function\$;/g)]
@@ -20,7 +21,7 @@ function body(name: string): string {
 }
 const permissions = compact(code);
 
-describe("paid claim and global allowance", () => {
+describe("immediate paid claims with confirmed-spam holds", () => {
   const claim = body("spam_gate_claim");
 
   it("locks campaign then monitor and refuses stopped campaigns before claiming", () => {
@@ -33,60 +34,46 @@ describe("paid claim and global allowance", () => {
     expect(claim).toContain("m.stateIN('paused_spam','paused_timeout')THENRETURN");
   });
 
-  it("preserves financial RPC body and buffers claims until a locked account recheck", () => {
-    expect(code).not.toMatch(/CREATE(?: OR REPLACE)? FUNCTION public\.claim_campaign_messages\(/);
-    expect(claim).toContain("jsonb_agg(to_jsonb(x))INTOclaimedFROMpublic.claim_campaign_messages(_campaign_id,allowed)x");
-    expect(claim).toContain("a.sending_suspended_atISNOTNULLORa.onboarding_status<>'active'");
-    expect(claim).toContain("INTOon_holdFROMpublic.accountsaWHEREa.id=c.account_idFORUPDATE");
-    expect(claim).toContain("RAISESQLSTATE'PT001'");
-    expect(claim).toContain("EXCEPTIONWHENSQLSTATE'PT001'THENRETURN");
-    // Existing refunds lock message->account; no account lock precedes claim.
-    expect(claim.indexOf("public.claim_campaign_messages(")).toBeLessThan(claim.indexOf("c.account_idFORUPDATE"));
-  });
-
-  it("caps initial work at25, later current outstanding at250 and evaluates late spam waves", () => {
-    expect(claim).toContain("m.expected_totalISNULLORm.expected_total>25");
-    expect(claim).toContain("GREATEST(0,25-m.submitted_count)");
-    expect(claim).toContain("GREATEST(0,250-outstanding)");
-    expect(claim).toContain("allowed:=LEAST(_limit,new_capacity,1000)");
+  it("delegates the requested limit with no new feedback caps, wait or claim-time campaign scans", () => {
+    expect(claim).toContain("public.claim_campaign_messages(_campaign_id,_limit)");
+    expect(claim).not.toContain("LEAST(");
+    expect(claim).not.toContain("new_capacity");
+    expect(claim).not.toContain("outstanding");
+    expect(claim).not.toContain("waiting_since");
+    expect(claim).not.toContain("expected_total");
+    expect(claim).not.toContain("interval");
+    expect(claim).not.toContain("public.messages");
+    expect(claim).not.toContain("campaign_spam_receipts");
+    expect(claim).toContain("IFEXISTS(SELECT1FROMpublic.campaign_spam_receipt_invalidationsWHEREcampaign_id=_campaign_id)THENPERFORMpublic.spam_gate_refresh(_campaign_id)");
     expect(claim).toContain("m.finalized_count>=20ANDm.spam_count>=CEIL(m.finalized_count*0.2)");
     expect(claim).toContain("spam_gate_do_pause(_campaign_id,'spam')");
   });
 
-  it("counts current attempts with unknown provider results regardless of mutable status", () => {
-    for (const name of ["spam_gate_claim", "spam_gate_state"]) {
-      const current = body(name);
-      expect(current).toContain("ms.attempt_number=r.attempt_number");
-      expect(current).toContain("ms.provider_message_idISNOTNULLORms.statusIN('queued','sending','pending')");
-      expect(current).toContain("f.message_id=ms.idANDf.provider_message_id=ms.provider_message_id");
-    }
-    expect(compact(code)).toContain("waiting_sincetimestamptz,outstanding_countinteger");
+  it("preserves financial RPC body and buffers claims until a locked account recheck", () => {
+    expect(code).not.toMatch(/CREATE(?: OR REPLACE)? FUNCTION public\.claim_campaign_messages\(/);
+    expect(claim).toContain("jsonb_agg(to_jsonb(x))INTOclaimedFROMpublic.claim_campaign_messages(_campaign_id,_limit)x");
+    expect(claim).toContain("a.sending_suspended_atISNOTNULLORa.onboarding_status<>'active'");
+    expect(claim).toContain("INTOon_holdFROMpublic.accountsaWHEREa.id=c.account_idFORUPDATE");
+    expect(claim).toContain("RAISESQLSTATE'PT001'");
+    expect(claim).toContain("EXCEPTIONWHENSQLSTATE'PT001'THENRETURN");
+    expect(claim.indexOf("public.claim_campaign_messages(")).toBeLessThan(claim.indexOf("c.account_idFORUPDATE"));
   });
 
-  it("deduplicates reserved attempts and owns prepaid rows before SKIP LOCKED fallback", () => {
+  it("visits only returned rows for idempotent reservation accounting", () => {
     expect(compact(code)).toContain("PRIMARYKEY(message_id,attempt_number)");
+    expect(claim).toContain("jsonb_to_recordset(COALESCE(claimed,'[]'::jsonb))");
     expect(claim).toContain("VALUES(rec.id,rec.attempt_number,_campaign_id)ONCONFLICTDONOTHING");
     expect(claim).toContain("GETDIAGNOSTICSadded=ROW_COUNT;fresh:=fresh+added");
     expect(claim).toContain("submitted_count=submitted_count+fresh");
-    expect(claim).toContain("LIMITLEAST(_limit,prepaid,1000)FORUPDATESKIPLOCKED");
-    expect(claim).toContain("IFprepaid=0THENRETURN");
-    expect(claim).toContain("allowed:=prepaid");
+    expect(claim).not.toContain("count(*)");
   });
 
-  it("times out exhausted feedback before prepaid recovery and resets waits on fresh capacity", () => {
-    const timeout = claim.indexOf("m.waiting_since<=now()-interval'10minutes'");
-    expect(timeout).toBeGreaterThan(-1);
-    expect(timeout).toBeLessThan(claim.indexOf("SELECTcount(*)::integerINTOprepaid"));
-    expect(claim).toContain("IFnew_capacity>0THENUPDATEpublic.campaign_spam_monitorsSETwaiting_since=NULL");
-    expect(claim).toContain("spam_gate_do_pause(_campaign_id,'feedback_timeout')");
-  });
-
-  it("keeps legacy campaigns supported and benign concluded monitors eligible for deliberate retry", () => {
-    expect(claim).toContain("IFm.campaign_idISNULLTHENBEGIN");
-    expect(claim).toContain("public.claim_campaign_messages(_campaign_id,_limit)");
-    expect(claim).toContain("IFNOThas_workTHENRETURN");
-    expect(claim).toContain("m.state='concluded'OR(m.state='monitoring'ANDm.finalized_count>=20)");
-    expect(claim).toContain("SETstate='released',waiting_since=NULL");
+  it("leaves legacy campaigns and benign concluded monitors on the same original claim path", () => {
+    expect(claim).toContain("IFm.campaign_idISNOTNULLTHEN");
+    expect(claim.match(/public\.claim_campaign_messages\(/g)).toHaveLength(1);
+    expect(claim).not.toContain("state='concluded'");
+    expect(claim).not.toContain("UPDATEpublic.campaigns");
+    expect(claim).not.toContain("SETstate=");
   });
 });
 
@@ -150,7 +137,7 @@ describe("pause ownership, truthful copy and checked resume", () => {
     expect(sql).toContain(FEEDBACK_TIMEOUT_REASON);
   });
 
-  it("atomically resumes timeout campaign and monitor after exact healthy evidence", () => {
+  it("resumes a legacy timeout only by explicit CAS, without waiting for minimum feedback", () => {
     const resume = body("spam_gate_resume_timeout");
     expect(resume).toContain("c.statusISDISTINCTFROM_status");
     expect(resume).toContain("c.account_idISDISTINCTFROM_account_idORc.message_bodyISDISTINCTFROM_body");
@@ -158,7 +145,8 @@ describe("pause ownership, truthful copy and checked resume", () => {
     expect(resume).toContain("m.state<>'paused_timeout'");
     expect(resume).toContain("sending_suspended_atISNOTNULLORonboarding_status<>'active'");
     expect(resume).toContain("spam_gate_refresh(_campaign_id)");
-    expect(resume).toContain("m.finalized_count<20ORm.spam_count>=CEIL(m.finalized_count*0.2)");
+    expect(resume).toContain("m.finalized_count>=20ANDm.spam_count>=CEIL(m.finalized_count*0.2)");
+    expect(resume).not.toContain("m.finalized_count<20");
     expect(resume).toContain("SETstate='released',waiting_since=NULL");
     expect(resume).toContain("SETstatus='sending',paused_reason=NULL,paused_at=NULL");
   });

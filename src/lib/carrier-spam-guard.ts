@@ -1,27 +1,12 @@
 /**
- * Carrier spam-rejection gate for campaign dispatch (owner policy,
- * 2026-10-22 — supersedes the earlier "never auto-pause on 40002" rule).
- *
- * Newly launched campaigns are enrolled in persistent monitoring (see
- * db-proposals/20261022-campaign-spam-monitor.sql). Campaigns with more than
- * 25 recipients release at most 25 initial carrier submissions, then wait for
- * finalized carrier receipts. Once at least 20 distinct finalized results
- * exist, the remaining sends are paused when 20% or more were refused with
- * carrier spam code 40002, and the tenant is notified once (durable incident
- * + operational email via a durable outbox). Unknown or missing feedback
- * never counts as spam: at the bounded wait timeout the remainder stays
- * stopped with a truthful "carrier feedback unavailable" reason.
- *
- * This module is pure/shared (safe for the browser bundle). Database work
- * lives in carrier-spam-guard.server.ts; all coordination state lives in the
- * campaign_spam_* tables and is mutated only by the service-role-only SQL
- * functions in the migration.
+ * Passive carrier spam monitoring. Sending keeps the existing dispatcher and
+ * provider pacing; it never waits for delivery feedback. Signed final receipts
+ * pause remaining work only after at least 20 distinct finalized results show
+ * a 20% or higher rate of carrier spam code 40002. The tenant is notified once.
+ * Missing feedback is unknown, never spam and never a reason for a new pause.
+ * Legacy feedback-timeout reasons remain readable for deliberate manual resume.
  */
 
-/** The initial-submission cap applies only to campaigns with MORE than 25 recipients. */
-export const SPAM_GATE_MIN_RECIPIENTS = 26;
-/** Total initial carrier submissions a capped campaign may make before waiting. */
-export const SPAM_GATE_INITIAL_SUBMISSIONS = 25;
 /** Minimum distinct finalized receipts before a spam-ratio decision. */
 export const SPAM_GATE_MIN_FINALIZED = 20;
 /** Carrier spam-filter refusal code. 40001 (landline) and 40012 (invalid)
@@ -29,12 +14,6 @@ export const SPAM_GATE_MIN_FINALIZED = 20;
 export const SPAM_GATE_SPAM_CODE = "40002";
 /** Pause when spam refusals reach this share of distinct finalized results. */
 export const SPAM_GATE_SPAM_RATIO = 0.2;
-/** Bounded wait for carrier feedback before stopping with "unavailable". */
-export const SPAM_GATE_FEEDBACK_WAIT_MS = 10 * 60 * 1000;
-/** After a healthy initial burst, at most this many sends may be awaiting
- * final feedback at once — parallelism without blasting the whole audience. */
-export const SPAM_GATE_OUTSTANDING_ALLOWANCE = 250;
-
 /** Monitor states stored on campaign_spam_monitors.state. */
 export type SpamGateMonitorState =
   | "monitoring" | "released" | "paused_spam" | "paused_timeout" | "concluded";
@@ -103,7 +82,8 @@ export type SpamGateDecision =
 /**
  * Boundary rule: at exactly 20 finalized results, 4 spam refusals (20%)
  * pauses; 3 (15%) passes. Below 20 finalized results there is no decision —
- * keep waiting (never treat unknown as spam).
+ * there is insufficient evidence to classify spam. Ordinary dispatch continues;
+ * the returned "wait" value is retained for legacy/manual decision callers.
  */
 export function evaluateSpamGate(stats: SpamGateStats): SpamGateDecision {
   if (stats.finalized < SPAM_GATE_MIN_FINALIZED) return { decision: "wait", stats };

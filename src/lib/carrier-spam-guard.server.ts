@@ -5,8 +5,8 @@
  * db-proposals/20261022-campaign-spam-monitor.sql:
  *
  *  - spam_gate_claim is the ONLY claim path: it locks the campaign and
- *    monitor rows, re-checks live status and account hold, bounds the paid
- *    claim to the gate allowance and invokes the existing
+ *    monitor rows, re-checks live status, account hold and confirmed incident
+ *    flags, then invokes the existing
  *    claim_campaign_messages inside the same transaction.
  *  - spam_gate_record_receipt is fed only by the signature-verified
  *    message.finalized webhook and keeps immutable, deduped final facts.
@@ -19,7 +19,6 @@
  */
 import { INCIDENT_EMAIL_LABEL, transitionIncidentOutbox, type IncidentEmailState } from "./campaign-incident-email.server";
 import {
-  SPAM_GATE_MIN_RECIPIENTS,
   buildSpamIncidentEmail,
   resolveIncidentRecipient,
   type SpamGateMonitorState,
@@ -45,8 +44,8 @@ export type SpamGateState = {
   waitingSinceMs: number | null;
 };
 
-/** Read the monitor state. Returns null on ANY read error so callers defer
- * instead of guessing. Unenrolled campaigns return { enrolled: false }. */
+/** Explicit report/manual-resume read only; ordinary dispatch never calls
+ * this receipt-state query. Returns null on read error. */
 export async function spamGateState(db: any, campaignId: string): Promise<SpamGateState | null> {
   const { data, error } = await db.rpc("spam_gate_state", { _campaign_id: campaignId });
   if (error || !Array.isArray(data)) return null;
@@ -67,46 +66,10 @@ export async function spamGateState(db: any, campaignId: string): Promise<SpamGa
   };
 }
 
-export type SpamGateCheck =
-  | { action: "proceed"; mode: "open" | "gated"; enrolled: boolean }
-  | { action: "wait" | "defer" | "paused"; reason: string };
-
-/**
- * Advisory precheck for the dispatcher. Authoritative enforcement happens
- * inside spam_gate_claim under the row locks; this only decides the tick's
- * posture (and fails closed on any read error).
- */
-export async function spamGatePrecheck(db: any, campaign: { id: string }): Promise<SpamGateCheck> {
-  const s = await spamGateState(db, campaign.id);
-  if (!s) return { action: "defer", reason: "gate_state_unavailable" };
-  if (!s.enrolled) return { action: "proceed", mode: "open", enrolled: false };
-  if (s.state === "paused_spam") return { action: "paused", reason: "spam_threshold" };
-  if (s.state === "paused_timeout") return { action: "paused", reason: "feedback_timeout" };
-  if (s.state === "concluded" || s.state === "released") return { action: "proceed", mode: "open", enrolled: true };
-  // monitoring
-  const capped = s.expectedTotal == null || s.expectedTotal >= SPAM_GATE_MIN_RECIPIENTS;
-  if (!capped) return { action: "proceed", mode: "open", enrolled: true };
-  // Always let the authoritative transaction reevaluate an exhausted budget.
-  // It alone may release healthy feedback or persist a timeout pause. Waiting
-  // here would prevent that transaction from ever running after the first 25.
-  return { action: "proceed", mode: "gated", enrolled: true };
-}
-
-/** Last-mile live status/hold check for already claimed work. Failure keeps
- * the paid attempt queued; it never creates a fresh charge or provider call. */
-export async function canSendClaimedCampaignMessage(db: any, campaignId: string): Promise<boolean> {
-  try {
-    const { data, error } = await db.rpc("spam_gate_can_send", { _campaign_id: campaignId });
-    return !error && data === true;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * The ONLY way dispatch claims paid message work. The SQL wrapper checks
- * live campaign status + account hold and atomically bounds the claim to the
- * gate allowance before invoking the existing claim_campaign_messages.
+ * live campaign status, account hold and confirmed incident flags before
+ * invoking the original claim function with its unchanged requested limit.
  * Errors defer — there is deliberately no fallback to the bare claim.
  */
 export async function claimGatedMessages(
@@ -131,7 +94,7 @@ export async function enrollCampaignForSpamGate(db: any, campaignId: string): Pr
   return data === true;
 }
 
-/** Planning finished: record the true recipient total (cap applies only >25). */
+/** Planning-completion metadata for truthful incident copy; no send limit. */
 export async function setSpamGateExpectedTotal(db: any, campaignId: string, total: number): Promise<boolean> {
   const { error } = await db.rpc("spam_gate_set_expected_total", { _campaign_id: campaignId, _total: total });
   return !error;

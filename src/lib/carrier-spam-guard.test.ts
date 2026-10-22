@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  SPAM_GATE_INITIAL_SUBMISSIONS,
   SPAM_GATE_MIN_FINALIZED,
-  SPAM_GATE_OUTSTANDING_ALLOWANCE,
   SPAM_PAUSE_REASON,
   FEEDBACK_TIMEOUT_REASON,
   summarizeFinalizedReceipts,
@@ -12,7 +10,6 @@ import {
 } from "./carrier-spam-guard";
 import {
   spamGateState,
-  spamGatePrecheck,
   claimGatedMessages,
   enrollCampaignForSpamGate,
   recordSpamGateReceipt,
@@ -225,22 +222,8 @@ function fakeDb(opts: FakeOpts = {}) {
         if (!a || a.sending_suspended_at || a.onboarding_status !== "active") return { data: [], error: null };
         const m = state.monitor;
         let allowed = limit;
-        if (m) {
-          if (["paused_spam", "paused_timeout", "concluded"].includes(m.state)) return { data: [], error: null };
-          if (thresholdMet()) { doPause("spam"); return { data: [], error: null }; }
-          if (m.state === "monitoring" && m.finalized_count >= SPAM_GATE_MIN_FINALIZED) m.state = "released";
-          const capped = m.expected_total == null || m.expected_total > 25;
-          if (m.state === "monitoring" && capped) {
-            allowed = Math.min(limit, Math.max(0, SPAM_GATE_INITIAL_SUBMISSIONS - m.submitted_count));
-          } else {
-            allowed = Math.min(limit, Math.max(0, SPAM_GATE_OUTSTANDING_ALLOWANCE - (m.submitted_count - m.finalized_count)));
-          }
-          if (allowed <= 0) {
-            if (m.waiting_since == null) m.waiting_since = Date.now();
-            else if (Date.now() - m.waiting_since >= 10 * 60 * 1000) doPause("feedback_timeout");
-            return { data: [], error: null };
-          }
-        }
+        // Passive monitor flags only. Receipt counts do not cap or defer claims.
+        if (m && ["paused_spam", "paused_timeout"].includes(m.state)) return { data: [], error: null };
         const rows = state.messages.filter((x) => x.campaign_id === "c1" && x.status === "queued").slice(0, allowed);
         for (const r of rows) { r.status = "sending"; state.chargedClaims += 1; }
         if (m) m.submitted_count += rows.length;
@@ -269,7 +252,7 @@ function fakeDb(opts: FakeOpts = {}) {
       if (fn === "spam_gate_resume_timeout") {
         const m = state.monitor;
         const a = state.account;
-        if (!m || m.state !== "paused_timeout" || m.finalized_count < 20 || thresholdMet()
+        if (!m || m.state !== "paused_timeout" || thresholdMet()
           || state.campaign.status !== args._status || state.campaign.account_id !== args._account_id
           || state.campaign.message_body !== args._body || state.campaign.paused_reason !== FEEDBACK_TIMEOUT_REASON
           || !a || a.sending_suspended_at || a.onboarding_status !== "active") return { data: false, error: null };
@@ -356,7 +339,7 @@ describe("Enrollment cutoff (new campaigns only, never retro)", () => {
 });
 
 describe("Paid claim bounding through the wrapper", () => {
-  it("12 workers on a 479-recipient campaign make exactly 25 TOTAL paid claims", async () => {
+  it("12 workers claim all 479 recipients without waiting for any feedback", async () => {
     const db = fakeDb({ messageCount: 479 });
     await enrollCampaignForSpamGate(db, "c1");
     const worker = async () => {
@@ -369,9 +352,9 @@ describe("Paid claim bounding through the wrapper", () => {
       }
     };
     const counts = await Promise.all(Array.from({ length: 12 }, worker));
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(SPAM_GATE_INITIAL_SUBMISSIONS);
-    expect(db.state.chargedClaims).toBe(25); // paid claims bounded, not just provider calls
-    expect(db.state.monitor.submitted_count).toBe(25);
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(479);
+    expect(db.state.chargedClaims).toBe(479); // unchanged paid claims, no initial feedback cap
+    expect(db.state.monitor.submitted_count).toBe(479);
   });
 
   it("a campaign paused/cancelled before the next claim gets zero rows — no claim, no send", async () => {
@@ -465,25 +448,18 @@ describe("Receipt evidence and threshold", () => {
   });
 });
 
-describe("Released path: bounded outstanding allowance, no silent release", () => {
-  it("after a healthy initial 25, claims are bounded by 250 outstanding and re-check the threshold", async () => {
+describe("Passive monitoring never waits for feedback", () => {
+  it("keeps claiming past the old 25/250 boundaries even with missing results", async () => {
     const db = fakeDb({ messageCount: 1000 });
     await enrollCampaignForSpamGate(db, "c1");
-    await db.rpc("spam_gate_set_expected_total", { _campaign_id: "c1", _total: 1000 });
-    await seedReceipts(db, 20, 1, { submitted: 25 });
-    db.state.monitor.submitted_count = 25;
-    const r1 = await claimGatedMessages(db, "c1", 500);
-    expect((r1 as any).rows.length).toBeLessThanOrEqual(SPAM_GATE_OUTSTANDING_ALLOWANCE - (25 - 20));
-    // exhaust the outstanding allowance with no new feedback → claims stop
-    db.state.monitor.submitted_count = 20 + SPAM_GATE_OUTSTANDING_ALLOWANCE;
-    expect(((await claimGatedMessages(db, "c1", 24)) as any).rows).toHaveLength(0);
-    expect(db.state.monitor.waiting_since).not.toBeNull();
-    // unknown feedback never silently releases: after the bounded wait the
-    // remainder is stopped truthfully
-    db.state.monitor.waiting_since = Date.now() - 11 * 60 * 1000;
-    expect(((await claimGatedMessages(db, "c1", 24)) as any).rows).toHaveLength(0);
-    expect(db.state.campaign.paused_reason).toBe(FEEDBACK_TIMEOUT_REASON);
-    expect(db.state.incident.kind).toBe("feedback_timeout");
+    const first = await claimGatedMessages(db, "c1", 500);
+    expect((first as any).rows).toHaveLength(500);
+    db.state.monitor.waiting_since = Date.now() - 60 * 60 * 1000;
+    const second = await claimGatedMessages(db, "c1", 500);
+    expect((second as any).rows).toHaveLength(500);
+    expect(db.state.monitor.finalized_count).toBe(0);
+    expect(db.state.campaign.status).toBe("sending");
+    expect(db.state.incident).toBeNull();
   });
 });
 
@@ -650,25 +626,17 @@ describe("Durable email outbox", () => {
   });
 });
 
-describe("Dispatcher precheck posture", () => {
-  it("unenrolled campaigns proceed open; state errors defer", async () => {
-    expect(await spamGatePrecheck(fakeDb(), CAMPAIGN)).toEqual({ action: "proceed", mode: "open", enrolled: false });
-    expect((await spamGatePrecheck(fakeDb({ stateError: true }), CAMPAIGN)).action).toBe("defer");
-  });
-
-  it("enrolled campaign: exhausted initial budget still reaches authoritative claim, paused states reported", async () => {
-    const db = fakeDb({ messageCount: 100 });
-    await enrollCampaignForSpamGate(db, "c1");
-    expect(await spamGatePrecheck(db, CAMPAIGN)).toEqual({ action: "proceed", mode: "gated", enrolled: true });
-    db.state.monitor.submitted_count = 25;
-    expect(await spamGatePrecheck(db, CAMPAIGN)).toEqual({ action: "proceed", mode: "gated", enrolled: true });
-    db.state.monitor.state = "paused_spam";
-    expect(await spamGatePrecheck(db, CAMPAIGN)).toEqual({ action: "paused", reason: "spam_threshold" });
-  });
-
-  it("spamGateState returns null on error (defer) and enrolled:false when absent", async () => {
+describe("Receipt-state reads are explicit, not a sending precheck", () => {
+  it("manual/report reads fail closed and distinguish an unenrolled campaign", async () => {
     expect(await spamGateState(fakeDb(), "c1")).toMatchObject({ enrolled: false });
     expect(await spamGateState(fakeDb({ stateError: true }), "c1")).toBeNull();
+  });
+
+  it("normal claims do not consult the manual receipt-state read", async () => {
+    const db = fakeDb({ messageCount: 100, stateError: true });
+    const result = await claimGatedMessages(db, "c1", 48);
+    expect(result.ok).toBe(true);
+    expect((result as any).rows).toHaveLength(48);
   });
 });
 
@@ -698,11 +666,11 @@ describe("Hold-lift and checked-resume interaction", () => {
     expect(db.state.campaign.status).toBe("paused");
   });
 
-  it("feedback-timeout hold: reevaluation refuses while feedback is missing or shows spam", async () => {
+  it("legacy feedback-timeout: explicit screened resume allows unknown feedback, refuses confirmed spam", async () => {
     const waiting = resumeDb(FEEDBACK_TIMEOUT_REASON, { state: "paused_timeout", submitted_count: 25, finalized_count: 9, spam_count: 0 });
     const r1 = await checkedResumeCampaign(waiting, { campaignId: "c1", expectedAccountId: "a1" }, screenPass);
-    expect(r1.ok).toBe(false);
-    expect((r1 as any).code).toBe("carrier_spam_hold");
+    expect(r1.ok).toBe(true);
+    expect(waiting.state.campaign.status).toBe("sending");
 
     const spammy = resumeDb(FEEDBACK_TIMEOUT_REASON, { state: "paused_timeout", submitted_count: 25, finalized_count: 20, spam_count: 5 });
     const r2 = await checkedResumeCampaign(spammy, { campaignId: "c1", expectedAccountId: "a1" }, screenPass);

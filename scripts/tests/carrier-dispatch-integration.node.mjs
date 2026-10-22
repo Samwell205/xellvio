@@ -48,62 +48,63 @@ function productionDeliverPending() {
   return new Function(...Object.keys(deps),body+'; return deliverPending;')(...Object.values(deps));
 }
 
-function dispatcherDb(row, options={}) {
-  const db={events:[],requeued:[],rowsRead:[],async rpc(fn,args){
+function dispatcherDb(options={}) {
+  const pending=Array.from({length:options.messages??479},(_,i)=>({id:`m${i+1}`}));
+  const db={events:[],claimLimits:[],rowsRead:[],claims:0,async rpc(fn,args){
     db.events.push(fn);
-    if(fn==='spam_gate_state')return options.statError?{data:null,error:{message:'stats unavailable'}}:{data:[row],error:null};
-    if(fn==='spam_gate_claim')return options.claimError?{data:null,error:{message:'claim unavailable'}}:{data:options.claimRows??[],error:null};
-    if(fn==='spam_gate_can_send')return {data:options.canSend??true,error:options.canSendError?{message:'unknown'}:null};
-    throw Error('Unexpected RPC '+fn);
+    if(fn!=='spam_gate_claim')throw Error('Ordinary dispatch must not call '+fn);
+    db.claimLimits.push(args._limit);db.claims++;
+    if(options.claimError)return {data:null,error:{message:'claim unavailable'}};
+    if(options.denyAll||(options.denyAfterClaims!=null&&db.claims>options.denyAfterClaims))return {data:[],error:null};
+    return {data:pending.splice(0,args._limit),error:null};
   },from(table){
-    const q={op:'select',patch:null,ids:[]};
-    const api={select(){return api},eq(){return api},in(k,v){if(k==='id')q.ids=v;return api},
-      update(patch){q.op='update';q.patch=patch;return api},
+    const api={select(){return api},eq(){return api},in(){return api},update(){throw Error('unexpected prepaid requeue')},
       async maybeSingle(){return table==='campaigns'?{data:{status:options.campaignStatus??'sending'},error:options.liveError?{message:'unknown'}:null}:{data:null,error:null}},
-      then(a,b){
-        db.rowsRead.push(table);
-        if(q.op==='update')db.requeued.push({table,...q});
-        return Promise.resolve({data:[],count:100,error:null}).then(a,b);
-      }};return api;
+      then(a,b){db.rowsRead.push(table);return Promise.resolve({data:[],count:100,error:null}).then(a,b)}};return api;
   }};return db;
 }
 
-for(const [name,row] of [
-  ['healthy20-finalized',monitor()],
-  ['past-feedback-timeout',monitor({finalized_count:7,spam_count:0,outstanding_count:18,waiting_since:new Date(Date.now()-11*60000).toISOString()})],
-])test(`actual dispatcher reaches authoritative claim after initial25: ${name}`,async()=>{
-  const db=dispatcherDb(row);const result=await productionDeliverPending()(db,{id:'c1',account_id:'a1'},{},{perTick:100,concurrency:12,deadlineAt:Date.now()+30000});
-  assert.deepEqual(db.events,['spam_gate_state','spam_gate_claim']);
-  assert.equal(result.sent,0);assert.equal(result.remaining,100);
-  assert.ok(!db.events.includes('provider-call'));
+for(const name of ['no-final-feedback','healthy-feedback','old-feedback-timeout-marker'])
+test(`ordinary dispatch adds no feedback wait or monitor RPC: ${name}`,async()=>{
+  const db=dispatcherDb();
+  const result=await productionDeliverPending()(db,{id:'c1',account_id:'a1'},{},{perTick:100,concurrency:12,deadlineAt:Date.now()+30000});
+  assert.equal(result.sent,100);
+  assert.deepEqual(db.claimLimits,[48,48,4]); // original chunk/runtime bounds only
+  assert.equal(db.events.filter(x=>x==='provider-call').length,100);
+  assert.equal(db.events.filter(x=>x==='spam_gate_claim').length,3);
+  assert.ok(!db.events.some(x=>/spam_gate_state|can_send/.test(x)));
 });
 
-test('actual dispatcher state failure defers before paid claim/provider call',async()=>{
-  const db=dispatcherDb(monitor(),{statError:true});
+test('confirmed incident stops the next claim chunk without per-message reads',async()=>{
+  const db=dispatcherDb({denyAfterClaims:1});
   const result=await productionDeliverPending()(db,{id:'c1'},{},{perTick:100,concurrency:12});
-  assert.equal(result.gated,'defer');assert.deepEqual(db.events,['spam_gate_state']);
+  assert.equal(result.sent,48);assert.equal(db.claims,2);
+  assert.equal(db.events.filter(x=>x==='provider-call').length,48);
 });
 
-test('actual dispatcher last-mile refusal requeues all paid claimed rows before returning',async()=>{
-  const db=dispatcherDb(monitor(),{claimRows:[{id:'m1'},{id:'m2'}],canSend:false});
-  await productionDeliverPending()(db,{id:'c1'},{},{perTick:100,concurrency:12});
-  assert.ok(db.events.includes('spam_gate_claim'));assert.ok(db.events.includes('spam_gate_can_send'));
-  assert.ok(!db.events.includes('provider-call'));
-  assert.deepEqual(db.requeued.map(r=>r.ids),[['m1','m2']]);
-  assert.deepEqual(db.requeued[0].patch,{status:'queued'});
+for(const status of ['cancelled','paused','blocked_content','paused_by_user'])
+test(`preexisting live ${status} status still stops before claim`,async()=>{
+  const db=dispatcherDb({campaignStatus:status});
+  const result=await productionDeliverPending()(db,{id:'c1'},{},{perTick:100,concurrency:12});
+  assert.equal(result.cancelled,true);assert.equal(db.events.length,0);
 });
 
-for(const [name,response,expected] of [
-  ['true',{data:true,error:null},true],['false',{data:false,error:null},false],
-  ['null',{data:null,error:null},false],['truthy-string',{data:'true',error:null},false],
-  ['error',{data:true,error:{message:'lookup failed'}},false],
-])test(`canSendClaimedCampaignMessage exact boolean/error: ${name}`,async()=>{
-  const calls=[];const db={async rpc(fn,args){calls.push({fn,args});return response}};
-  assert.equal(await guards.canSendClaimedCampaignMessage(db,'c1'),expected);
-  assert.deepEqual(calls,[{fn:'spam_gate_can_send',args:{_campaign_id:'c1'}}]);
+test('unreadable live campaign status still fails closed before claim',async()=>{
+  const db=dispatcherDb({liveError:true});
+  const result=await productionDeliverPending()(db,{id:'c1'},{},{perTick:100,concurrency:12});
+  assert.equal(result.cancelled,true);assert.equal(db.events.length,0);
 });
-test('canSendClaimedCampaignMessage thrown connection error refuses',async()=>{
-  assert.equal(await guards.canSendClaimedCampaignMessage({rpc(){throw Error('connection reset')}},'c1'),false);
+
+test('authoritative account/incident refusal does not fall back to direct sending',async()=>{
+  const db=dispatcherDb({denyAll:true});
+  const result=await productionDeliverPending()(db,{id:'c1'},{},{perTick:100,concurrency:12});
+  assert.equal(result.sent,0);assert.deepEqual(db.events,['spam_gate_claim']);
+});
+
+test('claim RPC failure does not fall back to bare claim or provider calls',async()=>{
+  const db=dispatcherDb({claimError:true});
+  const result=await productionDeliverPending()(db,{id:'c1'},{},{perTick:100,concurrency:12});
+  assert.equal(result.sent,0);assert.deepEqual(db.events,['spam_gate_claim']);
 });
 
 /** Compile the actual server-function source. Only framework imports and the
@@ -174,7 +175,7 @@ function resumeDb(options={}) {
   return {state,from(table){const api={select(){return api},eq(){return api},update(){state.directUpdates++;return api},
     async maybeSingle(){if(table==='campaigns')return {data:live,error:null};state.accountReads++;return {data:{id:'a1',onboarding_status:'active',sending_suspended_at:null},error:null}}};return api;
   },async rpc(fn,args){state.rpcCalls.push({fn,args});
-    if(fn==='spam_gate_state')return {data:[monitor({state:'paused_timeout'})],error:null};
+    if(fn==='spam_gate_state')return {data:[monitor({state:'paused_timeout',finalized_count:options.feedbackFinalized??20})],error:null};
     if(fn==='spam_gate_resume_timeout')return options.atomicResponse??{data:true,error:null};
     throw Error('Unexpected RPC '+fn);
   }};
@@ -199,4 +200,13 @@ test('fresh screening refusal prevents any timeout-resume RPC',async()=>{
 test('active spam hold never screens or invokes timeout-resume RPC',async()=>{
   const db=resumeDb({reason:SPAM_PAUSE_REASON});const result=await checkedResumeCampaign(db,{campaignId:'c1',expectedAccountId:'a1'},async()=>{throw Error('must not screen')});
   assert.equal(result.ok,false);assert.equal(result.code,'carrier_spam_hold');assert.equal(db.state.rpcCalls.length,0);
+});
+
+
+test('explicit screened legacy-timeout resume does not wait for twenty final receipts',async()=>{
+  const db=resumeDb({feedbackFinalized:9});
+  let screens=0;
+  const result=await checkedResumeCampaign(db,{campaignId:'c1',expectedAccountId:'a1'},async()=>{screens++;return {action:'passed'}});
+  assert.equal(result.ok,true);assert.equal(screens,1);
+  assert.equal(db.state.rpcCalls.at(-1).fn,'spam_gate_resume_timeout');
 });
