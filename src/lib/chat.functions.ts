@@ -4,7 +4,30 @@ import { z } from "zod";
 const MessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().min(1).max(4000),
+  sig: z.string().max(128).optional(),
 });
+
+/**
+ * Assistant replies are signed by the server; on later turns only signed
+ * assistant messages are kept, so callers can't inject fake assistant history.
+ */
+async function signReply(content: string): Promise<string | null> {
+  const secret = process.env.LOVABLE_API_KEY;
+  if (!secret) return null;
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", enc.encode(`support-chat:${secret}`), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(content)));
+  return Array.from(mac, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function trustedHistory(messages: Array<{ role: "user" | "assistant"; content: string; sig?: string }>) {
+  const out: Array<{ role: "user" | "assistant"; content: string }> = [];
+  for (const m of messages) {
+    if (m.role === "user") out.push({ role: "user", content: m.content });
+    else if (m.sig && m.sig === (await signReply(m.content))) out.push({ role: "assistant", content: m.content });
+  }
+  return out;
+}
 
 const InputSchema = z.object({
   messages: z.array(MessageSchema).min(1).max(40),
@@ -163,10 +186,11 @@ export const chatWithSupportBot = createServerFn({ method: "POST" })
       const { text } = await generateText({
         model,
         system,
-        messages: data.messages,
+        messages: await trustedHistory(data.messages),
         maxOutputTokens: 900,
       });
-      return { reply: text.trim() || "Sorry, I couldn't generate a reply." };
+      const reply = text.trim() || "Sorry, I couldn't generate a reply.";
+      return { reply, sig: (await signReply(reply)) ?? undefined };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (/429|rate.?limit/i.test(message)) {

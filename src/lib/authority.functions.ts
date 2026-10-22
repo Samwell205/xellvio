@@ -57,6 +57,18 @@ const saveSchema = z.object({
   values: z.record(z.string(), z.any()),
 });
 
+/** System-managed columns the editor may never set directly. */
+const PROTECTED_KEYS = new Set(["id", "created_at", "updated_at", "created_by", "account_id", "user_id"]);
+const KEY_RE = /^[a-z][a-z0-9_]{0,62}$/;
+function editableValues(input: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (!KEY_RE.test(k) || PROTECTED_KEYS.has(k)) continue;
+    out[k] = v === "" ? null : v;
+  }
+  return out;
+}
+
 /** Insert or update one record. Empty strings are stored as NULL. */
 export const authoritySave = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -64,10 +76,7 @@ export const authoritySave = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase);
     const client = await db();
-    const values: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(data.values)) {
-      values[k] = v === "" ? null : v;
-    }
+    const values = editableValues(data.values);
     if (data.table === "authority_opportunities" && !data.id) {
       values.created_by = context.userId;
     }
@@ -130,7 +139,7 @@ export const authoritySaveBrandProfile = createServerFn({ method: "POST" })
     const client = await db();
     const { data: row, error } = await client
       .from("authority_brand_profile")
-      .update(data.values)
+      .update(editableValues(data.values))
       .eq("id", data.id)
       .select("*")
       .maybeSingle();

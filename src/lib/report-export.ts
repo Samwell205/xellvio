@@ -3,7 +3,9 @@ import autoTable from "jspdf-autotable";
 
 export function downloadCsv(filename: string, headers: string[], rows: (string | number | null | undefined)[][]) {
   const esc = (v: string | number | null | undefined) => {
-    const s = v === null || v === undefined ? "" : String(v);
+    let s = v === null || v === undefined ? "" : String(v);
+    // Neutralize spreadsheet formulas in text cells (numbers stay numeric).
+    if (typeof v !== "number" && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
     return `"${s.replace(/"/g, '""')}"`;
   };
   const csv = [headers.map(esc).join(","), ...rows.map((r) => r.map(esc).join(","))].join("\n");

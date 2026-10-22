@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { chatWithSupportBot } from "@/lib/chat.functions";
 import { cn } from "@/lib/utils";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; sig?: string };
 
 const GREETING: Msg = {
   role: "assistant",
@@ -87,8 +87,8 @@ export function AiChatWidget() {
     setInput("");
     setLoading(true);
     try {
-      const { reply } = await sendChat({ data: { messages: next } });
-      setMessages((m) => [...m, { role: "assistant", content: reply }]);
+      const { reply, sig } = await sendChat({ data: { messages: next } });
+      setMessages((m) => [...m, { role: "assistant", content: reply, sig }]);
     } catch (err) {
       setMessages((m) => [
         ...m,
