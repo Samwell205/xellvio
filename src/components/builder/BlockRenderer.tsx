@@ -1,3 +1,4 @@
+import DOMPurify from "isomorphic-dompurify";
 /**
  * Renders the structured block tree. Used by the builder canvas (editable
  * selection chrome), the preview modes and the public hosted pages, so what a
@@ -473,7 +474,7 @@ function BlockBody({ block }: { block: Block }) {
       );
     }
     case "html":
-      return <div style={boxStyle(block, theme, device)} dangerouslySetInnerHTML={{ __html: String(block.content.html ?? "") }} />;
+      return <div style={boxStyle(block, theme, device)} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(String(block.content.html ?? ""), { FORBID_TAGS: ["script", "iframe", "object", "embed", "form"], FORBID_ATTR: ["srcdoc"] }) }} />;
     case "social":
       return (
         <div style={{ ...boxStyle(block, theme, device), display: "flex", flexWrap: "wrap", gap: s.gap ?? 14, justifyContent: s.align === "center" ? "center" : s.align === "right" ? "flex-end" : "flex-start" }}>
