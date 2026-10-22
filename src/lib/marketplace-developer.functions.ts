@@ -273,6 +273,25 @@ export const testAppConnection = createServerFn({ method: "POST" })
     }
     if (url.protocol !== "https:") throw new Error("Only https:// endpoints can be tested");
     if (!isPublicHostname(url.hostname)) throw new Error("Only public internet endpoints can be tested");
+    // Only hosts the developer already declared on their own apps may be tested,
+    // so the tester can't be pointed at arbitrary third-party sites.
+    const { data: apps } = await sb
+      .from("apps")
+      .select("website_url,documentation_url")
+      .eq("developer_id", dev.id);
+    const allowedHosts = new Set<string>();
+    for (const a of (apps ?? []) as Array<{ website_url: string | null; documentation_url: string | null }>) {
+      for (const u of [a.website_url, a.documentation_url]) {
+        try {
+          if (u) allowedHosts.add(new URL(u).hostname.toLowerCase());
+        } catch {
+          /* ignore malformed */
+        }
+      }
+    }
+    if (!allowedHosts.has(url.hostname.toLowerCase())) {
+      throw new Error("Add this website to your app listing first, then test it.");
+    }
 
     const started = Date.now();
     try {
