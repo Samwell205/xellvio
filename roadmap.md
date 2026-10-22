@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Upload-first account assistant (Oct 22)
+- [ ] In-chat campaign launch: optional Send test / Skip test followed by explicit final confirmation; preserve sending checks and verify without sending paid SMS.
 - [x] Remove pre-upload name/country fields; signed-in upload asks for country only for local numbers, accepts United States, then asks for list name. International files skip the country question and cancellation restores normal chat. Twenty-two tests and preview builds pass; no imports, sends or publication.
 - [x] Account-wide foundation: permission-scoped bounded reads for all 15 areas; exact reviewed edits for business details, contact names, list/page/form names, draft campaign names/content and workflow names/pausing. Forty-nine focused tests pass. Signed-in reads across all areas, proposal confirmation, cancellation, follow-up and saved-thread restoration verified; temporary records removed. No SMS, charges or publication.
 - [ ] Remaining account-wide actions: inbox reply proposals, website/form content and publication, team changes, payment handoffs, campaign pause/resume, workflow graph/activation, receptionist edits, integration changes and support-ticket mutations are not connected to assistant execution yet; use existing account pages in this increment.
