@@ -12,11 +12,11 @@
 }
 
 @utility chat-launcher {
-  background: var(--chat-launcher-surface);
-  color: var(--chat-launcher-foreground);
+  background: var(--chat-launcher-surface) !important;
+  color: var(--chat-launcher-foreground) !important;
   border: 1px solid var(--chat-launcher-edge);
   box-shadow: var(--chat-launcher-glow);
-  &:hover { background: var(--chat-launcher-surface); color: var(--chat-launcher-foreground); }
+  &:hover { background: var(--chat-launcher-surface) !important; color: var(--chat-launcher-foreground) !important; }
 }
 
 @theme inline {
