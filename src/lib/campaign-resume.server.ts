@@ -47,9 +47,28 @@ export async function checkedResumeCampaign(
   // A carrier spam-gate hold is active on this campaign. Resume is a separate
   // deliberate decision and must not simply bypass the same active hold —
   // lifting an account hold never resumes these either (see HOLD_PAUSE_FILTER).
-  const { isSpamGateReason } = await import("./carrier-spam-guard");
-  if (isSpamGateReason(live.paused_reason)) {
-    return { ok: false, code: "carrier_spam_hold", message: "This campaign was stopped because carriers rejected many of its texts as spam (or carrier feedback was unavailable). Review the campaign report and contact support before resuming." };
+  const { isSpamGatePauseReason, isFeedbackTimeoutReason, evaluateSpamGate } = await import("./carrier-spam-guard");
+  if (isSpamGatePauseReason(live.paused_reason)) {
+    // An active 40002 spam condition is never bypassed.
+    return { ok: false, code: "carrier_spam_hold", message: "This campaign was stopped because carriers rejected many of its texts as spam. Review the campaign report and contact support before resuming." };
+  }
+  if (isFeedbackTimeoutReason(live.paused_reason)) {
+    // Feedback-timeout hold: support a deliberate checked reevaluation now
+    // that current feedback may have arrived. The active spam condition is
+    // still never bypassed, and insufficient/unknown feedback still refuses.
+    const { spamGateState } = await import("./carrier-spam-guard.server");
+    const st = await spamGateState(db, live.id);
+    if (!st) return { ok: false, code: "screen_unavailable", message: "Carrier feedback could not be read right now, so the campaign stays paused. Try again shortly." };
+    if (!st.enrolled) return { ok: false, code: "carrier_spam_hold", message: "This campaign is not monitored, so its carrier feedback hold cannot be reevaluated here. Contact support." };
+    const verdict = evaluateSpamGate({ finalized: st.finalized, spam: st.spam });
+    if (verdict.decision === "pause_spam") {
+      return { ok: false, code: "carrier_spam_hold", message: `Carrier feedback has arrived and ${st.spam} of ${st.finalized} final results were rejected as spam, so this campaign stays paused.` };
+    }
+    if (verdict.decision === "wait") {
+      return { ok: false, code: "carrier_spam_hold", message: `Only ${st.finalized} final carrier results are in so far. The campaign stays paused until enough feedback arrives.` };
+    }
+    // Enough feedback, below the spam threshold: fall through to the normal
+    // fresh content check and the exact-row resume below.
   }
   if (typeof live.message_body !== "string" || !live.message_body.trim()) {
     return { ok: false, code: "read_failed", message: "Could not read this campaign's message, so it stays paused." };

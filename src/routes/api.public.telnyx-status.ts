@@ -78,7 +78,7 @@ async function handleStatus(payload: any) {
 
   const { data: msg } = await supabaseAdmin
     .from("messages")
-    .select("id,status,campaigns!inner(account_id)")
+    .select("id,status,campaign_id,campaigns!inner(account_id)")
     .eq("provider_message_id", providerId)
     .maybeSingle();
   if (!msg) return;
@@ -100,6 +100,26 @@ async function handleStatus(payload: any) {
   await supabaseAdmin
     .from("events")
     .insert({ message_id: msg.id, type: `status:${finalStatus}`, payload });
+
+  // Carrier spam gate: feed this signature-verified final receipt into the
+  // enrolled campaign's monitor AFTER the final evidence above is recorded.
+  // The SQL matches the message's CURRENT provider id exactly, dedupes
+  // replays, and atomically pauses + records the incident when the spam
+  // threshold is met. Unenrolled (pre-rollout) campaigns are ignored by the
+  // RPC, so they can never receive a retroactive notice. A gate error throws
+  // so Telnyx redelivers; the whole handler is idempotent.
+  if (evtType === "message.finalized" && terminal.includes(finalStatus) && msg.campaign_id) {
+    const { recordSpamGateReceipt } = await import("@/lib/carrier-spam-guard.server");
+    const gate = await recordSpamGateReceipt(supabaseAdmin, {
+      campaignId: String(msg.campaign_id),
+      messageId: String(msg.id),
+      providerMessageId: providerId,
+      errorCode: errCode ? String(errCode) : null,
+      providerStatus: finalStatus,
+      finalizedAt: new Date().toISOString(),
+    });
+    if (!gate.ok) throw new Error(`spam-gate receipt failed: ${gate.error}`);
+  }
 
   const accountId = (msg as any).campaigns?.account_id as string | undefined;
   if (accountId && ["sent", "delivered", "delivery_unconfirmed", "undelivered", "failed"].includes(finalStatus)) {

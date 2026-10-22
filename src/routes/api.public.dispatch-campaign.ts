@@ -275,21 +275,9 @@ async function finalizeIfComplete(supabaseAdmin: any, campaign: any): Promise<vo
     await markSending(supabaseAdmin, campaign.id);
     return;
   }
-  // Receipt-side spam-gate conclusion: a monitored campaign whose sends all
-  // finished before the final carrier results arrived still gets its one
-  // honest incident notice if the spam threshold was met (nothing left to
-  // stop — the notice says so), and is marked concluded either way so no
-  // historical campaign ever receives a retroactive notice.
-  try {
-    const { count: total } = await supabaseAdmin
-      .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
-    if ((total ?? 0) > 25) {
-      const { concludeMonitoredCampaign } = await import("@/lib/carrier-spam-guard.server");
-      await concludeMonitoredCampaign(supabaseAdmin, campaign);
-    }
-  } catch (e) {
-    console.error("[dispatch] spam-gate conclusion failed", campaign.id, e);
-  }
+  // Spam-gate conclusion happens on the signature-verified message.finalized
+  // path (spam_gate_record_receipt), never here: finalizing because all sends
+  // were submitted must not end monitoring before late final receipts arrive.
   await supabaseAdmin.from("campaigns").update({ status: "sent" })
     .eq("id", campaign.id)
     .in("status", ["queued", "sending", "processing", "scheduled"]);
@@ -769,6 +757,15 @@ async function beginCampaignIfNeeded(
   }
 
 
+  // Register persistent carrier-spam monitoring for newly launched campaigns.
+  // The SQL enrolls only campaigns with zero submitted/reserved/attempted
+  // work, so pre-rollout campaigns can never be enrolled or retro-notified.
+  // Fail closed: an enrollment error defers the launch rather than sending
+  // unmonitored.
+  const { enrollCampaignForSpamGate } = await import("@/lib/carrier-spam-guard.server");
+  const enrolled = await enrollCampaignForSpamGate(supabaseAdmin, campaign.id);
+  if (enrolled === null) return { ok: false, reason: "spam_gate_enrollment_unavailable" };
+
   return { ok: true };
 }
 
@@ -1015,7 +1012,7 @@ async function planCampaign(
 
 async function deliverPending(
   supabaseAdmin: any, campaign: any, sender: Sender,
-  limits?: { perTick: number; concurrency: number; deadlineAt?: number; monitored?: boolean },
+  limits?: { perTick: number; concurrency: number; deadlineAt?: number },
 ): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean; throttled?: boolean; gated?: string }> {
   const { data: fresh } = await supabaseAdmin
     .from("campaigns").select("status").eq("id", campaign.id).maybeSingle();
@@ -1023,20 +1020,19 @@ async function deliverPending(
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
 
-  // Spam gate: monitored campaigns only. Any gate-state failure defers the
-  // campaign — no paid claim or provider call while the gate is unknown.
-  let gateMode: "open" | "gated" = "open";
-  if (limits?.monitored) {
-    const { spamGatePrecheck } = await import("@/lib/carrier-spam-guard.server");
-    const gate = await spamGatePrecheck(supabaseAdmin, campaign);
-    if (gate.action !== "proceed") {
-      const { count: pending } = await supabaseAdmin
-        .from("messages").select("id", { count: "exact", head: true })
-        .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
-      return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, gated: gate.action };
-    }
-    gateMode = gate.mode;
+  // Spam gate: every campaign claims through spam_gate_claim (unenrolled
+  // pre-rollout campaigns are passed through unchanged by the SQL wrapper).
+  // Any gate-state failure defers the campaign — no paid claim or provider
+  // call while the gate is unknown.
+  const { spamGatePrecheck, spamGateState, claimGatedMessages } = await import("@/lib/carrier-spam-guard.server");
+  const gate = await spamGatePrecheck(supabaseAdmin, campaign);
+  if (gate.action !== "proceed") {
+    const { count: pending } = await supabaseAdmin
+      .from("messages").select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
+    return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, gated: gate.action };
   }
+  const gateMode: "open" | "gated" = gate.mode;
 
   const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
   // The provider client paces every request through a shared gate, so the real
@@ -1094,11 +1090,13 @@ async function deliverPending(
 
   while (claimedTotal < claimLimit && canStartDispatchSend(hardDeadline)) {
     const want = Math.min(claimChunk, claimLimit - claimedTotal);
-    const { data: batch, error: qErr } = await supabaseAdmin.rpc("claim_campaign_messages", {
-      _campaign_id: campaign.id,
-      _limit: want,
-    });
-    if (qErr) {
+    // The ONLY claim path: spam_gate_claim locks the campaign/monitor rows,
+    // re-checks live status and account hold, and atomically bounds this paid
+    // claim to the gate allowance before invoking claim_campaign_messages.
+    // There is no fallback to the bare claim — a gate error defers the tick.
+    const claim = await claimGatedMessages(supabaseAdmin, campaign.id, want);
+    if (!claim.ok) {
+      const qErr = { message: claim.error };
       const timedOut = /statement timeout|canceling statement|57014/i.test(qErr.message ?? "");
       console.error("[dispatch] claim failed", qErr.message);
       // A statement timeout means the batch was too heavy for the database
@@ -1114,19 +1112,28 @@ async function deliverPending(
     }
     // A healthy claim lets the batch size creep back up.
     if (claimChunk < MAX_CLAIM_CHUNK) claimChunk = Math.min(MAX_CLAIM_CHUNK, claimChunk * 2);
-    const rows = batch ?? [];
+    const rows = claim.rows;
     if (rows.length === 0) break;
+    // Recheck the gate just before the provider calls in this chunk: a
+    // pause/cancel that landed after the claim must stop these sends. Any
+    // state read failure defers the whole chunk back to the queue.
+    const chunkState = await spamGateState(supabaseAdmin, campaign.id);
+    if (!chunkState || (chunkState.enrolled && chunkState.state !== "monitoring" && chunkState.state !== "released")) {
+      unsent.push(...rows.map((m: any) => m.id));
+      gateExhausted = true;
+      break;
+    }
     claimedTotal += rows.length;
     let rateLimitHits = 0;
     await runWithConcurrency(rows, effectiveConcurrency, async (m: any) => {
       if (gateExhausted || !canStartDispatchSend(hardDeadline)) { unsent.push(m.id); return; }
-      // Gated campaigns: each carrier submission needs one of the 25 initial
-      // gate slots BEFORE the paid claim/provider call. "full" waits for
-      // feedback; "unavailable" fails closed (no unguarded send).
+      // Gated campaigns (initial 25 submissions): recheck before EVERY
+      // provider call, so a pause landing mid-chunk stops the next call.
       if (gateMode === "gated") {
-        const { tryClaimGateSubmission } = await import("@/lib/carrier-spam-guard.server");
-        const slot = await tryClaimGateSubmission(supabaseAdmin, campaign.id);
-        if (slot !== "claimed") { gateExhausted = true; unsent.push(m.id); return; }
+        const st = await spamGateState(supabaseAdmin, campaign.id);
+        if (!st || (st.enrolled && st.state !== "monitoring" && st.state !== "released")) {
+          gateExhausted = true; unsent.push(m.id); return;
+        }
       }
       const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
       if (r.ok) { sent++; debited += r.debited; }
@@ -1234,10 +1241,18 @@ async function processCampaign(
     ? await planCampaign(supabaseAdmin, campaign, rates, recipients, isFirstBatch)
     : { planned: 0, skipped: 0, cost: 0 };
 
-  // Carrier spam gate: monitor campaigns with more than 25 recipients. While
-  // later audience pages are still unplanned the total is unknown — treat as
-  // monitored (fail-safe) so a large campaign can never blast ungated.
-  const monitored = (existing ?? 0) + (planned?.planned ?? 0) > 25 || hasMore;
+  // Planning finished: record the true recipient total so the spam gate's
+  // initial-25 cap applies only to campaigns with more than 25 recipients.
+  if (!hasMore) {
+    try {
+      const { count: total } = await supabaseAdmin
+        .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
+      const { setSpamGateExpectedTotal } = await import("@/lib/carrier-spam-guard.server");
+      await setSpamGateExpectedTotal(supabaseAdmin, campaign.id, total ?? 0);
+    } catch (e) {
+      console.error("[dispatch] spam-gate expected-total failed (stays capped — safe)", campaign.id, e);
+    }
+  }
 
   if (planned.planned === 0 && isFirstBatch && recipients.length > 0) {
     // Nothing could be queued at all (e.g. insufficient balance for every
@@ -1249,7 +1264,7 @@ async function processCampaign(
   // recipient pages are still being planned. Large campaigns therefore begin
   // immediately instead of showing zero progress for several cron intervals.
   const delivered = await deliverPending(supabaseAdmin, campaign, sender,
-    limits ? { ...limits, monitored } : { perTick: 0, concurrency: 0, monitored });
+    limits ?? { perTick: 0, concurrency: 0 });
   if (hasMore && !(await isStoppedByUser(supabaseAdmin, campaign.id))) {
     // deliverPending only sees rows that have already been planned. It must not
     // finalize the campaign while later audience pages still need planning.
@@ -1769,14 +1784,15 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
         );
         await Promise.all(campaignWorkers);
 
-        // Retry spam-gate incident emails whose first enqueue failed. Runs
-        // here (not from the campaign loop) so retries continue even though
-        // the paused campaigns dropped out of the due list.
+        // Drive the durable spam-gate incident email outbox (retries, crash
+        // recovery, suppression rechecks, sent/failed reconciliation). Runs
+        // here, not from the campaign loop, so it keeps working while the
+        // affected campaign is paused and even when no campaign is due.
         try {
-          const { retrySpamGateIncidentEmails } = await import("@/lib/carrier-spam-guard.server");
-          await retrySpamGateIncidentEmails(supabaseAdmin, { limit: 10 });
+          const { processSpamGateEmailOutbox } = await import("@/lib/carrier-spam-guard.server");
+          await processSpamGateEmailOutbox(supabaseAdmin, { limit: 10 });
         } catch (e: any) {
-          console.error("[dispatch] spam-gate email retry failed", e?.message ?? e);
+          console.error("[dispatch] spam-gate email outbox failed", e?.message ?? e);
         }
 
 
