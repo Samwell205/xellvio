@@ -617,10 +617,23 @@ export function AccountAssistant({
             maxLength={8000}
           />
           <PromptInputFooter className="justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
+            <div className="flex min-w-0 items-center gap-1">
+              <Button
+                type="button"
+                aria-label="Upload a contact list"
+                title="Upload a contact list (CSV or text)"
+                variant="ghost"
+                size="sm"
+                disabled={fileBusy || generating || speaking || !!pendingUpload}
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload />
+                {fileBusy ? "Inspecting…" : "Upload"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
               disabled={
                 generating || speaking || fileBusy || !!pendingUpload || !voiceAccess?.available
               }
