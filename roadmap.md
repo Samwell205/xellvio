@@ -1,5 +1,8 @@
 # Roadmap
 
+## Assistant send and voice controls (Oct 22)
+- [ ] Add a shorter assistant campaign launch path with explicit confirmation and unchanged sending safeguards; expose voice beside the composer without expanding the voice pilot. Verify without sending SMS or publishing.
+
 ## Business assistant design (Oct 22)
 - [x] Polish assistant welcome, saved conversations and chat with theme-aware styling and reduced-motion support. Signed-in admin search and saved-thread navigation passed, compact-screen layout has no overflow, reduced motion disables animation, and preview builds pass. Shared tenant presentation uses the same components; no messages sent or publication.
 
