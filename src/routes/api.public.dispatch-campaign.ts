@@ -1,3 +1,4 @@
+import { isAuthorizedCronRequest } from "@/lib/cron-auth.server";
 // Telnyx-backed campaign dispatcher. Sends via Telnyx Messages API scoped to
 // each tenant's Messaging Profile. Twilio has been removed entirely.
 
@@ -1353,16 +1354,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
     handlers: {
       POST: async ({ request }) => {
         const startedAt = Date.now();
-        const apiKey = request.headers.get("apikey");
-        const validApiKeys = new Set([
-          process.env.SUPABASE_PUBLISHABLE_KEY,
-          process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          process.env.SUPABASE_ANON_KEY,
-          // Fallback so the cron trigger keeps working even if the env var is
-          // missing on a deployment. Must match the key the cron jobs send.
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRieXFrdGZlY2ZidWtnbGNpaWhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODY5OTYsImV4cCI6MjA5NzM2Mjk5Nn0.IijlbZkJPlNvjp0_be_JRBYjrNwJmdWpte51rSSFcjw",
-        ].filter((value): value is string => Boolean(value)));
-        if (!apiKey || !validApiKeys.has(apiKey)) {
+        if (!(await isAuthorizedCronRequest(request))) {
           return new Response("Unauthorized", { status: 401 });
         }
         if (!process.env.TELNYX_API_KEY) {

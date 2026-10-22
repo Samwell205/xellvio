@@ -1,3 +1,4 @@
+import { isAuthorizedCronRequest } from "@/lib/cron-auth.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { reconcileOneNowPayment } from "@/lib/nowpayments.functions";
 
@@ -22,11 +23,7 @@ export const Route = createFileRoute("/api/public/nowpayments-poll")({
 });
 
 async function handle(request: Request) {
-  // Auth: require the Supabase anon/publishable key in the `apikey` header
-  // (matches the canonical pg_cron pattern in Lovable's scheduled-jobs docs).
-  const anonKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
-  const provided = request.headers.get("apikey") ?? request.headers.get("x-poll-secret");
-  if (!anonKey || provided !== anonKey) return new Response("Unauthorized", { status: 401 });
+  if (!(await isAuthorizedCronRequest(request))) return new Response("Unauthorized", { status: 401 });
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   // Only touch payments that had time to confirm on-chain (>2 min) and aren't ancient

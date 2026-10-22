@@ -117,7 +117,8 @@ export const Route = createFileRoute("/api/public/growth-events")({
                 (existing?.signup_started ?? false) || list.some((r) => r.event === "signup_started"),
               signup_completed:
                 (existing?.signup_completed ?? false) || list.some((r) => r.event === "signup_completed"),
-              account_id: list.find((r) => r.account_id)?.account_id ?? existing?.account_id ?? null,
+              // Once a visit is attributed it can never be re-pointed by later callers.
+              account_id: existing?.account_id ?? list.find((r) => r.account_id)?.account_id ?? null,
               ...(existing
                 ? {}
                 : {
