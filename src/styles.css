@@ -4,6 +4,21 @@
 
 @custom-variant dark (&:is(.dark *));
 
+:root {
+  --chat-launcher-surface: oklch(0.14 0.018 285);
+  --chat-launcher-foreground: oklch(0.99 0 0);
+  --chat-launcher-edge: oklch(0.48 0.065 300);
+  --chat-launcher-glow: 0 0 28px 5px oklch(0.65 0.16 300 / 0.18);
+}
+
+@utility chat-launcher {
+  background: var(--chat-launcher-surface);
+  color: var(--chat-launcher-foreground);
+  border: 1px solid var(--chat-launcher-edge);
+  box-shadow: var(--chat-launcher-glow);
+  &:hover { background: var(--chat-launcher-surface); color: var(--chat-launcher-foreground); }
+}
+
 @theme inline {
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);

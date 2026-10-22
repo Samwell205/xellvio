@@ -15,6 +15,8 @@ const GREETING: Msg = {
     "👋 Hi! I'm the Xellvio assistant. Ask me anything — or paste a message you plan to send, e.g. *Review this: \"your text\"*, and I'll check if it's allowed and suggest fixes.",
 };
 
+const LAUNCHER_CLASS = "chat-launcher group fixed bottom-5 right-5 z-50 grid size-16 shrink-0 place-items-center rounded-full p-0 transition-transform duration-300 motion-safe:hover:scale-110 motion-safe:active:scale-95 [&_svg]:size-7";
+
 // Turn bare "/contact"-style paths into clickable links.
 function linkify(text: string) {
   return text.replace(/(^|[\s(])(\/(?:contact|auth|forgot-password|pricing|app\/[a-z0-9\-/]+))(?=[\s.,)!?]|$)/g, "$1[$2]($2)");
@@ -142,30 +144,24 @@ export function AiChatWidget() {
   }
 
   if (hidden || pathname.startsWith("/app/assistant") || pathname.startsWith("/admin/account-assistant")) return null;
-  if (pathname.startsWith("/admin")) return <Button asChild className="fixed bottom-5 right-5 z-50 shadow-lg"><Link to="/admin/account-assistant"><MessageCircle/>Account assistant</Link></Button>;
-  if (pathname.startsWith("/app/")) return <Button asChild className="fixed bottom-5 right-5 z-50 shadow-lg"><Link to="/app/assistant"><MessageCircle/>Assistant</Link></Button>;
+  if (pathname.startsWith("/admin")) return <Button asChild variant="ghost" className={LAUNCHER_CLASS}><Link to="/admin/account-assistant" aria-label="Open account assistant" title="Account assistant"><MessageCircle/></Link></Button>;
+  if (pathname === "/app" || pathname.startsWith("/app/")) return <Button asChild variant="ghost" className={LAUNCHER_CLASS}><Link to="/app/assistant" aria-label="Open assistant" title="Assistant"><MessageCircle/></Link></Button>;
 
   return (
     <>
       <style>{WIDGET_STYLES}</style>
 
-      {/* Launcher orb */}
-      <button
+      {/* Shared circular launcher */}
+      <Button
+        variant="ghost"
         type="button"
         aria-label={open ? "Close support chat" : "Open support chat"}
+        title={open ? "Close support chat" : "Open support chat"}
         onClick={() => setOpen((v) => !v)}
-        className="group fixed bottom-5 right-5 z-50 grid size-16 place-items-center rounded-full border border-white/10 bg-[#0B0B14] transition-all duration-300 hover:scale-110 active:scale-95"
+        className={LAUNCHER_CLASS}
       >
-        {/* Orbiting rings */}
-        <span className="pointer-events-none absolute inset-0 rounded-full border border-[#7C3AED]/30 [animation:spin_4s_linear_infinite]" />
-        <span className="pointer-events-none absolute inset-0 rounded-full border border-[#22D3EE]/20 [animation:spin_7s_linear_infinite_reverse]" />
-        {/* Outer glow */}
-        <span className="pointer-events-none absolute -inset-1 rounded-full bg-gradient-to-tr from-[#7C3AED] via-[#F0ABFC] to-[#22D3EE] opacity-60 blur-md transition duration-500 group-hover:opacity-100" />
-        {/* Face */}
-        <span className="relative grid size-full place-items-center overflow-hidden rounded-full bg-[#0B0B14] text-white">
-          {open ? <X className="size-6" /> : <MessageCircle className="size-7" />}
-        </span>
-      </button>
+        {open ? <X /> : <MessageCircle />}
+      </Button>
 
       {/* Panel */}
       <div
