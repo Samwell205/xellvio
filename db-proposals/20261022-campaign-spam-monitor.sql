@@ -1,6 +1,6 @@
 -- Carrier spam-gate: persistent monitor enrollment, immutable finalized
 -- receipts, unique incidents and a durable email outbox.
--- Replaces the misuse of expiring dispatch_locks rows as permanent state.
+-- Replaces the earlier misuse of expiring two-minute lease rows as permanent state.
 -- All access goes through the SECURITY DEFINER functions below; the tables
 -- are service-role only (RLS enabled, no policies for anon/authenticated).
 
@@ -121,11 +121,14 @@ BEGIN
          updated_at = now()
    WHERE campaign_id = _campaign_id;
 
-  -- Exactly one incident per campaign, ever. When the campaign was already
-  -- stopped/fully submitted the incident records paused=false so the notice
-  -- truthfully says nothing remained to stop.
+  -- Exactly one incident per campaign, ever. paused=true only when unsent
+  -- (queued) work was actually stopped; a fully submitted campaign records
+  -- paused=false so the notice truthfully says nothing remained to stop.
   INSERT INTO public.campaign_spam_incidents (campaign_id, account_id, kind, paused, finalized, spam, recipient_email)
-  SELECT m.campaign_id, m.account_id, _kind, (stopped_id IS NOT NULL),
+  SELECT m.campaign_id, m.account_id, _kind,
+         (stopped_id IS NOT NULL AND EXISTS (
+           SELECT 1 FROM public.messages ms
+            WHERE ms.campaign_id = _campaign_id AND ms.status = 'queued')),
          m.finalized_count, m.spam_count,
          COALESCE(NULLIF(BTRIM(a.contact_email), ''), NULLIF(BTRIM(a.email), ''))
     FROM public.campaign_spam_monitors m

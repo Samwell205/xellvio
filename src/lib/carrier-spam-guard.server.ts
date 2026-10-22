@@ -326,8 +326,14 @@ export async function processSpamGateEmailOutbox(
       const { data: msgId, error: enqErr } = await db.rpc("spam_gate_outbox_enqueue", {
         _outbox_id: row.id, _payload: payload,
       });
-      if (enqErr || msgId == null) {
-        const message = String(enqErr?.message ?? "enqueue skipped (already handled)");
+      if (!enqErr && msgId == null) {
+        // The SQL wrapper refused because the row is no longer 'pending' —
+        // a concurrent retry already enqueued it. Nothing to do or undo.
+        result.stillPending += 1;
+        continue;
+      }
+      if (enqErr) {
+        const message = String(enqErr?.message ?? "enqueue failed");
         // Atomic mark keeps the row pending with backoff; the SQL wrapper
         // rolls back the pgmq.send together with the status flip on failure.
         await markOutbox(db, row.id, "pending", message, 300);
