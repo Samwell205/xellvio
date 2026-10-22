@@ -63,12 +63,39 @@ export const deleteCreditPack = createServerFn({ method: "POST" })
 
 export const updateBillingSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: {
+  .inputValidator((raw: {
     payoneer_payee_email?: string | null;
     payoneer_payee_name?: string | null;
     payoneer_instructions?: string | null;
     default_currency?: "NGN" | "USD";
-  }) => d)
+  }) => {
+    // Bind only the editable settings fields; anything else is dropped.
+    const d = (raw ?? {}) as Record<string, unknown>;
+    const out: {
+      payoneer_payee_email?: string | null;
+      payoneer_payee_name?: string | null;
+      payoneer_instructions?: string | null;
+      default_currency?: "NGN" | "USD";
+    } = {};
+    const str = (k: string, max: number) => {
+      const v = d[k];
+      if (v === undefined) return undefined;
+      if (v === null) return null;
+      if (typeof v !== "string" || v.length > max) throw new Error(`Invalid ${k}`);
+      return v;
+    };
+    const e = str("payoneer_payee_email", 320);
+    if (e !== undefined) out.payoneer_payee_email = e;
+    const n = str("payoneer_payee_name", 200);
+    if (n !== undefined) out.payoneer_payee_name = n;
+    const i = str("payoneer_instructions", 5000);
+    if (i !== undefined) out.payoneer_instructions = i;
+    if (d.default_currency !== undefined) {
+      if (d.default_currency !== "NGN" && d.default_currency !== "USD") throw new Error("Invalid currency");
+      out.default_currency = d.default_currency;
+    }
+    return out;
+  })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
