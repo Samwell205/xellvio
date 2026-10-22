@@ -757,6 +757,15 @@ async function beginCampaignIfNeeded(
   }
 
 
+  // Register persistent carrier-spam monitoring for newly launched campaigns.
+  // The SQL enrolls only campaigns with zero submitted/reserved/attempted
+  // work, so pre-rollout campaigns can never be enrolled or retro-notified.
+  // Fail closed: an enrollment error defers the launch rather than sending
+  // unmonitored.
+  const { enrollCampaignForSpamGate } = await import("@/lib/carrier-spam-guard.server");
+  const enrolled = await enrollCampaignForSpamGate(supabaseAdmin, campaign.id);
+  if (enrolled === null) return { ok: false, reason: "spam_gate_enrollment_unavailable" };
+
   return { ok: true };
 }
 
@@ -1775,14 +1784,15 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
         );
         await Promise.all(campaignWorkers);
 
-        // Retry spam-gate incident emails whose first enqueue failed. Runs
-        // here (not from the campaign loop) so retries continue even though
-        // the paused campaigns dropped out of the due list.
+        // Drive the durable spam-gate incident email outbox (retries, crash
+        // recovery, suppression rechecks, sent/failed reconciliation). Runs
+        // here, not from the campaign loop, so it keeps working while the
+        // affected campaign is paused and even when no campaign is due.
         try {
-          const { retrySpamGateIncidentEmails } = await import("@/lib/carrier-spam-guard.server");
-          await retrySpamGateIncidentEmails(supabaseAdmin, { limit: 10 });
+          const { processSpamGateEmailOutbox } = await import("@/lib/carrier-spam-guard.server");
+          await processSpamGateEmailOutbox(supabaseAdmin, { limit: 10 });
         } catch (e: any) {
-          console.error("[dispatch] spam-gate email retry failed", e?.message ?? e);
+          console.error("[dispatch] spam-gate email outbox failed", e?.message ?? e);
         }
 
 
