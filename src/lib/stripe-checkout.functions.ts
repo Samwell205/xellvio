@@ -27,7 +27,22 @@ type CheckoutResult = { url: string; reference: string } | { error: string };
 export const createCardCreditCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { packId?: string; amount?: number; returnUrl: string }) => {
-    if (!d.returnUrl?.startsWith("http")) throw new Error("Invalid return URL");
+    let ru: URL;
+    try {
+      ru = new URL(d.returnUrl);
+    } catch {
+      throw new Error("Invalid return URL");
+    }
+    const host = ru.hostname.toLowerCase();
+    const trusted =
+      ru.protocol === "https:" &&
+      (host === "xellvio.com" ||
+        host === "www.xellvio.com" ||
+        host.endsWith(".lovable.app") ||
+        host.endsWith(".lovableproject.com"));
+    const local = ru.protocol === "http:" && host === "localhost";
+    if (!trusted && !local) throw new Error("Invalid return URL");
+    d = { ...d, returnUrl: `${ru.origin}${ru.pathname}` };
     if (!d.packId) {
       const a = Number(d.amount);
       if (!Number.isFinite(a) || a < 5) throw new Error("Minimum is $5");
