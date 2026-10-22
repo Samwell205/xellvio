@@ -225,6 +225,14 @@ export function AccountAssistant({
     await sendMessage({ text });
     inputRef.current?.focus();
   }
+  const reviewOps = operations
+    .filter((op) => op.kind !== "campaign_launch")
+    .filter((op) => op.status === "pending" || op.status === "completed")
+    .slice(0, 6);
+  const awaitingReview = reviewOps.filter(
+    (op) => op.status === "pending" && Date.parse(op.expires_at) > Date.now(),
+  ).length;
+  const trayOpen = reviewOpen ?? awaitingReview > 0;
   return (
     <div className="assistant-chat assistant-arrive flex min-h-0 min-w-0 flex-1 flex-col">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
