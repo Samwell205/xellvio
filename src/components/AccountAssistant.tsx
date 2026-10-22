@@ -358,6 +358,7 @@ export function AccountAssistant({
               onClose={() => setLaunchId(null)}
               onLaunched={() => {
                 refresh();
+                setReportId(launchId);
                 toast.success("Campaign confirmed. Sending progress is shown in your report.");
               }}
             />

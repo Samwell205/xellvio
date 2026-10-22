@@ -1,7 +1,8 @@
 # Roadmap
 
 ## Assistant campaign status and reports (Oct 22)
-- [ ] Verify James campaign delivery without sending again; show live campaign status instead of stale draft/send controls, acknowledge launch in chat, and provide delivery reports in conversation.
+- [x] Confirmed latest James campaign: 807 message records, 751 delivered, 16 failed, 40 awaiting receipts. Live account-scoped status replaces stale draft/send controls; launch opens the in-chat report and reports use aggregate counts. Thirty-five tests, scoped lint and preview checks pass; authenticated real report read and cross-business denial verified. No SMS sent or published.
+- [ ] Verify natural-language report answer and affected tenant conversation end-to-end — AI service returned “Our servers are currently overloaded”; injected session belongs to a different business, so James conversation access correctly denies. Report read itself is verified on the signed-in business.
 
 ## Upload-first account assistant (Oct 22)
 - [x] In-chat campaign launch: Send campaign stays in the conversation, offers a test number or Skip test, then exact cost/audience/message review and required consent. Authenticated transactional queueing retains screening, live ownership, sender, price, balance, account hold and normal dispatch checks. Twenty-seven focused tests and scoped lint pass; signed-in number input, skipping, final confirmation, empty-audience denial and close verified. No SMS sent or publication; temporary records removed. Media/tracking drafts keep their exact builder preview.
