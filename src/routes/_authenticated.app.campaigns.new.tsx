@@ -1,3 +1,4 @@
+import { neutralizeCsvCell } from "@/lib/csv-safe";
 import { createFileRoute, useNavigate, Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -333,8 +334,8 @@ function NewCampaignPage() {
           [
             a.profile_id,
             a.phone_e164,
-            (a.first_name ?? "").replace(/[,"\n]/g, " "),
-            (a.last_name ?? "").replace(/[,"\n]/g, " "),
+            neutralizeCsvCell((a.first_name ?? "").replace(/[,"\n]/g, " ")),
+            neutralizeCsvCell((a.last_name ?? "").replace(/[,"\n]/g, " ")),
             a.country_code ?? "",
           ].join(","),
         )
