@@ -67,11 +67,12 @@ function fakeDb(opts: FakeOpts = {}) {
       expected_total: number | null; waiting_since: number | null;
     },
     receipts: new Map<string, { error_code: string | null }>(),
-    incident: null as null | { campaign_id: string; account_id: string; kind: string; paused: boolean; finalized: number; spam: number; recipient_email: string | null },
+    incident: null as null | { campaign_id: string; account_id: string; kind: string; paused: boolean; finalized: number; spam: number; recipient_email: string | null; submission_state: "remaining_stopped" | "all_submitted" | "no_remaining_work" },
     outbox: null as null | { id: string; campaign_id: string; account_id: string; status: string; payload: any; attempts: number; last_error: string | null; next_retry_at: number | null },
     messages: [] as Array<{ id: string; campaign_id: string; status: string; provider_message_id: string | null }>,
     suppressed: new Set(opts.suppressed ?? []),
     emailLog: [] as any[],
+    unsubscribeTokens: new Map<string, string>([["owner@example.com", "tok"]]),
     enqueued: [] as any[],
     pauseAttempts: 0,
     chargedClaims: 0, // paid claims actually made (the thing the gate must bound)
@@ -96,6 +97,8 @@ function fakeDb(opts: FakeOpts = {}) {
     state.pauseAttempts += 1;
     if (opts.crashDuringPause) throw new Error("crash mid-pause (transaction rolled back)");
     const wasDispatchable = DISPATCHABLE.includes(state.campaign.status);
+    const hasRemaining = state.messages.some((m) => m.status === "queued");
+    if (!wasDispatchable && hasRemaining) return;
     if (wasDispatchable) {
       state.campaign.status = "paused";
       state.campaign.paused_reason = kind === "spam" ? SPAM_PAUSE_REASON : FEEDBACK_TIMEOUT_REASON;
@@ -108,6 +111,7 @@ function fakeDb(opts: FakeOpts = {}) {
       state.incident = {
         campaign_id: "c1", account_id: "a1", kind,
         paused: wasDispatchable && hadQueued,
+        submission_state: hadQueued ? "remaining_stopped" : state.monitor.expected_total != null && state.messages.every(m => m.provider_message_id != null) ? "all_submitted" : "no_remaining_work",
         finalized: state.monitor.finalized_count, spam: state.monitor.spam_count,
         recipient_email: recipient,
       };
@@ -126,16 +130,17 @@ function fakeDb(opts: FakeOpts = {}) {
 
   const db: any = {
     state,
+    options: opts,
     from: (table: string) => {
-      const q: any = { table, filters: [] as any[], op: "select", patch: null, rows: null, limitN: null as number | null };
-      const matchRow = (row: any) => q.filters.every(([c, v]: any) => row[c] === v);
+      const q: any = { table, filters: [] as any[], op: "select", patch: null, rows: null, limitN: null as number | null, inFilters: [] as any[], upsertOptions: null as any };
+      const matchRow = (row: any) => q.filters.every(([c, v]: any) => row[c] === v) && q.inFilters.every(([c, values]: any) => values.includes(row[c]));
       const api: any = {
         select: () => api,
         insert: (rows: any) => { q.op = "insert"; q.rows = Array.isArray(rows) ? rows : [rows]; return api; },
         update: (patch: any) => { q.op = "update"; q.patch = patch; return api; },
-        upsert: (rows: any) => { q.op = "upsert"; q.rows = Array.isArray(rows) ? rows : [rows]; return api; },
+        upsert: (rows: any, options: any) => { q.op = "upsert"; q.rows = Array.isArray(rows) ? rows : [rows]; q.upsertOptions = options; return api; },
         eq: (c: string, v: any) => { q.filters.push([c, v]); return api; },
-        in: () => api,
+        in: (c: string, values: any[]) => { q.inFilters.push([c, values]); return api; },
         order: () => api,
         limit: (n: number) => { q.limitN = n; return api; },
         maybeSingle: async () => ({ data: execOne(), error: execErr() }),
@@ -154,7 +159,12 @@ function fakeDb(opts: FakeOpts = {}) {
           const email = q.filters.find(([c]: any) => c === "email")?.[1];
           return email && state.suppressed.has(email) ? { email } : null;
         }
-        if (table === "email_unsubscribe_tokens") return { token: "tok" };
+        if (table === "email_unsubscribe_tokens") {
+          const email = q.filters.find(([c]: any) => c === "email")?.[1];
+          const token = state.unsubscribeTokens.get(email);
+          return token ? { email, token } : null;
+        }
+        if (table === "email_send_log") return execAll()[0] ?? null;
         return null;
       }
       function execAll(): any[] {
@@ -162,9 +172,15 @@ function fakeDb(opts: FakeOpts = {}) {
         if (table === "campaigns" && q.op === "update") { Object.assign(state.campaign, q.patch); return [{ id: "c1" }]; }
         if (table === "email_send_log") {
           if (q.op === "insert") { state.emailLog.push(...q.rows); return q.rows; }
-          return state.emailLog;
+          const rows = state.emailLog.filter(matchRow);
+          return q.limitN ? rows.slice(0, q.limitN) : rows;
         }
-        if (table === "email_unsubscribe_tokens") return [{ token: "tok" }];
+        if (table === "email_unsubscribe_tokens") {
+          if (q.op === "upsert") for (const row of q.rows) {
+            if (!state.unsubscribeTokens.has(row.email) || !q.upsertOptions?.ignoreDuplicates) state.unsubscribeTokens.set(row.email, row.token);
+          }
+          return execOne() ? [execOne()] : [];
+        }
         return execOne() ? [execOne()] : [];
       }
       return api;
@@ -250,6 +266,17 @@ function fakeDb(opts: FakeOpts = {}) {
         }
         return { data: "recorded", error: null };
       }
+      if (fn === "spam_gate_resume_timeout") {
+        const m = state.monitor;
+        const a = state.account;
+        if (!m || m.state !== "paused_timeout" || m.finalized_count < 20 || thresholdMet()
+          || state.campaign.status !== args._status || state.campaign.account_id !== args._account_id
+          || state.campaign.message_body !== args._body || state.campaign.paused_reason !== FEEDBACK_TIMEOUT_REASON
+          || !a || a.sending_suspended_at || a.onboarding_status !== "active") return { data: false, error: null };
+        m.state = "released"; m.waiting_since = null;
+        state.campaign.status = "sending"; state.campaign.paused_reason = null;
+        return { data: true, error: null };
+      }
       if (fn === "spam_gate_outbox_due") {
         if (opts.outboxDueError) return { data: null, error: { message: "outbox down" } };
         const o = state.outbox;
@@ -267,17 +294,19 @@ function fakeDb(opts: FakeOpts = {}) {
         o.status = "queued";
         o.payload = args._payload;
         o.attempts += 1;
+        o.next_retry_at = Date.now() + 300_000;
         return { data: 42, error: null };
       }
       if (fn === "spam_gate_outbox_mark") {
         const o = state.outbox;
-        if (o) {
-          o.status = args._status;
-          o.last_error = args._error;
-          if (args._status === "pending") { o.attempts += 1; o.next_retry_at = Date.now() + 30_000; }
-          else o.next_retry_at = null;
-        }
-        return { data: null, error: null };
+        if (!o || o.status !== args._expected_status || o.status === "sent") return { data: false, error: null };
+        if (args._status === "pending" && o.status !== "pending") return { data: false, error: null };
+        o.status = args._status;
+        o.last_error = args._error;
+        if (args._status === "pending") o.attempts += 1;
+        o.next_retry_at = ["pending", "queued"].includes(o.status)
+          ? Date.now() + Math.max(30, args._retry_delay_seconds ?? 300) * 1000 : null;
+        return { data: true, error: null };
       }
       return { data: null, error: { message: `unknown rpc ${fn}` } };
     }),
@@ -512,7 +541,7 @@ describe("Atomic pause + incident + outbox", () => {
     const email = buildSpamIncidentEmail({
       campaignId: "c1", campaignName: "Spring Promo",
       stats: { finalized: db.state.incident.finalized, spam: db.state.incident.spam },
-      paused: false, kind: "spam", baseUrl: "https://xellvio.com",
+      paused: false, submissionState: db.state.incident.submission_state, kind: "spam", baseUrl: "https://xellvio.com",
     });
     expect(email.text).toContain("already been handed to the carriers");
     expect(email.text).not.toContain("remaining messages were stopped");
@@ -538,7 +567,8 @@ describe("Durable email outbox", () => {
     const email = db.state.enqueued[0];
     expect(email.to).toBe("owner@example.com");
     expect(email.subject).toContain("Spring Promo");
-    expect(email.text).toContain("still charged");
+    expect(email.text).toContain("charged or reserved");
+    expect(email.text).not.toContain("unsent messages are not sent and not charged");
     expect(email.text).toContain("/app/campaigns/c1");
     expect(email.unsubscribe_token).toBe("tok");
   });
@@ -558,8 +588,13 @@ describe("Durable email outbox", () => {
     expect(db.state.outbox.status).toBe("pending");
     // retries run even though the campaign is paused and not due
     db.state.campaign.status = "paused";
-    const crash = db.state.outbox; // clear the crash flag by rebuilding opts is not possible; flip status manually
-    expect(crash.attempts).toBe(1);
+    expect(db.state.outbox.attempts).toBe(1);
+    db.options.crashDuringEnqueue = false;
+    db.state.outbox.next_retry_at = null;
+    const r2 = await processSpamGateEmailOutbox(db);
+    expect(r2.enqueued).toBe(1);
+    expect(db.state.outbox.status).toBe("queued");
+    expect(db.state.campaign.status).toBe("paused");
   });
 
   it("suppression is rechecked at retry time: a bounce added during an outage stops the notice truthfully", async () => {
@@ -592,14 +627,16 @@ describe("Durable email outbox", () => {
   it("queued notices reconcile to sent/failed from the email processor log", async () => {
     const db = await pausedDb();
     await processSpamGateEmailOutbox(db);
-    db.state.emailLog.push({ status: "sent" });
+    db.state.emailLog.push({ message_id: "spamgate-incident-c1", status: "sent" });
+    db.state.outbox.next_retry_at = null;
     const r = await processSpamGateEmailOutbox(db);
     expect(r.sent).toBe(1);
     expect(db.state.outbox.status).toBe("sent");
 
     const db2 = await pausedDb();
     await processSpamGateEmailOutbox(db2);
-    db2.state.emailLog.push({ status: "bounced" });
+    db2.state.emailLog.push({ message_id: "spamgate-incident-c1", status: "bounced" });
+    db2.state.outbox.next_retry_at = null;
     const r2 = await processSpamGateEmailOutbox(db2);
     expect(r2.failedTerminal).toBe(1);
     expect(db2.state.outbox.status).toBe("failed");
@@ -619,12 +656,12 @@ describe("Dispatcher precheck posture", () => {
     expect((await spamGatePrecheck(fakeDb({ stateError: true }), CAMPAIGN)).action).toBe("defer");
   });
 
-  it("enrolled campaign: gated during the initial 25, wait after, paused states reported", async () => {
+  it("enrolled campaign: exhausted initial budget still reaches authoritative claim, paused states reported", async () => {
     const db = fakeDb({ messageCount: 100 });
     await enrollCampaignForSpamGate(db, "c1");
     expect(await spamGatePrecheck(db, CAMPAIGN)).toEqual({ action: "proceed", mode: "gated", enrolled: true });
     db.state.monitor.submitted_count = 25;
-    expect((await spamGatePrecheck(db, CAMPAIGN)).action).toBe("wait");
+    expect(await spamGatePrecheck(db, CAMPAIGN)).toEqual({ action: "proceed", mode: "gated", enrolled: true });
     db.state.monitor.state = "paused_spam";
     expect(await spamGatePrecheck(db, CAMPAIGN)).toEqual({ action: "paused", reason: "spam_threshold" });
   });

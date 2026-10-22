@@ -17,9 +17,8 @@
  * Every RPC failure defers (fail closed): no paid claim, no provider call,
  * no release while the gate state is unknown.
  */
+import { INCIDENT_EMAIL_LABEL, transitionIncidentOutbox, type IncidentEmailState } from "./campaign-incident-email.server";
 import {
-  SPAM_GATE_INITIAL_SUBMISSIONS,
-  SPAM_GATE_FEEDBACK_WAIT_MS,
   SPAM_GATE_MIN_RECIPIENTS,
   buildSpamIncidentEmail,
   resolveIncidentRecipient,
@@ -39,6 +38,7 @@ export type SpamGateState = {
   enrolled: boolean;
   state: SpamGateMonitorState | null;
   submitted: number;
+  outstanding: number;
   finalized: number;
   spam: number;
   expectedTotal: number | null;
@@ -52,13 +52,14 @@ export async function spamGateState(db: any, campaignId: string): Promise<SpamGa
   if (error || !Array.isArray(data)) return null;
   const row = data[0];
   if (!row) {
-    return { enrolled: false, state: null, submitted: 0, finalized: 0, spam: 0, expectedTotal: null, waitingSinceMs: null };
+    return { enrolled: false, state: null, submitted: 0, outstanding: 0, finalized: 0, spam: 0, expectedTotal: null, waitingSinceMs: null };
   }
   const waited = row.waiting_since ? new Date(String(row.waiting_since)).getTime() : null;
   return {
     enrolled: true,
     state: (row.state ?? null) as SpamGateMonitorState | null,
     submitted: Number(row.submitted_count ?? 0),
+    outstanding: Number(row.outstanding_count ?? Math.max(0, Number(row.submitted_count ?? 0) - Number(row.finalized_count ?? 0))),
     finalized: Number(row.finalized_count ?? 0),
     spam: Number(row.spam_count ?? 0),
     expectedTotal: row.expected_total == null ? null : Number(row.expected_total),
@@ -85,12 +86,21 @@ export async function spamGatePrecheck(db: any, campaign: { id: string }): Promi
   // monitoring
   const capped = s.expectedTotal == null || s.expectedTotal >= SPAM_GATE_MIN_RECIPIENTS;
   if (!capped) return { action: "proceed", mode: "open", enrolled: true };
-  if (s.submitted < SPAM_GATE_INITIAL_SUBMISSIONS) return { action: "proceed", mode: "gated", enrolled: true };
-  if (s.waitingSinceMs != null && Date.now() - s.waitingSinceMs >= SPAM_GATE_FEEDBACK_WAIT_MS) {
-    // The wrapper performs the atomic feedback-timeout pause at claim time.
-    return { action: "paused", reason: "feedback_timeout" };
+  // Always let the authoritative transaction reevaluate an exhausted budget.
+  // It alone may release healthy feedback or persist a timeout pause. Waiting
+  // here would prevent that transaction from ever running after the first 25.
+  return { action: "proceed", mode: "gated", enrolled: true };
+}
+
+/** Last-mile live status/hold check for already claimed work. Failure keeps
+ * the paid attempt queued; it never creates a fresh charge or provider call. */
+export async function canSendClaimedCampaignMessage(db: any, campaignId: string): Promise<boolean> {
+  try {
+    const { data, error } = await db.rpc("spam_gate_can_send", { _campaign_id: campaignId });
+    return !error && data === true;
+  } catch {
+    return false;
   }
-  return { action: "wait", reason: "awaiting_carrier_feedback" };
 }
 
 /**
@@ -182,176 +192,152 @@ type OutboxRow = {
   id: string;
   campaign_id: string;
   account_id: string;
-  status: "pending" | "queued" | "sent" | "failed" | "suppressed" | "missing";
+  status: IncidentEmailState;
   payload?: any;
 };
 
-async function markOutbox(db: any, id: string, status: string, error: string | null, retryDelaySeconds = 300): Promise<void> {
-  await db.rpc("spam_gate_outbox_mark", {
-    _outbox_id: id, _status: status, _error: error, _retry_delay_seconds: retryDelaySeconds,
-  });
-}
-
 async function logEmail(db: any, campaignId: string, to: string, status: string, errorMessage?: string | null): Promise<void> {
-  await db.from("email_send_log").insert({
+  const { error } = await db.from("email_send_log").insert({
     message_id: incidentIdempotencyKey(campaignId),
-    template_name: "campaign-spam-incident",
+    template_name: INCIDENT_EMAIL_LABEL,
     recipient_email: to,
     status,
     ...(errorMessage ? { error_message: String(errorMessage).slice(0, 1000) } : {}),
   });
+  if (error) throw new Error("Incident email visibility could not be saved");
 }
 
 export type OutboxProcessResult = {
-  scanned: number;
-  enqueued: number;
-  sent: number;
-  failedTerminal: number;
-  suppressed: number;
-  missing: number;
-  stillPending: number;
-  failed: number;
+  scanned: number; enqueued: number; sent: number; failedTerminal: number;
+  suppressed: number; missing: number; stillPending: number; failed: number;
 };
 
 /**
- * Drive the durable incident-email outbox. Runs from the dispatcher
- * invocation itself, so it keeps working while the affected campaign is
- * paused (paused campaigns drop out of the due list) and even when no
- * campaign is due at all. Bounded per run; every error leaves the row
- * 'pending' with backoff (deferred, never dropped).
+ * Independent, bounded worker: due selection is advisory; enqueue and each
+ * transition are protected by SQL row locks and expected-status CAS. "queued"
+ * means accepted by the mail queue, while "sent" requires actual send proof.
  */
 export async function processSpamGateEmailOutbox(
-  db: any,
-  opts: { limit?: number } = {},
+  db: any, opts: { limit?: number } = {},
 ): Promise<OutboxProcessResult> {
-  const limit = opts.limit ?? 10;
   const result: OutboxProcessResult = {
-    scanned: 0, enqueued: 0, sent: 0, failedTerminal: 0, suppressed: 0, missing: 0, stillPending: 0, failed: 0,
+    scanned: 0, enqueued: 0, sent: 0, failedTerminal: 0, suppressed: 0,
+    missing: 0, stillPending: 0, failed: 0,
   };
-  const { data, error } = await db.rpc("spam_gate_outbox_due", { _limit: limit });
+  const { data, error } = await db.rpc("spam_gate_outbox_due", { _limit: opts.limit ?? 10 });
   if (error || !Array.isArray(data)) { result.failed = 1; return result; }
   result.scanned = data.length;
 
   for (const row of data as OutboxRow[]) {
     try {
       if (row.status === "queued") {
-        // Enqueued ≠ delivered: reconcile real visibility from the email log.
-        const { data: logs } = await db
-          .from("email_send_log")
-          .select("status")
-          .eq("message_id", incidentIdempotencyKey(row.campaign_id))
-          .order("created_at", { ascending: false })
-          .limit(5);
-        const statuses = (logs ?? []).map((l: any) => String(l.status ?? ""));
-        if (statuses.includes("sent")) {
-          await markOutbox(db, row.id, "sent", null);
-          result.sent += 1;
-        } else if (statuses.some((s: string) => s === "failed" || s === "bounced")) {
-          await markOutbox(db, row.id, "failed", "Email delivery failed");
-          result.failedTerminal += 1;
+        const key = incidentIdempotencyKey(row.campaign_id);
+        // Query actual send proof independently: it wins over every older or
+        // transient failure, regardless of log pagination/order.
+        const { data: sentLog, error: sentError } = await db.from("email_send_log")
+          .select("id").eq("message_id", key).eq("status", "sent").limit(1).maybeSingle();
+        if (sentError) throw new Error("Incident email send proof could not be read");
+        if (sentLog) {
+          if (await transitionIncidentOutbox(db, row.id, "queued", "sent", null)) result.sent += 1;
+          continue;
+        }
+        const { data: terminal, error: terminalError } = await db.from("email_send_log")
+          .select("status,error_message").eq("message_id", key)
+          .in("status", ["dlq", "bounced", "suppressed"])
+          .order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (terminalError) throw new Error("Incident email terminal state could not be read");
+        if (terminal) {
+          const next = terminal.status === "suppressed" ? "suppressed" : "failed";
+          const message = next === "failed"
+            ? "Incident email needs manual review: " + String(terminal.error_message ?? terminal.status)
+            : "Recipient is on the suppression list";
+          if (await transitionIncidentOutbox(db, row.id, "queued", next, message)) {
+            if (next === "failed") result.failedTerminal += 1; else result.suppressed += 1;
+          }
         } else {
+          // Generic "failed" log rows are attempts, not a terminal outcome.
+          // Move the next check forward so old queued items cannot starve new notices.
+          await transitionIncidentOutbox(db, row.id, "queued", "queued", null, 300);
           result.stillPending += 1;
         }
         continue;
       }
+      if (row.status !== "pending") continue;
 
-      // status === 'pending': build (or rebuild after a crash) and enqueue.
-      const { data: incident } = await db
-        .from("campaign_spam_incidents")
-        .select("kind,paused,finalized,spam")
-        .eq("campaign_id", row.campaign_id)
-        .maybeSingle();
-      const { data: campaign } = await db
-        .from("campaigns").select("name").eq("id", row.campaign_id).maybeSingle();
-      const { data: account, error: acctErr } = await db
-        .from("accounts").select("email,contact_email").eq("id", row.account_id).maybeSingle();
-      if (acctErr) {
-        // Lookup failure is transient: leave pending for the next run — never
-        // record a permanent "missing" on a read error.
-        result.stillPending += 1;
-        continue;
+      const { data: incident, error: incidentError } = await db.from("campaign_spam_incidents")
+        .select("kind,paused,finalized,spam,submission_state,submitted_count,remaining_count")
+        .eq("campaign_id", row.campaign_id).maybeSingle();
+      const { data: campaign, error: campaignError } = await db.from("campaigns")
+        .select("name").eq("id", row.campaign_id).maybeSingle();
+      const { data: account, error: accountError } = await db.from("accounts")
+        .select("email,contact_email").eq("id", row.account_id).maybeSingle();
+      if (incidentError || !incident || campaignError || !campaign || accountError) {
+        throw new Error("Incident notification details could not be read; retry required");
       }
+
       const recipient = resolveIncidentRecipient(account);
       if (!recipient) {
-        await markOutbox(db, row.id, "missing", "Account has no contact or login email");
-        result.missing += 1;
+        if (await transitionIncidentOutbox(db, row.id, "pending", "missing", "Account has no contact or login email")) result.missing += 1;
         continue;
       }
-
-      // Recheck suppression immediately before enqueueing — a bounce added
-      // during an outage must stop the retry too.
-      const { data: suppressed } = await db
-        .from("suppressed_emails").select("email").eq("email", recipient).maybeSingle();
+      const { data: suppressed, error: suppressionError } = await db.from("suppressed_emails")
+        .select("email").eq("email", recipient).maybeSingle();
+      if (suppressionError) throw new Error("Incident email suppression check is unavailable");
       if (suppressed) {
-        await markOutbox(db, row.id, "suppressed", "Recipient is on the suppression list");
-        await logEmail(db, row.campaign_id, recipient, "suppressed", "Recipient is on the suppression list");
-        result.suppressed += 1;
+        if (await transitionIncidentOutbox(db, row.id, "pending", "suppressed", "Recipient is on the suppression list")) {
+          await logEmail(db, row.campaign_id, recipient, "suppressed", "Recipient is on the suppression list");
+          result.suppressed += 1;
+        }
         continue;
       }
 
       let unsubscribeToken: string | null = null;
-      try {
-        const token = generateToken();
-        const { data: tok } = await db
-          .from("email_unsubscribe_tokens")
-          .upsert({ email: recipient, token }, { onConflict: "email" })
-          .select("token")
-          .maybeSingle();
-        unsubscribeToken = tok?.token ?? token;
-      } catch (e) {
-        console.warn("[spam-gate] could not mint unsubscribe token", e);
-      }
+      const token = generateToken();
+      // Create only if absent. Retried/concurrent incident builds must never
+      // rotate a token already used by older unsubscribe links.
+      const { error: tokenInsertError } = await db.from("email_unsubscribe_tokens")
+        .upsert({ email: recipient, token }, { onConflict: "email", ignoreDuplicates: true });
+      if (tokenInsertError) throw new Error("Incident email unsubscribe token could not be saved");
+      const { data: tok, error: tokenReadError } = await db.from("email_unsubscribe_tokens")
+        .select("token").eq("email", recipient).maybeSingle();
+      if (tokenReadError || !tok?.token) throw new Error("Incident email unsubscribe token could not be read");
+      unsubscribeToken = tok.token;
 
       const content = buildSpamIncidentEmail({
-        campaignId: row.campaign_id,
-        campaignName: String(campaign?.name ?? ""),
-        stats: { finalized: Number(incident?.finalized ?? 0), spam: Number(incident?.spam ?? 0) },
-        paused: incident?.paused !== false,
-        kind: incident?.kind === "feedback_timeout" ? "feedback_timeout" : "spam",
-        baseUrl: publicBaseUrl(),
+        campaignId: row.campaign_id, campaignName: String(campaign.name ?? ""),
+        stats: { finalized: Number(incident.finalized), spam: Number(incident.spam) },
+        paused: incident.paused === true, submissionState: incident.submission_state,
+        kind: incident.kind, baseUrl: publicBaseUrl(),
       });
       const payload = {
         message_id: incidentIdempotencyKey(row.campaign_id),
-        to: recipient,
-        from: FROM_ADDRESS,
-        sender_domain: SENDER_DOMAIN,
-        subject: content.subject,
-        html: content.html,
-        text: content.text,
-        purpose: "transactional",
-        label: "campaign-spam-incident",
+        incident_outbox_id: row.id,
+        to: recipient, from: FROM_ADDRESS, sender_domain: SENDER_DOMAIN,
+        subject: content.subject, html: content.html, text: content.text,
+        purpose: "transactional", label: INCIDENT_EMAIL_LABEL,
         idempotency_key: incidentIdempotencyKey(row.campaign_id),
-        ...(unsubscribeToken ? { unsubscribe_token: unsubscribeToken } : {}),
-        queued_at: new Date().toISOString(),
-        site_name: SITE_NAME,
+        unsubscribe_token: unsubscribeToken, queued_at: new Date().toISOString(), site_name: SITE_NAME,
       };
-
-      // Visibility: "pending" first; "queued" only after the queue accepts
-      // it — never claimed as delivered.
       await logEmail(db, row.campaign_id, recipient, "pending");
-      const { data: msgId, error: enqErr } = await db.rpc("spam_gate_outbox_enqueue", {
+      const { data: msgId, error: enqueueError } = await db.rpc("spam_gate_outbox_enqueue", {
         _outbox_id: row.id, _payload: payload,
       });
-      if (!enqErr && msgId == null) {
-        // The SQL wrapper refused because the row is no longer 'pending' —
-        // a concurrent retry already enqueued it. Nothing to do or undo.
+      if (enqueueError) {
+        // The reply may be lost after commit. CAS pending->pending only adds
+        // retry backoff if it truly remains pending; queued/sent cannot rewind.
+        await transitionIncidentOutbox(db, row.id, "pending", "pending", String(enqueueError.message ?? "Queue response unavailable"), 300);
         result.stillPending += 1;
         continue;
       }
-      if (enqErr) {
-        const message = String(enqErr?.message ?? "enqueue failed");
-        // Atomic mark keeps the row pending with backoff; the SQL wrapper
-        // rolls back the pgmq.send together with the status flip on failure.
-        await markOutbox(db, row.id, "pending", message, 300);
-        await logEmail(db, row.campaign_id, recipient, "failed", message);
-        result.stillPending += 1;
-        continue;
-      }
+      if (msgId == null) { result.stillPending += 1; continue; } // another worker already committed it
       await logEmail(db, row.campaign_id, recipient, "queued");
       result.enqueued += 1;
     } catch (e: any) {
-      console.error("[spam-gate] outbox row failed", row.id, e?.message ?? e);
+      const message = String(e?.message ?? "Incident email deferred");
+      try { await transitionIncidentOutbox(db, row.id, row.status, row.status, message, 300); }
+      catch { /* Existing durable row remains discoverable; never erase or rewind it. */ }
       result.stillPending += 1;
+      result.failed += 1;
     }
   }
   return result;

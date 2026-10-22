@@ -1,3 +1,4 @@
+import { isIncidentEmail, prepareIncidentEmailSend, recordIncidentEmailOutcome, deferIncidentEmail } from '@/lib/campaign-incident-email.server'
 import { sendMail, mailerProvider } from '@/lib/email/mailer.server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createFileRoute } from '@tanstack/react-router'
@@ -42,6 +43,12 @@ async function moveToDlq(
   reason: string
 ): Promise<void> {
   const payload = msg.message
+  if (isIncidentEmail(payload)) {
+    // Retry/age policy has stopped this notification. Persist manual-review
+    // state BEFORE cleanup; a cleanup crash must not leave it forever queued.
+    // Actual send proof remains monotonic and wins over this policy stop.
+    await recordIncidentEmailOutcome(supabase, payload, 'failed', `Notification needs manual review: ${reason}. Further attempts stopped by sender policy; recipient delivery is not confirmed.`)
+  }
   await supabase.from('email_send_log').insert({
     message_id: payload.message_id,
     template_name: (payload.label || queue) as string,
@@ -204,6 +211,7 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
                 .maybeSingle()
 
               if (alreadySent) {
+                if (isIncidentEmail(payload)) await recordIncidentEmailOutcome(supabase, payload, 'sent')
                 console.warn('Skipping duplicate send (already sent)', {
                   queue,
                   msg_id: msg.msg_id,
@@ -231,7 +239,17 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
               (typeof payload.purpose === 'string' && payload.purpose) ||
               (queue === 'auth_emails' ? 'auth' : 'transactional')
 
+            let providerSendAttempted = false
             try {
+              if (isIncidentEmail(payload)) {
+                const check = await prepareIncidentEmailSend(supabase, payload)
+                if (!check.send) {
+                  const { error: skipError } = await supabase.rpc('delete_email', { queue_name: queue, message_id: msg.msg_id })
+                  if (skipError) throw new Error('Could not remove stopped incident email from queue')
+                  continue
+                }
+              }
+              providerSendAttempted = true
               await sendMail(
                 {
                   run_id: payload.run_id,
@@ -248,6 +266,8 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
                   message_id: payload.message_id,
                 }
               )
+
+              if (isIncidentEmail(payload)) await recordIncidentEmailOutcome(supabase, payload, 'sent')
 
               // Log success
               await supabase.from('email_send_log').insert({
@@ -268,6 +288,13 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
               totalProcessed++
             } catch (error) {
               const errorMsg = error instanceof Error ? error.message : String(error)
+              if (isIncidentEmail(payload) && !providerSendAttempted) {
+                // Suppression/identity reads failing is not a mail-provider attempt.
+                // Keep the item queued for a later retry, without consuming MAX_RETRIES.
+                try { await deferIncidentEmail(supabase, payload, errorMsg) } catch { /* durable item remains */ }
+                console.error('Incident email deferred before provider send', { msg_id: msg.msg_id, error: errorMsg })
+                continue
+              }
               console.error('Email send failed', {
                 queue,
                 msg_id: msg.msg_id,

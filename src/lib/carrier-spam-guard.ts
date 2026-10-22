@@ -144,6 +144,7 @@ export type SpamIncidentEmailInput = {
   /** true: remaining sends were stopped. false: everything was already
    * submitted before the results arrived — say so honestly. */
   paused: boolean;
+  submissionState?: "remaining_stopped" | "all_submitted" | "no_remaining_work";
   /** "spam" | "feedback_timeout" */
   kind: "spam" | "feedback_timeout";
   baseUrl: string;
@@ -173,11 +174,9 @@ export function buildSpamIncidentEmail(input: SpamIncidentEmailInput): {
       ? `The phone companies did not return delivery results for "${name}" in time, so the remaining messages were left unsent rather than released blindly.`
       : input.paused
         ? `Of the first ${input.stats.finalized} texts with a final carrier result on "${name}", ${input.stats.spam} (${pct}%) were rejected by the recipients' mobile carriers as suspected spam, so the remaining messages were stopped.`
-        : `Of ${input.stats.finalized} texts with a final carrier result on "${name}", ${input.stats.spam} (${pct}%) were rejected by the recipients' mobile carriers as suspected spam. All messages in this campaign had already been handed to the carriers, so there was nothing left to stop.`;
+        : `Of ${input.stats.finalized} texts with a final carrier result on "${name}", ${input.stats.spam} (${pct}%) were rejected by the recipients' mobile carriers as suspected spam. ${input.submissionState === "all_submitted" ? "All messages in this campaign had already been handed to the carriers, so there was nothing left to stop." : "No additional submissions were paused by this notice. See the report for the outcome of submitted and unsent messages."}`;
 
-  const caveat = input.paused
-    ? "Messages already handed to the carriers before the pause can still complete, and those sends are still charged. The remaining, unsent messages are not sent and not charged."
-    : "All submitted sends are final and charged as usual.";
+  const caveat = "Messages already handed to the carriers can still complete. Some sends may already have been charged or reserved before this notice. Check the campaign report and billing history for the amounts; this notice does not change existing charges or issue a refund.";
 
   const nextSteps =
     input.kind === "feedback_timeout"

@@ -13,6 +13,7 @@ import {
 
 import { toast } from "sonner";
 import { isSpamGateReason, isSpamGatePauseReason } from "@/lib/carrier-spam-guard";
+import { getCampaignCarrierNotice } from "@/lib/carrier-spam-notice.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +88,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useCanViewCosts } from "@/hooks/useCanViewCosts";
 import { formatUSD } from "@/lib/money";
 
+const CARRIER_NOTICE_EMAIL_LABELS: Record<string, string> = {
+  pending: "waiting to send",
+  queued: "queued",
+  sent: "sent",
+  failed: "failed — support can review",
+  suppressed: "not sent because the address is suppressed",
+  missing: "no account email available",
+  unavailable: "status unavailable",
+};
+
 export const Route = createFileRoute("/_authenticated/app/campaigns/$id")({
   head: () => ({ meta: [{ title: "Campaign delivery — Xellvio" }, { name: "description", content: "Campaign delivery receipts, confirmed failures and unconfirmed messages." }, { property: "og:title", content: "Campaign delivery — Xellvio" }, { property: "og:description", content: "Track campaign results and recover delivery receipts." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: CampaignReport,
@@ -96,6 +107,12 @@ function CampaignReport() {
   const { id } = Route.useParams();
   const canViewCosts = useCanViewCosts();
   const queryClient = useQueryClient();
+  const carrierNoticeFn = useServerFn(getCampaignCarrierNotice);
+  const { data: carrierNotice } = useQuery({
+    queryKey: ["campaign-carrier-notice", id],
+    queryFn: () => carrierNoticeFn({ data: { campaignId: id } }),
+    refetchInterval: 15_000,
+  });
   const reconcileFn = useServerFn(reconcileCampaignMessages);
   const reconcileM = useMutation({
     mutationFn: async () => {
@@ -875,7 +892,31 @@ function CampaignReport() {
         </div>
       </div>
 
-      {c.status === "paused" && isSpamGateReason(c.paused_reason) && (
+      {carrierNotice && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 flex items-start gap-3">
+          <AlertTriangle className="size-5 text-destructive shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <div className="font-semibold mb-0.5">
+              {carrierNotice.kind === "feedback_timeout"
+                ? "Carrier feedback was unavailable"
+                : carrierNotice.paused && c.status === "paused" ? "Paused after carrier spam rejections" : "Carrier spam rejections reported"}
+            </div>
+            <div className="text-muted-foreground">
+              {carrierNotice.kind === "spam"
+                ? `${carrierNotice.spam} of ${carrierNotice.finalized} final carrier results were spam rejections.`
+                : `Only ${carrierNotice.finalized} final carrier results were available when the remaining work was stopped.`}
+              {carrierNotice.paused ? " Remaining sends were paused for review." : " There was no remaining dispatch work to pause."}
+            </div>
+            <div className="text-xs mt-1 text-muted-foreground">
+              Already reserved or submitted messages may still complete and incur charges. The report retains the actual charges.
+              {" "}Email notice: {CARRIER_NOTICE_EMAIL_LABELS[carrierNotice.emailStatus] ?? "status unavailable"}.
+              {" "}<Link to="/app/support" className="underline">Contact support</Link> for review.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!carrierNotice && c.status === "paused" && isSpamGateReason(c.paused_reason) && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 flex items-start gap-3">
           <AlertTriangle className="size-5 text-destructive shrink-0 mt-0.5" />
           <div className="text-sm">
@@ -886,8 +927,8 @@ function CampaignReport() {
             </div>
             <div className="text-muted-foreground">{c.paused_reason}</div>
             <div className="text-xs mt-1 text-muted-foreground">
-              Messages already handed to the carriers can still complete and are still charged; the
-              remaining, unsent messages are not sent and not charged. This campaign does not resume
+              Messages already reserved or handed to the carriers may still complete and incur charges.
+              See the report for actual charges. This campaign does not resume
               automatically — review the report and contact support if you believe this is wrong.
             </div>
           </div>

@@ -92,6 +92,22 @@ export async function checkedResumeCampaign(
   const after = await accountGate(db, live.account_id);
   if (after) return after;
 
+  if (isFeedbackTimeoutReason(live.paused_reason)) {
+    // Reevaluate after screening under the same campaign/monitor locks used
+    // by final receipts. This resets the monitor and campaign together, and
+    // refuses a late spam result or an intervening content/account change.
+    const { data: resumed, error: resumeError } = await db.rpc("spam_gate_resume_timeout", {
+      _campaign_id: live.id,
+      _account_id: live.account_id,
+      _body: live.message_body,
+      _status: live.status,
+    });
+    if (resumeError || resumed !== true) {
+      return { ok: false, code: "changed", message: "The campaign or carrier feedback changed before it could resume. It stays paused; refresh and review the latest results." };
+    }
+    return { ok: true, status: "sending", message: `Campaign "${live.name ?? "campaign"}" passed the checks and is back in the send queue.` };
+  }
+
   const { data: updated, error: uErr } = await db.from("campaigns")
     .update({ status: "sending", paused_reason: null, paused_at: null })
     .eq("id", live.id).eq("account_id", live.account_id).eq("status", live.status).eq("message_body", live.message_body)

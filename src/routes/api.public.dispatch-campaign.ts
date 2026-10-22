@@ -1014,9 +1014,9 @@ async function deliverPending(
   supabaseAdmin: any, campaign: any, sender: Sender,
   limits?: { perTick: number; concurrency: number; deadlineAt?: number },
 ): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean; throttled?: boolean; gated?: string }> {
-  const { data: fresh } = await supabaseAdmin
+  const { data: fresh, error: freshError } = await supabaseAdmin
     .from("campaigns").select("status").eq("id", campaign.id).maybeSingle();
-  if (fresh?.status === "cancelled") {
+  if (freshError || !fresh || !["queued", "sending", "processing", "scheduled"].includes(fresh.status)) {
     return { sent: 0, failed: 0, debited: 0, remaining: 0, cancelled: true };
   }
 
@@ -1024,7 +1024,7 @@ async function deliverPending(
   // pre-rollout campaigns are passed through unchanged by the SQL wrapper).
   // Any gate-state failure defers the campaign — no paid claim or provider
   // call while the gate is unknown.
-  const { spamGatePrecheck, spamGateState, claimGatedMessages } = await import("@/lib/carrier-spam-guard.server");
+  const { spamGatePrecheck, canSendClaimedCampaignMessage, claimGatedMessages } = await import("@/lib/carrier-spam-guard.server");
   const gate = await spamGatePrecheck(supabaseAdmin, campaign);
   if (gate.action !== "proceed") {
     const { count: pending } = await supabaseAdmin
@@ -1032,7 +1032,6 @@ async function deliverPending(
       .eq("campaign_id", campaign.id).in("status", ["queued", "sending"]);
     return { sent: 0, failed: 0, debited: 0, remaining: pending ?? 0, gated: gate.action };
   }
-  const gateMode: "open" | "gated" = gate.mode;
 
   const throttle = limits ?? throttleForSender(sender, !!campaign.media_url);
   // The provider client paces every request through a shared gate, so the real
@@ -1114,26 +1113,22 @@ async function deliverPending(
     if (claimChunk < MAX_CLAIM_CHUNK) claimChunk = Math.min(MAX_CLAIM_CHUNK, claimChunk * 2);
     const rows = claim.rows;
     if (rows.length === 0) break;
+    claimedTotal += rows.length;
     // Recheck the gate just before the provider calls in this chunk: a
     // pause/cancel that landed after the claim must stop these sends. Any
     // state read failure defers the whole chunk back to the queue.
-    const chunkState = await spamGateState(supabaseAdmin, campaign.id);
-    if (!chunkState || (chunkState.enrolled && chunkState.state !== "monitoring" && chunkState.state !== "released")) {
+    if (!(await canSendClaimedCampaignMessage(supabaseAdmin, campaign.id))) {
       unsent.push(...rows.map((m: any) => m.id));
       gateExhausted = true;
       break;
     }
-    claimedTotal += rows.length;
     let rateLimitHits = 0;
     await runWithConcurrency(rows, effectiveConcurrency, async (m: any) => {
       if (gateExhausted || !canStartDispatchSend(hardDeadline)) { unsent.push(m.id); return; }
-      // Gated campaigns (initial 25 submissions): recheck before EVERY
-      // provider call, so a pause landing mid-chunk stops the next call.
-      if (gateMode === "gated") {
-        const st = await spamGateState(supabaseAdmin, campaign.id);
-        if (!st || (st.enrolled && st.state !== "monitoring" && st.state !== "released")) {
-          gateExhausted = true; unsent.push(m.id); return;
-        }
+      // Recheck all monitored phases before every call, including the
+      // released phase. Calls already in flight may finish after a pause.
+      if (!(await canSendClaimedCampaignMessage(supabaseAdmin, campaign.id))) {
+        gateExhausted = true; unsent.push(m.id); return;
       }
       const r = await sendOneMessage(supabaseAdmin, campaign, sender, m, sink);
       if (r.ok) { sent++; debited += r.debited; }
@@ -1263,8 +1258,7 @@ async function processCampaign(
   // Send from the rows already planned on every tick, even while later
   // recipient pages are still being planned. Large campaigns therefore begin
   // immediately instead of showing zero progress for several cron intervals.
-  const delivered = await deliverPending(supabaseAdmin, campaign, sender,
-    limits ?? { perTick: 0, concurrency: 0 });
+  const delivered = await deliverPending(supabaseAdmin, campaign, sender, limits);
   if (hasMore && !(await isStoppedByUser(supabaseAdmin, campaign.id))) {
     // deliverPending only sees rows that have already been planned. It must not
     // finalize the campaign while later audience pages still need planning.

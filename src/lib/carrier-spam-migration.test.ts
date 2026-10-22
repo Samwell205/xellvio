@@ -1,143 +1,249 @@
-// SQL contract test: the migration proposal must structurally implement the
-// semantics the TS helpers (and their fakes) rely on. This reads the proposal
-// text — it does NOT apply or connect to any database.
+// Text contracts supplement scripts/test-carrier-spam-sql.mjs, which executes
+// the actual proposal and unchanged financial RPC against synthetic fixtures.
+// Text matching alone cannot prove transactions or multi-session scheduling.
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { SPAM_PAUSE_REASON, FEEDBACK_TIMEOUT_REASON } from "./carrier-spam-guard";
 
 const sql = readFileSync(resolve(__dirname, "../../db-proposals/20261022-campaign-spam-monitor.sql"), "utf8");
-
-function fnBody(name: string): string {
-  const start = sql.indexOf(`FUNCTION public.${name}(`);
-  expect(start, `${name} exists`).toBeGreaterThan(-1);
-  const rest = sql.slice(start);
-  const end = rest.indexOf("$function$;", rest.indexOf("AS $function$"));
-  return end === -1 ? rest : rest.slice(0, end);
+const code = sql.replace(/--[^\n]*/g, ""); // Comments must not satisfy contracts.
+const compact = (value: string) => value.replace(/\s+/g, "");
+const functions = new Map<string, string>(
+  [...code.matchAll(/CREATE(?: OR REPLACE)? FUNCTION public\.(\w+)\([\s\S]*?AS \$function\$([\s\S]*?)\$function\$;/g)]
+    .map((match) => [match[1], compact(match[2])] as const),
+);
+function body(name: string): string {
+  const result = functions.get(name);
+  if (!result) throw new Error(`Missing SQL function: ${name}`);
+  return result;
 }
+const permissions = compact(code);
 
-describe("spam_gate_claim wrapper contract", () => {
-  const body = fnBody("spam_gate_claim");
+describe("paid claim and global allowance", () => {
+  const claim = body("spam_gate_claim");
 
-  it("locks the campaign row (contends pause/cancel) and the monitor row", () => {
-    expect(body).toMatch(/FROM public\.campaigns WHERE campaigns\.id = _campaign_id FOR UPDATE/);
-    expect(body).toMatch(/FROM public\.campaign_spam_monitors\s+WHERE campaign_id = _campaign_id FOR UPDATE/);
+  it("locks campaign then monitor and refuses stopped campaigns before claiming", () => {
+    const campaign = claim.indexOf("FROMpublic.campaignsWHEREcampaigns.id=_campaign_idFORUPDATE");
+    const monitor = claim.indexOf("FROMpublic.campaign_spam_monitorsWHEREcampaign_id=_campaign_idFORUPDATE");
+    expect(campaign).toBeGreaterThan(-1);
+    expect(monitor).toBeGreaterThan(campaign);
+    expect(claim.indexOf("public.claim_campaign_messages(")).toBeGreaterThan(monitor);
+    expect(claim).toContain("c.statusNOTIN('queued','sending','processing','scheduled')THENRETURN");
+    expect(claim).toContain("m.stateIN('paused_spam','paused_timeout')THENRETURN");
   });
 
-  it("checks live campaign status and account hold before any claim", () => {
-    expect(body).toMatch(/c_status NOT IN \('queued','sending','processing','scheduled'\)/);
-    expect(body).toMatch(/sending_suspended_at IS NOT NULL/);
-    expect(body).toMatch(/onboarding_status <> 'active'/);
+  it("preserves financial RPC body and buffers claims until a locked account recheck", () => {
+    expect(code).not.toMatch(/CREATE(?: OR REPLACE)? FUNCTION public\.claim_campaign_messages\(/);
+    expect(claim).toContain("jsonb_agg(to_jsonb(x))INTOclaimedFROMpublic.claim_campaign_messages(_campaign_id,allowed)x");
+    expect(claim).toContain("a.sending_suspended_atISNOTNULLORa.onboarding_status<>'active'");
+    expect(claim).toContain("INTOon_holdFROMpublic.accountsaWHEREa.id=c.account_idFORUPDATE");
+    expect(claim).toContain("RAISESQLSTATE'PT001'");
+    expect(claim).toContain("EXCEPTIONWHENSQLSTATE'PT001'THENRETURN");
+    // Existing refunds lock message->account; no account lock precedes claim.
+    expect(claim.indexOf("public.claim_campaign_messages(")).toBeLessThan(claim.indexOf("c.account_idFORUPDATE"));
   });
 
-  it("invokes the EXISTING claim_campaign_messages inside the wrapper (financial internals preserved)", () => {
-    expect(body).toMatch(/RETURN QUERY SELECT \* FROM public\.claim_campaign_messages\(_campaign_id, allowed\)/);
-    // paid claim count is fed back into the gate allowance in the same transaction
-    expect(body).toMatch(/GET DIAGNOSTICS claimed_count = ROW_COUNT/);
-    expect(body).toMatch(/submitted_count = submitted_count \+ claimed_count/);
+  it("caps initial work at25, later current outstanding at250 and evaluates late spam waves", () => {
+    expect(claim).toContain("m.expected_totalISNULLORm.expected_total>25");
+    expect(claim).toContain("GREATEST(0,25-m.submitted_count)");
+    expect(claim).toContain("GREATEST(0,250-outstanding)");
+    expect(claim).toContain("allowed:=LEAST(_limit,new_capacity,1000)");
+    expect(claim).toContain("m.finalized_count>=20ANDm.spam_count>=CEIL(m.finalized_count*0.2)");
+    expect(claim).toContain("spam_gate_do_pause(_campaign_id,'spam')");
   });
 
-  it("bounds claims: 25 initial for capped campaigns, 250 outstanding after release, 10-minute feedback timeout", () => {
-    expect(body).toMatch(/25 - m\.submitted_count/);
-    expect(body).toMatch(/250 - \(m\.submitted_count - m\.finalized_count\)/);
-    expect(body).toMatch(/interval '10 minutes'/);
-    expect(body).toMatch(/spam_gate_do_pause\(_campaign_id, 'feedback_timeout'\)/);
+  it("counts current attempts with unknown provider results regardless of mutable status", () => {
+    for (const name of ["spam_gate_claim", "spam_gate_state"]) {
+      const current = body(name);
+      expect(current).toContain("ms.attempt_number=r.attempt_number");
+      expect(current).toContain("ms.provider_message_idISNOTNULLORms.statusIN('queued','sending','pending')");
+      expect(current).toContain("f.message_id=ms.idANDf.provider_message_id=ms.provider_message_id");
+    }
+    expect(compact(code)).toContain("waiting_sincetimestamptz,outstanding_countinteger");
   });
 
-  it("re-checks the spam threshold on every claim (late waves pause after release)", () => {
-    expect(body).toMatch(/m\.finalized_count >= 20 AND m\.spam_count >= CEIL\(m\.finalized_count \* 0\.2\)/);
-    expect(body).toMatch(/spam_gate_do_pause\(_campaign_id, 'spam'\)/);
+  it("deduplicates reserved attempts and owns prepaid rows before SKIP LOCKED fallback", () => {
+    expect(compact(code)).toContain("PRIMARYKEY(message_id,attempt_number)");
+    expect(claim).toContain("VALUES(rec.id,rec.attempt_number,_campaign_id)ONCONFLICTDONOTHING");
+    expect(claim).toContain("GETDIAGNOSTICSadded=ROW_COUNT;fresh:=fresh+added");
+    expect(claim).toContain("submitted_count=submitted_count+fresh");
+    expect(claim).toContain("LIMITLEAST(_limit,prepaid,1000)FORUPDATESKIPLOCKED");
+    expect(claim).toContain("IFprepaid=0THENRETURN");
+    expect(claim).toContain("allowed:=prepaid");
   });
 
-  it("delegates unenrolled campaigns to the plain claim (pre-rollout behavior unchanged)", () => {
-    expect(body).toMatch(/IF NOT FOUND THEN\s+-- Pre-rollout[\s\S]*claim_campaign_messages\(_campaign_id, _limit\)/);
+  it("times out exhausted feedback before prepaid recovery and resets waits on fresh capacity", () => {
+    const timeout = claim.indexOf("m.waiting_since<=now()-interval'10minutes'");
+    expect(timeout).toBeGreaterThan(-1);
+    expect(timeout).toBeLessThan(claim.indexOf("SELECTcount(*)::integerINTOprepaid"));
+    expect(claim).toContain("IFnew_capacity>0THENUPDATEpublic.campaign_spam_monitorsSETwaiting_since=NULL");
+    expect(claim).toContain("spam_gate_do_pause(_campaign_id,'feedback_timeout')");
+  });
+
+  it("keeps legacy campaigns supported and benign concluded monitors eligible for deliberate retry", () => {
+    expect(claim).toContain("IFm.campaign_idISNULLTHENBEGIN");
+    expect(claim).toContain("public.claim_campaign_messages(_campaign_id,_limit)");
+    expect(claim).toContain("IFNOThas_workTHENRETURN");
+    expect(claim).toContain("m.state='concluded'OR(m.state='monitoring'ANDm.finalized_count>=20)");
+    expect(claim).toContain("SETstate='released',waiting_since=NULL");
   });
 });
 
-describe("spam_gate_do_pause atomicity contract", () => {
-  const body = fnBody("spam_gate_do_pause");
-
-  it("pause + incident + outbox shell live in ONE function (one transaction)", () => {
-    expect(body).toMatch(/UPDATE public\.campaigns\s+SET status = 'paused'/);
-    expect(body).toMatch(/INSERT INTO public\.campaign_spam_incidents/);
-    expect(body).toMatch(/INSERT INTO public\.campaign_spam_email_outbox/);
+describe("current signed final evidence", () => {
+  it("checks exact message/campaign/current provider id under lock and deduplicates replay", () => {
+    const receipt = body("spam_gate_record_receipt");
+    expect(receipt).toContain("WHEREid=_message_idANDcampaign_id=_campaign_idFORUPDATE");
+    expect(receipt).toContain("current_pidISNULLORcurrent_pidISDISTINCTFROM_provider_message_id");
+    expect(receipt).toContain("IFNOTFOUNDTHENRETURN'unenrolled'");
+    expect(receipt).toContain("ONCONFLICT(campaign_id,provider_message_id)DONOTHING");
+    expect(receipt).not.toContain("UPDATEpublic.campaign_spam_receipts");
   });
 
-  it("never resurrects stopped campaigns and records paused=false honestly", () => {
-    expect(body).toMatch(/status IN \('queued','sending','processing','scheduled'\)/);
-    expect(body).toMatch(/\(stopped_id IS NOT NULL AND EXISTS/);
-    expect(body).toMatch(/ms\.status = 'queued'/);
+  it("keeps routine callbacks incremental and removes replaced provider facts from exact counts", () => {
+    const receipt = body("spam_gate_record_receipt");
+    const refresh = body("spam_gate_refresh");
+    const invalidate = body("spam_gate_invalidate_provider");
+    expect(receipt).toContain("ELSIFinserted=1THENUPDATEpublic.campaign_spam_monitorsSETfinalized_count=finalized_count+1");
+    expect(receipt).toContain("public.campaign_spam_receipt_invalidationsWHEREcampaign_id=_campaign_id");
+    expect(refresh).toContain("ms.id=r.message_idANDms.campaign_id=r.campaign_idANDms.provider_message_id=r.provider_message_id");
+    expect(refresh.indexOf("DELETEFROMpublic.campaign_spam_receipt_invalidations")).toBeLessThan(refresh.indexOf("SELECTcount(*)"));
+    expect(invalidate).toContain("OLD.provider_message_idISNOTNULLANDOLD.provider_message_idISDISTINCTFROMNEW.provider_message_id");
+    expect(invalidate).not.toContain("FORUPDATE");
+    expect(invalidate).not.toContain("UPDATEpublic.campaign_spam_monitors");
   });
 
-  it("exactly one incident and one outbox row per campaign", () => {
-    expect(body.match(/ON CONFLICT \(campaign_id\) DO NOTHING/g)!.length).toBeGreaterThanOrEqual(2);
-    expect(sql).toMatch(/campaign_id uuid NOT NULL UNIQUE REFERENCES public\.campaign_spam_incidents/);
+  it("continues checking late spam waves without concluding after merely20 finals", () => {
+    const receipt = body("spam_gate_record_receipt");
+    expect(receipt).toContain("m.finalized_count>=20ANDm.spam_count>=CEIL(m.finalized_count*0.2)");
+    expect(receipt).toContain("spam_gate_do_pause(_campaign_id,'spam')");
+    expect(receipt).not.toContain("state='concluded'");
+    expect(receipt).not.toContain("message_send_attempts");
+  });
+});
+
+describe("pause ownership, truthful copy and checked resume", () => {
+  const pause = body("spam_gate_do_pause");
+
+  it("keeps conditional pause, one incident and outbox insertion in one function", () => {
+    expect(pause).toContain("UPDATEpublic.campaignsSETstatus='paused'");
+    expect(pause).toContain("INSERTINTOpublic.campaign_spam_incidents");
+    expect(pause).toContain("INSERTINTOpublic.campaign_spam_email_outbox");
+    expect(pause.match(/ONCONFLICT\(campaign_id\)DONOTHING/g)).toHaveLength(2);
+    expect(compact(code)).toContain("campaign_iduuidNOTNULLUNIQUEREFERENCESpublic.campaign_spam_incidents(campaign_id)");
   });
 
-  it("pause reasons match the TS constants byte-for-byte", () => {
+  it("lets cancellation/manual holds win and requires proof for completed late notices", () => {
+    expect(pause).toContain("c.statusNOTIN('sent','completed')ORNOTall_submittedOR_kind<>'spam'");
+    expect(pause).toContain("IFNOTwonTHENRETURN");
+    expect(pause).toContain("WHEREid=_campaign_idANDstatusIN('queued','sending','processing','scheduled')");
+    expect(pause).toContain("m.expected_totalISNOTNULLANDtotal=m.expected_totalANDsubmitted=m.expected_total");
+  });
+
+  it("distinguishes provider submissions, remaining sends and unknown planning totals", () => {
+    expect(pause).toContain("count(*)FILTER(WHEREprovider_message_idISNOTNULL)::integer");
+    expect(pause).toContain("WHENall_submittedTHEN'all_submitted'");
+    expect(pause).toContain("THEN'remaining_stopped'ELSE'no_remaining_work'");
+    expect(pause).toContain("CASEWHENm.expected_totalISNULLTHENNULLELSEremainingEND");
+    expect(pause).toContain("COALESCE(NULLIF(BTRIM(a.contact_email),''),NULLIF(BTRIM(a.email),''))");
     expect(sql).toContain(SPAM_PAUSE_REASON);
     expect(sql).toContain(FEEDBACK_TIMEOUT_REASON);
   });
 
-  it("resolves the recipient by trimming both emails, empty strings never win", () => {
-    expect(body).toMatch(/COALESCE\(NULLIF\(BTRIM\(a\.contact_email\), ''\), NULLIF\(BTRIM\(a\.email\), ''\)\)/);
+  it("atomically resumes timeout campaign and monitor after exact healthy evidence", () => {
+    const resume = body("spam_gate_resume_timeout");
+    expect(resume).toContain("c.statusISDISTINCTFROM_status");
+    expect(resume).toContain("c.account_idISDISTINCTFROM_account_idORc.message_bodyISDISTINCTFROM_body");
+    expect(resume).toContain("c.paused_reasonISNULL");
+    expect(resume).toContain("m.state<>'paused_timeout'");
+    expect(resume).toContain("sending_suspended_atISNOTNULLORonboarding_status<>'active'");
+    expect(resume).toContain("spam_gate_refresh(_campaign_id)");
+    expect(resume).toContain("m.finalized_count<20ORm.spam_count>=CEIL(m.finalized_count*0.2)");
+    expect(resume).toContain("SETstate='released',waiting_since=NULL");
+    expect(resume).toContain("SETstatus='sending',paused_reason=NULL,paused_at=NULL");
+  });
+
+  it("uses cheap indexed live flags for each provider check, including unmonitored legacy campaigns", () => {
+    const canSend = body("spam_gate_can_send");
+    expect(canSend).toContain("SELECTEXISTS(");
+    expect(canSend).toContain("c.statusIN('queued','sending','processing','scheduled')");
+    expect(canSend).toContain("a.onboarding_status='active'ANDa.sending_suspended_atISNULL");
+    expect(canSend).toContain("m.campaign_idISNULLORm.stateNOTIN('paused_spam','paused_timeout')");
+    expect(canSend).not.toContain("campaign_spam_receipts");
+    expect(canSend).not.toContain("campaign_spam_reservations");
+    expect(canSend).not.toContain("count(");
   });
 });
 
-describe("spam_gate_record_receipt contract", () => {
-  const body = fnBody("spam_gate_record_receipt");
-
-  it("matches the message's CURRENT provider id exactly; stale retry ids ignored", () => {
-    expect(body).toMatch(/current_pid IS NULL OR current_pid <> _provider_message_id/);
+describe("durable notification outbox", () => {
+  it("serializes pending-only enqueue and stores queue id in the same function", () => {
+    const enqueue = body("spam_gate_outbox_enqueue");
+    expect(enqueue).toContain("WHEREid=_outbox_idANDstatus='pending'FORUPDATE");
+    expect(enqueue).toContain("IFNOTFOUNDTHENRETURNNULL");
+    expect(enqueue).toContain("public.enqueue_email('transactional_emails',_payload)");
+    expect(enqueue).toContain("SETstatus='queued',payload=_payload,queue_message_id=msg_id");
   });
 
-  it("dedupes replayed receipts and only touches enrolled campaigns", () => {
-    expect(body).toMatch(/ON CONFLICT \(campaign_id, provider_message_id\) DO NOTHING/);
-    expect(body).toMatch(/IF NOT FOUND THEN RETURN 'unenrolled'/);
+  it("uses expected-status CAS, monotonic sent proof and no queued-to-pending rewind", () => {
+    const mark = body("spam_gate_outbox_mark");
+    expect(mark).toContain("WHEREid=_outbox_idFORUPDATE");
+    expect(mark).toContain("current_stateISDISTINCTFROM_expected_statusTHENRETURNfalse");
+    expect(mark).toContain("IFcurrent_state='sent'THENRETURN_status='sent'");
+    expect(mark).toContain("current_state='pending'AND_statusIN('pending','suppressed','missing')");
+    expect(mark).toContain("current_state='queued'AND_statusIN('queued','failed','suppressed')");
+    expect(mark).not.toContain("current_state='queued'AND_statusIN('pending'");
+    expect(mark).toContain("message_id='spamgate-incident-'||campaign::textANDstatus='sent'");
   });
 
-  it("concludes only after enough final feedback, not on submission completion", () => {
-    expect(body).toMatch(/fully_submitted AND m\.finalized_count >= 20/);
-    expect(body).toMatch(/SET state = 'concluded'/);
-  });
-});
-
-describe("outbox contract", () => {
-  it("enqueue + status flip are one transactional function around pgmq.send", () => {
-    const body = fnBody("spam_gate_outbox_enqueue");
-    expect(body).toMatch(/FOR UPDATE/);
-    expect(body).toMatch(/status = 'pending'/);
-    expect(body).toMatch(/enqueue_email\('transactional_emails', _payload\)/);
-    expect(body).toMatch(/SET status = 'queued'/);
-  });
-
-  it("due-selection is bounded and lock-skipping", () => {
-    const body = fnBody("spam_gate_outbox_due");
-    expect(body).toMatch(/FOR UPDATE SKIP LOCKED/);
-    expect(body).toMatch(/LIMIT GREATEST\(0, LEAST\(100, _limit\)\)/);
+  it("bounds advisory due scans; authoritative enqueue/CAS owns transitions", () => {
+    expect(body("spam_gate_outbox_due")).toContain("o.statusIN('pending','queued')");
+    expect(body("spam_gate_outbox_due")).toContain("LIMITGREATEST(0,LEAST(100,_limit))FORUPDATESKIPLOCKED");
   });
 });
 
-describe("enrollment and access control contract", () => {
-  it("enrolls only zero-work campaigns (rollout cutoff: no retro enrollment)", () => {
-    const body = fnBody("spam_gate_enroll");
-    expect(body).toMatch(/NOT EXISTS \(SELECT 1 FROM public\.message_send_attempts/);
-    expect(body).toMatch(/m\.provider_message_id IS NOT NULL/);
-    expect(body).toMatch(/ON CONFLICT \(campaign_id\) DO NOTHING/);
+describe("future rollout and service-only access", () => {
+  it("persists a future cutoff and enrolls under row locks only with zero paid work", () => {
+    const enroll = body("spam_gate_enroll");
+    expect(compact(code)).toContain("activated_attimestamptzNOTNULLDEFAULT(statement_timestamp()+interval'2minutes')");
+    expect(enroll).toContain("c.created_at<cutoff");
+    expect(enroll).toContain("FROMpublic.messagesWHEREcampaign_id=_campaign_idFORUPDATE");
+    expect(enroll).toContain("public.message_send_attemptsWHEREcampaign_id=_campaign_id");
+    expect(enroll).toContain("provider_message_idISNOTNULLORcharged_atISNOTNULLORattempt_number>0");
+    expect(enroll).toContain("statusNOTIN('queued','failed')");
+    expect(enroll.indexOf("FROMpublic.messagesWHEREcampaign_id=_campaign_idFORUPDATE")).toBeLessThan(enroll.indexOf("public.message_send_attempts"));
   });
 
-  it("tables are service-role only with RLS; functions revoked from anon/authenticated", () => {
-    for (const t of ["campaign_spam_monitors", "campaign_spam_receipts", "campaign_spam_incidents", "campaign_spam_email_outbox"]) {
-      expect(sql).toContain(`GRANT ALL ON public.${t} TO service_role;`);
-      expect(sql).toContain(`ALTER TABLE public.${t} ENABLE ROW LEVEL SECURITY;`);
+  it("explicitly revokes browser table grants and enables RLS for every created table", () => {
+    const tables = [...code.matchAll(/CREATE TABLE public\.(\w+)\s*\(/g)].map((match) => match[1]);
+    const revoke = permissions.match(/REVOKEALLONTABLE([\s\S]*?)FROMPUBLIC,anon,authenticated;/)?.[1] ?? "";
+    const grant = permissions.match(/GRANTALLONTABLE([\s\S]*?)TOservice_role;/)?.[1] ?? "";
+    expect(tables).toContain("campaign_spam_rollout");
+    expect(tables).toContain("campaign_spam_reservations");
+    expect(tables).toContain("campaign_spam_receipt_invalidations");
+    for (const table of tables) {
+      expect(revoke, `${table}: browser access revoked`).toContain(`public.${table}`);
+      expect(grant, `${table}: service role grant`).toContain(`public.${table}`);
+      expect(permissions, `${table}: RLS enabled`).toContain(`ALTERTABLEpublic.${table}ENABLEROWLEVELSECURITY;`);
     }
-    expect(sql).toMatch(/REVOKE ALL ON FUNCTION public\.spam_gate_claim\(uuid, integer\) FROM PUBLIC, anon, authenticated;/);
-    expect(sql).toMatch(/GRANT EXECUTE ON FUNCTION public\.spam_gate_claim\(uuid, integer\) TO service_role;/);
-    // the internal pause function is never granted
-    expect(sql).not.toMatch(/GRANT EXECUTE ON FUNCTION public\.spam_gate_do_pause/);
+    expect(code).not.toMatch(/CREATE POLICY/);
   });
 
-  it("never uses expiring dispatch_locks as permanent state", () => {
-    expect(sql).not.toMatch(/dispatch_locks/);
+  it("checks every created function's privileges instead of a fixed function count", () => {
+    const privateFunctions = new Set(["spam_gate_invalidate_provider", "spam_gate_refresh", "spam_gate_do_pause"]);
+    for (const name of functions.keys()) {
+      expect(permissions, `${name}: browser execution revoked`).toMatch(new RegExp(`REVOKEALLONFUNCTIONpublic\\.${name}\\([^;]+FROMPUBLIC,anon,authenticated`));
+      const grant = new RegExp(`GRANTEXECUTEONFUNCTIONpublic\\.${name}\\([^;]+TOservice_role;`);
+      if (privateFunctions.has(name)) {
+        expect(permissions, `${name}: private helper`).not.toMatch(grant);
+        expect(permissions).toMatch(new RegExp(`REVOKEALLONFUNCTIONpublic\\.${name}\\([^;]+FROMPUBLIC,anon,authenticated,service_role;`));
+      } else {
+        expect(permissions, `${name}: service RPC`).toMatch(grant);
+      }
+    }
+    expect(permissions).toContain("REVOKEALLONFUNCTIONpublic.claim_campaign_messages(uuid,integer)FROMPUBLIC,anon,authenticated,service_role;");
+  });
+
+  it("keeps durable gate state independent of expiring dispatch leases", () => {
+    expect(code).not.toMatch(/dispatch_locks/);
   });
 });
