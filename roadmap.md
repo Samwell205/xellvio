@@ -1,5 +1,9 @@
 # Roadmap
 
+## Upload-first account assistant (Oct 22)
+- [ ] Remove pre-upload name/country fields and collect missing details conversationally; test named-country handling without imports or sends.
+- [ ] Clarify the first additional account actions to support beyond the existing tools.
+
 ## Assistant send and voice controls (Oct 22)
 - [x] Add Send campaign beside Review / edit, opening the existing required test and final confirmation without repeating setup. Composer microphone verified enabled for the pilot and unavailable for a non-pilot; complete saved draft opens at Test with Next blocked until testing. Thirteen tests and preview builds pass. No SMS sent or publication; live voice and paid launch remain untested.
 
