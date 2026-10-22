@@ -12,6 +12,7 @@ import {
 } from "@/lib/campaign-control.functions";
 
 import { toast } from "sonner";
+import { isSpamGateReason, isSpamGatePauseReason } from "@/lib/carrier-spam-guard";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -874,7 +875,26 @@ function CampaignReport() {
         </div>
       </div>
 
-      {c.status === "paused" && (
+      {c.status === "paused" && isSpamGateReason(c.paused_reason) && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 flex items-start gap-3">
+          <AlertTriangle className="size-5 text-destructive shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <div className="font-semibold mb-0.5">
+              {isSpamGatePauseReason(c.paused_reason)
+                ? "Paused after carrier spam rejections"
+                : "Paused — carrier feedback unavailable"}
+            </div>
+            <div className="text-muted-foreground">{c.paused_reason}</div>
+            <div className="text-xs mt-1 text-muted-foreground">
+              Messages already handed to the carriers can still complete and are still charged; the
+              remaining, unsent messages are not sent and not charged. This campaign does not resume
+              automatically — review the report and contact support if you believe this is wrong.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {c.status === "paused" && !isSpamGateReason(c.paused_reason) && (
         <div className="rounded-md border border-warning/40 bg-warning/10 p-4 flex items-start gap-3">
           <AlertTriangle className="size-5 text-warning-foreground shrink-0 mt-0.5" />
           <div className="text-sm">
