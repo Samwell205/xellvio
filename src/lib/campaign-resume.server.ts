@@ -13,7 +13,7 @@ export type ResumeOutcome =
 export type ResumeRefusal =
   | "not_found" | "wrong_account" | "not_resumable" | "read_failed"
   | "account_inactive" | "sending_hold" | "screen_blocked" | "screen_held"
-  | "screen_unavailable" | "changed";
+  | "screen_unavailable" | "changed" | "carrier_spam_hold";
 
 /** Only these paused states may be resumed. Cancelled, blocked_content and
  * final states (sent/failed/completed) are always refused. */
@@ -39,11 +39,18 @@ export async function checkedResumeCampaign(
   screen?: ScreenFn,
 ): Promise<ResumeOutcome> {
   const { data: live, error } = await db.from("campaigns")
-    .select("id, account_id, status, message_body, name").eq("id", input.campaignId).maybeSingle();
+    .select("id, account_id, status, message_body, name, paused_reason").eq("id", input.campaignId).maybeSingle();
   if (error) return { ok: false, code: "read_failed", message: "Could not read this campaign, so it stays paused." };
   if (!live) return { ok: false, code: "not_found", message: "Campaign not found." };
   if (live.account_id !== input.expectedAccountId) return { ok: false, code: "wrong_account", message: "That campaign doesn't belong to this account." };
   if (!isResumableStatus(live.status)) return { ok: false, code: "not_resumable", message: `This campaign can't be resumed from "${live.status}".` };
+  // A carrier spam-gate hold is active on this campaign. Resume is a separate
+  // deliberate decision and must not simply bypass the same active hold —
+  // lifting an account hold never resumes these either (see HOLD_PAUSE_FILTER).
+  const { isSpamGateReason } = await import("./carrier-spam-guard");
+  if (isSpamGateReason(live.paused_reason)) {
+    return { ok: false, code: "carrier_spam_hold", message: "This campaign was stopped because carriers rejected many of its texts as spam (or carrier feedback was unavailable). Review the campaign report and contact support before resuming." };
+  }
   if (typeof live.message_body !== "string" || !live.message_body.trim()) {
     return { ok: false, code: "read_failed", message: "Could not read this campaign's message, so it stays paused." };
   }
