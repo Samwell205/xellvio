@@ -649,7 +649,8 @@ export function AccountAssistant({
             >
               <Mic />
               {voiceAccess?.available ? "Voice instructions" : "Voice · Coming soon"}
-            </Button>
+              </Button>
+            </div>
             <PromptInputSubmit
               status={status}
               onStop={stop}
