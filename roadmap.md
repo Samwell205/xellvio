@@ -1,5 +1,8 @@
 # Roadmap
 
+## Business assistant design (Oct 22)
+- [x] Polish assistant welcome, saved conversations and chat with theme-aware styling and reduced-motion support. Signed-in admin search and saved-thread navigation passed, compact-screen layout has no overflow, reduced motion disables animation, and preview builds pass. Shared tenant presentation uses the same components; no messages sent or publication.
+
 ## Consistent content screening (Oct 21)
 - [x] Confirmed alternating AI passes/blocks for the reported company-information demand. Shared deterministic review flag now blocks it consistently despite tracking-code changes; preview also rejects review flags/unavailable checks. Safeguard tests pass; authenticated preview check returns blocked. Affected tenant UI and real delivery unverified; no messages sent or account reinstated, and changes are not published.
 

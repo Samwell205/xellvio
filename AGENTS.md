@@ -37,3 +37,5 @@
 - Public signup CTAs use `/auth?mode=signup`.
 - Billing/test SMS use the acting business to avoid teammate mismatches: billing permission and separate payer; tests use business sender/profile/opt-outs/compliance, per-user quotas.
 - Lifting a sending hold requeues only campaigns that hold paused (HOLD_PAUSE_FILTER, owner rule) and they are re-screened; dispatcher slots re-read live status, use status-conditional writes, and claim screening once per campaign+content (dispatch-campaign-guard.ts) so stale workers can't add abuse strikes.
+
+- AssistantHome owns the shared conversation rail and welcome presentation for tenant/admin assistant routes; preserve existing route-owned chat and confirmation logic so design changes cannot authorize actions.
