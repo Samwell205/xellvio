@@ -2,7 +2,7 @@
 
 ## Upload-first account assistant (Oct 22)
 - [x] Remove pre-upload name/country fields; signed-in upload asks for country only for local numbers, accepts United States, then asks for list name. International files skip the country question and cancellation restores normal chat. Twenty-two tests and preview builds pass; no imports, sends or publication.
-- [ ] Full account-wide action coverage: implementation awaits approval of the staged plan; existing tools do not yet manage every account feature.
+- [ ] Full account-wide action coverage: approved plan in progress. Add bounded permission-scoped reads across all account areas and exact confirmed edits first; publishing, team changes, purchases, activation, replies and advanced edits still require domain-specific integration and verification.
 
 ## Assistant send and voice controls (Oct 22)
 - [x] Add Send campaign beside Review / edit, opening the existing required test and final confirmation without repeating setup. Composer microphone verified enabled for the pilot and unavailable for a non-pilot; complete saved draft opens at Test with Next blocked until testing. Thirteen tests and preview builds pass. No SMS sent or publication; live voice and paid launch remain untested.

@@ -41,3 +41,4 @@
 
 - AssistantHome owns the shared conversation rail and welcome presentation for tenant/admin assistant routes; preserve existing route-owned chat and confirmation logic so design changes cannot authorize actions.
 - Assistant uploads collect country and list name after file selection in a local conversation step, then call authenticated inspection; raw contact files never enter model messages and imports still need explicit opt-in confirmation.
+- Account-wide assistant reads use a fixed permission-scoped area catalog and bounded projections; exact field edits use an allowlist and transactional confirmation with live membership, target locking, before-value checks and durable idempotent outcomes. Unsupported consequential actions stay in their existing reviewed flows.
