@@ -14,9 +14,12 @@ import {
   X,
   ArrowUpRight,
   Send,
+  ChevronDown,
+  ClipboardList,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { uploadCountry, uploadNeedsCountry } from "@/lib/assistant-upload";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
@@ -79,6 +82,7 @@ export function AccountAssistant({
   const [uploadReply, setUploadReply] = useState("");
   const [launchId, setLaunchId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState<boolean | null>(null);
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["assistant-actions"] });
     void qc.invalidateQueries({ queryKey: ["assistant-threads"] });
