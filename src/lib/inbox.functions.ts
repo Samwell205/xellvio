@@ -187,10 +187,14 @@ export const sendReply = createServerFn({ method: "POST" })
     const { assertNotSuppressed } = await import("./suppression.server");
     await assertNotSuppressed(accountId, data.phone);
 
-    const { data: lastInbound } = await supabase
+    const { data: lastInbound, error: inboundErr } = await supabaseAdmin
       .from("sms_thread_messages")
       .select("to_number").eq("account_id", accountId).eq("phone_e164", data.phone)
       .eq("direction", "inbound").order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (inboundErr) throw new Error("Could not load this conversation. Please try again.");
+    // Inbox replies are only allowed inside an existing conversation started by the recipient.
+    if (!lastInbound) throw new Error("You can only reply to numbers that have texted this business.");
+    void supabase;
     const { data: assets } = await supabaseAdmin
       .from("sender_assets")
       .select("telnyx_messaging_profile_id,phone_number,sender_kind,country_code,verification_status")
