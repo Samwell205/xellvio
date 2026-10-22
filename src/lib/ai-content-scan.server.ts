@@ -111,7 +111,8 @@ export async function aiScan(messageBody: string): Promise<ScanResult> {
       // identically every time) and risks blowing the Cloudflare Worker's
       // CPU budget on retry overhead, which is exactly what happened here.
       maxRetries: 0,
-      timeout: 8000,
+      // Provider latency spikes (~20s) were cancelling legitimate scans; allow headroom.
+      timeout: 30000,
       system:
         "You are a content safety classifier for an SMS marketing platform that must comply with US/CA carrier (SHAFT) policies and Twilio's Acceptable Use Policy. " +
         "Block messages promoting any of these categories:\n" +
