@@ -667,6 +667,12 @@ function NewCampaignPage() {
     const { data, error } = await supabase.from("campaigns").insert(payload).select("id").single();
     if (error) throw error;
     setCampaignId(data.id);
+    draftHydratedRef.current = true;
+    // Anchor the new draft in the URL so leaving and returning restores it
+    // instead of showing a blank form and inserting a duplicate draft.
+    if (mountedRef.current) {
+      void navigate({ to: "/app/campaigns/new", search: { id: data.id }, replace: true });
+    }
     return data.id;
   }
 
