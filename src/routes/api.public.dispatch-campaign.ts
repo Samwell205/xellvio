@@ -1003,7 +1003,7 @@ async function planCampaign(
 
 async function deliverPending(
   supabaseAdmin: any, campaign: any, sender: Sender,
-  limits?: { perTick: number; concurrency: number; deadlineAt?: number; monitored?: boolean },
+  limits?: { perTick: number; concurrency: number; deadlineAt?: number },
 ): Promise<{ sent: number; failed: number; debited: number; remaining: number; cancelled?: boolean; throttled?: boolean; gated?: string }> {
   const { data: fresh } = await supabaseAdmin
     .from("campaigns").select("status").eq("id", campaign.id).maybeSingle();
@@ -1232,10 +1232,18 @@ async function processCampaign(
     ? await planCampaign(supabaseAdmin, campaign, rates, recipients, isFirstBatch)
     : { planned: 0, skipped: 0, cost: 0 };
 
-  // Carrier spam gate: monitor campaigns with more than 25 recipients. While
-  // later audience pages are still unplanned the total is unknown — treat as
-  // monitored (fail-safe) so a large campaign can never blast ungated.
-  const monitored = (existing ?? 0) + (planned?.planned ?? 0) > 25 || hasMore;
+  // Planning finished: record the true recipient total so the spam gate's
+  // initial-25 cap applies only to campaigns with more than 25 recipients.
+  if (!hasMore) {
+    try {
+      const { count: total } = await supabaseAdmin
+        .from("messages").select("id", { count: "exact", head: true }).eq("campaign_id", campaign.id);
+      const { setSpamGateExpectedTotal } = await import("@/lib/carrier-spam-guard.server");
+      await setSpamGateExpectedTotal(supabaseAdmin, campaign.id, total ?? 0);
+    } catch (e) {
+      console.error("[dispatch] spam-gate expected-total failed (stays capped — safe)", campaign.id, e);
+    }
+  }
 
   if (planned.planned === 0 && isFirstBatch && recipients.length > 0) {
     // Nothing could be queued at all (e.g. insufficient balance for every
@@ -1247,7 +1255,7 @@ async function processCampaign(
   // recipient pages are still being planned. Large campaigns therefore begin
   // immediately instead of showing zero progress for several cron intervals.
   const delivered = await deliverPending(supabaseAdmin, campaign, sender,
-    limits ? { ...limits, monitored } : { perTick: 0, concurrency: 0, monitored });
+    limits ?? { perTick: 0, concurrency: 0 });
   if (hasMore && !(await isStoppedByUser(supabaseAdmin, campaign.id))) {
     // deliverPending only sees rows that have already been planned. It must not
     // finalize the campaign while later audience pages still need planning.
