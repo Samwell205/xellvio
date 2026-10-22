@@ -1,7 +1,8 @@
 # Roadmap
 
 ## Signup confirmation recovery (Oct 22)
-- [ ] Repair signup confirmation handling and cooldown recovery; verify signup, blocked retry, resend and callback error states without sending emails to the affected user.
+- [x] Repair signup confirmation handling in tenant and verifier signup; no automatic password sign-in or repeated email-triggering signup. Five tests and preview build pass; browser checks with controlled auth responses verify confirmation, one signup request, resend countdown and callback recovery. Affected account exists and is unconfirmed; live redirect allow-list checked. No security settings changed, emails sent or publication performed.
+- [ ] Verify the affected user's confirmation email and successful sign-in — requires them to open their private confirmation link; inbox delivery and the original Google exchange failure remain unverified.
 
 ## Assistant campaign status and reports (Oct 22)
 - [x] Confirmed latest James campaign: 807 message records, 751 delivered, 16 failed, 40 awaiting receipts. Live account-scoped status replaces stale draft/send controls; launch opens the in-chat report and reports use aggregate counts. Thirty-five tests, scoped lint and preview checks pass; authenticated real report read and cross-business denial verified. No SMS sent or published.
