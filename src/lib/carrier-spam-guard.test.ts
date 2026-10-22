@@ -95,7 +95,8 @@ function fakeDb(opts: FakeOpts = {}) {
   function doPause(kind: "spam" | "feedback_timeout") {
     state.pauseAttempts += 1;
     if (opts.crashDuringPause) throw new Error("crash mid-pause (transaction rolled back)");
-    if (DISPATCHABLE.includes(state.campaign.status)) {
+    const wasDispatchable = DISPATCHABLE.includes(state.campaign.status);
+    if (wasDispatchable) {
       state.campaign.status = "paused";
       state.campaign.paused_reason = kind === "spam" ? SPAM_PAUSE_REASON : FEEDBACK_TIMEOUT_REASON;
     }
@@ -103,9 +104,10 @@ function fakeDb(opts: FakeOpts = {}) {
     if (!state.incident && state.monitor) {
       const a = state.account;
       const recipient = resolveIncidentRecipient(a);
+      const hadQueued = state.messages.some((m) => m.campaign_id === "c1" && m.status === "queued");
       state.incident = {
         campaign_id: "c1", account_id: "a1", kind,
-        paused: state.campaign.status === "paused",
+        paused: wasDispatchable && hadQueued,
         finalized: state.monitor.finalized_count, spam: state.monitor.spam_count,
         recipient_email: recipient,
       };
@@ -157,6 +159,7 @@ function fakeDb(opts: FakeOpts = {}) {
       }
       function execAll(): any[] {
         if (execErr()) return [];
+        if (table === "campaigns" && q.op === "update") { Object.assign(state.campaign, q.patch); return [{ id: "c1" }]; }
         if (table === "email_send_log") {
           if (q.op === "insert") { state.emailLog.push(...q.rows); return q.rows; }
           return state.emailLog;
@@ -282,16 +285,16 @@ function fakeDb(opts: FakeOpts = {}) {
   return db;
 }
 
-/** Enroll and push `finalized` receipts (first `spam` of them 40002). */
-async function seedReceipts(db: any, finalized: number, spam: number, { submitted = 0 } = {}) {
-  // mark messages as submitted with provider ids first
+/** Push `finalized` receipts (first `spam` of them 40002) for messages
+ * starting at `offset`; `submitted` pre-marks that many as sent. */
+async function seedReceipts(db: any, finalized: number, spam: number, { submitted = 0, offset = 0 } = {}) {
   for (let i = 0; i < submitted; i += 1) {
-    const m = db.state.messages[i];
-    if (m) { m.status = "sent"; m.provider_message_id = `pid-${i}`; }
+    const m = db.state.messages[offset + i];
+    if (m) { m.status = "sent"; m.provider_message_id = `pid-${offset + i}`; }
   }
   for (let i = 0; i < finalized; i += 1) {
-    const m = db.state.messages[i];
-    if (!m.provider_message_id) { m.status = "sent"; m.provider_message_id = `pid-${i}`; }
+    const m = db.state.messages[offset + i];
+    if (!m.provider_message_id) { m.status = "sent"; m.provider_message_id = `pid-${offset + i}`; }
     await recordSpamGateReceipt(db, {
       campaignId: "c1", messageId: m.id, providerMessageId: m.provider_message_id,
       errorCode: i < spam ? "40002" : null, providerStatus: i < spam ? "undelivered" : "delivered",
@@ -404,7 +407,7 @@ describe("Receipt evidence and threshold", () => {
     expect(dup).toEqual({ ok: true, result: "duplicate" });
     expect(db.state.monitor.finalized_count).toBe(1200);
     // a late bad wave pushes the ratio over 20% → the next claim pauses
-    await seedReceipts(db, 1500, 241);
+    await seedReceipts(db, 300, 300, { offset: 1200 });
     const r = await claimGatedMessages(db, "c1", 24);
     expect((r as any).rows).toHaveLength(0);
     expect(db.state.campaign.status).toBe("paused");
