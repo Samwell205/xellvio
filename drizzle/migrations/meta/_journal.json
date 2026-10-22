@@ -134,6 +134,13 @@
       "when": 1792655369207,
       "tag": "0018_campaign_spam_monitor_gate",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792658539361,
+      "tag": "0019_remove_carrier_feedback_delays",
+      "breakpoints": true
     }
   ]
 }
