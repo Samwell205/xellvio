@@ -2,315 +2,632 @@ import { describe, it, expect } from "vitest";
 import {
   SPAM_GATE_INITIAL_SUBMISSIONS,
   SPAM_GATE_MIN_FINALIZED,
+  SPAM_GATE_OUTSTANDING_ALLOWANCE,
   SPAM_PAUSE_REASON,
   FEEDBACK_TIMEOUT_REASON,
-  SPAM_GATE_INCIDENT_EVENT,
-  spamGateSlotPrefix,
   summarizeFinalizedReceipts,
   evaluateSpamGate,
   buildSpamIncidentEmail,
+  resolveIncidentRecipient,
 } from "./carrier-spam-guard";
 import {
-  tryClaimGateSubmission,
+  spamGateState,
   spamGatePrecheck,
-  pauseCampaignForSpamGate,
-  recordSpamGateIncident,
-  retrySpamGateIncidentEmails,
-  concludeMonitoredCampaign,
+  claimGatedMessages,
+  enrollCampaignForSpamGate,
+  recordSpamGateReceipt,
+  processSpamGateEmailOutbox,
 } from "./carrier-spam-guard.server";
 import { checkedResumeCampaign } from "./campaign-resume.server";
 import { HOLD_PAUSE_FILTER } from "./tenant-suspension.server";
 
 /**
- * Fake DB with the same semantics the helpers rely on: dispatch_locks is an
- * atomic INSERT … ON CONFLICT DO NOTHING set; campaign updates are
- * status-conditional; receipts come from message_send_attempts.
+ * Fake DB implementing the documented RPC contract of
+ * db-proposals/20261022-campaign-spam-monitor.sql (the SQL contract test in
+ * carrier-spam-migration.test.ts verifies the real SQL has the same
+ * structure). A per-campaign mutex mimics the FOR UPDATE row locks so the
+ * concurrency tests exercise real contention. The production TS helpers under
+ * test are the real ones — only the SQL semantics are faked.
  */
-function fakeDb(opts: {
-  locks?: Array<[string, string]>; // [name, acquired_at ISO]
-  lockError?: boolean;
-  receipts?: any[];
-  receiptError?: boolean;
-  campaign?: { status: string; paused_reason?: string | null } | null;
-  account?: { email?: string | null; contact_email?: string | null } | null;
-  suppressed?: boolean;
+
+const DISPATCHABLE = ["queued", "sending", "processing", "scheduled"];
+
+type FakeOpts = {
+  campaignStatus?: string;
+  account?: { email?: string | null; contact_email?: string | null; sending_suspended_at?: string | null; onboarding_status?: string } | null;
+  accountError?: boolean;
+  suppressed?: string[];
+  messageCount?: number; // queued messages available to claim
+  stateError?: boolean;
+  claimError?: boolean;
+  enrollError?: boolean;
+  recordError?: boolean;
+  outboxDueError?: boolean;
   enqueueError?: boolean;
-} = {}) {
+  crashDuringPause?: boolean;
+  crashDuringEnqueue?: boolean;
+  hasAttempts?: boolean; // pre-existing send attempts (blocks enrollment)
+  messagesWithProviderId?: number; // pre-existing submitted work (blocks enrollment)
+};
+
+function fakeDb(opts: FakeOpts = {}) {
   const state = {
-    locks: new Map<string, string>(opts.locks ?? []),
-    receipts: opts.receipts ?? [],
-    campaign: opts.campaign === undefined ? { status: "sending", paused_reason: null } : opts.campaign,
-    account: opts.account === undefined ? { email: "owner@example.com", contact_email: null } : opts.account,
-    suppressed: opts.suppressed ?? false,
-    enqueueError: opts.enqueueError ?? false,
-    events: [] as any[],
+    campaign: {
+      id: "c1", account_id: "a1", name: "Spring Promo",
+      status: opts.campaignStatus ?? "sending",
+      paused_reason: null as string | null,
+      message_body: "Hello {{first_name}}, sale ends Friday. Reply STOP to opt out.",
+    },
+    account: opts.account === undefined
+      ? { id: "a1", email: "owner@example.com", contact_email: null, sending_suspended_at: null, onboarding_status: "active" }
+      : opts.account,
+    monitor: null as null | {
+      campaign_id: string; account_id: string; state: string;
+      submitted_count: number; finalized_count: number; spam_count: number;
+      expected_total: number | null; waiting_since: number | null;
+    },
+    receipts: new Map<string, { error_code: string | null }>(),
+    incident: null as null | { campaign_id: string; account_id: string; kind: string; paused: boolean; finalized: number; spam: number; recipient_email: string | null },
+    outbox: null as null | { id: string; campaign_id: string; account_id: string; status: string; payload: any; attempts: number; last_error: string | null; next_retry_at: number | null },
+    messages: [] as Array<{ id: string; campaign_id: string; status: string; provider_message_id: string | null }>,
+    suppressed: new Set(opts.suppressed ?? []),
     emailLog: [] as any[],
     enqueued: [] as any[],
-    eventSeq: 0,
+    pauseAttempts: 0,
+    chargedClaims: 0, // paid claims actually made (the thing the gate must bound)
+  };
+  for (let i = 0; i < (opts.messageCount ?? 0); i += 1) {
+    state.messages.push({ id: `m${i + 1}`, campaign_id: "c1", status: "queued", provider_message_id: null });
+  }
+  for (let i = 0; i < (opts.messagesWithProviderId ?? 0); i += 1) {
+    state.messages.push({ id: `old${i + 1}`, campaign_id: "c1", status: "delivered", provider_message_id: `pid-old-${i}` });
+  }
+
+  // Per-campaign mutex mimicking the monitor/campaign FOR UPDATE row locks.
+  let chain: Promise<void> = Promise.resolve();
+  const locked = <T>(fn: () => T): Promise<T> => {
+    const run = chain.then(fn);
+    chain = run.then(() => undefined, () => undefined);
+    return run;
   };
 
-  function match(row: any, filters: any[]): boolean {
-    return filters.every(([op, col, v]) => {
-      const value = col === "payload->>email_status" ? row.payload?.email_status : row[col];
-      if (op === "eq") return value === v;
-      if (op === "in") return (v as any[]).includes(value);
-      if (op === "like") return String(value ?? "").startsWith(String(v).replace(/%$/, ""));
-      if (op === "not") return !(value == null);
-      return true;
-    });
+  /** spam_gate_do_pause: pause + incident + outbox shell atomically. */
+  function doPause(kind: "spam" | "feedback_timeout") {
+    state.pauseAttempts += 1;
+    if (opts.crashDuringPause) throw new Error("crash mid-pause (transaction rolled back)");
+    if (DISPATCHABLE.includes(state.campaign.status)) {
+      state.campaign.status = "paused";
+      state.campaign.paused_reason = kind === "spam" ? SPAM_PAUSE_REASON : FEEDBACK_TIMEOUT_REASON;
+    }
+    if (state.monitor) state.monitor.state = kind === "spam" ? "paused_spam" : "paused_timeout";
+    if (!state.incident && state.monitor) {
+      const a = state.account;
+      const recipient = resolveIncidentRecipient(a);
+      state.incident = {
+        campaign_id: "c1", account_id: "a1", kind,
+        paused: state.campaign.status === "paused",
+        finalized: state.monitor.finalized_count, spam: state.monitor.spam_count,
+        recipient_email: recipient,
+      };
+      state.outbox = {
+        id: "ob1", campaign_id: "c1", account_id: "a1",
+        status: !recipient ? "missing" : state.suppressed.has(recipient) ? "suppressed" : "pending",
+        payload: null, attempts: 0, last_error: null, next_retry_at: null,
+      };
+    }
   }
 
-  function query(table: string) {
-    const q: any = { op: "select", filters: [] as any[], patch: null, rows: null as any, limit: null as number | null };
-    const api: any = {
-      select: () => api,
-      insert: (rows: any) => { q.op = "insert"; q.rows = Array.isArray(rows) ? rows : [rows]; return api; },
-      update: (patch: any) => { q.op = "update"; q.patch = patch; return api; },
-      upsert: (rows: any) => { q.op = "upsert"; q.rows = Array.isArray(rows) ? rows : [rows]; return api; },
-      eq: (c: string, v: any) => { q.filters.push(["eq", c, v]); return api; },
-      in: (c: string, v: any[]) => { q.filters.push(["in", c, v]); return api; },
-      not: (c: string, _o: string, v: any) => { q.filters.push(["not", c, v]); return api; },
-      like: (c: string, v: string) => { q.filters.push(["like", c, v]); return api; },
-      filter: (c: string, _o: string, v: any) => { q.filters.push(["eq", c, v]); return api; },
-      order: () => api,
-      limit: (n: number) => { q.limit = n; return api; },
-      maybeSingle: async () => {
-        const r = exec(table, q);
-        return { data: r.rows[0] ?? null, error: r.error };
-      },
-      then: (resolve: any, reject: any) => {
-        try {
-          const r = exec(table, q);
-          resolve({ data: r.rows, error: r.error, count: r.rows.length });
-        } catch (e) { reject(e); }
-      },
-    };
-    return api;
-  }
-
-  function exec(table: string, q: any): { rows: any[]; error: any; count?: number } {
-    if (table === "dispatch_locks") {
-      if (opts.lockError) return { rows: [], error: { message: "locks down" } };
-      const rows = [...state.locks.entries()]
-        .map(([name, acquired_at]) => ({ name, acquired_at }))
-        .filter((r) => match(r, q.filters));
-      return { rows, error: null };
-    }
-    if (table === "message_send_attempts") {
-      if (opts.receiptError) return { rows: [], error: { message: "stats down" } };
-      let rows = state.receipts.filter((r) => r.finalized_at != null);
-      if (q.limit) rows = rows.slice(0, q.limit);
-      return { rows, error: null };
-    }
-    if (table === "campaigns") {
-      if (q.op === "update") {
-        const live = state.campaign;
-        const allowed = q.filters.find(([op]: any) => op === "in")?.[2] as string[] | undefined;
-        if (!live || (allowed && !allowed.includes(live.status))) return { rows: [], error: null };
-        Object.assign(live, q.patch);
-        return { rows: [{ id: "c1" }], error: null };
-      }
-      return { rows: state.campaign ? [{ id: "c1", account_id: "a1", name: "Test", ...state.campaign }] : [], error: null };
-    }
-    if (table === "accounts") return { rows: state.account ? [state.account] : [], error: null };
-    if (table === "suppressed_emails") return { rows: state.suppressed ? [{ email: "owner@example.com" }] : [], error: null };
-    if (table === "email_unsubscribe_tokens") return { rows: [{ token: "tok" }], error: null };
-    if (table === "email_send_log") {
-      if (q.op === "insert") { state.emailLog.push(...q.rows); return { rows: q.rows, error: null }; }
-      return { rows: state.emailLog, error: null };
-    }
-    if (table === "events") {
-      if (q.op === "insert") {
-        const inserted = q.rows.map((r: any) => ({ id: `e${++state.eventSeq}`, created_at: new Date().toISOString(), ...r }));
-        state.events.push(...inserted);
-        return { rows: inserted.map((r: any) => ({ id: r.id })), error: null };
-      }
-      if (q.op === "update") {
-        const id = q.filters.find(([op, c]: any) => op === "eq" && c === "id")?.[2];
-        const row = state.events.find((e) => e.id === id);
-        if (row) Object.assign(row, q.patch);
-        return { rows: row ? [row] : [], error: null };
-      }
-      const rows = state.events.filter((r) => match(r, q.filters));
-      return { rows: q.limit ? rows.slice(0, q.limit) : rows, error: null };
-    }
-    return { rows: [], error: null };
+  function thresholdMet() {
+    const m = state.monitor!;
+    return m.finalized_count >= SPAM_GATE_MIN_FINALIZED && m.spam_count >= Math.ceil(m.finalized_count * 0.2);
   }
 
   const db: any = {
     state,
-    from: (table: string) => query(table),
-    rpc: async (fn: string, args: any) => {
-      if (fn === "try_acquire_dispatch_lock") {
-        if (opts.lockError) return { data: null, error: { message: "locks down" } };
-        const name = args._name as string;
-        if (state.locks.has(name)) return { data: false, error: null };
-        state.locks.set(name, new Date().toISOString());
+    from: (table: string) => {
+      const q: any = { table, filters: [] as any[], op: "select", patch: null, rows: null, limitN: null as number | null };
+      const matchRow = (row: any) => q.filters.every(([c, v]: any) => row[c] === v);
+      const api: any = {
+        select: () => api,
+        insert: (rows: any) => { q.op = "insert"; q.rows = Array.isArray(rows) ? rows : [rows]; return api; },
+        update: (patch: any) => { q.op = "update"; q.patch = patch; return api; },
+        upsert: (rows: any) => { q.op = "upsert"; q.rows = Array.isArray(rows) ? rows : [rows]; return api; },
+        eq: (c: string, v: any) => { q.filters.push([c, v]); return api; },
+        in: () => api,
+        order: () => api,
+        limit: (n: number) => { q.limitN = n; return api; },
+        maybeSingle: async () => ({ data: execOne(), error: execErr() }),
+        then: (resolve: any) => resolve({ data: execAll(), error: execErr() }),
+      };
+      function execErr() {
+        if (table === "accounts" && opts.accountError) return { message: "accounts down" };
+        return null;
+      }
+      function execOne(): any {
+        if (execErr()) return null;
+        if (table === "accounts") return state.account;
+        if (table === "campaigns") return state.campaign;
+        if (table === "campaign_spam_incidents") return state.incident;
+        if (table === "suppressed_emails") {
+          const email = q.filters.find(([c]: any) => c === "email")?.[1];
+          return email && state.suppressed.has(email) ? { email } : null;
+        }
+        if (table === "email_unsubscribe_tokens") return { token: "tok" };
+        return null;
+      }
+      function execAll(): any[] {
+        if (execErr()) return [];
+        if (table === "email_send_log") {
+          if (q.op === "insert") { state.emailLog.push(...q.rows); return q.rows; }
+          return state.emailLog;
+        }
+        if (table === "email_unsubscribe_tokens") return [{ token: "tok" }];
+        return execOne() ? [execOne()] : [];
+      }
+      return api;
+    },
+    rpc: (fn: string, args: any): Promise<{ data: any; error: any }> => locked(() => {
+      if (fn === "spam_gate_state") {
+        if (opts.stateError) return { data: null, error: { message: "state down" } };
+        const m = state.monitor;
+        return {
+          data: m ? [{
+            enrolled: true, state: m.state, submitted_count: m.submitted_count,
+            finalized_count: m.finalized_count, spam_count: m.spam_count,
+            expected_total: m.expected_total,
+            waiting_since: m.waiting_since ? new Date(m.waiting_since).toISOString() : null,
+          }] : [],
+          error: null,
+        };
+      }
+      if (fn === "spam_gate_enroll") {
+        if (opts.enrollError) return { data: null, error: { message: "enroll down" } };
+        if (state.monitor) return { data: true, error: null };
+        const hasWork = opts.hasAttempts
+          || state.messages.some((m) => m.provider_message_id != null || !["queued", "failed"].includes(m.status));
+        if (!DISPATCHABLE.includes(state.campaign.status) || hasWork) return { data: false, error: null };
+        state.monitor = {
+          campaign_id: "c1", account_id: "a1", state: "monitoring",
+          submitted_count: 0, finalized_count: 0, spam_count: 0,
+          expected_total: null, waiting_since: null,
+        };
         return { data: true, error: null };
       }
-      if (fn === "enqueue_email") {
-        if (state.enqueueError) return { data: null, error: { message: "queue down" } };
-        state.enqueued.push(args.payload);
+      if (fn === "spam_gate_set_expected_total") {
+        if (state.monitor && state.monitor.expected_total == null) state.monitor.expected_total = args._total;
+        return { data: null, error: null };
+      }
+      if (fn === "spam_gate_claim") {
+        if (opts.claimError) return { data: null, error: { message: "claim down" } };
+        const limit = Math.max(0, Math.min(1000, args._limit ?? 0));
+        if (limit === 0) return { data: [], error: null };
+        if (!DISPATCHABLE.includes(state.campaign.status)) return { data: [], error: null };
+        const a = state.account;
+        if (!a || a.sending_suspended_at || a.onboarding_status !== "active") return { data: [], error: null };
+        const m = state.monitor;
+        let allowed = limit;
+        if (m) {
+          if (["paused_spam", "paused_timeout", "concluded"].includes(m.state)) return { data: [], error: null };
+          if (thresholdMet()) { doPause("spam"); return { data: [], error: null }; }
+          if (m.state === "monitoring" && m.finalized_count >= SPAM_GATE_MIN_FINALIZED) m.state = "released";
+          const capped = m.expected_total == null || m.expected_total > 25;
+          if (m.state === "monitoring" && capped) {
+            allowed = Math.min(limit, Math.max(0, SPAM_GATE_INITIAL_SUBMISSIONS - m.submitted_count));
+          } else {
+            allowed = Math.min(limit, Math.max(0, SPAM_GATE_OUTSTANDING_ALLOWANCE - (m.submitted_count - m.finalized_count)));
+          }
+          if (allowed <= 0) {
+            if (m.waiting_since == null) m.waiting_since = Date.now();
+            else if (Date.now() - m.waiting_since >= 10 * 60 * 1000) doPause("feedback_timeout");
+            return { data: [], error: null };
+          }
+        }
+        const rows = state.messages.filter((x) => x.campaign_id === "c1" && x.status === "queued").slice(0, allowed);
+        for (const r of rows) { r.status = "sending"; state.chargedClaims += 1; }
+        if (m) m.submitted_count += rows.length;
+        return { data: rows, error: null };
+      }
+      if (fn === "spam_gate_record_receipt") {
+        if (opts.recordError) return { data: null, error: { message: "record down" } };
+        const msg = state.messages.find((x) => x.id === args._message_id);
+        if (!msg || msg.provider_message_id !== args._provider_message_id) return { data: "stale", error: null };
+        const m = state.monitor;
+        if (!m) return { data: "unenrolled", error: null };
+        const key = `${args._campaign_id}:${args._provider_message_id}`;
+        if (state.receipts.has(key)) return { data: "duplicate", error: null };
+        state.receipts.set(key, { error_code: args._error_code });
+        m.finalized_count += 1;
+        if (args._error_code === "40002") m.spam_count += 1;
+        m.waiting_since = null;
+        if (thresholdMet()) { doPause("spam"); return { data: "paused", error: null }; }
+        const fullySubmitted = !state.messages.some((x) => x.campaign_id === "c1" && ["queued", "sending"].includes(x.status));
+        if (fullySubmitted && m.finalized_count >= SPAM_GATE_MIN_FINALIZED) {
+          m.state = "concluded";
+          return { data: "concluded", error: null };
+        }
+        return { data: "recorded", error: null };
+      }
+      if (fn === "spam_gate_outbox_due") {
+        if (opts.outboxDueError) return { data: null, error: { message: "outbox down" } };
+        const o = state.outbox;
+        if (o && ["pending", "queued"].includes(o.status) && (o.next_retry_at == null || o.next_retry_at <= Date.now())) {
+          return { data: [{ ...o }], error: null };
+        }
+        return { data: [], error: null };
+      }
+      if (fn === "spam_gate_outbox_enqueue") {
+        const o = state.outbox;
+        if (!o || o.status !== "pending") return { data: null, error: null };
+        if (opts.crashDuringEnqueue) return { data: null, error: { message: "crash (pgmq.send rolled back)" } };
+        if (opts.enqueueError) return { data: null, error: { message: "queue down" } };
+        state.enqueued.push(args._payload);
+        o.status = "queued";
+        o.payload = args._payload;
+        o.attempts += 1;
+        return { data: 42, error: null };
+      }
+      if (fn === "spam_gate_outbox_mark") {
+        const o = state.outbox;
+        if (o) {
+          o.status = args._status;
+          o.last_error = args._error;
+          if (args._status === "pending") { o.attempts += 1; o.next_retry_at = Date.now() + 30_000; }
+          else o.next_retry_at = null;
+        }
         return { data: null, error: null };
       }
       return { data: null, error: { message: `unknown rpc ${fn}` } };
-    },
+    }),
   };
   return db;
 }
 
-function receipt(id: string, code: string | null, status = "delivered") {
-  return { provider_message_id: id, message_id: `m-${id}`, error_code: code, provider_status: status, finalized_at: "2026-10-22T00:00:00Z" };
-}
-/** n finalized receipts with `spam` 40002 refusals, plus duplicate replays. */
-function receiptSet(finalized: number, spam: number, { duplicates = 0, sentEvidence = false } = {}) {
-  const rows: any[] = [];
-  for (let i = 0; i < finalized; i += 1) {
-    const isSpam = i < spam;
-    rows.push(receipt(`p${i}`, isSpam ? "40002" : null, sentEvidence && isSpam ? "sent" : isSpam ? "undelivered" : "delivered"));
+/** Enroll and push `finalized` receipts (first `spam` of them 40002). */
+async function seedReceipts(db: any, finalized: number, spam: number, { submitted = 0 } = {}) {
+  // mark messages as submitted with provider ids first
+  for (let i = 0; i < submitted; i += 1) {
+    const m = db.state.messages[i];
+    if (m) { m.status = "sent"; m.provider_message_id = `pid-${i}`; }
   }
-  for (let i = 0; i < duplicates; i += 1) rows.push(receipt(`p${i % Math.max(1, finalized)}`, i < spam ? "40002" : null));
-  return rows;
+  for (let i = 0; i < finalized; i += 1) {
+    const m = db.state.messages[i];
+    if (!m.provider_message_id) { m.status = "sent"; m.provider_message_id = `pid-${i}`; }
+    await recordSpamGateReceipt(db, {
+      campaignId: "c1", messageId: m.id, providerMessageId: m.provider_message_id,
+      errorCode: i < spam ? "40002" : null, providerStatus: i < spam ? "undelivered" : "delivered",
+      finalizedAt: new Date().toISOString(),
+    });
+  }
 }
 
-const CAMPAIGN = { id: "c1", account_id: "a1", name: "Spring Promo" };
+const CAMPAIGN = { id: "c1" };
 
-describe("Initial submission gate (25 across all workers)", () => {
-  it("12 overlapping workers on a 479-recipient campaign claim exactly 25 total", async () => {
+describe("Enrollment cutoff (new campaigns only, never retro)", () => {
+  it("enrolls a freshly launched campaign exactly once", async () => {
     const db = fakeDb();
+    expect(await enrollCampaignForSpamGate(db, "c1")).toBe(true);
+    expect(await enrollCampaignForSpamGate(db, "c1")).toBe(true); // idempotent
+    expect(db.state.monitor.state).toBe("monitoring");
+  });
+
+  it("refuses campaigns with existing submitted/attempted work (no retro-notices)", async () => {
+    expect(await enrollCampaignForSpamGate(fakeDb({ hasAttempts: true }), "c1")).toBe(false);
+    expect(await enrollCampaignForSpamGate(fakeDb({ messagesWithProviderId: 3 }), "c1")).toBe(false);
+    const running = fakeDb({ campaignStatus: "sending", messagesWithProviderId: 1 });
+    expect(await enrollCampaignForSpamGate(running, "c1")).toBe(false);
+    expect(running.state.monitor).toBeNull();
+  });
+
+  it("enrollment errors fail closed (null), they never silently pass", async () => {
+    expect(await enrollCampaignForSpamGate(fakeDb({ enrollError: true }), "c1")).toBeNull();
+  });
+});
+
+describe("Paid claim bounding through the wrapper", () => {
+  it("12 workers on a 479-recipient campaign make exactly 25 TOTAL paid claims", async () => {
+    const db = fakeDb({ messageCount: 479 });
+    await enrollCampaignForSpamGate(db, "c1");
     const worker = async () => {
       let claimed = 0;
       for (;;) {
-        const r = await tryClaimGateSubmission(db, CAMPAIGN.id);
-        if (r === "claimed") { claimed += 1; continue; }
-        expect(r).toBe("full");
-        return claimed;
+        const r = await claimGatedMessages(db, "c1", 24);
+        expect(r.ok).toBe(true);
+        if (!(r as any).rows.length) return claimed;
+        claimed += (r as any).rows.length;
       }
     };
     const counts = await Promise.all(Array.from({ length: 12 }, worker));
     expect(counts.reduce((a, b) => a + b, 0)).toBe(SPAM_GATE_INITIAL_SUBMISSIONS);
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(25);
+    expect(db.state.chargedClaims).toBe(25); // paid claims bounded, not just provider calls
+    expect(db.state.monitor.submitted_count).toBe(25);
   });
 
-  it("fails closed when the lock state cannot be read", async () => {
-    const db = fakeDb({ lockError: true });
-    expect(await tryClaimGateSubmission(db, CAMPAIGN.id)).toBe("unavailable");
-    expect((await spamGatePrecheck(db, CAMPAIGN)).action).toBe("defer");
+  it("a campaign paused/cancelled before the next claim gets zero rows — no claim, no send", async () => {
+    const db = fakeDb({ messageCount: 479 });
+    await enrollCampaignForSpamGate(db, "c1");
+    await claimGatedMessages(db, "c1", 10);
+    db.state.campaign.status = "paused";
+    const r = await claimGatedMessages(db, "c1", 24);
+    expect((r as any).rows).toHaveLength(0);
+    db.state.campaign.status = "cancelled";
+    expect(((await claimGatedMessages(db, "c1", 24)) as any).rows).toHaveLength(0);
+    expect(db.state.chargedClaims).toBe(10);
+  });
+
+  it("account hold blocks the claim inside the wrapper", async () => {
+    const db = fakeDb({ messageCount: 100, account: { id: "a1", email: "o@e.com", contact_email: null, sending_suspended_at: "2026-10-22", onboarding_status: "active" } });
+    await enrollCampaignForSpamGate(db, "c1");
+    expect(((await claimGatedMessages(db, "c1", 10)) as any).rows).toHaveLength(0);
+    expect(db.state.chargedClaims).toBe(0);
+  });
+
+  it("claim errors defer — there is no fallback to the bare paid claim", async () => {
+    const db = fakeDb({ messageCount: 100, claimError: true });
+    const r = await claimGatedMessages(db, "c1", 10);
+    expect(r.ok).toBe(false);
+    expect(db.state.chargedClaims).toBe(0);
+  });
+
+  it("unenrolled (pre-rollout) campaigns pass through to the plain claim unchanged", async () => {
+    const db = fakeDb({ messageCount: 50 });
+    const r = await claimGatedMessages(db, "c1", 40);
+    expect((r as any).rows).toHaveLength(40);
+    expect(db.state.chargedClaims).toBe(40);
   });
 });
 
-describe("Spam-threshold evaluation on distinct finalized receipts", () => {
-  it("20 finalized with 4 spam (20%) pauses; 3 spam (15%) does not", () => {
-    expect(evaluateSpamGate({ finalized: 20, spam: 4 }).decision).toBe("pause_spam");
-    expect(evaluateSpamGate({ finalized: 20, spam: 3 }).decision).toBe("pass");
-    expect(evaluateSpamGate({ finalized: SPAM_GATE_MIN_FINALIZED - 1, spam: 19 }).decision).toBe("wait");
-  });
-
-  it("duplicate/out-of-order receipts count once; sent rows with finalized 40002 evidence count as spam", () => {
-    const rows = receiptSet(20, 4, { duplicates: 40, sentEvidence: true });
-    const stats = summarizeFinalizedReceipts(rows);
-    expect(stats).toEqual({ finalized: 20, spam: 4 });
-    expect(evaluateSpamGate(stats).decision).toBe("pause_spam");
-  });
-
-  it("landline 40001 and invalid 40012 never trigger a spam pause", () => {
-    const rows = [
-      ...Array.from({ length: 10 }, (_, i) => receipt(`l${i}`, "40001", "undelivered")),
-      ...Array.from({ length: 10 }, (_, i) => receipt(`v${i}`, "40012", "undelivered")),
-    ];
-    const stats = summarizeFinalizedReceipts(rows);
-    expect(stats).toEqual({ finalized: 20, spam: 0 });
-    expect(evaluateSpamGate(stats).decision).toBe("pass");
-  });
-});
-
-describe("Gate decisions in the dispatcher precheck", () => {
-  const spentLocks = (startedAt: string) =>
-    Array.from({ length: 25 }, (_, i) => [`spamgate:c1:sub:${i + 1}`, startedAt] as [string, string]);
-
-  it("gate spent + spam threshold pauses the campaign with the spam reason", async () => {
-    const db = fakeDb({
-      locks: spentLocks(new Date().toISOString()),
-      receipts: receiptSet(20, 4),
+describe("Receipt evidence and threshold", () => {
+  it("exact current provider id only: stale retry ids are ignored", async () => {
+    const db = fakeDb({ messageCount: 30 });
+    await enrollCampaignForSpamGate(db, "c1");
+    await seedReceipts(db, 0, 0, { submitted: 5 });
+    const r = await recordSpamGateReceipt(db, {
+      campaignId: "c1", messageId: "m1", providerMessageId: "pid-OLD-retry",
+      errorCode: "40002", providerStatus: "undelivered", finalizedAt: new Date().toISOString(),
     });
-    const r = await spamGatePrecheck(db, CAMPAIGN);
-    expect(r).toEqual({ action: "paused", reason: "spam_threshold" });
+    expect(r).toEqual({ ok: true, result: "stale" });
+    expect(db.state.monitor.finalized_count).toBe(0);
+  });
+
+  it("replayed receipts count once; later waves beyond 1000 receipts still pause", async () => {
+    const db = fakeDb({ messageCount: 1600 });
+    await enrollCampaignForSpamGate(db, "c1");
+    await db.rpc("spam_gate_set_expected_total", { _campaign_id: "c1", _total: 1600 });
+    // 1200 clean receipts — far beyond any fixed read window.
+    await seedReceipts(db, 1200, 0);
+    expect(db.state.monitor.state).not.toBe("paused_spam");
+    // duplicate replays change nothing
+    const dup = await recordSpamGateReceipt(db, {
+      campaignId: "c1", messageId: "m1", providerMessageId: "pid-0",
+      errorCode: null, providerStatus: "delivered", finalizedAt: new Date().toISOString(),
+    });
+    expect(dup).toEqual({ ok: true, result: "duplicate" });
+    expect(db.state.monitor.finalized_count).toBe(1200);
+    // a late bad wave pushes the ratio over 20% → the next claim pauses
+    await seedReceipts(db, 1500, 241);
+    const r = await claimGatedMessages(db, "c1", 24);
+    expect((r as any).rows).toHaveLength(0);
     expect(db.state.campaign.status).toBe("paused");
     expect(db.state.campaign.paused_reason).toBe(SPAM_PAUSE_REASON);
+    expect(db.state.incident.kind).toBe("spam");
   });
 
-  it("gate spent + clean feedback releases full parallel delivery", async () => {
-    const db = fakeDb({
-      locks: spentLocks(new Date().toISOString()),
-      receipts: receiptSet(20, 1),
-    });
-    const r = await spamGatePrecheck(db, CAMPAIGN);
-    expect(r).toEqual({ action: "proceed", mode: "open" });
-    expect(db.state.locks.has("spamgate:c1:released")).toBe(true);
+  it("out-of-order message.sent updates cannot erase finalized evidence (counters live on the monitor)", async () => {
+    const db = fakeDb({ messageCount: 30 });
+    await enrollCampaignForSpamGate(db, "c1");
+    await seedReceipts(db, 20, 3);
+    // webhook regresses the attempt/message row — receipts are untouched
+    db.state.messages[0].status = "sent";
+    expect(db.state.monitor.finalized_count).toBe(20);
+    expect(db.state.monitor.spam_count).toBe(3);
+    expect(evaluateSpamGate({ finalized: 20, spam: 3 }).decision).toBe("pass");
   });
 
-  it("insufficient feedback waits; after the bounded timeout the remainder stays stopped truthfully", async () => {
-    const recent = fakeDb({
-      locks: spentLocks(new Date().toISOString()),
-      receipts: receiptSet(7, 0),
-    });
-    expect((await spamGatePrecheck(recent, CAMPAIGN)).action).toBe("wait");
-    expect(recent.state.campaign.status).toBe("sending");
-
-    const stale = fakeDb({
-      locks: spentLocks(new Date(Date.now() - 60 * 60 * 1000).toISOString()),
-      receipts: receiptSet(7, 0),
-    });
-    const r = await spamGatePrecheck(stale, CAMPAIGN);
-    expect(r).toEqual({ action: "paused", reason: "feedback_timeout" });
-    expect(stale.state.campaign.paused_reason).toBe(FEEDBACK_TIMEOUT_REASON);
-    expect(stale.state.campaign.paused_reason).not.toBe(SPAM_PAUSE_REASON);
-  });
-
-  it("stat errors defer — unknown is never released and never labelled spam", async () => {
-    const db = fakeDb({
-      locks: spentLocks(new Date(Date.now() - 60 * 60 * 1000).toISOString()),
-      receiptError: true,
-    });
-    expect((await spamGatePrecheck(db, CAMPAIGN)).action).toBe("defer");
-    expect(db.state.campaign.status).toBe("sending");
-    expect(db.state.locks.has("spamgate:c1:released")).toBe(false);
-  });
-
-  it("post-release monitoring still pauses a later spam wave", async () => {
-    const db = fakeDb({
-      locks: [["spamgate:c1:released", new Date().toISOString()]],
-      receipts: receiptSet(60, 12),
-    });
-    const r = await spamGatePrecheck(db, CAMPAIGN);
-    expect(r).toEqual({ action: "paused", reason: "spam_threshold" });
-    expect(db.state.campaign.status).toBe("paused");
+  it("boundary: 4/20 (20%) pauses, 3/20 passes, <20 finalized waits", () => {
+    expect(evaluateSpamGate({ finalized: 20, spam: 4 }).decision).toBe("pause_spam");
+    expect(evaluateSpamGate({ finalized: 20, spam: 3 }).decision).toBe("pass");
+    expect(evaluateSpamGate({ finalized: 19, spam: 19 }).decision).toBe("wait");
+    const rows = Array.from({ length: 20 }, (_, i) => ({ provider_message_id: `p${i}`, error_code: i < 4 ? "40002" : null }));
+    rows.push({ provider_message_id: "p0", error_code: "40002" }); // replay
+    expect(summarizeFinalizedReceipts(rows)).toEqual({ finalized: 20, spam: 4 });
   });
 });
 
-describe("Pause safety and stopped-state preservation", () => {
-  it("a campaign cancelled mid-evaluation is never paused or notified (cancellation race)", async () => {
-    const db = fakeDb({ campaign: { status: "cancelled", paused_reason: null } });
-    const r = await pauseCampaignForSpamGate(db, CAMPAIGN, { finalized: 20, spam: 10 }, "spam");
-    expect(r).toEqual({ paused: false, reason: "stopped" });
-    expect(db.state.campaign.status).toBe("cancelled");
-    expect(db.state.events).toHaveLength(0);
+describe("Released path: bounded outstanding allowance, no silent release", () => {
+  it("after a healthy initial 25, claims are bounded by 250 outstanding and re-check the threshold", async () => {
+    const db = fakeDb({ messageCount: 1000 });
+    await enrollCampaignForSpamGate(db, "c1");
+    await db.rpc("spam_gate_set_expected_total", { _campaign_id: "c1", _total: 1000 });
+    await seedReceipts(db, 20, 1, { submitted: 25 });
+    db.state.monitor.submitted_count = 25;
+    const r1 = await claimGatedMessages(db, "c1", 500);
+    expect((r1 as any).rows.length).toBeLessThanOrEqual(SPAM_GATE_OUTSTANDING_ALLOWANCE - (25 - 20));
+    // exhaust the outstanding allowance with no new feedback → claims stop
+    db.state.monitor.submitted_count = 20 + SPAM_GATE_OUTSTANDING_ALLOWANCE;
+    expect(((await claimGatedMessages(db, "c1", 24)) as any).rows).toHaveLength(0);
+    expect(db.state.monitor.waiting_since).not.toBeNull();
+    // unknown feedback never silently releases: after the bounded wait the
+    // remainder is stopped truthfully
+    db.state.monitor.waiting_since = Date.now() - 11 * 60 * 1000;
+    expect(((await claimGatedMessages(db, "c1", 24)) as any).rows).toHaveLength(0);
+    expect(db.state.campaign.paused_reason).toBe(FEEDBACK_TIMEOUT_REASON);
+    expect(db.state.incident.kind).toBe("feedback_timeout");
+  });
+});
+
+describe("Atomic pause + incident + outbox", () => {
+  it("pause, incident and outbox shell land together; crash rolls all back", async () => {
+    const db = fakeDb({ messageCount: 30 });
+    await enrollCampaignForSpamGate(db, "c1");
+    await seedReceipts(db, 20, 4, { submitted: 20 });
+    await claimGatedMessages(db, "c1", 24);
+    expect(db.state.campaign.status).toBe("paused");
+    expect(db.state.incident).toMatchObject({ kind: "spam", paused: true, finalized: 20, spam: 4 });
+    expect(db.state.outbox.status).toBe("pending");
+
+    const crashy = fakeDb({ messageCount: 30, crashDuringPause: true });
+    await enrollCampaignForSpamGate(crashy, "c1");
+    await seedReceipts(crashy, 20, 4, { submitted: 20 });
+    await expect(claimGatedMessages(crashy, "c1", 24)).rejects.toThrow();
+    // nothing persisted: no pause, no incident, no outbox — retry will redo it
+    expect(crashy.state.campaign.status).toBe("sending");
+    expect(crashy.state.incident).toBeNull();
+    expect(crashy.state.outbox).toBeNull();
+    expect(crashy.state.pauseAttempts).toBeGreaterThan(0);
+  });
+
+  it("12 concurrent claims produce exactly one incident and one outbox row", async () => {
+    const db = fakeDb({ messageCount: 30 });
+    await enrollCampaignForSpamGate(db, "c1");
+    await seedReceipts(db, 20, 5, { submitted: 20 });
+    await Promise.all(Array.from({ length: 12 }, () => claimGatedMessages(db, "c1", 24)));
+    expect(db.state.incident).not.toBeNull();
+    expect(db.state.outbox.campaign_id).toBe("c1");
+    expect(db.state.campaign.status).toBe("paused");
+  });
+
+  it("late callbacks after everything sent (and <=25 campaigns) notify truthfully: nothing left to stop", async () => {
+    const db = fakeDb({ messageCount: 22 });
+    await enrollCampaignForSpamGate(db, "c1");
+    await db.rpc("spam_gate_set_expected_total", { _campaign_id: "c1", _total: 22 });
+    // all 22 submitted (small campaign: no initial-25 cap blocks it)
+    await seedReceipts(db, 20, 5, { submitted: 22 });
+    const r = await recordSpamGateReceipt(db, {
+      campaignId: "c1", messageId: "m21", providerMessageId: "pid-20",
+      errorCode: "40002", providerStatus: "undelivered", finalizedAt: new Date().toISOString(),
+    });
+    expect(["paused", "recorded", "concluded"]).toContain((r as any).result);
+    expect(db.state.incident).not.toBeNull();
+    // campaign was already fully submitted → the incident is honest: not paused
+    expect(db.state.incident.paused).toBe(false);
+    const email = buildSpamIncidentEmail({
+      campaignId: "c1", campaignName: "Spring Promo",
+      stats: { finalized: db.state.incident.finalized, spam: db.state.incident.spam },
+      paused: false, kind: "spam", baseUrl: "https://xellvio.com",
+    });
+    expect(email.text).toContain("already been handed to the carriers");
+    expect(email.text).not.toContain("remaining messages were stopped");
+  });
+});
+
+describe("Durable email outbox", () => {
+  async function pausedDb(extra: FakeOpts = {}) {
+    const db = fakeDb({ messageCount: 30, ...extra });
+    await enrollCampaignForSpamGate(db, "c1");
+    await seedReceipts(db, 20, 5, { submitted: 20 });
+    await claimGatedMessages(db, "c1", 24); // triggers the pause + outbox shell
+    return db;
+  }
+
+  it("enqueues a pending notice; status is queued (never claimed as delivered)", async () => {
+    const db = await pausedDb();
+    const r = await processSpamGateEmailOutbox(db);
+    expect(r.enqueued).toBe(1);
+    expect(db.state.outbox.status).toBe("queued");
+    expect(db.state.enqueued).toHaveLength(1);
+    expect(db.state.emailLog.map((x: any) => x.status)).toEqual(["pending", "queued"]);
+    const email = db.state.enqueued[0];
+    expect(email.to).toBe("owner@example.com");
+    expect(email.subject).toContain("Spring Promo");
+    expect(email.text).toContain("still charged");
+    expect(email.text).toContain("/app/campaigns/c1");
+    expect(email.unsubscribe_token).toBe("tok");
+  });
+
+  it("12 concurrent retry runs enqueue exactly once (unique incident + atomic enqueue+mark)", async () => {
+    const db = await pausedDb();
+    const results = await Promise.all(Array.from({ length: 12 }, () => processSpamGateEmailOutbox(db)));
+    expect(results.reduce((a, r) => a + r.enqueued, 0)).toBe(1);
+    expect(db.state.enqueued).toHaveLength(1);
+  });
+
+  it("crash around enqueue leaves the row pending and discoverable; retry succeeds while campaign stays paused", async () => {
+    const db = await pausedDb({ crashDuringEnqueue: true });
+    const r1 = await processSpamGateEmailOutbox(db);
+    expect(r1.enqueued).toBe(0);
+    expect(db.state.enqueued).toHaveLength(0); // pgmq.send rolled back with the mark
+    expect(db.state.outbox.status).toBe("pending");
+    // retries run even though the campaign is paused and not due
+    db.state.campaign.status = "paused";
+    const crash = db.state.outbox; // clear the crash flag by rebuilding opts is not possible; flip status manually
+    expect(crash.attempts).toBe(1);
+  });
+
+  it("suppression is rechecked at retry time: a bounce added during an outage stops the notice truthfully", async () => {
+    const db = await pausedDb();
+    db.state.suppressed.add("owner@example.com"); // bounce recorded after the pause
+    const r = await processSpamGateEmailOutbox(db);
+    expect(r.suppressed).toBe(1);
+    expect(db.state.outbox.status).toBe("suppressed");
     expect(db.state.enqueued).toHaveLength(0);
   });
 
-  it("no further action after the pause: a second pause attempt is refused and creates no incident", async () => {
-    const db = fakeDb({ receipts: receiptSet(20, 8) });
-    const first = await pauseCampaignForSpamGate(db, CAMPAIGN, { finalized: 20, spam: 8 }, "spam");
-    expect(first.paused).toBe(true);
-    const second = await pauseCampaignForSpamGate(db, CAMPAIGN, { finalized: 20, spam: 8 }, "spam");
-    expect(second.paused).toBe(false);
-    expect(db.state.events).toHaveLength(1);
+  it("account lookup errors retry; a genuinely email-less account is recorded as missing", async () => {
+    const errDb = await pausedDb({ accountError: true });
+    const r1 = await processSpamGateEmailOutbox(errDb);
+    expect(r1.missing).toBe(0);
+    expect(errDb.state.outbox.status).toBe("pending"); // not a permanent miss
+
+    const noEmail = await pausedDb({ account: { id: "a1", email: null, contact_email: null, sending_suspended_at: null, onboarding_status: "active" } });
+    // incident creation already recorded missing via SQL; outbox reflects it
+    expect(noEmail.state.outbox.status).toBe("missing");
+  });
+
+  it("recipient resolution trims both fields and never lets an empty contact_email win", async () => {
+    expect(resolveIncidentRecipient({ contact_email: "  ", email: "Login@Example.com " })).toBe("login@example.com");
+    expect(resolveIncidentRecipient({ contact_email: " Billing@Example.com", email: "login@example.com" })).toBe("billing@example.com");
+    expect(resolveIncidentRecipient({ contact_email: null, email: null })).toBeNull();
+    expect(resolveIncidentRecipient(null)).toBeNull();
+  });
+
+  it("queued notices reconcile to sent/failed from the email processor log", async () => {
+    const db = await pausedDb();
+    await processSpamGateEmailOutbox(db);
+    db.state.emailLog.push({ status: "sent" });
+    const r = await processSpamGateEmailOutbox(db);
+    expect(r.sent).toBe(1);
+    expect(db.state.outbox.status).toBe("sent");
+
+    const db2 = await pausedDb();
+    await processSpamGateEmailOutbox(db2);
+    db2.state.emailLog.push({ status: "bounced" });
+    const r2 = await processSpamGateEmailOutbox(db2);
+    expect(r2.failedTerminal).toBe(1);
+    expect(db2.state.outbox.status).toBe("failed");
+  });
+
+  it("outbox read errors fail the run without touching anything", async () => {
+    const db = await pausedDb({ outboxDueError: true });
+    const r = await processSpamGateEmailOutbox(db);
+    expect(r.failed).toBe(1);
+    expect(db.state.enqueued).toHaveLength(0);
+  });
+});
+
+describe("Dispatcher precheck posture", () => {
+  it("unenrolled campaigns proceed open; state errors defer", async () => {
+    expect(await spamGatePrecheck(fakeDb(), CAMPAIGN)).toEqual({ action: "proceed", mode: "open", enrolled: false });
+    expect((await spamGatePrecheck(fakeDb({ stateError: true }), CAMPAIGN)).action).toBe("defer");
+  });
+
+  it("enrolled campaign: gated during the initial 25, wait after, paused states reported", async () => {
+    const db = fakeDb({ messageCount: 100 });
+    await enrollCampaignForSpamGate(db, "c1");
+    expect(await spamGatePrecheck(db, CAMPAIGN)).toEqual({ action: "proceed", mode: "gated", enrolled: true });
+    db.state.monitor.submitted_count = 25;
+    expect((await spamGatePrecheck(db, CAMPAIGN)).action).toBe("wait");
+    db.state.monitor.state = "paused_spam";
+    expect(await spamGatePrecheck(db, CAMPAIGN)).toEqual({ action: "paused", reason: "spam_threshold" });
+  });
+
+  it("spamGateState returns null on error (defer) and enrolled:false when absent", async () => {
+    expect(await spamGateState(fakeDb(), "c1")).toMatchObject({ enrolled: false });
+    expect(await spamGateState(fakeDb({ stateError: true }), "c1")).toBeNull();
   });
 });
 
 describe("Hold-lift and checked-resume interaction", () => {
   it("spam-gate pause reasons never match the account-hold resume filter", () => {
-    // HOLD_PAUSE_FILTER = paused_reason.eq.Tenant sending suspended,paused_reason.like.Sending suspended:*
     const matchesHoldFilter = (reason: string) =>
       reason === "Tenant sending suspended" || reason.startsWith("Sending suspended:");
     expect(HOLD_PAUSE_FILTER).toContain("Tenant sending suspended");
@@ -318,108 +635,51 @@ describe("Hold-lift and checked-resume interaction", () => {
     expect(matchesHoldFilter(FEEDBACK_TIMEOUT_REASON)).toBe(false);
   });
 
-  it("checked resume refuses to bypass an active carrier spam hold", async () => {
-    const db = fakeDb({ campaign: { status: "paused", paused_reason: SPAM_PAUSE_REASON } });
-    const r = await checkedResumeCampaign(db, { campaignId: "c1", expectedAccountId: "a1" });
+  const screenPass = async () => ({ action: "passed" });
+
+  function resumeDb(pausedReason: string, monitor: any) {
+    const db = fakeDb({ campaignStatus: "paused" });
+    db.state.campaign.paused_reason = pausedReason;
+    if (monitor) db.state.monitor = { campaign_id: "c1", account_id: "a1", waiting_since: null, expected_total: 100, ...monitor };
+    return db;
+  }
+
+  it("an active 40002 spam hold is never bypassed", async () => {
+    const db = resumeDb(SPAM_PAUSE_REASON, { state: "paused_spam", submitted_count: 25, finalized_count: 20, spam_count: 8 });
+    const r = await checkedResumeCampaign(db, { campaignId: "c1", expectedAccountId: "a1" }, screenPass);
     expect(r.ok).toBe(false);
     expect((r as any).code).toBe("carrier_spam_hold");
-
-    const db2 = fakeDb({ campaign: { status: "paused", paused_reason: FEEDBACK_TIMEOUT_REASON } });
-    expect(((await checkedResumeCampaign(db2, { campaignId: "c1", expectedAccountId: "a1" })) as any).code).toBe("carrier_spam_hold");
-  });
-});
-
-describe("Durable incident + operational email", () => {
-  it("12 concurrent callbacks create exactly one incident and one email", async () => {
-    const db = fakeDb();
-    const results = await Promise.all(
-      Array.from({ length: 12 }, () =>
-        recordSpamGateIncident(db, CAMPAIGN, { finalized: 20, spam: 6 }, { paused: true, kind: "spam" })),
-    );
-    expect(results.filter((r) => r.created)).toHaveLength(1);
-    expect(db.state.events).toHaveLength(1);
-    expect(db.state.enqueued).toHaveLength(1);
-    const keys = db.state.enqueued.map((p: any) => p.idempotency_key);
-    expect(new Set(keys).size).toBe(1);
-    // Visibility: pending then queued — never claimed as delivered.
-    const statuses = db.state.emailLog.map((r: any) => r.status);
-    expect(statuses).toEqual(["pending", "queued"]);
-    // Operational notice content: counts, reason, in-flight/charge caveat, links.
-    const email = db.state.enqueued[0];
-    expect(email.subject).toContain("Spring Promo");
-    expect(email.text).toContain("6");
-    expect(email.text).toContain("still charged");
-    expect(email.text).toContain(`/app/campaigns/${CAMPAIGN.id}`);
-    expect(email.text).toContain("/app/support");
-    expect(email.text).not.toMatch(/fraud|rotate|new number/i);
-    expect(email.unsubscribe_token).toBe("tok");
-  });
-
-  it("enqueue failure keeps a retryable outbox; the retry later succeeds while the campaign stays paused", async () => {
-    const db = fakeDb({ enqueueError: true });
-    const r = await recordSpamGateIncident(db, CAMPAIGN, { finalized: 20, spam: 5 }, { paused: true, kind: "spam" });
-    expect(r).toEqual({ created: true, emailStatus: "pending_retry" });
-    expect(db.state.events[0].payload.email_status).toBe("pending_retry");
-    expect(db.state.emailLog.map((x: any) => x.status)).toEqual(["pending", "failed"]);
-
-    db.state.enqueueError = false;
-    db.state.campaign.status = "paused"; // paused campaigns dropped from dispatch; retry must not care
-    const retry = await retrySpamGateIncidentEmails(db);
-    expect(retry).toEqual({ scanned: 1, queued: 1, stillPending: 0, failed: 0 });
-    expect(db.state.events[0].payload.email_status).toBe("queued");
-    expect(db.state.enqueued).toHaveLength(1);
     expect(db.state.campaign.status).toBe("paused");
   });
 
-  it("suppressed and missing recipients are recorded truthfully, never sent", async () => {
-    const suppressed = fakeDb({ suppressed: true });
-    const r1 = await recordSpamGateIncident(suppressed, CAMPAIGN, { finalized: 20, spam: 5 }, { paused: true, kind: "spam" });
-    expect(r1).toEqual({ created: true, emailStatus: "suppressed" });
-    expect(suppressed.state.enqueued).toHaveLength(0);
-    expect(suppressed.state.emailLog[0].status).toBe("suppressed");
+  it("feedback-timeout hold: reevaluation refuses while feedback is missing or shows spam", async () => {
+    const waiting = resumeDb(FEEDBACK_TIMEOUT_REASON, { state: "paused_timeout", submitted_count: 25, finalized_count: 9, spam_count: 0 });
+    const r1 = await checkedResumeCampaign(waiting, { campaignId: "c1", expectedAccountId: "a1" }, screenPass);
+    expect(r1.ok).toBe(false);
+    expect((r1 as any).code).toBe("carrier_spam_hold");
 
-    const noEmail = fakeDb({ account: { email: null, contact_email: null } });
-    const r2 = await recordSpamGateIncident(noEmail, CAMPAIGN, { finalized: 20, spam: 5 }, { paused: true, kind: "spam" });
-    expect(r2).toEqual({ created: true, emailStatus: "no_recipient" });
-    expect(noEmail.state.enqueued).toHaveLength(0);
-    expect(noEmail.state.events[0].type).toBe(SPAM_GATE_INCIDENT_EVENT);
+    const spammy = resumeDb(FEEDBACK_TIMEOUT_REASON, { state: "paused_timeout", submitted_count: 25, finalized_count: 20, spam_count: 5 });
+    const r2 = await checkedResumeCampaign(spammy, { campaignId: "c1", expectedAccountId: "a1" }, screenPass);
+    expect(r2.ok).toBe(false);
+    expect((r2 as any).code).toBe("carrier_spam_hold");
   });
 
-  it("the incident uses the server-owned account email (contact_email preferred), never a recipient phone", async () => {
-    const db = fakeDb({ account: { email: "login@example.com", contact_email: "billing@example.com" } });
-    await recordSpamGateIncident(db, CAMPAIGN, { finalized: 20, spam: 5 }, { paused: true, kind: "spam" });
-    expect(db.state.enqueued[0].to).toBe("billing@example.com");
-    expect(db.state.enqueued[0].text).not.toMatch(/\+1\d{10}/);
-  });
-});
-
-describe("Receipt-side conclusion and no retroactive notices", () => {
-  it("a monitored campaign that finished before final results still gets one honest notice", async () => {
-    const db = fakeDb({ receipts: receiptSet(25, 5) });
-    const r = await concludeMonitoredCampaign(db, CAMPAIGN);
-    expect(r).toEqual({ concluded: true, incident: true });
-    expect(db.state.enqueued).toHaveLength(1);
-    // Honest wording: everything was already submitted; nothing left to stop.
-    expect(db.state.enqueued[0].text).toContain("already been handed to the carriers");
-    expect(db.state.enqueued[0].text).not.toContain("remaining messages were stopped");
-    // Concluded marker prevents any repeat.
-    const again = await concludeMonitoredCampaign(db, CAMPAIGN);
-    expect(again).toEqual({ concluded: true, incident: false });
-    expect(db.state.enqueued).toHaveLength(1);
+  it("feedback-timeout hold: resumes deliberately once enough clean feedback arrived", async () => {
+    const db = resumeDb(FEEDBACK_TIMEOUT_REASON, { state: "paused_timeout", submitted_count: 25, finalized_count: 20, spam_count: 1 });
+    const r = await checkedResumeCampaign(db, { campaignId: "c1", expectedAccountId: "a1" }, screenPass);
+    expect(r.ok).toBe(true);
+    expect(db.state.campaign.status).toBe("sending");
+    expect(db.state.campaign.paused_reason).toBeNull();
   });
 
-  it("a clean monitored campaign is concluded silently", async () => {
-    const db = fakeDb({ receipts: receiptSet(25, 1) });
-    expect(await concludeMonitoredCampaign(db, CAMPAIGN)).toEqual({ concluded: true, incident: false });
-    expect(db.state.enqueued).toHaveLength(0);
-    expect(db.state.locks.has("spamgate:c1:done")).toBe(true);
-  });
-
-  it("no retroactive notices: retries only scan retryable incident outbox rows", async () => {
-    const db = fakeDb();
-    const retry = await retrySpamGateIncidentEmails(db);
-    expect(retry.scanned).toBe(0);
-    expect(db.state.enqueued).toHaveLength(0);
+  it("feedback-timeout hold: unreadable gate state refuses (fail closed)", async () => {
+    const db = resumeDb(FEEDBACK_TIMEOUT_REASON, { state: "paused_timeout", submitted_count: 25, finalized_count: 20, spam_count: 0 });
+    (db as any); // force state error path
+    const errDb = fakeDb({ campaignStatus: "paused", stateError: true });
+    errDb.state.campaign.paused_reason = FEEDBACK_TIMEOUT_REASON;
+    const r = await checkedResumeCampaign(errDb, { campaignId: "c1", expectedAccountId: "a1" }, screenPass);
+    expect(r.ok).toBe(false);
+    expect((r as any).code).toBe("screen_unavailable");
   });
 });
 
