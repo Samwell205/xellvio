@@ -17,7 +17,13 @@ export async function handleAccountAssistantChat(request:Request) {
     const thread=await db.from("account_assistant_threads").select("id,messages").eq("id",input.threadId).eq("user_id",userId).single();
     if(thread.error) return Response.json({message:"Conversation not found."},{status:404});
     const tools=accountAssistantTools(userId);
-    const messages=await validateUIMessages({messages:input.messages});
+    // History comes from the server-stored thread; the request may only add one new user turn,
+    // so callers can't forge earlier assistant replies or tool results.
+    const stored=Array.isArray(thread.data.messages)?(thread.data.messages as unknown[]):[];
+    const incoming=input.messages[input.messages.length-1] as {role?:unknown;id?:unknown}|undefined;
+    if(!incoming||incoming.role!=="user") return Response.json({message:"Send a message to continue."},{status:400});
+    const already=stored.some(m=>(m as {id?:unknown})?.id===incoming.id);
+    const messages=await validateUIMessages({messages:already?stored:[...stored,incoming]});
     // Store the optimistic user turn before generating, so cancellation cannot lose it.
     const save=await db.from("account_assistant_threads").update({messages:messages as never,title:messages.find(m=>m.role==="user")?.parts.filter(p=>p.type==="text").map(p=>p.text).join(" ").slice(0,80)||"New conversation",updated_at:new Date().toISOString()}).eq("id",input.threadId).eq("user_id",userId);
     if(save.error) throw new Error("Your message could not be saved.");
