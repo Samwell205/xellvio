@@ -1,5 +1,8 @@
 # Roadmap
 
+## Assistant campaign status and reports (Oct 22)
+- [ ] Verify James campaign delivery without sending again; show live campaign status instead of stale draft/send controls, acknowledge launch in chat, and provide delivery reports in conversation.
+
 ## Upload-first account assistant (Oct 22)
 - [x] In-chat campaign launch: Send campaign stays in the conversation, offers a test number or Skip test, then exact cost/audience/message review and required consent. Authenticated transactional queueing retains screening, live ownership, sender, price, balance, account hold and normal dispatch checks. Twenty-seven focused tests and scoped lint pass; signed-in number input, skipping, final confirmation, empty-audience denial and close verified. No SMS sent or publication; temporary records removed. Media/tracking drafts keep their exact builder preview.
 - [ ] Verify real test SMS and paid final launch — requires an authorized opted-in destination and campaign; deliberately not sent during UI verification.
