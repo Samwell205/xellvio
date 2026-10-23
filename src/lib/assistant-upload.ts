@@ -1,13 +1,14 @@
 import Papa from "papaparse";
 import { getCountries } from "libphonenumber-js";
+import { detectContactColumns } from "./contact-file-columns";
 
 /** Country must come from the user for local numbers, never a guessed dialling region. */
 export function uploadNeedsCountry(content: string): boolean {
-  const parsed = Papa.parse<string[]>(content, { skipEmptyLines: "greedy" });
-  const first = parsed.data[0] ?? [];
-  const index = first.findIndex(c => /^(phone|phone_number|phone_e164|mobile|telephone|number)$/i.test(c.trim()));
-  return (index >= 0 ? parsed.data.slice(1) : parsed.data).some(row => {
-    const phone = row[index >= 0 ? index : 0]?.trim() ?? "";
+  const parsed = Papa.parse<string[]>(content.replace(/^\uFEFF/, ""), { skipEmptyLines: "greedy" });
+  const detected = detectContactColumns(parsed.data);
+  const index = detected?.phoneIndex ?? 0;
+  return (detected?.hasHeader ? parsed.data.slice(1) : parsed.data).some(row => {
+    const phone = row[index]?.trim() ?? "";
     return phone !== "" && !phone.startsWith("+") && !phone.startsWith("00");
   });
 }

@@ -178,6 +178,17 @@ export function AccountAssistant({
       if (pendingUpload.stage === "country") {
         const country = uploadCountry(text);
         if (!country) {
+          // Not a country: treat it as a normal message so the assistant can answer and explain,
+          // while the file stays attached for the country answer.
+          if (text.split(/\s+/).length > 2 || text.includes("?")) {
+            setInput("");
+            await sendMessage({
+              text: `${text}\n\n(Context: I attached ${pendingUpload.fileName}; the upload is waiting for me to say which country the local numbers are from.)`,
+            });
+            setUploadReply("When you're ready, tell me which country the local numbers are from, e.g. United States.");
+            inputRef.current?.focus();
+            return;
+          }
           setUploadReply(
             "Which country are the local phone numbers from? For example, United States or United Kingdom.",
           );
@@ -194,6 +205,7 @@ export function AccountAssistant({
         return;
       }
       setFileBusy(true);
+      const fileName = pendingUpload.fileName;
       try {
         const result = await inspect({
           data: {
@@ -204,7 +216,6 @@ export function AccountAssistant({
         });
         refresh();
         const args = result.arguments as Record<string, unknown>;
-        const fileName = pendingUpload.fileName;
         setPendingUpload(null);
         setUploadReply("");
         setInput("");
@@ -212,9 +223,14 @@ export function AccountAssistant({
           text: `I uploaded ${fileName} and named the list ${text}. The file inspection found ${args.valid} unique valid numbers, ${args.invalid} invalid rows and ${args.duplicates} duplicates. The import proposal is awaiting my on-screen opt-in confirmation. Do not treat these contacts as imported yet.`,
         });
       } catch (e) {
-        setUploadReply(
-          e instanceof Error ? e.message : "Could not inspect file. Your file is still attached.",
-        );
+        // Never trap the user in the upload step: hand the problem to the assistant to explain.
+        const reason = e instanceof Error ? e.message : "The file could not be read.";
+        setPendingUpload(null);
+        setUploadReply("");
+        setInput("");
+        await sendMessage({
+          text: `I uploaded ${fileName} (list name "${text}") but the file check said: "${reason}". Explain in plain words what this means and exactly how I can fix the file, then I'll upload it again.`,
+        });
       } finally {
         setFileBusy(false);
         inputRef.current?.focus();
