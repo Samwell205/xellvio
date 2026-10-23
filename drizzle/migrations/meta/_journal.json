@@ -169,6 +169,13 @@
       "when": 1792676236813,
       "tag": "0023_assistant_campaign_launch_confirmation",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792788494388,
+      "tag": "0024_admin_campaign_stats_for_ids",
+      "breakpoints": true
     }
   ]
 }

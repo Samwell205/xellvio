@@ -7802,6 +7802,23 @@ export type Database = {
           total: number
         }[]
       }
+      admin_campaign_stats_for: {
+        Args: { _ids: string[] }
+        Returns: {
+          campaign_id: string
+          delivered: number
+          delivery_unconfirmed: number
+          failed: number
+          mms_count: number
+          queued: number
+          reserved_cost: number
+          segments: number
+          sent: number
+          telnyx_cost: number
+          tenant_cost: number
+          total: number
+        }[]
+      }
       admin_finance_daily: {
         Args: { _days?: number }
         Returns: {
