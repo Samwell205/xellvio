@@ -131,6 +131,14 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
       }
       results.push({ cc, status });
     }
+    // A ready sender must switch sending on; otherwise campaigns sit queued
+    // forever while the account stays "sender_pending". Never lifts a suspension.
+    if (results.some((r) => r.status === "verified")) {
+      await supabaseAdmin.from("accounts")
+        .update({ onboarding_status: "active", telnyx_phone_number: data.senderId })
+        .eq("id", accountId)
+        .eq("onboarding_status", "sender_pending");
+    }
     return {
       ok: true,
       senderId: data.senderId,
