@@ -31,9 +31,18 @@ export const adminListCampaigns = createServerFn({ method: "GET" })
     const stats = new Map<string, { total: number; delivered: number; failed: number; sent: number; unconfirmed: number; queued: number; cost: number; reserved: number; carrier_cost: number; segments: number; mms_count: number }>();
     for (const id of campaignIds) stats.set(id, { total: 0, delivered: 0, failed: 0, sent: 0, unconfirmed: 0, queued: 0, cost: 0, reserved: 0, carrier_cost: 0, segments: 0, mms_count: 0 });
 
-    const { data: statRows, error: statErr } = await supabaseAdmin.rpc("admin_campaign_stats");
-    if (statErr) throw new Error(statErr.message);
-    for (const r of (statRows ?? []) as any[]) {
+    // Bounded: only the listed campaigns, in small chunks, never full message history.
+    const chunks: string[][] = [];
+    for (let i = 0; i < campaignIds.length; i += 25) chunks.push(campaignIds.slice(i, i + 25));
+    const results = await Promise.all(
+      chunks.map((ids) => supabaseAdmin.rpc("admin_campaign_stats_for", { _ids: ids })),
+    );
+    const statRows: any[] = [];
+    for (const r of results) {
+      if (r.error) throw new Error(r.error.message);
+      statRows.push(...((r.data ?? []) as any[]));
+    }
+    for (const r of statRows) {
       if (!stats.has(r.campaign_id)) continue;
       stats.set(r.campaign_id, {
         total: Number(r.total ?? 0),
