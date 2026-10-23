@@ -90,7 +90,11 @@ async function handleStatus(payload: any) {
       .insert({ message_id: msg.id, type: `status:ignored:${finalStatus}`, payload });
     return;
   }
-  await supabaseAdmin.from("messages").update(update).eq("id", msg.id);
+  // Conditional write: a late "sent" receipt racing a final one must never
+  // overwrite a delivered/failed status recorded in between.
+  let write = supabaseAdmin.from("messages").update(update).eq("id", msg.id);
+  if (nonTerminal.includes(finalStatus)) write = write.in("status", nonTerminal);
+  await write;
   await supabaseAdmin.from("message_send_attempts").update({
     provider_status: finalStatus,
     error_code: errCode ? String(errCode) : null,
