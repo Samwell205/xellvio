@@ -1,3 +1,4 @@
+import { isValidSenderId, SENDER_ID_HINT } from "./sender-id-rules";
 import { z } from "zod";
 
 const SenderIdSchema = z.preprocess(
@@ -8,7 +9,7 @@ const SenderIdSchema = z.preprocess(
   },
   z
     .string()
-    .regex(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/, "Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter")
+    .refine(isValidSenderId, SENDER_ID_HINT)
     .optional(),
 );
 

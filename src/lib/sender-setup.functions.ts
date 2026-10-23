@@ -1,3 +1,4 @@
+import { isValidSenderId, SENDER_ID_HINT } from "./sender-id-rules";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
@@ -64,7 +65,7 @@ const CustomSenderInput = z.object({
   countries: z.array(z.string().length(2)).min(1),
   senderId: z.preprocess(
     (value) => (typeof value === "string" ? value.trim().toUpperCase() : value),
-    z.string().regex(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/, "Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter"),
+    z.string().refine(isValidSenderId, SENDER_ID_HINT),
   ),
 });
 
@@ -142,7 +143,7 @@ const SenderRegistrationInput = z.object({
   country: z.string().length(2),
   senderId: z.preprocess(
     (v) => (typeof v === "string" ? v.trim().toUpperCase() : v),
-    z.string().regex(/^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/, "Sender ID must be 1–11 letters, numbers, or spaces and include at least one letter"),
+    z.string().refine(isValidSenderId, SENDER_ID_HINT),
   ),
   businessName: z.string().trim().min(2).max(200).optional(),
   businessWebsite: z.string().trim().url().max(300).optional(),

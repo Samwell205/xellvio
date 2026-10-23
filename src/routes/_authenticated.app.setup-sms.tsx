@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { isValidSenderId, SENDER_ID_HINT } from "@/lib/sender-id-rules";
 import {
   Dialog,
   DialogContent,
@@ -1128,7 +1129,7 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
   const needsCarrierDetails = form.targetCountries.some((cc) => cc === "US" || cc === "CA");
   const hasSenderIdCountry = form.targetCountries.some((cc) => cc !== "US" && cc !== "CA");
   const senderIdReady =
-    !hasSenderIdCountry || /^(?=.*[A-Z])[A-Z0-9 ]{1,11}$/.test(form.customSenderId);
+    !hasSenderIdCountry || isValidSenderId(form.customSenderId);
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -1276,8 +1277,11 @@ function Wizard({ account, onDone }: { account: any; onDone: () => void }) {
                 maxLength={11}
               />
               <p className="text-xs text-muted-foreground">
-                Use 1–11 letters, numbers, or spaces with at least one letter. UK alphanumeric
-                sender IDs may be available without registration.
+                {form.customSenderId && !senderIdReady ? (
+                  <span className="text-destructive">{SENDER_ID_HINT}</span>
+                ) : (
+                  SENDER_ID_HINT
+                )}
               </p>
             </div>
           )}
