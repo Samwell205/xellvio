@@ -75,7 +75,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
 
   const created: string[] = [];
   const errors: Array<{ cc: string; reason: string }> = [];
-  let accountSenderSet = Boolean(acct.telnyx_phone_number || acct.telnyx_messaging_profile_id);
+  let accountSenderSet = Boolean(acct.telnyx_phone_number) && acct.onboarding_status !== "sender_pending";
 
   async function setPrimarySender(patch: any) {
     if (accountSenderSet) return;
