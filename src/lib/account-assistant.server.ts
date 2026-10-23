@@ -98,8 +98,12 @@ export async function inspectContacts(userId: string, input: unknown) {
   }> = [];
   const cell = (row: string[], index: number) => (index >= 0 ? row[index]?.trim().slice(0, 120) ?? "" : "");
   for (const row of data) {
-    const raw = row[phoneIndex] ?? "";
-    if (!raw.trim().startsWith("+") && !raw.trim().startsWith("00") && !args.defaultCountry)
+    const raw = (row[phoneIndex] ?? "").trim();
+    if (!raw) {
+      invalid++;
+      continue;
+    }
+    if (!raw.startsWith("+") && !raw.startsWith("00") && !args.defaultCountry)
       throw new Error("Choose the country for numbers without an international prefix.");
     const phone = normalizePhone(raw, { defaultCountry: args.defaultCountry });
     if ("error" in phone) {
@@ -114,8 +118,8 @@ export async function inspectContacts(userId: string, input: unknown) {
     rows.push({
       phone_e164: phone.e164,
       country_code: phone.country,
-      first_name: hasHeader ? column(row, "first_name") : "",
-      last_name: hasHeader ? column(row, "last_name") : "",
+      first_name: cell(row, detected.firstIndex),
+      last_name: cell(row, detected.lastIndex),
     });
   }
   if (!rows.length) throw new Error("No valid phone numbers were found.");
