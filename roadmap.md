@@ -3,8 +3,8 @@
 ## Conversational assistant and missing sends (Oct 23)
 - [x] Contact CSV import saves all batches (completion no longer races saving).
 - [x] Assistant upload: lenient phone-column detection; failed checks and off-topic replies go to the assistant to explain instead of trapping the chat; friendly conversational prompt; support-request tool after user agrees. Tests pass; live chat reply not verified.
-- [ ] Two accounts stuck at sender_pending (Unilever United state, conversionflow) with 996 queued messages — awaiting owner decision to activate.
-- [ ] Stale "sent" statuses that already have final carrier receipts (e.g. 145 on Business) — awaiting owner decision to correct from recorded receipts.
+- [ ] Two accounts stuck at sender_pending (Unilever United state, conversionflow) with 996 queued messages — owner chose to keep them held for review.
+- [x] Corrected 660 stale "sent" statuses from recorded carrier receipts (263 delivered, 397 undelivered); receipt writes are now conditional so late "sent" reports can't overwrite final results. No resends or balance changes.
 
 ## Signup confirmation recovery (Oct 22)
 - [x] Repair signup confirmation handling in tenant and verifier signup; no automatic password sign-in or repeated email-triggering signup. Five tests and preview build pass; browser checks with controlled auth responses verify confirmation, one signup request, resend countdown and callback recovery. Affected account exists and is unconfirmed; live redirect allow-list checked. No security settings changed, emails sent or publication performed.
