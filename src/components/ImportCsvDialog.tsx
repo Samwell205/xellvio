@@ -60,7 +60,8 @@ const FIRST_KEYS = ["first_name", "firstname", "fname", "given_name", "first"];
 const LAST_KEYS = ["last_name", "lastname", "lname", "surname", "family_name", "last"];
 const COUNTRY_KEYS = ["country", "country_code", "iso", "iso2"];
 const PREVIEW_ROWS = 100;
-const BATCH_ROWS = 5000;
+// Smaller batches finish well inside the database time limit on large workspaces.
+const BATCH_ROWS = 2000;
 
 function detect(headers: string[], aliases: string[]) {
   for (const h of headers) if (aliases.includes(h.trim().toLowerCase())) return h;
@@ -223,14 +224,18 @@ export default function ImportCsvDialog({
     };
 
     await new Promise<void>((resolve, reject) => {
-      // NOTE: worker mode cannot pause/resume the parser, which silently ends
-      // the stream before any row is saved. Stream on the main thread in small
-      // chunks instead — pause/resume keeps memory flat and the UI responsive.
+      // Papa fires `complete` right after the LAST chunk callback returns, even
+      // while that chunk is still being saved. Chain every chunk's work and only
+      // resolve once the chain (including in-flight batches) has finished —
+      // otherwise small files "complete" before anything is saved.
+      let chain: Promise<void> = Promise.resolve();
+      let failed = false;
       Papa.parse<Record<string, string>>(file, {
         header: true, skipEmptyLines: true, chunkSize: 1024 * 256,
         chunk: (res, parser) => {
           parser.pause();
-          (async () => {
+          chain = chain.then(async () => {
+            if (failed || cancelRef.current) return;
             for (const row of res.data) {
               const idx = rowIndex++;
               if (idx < resumeFrom) { processed++; continue; }
@@ -258,16 +263,17 @@ export default function ImportCsvDialog({
                 custom_fields: custom,
               });
               if (buffer.length >= BATCH_ROWS) await flush(false);
+              if (cancelRef.current) break;
             }
-          })().then(
+          }).then(
             () => {
-              if (cancelRef.current) { parser.abort(); resolve(); return; }
+              if (cancelRef.current) { parser.abort(); return; }
               parser.resume();
             },
-            (e) => { parser.abort(); reject(e); },
+            (e) => { failed = true; parser.abort(); reject(e); },
           );
         },
-        complete: () => resolve(),
+        complete: () => { chain.then(() => { if (!failed) resolve(); }); },
         error: (e) => reject(e),
       });
     }).then(async () => {
