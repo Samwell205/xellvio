@@ -115,15 +115,16 @@ export async function notifyTicketOpened(ticketId: string) {
   await notifyAdmin(t, "Paid assisted number-verification request awaiting review.");
 }
 
-export async function customerReply(ticketId: string, body: string, via: "web" | "email" = "web") {
+export async function customerReply(ticketId: string, body: string, via: "web" | "email" = "web", files: AttachmentUpload[] = []) {
   const sb = await db();
   const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
   if (!t) throw new Error("Ticket not found");
   if (t.status === "closed") throw new Error("This ticket is closed. Please open a new ticket.");
   const now = new Date().toISOString();
-  await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "customer", body, via });
+  const attachments = files.length ? await saveAttachments(t.id, files) : [];
+  await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "customer", body, via, attachments });
   await sb.from("support_tickets").update({ status: "open", last_customer_reply_at: now, reminder_sent_at: null, updated_at: now }).eq("id", t.id);
-  await notifyAdmin(t, `Reply from ${t.requester_email}: ${body}`);
+  await notifyAdmin(t, `Reply from ${t.requester_email}: ${body}${attachments.length ? `\n\nAttached: ${attachments.map((a) => a.name).join(", ")}` : ""}`);
 }
 
 export async function adminReply(ticketId: string, body: string, userId: string, opts: { internal?: boolean; close?: boolean } = {}) {
@@ -225,4 +226,37 @@ export async function handleInboundEmail(msg: { from: string; to: string[]; subj
     message: body, source: "email", previousTicketId: t?.id ?? null,
   });
   return { ok: true, ticket: created.number, created: true };
+}
+
+// ---------- Attachments (private bucket, service-role only) ----------
+export type TicketAttachment = { path: string; name: string; size: number; type: string; url?: string };
+export type AttachmentUpload = { name: string; type: string; data: string };
+const ATTACH_BUCKET = "support-attachments";
+const MAX_BYTES = 10 * 1024 * 1024;
+const ALLOWED = /^(image\/(png|jpe?g|gif|webp|heic)|application\/pdf|text\/(plain|csv)|application\/vnd\.(ms-excel|openxmlformats-officedocument\.(spreadsheetml\.sheet|wordprocessingml\.document))|application\/msword)$/;
+
+export async function saveAttachments(ticketId: string, files: AttachmentUpload[]): Promise<TicketAttachment[]> {
+  const sb = await db();
+  const out: TicketAttachment[] = [];
+  for (const f of files.slice(0, 5)) {
+    const type = f.type || "application/octet-stream";
+    if (!ALLOWED.test(type)) throw new Error(`"${f.name}" is not a supported file type (images, PDF, CSV, Excel, Word or text).`);
+    const bin = Uint8Array.from(atob(f.data), (c) => c.charCodeAt(0));
+    if (bin.byteLength > MAX_BYTES) throw new Error(`"${f.name}" is larger than 10 MB.`);
+    const safe = f.name.replace(/[^\w.\- ]+/g, "_").slice(-120) || "file";
+    const path = `${ticketId}/${crypto.randomUUID()}-${safe}`;
+    const { error } = await sb.storage.from(ATTACH_BUCKET).upload(path, bin, { contentType: type });
+    if (error) throw new Error(`Could not upload "${f.name}".`);
+    out.push({ path, name: safe, size: bin.byteLength, type });
+  }
+  return out;
+}
+
+export async function signAttachments<T extends { attachments?: TicketAttachment[] | null }>(msgs: T[]): Promise<T[]> {
+  const sb = await db();
+  const paths = msgs.flatMap((m) => (m.attachments ?? []).map((a) => a.path));
+  if (!paths.length) return msgs;
+  const { data } = await sb.storage.from(ATTACH_BUCKET).createSignedUrls(paths, 3600);
+  const map = new Map<string, string>((data ?? []).map((d: any) => [d.path, d.signedUrl]));
+  return msgs.map((m) => ({ ...m, attachments: (m.attachments ?? []).map((a) => ({ ...a, url: map.get(a.path) })) }));
 }

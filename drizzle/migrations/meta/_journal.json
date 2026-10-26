@@ -176,6 +176,13 @@
       "when": 1792788494388,
       "tag": "0024_admin_campaign_stats_for_ids",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793023799295,
+      "tag": "0025_support_ticket_attachments",
+      "breakpoints": true
     }
   ]
 }

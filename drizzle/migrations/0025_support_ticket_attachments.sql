@@ -1,0 +1,1 @@
+ALTER TABLE public.support_ticket_messages ADD COLUMN IF NOT EXISTS attachments jsonb NOT NULL DEFAULT '[]'::jsonb;
