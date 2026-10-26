@@ -6445,6 +6445,7 @@ export type Database = {
       }
       support_ticket_messages: {
         Row: {
+          attachments: Json
           author: string
           author_user_id: string | null
           body: string
@@ -6455,6 +6456,7 @@ export type Database = {
           via: string
         }
         Insert: {
+          attachments?: Json
           author: string
           author_user_id?: string | null
           body: string
@@ -6465,6 +6467,7 @@ export type Database = {
           via?: string
         }
         Update: {
+          attachments?: Json
           author?: string
           author_user_id?: string | null
           body?: string
