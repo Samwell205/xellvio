@@ -46,8 +46,8 @@ function TicketPage() {
               <StatusBadge status={t.status} />
             </div>
             <TicketThread messages={q.data!.messages} viewer="customer" />
-            <ReplyBox closed={t.status === "closed"} newTicketHref="/contact" onSend={async (body) => {
-              try { await replyFn({ data: { token, body } }); toast.success("Reply sent"); await qc.invalidateQueries({ queryKey: ["public-ticket", token] }); }
+            <ReplyBox closed={t.status === "closed"} newTicketHref="/contact" onSend={async (body, files) => {
+              try { await replyFn({ data: { token, body, files } }); toast.success("Reply sent"); await qc.invalidateQueries({ queryKey: ["public-ticket", token] }); }
               catch (e: any) { toast.error(e?.message ?? "Could not send"); }
             }} />
           </div>
