@@ -194,3 +194,19 @@ export async function deleteContactListForUser(
   if (error) throw error;
   return { deletedContacts: Number(data ?? 0) };
 }
+
+export async function deleteContactListsForUser(
+  userId: string,
+  listIds: string[],
+  withContacts: boolean,
+): Promise<{ deletedContacts: number }> {
+  const accountId = await getAudienceAccountId(userId);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await (supabaseAdmin.rpc as any)("delete_contact_lists", {
+    _account_id: accountId,
+    _list_ids: listIds,
+    _with_contacts: withContacts,
+  });
+  if (error) throw error;
+  return { deletedContacts: Number(data ?? 0) };
+}

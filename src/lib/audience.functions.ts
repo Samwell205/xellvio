@@ -8,6 +8,7 @@ import {
   listAudienceContactListsForUser,
   listAudienceProfilesForUser,
   deleteContactListForUser,
+  deleteContactListsForUser,
 } from "./audience.server";
 
 const CampaignAudienceSchema = z.object({
@@ -45,4 +46,18 @@ export const deleteContactList = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) =>
     deleteContactListForUser(context.userId, data.listId, data.withContacts),
+  );
+
+export const deleteContactLists = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        listIds: z.array(z.string().uuid()).min(1).max(200),
+        withContacts: z.boolean().default(false),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) =>
+    deleteContactListsForUser(context.userId, data.listIds, data.withContacts),
   );

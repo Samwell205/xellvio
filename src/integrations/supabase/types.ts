@@ -7999,6 +7999,14 @@ export type Database = {
         }
         Returns: number
       }
+      delete_contact_lists: {
+        Args: {
+          _account_id: string
+          _list_ids: string[]
+          _with_contacts?: boolean
+        }
+        Returns: number
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

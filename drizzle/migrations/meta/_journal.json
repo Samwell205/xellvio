@@ -183,6 +183,13 @@
       "when": 1793023799295,
       "tag": "0025_support_ticket_attachments",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793025643509,
+      "tag": "0026_delete_contact_lists_bulk",
+      "breakpoints": true
     }
   ]
 }

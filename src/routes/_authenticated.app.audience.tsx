@@ -8,6 +8,7 @@ import { useAccountId } from "@/hooks/useAccountId";
 import ImportCsvDialog from "@/components/ImportCsvDialog";
 import {
   deleteContactList,
+  deleteContactLists,
   getAudienceListCounts,
   getAudienceStats,
   listAudienceContactLists,
@@ -618,7 +619,43 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
   const [desc, setDesc] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const deleteListFn = useServerFn(deleteContactList);
+  const deleteListsFn = useServerFn(deleteContactLists);
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function removeSelected(withContacts: boolean) {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    const message = withContacts
+      ? `Delete ${ids.length} list${ids.length === 1 ? "" : "s"} AND every contact inside them? This cannot be undone.`
+      : `Delete ${ids.length} list${ids.length === 1 ? "" : "s"}? Contacts will remain — only the groupings are removed.`;
+    if (!confirm(message)) return;
+    setBusy(true);
+    try {
+      const res = await deleteListsFn({ data: { listIds: ids, withContacts } });
+      const n = res?.deletedContacts ?? 0;
+      toast.success(
+        withContacts
+          ? `${ids.length} list${ids.length === 1 ? "" : "s"} and ${n} contact${n === 1 ? "" : "s"} deleted`
+          : `${ids.length} list${ids.length === 1 ? "" : "s"} deleted`,
+      );
+      setSelected(new Set());
+      onDone();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to delete lists");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function save() {
     if (!name.trim()) {
@@ -663,6 +700,11 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
     try {
       await deleteListFn({ data: { listId: id, withContacts: false } });
       toast.success("List deleted");
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       onDone();
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to delete list");
@@ -679,6 +721,11 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
       const res = await deleteListFn({ data: { listId: id, withContacts: true } });
       const n = res?.deletedContacts ?? 0;
       toast.success(`List and ${n} contact${n === 1 ? "" : "s"} deleted`);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       onDone();
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to delete list with contacts");
@@ -736,8 +783,43 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
             </div>
           </div>
           <div className="border-t pt-3">
-            <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
-              Existing lists ({lists.length})
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-2 text-xs uppercase text-muted-foreground tracking-wide">
+                <Checkbox
+                  checked={lists.length > 0 && selected.size === lists.length}
+                  onCheckedChange={(checked) =>
+                    setSelected(checked ? new Set(lists.map((l) => l.id)) : new Set())
+                  }
+                  aria-label="Select all lists"
+                />
+                Existing lists ({lists.length})
+              </label>
+              {selected.size > 0 && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-destructive"
+                    disabled={busy}
+                    title="Delete selected lists (keep contacts)"
+                    onClick={() => removeSelected(false)}
+                  >
+                    <Trash2 className="size-3.5 mr-1" />
+                    Delete {selected.size}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-destructive"
+                    disabled={busy}
+                    title="Delete selected lists AND all contacts in them"
+                    onClick={() => removeSelected(true)}
+                  >
+                    <Trash2 className="size-3.5 mr-1" />
+                    + contacts
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="space-y-1 max-h-60 overflow-y-auto">
               {lists.length === 0 && <p className="text-sm text-muted-foreground">No lists yet.</p>}
@@ -746,11 +828,18 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
                   key={l.id}
                   className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
                 >
-                  <div>
-                    <div className="font-medium">{l.name}</div>
-                    {l.description && (
-                      <div className="text-xs text-muted-foreground">{l.description}</div>
-                    )}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Checkbox
+                      checked={selected.has(l.id)}
+                      onCheckedChange={() => toggleSelected(l.id)}
+                      aria-label={`Select list ${l.name}`}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{l.name}</div>
+                      {l.description && (
+                        <div className="text-xs text-muted-foreground">{l.description}</div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-1">
                     <Button
