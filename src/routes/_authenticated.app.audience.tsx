@@ -773,8 +773,43 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
             </div>
           </div>
           <div className="border-t pt-3">
-            <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
-              Existing lists ({lists.length})
+            <div className="flex items-center justify-between mb-2">
+              <label className="flex items-center gap-2 text-xs uppercase text-muted-foreground tracking-wide">
+                <Checkbox
+                  checked={lists.length > 0 && selected.size === lists.length}
+                  onCheckedChange={(checked) =>
+                    setSelected(checked ? new Set(lists.map((l) => l.id)) : new Set())
+                  }
+                  aria-label="Select all lists"
+                />
+                Existing lists ({lists.length})
+              </label>
+              {selected.size > 0 && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-destructive"
+                    disabled={busy}
+                    title="Delete selected lists (keep contacts)"
+                    onClick={() => removeSelected(false)}
+                  >
+                    <Trash2 className="size-3.5 mr-1" />
+                    Delete {selected.size}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-destructive"
+                    disabled={busy}
+                    title="Delete selected lists AND all contacts in them"
+                    onClick={() => removeSelected(true)}
+                  >
+                    <Trash2 className="size-3.5 mr-1" />
+                    + contacts
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="space-y-1 max-h-60 overflow-y-auto">
               {lists.length === 0 && <p className="text-sm text-muted-foreground">No lists yet.</p>}
@@ -783,8 +818,14 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
                   key={l.id}
                   className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
                 >
-                  <div>
-                    <div className="font-medium">{l.name}</div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Checkbox
+                      checked={selected.has(l.id)}
+                      onCheckedChange={() => toggleSelected(l.id)}
+                      aria-label={`Select list ${l.name}`}
+                    />
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{l.name}</div>
                     {l.description && (
                       <div className="text-xs text-muted-foreground">{l.description}</div>
                     )}
