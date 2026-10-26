@@ -19,8 +19,13 @@ async function acting(userId: string) {
 const PUBLIC_TICKET = "id,number,subject,status,created_at,closed_at,requester_name";
 const token = z.string().regex(/^[a-f0-9]{48}$/);
 const body = z.string().trim().min(1).max(8000);
+const files = z.array(z.object({ name: z.string().min(1).max(200), type: z.string().max(120), data: z.string().max(14_000_000) })).max(5).default([]);
+async function sign(msgs: any[] | null) {
+  const { signAttachments } = await import("./support-tickets.server");
+  return signAttachments(msgs ?? []);
+}
 
-export type TicketMessage = { id: string; author: "customer" | "admin" | "system"; body: string; internal: boolean; via: string; created_at: string };
+export type TicketMessage = { id: string; author: "customer" | "admin" | "system"; body: string; internal: boolean; via: string; created_at: string; attachments?: { name: string; size: number; type: string; url?: string; path: string }[] };
 
 // ---------- Public (private link) ----------
 export const getTicketByToken = createServerFn({ method: "GET" })
@@ -29,19 +34,19 @@ export const getTicketByToken = createServerFn({ method: "GET" })
     const sb = await db();
     const { data: t } = await sb.from("support_tickets").select(PUBLIC_TICKET).eq("access_token", data.token).maybeSingle();
     if (!t) return null;
-    const { data: msgs } = await sb.from("support_ticket_messages").select("id,author,body,via,created_at")
+    const { data: msgs } = await sb.from("support_ticket_messages").select("id,author,body,via,created_at,attachments")
       .eq("ticket_id", t.id).eq("internal", false).order("created_at");
-    return { ticket: t, messages: (msgs ?? []) as TicketMessage[] };
+    return { ticket: t, messages: (await sign(msgs)) as TicketMessage[] };
   });
 
 export const replyByToken = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => z.object({ token, body }).parse(d))
+  .inputValidator((d: unknown) => z.object({ token, body, files }).parse(d))
   .handler(async ({ data }) => {
     const sb = await db();
     const { data: t } = await sb.from("support_tickets").select("id").eq("access_token", data.token).maybeSingle();
     if (!t) throw new Error("Ticket not found");
     const { customerReply } = await import("./support-tickets.server");
-    await customerReply(t.id, data.body);
+    await customerReply(t.id, data.body, "web", data.files);
     return { ok: true };
   });
 
@@ -79,21 +84,21 @@ export const getMyTicket = createServerFn({ method: "GET" })
     const sb = await db();
     const { data: t } = await sb.from("support_tickets").select(PUBLIC_TICKET).eq("id", data.id).eq("account_id", a.accountId).maybeSingle();
     if (!t) return null;
-    const { data: msgs } = await sb.from("support_ticket_messages").select("id,author,body,via,created_at")
+    const { data: msgs } = await sb.from("support_ticket_messages").select("id,author,body,via,created_at,attachments")
       .eq("ticket_id", t.id).eq("internal", false).order("created_at");
-    return { ticket: t, messages: (msgs ?? []) as TicketMessage[] };
+    return { ticket: t, messages: (await sign(msgs)) as TicketMessage[] };
   });
 
 export const replyMyTicket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), body }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), body, files }).parse(d))
   .handler(async ({ data, context }) => {
     const a = await acting(context.userId);
     const sb = await db();
     const { data: t } = await sb.from("support_tickets").select("id").eq("id", data.id).eq("account_id", a.accountId).maybeSingle();
     if (!t) throw new Error("Ticket not found");
     const { customerReply } = await import("./support-tickets.server");
-    await customerReply(t.id, data.body);
+    await customerReply(t.id, data.body, "web", data.files);
     return { ok: true };
   });
 
@@ -122,11 +127,11 @@ export const adminGetTicket = createServerFn({ method: "GET" })
     const { data: t } = await sb.from("support_tickets").select("*").eq("id", data.id).maybeSingle();
     if (!t) return null;
     const [{ data: msgs }, acct] = await Promise.all([
-      sb.from("support_ticket_messages").select("id,author,body,internal,via,created_at").eq("ticket_id", t.id).order("created_at"),
+      sb.from("support_ticket_messages").select("id,author,body,internal,via,created_at,attachments").eq("ticket_id", t.id).order("created_at"),
       t.account_id ? sb.from("accounts").select("id,email,legal_business_name,credit_balance,sending_suspended_at").eq("id", t.account_id).maybeSingle().then((r: any) => r.data) : null,
     ]);
     const { access_token: _omit, ...safe } = t;
-    return { ticket: safe, messages: (msgs ?? []) as TicketMessage[], account: acct };
+    return { ticket: safe, messages: (await sign(msgs)) as TicketMessage[], account: acct };
   });
 
 export const adminReplyTicket = createServerFn({ method: "POST" })
