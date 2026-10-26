@@ -8,6 +8,7 @@ import { useAccountId } from "@/hooks/useAccountId";
 import ImportCsvDialog from "@/components/ImportCsvDialog";
 import {
   deleteContactList,
+  deleteContactLists,
   getAudienceListCounts,
   getAudienceStats,
   listAudienceContactLists,
@@ -618,7 +619,43 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
   const [desc, setDesc] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const deleteListFn = useServerFn(deleteContactList);
+  const deleteListsFn = useServerFn(deleteContactLists);
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function removeSelected(withContacts: boolean) {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    const message = withContacts
+      ? `Delete ${ids.length} list${ids.length === 1 ? "" : "s"} AND every contact inside them? This cannot be undone.`
+      : `Delete ${ids.length} list${ids.length === 1 ? "" : "s"}? Contacts will remain — only the groupings are removed.`;
+    if (!confirm(message)) return;
+    setBusy(true);
+    try {
+      const res = await deleteListsFn({ data: { listIds: ids, withContacts } });
+      const n = res?.deletedContacts ?? 0;
+      toast.success(
+        withContacts
+          ? `${ids.length} list${ids.length === 1 ? "" : "s"} and ${n} contact${n === 1 ? "" : "s"} deleted`
+          : `${ids.length} list${ids.length === 1 ? "" : "s"} deleted`,
+      );
+      setSelected(new Set());
+      onDone();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to delete lists");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function save() {
     if (!name.trim()) {
