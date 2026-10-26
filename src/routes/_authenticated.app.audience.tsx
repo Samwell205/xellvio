@@ -826,9 +826,10 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
                     />
                     <div className="min-w-0">
                       <div className="font-medium truncate">{l.name}</div>
-                    {l.description && (
-                      <div className="text-xs text-muted-foreground">{l.description}</div>
-                    )}
+                      {l.description && (
+                        <div className="text-xs text-muted-foreground">{l.description}</div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-1">
                     <Button
