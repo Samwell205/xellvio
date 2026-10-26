@@ -224,28 +224,48 @@ function AudiencePage() {
     const { data: u } = await supabase.auth.getUser();
     const accountId = acctId ?? u.user!.id;
 
+    // Large selections are split into small batches so request URLs stay short.
+    const CHUNK = 100;
+    const chunks = <T,>(arr: T[]) => {
+      const out: T[][] = [];
+      for (let i = 0; i < arr.length; i += CHUNK) out.push(arr.slice(i, i + CHUNK));
+      return out;
+    };
+    const idChunks = chunks(ids);
+
     // Snapshot profile data, consents, list memberships
-    const { data: consentSnap } = await supabase
-      .from("consents")
-      .select("profile_id,channel,status,source,consented_at")
-      .in("profile_id", ids);
-    const { data: memSnap } = await sb
-      .from("profile_list_members")
-      .select("profile_id,list_id,account_id,added_at")
-      .in("profile_id", ids);
+    const consentSnap: any[] = [];
+    const memSnap: any[] = [];
+    await Promise.all(
+      idChunks.map(async (c) => {
+        const [cs, ms] = await Promise.all([
+          supabase
+            .from("consents")
+            .select("profile_id,channel,status,source,consented_at")
+            .in("profile_id", c),
+          sb
+            .from("profile_list_members")
+            .select("profile_id,list_id,account_id,added_at")
+            .in("profile_id", c),
+        ]);
+        consentSnap.push(...(cs.data ?? []));
+        memSnap.push(...(ms.data ?? []));
+      }),
+    );
 
     // Remove suppressions, then profiles (cascades consents + memberships)
-    await supabase
-      .from("suppressions")
-      .delete()
-      .eq("account_id", accountId)
-      .in(
-        "phone_e164",
-        rows.map((r) => r.phone_e164),
-      );
-    const { error } = await supabase.from("profiles").delete().in("id", ids);
+    await Promise.all(
+      chunks(rows.map((r) => r.phone_e164)).map((c) =>
+        supabase.from("suppressions").delete().eq("account_id", accountId).in("phone_e164", c),
+      ),
+    );
+    const results = await Promise.all(
+      idChunks.map((c) => supabase.from("profiles").delete().in("id", c)),
+    );
+    const error = results.find((r) => r.error)?.error;
     if (error) {
       toast.error(error.message);
+      invalidateAll();
       return;
     }
 
