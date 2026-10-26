@@ -700,6 +700,11 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
     try {
       await deleteListFn({ data: { listId: id, withContacts: false } });
       toast.success("List deleted");
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       onDone();
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to delete list");
@@ -716,6 +721,11 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
       const res = await deleteListFn({ data: { listId: id, withContacts: true } });
       const n = res?.deletedContacts ?? 0;
       toast.success(`List and ${n} contact${n === 1 ? "" : "s"} deleted`);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       onDone();
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to delete list with contacts");
