@@ -52,6 +52,28 @@ async function notifyAdmin(t: TicketRow, text: string) {
     const { sendAdminPush } = await import("./admin-push.server");
     await sendAdminPush({ title: `Ticket #${t.number}`, body: text.slice(0, 140), url: `/admin/tickets/${t.id}`, tag: `ticket-${t.id}` });
   } catch { /* best effort */ }
+  // Owner wants an email for every new ticket AND every customer follow-up.
+  try {
+    const { ADMIN_NOTIFY_EMAIL } = await import("./admin-notify.server");
+    const { sendBrandedEmail } = await import("@/lib/email/send-internal.server");
+    await sendBrandedEmail({
+      templateName: "generic",
+      recipientEmail: ADMIN_NOTIFY_EMAIL,
+      idempotencyKey: `ticket-admin-${t.id}-${Date.now()}`,
+      includeUnsubscribe: false,
+      sendImmediately: true,
+      replyTo: t.requester_email,
+      templateData: {
+        subject: `[Ticket #${t.number}] ${t.subject}`,
+        heading: `Ticket #${t.number} needs attention`,
+        body: text.slice(0, 4000),
+        ctaText: "Open ticket",
+        ctaUrl: `${SITE()}/admin/tickets/${t.id}`,
+      },
+    });
+  } catch (e) {
+    console.error("[tickets] admin email failed", e);
+  }
 }
 
 async function matchAccount(emailAddr: string): Promise<string | null> {
