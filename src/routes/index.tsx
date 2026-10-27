@@ -256,7 +256,6 @@ function Hero() {
         >
           <div className="bg-muted rounded-3xl relative overflow-hidden">
             <video
-              src={heroLoopAsset.url}
               autoPlay
               loop
               muted
@@ -264,7 +263,10 @@ function Hero() {
               preload="metadata"
               className="block w-full h-full object-cover"
               aria-label="Xellvio automation preview"
-            />
+            >
+              <source src={heroLoopAsset.url} type="video/mp4" />
+              <source src={heroLoopWebmAsset.url} type="video/webm" />
+            </video>
           </div>
         </motion.div>
       </div>
