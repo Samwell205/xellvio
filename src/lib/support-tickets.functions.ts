@@ -50,10 +50,11 @@ export const replyByToken = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-const feedbackInput = {
+export const ticketFeedbackSchema = z.object({
   rating: z.number().int().min(1).max(5).nullish(),
   feedback: z.string().trim().max(2000).nullish(),
-};
+});
+const feedbackInput = ticketFeedbackSchema.shape;
 
 export const confirmResolvedByToken = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ token, ...feedbackInput }).parse(d))
