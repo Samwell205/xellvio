@@ -291,12 +291,12 @@ export function AppSidebar() {
                           <it.icon className="size-[1.125rem] shrink-0" />
                           {!collapsed && <span className="truncate">{it.title}</span>}
                           {showTicketBadge && !collapsed && (
-                            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+                            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold inline-flex items-center justify-center">
                               {ticketAlerts > 99 ? "99+" : ticketAlerts}
                             </span>
                           )}
                           {showTicketBadge && collapsed && (
-                            <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+                            <span className="absolute top-1 right-1 size-2 rounded-full bg-destructive" />
                           )}
                         </Link>
                       </SidebarMenuButton>

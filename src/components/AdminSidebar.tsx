@@ -91,7 +91,7 @@ export function AdminSidebar() {
           <it.icon className="size-4 shrink-0" />
           {!collapsed && <span className="truncate">{it.title}</span>}
           {it.url === "/admin/tickets" && openTickets > 0 && !collapsed && (
-            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold inline-flex items-center justify-center">
               {openTickets > 99 ? "99+" : openTickets}
             </span>
           )}
