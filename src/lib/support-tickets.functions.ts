@@ -16,7 +16,7 @@ async function acting(userId: string) {
   return resolveActingAccount(userId);
 }
 
-const PUBLIC_TICKET = "id,number,subject,status,created_at,closed_at,requester_name";
+const PUBLIC_TICKET = "id,number,subject,status,created_at,closed_at,resolved_at,feedback_rating,feedback_text,requester_name";
 const token = z.string().regex(/^[a-f0-9]{48}$/);
 const body = z.string().trim().min(1).max(8000);
 const files = z.array(z.object({ name: z.string().min(1).max(200), type: z.string().max(120), data: z.string().max(14_000_000) })).max(5).default([]);
@@ -47,6 +47,33 @@ export const replyByToken = createServerFn({ method: "POST" })
     if (!t) throw new Error("Ticket not found");
     const { customerReply } = await import("./support-tickets.server");
     await customerReply(t.id, data.body, "web", data.files);
+    return { ok: true };
+  });
+
+const feedbackInput = {
+  rating: z.number().int().min(1).max(5).nullish(),
+  feedback: z.string().trim().max(2000).nullish(),
+};
+
+export const confirmResolvedByToken = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token, ...feedbackInput }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = await db();
+    const { data: t } = await sb.from("support_tickets").select("id").eq("access_token", data.token).maybeSingle();
+    if (!t) throw new Error("Ticket not found");
+    const { customerConfirmResolved } = await import("./support-tickets.server");
+    await customerConfirmResolved(t.id, data.rating ?? null, data.feedback || null);
+    return { ok: true };
+  });
+
+export const reopenResolvedByToken = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = await db();
+    const { data: t } = await sb.from("support_tickets").select("id").eq("access_token", data.token).maybeSingle();
+    if (!t) throw new Error("Ticket not found");
+    const { customerReopenResolved } = await import("./support-tickets.server");
+    await customerReopenResolved(t.id);
     return { ok: true };
   });
 
