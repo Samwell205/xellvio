@@ -141,10 +141,15 @@ export function AppSidebar() {
   const ticketAlerts = pathname.startsWith("/app/support") ? 0 : (ticketQ.data?.count ?? 0);
   useTabBadge(ticketAlerts);
   const lastTicketAlertAt = useRef<string | null>(null);
+  const seenFirstTicketPoll = useRef(false);
   useEffect(() => {
     const at = ticketQ.data?.latestAt ?? null;
-    if (!at) return;
-    if (lastTicketAlertAt.current && at > lastTicketAlertAt.current) {
+    if (!seenFirstTicketPoll.current) {
+      seenFirstTicketPoll.current = true;
+      lastTicketAlertAt.current = at;
+      return;
+    }
+    if (at && at !== lastTicketAlertAt.current) {
       toast("New reply from Xellvio Support", {
         description: "Open Support to read it and reply.",
         action: { label: "View", onClick: () => { window.location.href = "/app/support"; } },

@@ -68,10 +68,15 @@ export function AdminSidebar() {
   const openTickets = pathname.startsWith("/admin/tickets") ? 0 : (ticketQ.data?.count ?? 0);
   useTabBadge(openTickets);
   const lastTicketActivityAt = useRef<string | null>(null);
+  const seenFirstTicketPoll = useRef(false);
   useEffect(() => {
     const at = ticketQ.data?.latestAt ?? null;
-    if (!at) return;
-    if (lastTicketActivityAt.current && at > lastTicketActivityAt.current) {
+    if (!seenFirstTicketPoll.current) {
+      seenFirstTicketPoll.current = true;
+      lastTicketActivityAt.current = at;
+      return;
+    }
+    if (at && at !== lastTicketActivityAt.current) {
       toast("New support ticket activity", {
         description: "A customer opened a ticket or sent a reply.",
         action: { label: "View", onClick: () => { window.location.href = "/admin/tickets"; } },
