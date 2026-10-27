@@ -254,57 +254,17 @@ function Hero() {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="relative"
         >
-          <div className="bg-muted rounded-3xl p-10 md:p-14 min-h-[460px] relative overflow-hidden">
-            {/* Decorative dot pattern emulating editorial product photo */}
-            <div
-              className="absolute inset-0 opacity-30"
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.6) 0, transparent 40%), radial-gradient(circle at 80% 70%, rgba(0,0,0,0.06) 0, transparent 45%)",
-              }}
+          <div className="bg-muted rounded-3xl relative overflow-hidden">
+            <video
+              src={heroLoopAsset.url}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="metadata"
+              className="block w-full h-full object-cover"
+              aria-label="Xellvio automation preview"
             />
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-card rounded-xl border shadow-sm relative p-5 max-w-xs ml-auto"
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="size-7 rounded-md bg-muted grid place-items-center">
-                  <Flag className="size-4 text-muted-foreground" />
-                </div>
-                <span className="font-semibold text-foreground">Trigger</span>
-              </div>
-              <div className="text-sm text-muted-foreground mb-2">Keyword</div>
-              <div className="bg-primary/10 text-primary rounded-md px-3 py-2 text-sm font-medium">
-                Supplement quiz
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-card rounded-xl border shadow-sm relative p-5 max-w-[280px] mt-6"
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="size-7 rounded-md bg-muted grid place-items-center">
-                  <Send className="size-4 text-muted-foreground" />
-                </div>
-                <span className="font-semibold text-foreground">Message 2</span>
-              </div>
-              <div className="text-sm text-muted-foreground mb-3">
-                How many servings of fruit do you eat daily?
-              </div>
-              <div className="space-y-1.5">
-                <div className="rounded-md border border-border px-3 py-2 text-sm">
-                  0–2 servings
-                </div>
-                <div className="bg-primary/10 text-primary rounded-md px-3 py-2 text-sm font-medium">
-                  3–5
-                </div>
-                <div className="rounded-md border border-border px-3 py-2 text-sm">6+</div>
-              </div>
-            </motion.div>
           </div>
         </motion.div>
       </div>
