@@ -30,6 +30,7 @@ import { StatsMarquee, reveal } from "@/components/marketing/ProductKit";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { faqSchema, pageHead, softwareApplicationSchema, websiteSchema } from "@/lib/seo";
+import heroLoopAsset from "@/assets/xellvio-hero-loop.mp4.asset.json";
 
 const CHANNELS = [
   {
