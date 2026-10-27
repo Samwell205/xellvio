@@ -152,9 +152,10 @@ export async function adminReply(ticketId: string, body: string, userId: string,
 export async function markTicketResolved(ticketId: string) {
   const sb = await db();
   const now = new Date().toISOString();
-  const { data: t } = await sb.from("support_tickets")
+  const { data: t, error } = await sb.from("support_tickets")
     .update({ status: "resolved", resolved_at: now, reminder_sent_at: null, updated_at: now })
     .eq("id", ticketId).neq("status", "closed").select("*").maybeSingle();
+  if (error) throw new Error(`Could not mark resolved: ${error.message}`);
   if (!t) throw new Error("Ticket not found or already closed");
   await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "system", body: "Marked as resolved by support — waiting for the customer to confirm." });
   await email(t, `resolved-${now}`, t.subject, `Ticket #${t.number} — did we fix it?`,
