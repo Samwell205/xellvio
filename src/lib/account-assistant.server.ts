@@ -9,6 +9,7 @@ import {
   draftAgentSchema,
   inspectFileSchema,
   designFormSchema,
+  designWebsiteSchema,
 } from "./account-assistant.schemas";
 import { receptionistConfigSchema } from "./receptionist/shared";
 import { detectContactColumns } from "./contact-file-columns";
