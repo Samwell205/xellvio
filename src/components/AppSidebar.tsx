@@ -10,7 +10,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Logo } from "./Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { getMySession } from "@/lib/session.functions";
 import { getInboxUnreadCount } from "@/lib/inbox.functions";
@@ -137,8 +138,25 @@ export function AppSidebar() {
     enabled: !!session,
     refetchInterval: 30_000,
   });
-  const ticketAlerts = pathname.startsWith("/app/support") ? 0 : (ticketQ.data ?? 0);
+  const ticketAlerts = pathname.startsWith("/app/support") ? 0 : (ticketQ.data?.count ?? 0);
   useTabBadge(ticketAlerts);
+  const lastTicketAlertAt = useRef<string | null>(null);
+  const seenFirstTicketPoll = useRef(false);
+  useEffect(() => {
+    const at = ticketQ.data?.latestAt ?? null;
+    if (!seenFirstTicketPoll.current) {
+      seenFirstTicketPoll.current = true;
+      lastTicketAlertAt.current = at;
+      return;
+    }
+    if (at && at !== lastTicketAlertAt.current) {
+      toast("New reply from Xellvio Support", {
+        description: "Open Support to read it and reply.",
+        action: { label: "View", onClick: () => { window.location.href = "/app/support"; } },
+      });
+    }
+    lastTicketAlertAt.current = at;
+  }, [ticketQ.data?.latestAt]);
   const visibleSettings = settingsChildren.filter(canSee);
   const settingsActive = visibleSettings.some((c) => isActive(c.url, c.exact));
   const [settingsOpen, setSettingsOpen] = useState(settingsActive);
@@ -273,12 +291,12 @@ export function AppSidebar() {
                           <it.icon className="size-[1.125rem] shrink-0" />
                           {!collapsed && <span className="truncate">{it.title}</span>}
                           {showTicketBadge && !collapsed && (
-                            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+                            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold inline-flex items-center justify-center">
                               {ticketAlerts > 99 ? "99+" : ticketAlerts}
                             </span>
                           )}
                           {showTicketBadge && collapsed && (
-                            <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+                            <span className="absolute top-1 right-1 size-2 rounded-full bg-destructive" />
                           )}
                         </Link>
                       </SidebarMenuButton>

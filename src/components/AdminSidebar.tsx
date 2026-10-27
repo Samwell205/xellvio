@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { adminOpenTicketCount } from "@/lib/support-tickets.functions";
 import { useTabBadge } from "@/lib/use-tab-badge";
 import { LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2, Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, Megaphone, Scale, PhoneOutgoing, Send, Blocks, Handshake, KeyRound, LineChart, Gauge, HeartHandshake, Bot, Ticket, ChevronDown, Search, type LucideIcon } from "lucide-react";
@@ -64,8 +65,25 @@ export function AdminSidebar() {
   const matches = (it: Item) => it.title.toLowerCase().includes(search.toLowerCase());
   const openCountFn = useServerFn(adminOpenTicketCount);
   const ticketQ = useQuery({ queryKey: ["admin-open-tickets"], queryFn: () => openCountFn(), refetchInterval: 30_000 });
-  const openTickets = pathname.startsWith("/admin/tickets") ? 0 : (ticketQ.data ?? 0);
+  const openTickets = pathname.startsWith("/admin/tickets") ? 0 : (ticketQ.data?.count ?? 0);
   useTabBadge(openTickets);
+  const lastTicketActivityAt = useRef<string | null>(null);
+  const seenFirstTicketPoll = useRef(false);
+  useEffect(() => {
+    const at = ticketQ.data?.latestAt ?? null;
+    if (!seenFirstTicketPoll.current) {
+      seenFirstTicketPoll.current = true;
+      lastTicketActivityAt.current = at;
+      return;
+    }
+    if (at && at !== lastTicketActivityAt.current) {
+      toast("New support ticket activity", {
+        description: "A customer opened a ticket or sent a reply.",
+        action: { label: "View", onClick: () => { window.location.href = "/admin/tickets"; } },
+      });
+    }
+    lastTicketActivityAt.current = at;
+  }, [ticketQ.data?.latestAt]);
   const menu = (items: Item[]) => <SidebarMenu>{items.filter(matches).map(it => (
     <SidebarMenuItem key={it.url}>
       <SidebarMenuButton asChild isActive={isActive(it)} tooltip={it.title} className="admin-nav-item h-10">
@@ -73,12 +91,12 @@ export function AdminSidebar() {
           <it.icon className="size-4 shrink-0" />
           {!collapsed && <span className="truncate">{it.title}</span>}
           {it.url === "/admin/tickets" && openTickets > 0 && !collapsed && (
-            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold inline-flex items-center justify-center">
               {openTickets > 99 ? "99+" : openTickets}
             </span>
           )}
           {it.url === "/admin/tickets" && openTickets > 0 && collapsed && (
-            <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+            <span className="absolute top-1 right-1 size-2 rounded-full bg-destructive" />
           )}
         </Link>
       </SidebarMenuButton>
