@@ -168,3 +168,6 @@ Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout 
 - [x] Verify Google Calendar client linked with offline access enabled.
 - [ ] Verify Google OAuth app production status and complete real Calendar consent, booking/cancellation read-back (needs owner consent).
 - [ ] Complete live number purchase and document submission; exact-number order guard and regulatory response parsing implemented, not a real purchased-line test.
+
+## Oct 27
+- [x] Assistant can design/create/restyle signup forms (form_draft proposal + on-screen confirm, unpublished drafts); applied confirm_assistant_operation update.
