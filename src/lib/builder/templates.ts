@@ -690,3 +690,35 @@ export function blankDesign(kind: "form" | "page"): { blocks: Block[]; theme: Th
 }
 
 export const DARK_STARTER = DARK_THEME;
+
+/** Full editable builder design for an assistant-designed signup form. */
+export function assistantFormDesign(spec: {
+  headline: string;
+  description?: string;
+  ctaLabel: string;
+  successMessage: string;
+  collectName?: boolean;
+  theme?: "light" | "dark";
+  accent: string;
+  consentText: string;
+  eyebrow?: string | null;
+}): { blocks: Block[]; theme: Theme } {
+  const base = spec.theme === "dark" ? DARK_THEME : LIGHT_THEME;
+  const hex = spec.accent.length === 4 ? "#" + [...spec.accent.slice(1)].map((c) => c + c).join("") : spec.accent;
+  const n = parseInt(hex.slice(1), 16);
+  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  const theme: Theme = { ...base, primary: hex, secondary: hex, primaryText: lum > 0.6 ? "#111827" : "#ffffff", buttonStyle: "pill", radius: 16, shadow: true };
+  const fields = [
+    ...(spec.collectName !== false ? [field("firstName", "First name", "Jane", true)] : []),
+    field("phone", "Mobile number", "+1 555 000 1234", true),
+  ];
+  const f = form(fields, spec.ctaLabel, { success: spec.successMessage });
+  f.content = { ...f.content, consentText: spec.consentText };
+  const inner: Block[] = [];
+  if (spec.eyebrow)
+    inner.push(makeBlock("text", { content: { text: spec.eyebrow }, styles: { fontSize: 13, letterSpacing: 1.4, textTransform: "uppercase", color: "primary", marginBottom: 10, fontWeight: 700, align: "center" } }));
+  inner.push(heading(spec.headline, 38, { align: "center" }));
+  if (spec.description) inner.push(text(spec.description, { align: "center" }));
+  inner.push(f);
+  return instantiate({ id: "assistant", label: "", category: "", blurb: "", kind: "form", theme, blocks: [section(inner, { paddingY: 64, maxWidth: 560, align: "center" })] });
+}

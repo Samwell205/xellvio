@@ -6,6 +6,7 @@ export const DEFAULT_FORM_CONSENT = "By signing up, you agree to receive text me
 export const designFormSchema = z.object({
   formId: z.string().uuid().nullish(),
   name: z.string().trim().min(1).max(120),
+  eyebrow: z.string().trim().max(60).nullish(),
   headline: z.string().trim().min(1).max(160),
   description: z.string().trim().max(400).default(""),
   ctaLabel: z.string().trim().min(1).max(40),
