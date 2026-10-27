@@ -208,7 +208,9 @@ export async function setTicketStatus(ticketId: string, status: "open" | "closed
 export async function sweepTickets(now = Date.now()) {
   const sb = await db();
   const { data: waiting } = await sb.from("support_tickets").select("*")
-    .eq("status", "waiting").lte("last_admin_reply_at", new Date(now - REMINDER_AFTER_MS).toISOString()).limit(200);
+    .in("status", ["waiting", "resolved"])
+    .or(`last_admin_reply_at.lte.${new Date(now - REMINDER_AFTER_MS).toISOString()},and(status.eq.resolved,resolved_at.lte.${new Date(now - REMINDER_AFTER_MS).toISOString()})`)
+    .limit(200);
   let reminded = 0, closed = 0;
   for (const t of (waiting ?? []) as TicketRow[]) {
     const since = now - new Date(t.last_admin_reply_at!).getTime();
