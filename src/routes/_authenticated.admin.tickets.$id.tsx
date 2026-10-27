@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Bot, Loader2, Lock, RotateCcw, Send, StickyNote } from "lucide-react";
+import { ArrowLeft, Bot, CheckCircle2, Loader2, Lock, RotateCcw, Send, Star, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -49,7 +49,10 @@ function AdminTicket() {
               <StatusBadge status={t.status} />
               {t.status === "closed"
                 ? <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run("reopen", () => statusFn({ data: { id, status: "open" } }), "Reopened")}><RotateCcw className="size-4" /> Reopen</Button>
-                : <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run("close", () => statusFn({ data: { id, status: "closed" } }), "Ticket closed")}><Lock className="size-4" /> Close</Button>}
+                : <>
+                    {t.status !== "resolved" && <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run("resolve", () => statusFn({ data: { id, status: "resolved" } }), "Marked resolved — customer asked to confirm")}><CheckCircle2 className="size-4" /> Mark resolved</Button>}
+                    <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run("close", () => statusFn({ data: { id, status: "closed" } }), "Ticket closed")}><Lock className="size-4" /> Close</Button>
+                  </>}
             </div>
           </div>
           <TicketThread messages={q.data!.messages} viewer="admin" />
