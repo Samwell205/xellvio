@@ -171,3 +171,4 @@ Built-in payments (Paddle) enabled Sep 21. Next: create products, wire checkout 
 
 ## Oct 27
 - [x] Assistant can design/create/restyle signup forms (form_draft proposal + on-screen confirm, unpublished drafts); applied confirm_assistant_operation update.
+- [ ] Verify assistant follow-ups use confirmed saved-form state instead of historical pending tool output.
