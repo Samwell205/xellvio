@@ -2,6 +2,21 @@ export function signupNeedsConfirmation(data: { session: unknown }): boolean {
   return !data.session;
 }
 
+/**
+ * When the email already belongs to an account, the auth service hides that fact:
+ * it returns success with no session, a user with zero identities, and sends NO
+ * email. Detect it so the page never claims a code was emailed.
+ */
+export function signupEmailAlreadyRegistered(data: {
+  session: unknown;
+  user?: { identities?: unknown[] | null } | null;
+}): boolean {
+  return !data.session && Array.isArray(data.user?.identities) && data.user!.identities!.length === 0;
+}
+
+export const EXISTING_ACCOUNT_MESSAGE =
+  "An account with this email already exists, so no new code was sent. Sign in instead, or use “Forgot password” to reset it.";
+
 export function authCooldownSeconds(error: unknown): number {
   if (!error || typeof error !== "object") return 0;
   const value = error as { message?: string; code?: string; status?: number };

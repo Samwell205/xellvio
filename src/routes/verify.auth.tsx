@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { pageHead } from "@/lib/seo";
-import { EMAIL_CONFIRMATION_MESSAGE, signupNeedsConfirmation } from "@/lib/signup-flow";
+import { EMAIL_CONFIRMATION_MESSAGE, EXISTING_ACCOUNT_MESSAGE, signupEmailAlreadyRegistered, signupNeedsConfirmation } from "@/lib/signup-flow";
 
 export const Route = createFileRoute("/verify/auth")({
   head: () =>
@@ -91,6 +91,12 @@ function VerifierAuth() {
         options: { data: { full_name: signupName }, emailRedirectTo: `${window.location.origin}/verify/auth` },
       });
       if (signUpError) throw signUpError;
+      if (signupEmailAlreadyRegistered(data)) {
+        setSignupPassword("");
+        setSignupPasswordConfirm("");
+        toast.error(EXISTING_ACCOUNT_MESSAGE);
+        return;
+      }
       if (signupNeedsConfirmation(data)) {
         setConfirmationPending(true);
         setSignupPassword("");
