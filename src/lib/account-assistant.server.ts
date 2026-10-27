@@ -168,6 +168,10 @@ export async function confirmOperation(userId: string, id: string, consent: bool
     .single();
   if (op.error) throw new Error("Action not found.");
   if (op.data.kind === "account_edit") return confirmAccountEdit(userId, id);
+  if (op.data.kind === "website_draft") {
+    assertPermission(acting, "settings");
+    return confirmWebsiteDraft(db, id, userId, acting.accountId);
+  }
   if (op.data.kind === "contact_import") assertPermission(acting, "audience");
   else if (op.data.kind === "campaign_draft") assertPermission(acting, "campaigns");
   else if (op.data.kind === "form_draft") assertPermission(acting, "settings");
@@ -186,6 +190,75 @@ export async function confirmOperation(userId: string, id: string, consent: bool
   if (result.error) throw new Error(result.error.message);
   if (op.data.kind === "form_draft") await applyFormDesign(db, id, acting.accountId, result.data, userId);
   return result.data;
+}
+
+export async function proposeWebsite(userId: string, input: unknown) {
+  const args = designWebsiteSchema.parse(input);
+  const { acting } = await assistantAccess(userId);
+  assertPermission(acting, "settings");
+  const pages = [...new Set(["Home", ...args.pages.map((p) => p.trim()).filter(Boolean)])].slice(0, 5);
+  return proposal(userId, "website_draft", { ...args, pages });
+}
+
+const slugPart = (v: string) =>
+  v.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 32) || "page";
+
+async function confirmWebsiteDraft(db: any, id: string, userId: string, accountId: string) {
+  // Claim the action once so double clicks can never build two websites.
+  const claim = await db
+    .from("assistant_operations")
+    .update({ status: "processing" })
+    .eq("id", id)
+    .eq("user_id", userId)
+    .eq("account_id", accountId)
+    .eq("status", "pending")
+    .gt("expires_at", new Date().toISOString())
+    .select("arguments")
+    .maybeSingle();
+  if (claim.error || !claim.data) {
+    const current = await db.from("assistant_operations").select("status,outcome").eq("id", id).single();
+    if (current.data?.status === "completed") return current.data.outcome;
+    throw new Error("This website request expired or is already being built.");
+  }
+  const args = designWebsiteSchema.parse(claim.data.arguments);
+  const suffix = Math.random().toString(36).slice(2, 7);
+  const pages = args.pages.map((title) => ({ title, slug: `${slugPart(args.name)}-${slugPart(title)}-${suffix}` }));
+  const nav = pages.map((p) => `"${p.title}" -> /p/${p.slug}`).join(", ");
+  try {
+    const { designFromBrief } = await import("./ai-designer.server");
+    const { normalizeBlocks, LIGHT_THEME } = await import("./builder/schema");
+    // The home page sets the look; other pages follow its theme.
+    const designs = await Promise.all(
+      pages.map((p, i) =>
+        designFromBrief({
+          kind: "page",
+          accountId,
+          userId,
+          brief: `Website "${args.name}". ${args.brief}\n\nThis is the "${p.title}" page${i === 0 ? " (homepage)" : ""}. Start with a top navigation row of button blocks linking every page of the site: ${nav}. Include one SMS signup form with a phone field and consent text. Keep the same brand look on every page.`,
+        }),
+      ),
+    );
+    const theme = { ...LIGHT_THEME, ...((designs[0].theme as object) ?? {}) };
+    const rows = pages.map((p, i) => ({
+      account_id: accountId,
+      name: pages.length > 1 ? `${args.name} – ${p.title}` : args.name,
+      slug: p.slug,
+      headline: designs[i].seo?.title || args.name,
+      subheadline: designs[i].seo?.description || "",
+      blocks: normalizeBlocks(designs[i].blocks),
+      builder_theme: theme,
+      published: false,
+    }));
+    const inserted = await db.from("landing_pages").insert(rows as never).select("id,name");
+    if (inserted.error) throw new Error(inserted.error.message);
+    const outcome = { status: "draft", pages: inserted.data };
+    await db.from("assistant_operations").update({ status: "completed", outcome }).eq("id", id);
+    return outcome;
+  } catch (e) {
+    await db.from("assistant_operations").update({ status: "pending" }).eq("id", id).eq("status", "processing");
+    console.error("[assistant] website design failed", e instanceof Error ? e.message : e);
+    throw new Error("The website could not be designed right now. Please try again.");
+  }
 }
 
 async function applyFormDesign(db: any, opId: string, accountId: string, outcome: any, userId: string) {
@@ -309,6 +382,12 @@ export function accountAssistantTools(userId: string) {
         "Design a signup form for the user's website: create a new one, or restyle an existing form by passing its formId (find forms with account_overview). The form collects a phone number and optionally a name for text-message updates. Choose an attractive headline, description, button label, success message, theme and accent color yourself when the user does not specify. Always include clear consent text for text-message signups. Requires on-screen confirmation; saves an UNPUBLISHED draft the user reviews and publishes under Forms.",
       inputSchema: designFormSchema,
       execute: (args) => proposeForm(userId, args),
+    }),
+    design_website: tool({
+      description:
+        "Design a complete multi-page website draft (for example Home, About, Services, Contact) with creative layouts, AI-generated pictures, motion and an SMS signup form. Write a rich creative brief from the user's request: business, audience, offer, tone, colours and sections. Requires on-screen confirmation; saves UNPUBLISHED pages the user reviews and publishes under Landing pages.",
+      inputSchema: designWebsiteSchema,
+      execute: (args) => proposeWebsite(userId, args),
     }),
     prepare_business_agent: tool({
       description:

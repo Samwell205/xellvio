@@ -18,3 +18,8 @@ export const designFormSchema = z.object({
   listId: z.string().uuid().nullish(),
   designBrief: z.string().trim().max(1200).nullish(),
 });
+export const designWebsiteSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  brief: z.string().trim().min(10).max(2000),
+  pages: z.array(z.string().trim().min(1).max(40)).max(5).default(["Home"]),
+});
