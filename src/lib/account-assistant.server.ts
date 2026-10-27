@@ -170,6 +170,7 @@ export async function confirmOperation(userId: string, id: string, consent: bool
   if (op.data.kind === "account_edit") return confirmAccountEdit(userId, id);
   if (op.data.kind === "contact_import") assertPermission(acting, "audience");
   else if (op.data.kind === "campaign_draft") assertPermission(acting, "campaigns");
+  else if (op.data.kind === "form_draft") assertPermission(acting, "settings");
   else {
     assertOwner(acting);
     assertPermission(acting, "settings");
@@ -243,6 +244,12 @@ export function accountAssistantTools(userId: string) {
         "Prepare a named draft campaign proposal with exact SMS content and an existing list. Requires on-screen confirmation; DOES NOT SEND.",
       inputSchema: z.object({ name: z.string(), body: z.string(), listId: z.string() }).strict(),
       execute: (args) => proposeCampaign(userId, args),
+    }),
+    design_signup_form: tool({
+      description:
+        "Design a signup form for the user's website: create a new one, or restyle an existing form by passing its formId (find forms with account_overview). Choose an attractive headline, description, button label, success message, theme and accent color yourself when the user does not specify. Always include clear consent text for text-message signups. Requires on-screen confirmation; saves an UNPUBLISHED draft the user reviews and publishes under Forms.",
+      inputSchema: designFormSchema,
+      execute: (args) => proposeForm(userId, args),
     }),
     prepare_business_agent: tool({
       description:
