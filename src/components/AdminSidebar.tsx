@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 import { adminOpenTicketCount } from "@/lib/support-tickets.functions";
 import { useTabBadge } from "@/lib/use-tab-badge";
 import { LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2, Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, Megaphone, Scale, PhoneOutgoing, Send, Blocks, Handshake, KeyRound, LineChart, Gauge, HeartHandshake, Bot, Ticket, ChevronDown, Search, type LucideIcon } from "lucide-react";
@@ -64,8 +65,20 @@ export function AdminSidebar() {
   const matches = (it: Item) => it.title.toLowerCase().includes(search.toLowerCase());
   const openCountFn = useServerFn(adminOpenTicketCount);
   const ticketQ = useQuery({ queryKey: ["admin-open-tickets"], queryFn: () => openCountFn(), refetchInterval: 30_000 });
-  const openTickets = pathname.startsWith("/admin/tickets") ? 0 : (ticketQ.data ?? 0);
+  const openTickets = pathname.startsWith("/admin/tickets") ? 0 : (ticketQ.data?.count ?? 0);
   useTabBadge(openTickets);
+  const lastTicketActivityAt = useRef<string | null>(null);
+  useEffect(() => {
+    const at = ticketQ.data?.latestAt ?? null;
+    if (!at) return;
+    if (lastTicketActivityAt.current && at > lastTicketActivityAt.current) {
+      toast("New support ticket activity", {
+        description: "A customer opened a ticket or sent a reply.",
+        action: { label: "View", onClick: () => { window.location.href = "/admin/tickets"; } },
+      });
+    }
+    lastTicketActivityAt.current = at;
+  }, [ticketQ.data?.latestAt]);
   const menu = (items: Item[]) => <SidebarMenu>{items.filter(matches).map(it => (
     <SidebarMenuItem key={it.url}>
       <SidebarMenuButton asChild isActive={isActive(it)} tooltip={it.title} className="admin-nav-item h-10">
