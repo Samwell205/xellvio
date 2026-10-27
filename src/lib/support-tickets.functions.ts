@@ -219,19 +219,24 @@ export const adminGetTicket = createServerFn({ method: "GET" })
 
 export const adminReplyTicket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), body, internal: z.boolean().default(false), close: z.boolean().default(false) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), body, internal: z.boolean().default(false), close: z.boolean().default(false), resolve: z.boolean().default(false) }).parse(d))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase);
     const { adminReply } = await import("./support-tickets.server");
-    await adminReply(data.id, data.body, context.userId, { internal: data.internal, close: data.close });
+    await adminReply(data.id, data.body, context.userId, { internal: data.internal, close: data.close, resolve: data.resolve });
     return { ok: true };
   });
 
 export const adminSetTicketStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["open", "closed"]) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["open", "resolved", "closed"]) }).parse(d))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase);
+    if (data.status === "resolved") {
+      const { markTicketResolved } = await import("./support-tickets.server");
+      await markTicketResolved(data.id);
+      return { ok: true };
+    }
     const { setTicketStatus } = await import("./support-tickets.server");
     await setTicketStatus(data.id, data.status);
     return { ok: true };
