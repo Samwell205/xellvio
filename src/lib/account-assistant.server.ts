@@ -184,18 +184,47 @@ export async function confirmOperation(userId: string, id: string, consent: bool
     _consent: consent,
   });
   if (result.error) throw new Error(result.error.message);
-  if (op.data.kind === "form_draft") await applyFormDesign(db, id, acting.accountId, result.data);
+  if (op.data.kind === "form_draft") await applyFormDesign(db, id, acting.accountId, result.data, userId);
   return result.data;
 }
 
-async function applyFormDesign(db: any, opId: string, accountId: string, outcome: any) {
+async function applyFormDesign(db: any, opId: string, accountId: string, outcome: any, userId: string) {
   const formId = outcome?.formId;
   if (!formId) return;
   const row = await db.from("assistant_operations").select("arguments").eq("id", opId).single();
   const args = designFormSchema.safeParse(row.data?.arguments);
   if (!args.success) return;
-  const { assistantFormDesign } = await import("./builder/templates");
-  const design = assistantFormDesign(args.data);
+  const a = args.data;
+  let design: { blocks: unknown[]; theme: unknown } | null = null;
+  try {
+    const { designFromBrief } = await import("./ai-designer.server");
+    const { normalizeBlocks, LIGHT_THEME, DARK_THEME } = await import("./builder/schema");
+    const brief = [
+      `SMS signup form "${a.name}".`,
+      a.eyebrow ? `Eyebrow: ${a.eyebrow}` : "",
+      `Headline: ${a.headline}`,
+      a.description ? `About: ${a.description}` : "",
+      a.designBrief ? `Creative direction: ${a.designBrief}` : "",
+      `Button label: ${a.ctaLabel}. Success message: ${a.successMessage}.`,
+      `Fields: ${a.collectName ? "first name and " : ""}phone number only.`,
+      `Consent text (use exactly): ${a.consentText}`,
+      `Base mood: ${a.theme}, accent colour ${a.accent}.`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    const out = await designFromBrief({ kind: "form", brief, accountId, userId });
+    const blocks = normalizeBlocks(out.blocks);
+    if (blocks.length) {
+      const base = a.theme === "dark" ? DARK_THEME : LIGHT_THEME;
+      design = { blocks, theme: { ...base, ...((out.theme as object) ?? {}) } };
+    }
+  } catch (e) {
+    console.error("[assistant] AI form design failed, using template", e instanceof Error ? e.message : e);
+  }
+  if (!design) {
+    const { assistantFormDesign } = await import("./builder/templates");
+    design = assistantFormDesign(a);
+  }
   const saved = await db
     .from("signup_forms")
     .update({ blocks: design.blocks, builder_theme: design.theme })

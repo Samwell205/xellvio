@@ -16,4 +16,5 @@ export const designFormSchema = z.object({
   accent: z.string().trim().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Use a hex color like #7C3AED"),
   consentText: z.string().trim().min(1).max(400).default(DEFAULT_FORM_CONSENT),
   listId: z.string().uuid().nullish(),
+  designBrief: z.string().trim().max(1200).nullish(),
 });

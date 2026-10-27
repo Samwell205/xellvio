@@ -28,8 +28,8 @@ import { MODE_INSTRUCTIONS, extractJson, systemPrompt } from "./builder/design-p
 export const generateBuilderDesign = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => Input.parse(input))
-  .handler(async ({ data }) => {
-    const { runDesignModel } = await import("./ai-designer.server");
+  .handler(async ({ data, context }) => {
+    const { runDesignModel, fillDesignImages } = await import("./ai-designer.server");
 
     const current = JSON.stringify({ theme: data.theme, blocks: data.blocks }).slice(0, 60_000);
     const hasDesign = Array.isArray(data.blocks) && data.blocks.length > 0;
@@ -54,8 +54,11 @@ export const generateBuilderDesign = createServerFn({ method: "POST" })
     const text = await runDesignModel(systemPrompt(data.kind), userPrompt);
 
     const parsed = extractJson(text);
-    const blocks = Array.isArray(parsed?.blocks) ? parsed.blocks : [];
-    if (blocks.length === 0) throw new Error("The AI did not return a design. Try describing it again.");
+    const rawBlocks = Array.isArray(parsed?.blocks) ? parsed.blocks : [];
+    if (rawBlocks.length === 0) throw new Error("The AI did not return a design. Try describing it again.");
+    const { resolveActingAccount } = await import("./acting-account.server");
+    const { accountId } = await resolveActingAccount(context.userId);
+    const blocks = await fillDesignImages(accountId, rawBlocks, parsed?.imagePrompts, data.prompt || "modern marketing hero", context.userId);
     const summary: string[] = Array.isArray(parsed?.summary)
       ? parsed.summary.filter((s: unknown) => typeof s === "string").slice(0, 8)
       : [];
