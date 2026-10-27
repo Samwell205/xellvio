@@ -243,7 +243,9 @@ export type MessagingProfile = { id: string; name: string; enabled: boolean; web
 // requires whitelisted_destinations to be non-empty or it rejects sends with
 // "Messaging profile is missing whitelisted destinations".
 export const DEFAULT_WHITELISTED_DESTINATIONS = [
-  "US","CA","GB","IE","AU","NZ","DE","FR","ES","IT","PT","NL","BE","LU","CH","AT",
+  // GG/JE/IM are Crown Dependencies that share the +44 prefix with GB; without
+  // them Telnyx rejects those destinations with code 40309.
+  "US","CA","GB","GG","JE","IM","IE","AU","NZ","DE","FR","ES","IT","PT","NL","BE","LU","CH","AT",
   "DK","SE","NO","FI","IS","PL","CZ","SK","HU","RO","BG","GR","HR","SI","EE","LV","LT",
   "MT","CY","TR","UA","RU","IL","AE","SA","QA","KW","BH","OM","JO","LB","EG",
   "ZA","NG","KE","GH","UG","TZ","RW","CI","SN","CM","MA","DZ","TN","ET",
