@@ -96,7 +96,7 @@ export function AdminSidebar() {
             </span>
           )}
           {it.url === "/admin/tickets" && openTickets > 0 && collapsed && (
-            <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+            <span className="absolute top-1 right-1 size-2 rounded-full bg-destructive" />
           )}
         </Link>
       </SidebarMenuButton>
