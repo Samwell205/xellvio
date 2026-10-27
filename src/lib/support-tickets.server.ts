@@ -13,7 +13,7 @@ async function db() {
 
 export type TicketRow = {
   id: string; number: number; account_id: string | null; requester_email: string; requester_name: string | null;
-  subject: string; status: "open" | "waiting" | "closed"; access_token: string;
+  subject: string; status: "open" | "waiting" | "resolved" | "closed"; access_token: string;
   last_admin_reply_at: string | null; reminder_sent_at: string | null; closed_at: string | null;
 };
 
@@ -127,7 +127,7 @@ export async function customerReply(ticketId: string, body: string, via: "web" |
   await notifyAdmin(t, `Reply from ${t.requester_email}: ${body}${attachments.length ? `\n\nAttached: ${attachments.map((a) => a.name).join(", ")}` : ""}`);
 }
 
-export async function adminReply(ticketId: string, body: string, userId: string, opts: { internal?: boolean; close?: boolean } = {}) {
+export async function adminReply(ticketId: string, body: string, userId: string, opts: { internal?: boolean; close?: boolean; resolve?: boolean } = {}) {
   const sb = await db();
   const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
   if (!t) throw new Error("Ticket not found");
