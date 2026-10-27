@@ -483,6 +483,43 @@ export function AccountAssistant({
                         </p>
                       )}
                   </>
+                ) : op.kind === "form_draft" ? (
+                  <div className="space-y-2 text-sm">
+                    <p className="text-xs text-muted-foreground">
+                      {args.formId ? "Restyles your existing form" : "New signup form"} · not
+                      published yet
+                    </p>
+                    <div className="rounded-md border border-border bg-muted/30 p-3">
+                      <p className="font-semibold">{String(args.headline)}</p>
+                      {Boolean(args.description) && (
+                        <p className="mt-1 text-muted-foreground">{String(args.description)}</p>
+                      )}
+                      <p className="mt-2 inline-flex items-center gap-2">
+                        <span
+                          aria-hidden
+                          className="inline-block size-3 rounded-full border border-border"
+                          style={{ backgroundColor: String(args.accent) }}
+                        />
+                        <span className="font-medium">{String(args.ctaLabel)}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {String(args.theme)} theme
+                          {args.collectName ? " · collects name" : ""}
+                        </span>
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Consent: {String(args.consentText)}
+                    </p>
+                    {op.status === "completed" && (
+                      <p role="status" className="text-sm">
+                        Saved. Open{" "}
+                        <Link to="/app/signup-forms" className="font-medium text-primary underline">
+                          Forms
+                        </Link>{" "}
+                        to review and publish it.
+                      </p>
+                    )}
+                  </div>
                 ) : op.kind === "account_edit" ? (
                   <div className="space-y-2 text-sm">
                     <p className="font-medium">{String(args.targetName)}</p>
@@ -542,7 +579,11 @@ export function AccountAssistant({
                           ? "Confirm import"
                           : op.kind === "account_edit"
                             ? "Confirm change"
-                            : "Save draft"}
+                            : op.kind === "form_draft"
+                              ? args.formId
+                                ? "Save changes"
+                                : "Create form"
+                              : "Save draft"}
                       </Button>
                       <Button
                         variant="ghost"
