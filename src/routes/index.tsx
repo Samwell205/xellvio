@@ -18,7 +18,6 @@ import {
   MousePointerClick,
   Mail,
   Smartphone,
-  Flag,
   Play,
 } from "lucide-react";
 import { useState } from "react";
