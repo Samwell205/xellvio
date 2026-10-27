@@ -14,8 +14,6 @@ import {
   X,
   ArrowUpRight,
   Send,
-  ChevronDown,
-  ClipboardList,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -82,7 +80,6 @@ export function AccountAssistant({
   const [uploadReply, setUploadReply] = useState("");
   const [launchId, setLaunchId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
-  const [reviewOpen, setReviewOpen] = useState<boolean | null>(null);
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["assistant-actions"] });
     void qc.invalidateQueries({ queryKey: ["assistant-threads"] });
@@ -241,210 +238,23 @@ export function AccountAssistant({
     await sendMessage({ text });
     inputRef.current?.focus();
   }
-  const reviewOps = operations
-    .filter((op) => op.kind !== "campaign_launch")
-    .filter((op) => op.status === "pending" || op.status === "completed")
-    .slice(0, 6);
-  const awaitingReview = reviewOps.filter(
-    (op) => op.status === "pending" && Date.parse(op.expires_at) > Date.now(),
-  ).length;
-  const trayOpen = reviewOpen ?? awaitingReview > 0;
-  return (
-    <div className="assistant-chat assistant-arrive flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
-        <div className="flex items-center gap-3">
-          <Sparkles className="size-5 text-primary" />
-          <div>
-            <h1 className="font-display text-lg font-medium">Xellvio assistant</h1>
-            <p className="mt-0.5 text-xs text-muted-foreground">Business conversation</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          {speaking ? (
-            <>
-              <Button
-                size="icon"
-                variant="outline"
-                aria-label={voice.muted ? "Unmute microphone" : "Mute microphone"}
-                onClick={() => voice.setMuted(!voice.muted)}
-              >
-                {voice.muted ? <MicOff /> : <Mic />}
-              </Button>
-              <Button variant="destructive" onClick={voice.stop}>
-                <PhoneOff />
-                End call
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="outline"
-              disabled={generating || !voiceAccess?.available}
-              onClick={voice.start}
-            >
-              <Mic />
-              {voiceAccess?.available ? "Talk" : "Voice · Coming soon"}
-            </Button>
-          )}
-        </div>
-      </header>
-      <audio ref={voice.audioRef} autoPlay playsInline />
-      {(speaking || voice.error) && (
-        <div className="border-b bg-muted px-5 py-3 text-sm">
-          <p>{voice.error || `${voice.status === "connected" ? "Listening" : voice.status}…`}</p>
-          <p className="mt-1 text-muted-foreground">{caption}</p>
-          {voice.playbackBlocked && <Button onClick={voice.resumePlayback}>Resume audio</Button>}
-        </div>
-      )}
-      <Conversation className="min-h-64 flex-1">
-        <ConversationContent className="mx-auto w-full max-w-3xl space-y-6 p-5">
-          {messages.length === 0 && (
-            <div className="assistant-arrive py-10 md:py-16">
-              <AssistantMark />
-              <h2 className="mt-6 font-display text-3xl font-medium">What needs doing today?</h2>
-            </div>
-          )}
-          {messages.map((message) => (
-            <Message key={message.id} from={message.role}>
-              <MessageContent
-                className={
-                  message.role === "user"
-                    ? "group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground"
-                    : ""
-                }
-              >
-                {message.parts.map((part, i) => {
-                  if (part.type === "text")
-                    return <MessageResponse key={i}>{part.text}</MessageResponse>;
-                  if (part.type === "reasoning")
-                    return (
-                      <details key={i} className="text-xs text-muted-foreground">
-                        <summary>Thinking</summary>
-                        <MessageResponse>{part.text}</MessageResponse>
-                      </details>
-                    );
-                  if (part.type.startsWith("tool-") && "state" in part)
-                    return (
-                      <Tool key={i} defaultOpen={false}>
-                        <ToolHeader
-                          type={part.type as `tool-${string}`}
-                          state={part.state as "output-available"}
-                          title={part.type.replace("tool-", "").replaceAll("_", " ")}
-                        />
-                        <ToolContent>
-                          {"errorText" in part ? (
-                            <p>{String(part.errorText)}</p>
-                          ) : (
-                            <p>Prepared changes appear in the action review.</p>
-                          )}
-                        </ToolContent>
-                      </Tool>
-                    );
-                  return null;
-                })}
-              </MessageContent>
-            </Message>
-          ))}
-          {pendingUpload && (
-            <>
-              <Message from="user">
-                <MessageContent className="group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground">
-                  <p className="flex items-center gap-2 break-all">
-                    <Upload className="size-4 shrink-0" />
-                    {pendingUpload.fileName}
-                  </p>
-                </MessageContent>
-              </Message>
-              <Message from="assistant">
-                <MessageContent>
-                  <MessageResponse>
-                    {uploadReply ||
-                      (pendingUpload.stage === "country"
-                        ? "Which country are the local phone numbers in this file from?"
-                        : "What would you like to name this list?")}
-                  </MessageResponse>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setPendingUpload(null);
-                      setUploadReply("");
-                      setInput("");
-                      inputRef.current?.focus();
-                    }}
-                  >
-                    <X />
-                    Cancel upload
-                  </Button>
-                </MessageContent>
-              </Message>
-            </>
-          )}
-          {launchId && (
-            <AssistantCampaignLaunch
-              key={launchId}
-              campaignId={launchId}
-              onClose={() => setLaunchId(null)}
-              onLaunched={() => {
-                refresh();
-                setReportId(launchId);
-                toast.success("Campaign confirmed. Sending progress is shown in your report.");
-              }}
-            />
-          )}
-          {reportId && (
-            <AssistantCampaignReport
-              key={reportId}
-              campaignId={reportId}
-              onClose={() => setReportId(null)}
-            />
-          )}{" "}
-          {status === "submitted" && (
-            <p role="status" className="text-sm text-muted-foreground">
-              Working on your request…
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {error.message}
-            </p>
-          )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
-      {reviewOps.length > 0 && (
-        <section aria-label="Action review" className="border-t bg-muted/20">
-          <button
-            type="button"
-            aria-expanded={trayOpen}
-            onClick={() => setReviewOpen(!trayOpen)}
-            className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-5 py-2.5 text-left"
-          >
-            <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
-              <ClipboardList className="size-4 shrink-0 text-primary" />
-              Actions
-              <Badge variant="secondary" className="rounded-full px-2 text-[10px]">
-                {reviewOps.length}
-              </Badge>
-              {awaitingReview > 0 && (
-                <Badge className="rounded-full px-2 text-[10px]">
-                  {awaitingReview} to review
-                </Badge>
-              )}
-            </span>
-            <ChevronDown
-              className={`size-4 shrink-0 text-muted-foreground transition-transform ${trayOpen ? "rotate-180" : ""}`}
-            />
-          </button>
-          {trayOpen && (
-            <div className="mx-auto max-h-72 w-full max-w-3xl space-y-3 overflow-y-auto px-4 pb-4 md:px-5">
-              {reviewOps.map((op) => {
+  const visibleOps = operations.filter(
+    (op) => op.kind !== "campaign_launch" && (op.status === "pending" || op.status === "completed"),
+  );
+  const linkedIds = new Set(
+    messages.flatMap((m) =>
+      m.parts.map((p) => (p as { output?: { id?: string } }).output?.id).filter(Boolean),
+    ),
+  );
+  const orphanOps = visibleOps.filter((op) => !linkedIds.has(op.id)).slice(0, 6).reverse();
+  const renderOp = (op: (typeof operations)[number]) => {
             const args = op.arguments as Record<string, unknown>,
               out = op.outcome as Record<string, unknown> | null;
             const expired = Date.parse(op.expires_at) <= Date.now();
             return (
               <article
                 key={op.id}
-                className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-sm"
+                className="assistant-arrive space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="min-w-0 font-semibold">
@@ -642,11 +452,174 @@ export function AccountAssistant({
                 )}
               </article>
             );
-          })}
+  };
+  return (
+    <div className="assistant-chat assistant-arrive flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4">
+        <div className="flex items-center gap-3">
+          <Sparkles className="size-5 text-primary" />
+          <div>
+            <h1 className="font-display text-lg font-medium">Xellvio assistant</h1>
+            <p className="mt-0.5 text-xs text-muted-foreground">Business conversation</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {speaking ? (
+            <>
+              <Button
+                size="icon"
+                variant="outline"
+                aria-label={voice.muted ? "Unmute microphone" : "Mute microphone"}
+                onClick={() => voice.setMuted(!voice.muted)}
+              >
+                {voice.muted ? <MicOff /> : <Mic />}
+              </Button>
+              <Button variant="destructive" onClick={voice.stop}>
+                <PhoneOff />
+                End call
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              disabled={generating || !voiceAccess?.available}
+              onClick={voice.start}
+            >
+              <Mic />
+              {voiceAccess?.available ? "Talk" : "Voice · Coming soon"}
+            </Button>
+          )}
+        </div>
+      </header>
+      <audio ref={voice.audioRef} autoPlay playsInline />
+      {(speaking || voice.error) && (
+        <div className="border-b bg-muted px-5 py-3 text-sm">
+          <p>{voice.error || `${voice.status === "connected" ? "Listening" : voice.status}…`}</p>
+          <p className="mt-1 text-muted-foreground">{caption}</p>
+          {voice.playbackBlocked && <Button onClick={voice.resumePlayback}>Resume audio</Button>}
+        </div>
+      )}
+      <Conversation className="min-h-64 flex-1">
+        <ConversationContent className="mx-auto w-full max-w-3xl space-y-6 p-5">
+          {messages.length === 0 && (
+            <div className="assistant-arrive py-10 md:py-16">
+              <AssistantMark />
+              <h2 className="mt-6 font-display text-3xl font-medium">What needs doing today?</h2>
             </div>
           )}
-        </section>
-      )}
+          {messages.map((message) => (
+            <Message key={message.id} from={message.role}>
+              <MessageContent
+                className={
+                  message.role === "user"
+                    ? "group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground"
+                    : ""
+                }
+              >
+                {message.parts.map((part, i) => {
+                  if (part.type === "text")
+                    return <MessageResponse key={i}>{part.text}</MessageResponse>;
+                  if (part.type === "reasoning")
+                    return (
+                      <details key={i} className="text-xs text-muted-foreground">
+                        <summary>Thinking</summary>
+                        <MessageResponse>{part.text}</MessageResponse>
+                      </details>
+                    );
+                  if (part.type.startsWith("tool-") && "state" in part) {
+                    const outId = (part as { output?: { id?: string } }).output?.id;
+                    const linked = outId ? visibleOps.find((o) => o.id === outId) : undefined;
+                    if (linked) return <div key={i} className="mt-3">{renderOp(linked)}</div>;
+                    return (
+                      <Tool key={i} defaultOpen={false}>
+                        <ToolHeader
+                          type={part.type as `tool-${string}`}
+                          state={part.state as "output-available"}
+                          title={part.type.replace("tool-", "").replaceAll("_", " ")}
+                        />
+                        <ToolContent>
+                          {"errorText" in part ? <p>{String(part.errorText)}</p> : <p>Done.</p>}
+                        </ToolContent>
+                      </Tool>
+                    );
+                  }
+                  return null;
+                })}
+              </MessageContent>
+            </Message>
+          ))}
+          {pendingUpload && (
+            <>
+              <Message from="user">
+                <MessageContent className="group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground">
+                  <p className="flex items-center gap-2 break-all">
+                    <Upload className="size-4 shrink-0" />
+                    {pendingUpload.fileName}
+                  </p>
+                </MessageContent>
+              </Message>
+              <Message from="assistant">
+                <MessageContent>
+                  <MessageResponse>
+                    {uploadReply ||
+                      (pendingUpload.stage === "country"
+                        ? "Which country are the local phone numbers in this file from?"
+                        : "What would you like to name this list?")}
+                  </MessageResponse>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setPendingUpload(null);
+                      setUploadReply("");
+                      setInput("");
+                      inputRef.current?.focus();
+                    }}
+                  >
+                    <X />
+                    Cancel upload
+                  </Button>
+                </MessageContent>
+              </Message>
+            </>
+          )}
+          {orphanOps.map((op) => (
+            <Message key={op.id} from="assistant">
+              <MessageContent className="w-full">{renderOp(op)}</MessageContent>
+            </Message>
+          ))}
+          {launchId && (
+            <AssistantCampaignLaunch
+              key={launchId}
+              campaignId={launchId}
+              onClose={() => setLaunchId(null)}
+              onLaunched={() => {
+                refresh();
+                setReportId(launchId);
+                toast.success("Campaign confirmed. Sending progress is shown in your report.");
+              }}
+            />
+          )}
+          {reportId && (
+            <AssistantCampaignReport
+              key={reportId}
+              campaignId={reportId}
+              onClose={() => setReportId(null)}
+            />
+          )}{" "}
+          {status === "submitted" && (
+            <p role="status" className="text-sm text-muted-foreground">
+              Working on your request…
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error.message}
+            </p>
+          )}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
       <footer className="mx-auto w-full max-w-3xl p-4 md:p-5">
         <input
           hidden
