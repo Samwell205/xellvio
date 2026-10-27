@@ -170,10 +170,14 @@ export const myTicketAlertCount = createServerFn({ method: "GET" })
       .eq("account_id", a.accountId)
       .in("status", ["waiting", "resolved"])
       .limit(200);
-    return (data ?? []).filter((t: any) =>
+    const awaiting = (data ?? []).filter((t: any) =>
       t.status === "resolved" ||
-      (t.last_admin_reply_at && (!t.last_customer_reply_at || t.last_admin_reply_at > t.last_customer_reply_at)),
-    ).length;
+      (t.last_admin_reply_at && (!t.last_customer_reply_at || t.last_admin_reply_at > t.last_customer_reply_at)));
+    const latestAt = awaiting.reduce((m: string | null, t: any) => {
+      const at = t.last_admin_reply_at ?? null;
+      return at && (!m || at > m) ? at : m;
+    }, null);
+    return { count: awaiting.length, latestAt };
   });
 
 // ---------- Admin ----------
@@ -192,14 +196,22 @@ export const adminListTickets = createServerFn({ method: "GET" })
     return { rows: rows ?? [], counts: Object.fromEntries(counts) as Record<string, number> };
   });
 
-/** Admin badge: open tickets needing a reply. */
+/** Admin badge: open tickets needing a reply, plus the newest customer activity for popup alerts. */
 export const adminOpenTicketCount = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await ensureAdmin(context.supabase);
     const sb = await db();
-    const { count } = await sb.from("support_tickets").select("id", { count: "exact", head: true }).eq("status", "open");
-    return count ?? 0;
+    const { data } = await sb.from("support_tickets")
+      .select("created_at,last_customer_reply_at")
+      .eq("status", "open")
+      .limit(200);
+    const rows = data ?? [];
+    const latestAt = rows.reduce((m: string | null, t: any) => {
+      const at = t.last_customer_reply_at ?? t.created_at ?? null;
+      return at && (!m || at > m) ? at : m;
+    }, null);
+    return { count: rows.length, latestAt };
   });
 
 export const adminGetTicket = createServerFn({ method: "GET" })
