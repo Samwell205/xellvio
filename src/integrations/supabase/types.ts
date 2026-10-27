@@ -6493,6 +6493,9 @@ export type Database = {
           account_id: string | null
           closed_at: string | null
           created_at: string
+          feedback_at: string | null
+          feedback_rating: number | null
+          feedback_text: string | null
           id: string
           last_admin_reply_at: string | null
           last_customer_reply_at: string | null
@@ -6502,6 +6505,7 @@ export type Database = {
           reminder_sent_at: string | null
           requester_email: string
           requester_name: string | null
+          resolved_at: string | null
           source: string
           status: string
           subject: string
@@ -6513,6 +6517,9 @@ export type Database = {
           account_id?: string | null
           closed_at?: string | null
           created_at?: string
+          feedback_at?: string | null
+          feedback_rating?: number | null
+          feedback_text?: string | null
           id?: string
           last_admin_reply_at?: string | null
           last_customer_reply_at?: string | null
@@ -6522,6 +6529,7 @@ export type Database = {
           reminder_sent_at?: string | null
           requester_email: string
           requester_name?: string | null
+          resolved_at?: string | null
           source?: string
           status?: string
           subject?: string
@@ -6533,6 +6541,9 @@ export type Database = {
           account_id?: string | null
           closed_at?: string | null
           created_at?: string
+          feedback_at?: string | null
+          feedback_rating?: number | null
+          feedback_text?: string | null
           id?: string
           last_admin_reply_at?: string | null
           last_customer_reply_at?: string | null
@@ -6542,6 +6553,7 @@ export type Database = {
           reminder_sent_at?: string | null
           requester_email?: string
           requester_name?: string | null
+          resolved_at?: string | null
           source?: string
           status?: string
           subject?: string
