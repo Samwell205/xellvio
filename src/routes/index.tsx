@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { faqSchema, pageHead, softwareApplicationSchema, websiteSchema } from "@/lib/seo";
 import heroLoopAsset from "@/assets/xellvio-hero-loop.mp4.asset.json";
+import heroLoopWebmAsset from "@/assets/xellvio-hero-loop.webm.asset.json";
 
 const CHANNELS = [
   {
