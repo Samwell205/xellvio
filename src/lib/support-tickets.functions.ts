@@ -129,20 +129,70 @@ export const replyMyTicket = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---------- Tenant: resolution confirmation + unread badge ----------
+export const confirmMyTicketResolved = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), ...feedbackInput }).parse(d))
+  .handler(async ({ data, context }) => {
+    const a = await acting(context.userId);
+    const sb = await db();
+    const { data: t } = await sb.from("support_tickets").select("id").eq("id", data.id).eq("account_id", a.accountId).maybeSingle();
+    if (!t) throw new Error("Ticket not found");
+    const { customerConfirmResolved } = await import("./support-tickets.server");
+    await customerConfirmResolved(t.id, data.rating ?? null, data.feedback || null);
+    return { ok: true };
+  });
+
+export const reopenMyResolvedTicket = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const a = await acting(context.userId);
+    const sb = await db();
+    const { data: t } = await sb.from("support_tickets").select("id").eq("id", data.id).eq("account_id", a.accountId).maybeSingle();
+    if (!t) throw new Error("Ticket not found");
+    const { customerReopenResolved } = await import("./support-tickets.server");
+    await customerReopenResolved(t.id);
+    return { ok: true };
+  });
+
+/** Tenant badge: tickets waiting on the customer (admin replied or resolved, no customer reply yet). */
+export const myTicketAlertCount = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const a = await acting(context.userId);
+    const sb = await db();
+    const { count } = await sb.from("support_tickets")
+      .select("id", { count: "exact", head: true })
+      .eq("account_id", a.accountId)
+      .or("status.eq.resolved,and(status.eq.waiting,last_admin_reply_at.gt.last_customer_reply_at)");
+    return count ?? 0;
+  });
+
 // ---------- Admin ----------
 export const adminListTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ status: z.enum(["open", "waiting", "closed"]) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ status: z.enum(["open", "waiting", "resolved", "closed"]) }).parse(d))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase);
     const sb = await db();
     const [{ data: rows }, counts] = await Promise.all([
       sb.from("support_tickets").select("id,number,subject,status,requester_email,requester_name,account_id,updated_at,created_at")
         .eq("status", data.status).order("updated_at", { ascending: false }).limit(200),
-      Promise.all(["open", "waiting", "closed"].map((s) =>
+      Promise.all(["open", "waiting", "resolved", "closed"].map((s) =>
         sb.from("support_tickets").select("id", { count: "exact", head: true }).eq("status", s).then((r: any) => [s, r.count ?? 0]))),
     ]);
     return { rows: rows ?? [], counts: Object.fromEntries(counts) as Record<string, number> };
+  });
+
+/** Admin badge: open tickets needing a reply. */
+export const adminOpenTicketCount = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase);
+    const sb = await db();
+    const { count } = await sb.from("support_tickets").select("id", { count: "exact", head: true }).eq("status", "open");
+    return count ?? 0;
   });
 
 export const adminGetTicket = createServerFn({ method: "GET" })
