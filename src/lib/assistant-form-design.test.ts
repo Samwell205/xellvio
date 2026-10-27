@@ -18,10 +18,10 @@ describe("assistant form design proposals", () => {
     expect(parsed.formId ?? null).toBeNull();
   });
 
-  it("requires consent text to always be present", () => {
-    const parsed = designFormSchema.parse({ ...base, consentText: "  " });
+  it("defaults consent text when omitted and rejects blank consent", () => {
+    const parsed = designFormSchema.parse(base);
     expect(parsed.consentText).toBe(DEFAULT_FORM_CONSENT);
-    expect(designFormSchema.safeParse({ ...base, consentText: "" }).success).toBe(true);
+    expect(designFormSchema.safeParse({ ...base, consentText: "  " }).success).toBe(false);
   });
 
   it.each(["purple", "7C3AED", "#12345", "rgb(1,2,3)"])("rejects non-hex accent %s", accent => {
