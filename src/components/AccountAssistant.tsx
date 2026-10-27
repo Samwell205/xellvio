@@ -315,11 +315,46 @@ export function AccountAssistant({
               </p>
             </div>
             <p className="text-xs text-muted-foreground">Consent: {String(args.consentText)}</p>
+            {busy === op.id && (
+              <p role="status" className="animate-pulse text-sm text-muted-foreground">
+                Designing your form and creating pictures… this can take up to a minute.
+              </p>
+            )}
             {op.status === "completed" && (
               <p role="status" className="text-sm">
                 Saved. Open{" "}
                 <Link to="/app/signup-forms" className="font-medium text-primary underline">
                   Forms
+                </Link>{" "}
+                to review and publish it.
+              </p>
+            )}
+          </div>
+        ) : op.kind === "website_draft" ? (
+          <div className="space-y-2 text-sm">
+            <p className="text-xs text-muted-foreground">
+              New website · {(args.pages as string[] | undefined)?.length ?? 1} pages · not published yet
+            </p>
+            <p className="whitespace-pre-wrap break-words rounded-md border border-border bg-muted/30 p-3">
+              {String(args.brief)}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {((args.pages as string[] | undefined) ?? []).map((p) => (
+                <Badge key={p} variant="secondary" className="rounded-full">
+                  {p}
+                </Badge>
+              ))}
+            </div>
+            {busy === op.id && (
+              <p role="status" className="animate-pulse text-sm text-muted-foreground">
+                Designing your pages and creating pictures… this can take a minute or two.
+              </p>
+            )}
+            {op.status === "completed" && (
+              <p role="status" className="text-sm">
+                Saved. Open{" "}
+                <Link to="/app/landing-pages" className="font-medium text-primary underline">
+                  Landing pages
                 </Link>{" "}
                 to review and publish it.
               </p>
@@ -384,7 +419,9 @@ export function AccountAssistant({
                       ? args.formId
                         ? "Save changes"
                         : "Create form"
-                      : "Save draft"}
+                      : op.kind === "website_draft"
+                        ? "Build website"
+                        : "Save draft"}
               </Button>
               <Button
                 variant="ghost"
