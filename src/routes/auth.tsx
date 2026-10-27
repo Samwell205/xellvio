@@ -11,7 +11,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { withAuthRetry, friendlyAuthError, clearStaleSession } from "@/lib/auth-retry";
 import { pageHead } from "@/lib/seo";
 import { trackProduct } from "@/lib/growth/track";
-import { authCooldownSeconds, EMAIL_CONFIRMATION_MESSAGE, signupNeedsConfirmation } from "@/lib/signup-flow";
+import { authCooldownSeconds, EMAIL_CONFIRMATION_MESSAGE, EXISTING_ACCOUNT_MESSAGE, signupEmailAlreadyRegistered, signupNeedsConfirmation } from "@/lib/signup-flow";
 
 export const Route = createFileRoute("/auth")({
   head: () =>
@@ -114,6 +114,13 @@ function AuthPage() {
             },
           });
         if (signUpError) throw signUpError;
+        if (signupEmailAlreadyRegistered(signupData)) {
+          setMode("signin");
+          setPassword("");
+          setConfirmPassword("");
+          setErrorMsg(EXISTING_ACCOUNT_MESSAGE);
+          return;
+        }
         if (signupNeedsConfirmation(signupData)) {
           setConfirmationEmail(email.trim());
           setRetryAt(Date.now() + 60_000);

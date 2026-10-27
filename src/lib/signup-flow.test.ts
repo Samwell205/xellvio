@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { authCooldownSeconds, signupNeedsConfirmation } from "./signup-flow";
+import { authCooldownSeconds, signupEmailAlreadyRegistered, signupNeedsConfirmation } from "./signup-flow";
+
+describe("existing-account signup", () => {
+  it("detects an already-registered email (no identities, no session, no email sent)", () => {
+    expect(signupEmailAlreadyRegistered({ session: null, user: { identities: [] } })).toBe(true);
+  });
+  it("treats a genuinely new signup as awaiting a code", () => {
+    expect(signupEmailAlreadyRegistered({ session: null, user: { identities: [{ id: "x" }] } })).toBe(false);
+  });
+});
 
 describe("signup confirmation and retry guards", () => {
   it("requires email confirmation when signup returns no session", () => {
