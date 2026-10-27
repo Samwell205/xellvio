@@ -47,6 +47,7 @@ import { AssistantCampaignLaunch } from "@/components/AssistantCampaignLaunch";
 import { AssistantCampaignReport } from "@/components/AssistantCampaignReport";
 import { canSendAssistantCampaign, assistantCampaignStatus } from "@/lib/assistant-campaign-status";
 import { AssistantMark } from "@/components/AssistantHome";
+import { assistantMessageActionIds } from "@/lib/assistant-message-actions";
 export { AssistantThreads } from "@/components/AssistantHome";
 export function AccountAssistant({
   threadId,
@@ -217,6 +218,7 @@ export function AccountAssistant({
         setUploadReply("");
         setInput("");
         await sendMessage({
+          metadata: { uploadOperationId: result.id },
           text: `I uploaded ${fileName} and named the list ${text}. The file inspection found ${args.valid} unique valid numbers, ${args.invalid} invalid rows and ${args.duplicates} duplicates. The import proposal is awaiting my on-screen opt-in confirmation. Do not treat these contacts as imported yet.`,
         });
       } catch (e) {
@@ -241,12 +243,7 @@ export function AccountAssistant({
   const visibleOps = operations.filter(
     (op) => op.kind !== "campaign_launch" && (op.status === "pending" || op.status === "completed"),
   );
-  const linkedIds = new Set(
-    messages.flatMap((m) =>
-      m.parts.map((p) => (p as { output?: { id?: string } }).output?.id).filter(Boolean),
-    ),
-  );
-  const orphanOps = visibleOps.filter((op) => !linkedIds.has(op.id)).slice(0, 6).reverse();
+  const messageActions = assistantMessageActionIds(messages);
   const renderOp = (op: (typeof operations)[number]) => {
             const args = op.arguments as Record<string, unknown>,
               out = op.outcome as Record<string, unknown> | null;
@@ -527,9 +524,6 @@ export function AccountAssistant({
                       </details>
                     );
                   if (part.type.startsWith("tool-") && "state" in part) {
-                    const outId = (part as { output?: { id?: string } }).output?.id;
-                    const linked = outId ? visibleOps.find((o) => o.id === outId) : undefined;
-                    if (linked) return <div key={i} className="mt-3">{renderOp(linked)}</div>;
                     return (
                       <Tool key={i} defaultOpen={false}>
                         <ToolHeader
@@ -544,6 +538,10 @@ export function AccountAssistant({
                     );
                   }
                   return null;
+                })}
+                {messageActions.get(message.id)?.map(id => {
+                  const op = visibleOps.find(action => action.id === id);
+                  return op ? <div key={id} className="mt-3">{renderOp(op)}</div> : null;
                 })}
               </MessageContent>
             </Message>
@@ -583,11 +581,6 @@ export function AccountAssistant({
               </Message>
             </>
           )}
-          {orphanOps.map((op) => (
-            <Message key={op.id} from="assistant">
-              <MessageContent className="w-full">{renderOp(op)}</MessageContent>
-            </Message>
-          ))}
           {launchId && (
             <AssistantCampaignLaunch
               key={launchId}
