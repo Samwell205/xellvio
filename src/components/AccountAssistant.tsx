@@ -183,7 +183,9 @@ export function AccountAssistant({
             await sendMessage({
               text: `${text}\n\n(Context: I attached ${pendingUpload.fileName}; the upload is waiting for me to say which country the local numbers are from.)`,
             });
-            setUploadReply("When you're ready, tell me which country the local numbers are from, e.g. United States.");
+            setUploadReply(
+              "When you're ready, tell me which country the local numbers are from, e.g. United States.",
+            );
             inputRef.current?.focus();
             return;
           }
@@ -245,210 +247,199 @@ export function AccountAssistant({
   );
   const messageActions = assistantMessageActionIds(messages);
   const renderOp = (op: (typeof operations)[number]) => {
-            const args = op.arguments as Record<string, unknown>,
-              out = op.outcome as Record<string, unknown> | null;
-            const expired = Date.parse(op.expires_at) <= Date.now();
-            return (
-              <article
-                key={op.id}
-                className="assistant-arrive space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+    const args = op.arguments as Record<string, unknown>,
+      out = op.outcome as Record<string, unknown> | null;
+    const expired = Date.parse(op.expires_at) <= Date.now();
+    return (
+      <article
+        key={op.id}
+        className="assistant-arrive space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="min-w-0 font-semibold">
+            {String(op.campaign?.name ?? args.name ?? "Action")} ·{" "}
+            {op.status === "completed"
+              ? op.kind === "campaign_draft"
+                ? assistantCampaignStatus(op.campaign?.status)
+                : "Saved"
+              : expired
+                ? "Expired"
+                : "Review"}
+          </h2>
+          <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">
+            {op.kind === "campaign_draft" && op.status === "completed"
+              ? "campaign"
+              : op.kind.replaceAll("_", " ")}
+          </Badge>
+        </div>
+        {op.kind === "contact_import" ? (
+          <p className="text-sm">
+            {String(args.valid)} valid · {String(args.invalid)} invalid · {String(args.duplicates)}{" "}
+            duplicates
+          </p>
+        ) : op.kind === "campaign_draft" ? (
+          <>
+            <p className="text-sm text-muted-foreground">{String(args.listName)}</p>
+            <p className="whitespace-pre-wrap break-words text-sm">
+              {String(op.campaign?.message_body ?? args.body)}
+            </p>
+            {op.status === "completed" && !canSendAssistantCampaign(op.campaign?.status) && (
+              <p role="status" className="text-sm">
+                {op.campaign?.status === "sent"
+                  ? "Sending is complete. Open the report below for confirmed delivery results."
+                  : "This campaign is no longer a draft. Check its current progress below."}
+              </p>
+            )}
+          </>
+        ) : op.kind === "form_draft" ? (
+          <div className="space-y-2 text-sm">
+            <p className="text-xs text-muted-foreground">
+              {args.formId ? "Restyles your existing form" : "New signup form"} · not published yet
+            </p>
+            <div className="rounded-md border border-border bg-muted/30 p-3">
+              <p className="font-semibold">{String(args.headline)}</p>
+              {Boolean(args.description) && (
+                <p className="mt-1 text-muted-foreground">{String(args.description)}</p>
+              )}
+              <p className="mt-2 inline-flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="inline-block size-3 rounded-full border border-border"
+                  style={{ backgroundColor: String(args.accent) }}
+                />
+                <span className="font-medium">{String(args.ctaLabel)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {String(args.theme)} theme
+                  {args.collectName ? " · collects name" : ""}
+                </span>
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">Consent: {String(args.consentText)}</p>
+            {op.status === "completed" && (
+              <p role="status" className="text-sm">
+                Saved. Open{" "}
+                <Link to="/app/signup-forms" className="font-medium text-primary underline">
+                  Forms
+                </Link>{" "}
+                to review and publish it.
+              </p>
+            )}
+          </div>
+        ) : op.kind === "account_edit" ? (
+          <div className="space-y-2 text-sm">
+            <p className="font-medium">{String(args.targetName)}</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <p className="text-xs text-muted-foreground">Current</p>
+                <p className="whitespace-pre-wrap break-words">
+                  {String(args.before ?? "Not set")}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Proposed</p>
+                <p className="whitespace-pre-wrap break-words">{String(args.value)}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="whitespace-pre-wrap text-sm">
+            {String((args.config as Record<string, unknown>)?.agentInstructions ?? "")}
+          </p>
+        )}
+        {op.status === "pending" && !expired && (
+          <>
+            {op.kind === "contact_import" && (
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={consents[op.id] ?? false}
+                  onCheckedChange={(v) => setConsents((c) => ({ ...c, [op.id]: v === true }))}
+                />
+                These contacts explicitly opted in to receive my SMS.
+              </label>
+            )}
+            <div className="flex gap-2">
+              <Button
+                disabled={busy !== null || (op.kind === "contact_import" && !consents[op.id])}
+                onClick={async () => {
+                  setBusy(op.id);
+                  try {
+                    await confirm({
+                      data: { id: op.id, consent: consents[op.id] ?? false },
+                    });
+                    toast.success("Saved successfully");
+                    refresh();
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Could not save.");
+                  } finally {
+                    setBusy(null);
+                  }
+                }}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="min-w-0 font-semibold">
-                    {String(op.campaign?.name ?? args.name ?? "Action")} ·{" "}
-                    {op.status === "completed"
-                      ? op.kind === "campaign_draft"
-                        ? assistantCampaignStatus(op.campaign?.status)
-                        : "Saved"
-                      : expired
-                        ? "Expired"
-                        : "Review"}
-                  </h2>
-                  <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">
-                    {op.kind === "campaign_draft" && op.status === "completed"
-                      ? "campaign"
-                      : op.kind.replaceAll("_", " ")}
-                  </Badge>
-                </div>
-                {op.kind === "contact_import" ? (
-                  <p className="text-sm">
-                    {String(args.valid)} valid · {String(args.invalid)} invalid ·{" "}
-                    {String(args.duplicates)} duplicates
-                  </p>
-                ) : op.kind === "campaign_draft" ? (
-                  <>
-                    <p className="text-sm text-muted-foreground">{String(args.listName)}</p>
-                    <p className="whitespace-pre-wrap break-words text-sm">
-                      {String(op.campaign?.message_body ?? args.body)}
-                    </p>
-                    {op.status === "completed" &&
-                      !canSendAssistantCampaign(op.campaign?.status) && (
-                        <p role="status" className="text-sm">
-                          {op.campaign?.status === "sent"
-                            ? "Sending is complete. Open the report below for confirmed delivery results."
-                            : "This campaign is no longer a draft. Check its current progress below."}
-                        </p>
-                      )}
-                  </>
-                ) : op.kind === "form_draft" ? (
-                  <div className="space-y-2 text-sm">
-                    <p className="text-xs text-muted-foreground">
-                      {args.formId ? "Restyles your existing form" : "New signup form"} · not
-                      published yet
-                    </p>
-                    <div className="rounded-md border border-border bg-muted/30 p-3">
-                      <p className="font-semibold">{String(args.headline)}</p>
-                      {Boolean(args.description) && (
-                        <p className="mt-1 text-muted-foreground">{String(args.description)}</p>
-                      )}
-                      <p className="mt-2 inline-flex items-center gap-2">
-                        <span
-                          aria-hidden
-                          className="inline-block size-3 rounded-full border border-border"
-                          style={{ backgroundColor: String(args.accent) }}
-                        />
-                        <span className="font-medium">{String(args.ctaLabel)}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {String(args.theme)} theme
-                          {args.collectName ? " · collects name" : ""}
-                        </span>
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Consent: {String(args.consentText)}
-                    </p>
-                    {op.status === "completed" && (
-                      <p role="status" className="text-sm">
-                        Saved. Open{" "}
-                        <Link to="/app/signup-forms" className="font-medium text-primary underline">
-                          Forms
-                        </Link>{" "}
-                        to review and publish it.
-                      </p>
-                    )}
-                  </div>
-                ) : op.kind === "account_edit" ? (
-                  <div className="space-y-2 text-sm">
-                    <p className="font-medium">{String(args.targetName)}</p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Current</p>
-                        <p className="whitespace-pre-wrap break-words">
-                          {String(args.before ?? "Not set")}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Proposed</p>
-                        <p className="whitespace-pre-wrap break-words">{String(args.value)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="whitespace-pre-wrap text-sm">
-                    {String((args.config as Record<string, unknown>)?.agentInstructions ?? "")}
-                  </p>
-                )}
-                {op.status === "pending" && !expired && (
-                  <>
-                    {op.kind === "contact_import" && (
-                      <label className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={consents[op.id] ?? false}
-                          onCheckedChange={(v) =>
-                            setConsents((c) => ({ ...c, [op.id]: v === true }))
-                          }
-                        />
-                        These contacts explicitly opted in to receive my SMS.
-                      </label>
-                    )}
-                    <div className="flex gap-2">
-                      <Button
-                        disabled={
-                          busy !== null || (op.kind === "contact_import" && !consents[op.id])
-                        }
-                        onClick={async () => {
-                          setBusy(op.id);
-                          try {
-                            await confirm({
-                              data: { id: op.id, consent: consents[op.id] ?? false },
-                            });
-                            toast.success("Saved successfully");
-                            refresh();
-                          } catch (e) {
-                            toast.error(e instanceof Error ? e.message : "Could not save.");
-                          } finally {
-                            setBusy(null);
-                          }
-                        }}
-                      >
-                        <Check />
-                        {op.kind === "contact_import"
-                          ? "Confirm import"
-                          : op.kind === "account_edit"
-                            ? "Confirm change"
-                            : op.kind === "form_draft"
-                              ? args.formId
-                                ? "Save changes"
-                                : "Create form"
-                              : "Save draft"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled={busy !== null}
-                        onClick={async () => {
-                          try {
-                            await cancel({ data: { id: op.id } });
-                            refresh();
-                          } catch (e) {
-                            toast.error(e instanceof Error ? e.message : "Could not cancel.");
-                          }
-                        }}
-                      >
-                        <X />
-                        Cancel
-                      </Button>
-                    </div>
-                  </>
-                )}
-                {op.status === "completed" && Boolean(out?.campaignId) && (
-                  <div className="flex flex-wrap gap-2">
-                    {canSendAssistantCampaign(op.campaign?.status) ? (
-                      <>
-                        <Button
-                          disabled={generating || speaking || fileBusy || !!pendingUpload}
-                          onClick={() => setLaunchId(String(out?.campaignId))}
-                        >
-                          <Send />
-                          Send campaign
-                        </Button>
-                        <Button variant="outline" asChild>
-                          <Link to="/app/campaigns/new" search={{ id: String(out?.campaignId) }}>
-                            Review / edit
-                            <ArrowUpRight />
-                          </Link>
-                        </Button>
-                      </>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        onClick={() => setReportId(String(out?.campaignId))}
-                      >
-                        View delivery report
-                        <ArrowUpRight />
-                      </Button>
-                    )}
-                  </div>
-                )}
-                {op.status === "completed" && Boolean(out?.assistantId) && (
-                  <Button variant="outline" asChild>
-                    <Link to="/app/receptionist">
-                      Open assistant settings
-                      <ArrowUpRight />
-                    </Link>
-                  </Button>
-                )}
-              </article>
-            );
+                <Check />
+                {op.kind === "contact_import"
+                  ? "Confirm import"
+                  : op.kind === "account_edit"
+                    ? "Confirm change"
+                    : op.kind === "form_draft"
+                      ? args.formId
+                        ? "Save changes"
+                        : "Create form"
+                      : "Save draft"}
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={busy !== null}
+                onClick={async () => {
+                  try {
+                    await cancel({ data: { id: op.id } });
+                    refresh();
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Could not cancel.");
+                  }
+                }}
+              >
+                <X />
+                Cancel
+              </Button>
+            </div>
+          </>
+        )}
+        {op.status === "completed" && Boolean(out?.campaignId) && (
+          <div className="flex flex-wrap gap-2">
+            {canSendAssistantCampaign(op.campaign?.status) ? (
+              <>
+                <Button
+                  disabled={generating || speaking || fileBusy || !!pendingUpload}
+                  onClick={() => setLaunchId(String(out?.campaignId))}
+                >
+                  <Send />
+                  Send campaign
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link to="/app/campaigns/new" search={{ id: String(out?.campaignId) }}>
+                    Review / edit
+                    <ArrowUpRight />
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={() => setReportId(String(out?.campaignId))}>
+                View delivery report
+                <ArrowUpRight />
+              </Button>
+            )}
+          </div>
+        )}
+        {op.status === "completed" && Boolean(out?.assistantId) && (
+          <Button variant="outline" asChild>
+            <Link to="/app/receptionist">
+              Open assistant settings
+              <ArrowUpRight />
+            </Link>
+          </Button>
+        )}
+      </article>
+    );
   };
   return (
     <div className="assistant-chat assistant-arrive flex min-h-0 min-w-0 flex-1 flex-col">
@@ -539,9 +530,13 @@ export function AccountAssistant({
                   }
                   return null;
                 })}
-                {messageActions.get(message.id)?.map(id => {
-                  const op = visibleOps.find(action => action.id === id);
-                  return op ? <div key={id} className="mt-3">{renderOp(op)}</div> : null;
+                {messageActions.get(message.id)?.map((id) => {
+                  const op = visibleOps.find((action) => action.id === id);
+                  return op ? (
+                    <div key={id} className="mt-3">
+                      {renderOp(op)}
+                    </div>
+                  ) : null;
                 })}
               </MessageContent>
             </Message>
@@ -657,21 +652,21 @@ export function AccountAssistant({
                 type="button"
                 variant="ghost"
                 size="sm"
-              disabled={
-                generating || speaking || fileBusy || !!pendingUpload || !voiceAccess?.available
-              }
-              title={
-                voiceAccess?.available
-                  ? "Use your microphone to explain your request"
-                  : "Voice is coming soon; currently limited to the verified pilot account"
-              }
-              aria-label={
-                voiceAccess?.available ? "Voice instructions" : "Voice instructions coming soon"
-              }
-              onClick={voice.start}
-            >
-              <Mic />
-              {voiceAccess?.available ? "Voice instructions" : "Voice · Coming soon"}
+                disabled={
+                  generating || speaking || fileBusy || !!pendingUpload || !voiceAccess?.available
+                }
+                title={
+                  voiceAccess?.available
+                    ? "Use your microphone to explain your request"
+                    : "Voice is coming soon; currently limited to the verified pilot account"
+                }
+                aria-label={
+                  voiceAccess?.available ? "Voice instructions" : "Voice instructions coming soon"
+                }
+                onClick={voice.start}
+              >
+                <Mic />
+                {voiceAccess?.available ? "Voice instructions" : "Voice · Coming soon"}
               </Button>
             </div>
             <PromptInputSubmit
