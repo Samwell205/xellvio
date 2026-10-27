@@ -162,11 +162,17 @@ export const myTicketAlertCount = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const a = await acting(context.userId);
     const sb = await db();
-    const { count } = await sb.from("support_tickets")
-      .select("id", { count: "exact", head: true })
+    // Column-to-column comparison isn't possible in a filter, so read the bounded
+    // candidate set and count awaiting-customer tickets here.
+    const { data } = await sb.from("support_tickets")
+      .select("status,last_admin_reply_at,last_customer_reply_at")
       .eq("account_id", a.accountId)
-      .or("status.eq.resolved,and(status.eq.waiting,last_admin_reply_at.gt.last_customer_reply_at)");
-    return count ?? 0;
+      .in("status", ["waiting", "resolved"])
+      .limit(200);
+    return (data ?? []).filter((t: any) =>
+      t.status === "resolved" ||
+      (t.last_admin_reply_at && (!t.last_customer_reply_at || t.last_admin_reply_at > t.last_customer_reply_at)),
+    ).length;
   });
 
 // ---------- Admin ----------
