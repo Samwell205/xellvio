@@ -14,6 +14,8 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getMySession } from "@/lib/session.functions";
 import { getInboxUnreadCount } from "@/lib/inbox.functions";
+import { myTicketAlertCount } from "@/lib/support-tickets.functions";
+import { useTabBadge } from "@/lib/use-tab-badge";
 import { useServerFn } from "@tanstack/react-start";
 import type { PermissionKey } from "@/lib/team-permissions";
 
@@ -128,6 +130,15 @@ export function AppSidebar() {
     refetchInterval: 20_000,
   });
   const unread = pathname.startsWith("/app/inbox") ? 0 : (inboxQ.data?.count ?? 0);
+  const ticketAlertFn = useServerFn(myTicketAlertCount);
+  const ticketQ = useQuery({
+    queryKey: ["support-alerts", acctKey],
+    queryFn: () => ticketAlertFn(),
+    enabled: !!session,
+    refetchInterval: 30_000,
+  });
+  const ticketAlerts = pathname.startsWith("/app/support") ? 0 : (ticketQ.data ?? 0);
+  useTabBadge(ticketAlerts);
   const visibleSettings = settingsChildren.filter(canSee);
   const settingsActive = visibleSettings.some((c) => isActive(c.url, c.exact));
   const [settingsOpen, setSettingsOpen] = useState(settingsActive);
@@ -254,12 +265,21 @@ export function AppSidebar() {
               <SidebarMenu className="gap-1">
                 {visibleAdvanced.filter((e) => !isGroup(e)).map((e) => {
                   const it = e as Item;
+                  const showTicketBadge = it.url === "/app/support" && ticketAlerts > 0;
                   return (
                     <SidebarMenuItem key={it.url}>
                       <SidebarMenuButton asChild isActive={isActive(it.url, it.exact)} className="h-10 px-3 text-[0.9375rem] rounded-lg">
                         <Link to={it.url} className="flex items-center gap-3">
                           <it.icon className="size-[1.125rem] shrink-0" />
                           {!collapsed && <span className="truncate">{it.title}</span>}
+                          {showTicketBadge && !collapsed && (
+                            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+                              {ticketAlerts > 99 ? "99+" : ticketAlerts}
+                            </span>
+                          )}
+                          {showTicketBadge && collapsed && (
+                            <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

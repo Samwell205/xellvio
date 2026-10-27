@@ -16,7 +16,7 @@ async function acting(userId: string) {
   return resolveActingAccount(userId);
 }
 
-const PUBLIC_TICKET = "id,number,subject,status,created_at,closed_at,requester_name";
+const PUBLIC_TICKET = "id,number,subject,status,created_at,closed_at,resolved_at,feedback_rating,feedback_text,requester_name";
 const token = z.string().regex(/^[a-f0-9]{48}$/);
 const body = z.string().trim().min(1).max(8000);
 const files = z.array(z.object({ name: z.string().min(1).max(200), type: z.string().max(120), data: z.string().max(14_000_000) })).max(5).default([]);
@@ -47,6 +47,34 @@ export const replyByToken = createServerFn({ method: "POST" })
     if (!t) throw new Error("Ticket not found");
     const { customerReply } = await import("./support-tickets.server");
     await customerReply(t.id, data.body, "web", data.files);
+    return { ok: true };
+  });
+
+export const ticketFeedbackSchema = z.object({
+  rating: z.number().int().min(1).max(5).nullish(),
+  feedback: z.string().trim().max(2000).nullish(),
+});
+const feedbackInput = ticketFeedbackSchema.shape;
+
+export const confirmResolvedByToken = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token, ...feedbackInput }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = await db();
+    const { data: t } = await sb.from("support_tickets").select("id").eq("access_token", data.token).maybeSingle();
+    if (!t) throw new Error("Ticket not found");
+    const { customerConfirmResolved } = await import("./support-tickets.server");
+    await customerConfirmResolved(t.id, data.rating ?? null, data.feedback || null);
+    return { ok: true };
+  });
+
+export const reopenResolvedByToken = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = await db();
+    const { data: t } = await sb.from("support_tickets").select("id").eq("access_token", data.token).maybeSingle();
+    if (!t) throw new Error("Ticket not found");
+    const { customerReopenResolved } = await import("./support-tickets.server");
+    await customerReopenResolved(t.id);
     return { ok: true };
   });
 
@@ -102,20 +130,76 @@ export const replyMyTicket = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ---------- Tenant: resolution confirmation + unread badge ----------
+export const confirmMyTicketResolved = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), ...feedbackInput }).parse(d))
+  .handler(async ({ data, context }) => {
+    const a = await acting(context.userId);
+    const sb = await db();
+    const { data: t } = await sb.from("support_tickets").select("id").eq("id", data.id).eq("account_id", a.accountId).maybeSingle();
+    if (!t) throw new Error("Ticket not found");
+    const { customerConfirmResolved } = await import("./support-tickets.server");
+    await customerConfirmResolved(t.id, data.rating ?? null, data.feedback || null);
+    return { ok: true };
+  });
+
+export const reopenMyResolvedTicket = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const a = await acting(context.userId);
+    const sb = await db();
+    const { data: t } = await sb.from("support_tickets").select("id").eq("id", data.id).eq("account_id", a.accountId).maybeSingle();
+    if (!t) throw new Error("Ticket not found");
+    const { customerReopenResolved } = await import("./support-tickets.server");
+    await customerReopenResolved(t.id);
+    return { ok: true };
+  });
+
+/** Tenant badge: tickets waiting on the customer (admin replied or resolved, no customer reply yet). */
+export const myTicketAlertCount = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const a = await acting(context.userId);
+    const sb = await db();
+    // Column-to-column comparison isn't possible in a filter, so read the bounded
+    // candidate set and count awaiting-customer tickets here.
+    const { data } = await sb.from("support_tickets")
+      .select("status,last_admin_reply_at,last_customer_reply_at")
+      .eq("account_id", a.accountId)
+      .in("status", ["waiting", "resolved"])
+      .limit(200);
+    return (data ?? []).filter((t: any) =>
+      t.status === "resolved" ||
+      (t.last_admin_reply_at && (!t.last_customer_reply_at || t.last_admin_reply_at > t.last_customer_reply_at)),
+    ).length;
+  });
+
 // ---------- Admin ----------
 export const adminListTickets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ status: z.enum(["open", "waiting", "closed"]) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ status: z.enum(["open", "waiting", "resolved", "closed"]) }).parse(d))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase);
     const sb = await db();
     const [{ data: rows }, counts] = await Promise.all([
       sb.from("support_tickets").select("id,number,subject,status,requester_email,requester_name,account_id,updated_at,created_at")
         .eq("status", data.status).order("updated_at", { ascending: false }).limit(200),
-      Promise.all(["open", "waiting", "closed"].map((s) =>
+      Promise.all(["open", "waiting", "resolved", "closed"].map((s) =>
         sb.from("support_tickets").select("id", { count: "exact", head: true }).eq("status", s).then((r: any) => [s, r.count ?? 0]))),
     ]);
     return { rows: rows ?? [], counts: Object.fromEntries(counts) as Record<string, number> };
+  });
+
+/** Admin badge: open tickets needing a reply. */
+export const adminOpenTicketCount = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase);
+    const sb = await db();
+    const { count } = await sb.from("support_tickets").select("id", { count: "exact", head: true }).eq("status", "open");
+    return count ?? 0;
   });
 
 export const adminGetTicket = createServerFn({ method: "GET" })
@@ -136,19 +220,24 @@ export const adminGetTicket = createServerFn({ method: "GET" })
 
 export const adminReplyTicket = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), body, internal: z.boolean().default(false), close: z.boolean().default(false) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), body, internal: z.boolean().default(false), close: z.boolean().default(false), resolve: z.boolean().default(false) }).parse(d))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase);
     const { adminReply } = await import("./support-tickets.server");
-    await adminReply(data.id, data.body, context.userId, { internal: data.internal, close: data.close });
+    await adminReply(data.id, data.body, context.userId, { internal: data.internal, close: data.close, resolve: data.resolve });
     return { ok: true };
   });
 
 export const adminSetTicketStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["open", "closed"]) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["open", "resolved", "closed"]) }).parse(d))
   .handler(async ({ data, context }) => {
     await ensureAdmin(context.supabase);
+    if (data.status === "resolved") {
+      const { markTicketResolved } = await import("./support-tickets.server");
+      await markTicketResolved(data.id);
+      return { ok: true };
+    }
     const { setTicketStatus } = await import("./support-tickets.server");
     await setTicketStatus(data.id, data.status);
     return { ok: true };

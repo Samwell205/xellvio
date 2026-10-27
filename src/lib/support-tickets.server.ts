@@ -13,7 +13,7 @@ async function db() {
 
 export type TicketRow = {
   id: string; number: number; account_id: string | null; requester_email: string; requester_name: string | null;
-  subject: string; status: "open" | "waiting" | "closed"; access_token: string;
+  subject: string; status: "open" | "waiting" | "resolved" | "closed"; access_token: string;
   last_admin_reply_at: string | null; reminder_sent_at: string | null; closed_at: string | null;
 };
 
@@ -127,7 +127,7 @@ export async function customerReply(ticketId: string, body: string, via: "web" |
   await notifyAdmin(t, `Reply from ${t.requester_email}: ${body}${attachments.length ? `\n\nAttached: ${attachments.map((a) => a.name).join(", ")}` : ""}`);
 }
 
-export async function adminReply(ticketId: string, body: string, userId: string, opts: { internal?: boolean; close?: boolean } = {}) {
+export async function adminReply(ticketId: string, body: string, userId: string, opts: { internal?: boolean; close?: boolean; resolve?: boolean } = {}) {
   const sb = await db();
   const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
   if (!t) throw new Error("Ticket not found");
@@ -138,13 +138,58 @@ export async function adminReply(ticketId: string, body: string, userId: string,
     await sb.from("support_tickets").update({ updated_at: now }).eq("id", t.id);
     return;
   }
-  const status = opts.close ? "closed" : "waiting";
+  const status = opts.close ? "closed" : opts.resolve ? "resolved" : "waiting";
   await sb.from("support_tickets").update({
-    status, last_admin_reply_at: now, reminder_sent_at: null, updated_at: now, closed_at: opts.close ? now : null,
+    status, last_admin_reply_at: now, reminder_sent_at: null, updated_at: now,
+    closed_at: opts.close ? now : null, resolved_at: opts.resolve ? now : null,
   }).eq("id", t.id);
   await email(t, `reply-${msg?.id ?? now}`, t.subject, `New reply on ticket #${t.number}`,
-    `${body}\n${opts.close ? "This ticket is now closed. If you need more help, please open a new ticket." : "Reply to this email or open your ticket page to respond."}`,
-    opts.close ? "View ticket" : "Reply on your ticket");
+    `${body}\n${opts.close ? "This ticket is now closed. If you need more help, please open a new ticket." : opts.resolve ? "We believe this solves your issue. Open your ticket to confirm and close it — you can also leave a quick rating — or reply if you still need help." : "Reply to this email or open your ticket page to respond."}`,
+    opts.close ? "View ticket" : opts.resolve ? "Confirm & close your ticket" : "Reply on your ticket");
+}
+
+/** Admin marks a ticket resolved: customer confirms the fix and can leave feedback. */
+export async function markTicketResolved(ticketId: string) {
+  const sb = await db();
+  const now = new Date().toISOString();
+  const { data: t, error } = await sb.from("support_tickets")
+    .update({ status: "resolved", resolved_at: now, reminder_sent_at: null, updated_at: now })
+    .eq("id", ticketId).neq("status", "closed").select("*").maybeSingle();
+  if (error) throw new Error(`Could not mark resolved: ${error.message}`);
+  if (!t) throw new Error("Ticket not found or already closed");
+  await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "system", body: "Marked as resolved by support — waiting for the customer to confirm." });
+  await email(t, `resolved-${now}`, t.subject, `Ticket #${t.number} — did we fix it?`,
+    "We believe your issue is resolved. Please open your ticket to confirm and close it — you can leave a quick rating and feedback — or reply if you still need help.", "Confirm & close your ticket");
+}
+
+/** Customer confirms the fix: closes the ticket and stores optional 1–5 rating + feedback. */
+export async function customerConfirmResolved(ticketId: string, rating: number | null, feedback: string | null) {
+  const sb = await db();
+  const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
+  if (!t) throw new Error("Ticket not found");
+  if (t.status !== "resolved") throw new Error("This ticket is not waiting for your confirmation.");
+  const now = new Date().toISOString();
+  await sb.from("support_tickets").update({
+    status: "closed", closed_at: now, updated_at: now,
+    feedback_rating: rating, feedback_text: feedback, feedback_at: rating || feedback ? now : null,
+  }).eq("id", t.id);
+  await sb.from("support_ticket_messages").insert({
+    ticket_id: t.id, author: "system",
+    body: `Customer confirmed the fix and closed the ticket.${rating ? ` Rating: ${rating}/5.` : ""}${feedback ? ` Feedback: ${feedback}` : ""}`,
+  });
+  await notifyAdmin(t, `Ticket #${t.number} closed by the customer.${rating ? ` Rating: ${rating}/5.` : ""}${feedback ? ` Feedback: ${feedback}` : ""}`);
+}
+
+/** Customer says the issue is not fixed: ticket goes back to open. */
+export async function customerReopenResolved(ticketId: string) {
+  const sb = await db();
+  const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
+  if (!t) throw new Error("Ticket not found");
+  if (t.status !== "resolved") throw new Error("This ticket is not waiting for your confirmation.");
+  const now = new Date().toISOString();
+  await sb.from("support_tickets").update({ status: "open", resolved_at: null, updated_at: now }).eq("id", t.id);
+  await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "system", body: "Customer says the issue is not fixed — ticket reopened." });
+  await notifyAdmin(t, `Ticket #${t.number} reopened: the customer says the issue is not fixed.`);
 }
 
 export async function setTicketStatus(ticketId: string, status: "open" | "closed") {
@@ -164,14 +209,18 @@ export async function setTicketStatus(ticketId: string, status: "open" | "closed
 export async function sweepTickets(now = Date.now()) {
   const sb = await db();
   const { data: waiting } = await sb.from("support_tickets").select("*")
-    .eq("status", "waiting").lte("last_admin_reply_at", new Date(now - REMINDER_AFTER_MS).toISOString()).limit(200);
+    .in("status", ["waiting", "resolved"])
+    .or(`last_admin_reply_at.lte.${new Date(now - REMINDER_AFTER_MS).toISOString()},and(status.eq.resolved,resolved_at.lte.${new Date(now - REMINDER_AFTER_MS).toISOString()})`)
+    .limit(200);
   let reminded = 0, closed = 0;
-  for (const t of (waiting ?? []) as TicketRow[]) {
-    const since = now - new Date(t.last_admin_reply_at!).getTime();
+  for (const t of (waiting ?? []) as (TicketRow & { resolved_at: string | null })[]) {
+    const stamp = t.status === "resolved" ? (t.resolved_at ?? t.last_admin_reply_at) : t.last_admin_reply_at;
+    if (!stamp) continue;
+    const since = now - new Date(stamp).getTime();
     if (since >= CLOSE_AFTER_MS) {
       const iso = new Date(now).toISOString();
       const { data: upd } = await sb.from("support_tickets").update({ status: "closed", closed_at: iso, updated_at: iso })
-        .eq("id", t.id).eq("status", "waiting").select("id");
+        .eq("id", t.id).in("status", ["waiting", "resolved"]).select("id");
       if (!upd?.length) continue;
       await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "system", body: "Closed automatically after 72 hours without a reply." });
       await email(t, `autoclose-${t.last_admin_reply_at}`, t.subject, `Ticket #${t.number} has been closed`,

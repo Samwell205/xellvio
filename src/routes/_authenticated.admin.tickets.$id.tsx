@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Bot, Loader2, Lock, RotateCcw, Send, StickyNote } from "lucide-react";
+import { ArrowLeft, Bot, CheckCircle2, Loader2, Lock, RotateCcw, Send, Star, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -49,9 +49,24 @@ function AdminTicket() {
               <StatusBadge status={t.status} />
               {t.status === "closed"
                 ? <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run("reopen", () => statusFn({ data: { id, status: "open" } }), "Reopened")}><RotateCcw className="size-4" /> Reopen</Button>
-                : <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run("close", () => statusFn({ data: { id, status: "closed" } }), "Ticket closed")}><Lock className="size-4" /> Close</Button>}
+                : <>
+                    {t.status !== "resolved" && <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run("resolve", () => statusFn({ data: { id, status: "resolved" } }), "Marked resolved — customer asked to confirm")}><CheckCircle2 className="size-4" /> Mark resolved</Button>}
+                    <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run("close", () => statusFn({ data: { id, status: "closed" } }), "Ticket closed")}><Lock className="size-4" /> Close</Button>
+                  </>}
             </div>
           </div>
+          {(t as any).feedback_rating != null && (
+            <Card className="flex flex-wrap items-center gap-2 border-primary/30 bg-primary/5 p-4 text-sm">
+              <CheckCircle2 className="size-4 text-primary" />
+              <span className="font-medium">Customer confirmed the fix</span>
+              <span className="flex items-center gap-0.5" aria-label={`${(t as any).feedback_rating} out of 5 stars`}>
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star key={s} className={`size-4 ${s <= (t as any).feedback_rating ? "fill-primary text-primary" : "text-muted-foreground/40"}`} />
+                ))}
+              </span>
+              {(t as any).feedback_text && <span className="text-muted-foreground">— “{(t as any).feedback_text}”</span>}
+            </Card>
+          )}
           <TicketThread messages={q.data!.messages} viewer="admin" />
           <Card className="space-y-3 p-4">
             <Textarea rows={7} value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a reply to the customer, or an internal note…" />
@@ -63,6 +78,7 @@ function AdminTicket() {
               </Button>
               <div className="flex flex-wrap gap-2">
                 <Button variant="ghost" size="sm" disabled={!!busy || !text.trim()} onClick={() => run("note", async () => { await replyFn({ data: { id, body: text, internal: true, close: false } }); setText(""); }, "Note added")}><StickyNote className="size-4" /> Internal note</Button>
+                <Button variant="outline" size="sm" disabled={!!busy || !text.trim()} onClick={() => run("sendresolve", async () => { await replyFn({ data: { id, body: text, internal: false, close: false, resolve: true } }); setText(""); }, "Sent — customer asked to confirm the fix")}>Send & mark resolved</Button>
                 <Button variant="outline" size="sm" disabled={!!busy || !text.trim()} onClick={() => run("sendclose", async () => { await replyFn({ data: { id, body: text, internal: false, close: true } }); setText(""); }, "Sent and closed")}>Send & close</Button>
                 <Button size="sm" disabled={!!busy || !text.trim()} onClick={() => run("send", async () => { await replyFn({ data: { id, body: text, internal: false, close: false } }); setText(""); }, "Reply sent")}>
                   {busy === "send" ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Send reply

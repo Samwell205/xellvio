@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/admin/tickets/")({
   component: Tickets,
 });
 
-const TABS = [["open", "Open"], ["waiting", "Waiting on customer"], ["closed", "Closed"]] as const;
+const TABS = [["open", "Open"], ["waiting", "Waiting on customer"], ["resolved", "Resolved"], ["closed", "Closed"]] as const;
 
 function Tickets() {
   const [status, setStatus] = useState<(typeof TABS)[number][0]>("open");

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Loader2, Lock, Paperclip, Send, X, FileText } from "lucide-react";
+import { CheckCircle2, Loader2, Lock, Paperclip, Send, Star, X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +14,74 @@ function toBase64(f: File) {
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const label = status === "waiting" ? "Awaiting your reply" : status === "closed" ? "Closed" : "Open";
+  const label = status === "waiting" ? "Awaiting your reply" : status === "resolved" ? "Resolved — please confirm" : status === "closed" ? "Closed" : "Open";
   return <Badge variant={status === "closed" ? "secondary" : "default"}>{label}</Badge>;
+}
+
+/** Shown to the customer when support marks a ticket resolved: confirm + optional rating/feedback, or reopen. */
+export function ResolutionCard({
+  status,
+  feedbackRating,
+  feedbackText,
+  onConfirm,
+  onReopen,
+}: {
+  status: string;
+  feedbackRating?: number | null;
+  feedbackText?: string | null;
+  onConfirm: (rating: number | null, feedback: string) => Promise<unknown>;
+  onReopen: () => Promise<unknown>;
+}) {
+  const [rating, setRating] = useState<number | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const [busy, setBusy] = useState<"yes" | "no" | null>(null);
+  if (status === "closed" && feedbackRating) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/40 p-4 text-sm">
+        <CheckCircle2 className="size-4 text-primary" />
+        <span>You confirmed this was fixed and rated the support</span>
+        <span className="flex items-center gap-0.5" aria-label={`${feedbackRating} out of 5 stars`}>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <Star key={s} className={cn("size-4", s <= feedbackRating ? "fill-primary text-primary" : "text-muted-foreground/40")} />
+          ))}
+        </span>
+        {feedbackText && <span className="text-muted-foreground">— “{feedbackText}”</span>}
+      </div>
+    );
+  }
+  if (status !== "resolved") return null;
+  return (
+    <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/5 p-4">
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <CheckCircle2 className="size-4 text-primary" /> Did this solve your problem?
+      </p>
+      <div className="flex items-center gap-1" role="radiogroup" aria-label="Rate the support you received">
+        {[1, 2, 3, 4, 5].map((s) => (
+          <button key={s} type="button" role="radio" aria-checked={rating === s} aria-label={`${s} star${s > 1 ? "s" : ""}`}
+            onClick={() => setRating(rating === s ? null : s)} className="p-0.5">
+            <Star className={cn("size-6 transition", rating !== null && s <= rating ? "fill-primary text-primary" : "text-muted-foreground/40 hover:text-primary")} />
+          </button>
+        ))}
+        <span className="ml-2 text-xs text-muted-foreground">Optional rating</span>
+      </div>
+      <Textarea rows={2} value={feedback} onChange={(e) => setFeedback(e.target.value)}
+        placeholder="Anything you'd like to tell us? (optional)" maxLength={2000} />
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" disabled={busy !== null} onClick={async () => {
+          setBusy("yes");
+          try { await onConfirm(rating, feedback.trim()); } finally { setBusy(null); }
+        }}>
+          {busy === "yes" ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} Yes, close the ticket
+        </Button>
+        <Button size="sm" variant="outline" disabled={busy !== null} onClick={async () => {
+          setBusy("no");
+          try { await onReopen(); } finally { setBusy(null); }
+        }}>
+          {busy === "no" ? <Loader2 className="size-4 animate-spin" /> : null} No, I still need help
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function TicketThread({ messages, viewer }: { messages: ThreadMsg[]; viewer: "customer" | "admin" }) {

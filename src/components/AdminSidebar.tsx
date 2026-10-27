@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { adminOpenTicketCount } from "@/lib/support-tickets.functions";
+import { useTabBadge } from "@/lib/use-tab-badge";
 import { LayoutDashboard, Building2, UserCog, PhoneCall, CreditCard, Settings2, Mail, MessageSquareText, Activity, LogOut, ShieldCheck, ClipboardList, ShieldOff, Radio, Megaphone, Scale, PhoneOutgoing, Send, Blocks, Handshake, KeyRound, LineChart, Gauge, HeartHandshake, Bot, Ticket, ChevronDown, Search, type LucideIcon } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -58,10 +62,25 @@ export function AdminSidebar() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ Messaging: true });
   const isActive = (it: Item) => it.exact ? pathname === it.url || pathname === it.url + "/" : pathname === it.url || pathname.startsWith(it.url + "/");
   const matches = (it: Item) => it.title.toLowerCase().includes(search.toLowerCase());
+  const openCountFn = useServerFn(adminOpenTicketCount);
+  const ticketQ = useQuery({ queryKey: ["admin-open-tickets"], queryFn: () => openCountFn(), refetchInterval: 30_000 });
+  const openTickets = pathname.startsWith("/admin/tickets") ? 0 : (ticketQ.data ?? 0);
+  useTabBadge(openTickets);
   const menu = (items: Item[]) => <SidebarMenu>{items.filter(matches).map(it => (
     <SidebarMenuItem key={it.url}>
       <SidebarMenuButton asChild isActive={isActive(it)} tooltip={it.title} className="admin-nav-item h-10">
-        <Link to={it.url} onClick={() => { if (isMobile) setOpenMobile(false); }}><it.icon className="size-4 shrink-0" />{!collapsed && <span className="truncate">{it.title}</span>}</Link>
+        <Link to={it.url} onClick={() => { if (isMobile) setOpenMobile(false); }}>
+          <it.icon className="size-4 shrink-0" />
+          {!collapsed && <span className="truncate">{it.title}</span>}
+          {it.url === "/admin/tickets" && openTickets > 0 && !collapsed && (
+            <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold inline-flex items-center justify-center">
+              {openTickets > 99 ? "99+" : openTickets}
+            </span>
+          )}
+          {it.url === "/admin/tickets" && openTickets > 0 && collapsed && (
+            <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" />
+          )}
+        </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
   ))}</SidebarMenu>;

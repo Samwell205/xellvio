@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { Card } from "@/components/ui/card";
-import { ReplyBox, StatusBadge, TicketThread } from "@/components/support/TicketThread";
-import { getTicketByToken, replyByToken } from "@/lib/support-tickets.functions";
+import { ReplyBox, ResolutionCard, StatusBadge, TicketThread } from "@/components/support/TicketThread";
+import { confirmResolvedByToken, getTicketByToken, reopenResolvedByToken, replyByToken } from "@/lib/support-tickets.functions";
 
 export const Route = createFileRoute("/support/t/$token")({
   head: () => ({
@@ -28,6 +28,8 @@ function TicketPage() {
   const qc = useQueryClient();
   const getFn = useServerFn(getTicketByToken);
   const replyFn = useServerFn(replyByToken);
+  const confirmFn = useServerFn(confirmResolvedByToken);
+  const reopenFn = useServerFn(reopenResolvedByToken);
   const q = useQuery({ queryKey: ["public-ticket", token], queryFn: () => getFn({ data: { token } }), retry: false });
   const t = q.data?.ticket;
   return (
@@ -46,6 +48,19 @@ function TicketPage() {
               <StatusBadge status={t.status} />
             </div>
             <TicketThread messages={q.data!.messages} viewer="customer" />
+            <ResolutionCard
+              status={t.status}
+              feedbackRating={(t as any).feedback_rating}
+              feedbackText={(t as any).feedback_text}
+              onConfirm={async (rating, feedback) => {
+                try { await confirmFn({ data: { token, rating, feedback } }); toast.success("Thanks for your feedback — ticket closed"); await qc.invalidateQueries({ queryKey: ["public-ticket", token] }); }
+                catch (e: any) { toast.error(e?.message ?? "Could not close the ticket"); }
+              }}
+              onReopen={async () => {
+                try { await reopenFn({ data: { token } }); toast.success("Ticket reopened — we'll take another look"); await qc.invalidateQueries({ queryKey: ["public-ticket", token] }); }
+                catch (e: any) { toast.error(e?.message ?? "Could not reopen the ticket"); }
+              }}
+            />
             <ReplyBox closed={t.status === "closed"} newTicketHref="/contact" onSend={async (body, files) => {
               try { await replyFn({ data: { token, body, files } }); toast.success("Reply sent"); await qc.invalidateQueries({ queryKey: ["public-ticket", token] }); }
               catch (e: any) { toast.error(e?.message ?? "Could not send"); }
