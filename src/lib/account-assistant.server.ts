@@ -196,11 +196,15 @@ async function applyFormDesign(db: any, opId: string, accountId: string, outcome
   if (!args.success) return;
   const { assistantFormDesign } = await import("./builder/templates");
   const design = assistantFormDesign(args.data);
-  await db
+  const saved = await db
     .from("signup_forms")
     .update({ blocks: design.blocks, builder_theme: design.theme })
     .eq("id", formId)
     .eq("account_id", accountId);
+  if (saved.error) {
+    console.error("[assistant] form design save failed", saved.error.message);
+    throw new Error("The form was saved, but its design could not be applied. Please try again.");
+  }
 }
 export function accountAssistantTools(userId: string) {
   return {
