@@ -184,7 +184,23 @@ export async function confirmOperation(userId: string, id: string, consent: bool
     _consent: consent,
   });
   if (result.error) throw new Error(result.error.message);
+  if (op.data.kind === "form_draft") await applyFormDesign(db, id, acting.accountId, result.data);
   return result.data;
+}
+
+async function applyFormDesign(db: any, opId: string, accountId: string, outcome: any) {
+  const formId = outcome?.formId;
+  if (!formId) return;
+  const row = await db.from("assistant_operations").select("arguments").eq("id", opId).single();
+  const args = designFormSchema.safeParse(row.data?.arguments);
+  if (!args.success) return;
+  const { assistantFormDesign } = await import("./builder/templates");
+  const design = assistantFormDesign(args.data);
+  await db
+    .from("signup_forms")
+    .update({ blocks: design.blocks, builder_theme: design.theme })
+    .eq("id", formId)
+    .eq("account_id", accountId);
 }
 export function accountAssistantTools(userId: string) {
   return {
