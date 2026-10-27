@@ -105,12 +105,19 @@ export function systemPrompt(kind: "form" | "page") {
 ${SCHEMA_DOC}
 ${DATA_MODEL_DOC}
 
+Creative direction (always): design like an award-winning studio, never a plain centered card.
+- Pick a bold, topic-specific visual identity: distinctive theme colours (not default grey/blue), a fitting headingFont, buttonStyle and radius.
+- Build several sections: a striking hero (split two-column "columns" layout or full-bleed backgroundImage with overlay 40-60), then supporting sections such as "features", "stats", "testimonials", "faq" or "countdown" that suit the topic, then a closing call to action. Forms: 3-5 sections; landing pages: 6-9 sections.
+- Alternate section backgrounds (dark/primary/surface) for rhythm; use depth, hoverEffect and staggered entrance animations.
+- When an image would help, use the exact url "{{HERO_IMAGE}}" for the main hero picture (an image block or a section backgroundImage) and "{{SECOND_IMAGE}}" for at most one supporting picture. These are replaced with freshly generated pictures. Never invent other image urls.
+- Write specific, persuasive copy from the brief; never placeholders like "Add a sentence".
+
 Respond with ONLY minified JSON in this exact shape:
-{"blocks":[...],"theme":{...},"seo":{"title":"","description":""},"summary":["short change 1","short change 2"]}
+{"blocks":[...],"theme":{...},"seo":{"title":"","description":""},"summary":["short change 1","short change 2"],"imagePrompts":{"hero":"detailed photo/illustration description","second":"optional"}}
 "theme" may be omitted when unchanged. "seo" is optional: include it for landing pages when you
 write or rewrite the main headline — title under 60 characters, description under 160, both
 specific to the page content. "summary" is 1-6 plain-English bullet points describing what you
-changed. No markdown, no commentary, no code fences.`;
+changed. "imagePrompts" describe the pictures for {{HERO_IMAGE}}/{{SECOND_IMAGE}} (omit when unused; never include text in the pictures). No markdown, no commentary, no code fences.`;
 }
 
 export const MODE_INSTRUCTIONS: Record<string, string> = {
