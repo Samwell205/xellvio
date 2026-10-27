@@ -8,6 +8,7 @@ import {
   draftCampaignSchema,
   draftAgentSchema,
   inspectFileSchema,
+  designFormSchema,
 } from "./account-assistant.schemas";
 import { receptionistConfigSchema } from "./receptionist/shared";
 import { detectContactColumns } from "./contact-file-columns";
@@ -71,6 +72,30 @@ export async function proposeAgent(userId: string, input: unknown) {
     greeting: args.greeting,
   });
   return proposal(userId, "assistant_draft", { name: args.name, config });
+}
+export async function proposeForm(userId: string, input: unknown) {
+  const args = designFormSchema.parse(input);
+  const { acting, db } = await assistantAccess(userId);
+  assertPermission(acting, "settings");
+  if (args.formId) {
+    const form = await db
+      .from("signup_forms")
+      .select("id,name")
+      .eq("id", args.formId)
+      .eq("account_id", acting.accountId)
+      .maybeSingle();
+    if (form.error || !form.data) throw new Error("Choose a form belonging to your business.");
+  }
+  if (args.listId) {
+    const list = await db
+      .from("contact_lists")
+      .select("id,name")
+      .eq("id", args.listId)
+      .eq("account_id", acting.accountId)
+      .maybeSingle();
+    if (list.error || !list.data) throw new Error("Choose a list belonging to your business.");
+  }
+  return proposal(userId, "form_draft", args);
 }
 export async function inspectContacts(userId: string, input: unknown) {
   const args = inspectFileSchema.parse(input);
