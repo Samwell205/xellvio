@@ -212,12 +212,14 @@ export async function sweepTickets(now = Date.now()) {
     .or(`last_admin_reply_at.lte.${new Date(now - REMINDER_AFTER_MS).toISOString()},and(status.eq.resolved,resolved_at.lte.${new Date(now - REMINDER_AFTER_MS).toISOString()})`)
     .limit(200);
   let reminded = 0, closed = 0;
-  for (const t of (waiting ?? []) as TicketRow[]) {
-    const since = now - new Date(t.last_admin_reply_at!).getTime();
+  for (const t of (waiting ?? []) as (TicketRow & { resolved_at: string | null })[]) {
+    const stamp = t.status === "resolved" ? (t.resolved_at ?? t.last_admin_reply_at) : t.last_admin_reply_at;
+    if (!stamp) continue;
+    const since = now - new Date(stamp).getTime();
     if (since >= CLOSE_AFTER_MS) {
       const iso = new Date(now).toISOString();
       const { data: upd } = await sb.from("support_tickets").update({ status: "closed", closed_at: iso, updated_at: iso })
-        .eq("id", t.id).eq("status", "waiting").select("id");
+        .eq("id", t.id).in("status", ["waiting", "resolved"]).select("id");
       if (!upd?.length) continue;
       await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "system", body: "Closed automatically after 72 hours without a reply." });
       await email(t, `autoclose-${t.last_admin_reply_at}`, t.subject, `Ticket #${t.number} has been closed`,
