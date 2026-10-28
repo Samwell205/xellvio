@@ -28,15 +28,31 @@ export function MarketingNav() {
 
   return (
     <header
-      className="sticky top-0 z-50 w-full border-b border-border bg-background/90 backdrop-blur-xl"
+      className="sticky top-0 z-50 w-full bg-muted/70 backdrop-blur-xl pb-3"
       onKeyDown={(e) => { if (e.key === "Escape") setOpenMenu(null); }}
     >
-      <div className="mx-auto flex h-[68px] max-w-[1400px] items-center gap-8 px-5 sm:px-8">
+      <div className="h-1 w-full bg-foreground" />
+      {/* Utility bar */}
+      <div className="hidden lg:flex mx-auto max-w-[1400px] items-center justify-between px-8 pt-2.5 pb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-foreground/75">
+        <div className="flex items-center gap-8">
+          <Link to="/features" className="hover:text-foreground transition-colors">Features</Link>
+          <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
+          <Link to="/docs" className="hover:text-foreground transition-colors">Developer docs</Link>
+          <Link to="/contact" className="hover:text-foreground transition-colors">Support center</Link>
+        </div>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Link to="/auth" className="rounded-full bg-background px-3.5 py-1 hover:text-foreground shadow-sm transition-colors">Login</Link>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[1400px] px-3 sm:px-6 pt-3 lg:pt-0">
+        <div className="flex h-[64px] lg:h-[76px] items-center gap-6 rounded-2xl lg:rounded-3xl border border-border/60 bg-background px-4 lg:px-6 shadow-[0_10px_30px_-18px_color-mix(in_oklab,var(--foreground)_35%,transparent)] animate-in fade-in slide-in-from-top-2 duration-500">
         <div className="shrink-0" onClick={() => setOpenMenu(null)}>
           <Logo />
         </div>
 
-        <nav className="hidden lg:flex items-center gap-1 text-[15px] font-medium">
+        <nav className="hidden lg:flex items-center gap-1 text-[16px] font-medium">
           {NAV.map((entry) =>
             hasMenu(entry) ? (
               <div key={entry.label} onMouseEnter={() => open(entry.label)} onMouseLeave={scheduleClose}>
@@ -44,8 +60,8 @@ export function MarketingNav() {
                   type="button"
                   aria-expanded={openMenu === entry.label}
                   onClick={() => setOpenMenu(openMenu === entry.label ? null : entry.label)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 transition-colors ${
-                    openMenu === entry.label ? "bg-muted text-foreground" : "text-foreground/75 hover:text-foreground"
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 transition-colors ${
+                    openMenu === entry.label ? "bg-muted text-foreground" : "text-foreground/85 hover:text-foreground"
                   }`}
                 >
                   {entry.label}
@@ -57,7 +73,7 @@ export function MarketingNav() {
                 key={entry.label}
                 to={entry.to}
                 onMouseEnter={scheduleClose}
-                className="rounded-full px-3.5 py-2 text-foreground/75 hover:text-foreground transition-colors"
+                className="rounded-full px-4 py-2 text-foreground/85 hover:text-foreground transition-colors"
               >
                 {entry.label}
               </Link>
@@ -65,17 +81,15 @@ export function MarketingNav() {
           )}
         </nav>
 
-        <div className="ml-auto hidden lg:flex items-center gap-2">
-          <ThemeToggle className="mr-1" />
-          <Link to="/docs" aria-label="Search the docs" className="grid size-9 place-items-center rounded-full text-foreground/70 hover:bg-muted hover:text-foreground transition-colors">
-            <Search className="size-4" />
+        <div className="ml-auto hidden lg:flex items-center gap-3">
+          <Link to="/docs" aria-label="Search the docs" className="grid size-10 place-items-center rounded-full text-foreground/80 hover:bg-muted hover:text-foreground transition-colors">
+            <Search className="size-5" />
           </Link>
-          <Link to="/auth" className="px-3 text-sm font-medium text-foreground/80 hover:text-foreground">Log in</Link>
           <Link to="/auth" search={{ mode: "signup" }}>
-            <Button className="rounded-full px-5">Sign up</Button>
+            <Button className="h-12 rounded-2xl px-6 text-base shadow-md transition-transform hover:-translate-y-0.5">Try for free</Button>
           </Link>
           <Link to="/contact">
-            <Button variant="outline" className="rounded-full px-5">Get a demo</Button>
+            <Button variant="outline" className="h-12 rounded-2xl border-2 px-6 text-base">Contact us</Button>
           </Link>
         </div>
 
@@ -90,6 +104,24 @@ export function MarketingNav() {
         >
           {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
         </button>
+        </div>
+
+        {/* Announcement pill */}
+        <div className="mt-4 flex justify-center animate-in fade-in slide-in-from-top-3 duration-700">
+          <Link
+            to="/features"
+            className="group grid w-full max-w-[1200px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl lg:rounded-3xl bg-foreground px-3 py-2.5 lg:px-5 lg:py-3 text-background shadow-lg"
+          >
+            <span className="flex min-w-0 items-center gap-3 lg:gap-5">
+              <span className="shrink-0 text-base lg:text-3xl font-bold text-primary">AI Assistant</span>
+              <span className="hidden sm:block h-8 w-px shrink-0 bg-background/40" />
+              <span className="truncate text-sm lg:text-2xl font-medium tracking-tight">Run campaigns, forms and replies by just asking</span>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-xl lg:rounded-2xl bg-primary px-3 py-2 lg:px-7 lg:py-3 text-sm lg:text-lg font-semibold text-primary-foreground transition-all group-hover:gap-3">
+              Explore <ArrowRight className="size-4" />
+            </span>
+          </Link>
+        </div>
       </div>
 
       {/* Desktop mega menu */}
