@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
+import loginGlobeAsset from "@/assets/xellvio-login-globe.mp4.asset.json";
+import loginGlobeWebmAsset from "@/assets/xellvio-login-globe.webm.asset.json";
 import { withAuthRetry, friendlyAuthError, clearStaleSession } from "@/lib/auth-retry";
 import { pageHead } from "@/lib/seo";
 import { trackProduct } from "@/lib/growth/track";
@@ -278,7 +280,7 @@ function AuthPage() {
           <source src={loginGlobeWebmAsset.url} type="video/webm" />
         </video>
       </div>
-      <div className="flex items-center justify-center p-6 md:p-10">
+      <div className="flex flex-col items-center justify-center p-6 md:p-10">
         <div className="md:hidden relative mb-6 h-40 w-full overflow-hidden rounded-2xl" aria-hidden="true">
           <video
             autoPlay
