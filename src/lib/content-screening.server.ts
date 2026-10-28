@@ -95,15 +95,16 @@ export async function screenMessageContent(
       const { aiScan } = await import("./ai-content-scan.server");
       const aiResult = await aiScan(body);
       if (aiResult.unavailable) {
-        // Do NOT present an unscanned message as AI-approved. Score 0 keeps the
-        // send decision unchanged (fail open), but the audit log and admin
-        // compliance views now show that AI review did not run, and why.
+        // Owner decision 2026-10-28: AI outages (e.g. exhausted AI credits) must
+        // not stop tenants. Keyword rules already passed; plain messages send,
+        // links/phone numbers are held for admin review (blocked when the caller
+        // cannot wait for review).
+        const { aiUnavailableFallback } = await import("./ai-unavailable-fallback");
+        const fb = aiUnavailableFallback(body);
         reasons.push({
           code: "ai_scan_unavailable",
-          message:
-            "This message could not be safety-checked right now, so it was not sent. Please try again in a few minutes.",
-          // Fail closed: a message nobody could safety-check is never sent.
-          score: 70,
+          message: fb.message,
+          score: fb.score,
           detail: `ai_unavailable=${aiResult.unavailableCode ?? "unknown"}`,
         });
         try {

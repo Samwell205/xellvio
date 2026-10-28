@@ -29,11 +29,10 @@ export const scanCampaignContent = createServerFn({ method: "POST" })
     // We run AI on ALL messages to catch clever wording / obfuscation
     const aiResult = await aiScan(data.messageBody);
     if (aiResult.unavailable) {
-      return {
-        ...aiResult,
-        allowed: false,
-        reason: "This message could not be safety-checked right now, so it was not approved. Please try again later.",
-      };
+      const { aiUnavailableFallback } = await import("./ai-unavailable-fallback");
+      const fb = aiUnavailableFallback(data.messageBody);
+      if (!fb.risky) return { allowed: true, confidence: "keyword" } as ScanResult;
+      return { ...aiResult, allowed: false, reason: fb.message };
     }
     if (!aiResult.allowed) {
       return aiResult;
