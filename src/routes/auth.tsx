@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { Loader2, Eye, EyeOff } from "lucide-react";
+import loginGlobeAsset from "@/assets/xellvio-login-globe.mp4.asset.json";
+import loginGlobeWebmAsset from "@/assets/xellvio-login-globe.webm.asset.json";
 import { withAuthRetry, friendlyAuthError, clearStaleSession } from "@/lib/auth-retry";
 import { pageHead } from "@/lib/seo";
 import { trackProduct } from "@/lib/growth/track";
@@ -265,19 +267,42 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
-      <div className="hidden md:flex hero-gradient flex-col justify-between p-10">
-        <Logo />
-        <div className="max-w-md">
-          <div className="text-4xl font-extrabold tracking-tight">
-            Reach customers <span className="text-gradient">worldwide.</span>
-          </div>
-          <p className="mt-4 text-muted-foreground">
-            Send global SMS campaigns with confidence — fast, reliable, compliant.
-          </p>
-        </div>
-        <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} Xellvio</div>
+      <div className="relative hidden overflow-hidden hero-gradient md:block" aria-hidden="true">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          className="pointer-events-none absolute left-1/2 top-1/2 w-[88%] max-h-full -translate-x-1/2 -translate-y-1/2 object-contain"
+          style={{
+            maskImage:
+              "linear-gradient(to right, transparent, black 28px, black calc(100% - 28px), transparent), linear-gradient(to bottom, transparent, black 28px, black calc(100% - 28px), transparent)",
+            WebkitMaskImage:
+              "linear-gradient(to right, transparent, black 28px, black calc(100% - 28px), transparent), linear-gradient(to bottom, transparent, black 28px, black calc(100% - 28px), transparent)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
+          }}
+        >
+          <source src={loginGlobeAsset.url} type="video/mp4" />
+          <source src={loginGlobeWebmAsset.url} type="video/webm" />
+        </video>
       </div>
-      <div className="flex items-center justify-center p-6 md:p-10">
+      <div className="flex flex-col items-center justify-center p-6 md:p-10">
+        <div className="md:hidden relative mb-6 h-56 w-full overflow-hidden rounded-2xl" aria-hidden="true">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: "center 95%" }}
+          >
+            <source src={loginGlobeAsset.url} type="video/mp4" />
+            <source src={loginGlobeWebmAsset.url} type="video/webm" />
+          </video>
+        </div>
         <Card className="w-full max-w-md p-8">
           <div className="md:hidden mb-6">
             <Logo />
