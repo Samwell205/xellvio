@@ -602,13 +602,26 @@ export async function sendMessage(opts: {
   if (opts.from) body.from = opts.from;
   if (opts.messagingProfileId) body.messaging_profile_id = opts.messagingProfileId;
   if (opts.mediaUrls && opts.mediaUrls.length) body.media_urls = opts.mediaUrls;
-  const res = await telnyx<{ data: SendMessageResult }>("/messages", {
-    method: "POST",
-    body,
-    idempotencyKey: opts.idempotencyKey,
-    ...(opts.boundedDispatch ? {maxAttempts:1,timeoutMs:6000}:{}),
-  });
-  return res.data;
+  try {
+    const res = await telnyx<{ data: SendMessageResult }>("/messages", {
+      method: "POST",
+      body,
+      idempotencyKey: opts.idempotencyKey,
+      ...(opts.boundedDispatch ? {maxAttempts:1,timeoutMs:6000}:{}),
+    });
+    return res.data;
+  } catch (e: any) {
+    // US/Canada backup route: only for explicit primary-side non-acceptance,
+    // never for timeouts or carrier refusals (duplicate / pointless resend).
+    const { shouldUseBackup } = await import("./twilio-backup-routing");
+    const { twilioBackupState, sendViaTwilio } = await import("./twilio-backup.server");
+    const state = await twilioBackupState().catch(() => ({ enabled: false, from: null }));
+    if (state.from && shouldUseBackup({ to, hasMedia: Boolean(opts.mediaUrls?.length), enabled: state.enabled, primaryStatus: e?.telnyxStatus, primaryDetail: e?.providerDetail })) {
+      const r = await sendViaTwilio({ to, text: opts.text, from: state.from, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
+      return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
+    }
+    throw e;
+  }
 }
 
 // ============ Alphanumeric Sender IDs ============
@@ -658,6 +671,8 @@ export async function getMessage(id: string, boundedDispatch=false): Promise<any
     // UK-route messages get receipts by webhook only; never look them up here.
     const { isSinchMessageId } = await import("./sinch-routing");
     if (isSinchMessageId(id)) throw new Error("Delivery receipt pending from the UK route.");
+    const { isTwilioMessageId } = await import("./twilio-backup-routing");
+    if (isTwilioMessageId(id)) throw new Error("Delivery receipt pending from the backup route.");
   }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: message, error } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
