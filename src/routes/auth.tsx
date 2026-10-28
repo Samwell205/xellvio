@@ -297,7 +297,7 @@ function AuthPage() {
             playsInline
             preload="metadata"
             className="absolute inset-0 h-full w-full object-cover"
-            style={{ objectPosition: "center 88%" }}
+            style={{ objectPosition: "center 95%" }}
           >
             <source src={loginGlobeAsset.url} type="video/mp4" />
             <source src={loginGlobeWebmAsset.url} type="video/webm" />
