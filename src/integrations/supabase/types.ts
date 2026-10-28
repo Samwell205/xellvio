@@ -6989,6 +6989,68 @@ export type Database = {
           },
         ]
       }
+      tenant_twilio_lines: {
+        Row: {
+          account_id: string
+          auth_token_enc: string | null
+          billing_status: string
+          charged_at: string | null
+          created_at: string
+          last_renewal_error: string | null
+          monthly_fee_usd: number
+          phone_number: string | null
+          phone_sid: string | null
+          renews_at: string | null
+          status: string
+          status_detail: string | null
+          subaccount_sid: string | null
+          updated_at: string
+          verification_sid: string | null
+        }
+        Insert: {
+          account_id: string
+          auth_token_enc?: string | null
+          billing_status?: string
+          charged_at?: string | null
+          created_at?: string
+          last_renewal_error?: string | null
+          monthly_fee_usd?: number
+          phone_number?: string | null
+          phone_sid?: string | null
+          renews_at?: string | null
+          status?: string
+          status_detail?: string | null
+          subaccount_sid?: string | null
+          updated_at?: string
+          verification_sid?: string | null
+        }
+        Update: {
+          account_id?: string
+          auth_token_enc?: string | null
+          billing_status?: string
+          charged_at?: string | null
+          created_at?: string
+          last_renewal_error?: string | null
+          monthly_fee_usd?: number
+          phone_number?: string | null
+          phone_sid?: string | null
+          renews_at?: string | null
+          status?: string
+          status_detail?: string | null
+          subaccount_sid?: string | null
+          updated_at?: string
+          verification_sid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_twilio_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tollfree_verification_attempts: {
         Row: {
           account_id: string
@@ -7906,6 +7968,7 @@ export type Database = {
       can_read_app: { Args: { _app_id: string }; Returns: boolean }
       can_write_app: { Args: { _app_id: string }; Returns: boolean }
       charge_receptionist_number_renewals: { Args: never; Returns: number }
+      charge_twilio_line_renewals: { Args: never; Returns: number }
       claim_account_invites: { Args: never; Returns: number }
       claim_and_sell_verified_tfn: {
         Args: {
