@@ -22,9 +22,13 @@ describe("campaign preview safety decision", () => {
     expect(await scan({ data: { messageBody: "Urgent action required. Reply STOP to unsubscribe." } })).toMatchObject({ allowed: false, confidence: "keyword" });
     expect(mocks.aiScan).not.toHaveBeenCalled();
   });
-  it("fails closed when AI cannot check otherwise clean text", async () => {
+  it("lets clean text without links through when AI cannot check (rules fallback)", async () => {
     mocks.aiScan.mockResolvedValue({ allowed: true, confidence: "none", unavailable: true });
-    expect(await scan({ data: { messageBody: "Summit: Your requested order is ready. STOP" } })).toMatchObject({ allowed: false, unavailable: true });
+    expect(await scan({ data: { messageBody: "Summit: Your requested order is ready. STOP" } })).toMatchObject({ allowed: true });
+  });
+  it("holds text with a link when AI cannot check", async () => {
+    mocks.aiScan.mockResolvedValue({ allowed: true, confidence: "none", unavailable: true });
+    expect(await scan({ data: { messageBody: "Order ready: https://example.com STOP" } })).toMatchObject({ allowed: false });
   });
   it("allows an ordinary identified order update after a successful safety check", async () => {
     mocks.aiScan.mockResolvedValue({ allowed: true, confidence: "ai" });

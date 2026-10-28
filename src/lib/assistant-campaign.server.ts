@@ -180,8 +180,9 @@ export async function confirmAssistantCampaignLaunch(
     throw new Error(keyword.reason ?? "Message requires content review.");
   const { aiScan } = await import("./ai-content-scan.server");
   const scan = await aiScan(r.body);
-  if (!scan.allowed || scan.unavailable)
-    throw new Error(scan.reason ?? "Message could not be safety-checked. Nothing was launched.");
+  const { aiUnavailableFallback } = await import("./ai-unavailable-fallback");
+  if (!scan.allowed || (scan.unavailable && aiUnavailableFallback(r.body).risky))
+    throw new Error(scan.unavailable ? aiUnavailableFallback(r.body).message : (scan.reason ?? "Message could not be safety-checked. Nothing was launched."));
   const result = await db.rpc("confirm_assistant_campaign_launch", {
     _id: id,
     _user_id: userId,
