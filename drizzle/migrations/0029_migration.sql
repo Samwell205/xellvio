@@ -1,0 +1,2 @@
+REVOKE SELECT ON public.tenant_twilio_lines FROM authenticated;
+GRANT SELECT (account_id, phone_number, status, status_detail, monthly_fee_usd, charged_at, renews_at, billing_status, created_at, updated_at) ON public.tenant_twilio_lines TO authenticated;
