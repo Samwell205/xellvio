@@ -325,12 +325,17 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
   }
 
   return (
-    <Card className="p-5 space-y-4 border-primary/30 bg-primary/5">
-      <div>
-        <div className="font-semibold">Use your own Sender ID</div>
-        <p className="text-sm text-muted-foreground">
-          Add or change the name customers see when a country supports alphanumeric Sender ID.
-        </p>
+    <Card className="p-6 space-y-5 rounded-3xl border-primary/30 bg-primary/5" style={{ animation: "bento-rise .5s .15s cubic-bezier(.2,.8,.2,1) both" }}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-lg font-semibold">Use your own Sender ID</div>
+          <p className="text-sm text-muted-foreground">
+            Add or change the name customers see when a country supports alphanumeric Sender ID.
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 text-success px-3 py-1 text-xs font-semibold">
+          <CheckCircle2 className="size-3.5" /> United Kingdom: live instantly
+        </span>
       </div>
       <div className="grid gap-3 md:grid-cols-[1fr_auto]">
         <div className="space-y-1.5">
@@ -486,7 +491,8 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
               </span>{" "}
               (Kuwait, UAE, Saudi Arabia, Nigeria, India, etc.) need a one-time carrier
               registration. Save your Sender ID above, then pick the country here — we file the
-              registration for you. Approval typically takes 3–10 business days.
+              registration for you. Approval typically takes 3–10 business days. The United
+              Kingdom needs no registration: add it and save, and your name is used straight away.
             </p>
             {countries.length > 0 && (
               <div className="flex flex-wrap gap-2">
