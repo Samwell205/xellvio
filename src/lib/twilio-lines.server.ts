@@ -30,7 +30,7 @@ async function tw(url: string, auth: string, body?: URLSearchParams | Array<[str
 }
 
 export type LineBusiness = {
-  businessName: string; website: string; ein: string;
+  businessName: string; website: string; ein?: string;
   street: string; city: string; state: string; postalCode: string; country: string;
   contactFirstName: string; contactLastName: string; contactEmail: string; contactPhone: string;
   privacyUrl: string; termsUrl: string; optInImageUrl: string;
@@ -86,8 +86,10 @@ export async function provisionLine(accountId: string, biz: LineBusiness): Promi
 
   const fields: Array<[string, string]> = [
     ["TollfreePhoneNumberSid", phoneSid!], ["BusinessName", biz.businessName], ["BusinessWebsite", biz.website],
-    ["BusinessType", "PRIVATE_PROFIT"], ["BusinessRegistrationNumber", biz.ein], ["BusinessRegistrationAuthority", "EIN"],
-    ["BusinessRegistrationCountry", "US"], ["BusinessStreetAddress", biz.street], ["BusinessCity", biz.city],
+    ...(biz.ein
+      ? ([["BusinessType", "PRIVATE_PROFIT"], ["BusinessRegistrationNumber", biz.ein], ["BusinessRegistrationAuthority", "EIN"], ["BusinessRegistrationCountry", "US"]] as Array<[string, string]>)
+      : ([["BusinessType", "SOLE_PROPRIETOR"]] as Array<[string, string]>)),
+    ["BusinessStreetAddress", biz.street], ["BusinessCity", biz.city],
     ["BusinessStateProvinceRegion", biz.state], ["BusinessPostalCode", biz.postalCode], ["BusinessCountry", biz.country],
     ["BusinessContactFirstName", biz.contactFirstName], ["BusinessContactLastName", biz.contactLastName],
     ["BusinessContactEmail", biz.contactEmail], ["BusinessContactPhone", biz.contactPhone],
