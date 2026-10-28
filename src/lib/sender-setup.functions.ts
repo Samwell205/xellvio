@@ -61,6 +61,8 @@ export const refreshMyVerificationStatus = createServerFn({ method: "POST" })
     return { checked: (data ?? []).length, updated: 0 };
   });
 
+const UK_ROUTE_COUNTRIES = new Set(["GB", "GG", "JE", "IM"]);
+
 const CustomSenderInput = z.object({
   countries: z.array(z.string().length(2)).min(1),
   senderId: z.preprocess(
@@ -79,6 +81,7 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { ensureMessagingProfileForAccount, createAlphanumericSenderId } = await import("./telnyx.server");
     const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } = await import("./countries");
+    const { sinchConfigured } = await import("./sinch.server");
     const messagingProfileId = await ensureMessagingProfileForAccount(accountId);
     const results: Array<{ cc: string; status: string }> = [];
     for (const raw of data.countries) {
@@ -91,12 +94,17 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
       let alphaSenderId: string | null = null;
       let telnyxError: string | null = null;
       try {
-        const alpha = await createAlphanumericSenderId({
-          messagingProfileId,
-          senderId: data.senderId,
-          isoCountryCode: cc,
-        });
-        alphaSenderId = alpha.id ?? null;
+        if (UK_ROUTE_COUNTRIES.has(cc) && sinchConfigured()) {
+          // UK route shows the Sender ID directly; no carrier pre-registration.
+          status = "verified";
+        } else {
+          const alpha = await createAlphanumericSenderId({
+            messagingProfileId,
+            senderId: data.senderId,
+            isoCountryCode: cc,
+          });
+          alphaSenderId = alpha.id ?? null;
+        }
       } catch (e: any) {
         telnyxError = String(e?.message ?? e);
         const telnyxErrorText = telnyxError.toLowerCase();
