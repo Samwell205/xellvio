@@ -91,7 +91,7 @@ export async function ensureSinchWebhook(url: string): Promise<{ created: boolea
   const res = await fetch(`${BASE()}/webhooks`, {
     method: "POST",
     headers: H,
-    body: JSON.stringify({ app_id: app, target: url, target_type: "HTTP", secret: sinchWebhookSecret(), triggers: ["MESSAGE_DELIVERY", "MESSAGE_INBOUND"] }),
+    body: JSON.stringify({ app_id: app, target: url, target_type: "HTTP", secret: sinchWebhookSecret(), triggers: ["MESSAGE_DELIVERY"] }),
   });
   if (!res.ok) throw new Error(`webhook create failed ${res.status}`);
   return { created: true };
