@@ -195,6 +195,7 @@ function SetupSmsPage() {
               qc.invalidateQueries({ queryKey: ["account"] });
             }}
           />
+          <DedicatedLineCard />
         </div>
         <aside className="space-y-4 lg:sticky lg:top-20 self-start">
           <Card className="p-5 space-y-3">
