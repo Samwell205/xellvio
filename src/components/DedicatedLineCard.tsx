@@ -79,7 +79,7 @@ export function DedicatedLineCard() {
       {open && (
         <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); submit.mutate(); }}>
           {field("businessName", "Legal business name", p?.legal_business_name ?? "")}
-          {field("ein", "EIN", p?.business_reg_number ?? "", "12-3456789")}
+          <div className="space-y-1.5"><Label htmlFor="dl-ein">EIN (optional)</Label><Input id="dl-ein" value={v("ein", p?.business_reg_number ?? "")} onChange={set("ein")} placeholder="12-3456789" /><p className="text-xs text-muted-foreground">No EIN? Leave it empty and we submit you as a sole proprietor.</p></div>
           {field("website", "Website", p?.website_url ?? "", "https://")}
           {field("street", "Street address")}
           {field("city", "City")}

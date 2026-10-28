@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const str = (max: number) => z.string().trim().min(1).max(max);
 const Biz = z.object({
-  businessName: str(120), website: z.string().url().max(300), ein: z.string().trim().regex(/^\d{2}-?\d{7}$/, "Enter a 9-digit EIN"),
+  businessName: str(120), website: z.string().url().max(300), ein: z.string().trim().regex(/^(\d{2}-?\d{7})?$/, "Enter a 9-digit EIN or leave it empty").optional().default(""),
   street: str(200), city: str(100), state: str(60), postalCode: str(20), country: z.string().length(2),
   contactFirstName: str(60), contactLastName: str(60), contactEmail: z.string().email().max(200),
   contactPhone: z.string().regex(/^\+\d{8,15}$/, "Use international format, e.g. +15551234567"),
@@ -68,7 +68,7 @@ export const requestDedicatedLine = createServerFn({ method: "POST" })
     }
     const { provisionLine } = await import("./twilio-lines.server");
     try {
-      return await provisionLine(acting.accountId, { ...data, ein: data.ein.replace(/\D/g, "").replace(/^(\d{2})/, "$1-") });
+      return await provisionLine(acting.accountId, { ...data, ein: data.ein ? data.ein.replace(/\D/g, "").replace(/^(\d{2})/, "$1-") : undefined });
     } catch (e: any) {
       await db.from("tenant_twilio_lines").update({ status_detail: String(e?.message ?? "Setup failed").slice(0, 300) }).eq("account_id", acting.accountId);
       throw new Error(`Setup paused: ${e?.message ?? "please try again"}. You won't be charged again when you retry.`);
