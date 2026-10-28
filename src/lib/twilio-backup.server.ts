@@ -43,8 +43,7 @@ export async function sendViaTwilio(opts: { to: string; text: string; from: stri
 }
 
 /** Validates X-Twilio-Signature: base64(HMAC-SHA1(url + sorted key+value pairs)). */
-export function verifyTwilioSignature(url: string, params: URLSearchParams, signature: string | null): boolean {
-  const token = process.env.TWILIO_AUTH_TOKEN;
+export function verifyTwilioSignature(url: string, params: URLSearchParams, signature: string | null, token: string | null | undefined = process.env.TWILIO_AUTH_TOKEN): boolean {
   if (!token || !signature) return false;
   const keys = [...new Set([...params.keys()])].sort();
   const data = url + keys.map((k) => k + params.getAll(k).join("")).join("");

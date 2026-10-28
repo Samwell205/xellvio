@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { DedicatedLineCard } from "@/components/DedicatedLineCard";
 import { isValidSenderId, SENDER_ID_HINT } from "@/lib/sender-id-rules";
 import {
   Dialog,
@@ -195,6 +196,7 @@ function SetupSmsPage() {
               qc.invalidateQueries({ queryKey: ["account"] });
             }}
           />
+          <DedicatedLineCard />
         </div>
         <aside className="space-y-4 lg:sticky lg:top-20 self-start">
           <Card className="p-5 space-y-3">
