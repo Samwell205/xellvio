@@ -593,6 +593,23 @@ export async function sendMessage(opts: {
       return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
     }
   }
+  // Business's own dedicated toll-free line goes first for US/Canada text.
+  if (opts.accountId) {
+    const { ownLineApplies, fallBackFromOwnLine } = await import("./twilio-lines-rules");
+    if (ownLineApplies(to, Boolean(opts.mediaUrls?.length))) {
+      const { activeLineFor, sendViaLine } = await import("./twilio-lines.server");
+      const line = await activeLineFor(opts.accountId).catch(() => null);
+      if (line) {
+        try {
+          const r = await sendViaLine(line, { to, text: opts.text, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
+          return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
+        } catch (e: any) {
+          if (!fallBackFromOwnLine(e)) throw e;
+          console.error("[send] own line refused, using shared route", e?.lineStatus, e?.lineCode);
+        }
+      }
+    }
+  }
   const body: any = {
     to,
     text: opts.text,
