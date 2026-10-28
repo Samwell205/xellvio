@@ -585,6 +585,14 @@ export async function sendMessage(opts: {
   if (!/^\+[1-9]\d{7,14}$/.test(to)) {
     throw new Error(`Invalid destination number: "${opts.to}" is not a valid international (E.164) number`);
   }
+  {
+    const { isSinchDestination } = await import("./sinch-routing");
+    const { sinchConfigured, sendViaSinch } = await import("./sinch.server");
+    if (sinchConfigured() && isSinchDestination(to, { hasMedia: Boolean(opts.mediaUrls?.length) })) {
+      const r = await sendViaSinch({ to, text: opts.text, senderId: opts.from, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
+      return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
+    }
+  }
   const body: any = {
     to,
     text: opts.text,
@@ -646,6 +654,11 @@ export async function createAlphanumericSenderId(opts: {
 }
 
 export async function getMessage(id: string, boundedDispatch=false): Promise<any> {
+  {
+    // UK-route messages get receipts by webhook only; never look them up here.
+    const { isSinchMessageId } = await import("./sinch-routing");
+    if (isSinchMessageId(id)) throw new Error("Delivery receipt pending from the UK route.");
+  }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: message, error } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
   if (error || !message) throw new Error("Delivery connection could not be resolved. Please retry.");

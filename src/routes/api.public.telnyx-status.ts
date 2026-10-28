@@ -52,7 +52,7 @@ async function handleInbound(payload: any) {
   await handleTelnyxInboundMessage(payload);
 }
 
-async function handleStatus(payload: any) {
+export async function handleStatus(payload: any) {
   const evtType: string = payload?.data?.event_type ?? "";
   const p = payload?.data?.payload ?? {};
   const providerId: string | null = p?.id ?? null;

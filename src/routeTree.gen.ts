@@ -178,6 +178,7 @@ import { Route as ApiPublicCardWebhookRouteImport } from './routes/api/public/ca
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media.$'
 import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicSinchWebhookRouteImport } from './routes/api/public/sinch/webhook'
 import { Route as ApiPublicSupportInboundRouteImport } from './routes/api.public.support.inbound'
 import { Route as ApiPublicSupportSweepRouteImport } from './routes/api.public.support.sweep'
 import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
@@ -1116,6 +1117,11 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicSinchWebhookRoute = ApiPublicSinchWebhookRouteImport.update({
+  id: '/api/public/sinch/webhook',
+  path: '/api/public/sinch/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicSupportInboundRoute = ApiPublicSupportInboundRouteImport.update({
   id: '/api/public/support/inbound',
   path: '/api/public/support/inbound',
@@ -1345,6 +1351,7 @@ export interface FileRoutesByFullPath {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/sinch/webhook': typeof ApiPublicSinchWebhookRoute
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
@@ -1521,6 +1528,7 @@ export interface FileRoutesByTo {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/sinch/webhook': typeof ApiPublicSinchWebhookRoute
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
@@ -1706,6 +1714,7 @@ export interface FileRoutesById {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/sinch/webhook': typeof ApiPublicSinchWebhookRoute
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
@@ -1890,6 +1899,7 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/sinch/webhook'
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
     | '/api/public/v1/$'
@@ -2066,6 +2076,7 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/sinch/webhook'
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
     | '/api/public/v1/$'
@@ -2250,6 +2261,7 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/sinch/webhook'
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
     | '/api/public/v1/$'
@@ -2359,6 +2371,7 @@ export interface RootRouteChildren {
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiPublicSinchWebhookRoute: typeof ApiPublicSinchWebhookRoute
   ApiPublicSupportInboundRoute: typeof ApiPublicSupportInboundRoute
   ApiPublicSupportSweepRoute: typeof ApiPublicSupportSweepRoute
   ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
@@ -3557,6 +3570,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/sinch/webhook': {
+      id: '/api/public/sinch/webhook'
+      path: '/api/public/sinch/webhook'
+      fullPath: '/api/public/sinch/webhook'
+      preLoaderRoute: typeof ApiPublicSinchWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/support/inbound': {
       id: '/api/public/support/inbound'
       path: '/api/public/support/inbound'
@@ -4046,6 +4066,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiPublicSinchWebhookRoute: ApiPublicSinchWebhookRoute,
   ApiPublicSupportInboundRoute: ApiPublicSupportInboundRoute,
   ApiPublicSupportSweepRoute: ApiPublicSupportSweepRoute,
   ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,
