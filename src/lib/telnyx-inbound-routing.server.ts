@@ -36,6 +36,12 @@ export async function handleTelnyxInboundMessage(payload: any) {
       .select("account_id")
       .eq("phone_number", to);
     for (const n of numRows ?? []) numberOwners.add(n.account_id);
+
+    const { data: lines } = await admin
+      .from("tenant_twilio_lines")
+      .select("account_id")
+      .eq("phone_number", to);
+    for (const l of lines ?? []) numberOwners.add(l.account_id);
   }
 
   const { data: profiles } = await admin

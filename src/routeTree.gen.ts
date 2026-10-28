@@ -181,6 +181,7 @@ import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/publi
 import { Route as ApiPublicSinchWebhookRouteImport } from './routes/api/public/sinch/webhook'
 import { Route as ApiPublicSupportInboundRouteImport } from './routes/api.public.support.inbound'
 import { Route as ApiPublicSupportSweepRouteImport } from './routes/api.public.support.sweep'
+import { Route as ApiPublicTwilioInboundRouteImport } from './routes/api/public/twilio/inbound'
 import { Route as ApiPublicTwilioStatusRouteImport } from './routes/api/public/twilio/status'
 import { Route as ApiPublicV1SplatRouteImport } from './routes/api/public/v1/$'
 import { Route as ApiPublicVoiceEventsRouteImport } from './routes/api/public/voice/events'
@@ -1133,6 +1134,11 @@ const ApiPublicSupportSweepRoute = ApiPublicSupportSweepRouteImport.update({
   path: '/api/public/support/sweep',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTwilioInboundRoute = ApiPublicTwilioInboundRouteImport.update({
+  id: '/api/public/twilio/inbound',
+  path: '/api/public/twilio/inbound',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTwilioStatusRoute = ApiPublicTwilioStatusRouteImport.update({
   id: '/api/public/twilio/status',
   path: '/api/public/twilio/status',
@@ -1360,6 +1366,7 @@ export interface FileRoutesByFullPath {
   '/api/public/sinch/webhook': typeof ApiPublicSinchWebhookRoute
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
+  '/api/public/twilio/inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio/status': typeof ApiPublicTwilioStatusRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/api/public/voice/events': typeof ApiPublicVoiceEventsRoute
@@ -1538,6 +1545,7 @@ export interface FileRoutesByTo {
   '/api/public/sinch/webhook': typeof ApiPublicSinchWebhookRoute
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
+  '/api/public/twilio/inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio/status': typeof ApiPublicTwilioStatusRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/api/public/voice/events': typeof ApiPublicVoiceEventsRoute
@@ -1725,6 +1733,7 @@ export interface FileRoutesById {
   '/api/public/sinch/webhook': typeof ApiPublicSinchWebhookRoute
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
+  '/api/public/twilio/inbound': typeof ApiPublicTwilioInboundRoute
   '/api/public/twilio/status': typeof ApiPublicTwilioStatusRoute
   '/api/public/v1/$': typeof ApiPublicV1SplatRoute
   '/api/public/voice/events': typeof ApiPublicVoiceEventsRoute
@@ -1911,6 +1920,7 @@ export interface FileRouteTypes {
     | '/api/public/sinch/webhook'
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
+    | '/api/public/twilio/inbound'
     | '/api/public/twilio/status'
     | '/api/public/v1/$'
     | '/api/public/voice/events'
@@ -2089,6 +2099,7 @@ export interface FileRouteTypes {
     | '/api/public/sinch/webhook'
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
+    | '/api/public/twilio/inbound'
     | '/api/public/twilio/status'
     | '/api/public/v1/$'
     | '/api/public/voice/events'
@@ -2275,6 +2286,7 @@ export interface FileRouteTypes {
     | '/api/public/sinch/webhook'
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
+    | '/api/public/twilio/inbound'
     | '/api/public/twilio/status'
     | '/api/public/v1/$'
     | '/api/public/voice/events'
@@ -2386,6 +2398,7 @@ export interface RootRouteChildren {
   ApiPublicSinchWebhookRoute: typeof ApiPublicSinchWebhookRoute
   ApiPublicSupportInboundRoute: typeof ApiPublicSupportInboundRoute
   ApiPublicSupportSweepRoute: typeof ApiPublicSupportSweepRoute
+  ApiPublicTwilioInboundRoute: typeof ApiPublicTwilioInboundRoute
   ApiPublicTwilioStatusRoute: typeof ApiPublicTwilioStatusRoute
   ApiPublicV1SplatRoute: typeof ApiPublicV1SplatRoute
   ApiPublicVoiceEventsRoute: typeof ApiPublicVoiceEventsRoute
@@ -3604,6 +3617,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSupportSweepRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/twilio/inbound': {
+      id: '/api/public/twilio/inbound'
+      path: '/api/public/twilio/inbound'
+      fullPath: '/api/public/twilio/inbound'
+      preLoaderRoute: typeof ApiPublicTwilioInboundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/twilio/status': {
       id: '/api/public/twilio/status'
       path: '/api/public/twilio/status'
@@ -4089,6 +4109,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSinchWebhookRoute: ApiPublicSinchWebhookRoute,
   ApiPublicSupportInboundRoute: ApiPublicSupportInboundRoute,
   ApiPublicSupportSweepRoute: ApiPublicSupportSweepRoute,
+  ApiPublicTwilioInboundRoute: ApiPublicTwilioInboundRoute,
   ApiPublicTwilioStatusRoute: ApiPublicTwilioStatusRoute,
   ApiPublicV1SplatRoute: ApiPublicV1SplatRoute,
   ApiPublicVoiceEventsRoute: ApiPublicVoiceEventsRoute,
