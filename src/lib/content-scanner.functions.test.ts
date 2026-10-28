@@ -26,9 +26,9 @@ describe("campaign preview safety decision", () => {
     mocks.aiScan.mockResolvedValue({ allowed: true, confidence: "none", unavailable: true });
     expect(await scan({ data: { messageBody: "Summit: Your requested order is ready. STOP" } })).toMatchObject({ allowed: true });
   });
-  it("holds text with a link when AI cannot check", async () => {
+  it("lets text with a link send when AI cannot check and rules pass", async () => {
     mocks.aiScan.mockResolvedValue({ allowed: true, confidence: "none", unavailable: true });
-    expect(await scan({ data: { messageBody: "Order ready: https://example.com STOP" } })).toMatchObject({ allowed: false });
+    expect(await scan({ data: { messageBody: "Order ready: https://example.com STOP" } })).toMatchObject({ allowed: true });
   });
   it("allows an ordinary identified order update after a successful safety check", async () => {
     mocks.aiScan.mockResolvedValue({ allowed: true, confidence: "ai" });
