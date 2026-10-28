@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { DedicatedLineCard } from "@/components/DedicatedLineCard";
 import { isValidSenderId, SENDER_ID_HINT } from "@/lib/sender-id-rules";
 import {
   Dialog,
