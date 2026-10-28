@@ -1,0 +1,76 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { z } from "zod";
+
+const str = (max: number) => z.string().trim().min(1).max(max);
+const Biz = z.object({
+  businessName: str(120), website: z.string().url().max(300), ein: z.string().trim().regex(/^\d{2}-?\d{7}$/, "Enter a 9-digit EIN"),
+  street: str(200), city: str(100), state: str(60), postalCode: str(20), country: z.string().length(2),
+  contactFirstName: str(60), contactLastName: str(60), contactEmail: z.string().email().max(200),
+  contactPhone: z.string().regex(/^\+\d{8,15}$/, "Use international format, e.g. +15551234567"),
+  privacyUrl: z.string().url().max(300), termsUrl: z.string().url().max(300), optInImageUrl: z.string().url().max(500),
+  useCaseSummary: z.string().trim().min(40).max(1000), sampleMessage: z.string().trim().min(20).max(320).refine((s) => /stop/i.test(s), "Sample must include STOP opt-out"),
+  monthlyVolume: z.enum(["1,000", "10,000", "100,000", "250,000", "500,000"]),
+});
+
+export const getMyDedicatedLine = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { resolveActingAccount } = await import("./acting-account.server");
+    const acting = await resolveActingAccount(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
+    let { data } = await db.from("tenant_twilio_lines").select("status").eq("account_id", acting.accountId).maybeSingle();
+    if (data?.status === "verification_pending") {
+      const { refreshLine } = await import("./twilio-lines.server");
+      await refreshLine(acting.accountId).catch((e) => console.error("[line refresh]", e));
+    }
+    ({ data } = await db.from("tenant_twilio_lines")
+      .select("phone_number,status,status_detail,monthly_fee_usd,renews_at,billing_status")
+      .eq("account_id", acting.accountId).maybeSingle());
+    const { data: fee } = await db.from("platform_settings").select("value").eq("key", "twilio_line_monthly_usd").maybeSingle();
+    const { data: acct } = await db.from("accounts")
+      .select("legal_business_name,website_url,business_reg_number,privacy_policy_url,terms_url,contact_email,full_name,phone,use_case_description,sample_message,opt_in_screenshot_url")
+      .eq("id", acting.accountId).maybeSingle();
+    return { line: data ?? null, monthlyFee: Number(String(fee?.value ?? "5").replace(/"/g, "")) || 5, prefill: acct ?? null };
+  });
+
+export const requestDedicatedLine = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => Biz.parse(input))
+  .handler(async ({ data, context }) => {
+    const { resolveBillingAccount } = await import("./billing-account.server");
+    const acting = await resolveBillingAccount(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const db = supabaseAdmin as any;
+    const { data: acct } = await db.from("accounts").select("onboarding_status,sending_suspended_at").eq("id", acting.accountId).maybeSingle();
+    if (!acct || acct.onboarding_status === "suspended" || acct.sending_suspended_at) throw new Error("Sending is on hold for this business. Please contact support.");
+
+    const { data: fee } = await db.from("platform_settings").select("value").eq("key", "twilio_line_monthly_usd").maybeSingle();
+    const price = Number(String(fee?.value ?? "5").replace(/"/g, "")) || 5;
+
+    await db.from("tenant_twilio_lines").upsert({ account_id: acting.accountId, monthly_fee_usd: price }, { onConflict: "account_id", ignoreDuplicates: true });
+    const { data: row } = await db.from("tenant_twilio_lines").select("status,charged_at").eq("account_id", acting.accountId).maybeSingle();
+    if (row?.status === "active") return { status: "active" };
+    if (row?.status === "verification_pending") return { status: "verification_pending" };
+
+    // Charge the first month exactly once; a retry after a failed setup step resumes without charging again.
+    if (!row?.charged_at) {
+      const { data: claimed } = await db.from("tenant_twilio_lines").update({ charged_at: new Date().toISOString() })
+        .eq("account_id", acting.accountId).is("charged_at", null).select("account_id");
+      if (claimed?.length) {
+        const { error } = await db.rpc("debit_account", { _account_id: acting.accountId, _amount: price, _campaign_id: null, _description: "Dedicated toll-free number — first month" });
+        if (error) {
+          await db.from("tenant_twilio_lines").update({ charged_at: null }).eq("account_id", acting.accountId);
+          throw new Error(/insufficient/i.test(error.message) ? `Add at least $${price.toFixed(2)} credit to request a dedicated number.` : "Could not charge your credit. Please try again.");
+        }
+      }
+    }
+    const { provisionLine } = await import("./twilio-lines.server");
+    try {
+      return await provisionLine(acting.accountId, { ...data, ein: data.ein.replace(/\D/g, "").replace(/^(\d{2})/, "$1-") });
+    } catch (e: any) {
+      await db.from("tenant_twilio_lines").update({ status_detail: String(e?.message ?? "Setup failed").slice(0, 300) }).eq("account_id", acting.accountId);
+      throw new Error(`Setup paused: ${e?.message ?? "please try again"}. You won't be charged again when you retry.`);
+    }
+  });
