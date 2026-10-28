@@ -289,7 +289,7 @@ function AuthPage() {
         </video>
       </div>
       <div className="flex flex-col items-center justify-center p-6 md:p-10">
-        <div className="md:hidden relative mb-6 h-48 w-full overflow-hidden rounded-2xl" aria-hidden="true">
+        <div className="md:hidden relative mb-6 h-56 w-full overflow-hidden rounded-2xl" aria-hidden="true">
           <video
             autoPlay
             loop
@@ -297,6 +297,7 @@ function AuthPage() {
             playsInline
             preload="metadata"
             className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: "center 88%" }}
           >
             <source src={loginGlobeAsset.url} type="video/mp4" />
             <source src={loginGlobeWebmAsset.url} type="video/webm" />
