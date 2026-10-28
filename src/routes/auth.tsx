@@ -265,19 +265,33 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
-      <div className="hidden md:flex hero-gradient flex-col justify-between p-10">
-        <Logo />
-        <div className="max-w-md">
-          <div className="text-4xl font-extrabold tracking-tight">
-            Reach customers <span className="text-gradient">worldwide.</span>
-          </div>
-          <p className="mt-4 text-muted-foreground">
-            Send global SMS campaigns with confidence — fast, reliable, compliant.
-          </p>
-        </div>
-        <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} Xellvio</div>
+      <div className="relative hidden overflow-hidden hero-gradient md:block" aria-hidden="true">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          className="pointer-events-none absolute left-1/2 top-1/2 w-[88%] max-h-full -translate-x-1/2 -translate-y-1/2 object-contain"
+        >
+          <source src={loginGlobeAsset.url} type="video/mp4" />
+          <source src={loginGlobeWebmAsset.url} type="video/webm" />
+        </video>
       </div>
       <div className="flex items-center justify-center p-6 md:p-10">
+        <div className="md:hidden relative mb-6 h-40 w-full overflow-hidden rounded-2xl" aria-hidden="true">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 h-full w-full object-cover"
+          >
+            <source src={loginGlobeAsset.url} type="video/mp4" />
+            <source src={loginGlobeWebmAsset.url} type="video/webm" />
+          </video>
+        </div>
         <Card className="w-full max-w-md p-8">
           <div className="md:hidden mb-6">
             <Logo />
