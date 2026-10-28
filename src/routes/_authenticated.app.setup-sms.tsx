@@ -108,35 +108,133 @@ function SetupSmsPage() {
       </div>
     );
   const a = account.data;
-  const hasAssets = (assets.data?.length ?? 0) > 0;
+  const list = (assets.data ?? []) as any[];
+  const tfReady = list.some((x) => x.sender_kind === "toll_free" && x.verification_status === "verified");
+  const senderIdAsset = list.find((x) => x.sender_kind === "sender_id");
+  const readyCountries = list.filter((x) => x.verification_status === "verified").map((x) => x.country_code);
+  const pending = list.filter((x) => ["submitted", "in_review", "requires_registration"].includes(x.verification_status));
+  const steps = [
+    { label: "US & Canada number", done: tfReady, hint: tfReady ? "Approved" : "Toll-free verification" },
+    { label: "Your Sender ID", done: !!senderIdAsset, hint: senderIdAsset?.phone_number ?? "Name customers see" },
+    { label: "Countries live", done: readyCountries.length > 0, hint: `${new Set(readyCountries).size} ready${pending.length ? ` · ${pending.length} in review` : ""}` },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2">
-          <MessageSquareText className="size-6 text-primary" /> Set up SMS
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Answer a few questions and we'll handle the rest. Most setups are ready in 7–10 business
-          days.
-        </p>
+    <div className="max-w-5xl mx-auto space-y-6 pb-10">
+      <section
+        className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm"
+        style={{ animation: "bento-rise .5s cubic-bezier(.2,.8,.2,1) both" }}
+      >
+        <div className="bento-orb -right-10 -top-16 size-56 bg-primary/25" />
+        <div className="bento-orb -left-16 bottom-0 size-40 bg-success/20" style={{ animationDelay: "-4s" }} />
+        <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+          <div className="space-y-2 max-w-xl">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-semibold">
+              <Sparkles className="size-3.5" /> Sender setup
+            </span>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight flex items-center gap-3">
+              <MessageSquareText className="size-8 text-primary" /> Set up SMS
+            </h1>
+            <p className="text-muted-foreground">
+              Choose how your business appears on customers' phones. UK Sender IDs go live instantly;
+              some countries need a one-time registration that we file for you.
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="relative size-20">
+              <svg viewBox="0 0 36 36" className="size-20 -rotate-90">
+                <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-muted" strokeWidth="3" />
+                <circle
+                  cx="18" cy="18" r="15.5" fill="none" className="stroke-primary transition-all duration-700"
+                  strokeWidth="3" strokeLinecap="round" strokeDasharray={`${(doneCount / 3) * 97.4} 97.4`}
+                />
+              </svg>
+              <div className="absolute inset-0 grid place-items-center text-lg font-bold">{doneCount}/3</div>
+            </div>
+            <div className="text-sm">
+              <div className="font-semibold">{doneCount === 3 ? "You're all set" : "Setup progress"}</div>
+              <div className="text-muted-foreground">{doneCount === 3 ? "Ready to send" : "Finish the steps below"}</div>
+            </div>
+          </div>
+        </div>
+        <ol className="relative mt-6 grid gap-3 sm:grid-cols-3">
+          {steps.map((s, i) => (
+            <li
+              key={s.label}
+              className={`rounded-2xl border p-4 transition-colors ${s.done ? "border-success/40 bg-success/5" : "bg-background/60"}`}
+              style={{ animation: `bento-rise .5s ${0.1 + i * 0.08}s cubic-bezier(.2,.8,.2,1) both` }}
+            >
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                {s.done ? (
+                  <CheckCircle2 className="size-4 text-success" />
+                ) : (
+                  <span className="grid place-items-center size-5 rounded-full border text-[11px]">{i + 1}</span>
+                )}
+                {s.label}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground truncate">{s.hint}</div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="space-y-6 min-w-0">
+          <TollfreeSetupStep
+            assets={list}
+            targetCountries={a?.sms_target_countries ?? []}
+          />
+          <SenderStatusList
+            assets={list}
+            accountPhone={a?.phone ?? undefined}
+            onRefresh={() => refreshMut.mutate()}
+            refreshing={refreshMut.isPending}
+            onSaved={() => {
+              qc.invalidateQueries({ queryKey: ["sender-assets"] });
+              qc.invalidateQueries({ queryKey: ["account"] });
+            }}
+          />
+        </div>
+        <aside className="space-y-4 lg:sticky lg:top-20 self-start">
+          <Card className="p-5 space-y-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Phone preview</div>
+            <div className="rounded-2xl bg-muted p-4 space-y-2">
+              <div className="text-center text-xs font-semibold">{senderIdAsset?.phone_number || "YOUR NAME"}</div>
+              <div className="rounded-2xl rounded-bl-sm bg-background px-3 py-2 text-sm shadow-sm max-w-[90%]">
+                Hi Sarah, your order is ready for pickup today. Reply STOP to opt out.
+              </div>
+            </div>
+          </Card>
+          <Card className="p-5 space-y-3 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Countries ready</div>
+            {readyCountries.length === 0 ? (
+              <p className="text-muted-foreground">No countries live yet.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {[...new Set(readyCountries)].map((cc) => (
+                  <Badge key={cc} variant="secondary" className="gap-1">
+                    <CheckCircle2 className="size-3 text-success" /> {COUNTRIES.find((c) => c.code === cc)?.name ?? cc}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {pending.length > 0 && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Clock className="size-3.5" /> {pending.length} in review
+              </p>
+            )}
+          </Card>
+          <Card className="p-5 space-y-2 text-sm">
+            <div className="font-semibold flex items-center gap-2"><ShieldCheck className="size-4 text-primary" /> Sender ID tips</div>
+            <ul className="text-muted-foreground space-y-1.5 text-xs list-disc pl-4">
+              <li>3–11 letters, numbers or spaces, with at least two letters.</li>
+              <li>Use your brand name, not a phone number.</li>
+              <li>Customers can't reply to a Sender ID, so always include STOP.</li>
+            </ul>
+          </Card>
+        </aside>
       </div>
-
-      <TollfreeSetupStep
-        assets={assets.data ?? []}
-        targetCountries={a?.sms_target_countries ?? []}
-      />
-
-      <SenderStatusList
-        assets={assets.data ?? []}
-        accountPhone={a?.phone ?? undefined}
-        onRefresh={() => refreshMut.mutate()}
-        refreshing={refreshMut.isPending}
-        onSaved={() => {
-          qc.invalidateQueries({ queryKey: ["sender-assets"] });
-          qc.invalidateQueries({ queryKey: ["account"] });
-        }}
-      />
     </div>
   );
 }
