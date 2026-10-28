@@ -585,6 +585,14 @@ export async function sendMessage(opts: {
   if (!/^\+[1-9]\d{7,14}$/.test(to)) {
     throw new Error(`Invalid destination number: "${opts.to}" is not a valid international (E.164) number`);
   }
+  {
+    const { isSinchDestination } = await import("./sinch-routing");
+    const { sinchConfigured, sendViaSinch } = await import("./sinch.server");
+    if (sinchConfigured() && isSinchDestination(to, { hasMedia: Boolean(opts.mediaUrls?.length) })) {
+      const r = await sendViaSinch({ to, text: opts.text, senderId: opts.from, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
+      return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
+    }
+  }
   const body: any = {
     to,
     text: opts.text,
