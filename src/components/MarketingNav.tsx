@@ -5,6 +5,7 @@ import { Logo } from "./Logo";
 import { Button } from "@/components/ui/button";
 import { NAV, type NavEntry, type MenuGroup } from "@/components/marketing/nav-data";
 import { ThemeToggle, ThemeToggleLabelled } from "@/components/ThemeToggle";
+import { SiteSearch } from "@/components/marketing/SiteSearch";
 
 function hasMenu(e: NavEntry): e is Extract<NavEntry, { groups: MenuGroup[] }> {
   return "groups" in e;
@@ -12,6 +13,7 @@ function hasMenu(e: NavEntry): e is Extract<NavEntry, { groups: MenuGroup[] }> {
 
 export function MarketingNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -82,9 +84,10 @@ export function MarketingNav() {
         </nav>
 
         <div className="ml-auto hidden lg:flex items-center gap-3">
-          <Link to="/docs" aria-label="Search the docs" className="grid size-10 place-items-center rounded-full text-foreground/80 hover:bg-muted hover:text-foreground transition-colors">
+          <button type="button" onClick={() => setSearchOpen(true)} aria-label="Search" className="grid size-10 place-items-center rounded-full text-foreground/80 hover:bg-muted hover:text-foreground transition-colors">
             <Search className="size-5" />
-          </Link>
+          </button>
+          <SiteSearch open={searchOpen} onOpenChange={setSearchOpen} />
           <Link to="/auth" search={{ mode: "signup" }}>
             <Button className="h-12 rounded-2xl px-6 text-base shadow-md transition-transform hover:-translate-y-0.5">Try for free</Button>
           </Link>
