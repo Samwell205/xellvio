@@ -654,6 +654,11 @@ export async function createAlphanumericSenderId(opts: {
 }
 
 export async function getMessage(id: string, boundedDispatch=false): Promise<any> {
+  {
+    // UK-route messages get receipts by webhook only; never look them up here.
+    const { isSinchMessageId } = await import("./sinch-routing");
+    if (isSinchMessageId(id)) throw new Error("Delivery receipt pending from the UK route.");
+  }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: message, error } = await supabaseAdmin.from("messages").select("sent_at,phone_e164,campaigns!inner(account_id)").eq("provider_message_id", id).abortSignal(AbortSignal.timeout(2000)).maybeSingle();
   if (error || !message) throw new Error("Delivery connection could not be resolved. Please retry.");
