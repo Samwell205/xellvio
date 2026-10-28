@@ -275,13 +275,21 @@ function AuthPage() {
           playsInline
           preload="auto"
           className="pointer-events-none absolute left-1/2 top-1/2 w-[88%] max-h-full -translate-x-1/2 -translate-y-1/2 object-contain"
+          style={{
+            maskImage:
+              "linear-gradient(to right, transparent, black 28px, black calc(100% - 28px), transparent), linear-gradient(to bottom, transparent, black 28px, black calc(100% - 28px), transparent)",
+            WebkitMaskImage:
+              "linear-gradient(to right, transparent, black 28px, black calc(100% - 28px), transparent), linear-gradient(to bottom, transparent, black 28px, black calc(100% - 28px), transparent)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
+          }}
         >
           <source src={loginGlobeAsset.url} type="video/mp4" />
           <source src={loginGlobeWebmAsset.url} type="video/webm" />
         </video>
       </div>
       <div className="flex flex-col items-center justify-center p-6 md:p-10">
-        <div className="md:hidden relative mb-6 h-40 w-full overflow-hidden rounded-2xl" aria-hidden="true">
+        <div className="md:hidden relative mb-6 h-48 w-full overflow-hidden rounded-2xl" aria-hidden="true">
           <video
             autoPlay
             loop
