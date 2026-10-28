@@ -77,8 +77,8 @@ export async function sendViaSinch(opts: { to: string; text: string; senderId?: 
   if (!res.ok || !j?.message_id) {
     throw new Error(`Message was not accepted for UK delivery${j?.error?.message ? `: ${String(j.error.message).slice(0, 200)}` : ""}`);
   }
-  const { segmentCount } = await import("./sms-segments").catch(() => ({ segmentCount: undefined as any }));
-  const parts = typeof segmentCount === "function" ? Number(segmentCount(opts.text)) || 1 : 1;
+  const { calculateSegments } = await import("./sms-segments");
+  const parts = Number((calculateSegments(opts.text) as any).segments) || 1;
   return { id: j.message_id, parts };
 }
 
