@@ -455,13 +455,14 @@ function TollfreeVerificationPage() {
             </Button>
           </CardContent>
         </Card>
-      ) : !feePaid && !submissionStarted ? (
+      ) : !feePaid && !submissionStarted && !lineRejected ? (
         <PayFeeGate fee={feeQuery.data?.fee ?? 5} balance={feeQuery.data?.balance ?? 0} />
       ) : (
+        <div id="tollfree-wizard" className="scroll-mt-6">
         <TollfreeWizard
-          key={submissionStarted ? "locked" : "editable"}
+          key={lineRejected ? "rejected" : submissionStarted ? "locked" : "editable"}
           initial={initialForm}
-          disabled={isLocked}
+          disabled={lineRejected ? false : isLocked}
           submitting={submitMut.isPending}
           reservedNumber={asset?.phone_number ?? null}
           verificationStatus={status ?? rawStatus ?? null}
