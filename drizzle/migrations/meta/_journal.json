@@ -239,6 +239,13 @@
       "when": 1793292465274,
       "tag": "0033_email_queue_wake_and_unlimited_bundle",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793292773729,
+      "tag": "0034_exclusive_email_sending_domains",
+      "breakpoints": true
     }
   ]
 }
