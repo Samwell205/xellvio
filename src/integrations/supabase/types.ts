@@ -8444,6 +8444,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      email_apply_event: {
+        Args: {
+          _at: string
+          _event: string
+          _event_id: string
+          _reason?: string
+          _recipient: string
+        }
+        Returns: undefined
+      }
+      email_arm_dispatch: { Args: never; Returns: undefined }
       email_campaign_report: { Args: { _id: string }; Returns: Json }
       email_claim_batch: {
         Args: never
@@ -8472,13 +8483,17 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      email_finish_campaigns: { Args: never; Returns: undefined }
       email_queue_campaign: {
         Args: { _account: string; _id: string; _schedule?: string }
         Returns: number
       }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      email_recipient_eligible: { Args: { _id: string }; Returns: boolean }
       email_renew_bundles: { Args: never; Returns: undefined }
+      email_reserve_test: { Args: { _account: string }; Returns: undefined }
       email_unsubscribe: { Args: { _token: string }; Returns: undefined }
+      email_wake_dispatch: { Args: never; Returns: undefined }
       encrypt_twilio_token: { Args: { _plain: string }; Returns: string }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }

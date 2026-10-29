@@ -225,6 +225,13 @@
       "when": 1793291993450,
       "tag": "0031_email_campaign_queue_bundles",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793292158649,
+      "tag": "0032_email_delivery_scheduler_and_events",
+      "breakpoints": true
     }
   ]
 }
