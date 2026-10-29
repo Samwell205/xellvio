@@ -54,7 +54,7 @@ export function EmailVisualEditor({ html, onChange }: { html: string; onChange: 
   function setup() {
     const d = doc(); if (!d) return;
     if (!d.getElementById(EDIT_STYLE_ID)) { const s = d.createElement("style"); s.id = EDIT_STYLE_ID; s.textContent = EDIT_CSS; d.head?.appendChild(s); }
-    d.designMode = "on";
+    d.designMode = "on"; if (d.body) d.body.spellcheck = false;
     d.addEventListener("input", emitSoon);
     d.addEventListener("mouseover", (e) => { const t = e.target as HTMLElement; const el = t.closest?.("img,a"); if (el) el.setAttribute("data-xv-hover", ""); });
     d.addEventListener("mouseout", (e) => { (e.target as HTMLElement).closest?.("img,a")?.removeAttribute("data-xv-hover"); });

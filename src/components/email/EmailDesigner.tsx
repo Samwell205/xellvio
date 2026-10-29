@@ -78,7 +78,7 @@ export function EmailContentChooser({ draft, onPick }: { draft: EmailDraft; onPi
   </div>;
 }
 
-const METHOD_LABEL: Record<EmailMode, string> = { design: "Drag & drop design", plain: "Plain message", html: "Coded / template email" };
+const METHOD_LABEL: Record<EmailMode, string> = { design: "Drag & drop design", plain: "Plain message", html: "Template or HTML email" };
 
 export function EmailDesigner({ draft, onChange, onChangeMethod, htmlView, onHtmlView }: { draft: EmailDraft; onChange: (v: Partial<EmailDraft>) => void; onChangeMethod: () => void; htmlView: "visual" | "code"; onHtmlView: (v: "visual" | "code") => void }) {
   const [selected, setSelected] = useState<string | null>(null);
