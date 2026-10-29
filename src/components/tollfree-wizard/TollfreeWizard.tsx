@@ -883,32 +883,47 @@ function AdditionalStep({ form, update }: StepProps) {
   );
 }
 
-function ReviewStep({ form, update }: StepProps) {
+function ReviewStep({ form, update, onEdit }: StepProps & { onEdit?: (stepIdx: number) => void }) {
   const row = (label: string, value: React.ReactNode) => (
-    <div className="grid grid-cols-[180px_1fr] gap-3 py-1.5 text-sm border-b last:border-0">
+    <div className="grid grid-cols-1 gap-0.5 py-2 text-sm sm:grid-cols-[160px_1fr] sm:gap-3">
       <div className="text-muted-foreground">{label}</div>
-      <div className="break-words">{value || <span className="text-muted-foreground">—</span>}</div>
+      <div className="break-words font-medium">{value || <span className="text-muted-foreground">—</span>}</div>
     </div>
   );
+  const group = (title: string, step: number, children: React.ReactNode) => (
+    <div className="rounded-xl border p-4">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</span>
+        {onEdit && <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full text-xs" onClick={() => onEdit(step)}>Edit</Button>}
+      </div>
+      <div className="divide-y">{children}</div>
+    </div>
+  );
+  const address = [form.addressLine1, form.addressLine2, form.city, `${form.state} ${form.zip}`.trim(), form.businessCountry].filter((x) => x && x.trim()).join(", ");
+  const contact = [`${form.contactFirstName} ${form.contactLastName}`.trim(), form.contactEmail, form.contactPhone ? `${form.contactPhoneCountry} ${form.contactPhone}` : ""].filter(Boolean).join(" · ");
   return (
     <>
       <StepHeader
         title="Review & submit"
-        subtitle="Double-check the details below. Once submitted, this goes straight to the carriers for review."
+        subtitle="One last look. After you submit, the carrier usually replies within a few business days."
       />
-      <div className="rounded-md border p-4">
-        {row("Legal name", form.legalEntityName)}
-        {row("DBA", form.businessDba)}
-        {row("Company type", form.businessType)}
-        {row("Website", form.websiteUrl)}
-        {row("Address", `${form.addressLine1}${form.addressLine2 ? `, ${form.addressLine2}` : ""}, ${form.city}, ${form.state} ${form.zip}, ${form.businessCountry}`)}
-        {row("Contact", `${form.contactFirstName} ${form.contactLastName} — ${form.contactEmail} — ${form.contactPhoneCountry} ${form.contactPhone}`)}
-        {row("Monthly volume", form.monthlyVolume)}
-        {row("Use cases", form.useCaseCategories.join(", "))}
-        {row("Opt-in type", form.optInType)}
-        {row("Opt-in proof", form.proofOfOptInUrl)}
-        {row("Sample message", form.sampleMessage)}
-        {row("Notification email", form.notificationEmail)}
+      <div className="grid gap-3 lg:grid-cols-2">
+        {group("Business", 0, <>
+          {row("Legal name", form.legalEntityName)}
+          {form.businessDba && row("Also known as", form.businessDba)}
+          {row("Company type", form.businessType)}
+          {row("Website", form.websiteUrl)}
+          {row("Address", address)}
+          {row("Contact", contact)}
+        </>)}
+        {group("Texting", 2, <>
+          {row("Monthly volume", form.monthlyVolume)}
+          {row("Use cases", form.useCaseCategories.join(", "))}
+          {row("Sign-up method", OPT_IN_LABEL[form.optInType] ?? form.optInType)}
+          {row("Sign-up proof", form.proofOfOptInUrl)}
+          {row("Sample message", form.sampleMessage)}
+          {row("Updates sent to", form.notificationEmail)}
+        </>)}
       </div>
       <label className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-sm">
         <Checkbox
