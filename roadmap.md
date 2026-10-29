@@ -8,6 +8,7 @@
 ## Email marketing
 - [x] Contacts with phone, email, or both; uploads map an Email column
 - [x] Email sending domain page (add, DNS records, Check) — xellvio.com added, waiting on GoDaddy records
-- [ ] Email in campaign builder (subject, sender, reply-to, designer, test send)
-- [ ] Batched bulk sending, unsubscribe link, bounce/complaint handling, reports
-- [ ] Enforce Free/Standard/Pro plan limits and billing
+- [ ] Email in campaign builder (subject, sender, reply-to, visual designer, persisted drafts, test send)
+- [ ] Durable bulk queue, unsubscribe, signed delivery/bounce/complaint events, reports
+- [ ] Enforce Free/Standard/Pro limits and prepaid monthly bundle billing
+- [ ] Verify authenticated email draft/design flow and queue safeguards; report domain/provider blockers honestly
