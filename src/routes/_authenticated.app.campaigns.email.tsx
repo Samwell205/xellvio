@@ -30,11 +30,16 @@ function EmailCampaignPage() {
   const [draft, setDraft] = useState<EmailDraft | null>(null); const [step, setStep] = useState(0); const [busy, setBusy] = useState(false); const [saved, setSaved] = useState(false); const [dirty, setDirty] = useState(false);
   const [testEmail, setTestEmail] = useState(""); const [schedule, setSchedule] = useState(""); const [confirm, setConfirm] = useState(false);
   const creating = useRef(false);
+  const saveChain = useRef<Promise<unknown>>(Promise.resolve());
   const q = useQuery({ queryKey: ["email-campaign", id], queryFn: () => get({ data: { id: id ?? "" } }), enabled: !!id, refetchInterval: (query) => query.state.data?.campaign.status === "draft" ? false : 10000 });
   // Draft content is restored once, never replaced by background refreshes.
   useEffect(() => {
     if (!q.data || draft?.id === q.data.campaign.id) return;
-    const parsed = emailDraftSchema.safeParse(q.data.campaign); if (parsed.success) { setDraft(parsed.data); setSaved(true); setDirty(false); }
+    let source: unknown = q.data.campaign;
+    if (q.data.campaign.status === "draft") {
+      try { const local = localStorage.getItem(`email-draft:${q.data.campaign.id}`); if (local) source = JSON.parse(local); } catch { /* stored draft unavailable */ }
+    }
+    const parsed = emailDraftSchema.safeParse(source); if (parsed.success) { setDraft(parsed.data); setSaved(source === q.data.campaign); setDirty(source !== q.data.campaign); }
   }, [q.data, draft?.id]);
   useEffect(() => {
     if (id || creating.current) return;
@@ -47,12 +52,22 @@ function EmailCampaignPage() {
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
     window.addEventListener("beforeunload", handler); return () => window.removeEventListener("beforeunload", handler);
   }, [dirty, draft]);
+  useEffect(() => {
+    if (!dirty || !draft || q.data?.campaign.status && q.data.campaign.status !== "draft") return;
+    const timer = setTimeout(() => {
+      const snapshot = draft;
+      saveChain.current = saveChain.current.catch(() => {}).then(() => save({ data: snapshot })).then(() => {
+        setDraft((latest) => { if (latest === snapshot) { setSaved(true); setDirty(false); localStorage.removeItem(`email-draft:${snapshot.id}`); } return latest; });
+      }).catch((e) => toast.error(e instanceof Error ? e.message : "Draft could not be saved"));
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [dirty, draft, q.data?.campaign.status, save]);
   const current = q.data?.campaign; const status = current?.status ?? "draft";
   const editable = status === "draft";
   const verified = setup.domains.some((d) => d.status === "verified" && d.domain === emailSenderDomain(draft?.from_email ?? ""));
   const ready = !!draft?.subject.trim() && !!draft?.from_name.trim() && !!draft?.postal_address.trim() && !!draft?.blocks.length && verified;
-  function patch(values: Partial<EmailDraft>) { setDraft((d) => d ? { ...d, ...values } : d); setDirty(true); setSaved(false); }
-  async function saveNow() { if (!draft) return; await save({ data: draft }); setSaved(true); setDirty(false); qc.invalidateQueries({ queryKey: ["email-campaigns"] }); }
+  function patch(values: Partial<EmailDraft>) { setDraft((d) => { if (!d) return d; const next = { ...d, ...values }; try { localStorage.setItem(`email-draft:${d.id}`, JSON.stringify(next)); } catch { /* server autosave remains available */ } return next; }); setDirty(true); setSaved(false); }
+  async function saveNow() { if (!draft) return; saveChain.current = saveChain.current.catch(() => {}).then(() => save({ data: draft })); await saveChain.current; setSaved(true); setDirty(false); localStorage.removeItem(`email-draft:${draft.id}`); qc.invalidateQueries({ queryKey: ["email-campaigns"] }); }
   async function perform(action: () => Promise<void>) { setBusy(true); try { await action(); } catch (e) { toast.error(e instanceof Error ? e.message : "Please try again"); } finally { setBusy(false); } }
   if (q.error) return <div role="alert" className="p-6 text-destructive">{q.error.message}</div>;
   if (!draft) return <div className="flex items-center gap-2 p-8"><Loader2 className="size-5 animate-spin" />Opening email draft…</div>;
