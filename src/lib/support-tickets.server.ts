@@ -1,8 +1,9 @@
 // Support tickets: creation, messages, customer emails, reminders/auto-close
 // and inbound email replies. Server-only.
 
-export const REMINDER_AFTER_MS = 24 * 3600_000;
-export const CLOSE_AFTER_MS = 72 * 3600_000;
+import { CLOSE_AFTER_MS, FOLLOWUP_STEP_MS, followupAction } from "./support-ticket-followup";
+export { CLOSE_AFTER_MS };
+export const REMINDER_AFTER_MS = FOLLOWUP_STEP_MS;
 
 const SITE = () => (process.env.PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://xellvio.com");
 
@@ -97,10 +98,10 @@ export async function createTicket(input: {
   }).select("*").single();
   if (error) throw new Error(error.message);
   await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "customer", body: input.message, via: input.source === "email" ? "email" : "web" });
-  const prev = input.previousTicketId ? " Your earlier ticket was closed, so we've opened this new one." : "";
+  const prev = input.previousTicketId ? "\n\nYour earlier ticket was closed, so we've opened this new one." : "";
   await email(t, "opened", t.subject,
-    `Ticket #${t.number} is open`,
-    `Thanks for contacting Xellvio Support. We've received your message and opened ticket #${t.number}.${prev}\nWe'll reply within one business day. You can reply to this email or open your ticket page to add details.`);
+    `Ticket #${t.number} has been received`,
+    `Dear Valued Customer,\n\nThank you for reaching out to Xellvio Support. Your request has been received, and Ticket ID ${t.number} has been assigned to it. A support representative will be reaching out to you shortly.\n\nSubject: ${t.subject}\nTicket ID: ${t.number}${prev}\n\nYou can reply to this email or open your ticket page to add details. We sincerely appreciate your patience.\n\nKind regards,\nXellvio Support`);
   await notifyAdmin(t, `New ticket from ${t.requester_email}: ${input.message}`);
   return t;
 }
@@ -205,35 +206,41 @@ export async function setTicketStatus(ticketId: string, status: "open" | "closed
   }
 }
 
-/** Hourly: remind after 24h without a customer reply, close after 72h. Idempotent. */
+/** Remind at 3h and 6h without a customer reply, close at 9h. Idempotent. */
 export async function sweepTickets(now = Date.now()) {
   const sb = await db();
+  const cutoff = new Date(now - REMINDER_AFTER_MS).toISOString();
   const { data: waiting } = await sb.from("support_tickets").select("*")
     .in("status", ["waiting", "resolved"])
-    .or(`last_admin_reply_at.lte.${new Date(now - REMINDER_AFTER_MS).toISOString()},and(status.eq.resolved,resolved_at.lte.${new Date(now - REMINDER_AFTER_MS).toISOString()})`)
+    .or(`last_admin_reply_at.lte.${cutoff},and(status.eq.resolved,resolved_at.lte.${cutoff})`)
     .limit(200);
   let reminded = 0, closed = 0;
   for (const t of (waiting ?? []) as (TicketRow & { resolved_at: string | null })[]) {
     const stamp = t.status === "resolved" ? (t.resolved_at ?? t.last_admin_reply_at) : t.last_admin_reply_at;
     if (!stamp) continue;
-    const since = now - new Date(stamp).getTime();
-    if (since >= CLOSE_AFTER_MS) {
-      const iso = new Date(now).toISOString();
+    const action = followupAction(new Date(stamp).getTime(), t.reminder_sent_at ? new Date(t.reminder_sent_at).getTime() : null, now);
+    const iso = new Date(now).toISOString();
+    if (action === "close") {
       const { data: upd } = await sb.from("support_tickets").update({ status: "closed", closed_at: iso, updated_at: iso })
         .eq("id", t.id).in("status", ["waiting", "resolved"]).select("id");
       if (!upd?.length) continue;
-      await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "system", body: "Closed automatically after 72 hours without a reply." });
-      await email(t, `autoclose-${t.last_admin_reply_at}`, t.subject, `Ticket #${t.number} has been closed`,
-        "We haven't heard back from you, so we've closed this ticket. If you still need help, just open a new ticket and we'll pick it up.", "View ticket");
+      await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "system", body: "Closed automatically after 9 hours without a reply." });
+      await email(t, `autoclose-${stamp}`, t.subject, `Ticket #${t.number} has been closed`,
+        `Dear Valued Customer,\n\nWe haven't heard back from you after two reminders, so ticket #${t.number} has been closed automatically.\n\nIf you still need help, simply open a new ticket and our support team will pick it up.\n\nKind regards,\nXellvio Support`, "View ticket");
       closed++;
-    } else if (!t.reminder_sent_at) {
-      const iso = new Date(now).toISOString();
-      const { data: upd } = await sb.from("support_tickets").update({ reminder_sent_at: iso })
-        .eq("id", t.id).is("reminder_sent_at", null).select("id");
+    } else if (action === "reminder1" || action === "reminder2") {
+      let q = sb.from("support_tickets").update({ reminder_sent_at: iso }).eq("id", t.id);
+      q = t.reminder_sent_at ? q.eq("reminder_sent_at", t.reminder_sent_at) : q.is("reminder_sent_at", null);
+      const { data: upd } = await q.select("id");
       if (!upd?.length) continue;
-      await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "system", body: "Reminder sent to customer (24 hours without a reply)." });
-      await email(t, `reminder-${t.last_admin_reply_at}`, t.subject, `We're still waiting to hear from you`,
-        `We're still waiting for your reply on ticket #${t.number}. If we don't hear back within 48 hours, we'll close this ticket.`, "Reply on your ticket");
+      const second = action === "reminder2";
+      await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "system",
+        body: second ? "Final reminder sent to customer (6 hours without a reply)." : "Reminder sent to customer (3 hours without a reply)." });
+      await email(t, `${action}-${stamp}`, t.subject, second ? "Final reminder: we're waiting for your reply" : "We're still waiting to hear from you",
+        second
+          ? `Dear Valued Customer,\n\nThis is a final reminder about ticket #${t.number}. If we don't hear back within 3 hours, this ticket will be closed automatically.\n\nKind regards,\nXellvio Support`
+          : `Dear Valued Customer,\n\nWe're still waiting for your reply on ticket #${t.number}. If we don't hear back within 6 hours, this ticket will be closed automatically.\n\nKind regards,\nXellvio Support`,
+        "Reply on your ticket");
       reminded++;
     }
   }
