@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertTriangle, Download, Upload, Zap, RotateCcw, Plus } from "lucide-react";
 import { normalizePhone } from "@/lib/phone-normalize";
+import { normalizeEmail } from "@/lib/contact-email";
 import { supabase } from "@/integrations/supabase/client";
 import { useAccountId } from "@/hooks/useAccountId";
 import {
@@ -329,7 +330,7 @@ export default function ImportCsvDialog({
           <DialogTitle className="flex items-center gap-2"><Zap className="size-4 text-primary" />Fast CSV import</DialogTitle>
           <DialogDescription>
             Handles very large files (100k+ rows) — parsing runs in the background and saving happens in bulk.
-            You attest every contact opted in to receive SMS from you.
+            You attest every contact opted in to receive messages from you. Each contact needs a phone, an email, or both.
           </DialogDescription>
         </DialogHeader>
 
@@ -502,6 +503,7 @@ export default function ImportCsvDialog({
                                 <SelectContent>
                                   <SelectItem value="__none" className="text-xs">— skip —</SelectItem>
                                   <SelectItem value="phone" className="text-xs">Phone</SelectItem>
+                                  <SelectItem value="email" className="text-xs">Email</SelectItem>
                                   <SelectItem value="first_name" className="text-xs">First name</SelectItem>
                                   <SelectItem value="last_name" className="text-xs">Last name</SelectItem>
                                   <SelectItem value="country" className="text-xs">Country (ISO-2)</SelectItem>
