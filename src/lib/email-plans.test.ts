@@ -16,3 +16,10 @@ describe("email plans (Omnisend prices)", () => {
     expect(p.pro.price).toBe(150);
   });
 });
+
+describe("Xellvio free plan", () => {
+  it("is 25 contacts and 50 emails", async () => {
+    const { FREE_PLAN } = await import("./email-plans");
+    expect(FREE_PLAN).toEqual({ contacts: 25, emails: 50 });
+  });
+});

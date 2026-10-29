@@ -42,9 +42,23 @@ export function EmailPlans() {
         </div>
 
         <div className="mx-auto mt-8 max-w-2xl rounded-2xl border bg-card p-5 shadow-sm">
-          <div className="flex items-baseline justify-between">
-            <span className="font-semibold">How many contacts do you have?</span>
-            <span className="text-2xl font-bold tabular-nums">{fmt(contacts)}{idx === CONTACT_STEPS.length - 1 ? "+" : ""}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="font-semibold">List size</span>
+              <p className="text-sm text-muted-foreground">How many people are you sending to?</p>
+            </div>
+            <select
+              aria-label="Choose list size"
+              value={idx}
+              onChange={(e) => setIdx(Number(e.target.value))}
+              className="h-11 min-w-44 rounded-lg border bg-background px-3 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              {CONTACT_STEPS.map((step, i) => (
+                <option key={step} value={i}>
+                  {i === 0 ? `0 - ${fmt(step)}` : `${fmt(CONTACT_STEPS[i - 1] + 1)} - ${fmt(step)}`}
+                </option>
+              ))}
+            </select>
           </div>
           <Slider className="mt-5" min={0} max={CONTACT_STEPS.length - 1} step={1} value={[idx]} onValueChange={(v) => setIdx(v[0])} aria-label="Contacts" />
           <label className="mt-5 flex items-center justify-end gap-2 text-sm">
