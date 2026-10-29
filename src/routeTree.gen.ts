@@ -47,7 +47,6 @@ import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
-import { Route as ZzEmailCheckRouteImport } from './routes/zz-email-check'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
@@ -388,11 +387,6 @@ const UnsubscribeRoute = UnsubscribeRouteImport.update({
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ZzEmailCheckRoute = ZzEmailCheckRouteImport.update({
-  id: '/zz-email-check',
-  path: '/zz-email-check',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotmcpChar93ListToolsRoute =
@@ -1289,7 +1283,6 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
-  '/zz-email-check': typeof ZzEmailCheckRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -1480,7 +1473,6 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
-  '/zz-email-check': typeof ZzEmailCheckRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/account-assistant': typeof ApiAccountAssistantRoute
@@ -1670,7 +1662,6 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
-  '/zz-email-check': typeof ZzEmailCheckRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -1864,7 +1855,6 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/verify-email'
-    | '/zz-email-check'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/admin'
@@ -2055,7 +2045,6 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/verify-email'
-    | '/zz-email-check'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/api/account-assistant'
@@ -2244,7 +2233,6 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/verify-email'
-    | '/zz-email-check'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
@@ -2439,7 +2427,6 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
-  ZzEmailCheckRoute: typeof ZzEmailCheckRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiAccountAssistantRoute: typeof ApiAccountAssistantRoute
@@ -2769,13 +2756,6 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/zz-email-check': {
-      id: '/zz-email-check'
-      path: '/zz-email-check'
-      fullPath: '/zz-email-check'
-      preLoaderRoute: typeof ZzEmailCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -4207,7 +4187,6 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   VerifyEmailRoute: VerifyEmailRoute,
-  ZzEmailCheckRoute: ZzEmailCheckRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
