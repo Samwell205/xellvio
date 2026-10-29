@@ -56,4 +56,4 @@
 - Email domains are provider-validated and exclusive to a business; sending cannot impersonate another business.
 - Email campaigns use durable recipients, atomic consent/quotas, signed events and no ambiguous resends; SMS stays separate. Confirmed bundles debit the acting business; SQL owns renewals.
 - Email campaigns support design/plain/html content modes rendered and sanitized only in email-campaign-rules.ts (always with a text part and unsubscribe); email_templates rows with null account_id are the shared library, imported from the provider by admins only.
-- Email template selection shows shared imported prebuilt designs upfront; basic local layouts stay separate. Admin refresh reads /designs/pre-builts in batches of ten; applying any template only edits a draft, never launches it.
+- Email campaigns separate Details, Templates, Design and Review into focused steps; the template library uses paginated imported designs with saved/basic layouts in separate tabs. Admin refresh reads /designs/pre-builts in batches of ten; applying any template only edits a draft, never launches it.
