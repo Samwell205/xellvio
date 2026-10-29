@@ -27,6 +27,21 @@ export const listEmailCampaigns = createServerFn({ method: "GET" }).middleware([
   const { data, error } = await db.from("email_campaigns").select("id,name,subject,status,total,created_at,schedule_at,last_error").eq("account_id", accountId).order("created_at", { ascending: false }).limit(200);
   if (error) throw error; return data ?? [];
 });
+// Delete draft/cancelled email campaigns owned by the caller's account. Sent,
+// queued or sending campaigns are never touched — their records and reports
+// must survive for billing and compliance.
+export const deleteEmailCampaigns = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d: unknown) => z.object({ ids: z.array(z.string().uuid()).min(1).max(200) }).parse(d)).handler(async ({ data, context }) => {
+  const { accountId, db } = await access(context.userId);
+  const { data: owned, error } = await db.from("email_campaigns").select("id").eq("account_id", accountId).in("id", data.ids).in("status", ["draft", "cancelled"]);
+  if (error) throw error;
+  const ids = (owned ?? []).map((r) => r.id as string);
+  if (ids.length === 0) return { deleted: 0 };
+  const { error: rErr } = await db.from("email_recipients").delete().in("campaign_id", ids);
+  if (rErr) throw rErr;
+  const { error: dErr } = await db.from("email_campaigns").delete().in("id", ids);
+  if (dErr) throw dErr;
+  return { deleted: ids.length };
+});
 export const getEmailCampaign = createServerFn({ method: "GET" }).middleware([requireSupabaseAuth]).inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d)).handler(async ({ data, context }) => {
   const { accountId, db } = await access(context.userId);
   const { data: c, error } = await db.from("email_campaigns").select("*").eq("account_id", accountId).eq("id", data.id).single();

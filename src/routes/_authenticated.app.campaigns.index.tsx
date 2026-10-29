@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
-import { listEmailCampaigns } from "@/lib/email-campaigns.functions";
+import { listEmailCampaigns, deleteEmailCampaigns } from "@/lib/email-campaigns.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,12 +32,14 @@ const ACTIVE = ["queued", "sending", "running", "paused", "processing"];
 
 function CampaignsPage() {
   const qc = useQueryClient();
-  const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [toDelete, setToDelete] = useState<{ id: string; name: string; channel: "sms" | "email" } | null>(null);
+  const [confirmAllDrafts, setConfirmAllDrafts] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [channel, setChannel] = useState<"all" | "sms" | "email">("all");
   const [filter, setFilter] = useState<(typeof FILTERS)[number][0]>("all");
   const [search, setSearch] = useState("");
   const listEmails = useServerFn(listEmailCampaigns);
+  const deleteEmails = useServerFn(deleteEmailCampaigns);
   const emails = useQuery({ queryKey: ["email-campaigns"], queryFn: () => listEmails(), refetchInterval: 10000 });
   const q = useQuery({
     queryKey: ["campaigns"],
@@ -69,15 +71,51 @@ function CampaignsPage() {
     { label: "Email campaigns", value: rows.filter((r) => r.channel === "email").length, icon: Mail },
   ];
 
+  const draftRows = rows.filter((r) => r.status === "draft" || r.status === "cancelled");
+
   async function handleDelete() {
     if (!toDelete) return;
     setDeleting(true);
-    const { error } = await supabase.from("campaigns").delete().eq("id", toDelete.id);
+    if (toDelete.channel === "email") {
+      try {
+        await deleteEmails({ data: { ids: [toDelete.id] } });
+      } catch (e) {
+        setDeleting(false);
+        toast.error(e instanceof Error ? e.message : "Failed to delete campaign");
+        return;
+      }
+    } else {
+      const { error } = await supabase.from("campaigns").delete().eq("id", toDelete.id).in("status", ["draft", "cancelled"]);
+      if (error) { setDeleting(false); toast.error(error.message ?? "Failed to delete campaign"); return; }
+    }
     setDeleting(false);
-    if (error) { toast.error(error.message ?? "Failed to delete campaign"); return; }
     toast.success(`Deleted "${toDelete.name}"`);
     setToDelete(null);
     qc.invalidateQueries({ queryKey: ["campaigns"] });
+    qc.invalidateQueries({ queryKey: ["email-campaigns"] });
+  }
+
+  async function handleDeleteAllDrafts() {
+    if (draftRows.length === 0) return;
+    setDeleting(true);
+    const emailIds = draftRows.filter((r) => r.channel === "email").map((r) => r.id);
+    const smsIds = draftRows.filter((r) => r.channel === "sms").map((r) => r.id);
+    try {
+      if (emailIds.length) await deleteEmails({ data: { ids: emailIds } });
+      if (smsIds.length) {
+        const { error } = await supabase.from("campaigns").delete().in("id", smsIds).in("status", ["draft", "cancelled"]);
+        if (error) throw error;
+      }
+    } catch (e) {
+      setDeleting(false);
+      toast.error(e instanceof Error ? e.message : "Failed to delete drafts");
+      return;
+    }
+    setDeleting(false);
+    toast.success(`Deleted ${draftRows.length} draft${draftRows.length === 1 ? "" : "s"}`);
+    setConfirmAllDrafts(false);
+    qc.invalidateQueries({ queryKey: ["campaigns"] });
+    qc.invalidateQueries({ queryKey: ["email-campaigns"] });
   }
 
   return (
@@ -122,9 +160,16 @@ function CampaignsPage() {
             ))}
           </div>
         </div>
-        <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search campaigns" className="rounded-full pl-9" aria-label="Search campaigns" />
+        <div className="flex w-full items-center gap-2 lg:w-auto">
+          <div className="relative flex-1 lg:w-72">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search campaigns" className="rounded-full pl-9" aria-label="Search campaigns" />
+          </div>
+          {draftRows.length > 0 && (
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-full border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => setConfirmAllDrafts(true)}>
+              <Trash2 className="size-3.5" />Delete drafts ({draftRows.length})
+            </Button>
+          )}
         </div>
       </div>
 
@@ -167,8 +212,8 @@ function CampaignsPage() {
                 ) : (
                   <Link to="/app/campaigns/$id/report" params={{ id: c.id }}><Button variant="ghost" size="sm" className="gap-1"><BarChart3 className="size-4" /><span className="hidden sm:inline">Report</span></Button></Link>
                 )}
-                {!isEmail && (
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => setToDelete({ id: c.id, name: c.name })} aria-label={`Delete ${c.name}`}><Trash2 className="size-4" /></Button>
+                {(c.status === "draft" || c.status === "cancelled") && (
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => setToDelete({ id: c.id, name: c.name, channel: c.channel })} aria-label={`Delete ${c.name}`}><Trash2 className="size-4" /></Button>
                 )}
                 <ChevronRight className="hidden size-4 text-muted-foreground transition group-hover:translate-x-0.5 sm:block" />
               </div>
@@ -181,12 +226,29 @@ function CampaignsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
-            <AlertDialogDescription>"{toDelete?.name}" and all of its message records will be permanently removed. This can't be undone.</AlertDialogDescription>
+            <AlertDialogDescription>"{toDelete?.name}" and all of its records will be permanently removed. This can't be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting ? "Deleting…" : "Delete campaign"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmAllDrafts} onOpenChange={(o) => !o && setConfirmAllDrafts(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete all drafts?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {draftRows.length} draft{draftRows.length === 1 ? "" : "s"} and cancelled campaign{draftRows.length === 1 ? "" : "s"} will be permanently removed. Sent and scheduled campaigns are kept. This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Keep drafts</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteAllDrafts(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting…" : `Delete ${draftRows.length} draft${draftRows.length === 1 ? "" : "s"}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
