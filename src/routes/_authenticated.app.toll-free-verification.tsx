@@ -470,7 +470,9 @@ function TollfreeVerificationPage() {
           creditBalance={feeQuery.data?.balance ?? 0}
           feePaid={feePaid}
           submitLabel={
-            needsCarrierUpdate
+            lineRejected
+              ? "Resubmit with fixes"
+              : needsCarrierUpdate
               ? "Resubmit requested changes"
               : status === "rejected"
                 ? "Resubmit for verification"
@@ -490,9 +492,10 @@ function TollfreeVerificationPage() {
             ) : null
           }
         />
+        </div>
       )}
 
-      {!isVerified && !lineSubmitted && (
+      {!isVerified && !hasLine && (
         <>
           <Card>
             <CardHeader>
