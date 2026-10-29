@@ -7,15 +7,16 @@ import { PerCountryPricing } from "@/components/PerCountryPricing";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getPublicCountryRates } from "@/lib/public-pricing.functions";
+import { EmailPlans } from "@/components/EmailPlans";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/pricing")({
   head: () =>
     pageHead({
       path: "/pricing",
-      title: "Bulk SMS Pricing — Pay As You Go",
+      title: "Pricing — Email Plans & Pay-As-You-Go SMS",
       description:
-        "Xellvio pricing is pay-as-you-go: buy credits, see the live per-message rate for every country before you send, and pay no monthly platform fee.",
+        "Free, Standard and Pro email plans that scale with your contacts, plus pay-as-you-go SMS with live per-country rates.",
     }),
   component: PricingPage,
 });
@@ -38,15 +39,15 @@ function PricingPage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-24 text-center">
             <p className="text-sm font-semibold text-primary uppercase tracking-wider">Pricing</p>
             <h1 className="mt-3 text-4xl md:text-5xl font-extrabold tracking-tight">
-              Pay only for what you send
+              Simple pricing for email and SMS
             </h1>
             <p className="mt-3 text-muted-foreground max-w-2xl mx-auto">
-              SMS are billed per recipient at the country rate × segments. We never debit more than
-              your available balance — any messages your balance can't cover are skipped, not
-              charged.
+              Start free with email, upgrade as your list grows, and pay only for the text messages
+              you send.
             </p>
           </div>
         </section>
+        <EmailPlans />
         <CreditPacks />
         <SmsCalculator rates={rates} />
         <PerCountryPricing rates={rates} />
