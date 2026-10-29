@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { EmailDesigner, EmailTemplateChooser, templateBlocks } from "@/components/email/EmailDesigner";
+import { EmailDesigner, EmailContentChooser } from "@/components/email/EmailDesigner";
 import { hasEmailContent, renderEmail } from "@/lib/email-campaign-rules";
 import { EmailBundles } from "@/components/email/EmailBundles";
 import { emailDraftSchema, emailSenderDomain, type EmailDraft } from "@/lib/email-campaign-rules";
@@ -23,13 +23,13 @@ export const Route = createFileRoute("/_authenticated/app/campaigns/email")({
   validateSearch: (s) => z.object({ id: z.string().uuid().optional() }).parse(s),
   loader: ({ context }) => context.queryClient.ensureQueryData(setupOptions), component: EmailCampaignPage,
 });
-const STEPS = ["Details", "Templates", "Design", "Review"];
+const STEPS = ["Details", "Content", "Edit", "Review"];
 function EmailCampaignPage() {
   const { id } = Route.useSearch(); const setup = useSuspenseQuery(setupOptions).data;
   const navigate = useNavigate(); const qc = useQueryClient();
   const get = useServerFn(getEmailCampaign); const save = useServerFn(saveEmailCampaign); const launch = useServerFn(launchEmailCampaign); const test = useServerFn(sendEmailTest); const change = useServerFn(changeEmailCampaignStatus);
   const [draft, setDraft] = useState<EmailDraft | null>(null); const [step, setStep] = useState(0); const [busy, setBusy] = useState(false); const [saved, setSaved] = useState(false); const [dirty, setDirty] = useState(false);
-  const [testEmail, setTestEmail] = useState(""); const [schedule, setSchedule] = useState(""); const [confirm, setConfirm] = useState(false);
+  const [htmlView, setHtmlView] = useState<"visual" | "code">("visual"); const [testEmail, setTestEmail] = useState(""); const [schedule, setSchedule] = useState(""); const [confirm, setConfirm] = useState(false);
   const creating = useRef(false);
   const saveChain = useRef<Promise<unknown>>(Promise.resolve());
   const q = useQuery({ queryKey: ["email-campaign", id], queryFn: () => get({ data: { id: id ?? "" } }), enabled: !!id, refetchInterval: (query) => query.state.data?.campaign.status === "draft" ? false : 10000 });
@@ -45,7 +45,7 @@ function EmailCampaignPage() {
   useEffect(() => {
     if (id || creating.current) return;
     creating.current = true;
-    const c: EmailDraft = { id: crypto.randomUUID(), name: "Untitled email", subject: "", preheader: "", from_name: setup.account?.company || setup.account?.legal_business_name || "", from_email: "", reply_to: setup.account?.contact_email || setup.account?.email || "", list_id: null, postal_address: setup.account?.business_address || "", blocks: templateBlocks(0), content_mode: "design", plain_body: "", html_body: "", theme: {} };
+    const c: EmailDraft = { id: crypto.randomUUID(), name: "Untitled email", subject: "", preheader: "", from_name: setup.account?.company || setup.account?.legal_business_name || "", from_email: "", reply_to: setup.account?.contact_email || setup.account?.email || "", list_id: null, postal_address: setup.account?.business_address || "", blocks: [], content_mode: "design", plain_body: "", html_body: "", theme: {} };
     save({ data: c }).then(() => { setDraft(c); setSaved(true); navigate({ to: "/app/campaigns/email", search: { id: c.id }, replace: true }); }).catch((e) => { creating.current = false; toast.error(e.message); });
   }, [id, navigate, save, setup]);
   useEffect(() => {
@@ -78,7 +78,7 @@ function EmailCampaignPage() {
     { key: "from", label: "From", done: !!draft.from_name.trim() && !!draft.from_email.trim() && verified, value: draft.from_email ? `${draft.from_name} <${draft.from_email}>${verified ? "" : " · domain not verified"}` : "Add a sender email on your verified domain", step: 0 },
     { key: "subject", label: "Subject", done: !!draft.subject.trim(), value: draft.subject || "Add a subject line", step: 0 },
     { key: "address", label: "Business address", done: !!draft.postal_address.trim(), value: draft.postal_address || "Required in every marketing email", step: 0 },
-    { key: "content", label: "Content", done: hasEmailContent(draft), value: draft.content_mode === "plain" ? "Plain message" : draft.content_mode === "html" ? "Custom HTML" : `${draft.blocks.length} design blocks`, step: 2 },
+    { key: "content", label: "Content", done: hasEmailContent(draft), value: !hasEmailContent(draft) ? "Choose how to create your email" : draft.content_mode === "plain" ? "Plain message" : draft.content_mode === "html" ? "Template / coded email" : `${draft.blocks.length} design blocks`, step: hasEmailContent(draft) ? 2 : 1 },
   ];
   const doneCount = checks.filter((c) => c.done).length;
   const goto = (i: number) => perform(async () => { await saveNow(); setStep(i); });
@@ -96,7 +96,7 @@ function EmailCampaignPage() {
         </div>
         {editable && <div className="flex items-center gap-2"><span className="hidden text-xs text-muted-foreground sm:inline">{saved ? "All changes saved" : "Unsaved changes"}</span><Button variant="outline" disabled={busy} onClick={() => perform(saveNow)}>{saved ? <Check className="size-4 text-brand-green" /> : <Save className="size-4" />}{saved ? "Saved" : "Save draft"}</Button></div>}
       </div>
-      {editable && <nav aria-label="Email campaign steps" className="relative mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">{STEPS.map((s, i) => <Button variant="ghost" disabled={busy} key={s} onClick={() => goto(i)} aria-current={step === i ? "step" : undefined} className={`group h-auto justify-start gap-3 rounded-lg border p-3 text-left transition ${step === i ? "border-brand-green bg-brand-green/10" : "hover:bg-muted/60"}`}><span className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold ${step > i ? "bg-brand-green text-primary-foreground" : step === i ? "bg-brand-green/20 text-brand-green" : "bg-muted text-muted-foreground"}`}>{step > i ? <Check className="size-4" /> : i + 1}</span><span className="min-w-0"><span className="block text-sm font-semibold">{s}</span><span className="hidden truncate text-xs font-normal text-muted-foreground sm:block">{["Audience, sender & subject", "Choose a starting point", "Edit your email", "Test, schedule & send"][i]}</span></span></Button>)}</nav>}
+      {editable && <nav aria-label="Email campaign steps" className="relative mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">{STEPS.map((s, i) => <Button variant="ghost" disabled={busy} key={s} onClick={() => goto(i)} aria-current={step === i ? "step" : undefined} className={`group h-auto justify-start gap-3 rounded-lg border p-3 text-left transition ${step === i ? "border-brand-green bg-brand-green/10" : "hover:bg-muted/60"}`}><span className={`grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold ${step > i ? "bg-brand-green text-primary-foreground" : step === i ? "bg-brand-green/20 text-brand-green" : "bg-muted text-muted-foreground"}`}>{step > i ? <Check className="size-4" /> : i + 1}</span><span className="min-w-0"><span className="block text-sm font-semibold">{s}</span><span className="hidden truncate text-xs font-normal text-muted-foreground sm:block">{["Audience, sender & subject", "Template, design, plain or HTML", "Make it yours", "Test, schedule & send"][i]}</span></span></Button>)}</nav>}
     </header>
     {!editable ? <>
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border bg-card p-4"><Badge variant="secondary" className="capitalize">{status}</Badge><span className="text-sm">{current?.total.toLocaleString()} recipients</span>{current?.schedule_at && <span className="text-sm text-muted-foreground">{new Date(current.schedule_at).toLocaleString()}</span>}{["queued", "sending", "paused"].includes(status) && <><Button variant="outline" disabled={busy} onClick={() => perform(async () => { await change({ data: { id: draft.id, status: status === "paused" ? "queued" : "paused" } }); await q.refetch(); })}>{status === "paused" ? <Play className="size-4" /> : <Pause className="size-4" />}{status === "paused" ? "Resume" : "Pause"}</Button><Button variant="ghost" disabled={busy} onClick={() => perform(async () => { await change({ data: { id: draft.id, status: "cancelled" } }); await q.refetch(); })}>Cancel remaining</Button></>}</div>
@@ -105,7 +105,7 @@ function EmailCampaignPage() {
       <p className="text-xs text-muted-foreground">Accepted is not confirmed delivery. Opens can include privacy-protection scans; clicks can include automated scanners.</p>
       {!!q.data?.failures.length && <div className="overflow-x-auto rounded-2xl border bg-card"><table className="w-full text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="p-3">Recipient</th><th>Status</th><th>Reason</th></tr></thead><tbody>{q.data.failures.map((f, i) => <tr key={i} className="border-b last:border-0"><td className="p-3">{f.email}</td><td>{f.status}</td><td>{f.last_error}</td></tr>)}</tbody></table></div>}
     </> : <>
-      {step === 1 && <EmailTemplateChooser onPick={(values) => { patch(values); setStep(2); toast.success("Template applied — ready to edit"); }} />}
+      {step === 1 && <EmailContentChooser draft={draft} onPick={(values, method) => { patch(values); setHtmlView(method === "html" ? "code" : "visual"); setStep(2); window.scrollTo({ top: 0, behavior: "smooth" }); if (method === "template") toast.success("Template ready — click anything on it to change it"); }} />}
       {step === 0 && <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <Section title="To" desc="Who receives this campaign">
@@ -128,7 +128,7 @@ function EmailCampaignPage() {
           <div className="rounded-3xl border bg-card p-5"><h2 className="font-semibold">Sending domain</h2><div className="mt-3 space-y-2">{setup.domains.length ? setup.domains.map((d) => <div key={d.id} className="flex items-center justify-between gap-2 rounded-xl border p-3"><p className="min-w-0 break-all text-sm font-medium">{d.domain}</p><Badge variant={d.status === "verified" ? "default" : "secondary"} className={d.status === "verified" ? "bg-brand-green text-primary-foreground" : ""}>{d.status === "verified" ? "Verified" : "Pending"}</Badge></div>) : <p className="text-sm text-muted-foreground">No sending domain connected.</p>}</div><Link to="/app/email-domains"><Button variant="outline" size="sm" className="mt-3 w-full">Manage domain</Button></Link></div>
         </aside>
       </div>}
-      {step === 2 && <EmailDesigner draft={draft} onChange={patch} />}
+      {step === 2 && <EmailDesigner draft={draft} onChange={patch} onChangeMethod={() => setStep(1)} htmlView={htmlView} onHtmlView={setHtmlView} />}
       {step === 3 && <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <section className="rounded-3xl border bg-card p-5 md:p-6">
           <div className="flex items-center justify-between"><h2 className="text-xl font-bold">Ready to send?</h2><span className="text-sm text-muted-foreground">{doneCount} of {checks.length} complete</span></div>
@@ -147,7 +147,7 @@ function EmailCampaignPage() {
           <div className="overflow-hidden rounded-3xl border bg-muted/40"><p className="px-5 pt-4 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Preview</p><iframe title="Final email preview" sandbox="" srcDoc={renderEmail(draft, "https://xellvio.com", "Alex")} className="mt-2 h-[420px] w-full border-0 bg-card" /></div>
         </aside>
       </div>}
-      <div className="flex justify-between border-t pt-4"><Button variant="outline" disabled={busy || step === 0} onClick={() => goto(step - 1)}>Back</Button>{step < 3 && <Button disabled={busy} onClick={() => goto(step + 1)}>{busy && <Loader2 className="size-4 animate-spin" />}{step === 1 ? "Keep current design" : "Continue"}<ChevronRight className="size-4" /></Button>}</div>
+      <div className="flex justify-between border-t pt-4"><Button variant="outline" disabled={busy || step === 0} onClick={() => goto(step - 1)}>Back</Button>{step < 3 && !(step === 1 && !hasEmailContent(draft)) && <Button disabled={busy} onClick={() => goto(step + 1)}>{busy && <Loader2 className="size-4 animate-spin" />}{step === 1 ? "Keep my current email" : "Continue"}<ChevronRight className="size-4" /></Button>}</div>
     </>}
     {(!editable || step === 3) && <details className="group rounded-lg border bg-card p-5"><summary className="cursor-pointer list-none font-semibold">Monthly email bundle · <span className="font-normal capitalize text-muted-foreground">{setup.bundle?.plan ?? "Free"} · {setup.bundle?.used ?? 0} / {setup.bundle?.email_limit === null ? "Unlimited" : setup.bundle?.email_limit ?? 50} emails</span></summary><div className="mt-4"><EmailBundles bundle={setup.bundle} dailyCapacity={setup.dailyCapacity} /></div></details>}
     <Dialog open={confirm} onOpenChange={(v) => { if (!busy) setConfirm(v); }}><DialogContent><DialogHeader><DialogTitle>Confirm email campaign</DialogTitle></DialogHeader><p className="font-semibold">{draft.subject}</p><p className="text-sm">Send from {draft.from_email} to {setup.lists.find((l) => l.id === draft.list_id)?.name ?? "all subscribed email contacts"}. Each eligible recipient counts toward your allowance. {schedule ? `Scheduled for ${new Date(schedule).toLocaleString()}.` : "The campaign will enter the sending queue now."}</p><Button disabled={busy} onClick={() => perform(async () => { await saveNow(); const result = await launch({ data: { id: draft.id, schedule: schedule ? new Date(schedule).toISOString() : null, confirmed: true } }); setConfirm(false); toast.success(`${result.total} emails queued. Track their delivery below.`); await q.refetch(); qc.invalidateQueries({ queryKey: ["email-setup"] }); })}>{busy ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}Confirm {schedule ? "schedule" : "send"}</Button></DialogContent></Dialog>
