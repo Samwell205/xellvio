@@ -62,7 +62,8 @@ const UNSUB = /\{\{\s*unsubscribe_url\s*\}\}|\[unsubscribe\]|<%asm_group_unsubsc
 export function sanitizeEmailHtml(html: string) {
   let out = html
     .replace(/<!--[\s\S]*?-->/g, (c) => (/\[if /i.test(c) ? c : ""))
-    .replace(/<(script|iframe|object|embed|form|input|button|textarea|select|base|meta[^>]*http-equiv)[\s\S]*?(<\/\1>|>)/gi, "")
+    .replace(/<(script|iframe|object|embed|form|textarea|select|noscript)\b[\s\S]*?<\/\1\s*>/gi, "")
+    .replace(/<(input|button|base|link|meta[^>]*http-equiv)\b[^>]*>/gi, "")
     .replace(/<\/?(script|iframe|object|embed|form|base)[^>]*>/gi, "")
     .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/\ssrcdoc\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
