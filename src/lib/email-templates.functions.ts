@@ -18,7 +18,7 @@ export const listEmailTemplates = createServerFn({ method: "GET" }).middleware([
   const [own, lib, admin] = await Promise.all([
     db.from("email_templates").select(COLS).eq("account_id", accountId).order("updated_at", { ascending: false }).limit(200),
     db.from("email_templates").select(COLS).is("account_id", null).order("name").limit(200),
-    context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+    context.supabase.rpc("has_role", { _role: "admin" }),
   ]);
   if (own.error) throw own.error; if (lib.error) throw lib.error;
   return { saved: own.data ?? [], library: lib.data ?? [], isAdmin: !!admin.data };
@@ -44,7 +44,7 @@ export const deleteEmailTemplate = createServerFn({ method: "POST" }).middleware
 
 /** Admin only: copies the platform's provider email templates into the shared library. */
 export const importProviderEmailTemplates = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
-  const { data: ok } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
+  const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
   if (!ok) throw new Error("Forbidden");
   const { emailProviderRequest } = await import("./email-campaigns.server");
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
