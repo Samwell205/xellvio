@@ -67,5 +67,6 @@ export async function processEmailQueue() {
   }
   await db.rpc("email_finish_campaigns");
   await db.rpc("email_arm_dispatch");
+  await db.rpc("email_wake_dispatch");
   return { processed: rows?.length ?? 0 };
 }

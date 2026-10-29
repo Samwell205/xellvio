@@ -60,6 +60,7 @@ export const launchEmailCampaign = createServerFn({ method: "POST" }).middleware
   if (qe) throw new Error(qe.message);
   const { error: wakeError } = await db.rpc("email_arm_dispatch");
   if (wakeError) console.error("Email queue wake failed", wakeError);
+  await db.rpc("email_wake_dispatch");
   return { total, queued: true };
 });
 export const changeEmailCampaignStatus = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d: unknown) => z.object({ id: z.string().uuid(), status: z.enum(["paused", "queued", "cancelled"]) }).parse(d)).handler(async ({ data, context }) => {
@@ -73,12 +74,15 @@ export const changeEmailCampaignStatus = createServerFn({ method: "POST" }).midd
   }
   const { error } = await db.from("email_campaigns").update({ status: data.status, last_error: null, updated_at: new Date().toISOString() }).eq("account_id", accountId).eq("id", data.id).in("status", ["queued", "sending", "paused"]);
   if (error) throw error;
-  await db.rpc("email_arm_dispatch"); return { ok: true };
+  await db.rpc("email_arm_dispatch");
+  if (data.status === "queued") await db.rpc("email_wake_dispatch");
+  return { ok: true };
 });
 export const purchaseEmailBundle = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d: unknown) => z.object({ plan: z.enum(["standard", "pro"]), contacts: z.number().int().min(250).max(150000), confirmed: z.literal(true) }).parse(d)).handler(async ({ data, context }) => {
   const { accountId, db } = await access(context.userId, true);
   const q = bundleQuote(data.plan, data.contacts);
-  const { error } = await db.rpc("email_activate_bundle", { _account: accountId, _plan: data.plan, _contacts: q.contacts, _limit: q.emails ?? undefined, _price: q.price });
+  if (q.price === undefined) throw new Error("This bundle price is unavailable.");
+  const { error } = await db.rpc("email_activate_bundle", { _account: accountId, _plan: data.plan, _contacts: q.contacts, _limit: q.emails ?? -1, _price: q.price });
   if (error) throw new Error(error.message); return { ok: true };
 });
 export const cancelEmailBundleRenewal = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {

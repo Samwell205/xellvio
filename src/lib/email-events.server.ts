@@ -31,7 +31,7 @@ export async function verifyEmailEvent(request: Request, raw: string) {
     const { public_key } = await keyResponse.json() as { public_key: string };
     const der = decode(public_key.replace(/-----[^-]+-----/g, "").replace(/\s/g, ""));
     const key = await crypto.subtle.importKey("spki", der, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
-    return crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, derToRaw(decode(signature)), new TextEncoder().encode(timestamp + raw));
+    return crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, new Uint8Array(derToRaw(decode(signature))), new TextEncoder().encode(timestamp + raw));
   } catch { return false; }
 }
 const events = z.array(z.object({ sg_event_id: z.string().max(250), xellvio_recipient_id: z.string().uuid().optional(),
