@@ -13,6 +13,8 @@ import { MediaLibraryDialog } from "@/components/builder/MediaPicker";
 import { renderEmail, resolveTheme, type EmailBlock, type EmailDraft, type EmailMode, type EmailTheme } from "@/lib/email-campaign-rules";
 import { listEmailTemplates, saveEmailTemplate, deleteEmailTemplate, importProviderEmailTemplates } from "@/lib/email-templates.functions";
 import { EmailTemplatePreview } from "./EmailTemplatePreview";
+import { CREATIVE_EMAIL_TEMPLATES, emailTemplateCategory } from "@/lib/email-template-catalog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Tpl = { name: string; category: string; theme?: EmailTheme; blocks: Omit<EmailBlock, "id">[] };
 const b = (type: EmailBlock["type"], text = "", url = "", align?: "left" | "center"): Omit<EmailBlock, "id"> => ({ type, text, url, ...(align ? { align } : {}) });
@@ -161,13 +163,18 @@ function TemplateLibrary({ onPick }: { onPick: (v: Partial<EmailDraft>) => void 
   const [tab, setTab] = useState("ready");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [category, setCategory] = useState("All categories");
   const [previewTemplate, setPreviewTemplate] = useState<{ name: string; values: Partial<EmailDraft> } | null>(null);
   type Row = NonNullable<typeof q.data>["saved"][number];
   const fromRow = (r: Row): Partial<EmailDraft> => ({ content_mode: r.content_mode as EmailMode, blocks: ((r.blocks as EmailBlock[]) ?? []).map((x) => ({ ...x, id: crypto.randomUUID() })), plain_body: r.plain_body, html_body: r.html_body, theme: (r.theme as EmailTheme) ?? {}, ...(r.subject ? { subject: r.subject } : {}) });
   const sample = { preheader: "", from_name: "Your business", postal_address: "Your business address" };
-  const rows = (tab === "saved" ? q.data?.saved ?? [] : q.data?.library.filter((r) => r.provider_template_id?.startsWith("prebuilt:")) ?? []).filter((r) => r.name.toLowerCase().includes(search.toLowerCase()));
-  const basics = EMAIL_TEMPLATES.map((t, i) => ({ ...t, index: i })).filter((t) => t.name.toLowerCase().includes(search.toLowerCase()));
-  const total = tab === "basic" ? basics.length : rows.length;
+  const allRows = (tab === "saved" ? q.data?.saved ?? [] : q.data?.library.filter((r) => r.provider_template_id?.startsWith("prebuilt:")) ?? []).map((r) => ({ ...r, category: emailTemplateCategory(r.name, r.category) }));
+  const matches = (t: { name: string; category: string }) => t.name.toLowerCase().includes(search.toLowerCase()) && (category === "All categories" || t.category === category);
+  const rows = allRows.filter(matches);
+  const basics = EMAIL_TEMPLATES.map((t, i) => ({ ...t, index: i })).filter(matches);
+  const originals = CREATIVE_EMAIL_TEMPLATES.filter(matches);
+  const categories = ["All categories", ...new Set((tab === "creative" ? CREATIVE_EMAIL_TEMPLATES : tab === "basic" ? EMAIL_TEMPLATES : allRows).map((t) => t.category))];
+  const total = tab === "creative" ? originals.length : tab === "basic" ? basics.length : rows.length;
   const pages = Math.max(1, Math.ceil(total / 8));
   const currentPage = Math.min(page, pages - 1);
   const card = (id: string, name: string, subtitle: string, values: Partial<EmailDraft>, deletable = false) => <article key={id} className="group min-w-0 overflow-hidden rounded-lg border bg-card transition motion-safe:hover:-translate-y-1 hover:border-brand-green">
@@ -176,14 +183,14 @@ function TemplateLibrary({ onPick }: { onPick: (v: Partial<EmailDraft>) => void 
   </article>;
   return <section aria-label="Email template library" className="space-y-5">
     <div className="grid min-w-0 gap-4 border-b pb-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"><div className="min-w-0"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-green">Template library</p><h2 className="text-2xl font-bold">Choose your starting point</h2></div><Input aria-label="Search templates" placeholder="Search templates" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className="w-full sm:w-64" /></div>
-    <Tabs value={tab} onValueChange={(v) => { setTab(v); setPage(0); setSearch(""); }}><TabsList className="grid h-auto w-full grid-cols-3 gap-1 sm:w-auto sm:inline-flex"><TabsTrigger className="min-w-0 whitespace-normal" value="ready">Ready-made</TabsTrigger><TabsTrigger className="min-w-0 whitespace-normal" value="saved">My templates</TabsTrigger><TabsTrigger className="min-w-0 whitespace-normal" value="basic">Basic layouts</TabsTrigger></TabsList></Tabs>
+    <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_220px]"><Tabs value={tab} onValueChange={(v) => { setTab(v); setCategory("All categories"); setPage(0); setSearch(""); }}><TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4"><TabsTrigger className="min-w-0 whitespace-normal" value="ready">Ready-made</TabsTrigger><TabsTrigger className="min-w-0 whitespace-normal" value="creative">Studio designs</TabsTrigger><TabsTrigger className="min-w-0 whitespace-normal" value="saved">My templates</TabsTrigger><TabsTrigger className="min-w-0 whitespace-normal" value="basic">Basic layouts</TabsTrigger></TabsList></Tabs><Select value={category} onValueChange={(v) => { setCategory(v); setPage(0); }}><SelectTrigger aria-label="Template category" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
     {q.data?.isAdmin && tab === "ready" && <div className="flex justify-end"><Button variant="ghost" size="sm" disabled={busy} onClick={async () => { setBusy(true); try { let offset: number | null = 0; let total = 0; let skipped = 0; while (offset !== null) { const r = await importFn({ data: { offset } }); total += r.imported; skipped += r.skipped; offset = r.nextOffset; } toast.success(`${total} templates refreshed${skipped ? `; ${skipped} unavailable` : ""}`); await qc.invalidateQueries({ queryKey: ["email-templates"] }); } catch (e) { toast.error(e instanceof Error ? e.message : "Library could not refresh"); } finally { setBusy(false); } }}>{busy ? <Loader2 className="size-4 animate-spin" /> : <DownloadCloud className="size-4" />}Refresh library</Button></div>}
-    {tab !== "basic" && q.isLoading && <div role="status" className="flex items-center gap-2 py-10 text-muted-foreground"><Loader2 className="size-4 animate-spin" />Loading templates…</div>}
-    {tab !== "basic" && q.error && <div role="alert" className="py-6 text-sm text-destructive">Templates could not load. <Button variant="ghost" onClick={() => void q.refetch()}>Try again</Button></div>}
+    {["ready", "saved"].includes(tab) && q.isLoading && <div role="status" className="flex items-center gap-2 py-10 text-muted-foreground"><Loader2 className="size-4 animate-spin" />Loading templates…</div>}
+    {["ready", "saved"].includes(tab) && q.error && <div role="alert" className="py-6 text-sm text-destructive">Templates could not load. <Button variant="ghost" onClick={() => void q.refetch()}>Try again</Button></div>}
     <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-      {tab === "basic" ? basics.slice(currentPage * 8, currentPage * 8 + 8).map((t) => card(t.name, t.name, t.category, { content_mode: "design", blocks: templateBlocks(t.index), theme: t.theme ?? {} })) : rows.slice(currentPage * 8, currentPage * 8 + 8).map((r) => card(r.id, r.name, tab === "saved" ? "Saved design" : "Ready-made design", fromRow(r), tab === "saved"))}
+      {tab === "creative" ? originals.slice(currentPage * 8, currentPage * 8 + 8).map((t) => card(t.id, t.name, `${t.category} · Original`, t.values)) : tab === "basic" ? basics.slice(currentPage * 8, currentPage * 8 + 8).map((t) => card(t.name, t.name, t.category, { content_mode: "design", blocks: templateBlocks(t.index), theme: t.theme ?? {} })) : rows.slice(currentPage * 8, currentPage * 8 + 8).map((r) => card(r.id, r.name, r.category, fromRow(r), tab === "saved"))}
     </div>
-    {!total && (tab === "basic" || (!q.isLoading && !q.error)) && <p className="py-10 text-center text-muted-foreground">{search ? "No templates match your search." : tab === "saved" ? "No saved templates yet." : "No ready-made designs are available yet."}</p>}
+    {!total && (["basic", "creative"].includes(tab) || (!q.isLoading && !q.error)) && <p className="py-10 text-center text-muted-foreground">{search || category !== "All categories" ? "No templates match your filters." : tab === "saved" ? "No saved templates yet." : "No ready-made designs are available yet."}</p>}
     {total > 0 && <div className="grid gap-3 border-t pt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"><span className="min-w-0 text-xs text-muted-foreground">{currentPage * 8 + 1}–{Math.min(total, (currentPage + 1) * 8)} of {total} templates</span><div className="flex shrink-0 items-center gap-3"><Button variant="outline" size="sm" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</Button><span className="text-xs text-muted-foreground">{currentPage + 1} / {pages}</span><Button variant="outline" size="sm" disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>Next</Button></div></div>}
     <Dialog open={!!previewTemplate} onOpenChange={(open) => { if (!open) setPreviewTemplate(null); }}><DialogContent className="max-w-3xl"><DialogHeader><DialogTitle>{previewTemplate?.name}</DialogTitle></DialogHeader>{previewTemplate && <><iframe title="Full template preview" sandbox="" referrerPolicy="no-referrer" srcDoc={renderEmail({ ...sample, ...previewTemplate.values, blocks: previewTemplate.values.blocks ?? [] }, "#", "Alex")} className="h-[60vh] w-full border bg-muted" /><Button onClick={() => { onPick(previewTemplate.values); setPreviewTemplate(null); }}>Use template<MousePointer2 className="size-4" /></Button></>}</DialogContent></Dialog>
   </section>;
