@@ -55,3 +55,4 @@
 - Contacts need phone, email or both; SMS requires an 'sms' consent and email a separate 'email' consent, so email-only contacts never enter SMS dispatch.
 - Email domains are provider-validated and exclusive to a business; sending cannot impersonate another business.
 - Email campaigns use durable recipients, atomic consent/quotas, signed events and no ambiguous resends; SMS stays separate. Confirmed bundles debit the acting business; SQL owns renewals.
+- Email campaigns support design/plain/html content modes rendered and sanitized only in email-campaign-rules.ts (always with a text part and unsubscribe); email_templates rows with null account_id are the shared library, imported from the provider by admins only.
