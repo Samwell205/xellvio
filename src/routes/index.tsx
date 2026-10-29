@@ -26,6 +26,7 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { PlatformShowcase } from "@/components/marketing/PlatformShowcase";
 import { InteractiveShowcase } from "@/components/marketing/InteractiveShowcase";
 import { StatsMarquee, reveal } from "@/components/marketing/ProductKit";
+import { PhotoGallery } from "@/components/marketing/PhotoGallery";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { faqSchema, pageHead, softwareApplicationSchema, websiteSchema } from "@/lib/seo";
@@ -177,6 +178,7 @@ function HomePage() {
       <MarketingNav />
       <main className="flex-1">
         <Hero />
+        <PhotoGallery />
         <StatsMarquee
           stats={[
             { value: "190+", label: "countries reached" },
