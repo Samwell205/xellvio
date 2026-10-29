@@ -8,7 +8,8 @@
 ## Email marketing
 - [x] Contacts with phone, email, or both; uploads map an Email column
 - [x] Email sending domain page (add, DNS records, Check) — xellvio.com added, waiting on GoDaddy records
-- [ ] Email in campaign builder (subject, sender, reply-to, visual designer, persisted drafts, test send)
-- [ ] Durable bulk queue, unsubscribe, signed delivery/bounce/complaint events, reports
-- [ ] Enforce Free/Standard/Pro limits and prepaid monthly bundle billing
-- [ ] Verify authenticated email draft/design flow and queue safeguards; report domain/provider blockers honestly
+- [x] Email in campaign builder (subject, sender, reply-to, visual designer, persisted drafts, test send control)
+- [x] Durable bulk queue, unsubscribe, signed delivery/bounce/complaint events, reports
+- [x] Free/Standard/Pro reservations and confirmed prepaid monthly bundles; SQL renewals
+- [x] Authenticated design/save/reload, mobile layout, unsigned endpoint rejection; 19 focused tests passed
+- [ ] Live email delivery and paid renewal verification — blocked by unverified sending domain; current provider capacity is 100/day; public callbacks need publishing
