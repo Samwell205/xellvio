@@ -10,7 +10,7 @@ describe("isInfobipDestination", () => {
 
   it("keeps US/Canada on the primary route", () => {
     expect(isInfobipDestination("+15551234567")).toBe(false);
-    expect(isInfibDest("+14165551234"));
+    expect(isInfobipDestination("+14165551234")).toBe(false);
   });
 
   it("keeps UK on the UK route", () => {

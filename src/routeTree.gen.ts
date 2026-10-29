@@ -175,6 +175,7 @@ import { Route as VerifierVerifyDashboardSettingsRouteImport } from './routes/_v
 import { Route as VerifierVerifyDashboardWithdrawalsRouteImport } from './routes/_verifier.verify.dashboard.withdrawals'
 import { Route as ApiPublicCampaignMediaSplatRouteImport } from './routes/api.public.campaign-media.$'
 import { Route as ApiPublicCardWebhookRouteImport } from './routes/api/public/card/webhook'
+import { Route as ApiPublicInfobipWebhookRouteImport } from './routes/api/public/infobip/webhook'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media.$'
 import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -1102,6 +1103,11 @@ const ApiPublicCardWebhookRoute = ApiPublicCardWebhookRouteImport.update({
   path: '/api/public/card/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicInfobipWebhookRoute = ApiPublicInfobipWebhookRouteImport.update({
+  id: '/api/public/infobip/webhook',
+  path: '/api/public/infobip/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicMediaSplatRoute = ApiPublicMediaSplatRouteImport.update({
   id: '/api/public/media/$',
   path: '/api/public/media/$',
@@ -1360,6 +1366,7 @@ export interface FileRoutesByFullPath {
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
   '/api/public/campaign-media/$': typeof ApiPublicCampaignMediaSplatRoute
   '/api/public/card/webhook': typeof ApiPublicCardWebhookRoute
+  '/api/public/infobip/webhook': typeof ApiPublicInfobipWebhookRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1539,6 +1546,7 @@ export interface FileRoutesByTo {
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
   '/api/public/campaign-media/$': typeof ApiPublicCampaignMediaSplatRoute
   '/api/public/card/webhook': typeof ApiPublicCardWebhookRoute
+  '/api/public/infobip/webhook': typeof ApiPublicInfobipWebhookRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1727,6 +1735,7 @@ export interface FileRoutesById {
   '/_verifier/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
   '/api/public/campaign-media/$': typeof ApiPublicCampaignMediaSplatRoute
   '/api/public/card/webhook': typeof ApiPublicCardWebhookRoute
+  '/api/public/infobip/webhook': typeof ApiPublicInfobipWebhookRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -1914,6 +1923,7 @@ export interface FileRouteTypes {
     | '/verify/dashboard/withdrawals'
     | '/api/public/campaign-media/$'
     | '/api/public/card/webhook'
+    | '/api/public/infobip/webhook'
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
@@ -2093,6 +2103,7 @@ export interface FileRouteTypes {
     | '/verify/dashboard/withdrawals'
     | '/api/public/campaign-media/$'
     | '/api/public/card/webhook'
+    | '/api/public/infobip/webhook'
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
@@ -2280,6 +2291,7 @@ export interface FileRouteTypes {
     | '/_verifier/verify/dashboard/withdrawals'
     | '/api/public/campaign-media/$'
     | '/api/public/card/webhook'
+    | '/api/public/infobip/webhook'
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
@@ -2392,6 +2404,7 @@ export interface RootRouteChildren {
   TemplatesCategoryIndexRoute: typeof TemplatesCategoryIndexRoute
   ApiPublicCampaignMediaSplatRoute: typeof ApiPublicCampaignMediaSplatRoute
   ApiPublicCardWebhookRoute: typeof ApiPublicCardWebhookRoute
+  ApiPublicInfobipWebhookRoute: typeof ApiPublicInfobipWebhookRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -3575,6 +3588,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCardWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/infobip/webhook': {
+      id: '/api/public/infobip/webhook'
+      path: '/api/public/infobip/webhook'
+      fullPath: '/api/public/infobip/webhook'
+      preLoaderRoute: typeof ApiPublicInfobipWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/media/$': {
       id: '/api/public/media/$'
       path: '/api/public/media/$'
@@ -4103,6 +4123,7 @@ const rootRouteChildren: RootRouteChildren = {
   TemplatesCategoryIndexRoute: TemplatesCategoryIndexRoute,
   ApiPublicCampaignMediaSplatRoute: ApiPublicCampaignMediaSplatRoute,
   ApiPublicCardWebhookRoute: ApiPublicCardWebhookRoute,
+  ApiPublicInfobipWebhookRoute: ApiPublicInfobipWebhookRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
