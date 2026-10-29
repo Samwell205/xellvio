@@ -10,9 +10,9 @@ describe("email plans (Omnisend prices)", () => {
   it("Pro starts at $59 for 2,500 contacts", () => {
     expect(emailPlanFor(250).pro).toMatchObject({ price: 59, contacts: 2500 });
   });
-  it("10,000 contacts: Standard $150, Pro $170", () => {
+  it("10,000 contacts: Standard $132, Pro $150", () => {
     const p = emailPlanFor(10000);
-    expect(p.standard.price).toBe(150);
-    expect(p.pro.price).toBe(170);
+    expect(p.standard.price).toBe(132);
+    expect(p.pro.price).toBe(150);
   });
 });
