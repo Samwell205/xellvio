@@ -317,7 +317,7 @@ function FeatureGrid() {
               {...fade}
               transition={{ ...fade.transition, delay: i * 0.05 }}
             >
-              <f.icon className="size-7 text-primary" strokeWidth={1.6} />
+              <f.icon className="size-7 text-brand-green" strokeWidth={1.6} />
               <h3 className="mt-5 font-bold text-foreground text-lg leading-snug">{f.title}</h3>
               <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{f.text}</p>
             </motion.div>
