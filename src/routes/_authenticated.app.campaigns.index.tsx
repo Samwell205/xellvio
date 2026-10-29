@@ -160,9 +160,16 @@ function CampaignsPage() {
             ))}
           </div>
         </div>
-        <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search campaigns" className="rounded-full pl-9" aria-label="Search campaigns" />
+        <div className="flex w-full items-center gap-2 lg:w-auto">
+          <div className="relative flex-1 lg:w-72">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search campaigns" className="rounded-full pl-9" aria-label="Search campaigns" />
+          </div>
+          {draftRows.length > 0 && (
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-full border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => setConfirmAllDrafts(true)}>
+              <Trash2 className="size-3.5" />Delete drafts ({draftRows.length})
+            </Button>
+          )}
         </div>
       </div>
 
@@ -205,8 +212,8 @@ function CampaignsPage() {
                 ) : (
                   <Link to="/app/campaigns/$id/report" params={{ id: c.id }}><Button variant="ghost" size="sm" className="gap-1"><BarChart3 className="size-4" /><span className="hidden sm:inline">Report</span></Button></Link>
                 )}
-                {!isEmail && (
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => setToDelete({ id: c.id, name: c.name })} aria-label={`Delete ${c.name}`}><Trash2 className="size-4" /></Button>
+                {(c.status === "draft" || c.status === "cancelled") && (
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => setToDelete({ id: c.id, name: c.name, channel: c.channel })} aria-label={`Delete ${c.name}`}><Trash2 className="size-4" /></Button>
                 )}
                 <ChevronRight className="hidden size-4 text-muted-foreground transition group-hover:translate-x-0.5 sm:block" />
               </div>
