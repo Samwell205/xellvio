@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { EmailDesigner, EMAIL_TEMPLATES, templateBlocks } from "@/components/email/EmailDesigner";
+import { EmailDesigner, EmailTemplateChooser, templateBlocks } from "@/components/email/EmailDesigner";
 import { hasEmailContent, renderEmail } from "@/lib/email-campaign-rules";
 import { EmailBundles } from "@/components/email/EmailBundles";
 import { emailDraftSchema, emailSenderDomain, type EmailDraft } from "@/lib/email-campaign-rules";
@@ -105,6 +105,7 @@ function EmailCampaignPage() {
       <p className="text-xs text-muted-foreground">Accepted is not confirmed delivery. Opens can include privacy-protection scans; clicks can include automated scanners.</p>
       {!!q.data?.failures.length && <div className="overflow-x-auto rounded-2xl border bg-card"><table className="w-full text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="p-3">Recipient</th><th>Status</th><th>Reason</th></tr></thead><tbody>{q.data.failures.map((f, i) => <tr key={i} className="border-b last:border-0"><td className="p-3">{f.email}</td><td>{f.status}</td><td>{f.last_error}</td></tr>)}</tbody></table></div>}
     </> : <>
+      {step === 0 && <EmailTemplateChooser onPick={(values) => { patch(values); setStep(1); toast.success("Template applied — ready to edit"); }} />}
       {step === 0 && <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-4">
           <Section title="To" desc="Who receives this campaign">
@@ -125,7 +126,6 @@ function EmailCampaignPage() {
         </div>
         <aside className="space-y-4">
           <div className="rounded-3xl border bg-card p-5"><h2 className="font-semibold">Sending domain</h2><div className="mt-3 space-y-2">{setup.domains.length ? setup.domains.map((d) => <div key={d.id} className="flex items-center justify-between gap-2 rounded-xl border p-3"><p className="min-w-0 break-all text-sm font-medium">{d.domain}</p><Badge variant={d.status === "verified" ? "default" : "secondary"} className={d.status === "verified" ? "bg-brand-green text-primary-foreground" : ""}>{d.status === "verified" ? "Verified" : "Pending"}</Badge></div>) : <p className="text-sm text-muted-foreground">No sending domain connected.</p>}</div><Link to="/app/email-domains"><Button variant="outline" size="sm" className="mt-3 w-full">Manage domain</Button></Link></div>
-          <div className="rounded-3xl border bg-card p-5"><h2 className="font-semibold">Start with a design</h2><p className="mb-3 text-xs text-muted-foreground">Pick a starter or build from scratch in the next step.</p><div className="grid grid-cols-2 gap-2">{EMAIL_TEMPLATES.slice(0, 6).map((t, i) => <button type="button" key={t.name} className="rounded-xl border p-3 text-left text-sm font-medium transition hover:border-brand-green hover:bg-brand-green/5" onClick={() => { patch({ content_mode: "design", blocks: templateBlocks(i), theme: EMAIL_TEMPLATES[i]?.theme ?? {} }); setStep(1); }}><span className="mb-2 block h-1.5 w-8 rounded-full" style={{ background: t.theme?.brand ?? "var(--brand-green)" }} />{t.name}</button>)}</div></div>
         </aside>
       </div>}
       {step === 1 && <EmailDesigner draft={draft} onChange={patch} />}
