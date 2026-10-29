@@ -18,6 +18,7 @@ const ROUTE_PERMS: { prefix: string; exact?: boolean; perm: PermissionKey }[] = 
   { prefix: "/app/setup-sms", perm: "setup_sms" },
   { prefix: "/app/setup-10dlc", perm: "setup_sms" },
   { prefix: "/app/toll-free-verification", perm: "setup_sms" },
+  { prefix: "/app/email-domains", perm: "settings" },
   { prefix: "/app/team", perm: "team" },
   { prefix: "/app/settings", perm: "settings" },
   { prefix: "/app/receptionist", perm: "settings" },

@@ -17,7 +17,9 @@ export type ImportJob = {
 };
 
 export type ImportRow = {
-  phone_e164: string;
+  /** At least one of phone_e164 / email is present. */
+  phone_e164: string | null;
+  email?: string | null;
   first_name?: string | null;
   last_name?: string | null;
   country_code?: string | null;

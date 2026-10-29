@@ -211,6 +211,13 @@
       "when": 1793205437069,
       "tag": "0029_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793291105334,
+      "tag": "0030_email_contacts_and_domains",
+      "breakpoints": true
     }
   ]
 }
