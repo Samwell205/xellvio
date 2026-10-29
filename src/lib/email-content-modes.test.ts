@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { hasEmailContent, renderEmail, renderEmailText, sanitizeEmailHtml } from "./email-campaign-rules";
 const base = { from_name: "Shop", preheader: "", postal_address: "1 Main St", blocks: [] };
 describe("email content modes", () => {
+  it("upgrades imported HTTP template images to HTTPS without removing them", () => {
+    const image = "cdn.mcauto-images-production.sendgrid.net/example/banner.png";
+    expect(sanitizeEmailHtml(`<img src="http://${image}">`)).toContain(`src="https://${image}"`);
+    expect(sanitizeEmailHtml(`<img src="//${image}">`)).toContain(`src="https://${image}"`);
+    expect(sanitizeEmailHtml('<img src="javascript:alert(1)">')).toContain('src=""');
+  });
   it("plain message sends without a design and keeps unsubscribe", () => {
     const d = { ...base, content_mode: "plain" as const, plain_body: "Hi {{first_name}}" };
     expect(renderEmailText(d, "https://u.test/x", "Ann")).toContain("Hi Ann");
