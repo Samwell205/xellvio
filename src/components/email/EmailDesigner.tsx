@@ -82,7 +82,7 @@ export function EmailDesigner({ draft, onChange }: { draft: EmailDraft; onChange
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <Tabs value={mode} onValueChange={(v) => switchMode(v as EmailMode)}>
-        <TabsList>
+        <TabsList className="rounded-full p-1">
           <TabsTrigger value="design"><Wand2 className="size-4" />Drag & drop design</TabsTrigger>
           <TabsTrigger value="plain"><Type className="size-4" />Plain message</TabsTrigger>
           <TabsTrigger value="html"><Code2 className="size-4" />HTML code</TabsTrigger>
@@ -94,13 +94,14 @@ export function EmailDesigner({ draft, onChange }: { draft: EmailDraft; onChange
       </div>
     </div>
 
-    <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
-      <aside className="space-y-5">
+    <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <aside className="space-y-5 rounded-3xl border bg-card p-4 xl:sticky xl:top-20 xl:max-h-[calc(100vh-6rem)] xl:overflow-y-auto">
         {mode === "design" && <>
-          <div className="space-y-2"><h3 className="text-sm font-semibold">Add a block</h3><div className="grid grid-cols-2 gap-1.5">{TOOLS.map((t) => <Button key={t.type} size="sm" variant="outline" className="justify-start" title={t.label} onClick={() => {
+          <div className="space-y-2"><h3 className="text-sm font-semibold">Add a block</h3><div className="grid grid-cols-3 gap-2">{TOOLS.map((t) => <Button key={t.type} variant="outline" className="h-auto flex-col gap-1.5 rounded-xl py-3 text-xs hover:border-brand-green hover:bg-brand-green/5" title={t.label} onClick={() => {
             const id = crypto.randomUUID(); setBlocks([...draft.blocks, { id, type: t.type, text: DEFAULT_TEXT[t.type] ?? "", url: "" }]); setSelected(id);
-          }}><t.icon className="size-4" />{t.label}</Button>)}</div></div>
-          <div className="space-y-1">{draft.blocks.map((x, i) => <Button key={x.id} variant={selected === x.id ? "secondary" : "ghost"} className="w-full justify-start overflow-hidden" onClick={() => setSelected(x.id)}><span className="text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span><span className="truncate">{x.type === "divider" || x.type === "spacer" ? x.type : x.text || x.type}</span></Button>)}</div>
+          }}><t.icon className="size-4 text-brand-green" />{t.label}</Button>)}</div></div>
+          <h3 className="text-sm font-semibold">Layers</h3>
+          <div className="space-y-1">{draft.blocks.map((x, i) => <Button key={x.id} variant="ghost" className={`w-full justify-start overflow-hidden rounded-xl border ${selected === x.id ? "border-brand-green bg-brand-green/10" : "border-transparent"}`} onClick={() => setSelected(x.id)}><span className="text-xs text-muted-foreground">{String(i + 1).padStart(2, "0")}</span><span className="truncate">{x.type === "divider" || x.type === "spacer" ? x.type : x.text || x.type}</span></Button>)}</div>
           {block && <div className="space-y-3 border-t pt-4"><div className="flex items-center justify-between"><h3 className="font-semibold capitalize">{block.type}</h3><div className="flex"><Button size="icon" variant="ghost" title="Move up" onClick={() => move(-1)}><ArrowUp className="size-4" /></Button><Button size="icon" variant="ghost" title="Move down" onClick={() => move(1)}><ArrowDown className="size-4" /></Button><Button size="icon" variant="ghost" title="Delete block" onClick={() => { setBlocks(draft.blocks.filter((x) => x.id !== block.id)); setSelected(null); }}><Trash2 className="size-4 text-destructive" /></Button></div></div>
             {!["divider", "spacer"].includes(block.type) && <><Label htmlFor="block-text">{block.type === "image" || block.type === "logo" ? "Image description" : block.type === "social" ? "One link per line: Name|https://…" : block.type === "columns" ? "Put --- on its own line between columns" : "Content"}</Label><Textarea id="block-text" rows={5} value={block.text} onChange={(e) => patch({ text: e.target.value })} /></>}
             {["image", "button", "logo"].includes(block.type) && <><Label htmlFor="block-url">{block.type === "button" ? "Destination URL" : "Image URL"}</Label><Input id="block-url" placeholder="https://" value={block.url} onChange={(e) => patch({ url: e.target.value })} />{block.type !== "button" && <Button variant="outline" className="w-full" onClick={() => setMedia(true)}><ImageIcon className="size-4" />Choose or upload image</Button>}</>}
@@ -125,7 +126,7 @@ export function EmailDesigner({ draft, onChange }: { draft: EmailDraft; onChange
           <p className="text-xs text-muted-foreground">Use {"{{first_name}}"} for personalization and {"{{unsubscribe_url}}"} for your own unsubscribe link — if missing, a footer with your address and unsubscribe link is added. Scripts, forms and unsafe links are removed before sending.</p>
         </div>}
       </aside>
-      <section className="min-w-0 bg-muted/60 p-3 md:p-5"><div className="mb-4 flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">EMAIL PREVIEW</span><div className="flex gap-1"><Button size="icon" variant={mobile ? "ghost" : "secondary"} title="Desktop preview" onClick={() => setMobile(false)}><Monitor className="size-4" /></Button><Button size="icon" variant={mobile ? "secondary" : "ghost"} title="Phone preview" onClick={() => setMobile(true)}><Smartphone className="size-4" /></Button></div></div>
+      <section className="min-w-0 rounded-3xl border bg-[radial-gradient(circle_at_top,var(--brand-green-soft),transparent_60%)] bg-muted/50 p-3 md:p-6"><div className="mb-4 flex items-center justify-between"><span className="text-xs font-semibold text-muted-foreground">EMAIL PREVIEW</span><div className="flex gap-1"><Button size="icon" variant={mobile ? "ghost" : "secondary"} title="Desktop preview" onClick={() => setMobile(false)}><Monitor className="size-4" /></Button><Button size="icon" variant={mobile ? "secondary" : "ghost"} title="Phone preview" onClick={() => setMobile(true)}><Smartphone className="size-4" /></Button></div></div>
         <iframe title="Email design preview" sandbox="" srcDoc={preview} className={`mx-auto h-[680px] w-full border-0 bg-card transition-all duration-300 ${mobile ? "max-w-[360px]" : "max-w-[640px]"}`} />
       </section>
     </div>
