@@ -1,8 +1,8 @@
-/** International (non-US/Canada, non-UK) destinations use the international SMS route. MMS stays on the primary route. */
+/** All non-US/Canada destinations (UK included) use the international SMS route. MMS stays on the primary route. */
 export function isInfobipDestination(to: string, opts: { hasMedia?: boolean } = {}): boolean {
   if (opts.hasMedia) return false;
   const t = String(to ?? "").trim();
-  return /^\+[1-9]\d{7,14}$/.test(t) && !t.startsWith("+1") && !t.startsWith("+44");
+  return /^\+[1-9]\d{7,14}$/.test(t) && !t.startsWith("+1");
 }
 
 /**

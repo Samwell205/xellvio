@@ -585,16 +585,9 @@ export async function sendMessage(opts: {
   if (!/^\+[1-9]\d{7,14}$/.test(to)) {
     throw new Error(`Invalid destination number: "${opts.to}" is not a valid international (E.164) number`);
   }
-  {
-    const { isSinchDestination } = await import("./sinch-routing");
-    const { sinchConfigured, sendViaSinch } = await import("./sinch.server");
-    if (sinchConfigured() && isSinchDestination(to, { hasMedia: Boolean(opts.mediaUrls?.length) })) {
-      const r = await sendViaSinch({ to, text: opts.text, senderId: opts.from, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
-      return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
-    }
-  }
-  // International (non-US/Canada, non-UK) destinations use the international
-  // route so carriers there accept the tenant's alphanumeric sender ID.
+  // All non-US/Canada destinations (UK included) use the international route
+  // so carriers there accept the tenant's alphanumeric sender ID. The UK
+  // route no longer sends; its webhook stays only for earlier receipts.
   {
     const { isInfobipDestination } = await import("./infobip-routing");
     const { infobipConfigured, sendViaInfobip } = await import("./infobip.server");
