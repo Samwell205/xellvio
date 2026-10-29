@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { emailSenderDomain, renderEmail, type EmailDraft } from "./email-campaign-rules";
+import { emailSenderDomain, renderEmail, renderEmailText, type EmailDraft } from "./email-campaign-rules";
 
 export async function emailProviderRequest(path: string, init: RequestInit = {}) {
   const key = process.env["SENDGRID_API_KEY"];
@@ -46,7 +46,7 @@ export async function processEmailQueue() {
         from: { email: campaign.from_email, name: campaign.from_name },
         ...(campaign.reply_to ? { reply_to: { email: campaign.reply_to } } : {}),
         subject: campaign.subject.replace(/\{\{\s*first_name\s*\}\}/g, r.first_name || "there"),
-        content: [{ type: "text/html", value: renderEmail(parsed.data, unsubscribe, r.first_name ?? "") }],
+        content: [{ type: "text/plain", value: renderEmailText(parsed.data, unsubscribe, r.first_name ?? "") }, { type: "text/html", value: renderEmail(parsed.data, unsubscribe, r.first_name ?? "") }],
         tracking_settings: { click_tracking: { enable: true }, open_tracking: { enable: true } },
       }) });
       const now = new Date().toISOString();
