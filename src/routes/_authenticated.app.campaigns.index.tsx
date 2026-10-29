@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { motion } from "framer-motion";
 import { listEmailCampaigns } from "@/lib/email-campaigns.functions";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/StatusBadge";
 import {
   AlertDialog,
@@ -20,42 +19,62 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Plus, RefreshCw, Megaphone, Trash2, Mail } from "lucide-react";
+import { BarChart3, CalendarClock, ChevronRight, FileEdit, Mail, MessageSquare, Plus, RefreshCw, Search, Send, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/campaigns/")({
   head: () => ({ meta: [{ title: "SMS and email campaigns — Xellvio" }, { name: "description", content: "Manage and track your Xellvio SMS and email campaigns." }, { property: "og:title", content: "SMS and email campaigns — Xellvio" }, { property: "og:description", content: "Manage and track business campaigns in Xellvio." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: CampaignsPage,
 });
 
+type Row = { id: string; name: string; status: string; channel: "sms" | "email"; sub: string; when: string; created: string; total?: number };
+const FILTERS = [["all", "All"], ["draft", "Drafts"], ["scheduled", "Scheduled"], ["active", "Sending"], ["sent", "Sent"]] as const;
+const ACTIVE = ["queued", "sending", "running", "paused", "processing"];
+
 function CampaignsPage() {
   const qc = useQueryClient();
   const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [channel, setChannel] = useState("sms");
+  const [channel, setChannel] = useState<"all" | "sms" | "email">("all");
+  const [filter, setFilter] = useState<(typeof FILTERS)[number][0]>("all");
+  const [search, setSearch] = useState("");
   const listEmails = useServerFn(listEmailCampaigns);
-  const emails = useQuery({ queryKey: ["email-campaigns"], queryFn: () => listEmails(), refetchInterval: channel === "email" ? 10000 : false });
-
+  const emails = useQuery({ queryKey: ["email-campaigns"], queryFn: () => listEmails(), refetchInterval: 10000 });
   const q = useQuery({
     queryKey: ["campaigns"],
     refetchInterval: 8_000,
     queryFn: async () =>
-      (
-        await supabase
-          .from("campaigns")
-          .select("id,name,status,send_mode,schedule_at,created_at")
-          .order("created_at", { ascending: false })
-      ).data ?? [],
+      (await supabase.from("campaigns").select("id,name,status,send_mode,schedule_at,created_at").order("created_at", { ascending: false })).data ?? [],
   });
+
+  const rows = useMemo<Row[]>(() => {
+    const sms: Row[] = (q.data ?? []).map((c) => ({ id: c.id, name: c.name, status: c.status, channel: "sms", sub: c.send_mode === "scheduled" ? "Scheduled send" : "Text message", when: c.schedule_at ?? "", created: c.created_at }));
+    const em: Row[] = (emails.data ?? []).map((c) => ({ id: c.id, name: c.name, status: c.status, channel: "email", sub: c.subject || "No subject yet", when: "", created: c.created_at, total: c.total }));
+    return [...sms, ...em].sort((a, b) => b.created.localeCompare(a.created));
+  }, [q.data, emails.data]);
+
+  const visible = rows.filter((r) => {
+    if (channel !== "all" && r.channel !== channel) return false;
+    if (search && !`${r.name} ${r.sub}`.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filter === "draft") return r.status === "draft";
+    if (filter === "scheduled") return r.status === "scheduled" || !!r.when;
+    if (filter === "active") return ACTIVE.includes(r.status);
+    if (filter === "sent") return ["sent", "completed", "done"].includes(r.status);
+    return true;
+  });
+
+  const stats = [
+    { label: "Campaigns", value: rows.length, icon: Send },
+    { label: "Drafts", value: rows.filter((r) => r.status === "draft").length, icon: FileEdit },
+    { label: "Sending now", value: rows.filter((r) => ACTIVE.includes(r.status)).length, icon: RefreshCw },
+    { label: "Email campaigns", value: rows.filter((r) => r.channel === "email").length, icon: Mail },
+  ];
 
   async function handleDelete() {
     if (!toDelete) return;
     setDeleting(true);
     const { error } = await supabase.from("campaigns").delete().eq("id", toDelete.id);
     setDeleting(false);
-    if (error) {
-      toast.error(error.message ?? "Failed to delete campaign");
-      return;
-    }
+    if (error) { toast.error(error.message ?? "Failed to delete campaign"); return; }
     toast.success(`Deleted "${toDelete.name}"`);
     setToDelete(null);
     qc.invalidateQueries({ queryKey: ["campaigns"] });
@@ -63,125 +82,110 @@ function CampaignsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold">Campaigns</h1>
-          <p className="text-sm text-muted-foreground flex items-center gap-2">
-            SMS and email campaigns.
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground/70">
-              <RefreshCw className={`size-3 ${q.isFetching ? "animate-spin" : ""}`} /> live
-            </span>
-          </p>
+      <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-brand-green/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 size-72 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-5">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-green">Campaigns</p>
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight md:text-4xl">Reach your customers</h1>
+            <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+              Create, schedule and track SMS and email campaigns.
+              <span className="inline-flex items-center gap-1 text-xs"><RefreshCw className={`size-3 ${q.isFetching ? "animate-spin" : ""}`} />live</span>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link to="/app/campaigns/new"><Button size="lg" className="gap-2"><MessageSquare className="size-4" />New SMS</Button></Link>
+            <Link to="/app/campaigns/email"><Button size="lg" variant="outline" className="gap-2 border-brand-green/40 hover:bg-brand-green/10"><Mail className="size-4 text-brand-green" />New email</Button></Link>
+          </div>
         </div>
-        <Link to={channel === "email" ? "/app/campaigns/email" : "/app/campaigns/new"}>
-          <Button>
-            <Plus className="size-4 mr-1.5" />
-            New {channel === "email" ? "email" : "SMS"} campaign
-          </Button>
-        </Link>
+        <div className="relative mt-7 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {stats.map((s, i) => (
+            <motion.div key={s.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="rounded-2xl border bg-background/60 p-4 backdrop-blur">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">{s.label}<s.icon className="size-4 text-brand-green" /></div>
+              <div className="mt-2 text-2xl font-bold tabular-nums">{s.value}</div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-full border bg-muted/50 p-1">
+            {([["all", "All channels", Send], ["sms", "SMS", MessageSquare], ["email", "Email", Mail]] as const).map(([v, l, I]) => (
+              <button key={v} type="button" onClick={() => setChannel(v)} className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition ${channel === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}><I className="size-3.5" />{l}</button>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {FILTERS.map(([v, l]) => (
+              <button key={v} type="button" onClick={() => setFilter(v)} className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${filter === v ? "bg-brand-green/15 text-brand-green" : "text-muted-foreground hover:bg-muted"}`}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <div className="relative w-full lg:w-72">
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search campaigns" className="rounded-full pl-9" aria-label="Search campaigns" />
+        </div>
       </div>
 
-      <Tabs value={channel} onValueChange={setChannel}><TabsList><TabsTrigger value="sms">SMS</TabsTrigger><TabsTrigger value="email"><Mail className="mr-1 size-4" />Email</TabsTrigger></TabsList></Tabs>
-      {channel === "email" ? <div className="overflow-x-auto rounded-lg border"><table className="w-full text-sm"><thead className="bg-muted/40 text-left text-muted-foreground"><tr><th className="p-4">Campaign</th><th className="p-4">Status</th><th className="p-4">Recipients</th><th className="p-4">Created</th><th className="p-4"></th></tr></thead><tbody>{emails.data?.map((c) => <tr key={c.id} className="border-t"><td className="p-4"><Link to="/app/campaigns/email" search={{ id: c.id }} className="font-semibold hover:underline">{c.name}</Link><div className="text-xs text-muted-foreground">{c.subject}</div></td><td className="p-4"><Badge variant="secondary" className="capitalize">{c.status}</Badge></td><td className="p-4">{c.total.toLocaleString()}</td><td className="p-4">{new Date(c.created_at).toLocaleDateString()}</td><td className="p-4"><Link to="/app/campaigns/email" search={{ id: c.id }}><Button variant="ghost" size="sm">{c.status === "draft" ? "Edit draft" : "Report"}</Button></Link></td></tr>)}{emails.error && <tr><td colSpan={5} className="p-6 text-destructive">{emails.error.message}</td></tr>}{!emails.data?.length && !emails.isLoading && !emails.error && <tr><td colSpan={5} className="py-14 text-center text-muted-foreground">No email campaigns yet.</td></tr>}</tbody></table></div> : <Card className="p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="text-xs text-muted-foreground uppercase bg-muted/30">
-              <tr>
-                <th className="text-left py-3 px-4">Name</th>
-                <th className="text-left py-3 px-4">Status</th>
-                <th className="text-left py-3 px-4">Mode</th>
-                <th className="text-left py-3 px-4">Scheduled</th>
-                <th className="text-left py-3 px-4">Created</th>
-                <th className="text-right py-3 px-4 w-24">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(q.data ?? []).length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-16 text-center">
-                    <Megaphone className="size-8 mx-auto text-muted-foreground/60 mb-3" />
-                    <div className="font-medium">No campaigns yet</div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Click <strong>New campaign</strong> to create your first one.
-                    </p>
-                  </td>
-                </tr>
-              )}
-              {(q.data ?? []).map((c) => (
-                <tr key={c.id} className="border-t hover:bg-muted/20">
-                  <td className="py-3 px-4 font-semibold">
-                    {c.status === "draft" ? (
-                      <Link
-                        to="/app/campaigns/new"
-                        search={{ id: c.id }}
-                        className="hover:underline"
-                      >
-                        {c.name}
-                      </Link>
-                    ) : (
-                      <Link
-                        to="/app/campaigns/$id"
-                        params={{ id: c.id }}
-                        className="hover:underline"
-                      >
-                        {c.name}
-                      </Link>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <StatusBadge status={c.status} />
-                  </td>
-                  <td className="py-3 px-4 capitalize">{c.send_mode}</td>
-                  <td className="py-3 px-4 text-muted-foreground">
-                    {c.schedule_at ? new Date(c.schedule_at).toLocaleString() : "—"}
-                  </td>
-                  <td className="py-3 px-4 text-muted-foreground">
-                    {new Date(c.created_at).toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    {c.status !== "draft" && (
-                      <Link to="/app/campaigns/$id/report" params={{ id: c.id }}>
-                        <Button variant="ghost" size="sm" className="mr-1">
-                          Report
-                        </Button>
-                      </Link>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setToDelete({ id: c.id, name: c.name })}
-                      aria-label={`Delete ${c.name}`}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>}
+      <div className="space-y-2">
+        {visible.length === 0 && !q.isLoading && (
+          <div className="rounded-3xl border border-dashed p-14 text-center">
+            <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand-green/10"><Send className="size-6 text-brand-green" /></div>
+            <div className="mt-4 font-semibold">No campaigns here yet</div>
+            <p className="mt-1 text-sm text-muted-foreground">Start a new SMS or email campaign to reach your audience.</p>
+          </div>
+        )}
+        {emails.error && channel !== "sms" && <p className="text-sm text-destructive">{emails.error.message}</p>}
+        {visible.map((c, i) => {
+          const isEmail = c.channel === "email";
+          const open = isEmail
+            ? <Link to="/app/campaigns/email" search={{ id: c.id }} className="truncate font-semibold hover:underline">{c.name}</Link>
+            : c.status === "draft"
+              ? <Link to="/app/campaigns/new" search={{ id: c.id }} className="truncate font-semibold hover:underline">{c.name}</Link>
+              : <Link to="/app/campaigns/$id" params={{ id: c.id }} className="truncate font-semibold hover:underline">{c.name}</Link>;
+          return (
+            <motion.div key={`${c.channel}-${c.id}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 12) * 0.02 }}
+              className="group grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-2xl border bg-card p-4 transition hover:border-brand-green/40 hover:shadow-md">
+              <div className={`grid size-11 shrink-0 place-items-center rounded-xl ${isEmail ? "bg-brand-green/12 text-brand-green" : "bg-primary/10 text-primary"}`}>
+                {isEmail ? <Mail className="size-5" /> : <MessageSquare className="size-5" />}
+              </div>
+              <div className="min-w-0">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">{open}<StatusBadge status={c.status} /></div>
+                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span className="truncate">{c.sub}</span>
+                  {c.when && <span className="inline-flex items-center gap-1"><CalendarClock className="size-3" />{new Date(c.when).toLocaleString()}</span>}
+                  {typeof c.total === "number" && c.total > 0 && <span>{c.total.toLocaleString()} recipients</span>}
+                  <span>Created {new Date(c.created).toLocaleDateString()}</span>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                {isEmail ? (
+                  <Link to="/app/campaigns/email" search={{ id: c.id }}><Button variant="ghost" size="sm" className="gap-1">{c.status === "draft" ? <><FileEdit className="size-4" />Edit</> : <><BarChart3 className="size-4" />Report</>}</Button></Link>
+                ) : c.status === "draft" ? (
+                  <Link to="/app/campaigns/new" search={{ id: c.id }}><Button variant="ghost" size="sm" className="gap-1"><FileEdit className="size-4" />Edit</Button></Link>
+                ) : (
+                  <Link to="/app/campaigns/$id/report" params={{ id: c.id }}><Button variant="ghost" size="sm" className="gap-1"><BarChart3 className="size-4" /><span className="hidden sm:inline">Report</span></Button></Link>
+                )}
+                {!isEmail && (
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={() => setToDelete({ id: c.id, name: c.name })} aria-label={`Delete ${c.name}`}><Trash2 className="size-4" /></Button>
+                )}
+                <ChevronRight className="hidden size-4 text-muted-foreground transition group-hover:translate-x-0.5 sm:block" />
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
 
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
-            <AlertDialogDescription>
-              "{toDelete?.name}" and all of its message records will be permanently removed. This
-              can't be undone.
-            </AlertDialogDescription>
+            <AlertDialogDescription>"{toDelete?.name}" and all of its message records will be permanently removed. This can't be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleDelete();
-              }}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting ? "Deleting…" : "Delete campaign"}
             </AlertDialogAction>
           </AlertDialogFooter>
