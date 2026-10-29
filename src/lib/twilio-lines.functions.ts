@@ -55,7 +55,11 @@ export const requestDedicatedLine = createServerFn({ method: "POST" })
     if (row?.status === "verification_pending") return { status: "verification_pending" };
 
     // Charge the first month exactly once; a retry after a failed setup step resumes without charging again.
-    if (!row?.charged_at) {
+    // A business that already paid the toll-free setup fee is not charged a second time for the first month.
+    const { data: feeRow } = await db.from("accounts").select("tollfree_setup_fee_paid_at").eq("id", acting.accountId).maybeSingle();
+    if (!row?.charged_at && feeRow?.tollfree_setup_fee_paid_at) {
+      await db.from("tenant_twilio_lines").update({ charged_at: new Date().toISOString() }).eq("account_id", acting.accountId).is("charged_at", null);
+    } else if (!row?.charged_at) {
       const { data: claimed } = await db.from("tenant_twilio_lines").update({ charged_at: new Date().toISOString() })
         .eq("account_id", acting.accountId).is("charged_at", null).select("account_id");
       if (claimed?.length) {
