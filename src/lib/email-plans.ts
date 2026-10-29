@@ -5,7 +5,7 @@ const PRO: Record<number, number> = {0:59,251:59,501:59,1001:59,1501:59,2001:59,
 
 export const CONTACT_STEPS = [250, 500, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 6000, 7000, 9000, 10000, 12500, 15000, 20000, 25000, 30000, 40000, 50000, 75000, 100000, 150000];
 export const FIRST_MONTHS_DISCOUNT = 0.3;
-export const FREE_PLAN = { contacts: 250, emails: 500 };
+export const FREE_PLAN = { contacts: 25, emails: 50 };
 
 function lookup(table: Record<number, number>, contacts: number) {
   let price = table[0];
