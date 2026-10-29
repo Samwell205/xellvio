@@ -277,6 +277,33 @@ function stepValid(f: WizardForm, key: StepKey): string | null {
   }
 }
 
+// ---------- Smart defaults (only fill empty fields, never overwrite) ----------
+
+export function applySmartDefaults(f: WizardForm): WizardForm {
+  const name = (f.businessDba || f.legalEntityName).trim();
+  let origin = "";
+  try { if (isHttp(f.websiteUrl)) origin = new URL(f.websiteUrl.trim()).origin.replace(/^http:/, "https:"); } catch { /* ignore */ }
+  const out = { ...f };
+  const fill = <K extends keyof WizardForm>(k: K, v: WizardForm[K]) => {
+    if (typeof out[k] === "string" && !(out[k] as string).trim() && v) out[k] = v;
+  };
+  fill("notificationEmail", f.contactEmail.trim());
+  fill("optInKeywords", "START, YES, SUBSCRIBE");
+  if (name) {
+    fill("sampleMessage", `${name}: Thanks for joining! Enjoy updates and offers from us. Msg & data rates may apply. Reply HELP for help, STOP to opt out.`);
+    fill("useCaseDescription", `${name} sends marketing offers, updates and account notifications to customers who opted in through our website sign-up form. Messages are sent up to 4 times per month.`);
+    fill("optInConfirmationMessage", `${name}: You're subscribed to text updates. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to cancel.`);
+    fill("helpMessageSample", `${name}: For help, contact ${f.contactEmail.trim() || "us"}. Msg & data rates may apply. Reply STOP to cancel.`);
+  }
+  if (origin) {
+    fill("privacyPolicyUrl", `${origin}/privacy`);
+    fill("termsUrl", `${origin}/terms`);
+  }
+  return out;
+}
+
+const OPT_IN_LABEL: Record<string, string> = Object.fromEntries(OPT_IN_TYPES.map((o) => [o.v, o.l]));
+
 // ---------- Component ----------
 
 export type TollfreeWizardProps = {
@@ -310,8 +337,10 @@ export function TollfreeWizard({
   function goNext() {
     const err = stepValid(form, step.key);
     if (err) { toast.error(err); return; }
+    if (step.key === "general") setForm((f) => applySmartDefaults(f));
     setCompleted((c) => new Set(c).add(step.key));
     if (stepIdx < STEPS.length - 1) setStepIdx(stepIdx + 1);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function goBack() {
@@ -331,8 +360,15 @@ export function TollfreeWizard({
     await onSubmit({ ...form, agreeToTos: true });
   }
 
+  const STEP_HINTS: Record<StepKey, string> = {
+    general: "Who's sending",
+    numbers: "Your number",
+    "use-case-details": "What you'll text",
+  };
+  const progress = ((stepIdx + 1) / STEPS.length) * 100;
+
   return (
-    <div className="rounded-lg border bg-card overflow-hidden">
+    <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
       {onClose && (
         <div className="border-b px-6 py-3">
           <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-auto px-0 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground">
@@ -340,67 +376,101 @@ export function TollfreeWizard({
           </Button>
         </div>
       )}
-      <nav className="flex overflow-x-auto border-b px-4 sm:px-6" aria-label="Registration steps">
-        {STEPS.map((item, index) => {
-          const isCurrent = index === stepIdx;
-          const isDone = completed.has(item.key);
-          return (
-            <Button
-              key={item.key}
-              type="button"
-              variant="ghost"
-              onClick={() => setStepIdx(index)}
-              className={`h-12 shrink-0 rounded-none border-b-2 px-3 text-sm hover:bg-transparent ${isCurrent ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
-              aria-current={isCurrent ? "step" : undefined}
-            >
-              {isDone && !isCurrent && <CheckIcon className="mr-1.5 size-3.5 text-success" />}
-              {item.label}
-            </Button>
-          );
-        })}
-      </nav>
-      <div className="space-y-6 p-5 sm:p-6 lg:p-8">
+      <div className="border-b bg-muted/30 px-4 pt-5 sm:px-8">
+        <ol className="grid grid-cols-3 gap-2" aria-label="Registration steps">
+          {STEPS.map((item, index) => {
+            const isCurrent = index === stepIdx;
+            const isDone = completed.has(item.key) && !isCurrent;
+            return (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  onClick={() => setStepIdx(index)}
+                  aria-current={isCurrent ? "step" : undefined}
+                  className="group flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition-colors hover:bg-background/60"
+                >
+                  <span
+                    className={`grid size-9 shrink-0 place-items-center rounded-full border text-sm font-semibold transition-all duration-300 ${
+                      isCurrent
+                        ? "scale-105 border-primary bg-primary text-primary-foreground shadow-md"
+                        : isDone
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "bg-background text-muted-foreground"
+                    }`}
+                  >
+                    {isDone ? <CheckIcon className="size-4" /> : index + 1}
+                  </span>
+                  <span className="hidden min-w-0 sm:block">
+                    <span className={`block truncate text-sm font-medium ${isCurrent ? "text-foreground" : "text-muted-foreground"}`}>{item.label}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{STEP_HINTS[item.key]}</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <div className="mt-4 h-1 w-full overflow-hidden rounded-full bg-border">
+          <div className="h-full rounded-full bg-primary transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
+      <div className="space-y-6 p-5 sm:p-8">
         {helperBanner}
         <fieldset disabled={disabled} className={disabled ? "pointer-events-none opacity-70" : ""}>
-          <div className="space-y-8">
+          <div key={step.key} className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 motion-reduce:animate-none">
             {step.key === "general" && (
               <>
-                <BusinessInfoStep form={form} update={update} />
-                <div className="border-t pt-8"><AuthorizedRepStep form={form} update={update} /></div>
-                <div className="border-t pt-8"><BusinessAddressStep form={form} update={update} /></div>
+                <SectionCard n={1}><BusinessInfoStep form={form} update={update} /></SectionCard>
+                <SectionCard n={2}><AuthorizedRepStep form={form} update={update} /></SectionCard>
+                <SectionCard n={3}><BusinessAddressStep form={form} update={update} /></SectionCard>
               </>
             )}
             {step.key === "numbers" && (
-              <AssignNumbersStep
-                reservedNumber={reservedNumber}
-                verificationStatus={verificationStatus}
-                feeAmount={feeAmount}
-                creditBalance={creditBalance}
-                feePaid={feePaid}
-              />
+              <SectionCard>
+                <AssignNumbersStep
+                  reservedNumber={reservedNumber}
+                  verificationStatus={verificationStatus}
+                  feeAmount={feeAmount}
+                  creditBalance={creditBalance}
+                  feePaid={feePaid}
+                />
+              </SectionCard>
             )}
             {step.key === "use-case-details" && (
               <>
-                <UseCaseStep form={form} update={update} />
-                <div className="border-t pt-8"><OptInStep form={form} update={update} /></div>
-                <div className="border-t pt-8"><AdditionalStep form={form} update={update} /></div>
-                <div className="border-t pt-8"><ReviewStep form={form} update={update} /></div>
+                <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm">
+                  <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <p>We pre-filled compliant wording from your business details. Read it over, adjust anything that isn't accurate, and add your sign-up form proof.</p>
+                </div>
+                <SectionCard n={1}><UseCaseStep form={form} update={update} /></SectionCard>
+                <SectionCard n={2}><OptInStep form={form} update={update} /></SectionCard>
+                <details className="group rounded-2xl border bg-background">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 sm:p-6">
+                    <span>
+                      <span className="block font-semibold">Extra carrier details</span>
+                      <span className="block text-sm text-muted-foreground">Already filled in for you — open only if you want to change them.</span>
+                    </span>
+                    <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform duration-300 group-open:rotate-90" />
+                  </summary>
+                  <div className="space-y-5 border-t p-5 sm:p-6"><AdditionalStep form={form} update={update} /></div>
+                </details>
+                <SectionCard n={3}><ReviewStep form={form} update={update} onEdit={(i) => setStepIdx(i)} /></SectionCard>
               </>
             )}
           </div>
         </fieldset>
 
         {!disabled && (
-          <div className="flex items-center justify-between gap-2 border-t pt-5">
-            <Button type="button" variant="outline" onClick={goBack} disabled={stepIdx === 0}>
+          <div className="sticky bottom-0 -mx-5 flex items-center justify-between gap-2 border-t bg-card/95 px-5 py-4 backdrop-blur sm:-mx-8 sm:px-8">
+            <Button type="button" variant="outline" className="rounded-full" onClick={goBack} disabled={stepIdx === 0}>
               <ChevronLeft className="mr-1 size-4" /> Back
             </Button>
+            <span className="hidden text-xs text-muted-foreground sm:block">Step {stepIdx + 1} of {STEPS.length}</span>
             {stepIdx < STEPS.length - 1 ? (
-              <Button type="button" onClick={goNext}>
-                Next <ChevronRight className="ml-1 size-4" />
+              <Button type="button" className="rounded-full px-6" onClick={goNext}>
+                Continue <ChevronRight className="ml-1 size-4" />
               </Button>
             ) : (
-              <Button type="button" onClick={handleSubmit} disabled={submitting} size="lg">
+              <Button type="button" className="rounded-full px-6" onClick={handleSubmit} disabled={submitting} size="lg">
                 {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
                 {submitLabel}
               </Button>
@@ -414,6 +484,16 @@ export function TollfreeWizard({
 
 // ---------- Field helpers ----------
 
+function SectionCard({ n, children }: { n?: number; children: React.ReactNode }) {
+  return (
+    <section className="relative space-y-5 rounded-2xl border bg-background p-5 transition-shadow hover:shadow-md sm:p-6">
+      {n != null && (
+        <span className="absolute -left-3 -top-3 grid size-7 place-items-center rounded-full border bg-card text-xs font-semibold text-muted-foreground shadow-sm">{n}</span>
+      )}
+      {children}
+    </section>
+  );
+}
 function Two({ children }: { children: React.ReactNode }) {
   return <div className="grid md:grid-cols-2 gap-4">{children}</div>;
 }
@@ -425,9 +505,9 @@ function Field({
 }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="flex items-center justify-between gap-3 text-sm">
+      <Label className="flex items-center gap-1 text-sm font-medium">
         <span>{label}</span>
-        {required && <span className="text-xs italic text-muted-foreground">Required</span>}
+        {required && <span className="text-destructive" aria-label="required">*</span>}
       </Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -437,7 +517,7 @@ function Field({
 function StepHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div>
-      <h2 className="text-xl font-semibold">{title}</h2>
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
     </div>
   );
@@ -697,10 +777,10 @@ function OptInStep({ form, update }: StepProps) {
   return (
     <>
       <StepHeader
-        title="Describe your opt-in type and how recipients provide consent"
-        subtitle="Provide a clear description of how recipients opt-in to receive your messages."
+        title="How people sign up"
+        subtitle="Show the carrier where customers agree to get your texts."
       />
-      <Field label="Opt-in type" required>
+      <Field label="Where do they sign up?" required>
         <Select value={form.optInType} onValueChange={(v) => update("optInType", v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -709,7 +789,8 @@ function OptInStep({ form, update }: StepProps) {
         </Select>
       </Field>
 
-      <div className="rounded-lg border bg-muted/40 p-4 space-y-3 text-sm">
+      <details className="rounded-xl border bg-muted/40 p-4 space-y-3 text-sm [&_summary]:cursor-pointer">
+        <summary className="font-medium text-primary">What carriers want to see on a {help.title.toLowerCase()}</summary>
         <div>
           <div className="font-semibold">Example — {help.title}</div>
           <p className="text-muted-foreground mt-1">{help.example}</p>
@@ -726,10 +807,10 @@ function OptInStep({ form, update }: StepProps) {
             {help.notes.map((i) => <li key={i}>{i}</li>)}
           </ul>
         </div>
-      </div>
+      </details>
 
       <Field
-        label="Opt-in policy proof"
+        label="Sign-up form link or screenshot"
         required
         hint="Paste a public URL that shows the exact point where recipients give consent (sign-up form, hosted PDF of the workflow, or a screenshot). URL must start with https://."
       >
@@ -802,32 +883,47 @@ function AdditionalStep({ form, update }: StepProps) {
   );
 }
 
-function ReviewStep({ form, update }: StepProps) {
+function ReviewStep({ form, update, onEdit }: StepProps & { onEdit?: (stepIdx: number) => void }) {
   const row = (label: string, value: React.ReactNode) => (
-    <div className="grid grid-cols-[180px_1fr] gap-3 py-1.5 text-sm border-b last:border-0">
+    <div className="grid grid-cols-1 gap-0.5 py-2 text-sm sm:grid-cols-[160px_1fr] sm:gap-3">
       <div className="text-muted-foreground">{label}</div>
-      <div className="break-words">{value || <span className="text-muted-foreground">—</span>}</div>
+      <div className="break-words font-medium">{value || <span className="text-muted-foreground">—</span>}</div>
     </div>
   );
+  const group = (title: string, step: number, children: React.ReactNode) => (
+    <div className="rounded-xl border p-4">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</span>
+        {onEdit && <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full text-xs" onClick={() => onEdit(step)}>Edit</Button>}
+      </div>
+      <div className="divide-y">{children}</div>
+    </div>
+  );
+  const address = [form.addressLine1, form.addressLine2, form.city, `${form.state} ${form.zip}`.trim(), form.businessCountry].filter((x) => x && x.trim()).join(", ");
+  const contact = [`${form.contactFirstName} ${form.contactLastName}`.trim(), form.contactEmail, form.contactPhone ? `${form.contactPhoneCountry} ${form.contactPhone}` : ""].filter(Boolean).join(" · ");
   return (
     <>
       <StepHeader
         title="Review & submit"
-        subtitle="Double-check the details below. Once submitted, this goes straight to the carriers for review."
+        subtitle="One last look. After you submit, the carrier usually replies within a few business days."
       />
-      <div className="rounded-md border p-4">
-        {row("Legal name", form.legalEntityName)}
-        {row("DBA", form.businessDba)}
-        {row("Company type", form.businessType)}
-        {row("Website", form.websiteUrl)}
-        {row("Address", `${form.addressLine1}${form.addressLine2 ? `, ${form.addressLine2}` : ""}, ${form.city}, ${form.state} ${form.zip}, ${form.businessCountry}`)}
-        {row("Contact", `${form.contactFirstName} ${form.contactLastName} — ${form.contactEmail} — ${form.contactPhoneCountry} ${form.contactPhone}`)}
-        {row("Monthly volume", form.monthlyVolume)}
-        {row("Use cases", form.useCaseCategories.join(", "))}
-        {row("Opt-in type", form.optInType)}
-        {row("Opt-in proof", form.proofOfOptInUrl)}
-        {row("Sample message", form.sampleMessage)}
-        {row("Notification email", form.notificationEmail)}
+      <div className="grid gap-3 lg:grid-cols-2">
+        {group("Business", 0, <>
+          {row("Legal name", form.legalEntityName)}
+          {form.businessDba && row("Also known as", form.businessDba)}
+          {row("Company type", form.businessType)}
+          {row("Website", form.websiteUrl)}
+          {row("Address", address)}
+          {row("Contact", contact)}
+        </>)}
+        {group("Texting", 2, <>
+          {row("Monthly volume", form.monthlyVolume)}
+          {row("Use cases", form.useCaseCategories.join(", "))}
+          {row("Sign-up method", OPT_IN_LABEL[form.optInType] ?? form.optInType)}
+          {row("Sign-up proof", form.proofOfOptInUrl)}
+          {row("Sample message", form.sampleMessage)}
+          {row("Updates sent to", form.notificationEmail)}
+        </>)}
       </div>
       <label className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-sm">
         <Checkbox
