@@ -27,11 +27,6 @@ describe("isInfobipDestination", () => {
   });
 });
 
-// Guard against a typo'd local import shadowing the real one.
-function isInfibDest(to: string) {
-  return isInfobipDestination(to) === false;
-}
-
 describe("mapInfobipStatus", () => {
   it("maps final terminal groups", () => {
     expect(mapInfobipStatus("DELIVERED")).toBe("delivered");
