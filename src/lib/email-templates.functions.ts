@@ -43,30 +43,31 @@ export const deleteEmailTemplate = createServerFn({ method: "POST" }).middleware
 });
 
 /** Admin only: copies the platform's provider email templates into the shared library. */
-export const importProviderEmailTemplates = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).handler(async ({ context }) => {
+export const importProviderEmailTemplates = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d: unknown) => z.object({ offset: z.number().int().min(0).max(200).default(0) }).parse(d ?? {})).handler(async ({ data, context }) => {
   const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
   if (!ok) throw new Error("Forbidden");
   const { emailProviderRequest } = await import("./email-campaigns.server");
   const { supabaseAdmin: db } = await import("@/integrations/supabase/client.server");
   let imported = 0, skipped = 0;
-  for (const gen of ["dynamic", "legacy"]) {
-    const res = await emailProviderRequest(`/templates?generations=${gen}&page_size=100`);
+  {
+    const res = await emailProviderRequest("/designs/pre-builts?page_size=100");
     if (!res.ok) { console.error("Template list failed", res.status, await res.text()); throw new Error("The email service did not return your templates. Try again shortly."); }
-    const body = (await res.json()) as { result?: { id: string }[]; templates?: { id: string }[] };
-    for (const t of body.result ?? body.templates ?? []) {
-      const one = await emailProviderRequest(`/templates/${encodeURIComponent(t.id)}`);
+    const body = (await res.json()) as { result?: { id: string }[] };
+    const designs = body.result ?? [];
+    for (const t of designs.slice(data.offset, data.offset + 10)) {
+      const one = await emailProviderRequest(`/designs/pre-builts/${encodeURIComponent(t.id)}`);
       if (!one.ok) { skipped++; continue; }
-      const full = (await one.json()) as { name?: string; versions?: { active?: number; html_content?: string; plain_content?: string; subject?: string; name?: string }[] };
-      const v = full.versions?.find((x) => x.active === 1) ?? full.versions?.[0];
+      const full = (await one.json()) as { name?: string; html_content?: string; plain_content?: string; subject?: string };
+      const v = full;
       if (!v?.html_content && !v?.plain_content) { skipped++; continue; }
       const html = (v.html_content ?? "").replace(/\{\{\s*first_name\s*\}\}|-first_name-|\{\{\s*firstName\s*\}\}/gi, "{{first_name}}");
-      const row = { account_id: null, provider_template_id: t.id, name: (full.name || v.name || "Imported template").slice(0, 120), category: "Imported",
+      const row = { account_id: null, provider_template_id: `prebuilt:${t.id}`, name: (full.name || "Imported template").slice(0, 120), category: "Ready-made",
         content_mode: html ? "html" : "plain", html_body: html.slice(0, 400000), plain_body: (v.plain_content ?? "").slice(0, 50000),
         subject: (v.subject ?? "").replace(/\{\{[^}]*\}\}/g, "").slice(0, 200), blocks: [], theme: {}, created_by: context.userId, updated_at: new Date().toISOString() };
-      const { data: existing } = await db.from("email_templates").select("id").is("account_id", null).eq("provider_template_id", t.id).maybeSingle();
+      const { data: existing } = await db.from("email_templates").select("id").is("account_id", null).eq("provider_template_id", row.provider_template_id).maybeSingle();
       const { error } = existing ? await db.from("email_templates").update(row).eq("id", existing.id) : await db.from("email_templates").insert(row);
       if (error) { console.error(error); skipped++; } else imported++;
     }
+    return { imported, skipped, nextOffset: data.offset + 10 < designs.length ? data.offset + 10 : null };
   }
-  return { imported, skipped };
 });
