@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX email_sending_domains_exclusive_domain ON public.email_sending_domains(lower(domain));

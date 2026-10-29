@@ -12,7 +12,7 @@ import { addEmailDomain, checkEmailDomain, listEmailDomains } from "@/lib/email-
 import type { DnsRecord } from "@/lib/email-domain-rules";
 
 export const Route = createFileRoute("/_authenticated/app/email-domains")({
-  head: () => ({ meta: [{ title: "Email sending domain — Xellvio" }] }),
+  head: () => ({ meta: [{ title: "Email sending domain — Xellvio" }, { name: "description", content: "Connect and verify your business email sending domain in Xellvio." }, { property: "og:title", content: "Email sending domain — Xellvio" }, { property: "og:description", content: "Manage your business sender domain and verification records." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: EmailDomainsPage,
 });
 
