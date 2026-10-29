@@ -807,10 +807,10 @@ function OptInStep({ form, update }: StepProps) {
             {help.notes.map((i) => <li key={i}>{i}</li>)}
           </ul>
         </div>
-      </div>
+      </details>
 
       <Field
-        label="Opt-in policy proof"
+        label="Sign-up form link or screenshot"
         required
         hint="Paste a public URL that shows the exact point where recipients give consent (sign-up form, hosted PDF of the workflow, or a screenshot). URL must start with https://."
       >
