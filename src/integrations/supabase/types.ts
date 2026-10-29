@@ -3703,6 +3703,242 @@ export type Database = {
         }
         Relationships: []
       }
+      email_bundles: {
+        Row: {
+          account_id: string
+          contact_limit: number
+          email_limit: number | null
+          monthly_price: number
+          paid_months: number
+          period_end: string
+          period_start: string
+          plan: string
+          renew: boolean
+          status: string
+          updated_at: string
+          used: number
+        }
+        Insert: {
+          account_id: string
+          contact_limit?: number
+          email_limit?: number | null
+          monthly_price?: number
+          paid_months?: number
+          period_end?: string
+          period_start?: string
+          plan?: string
+          renew?: boolean
+          status?: string
+          updated_at?: string
+          used?: number
+        }
+        Update: {
+          account_id?: string
+          contact_limit?: number
+          email_limit?: number | null
+          monthly_price?: number
+          paid_months?: number
+          period_end?: string
+          period_start?: string
+          plan?: string
+          renew?: boolean
+          status?: string
+          updated_at?: string
+          used?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_bundles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_campaigns: {
+        Row: {
+          account_id: string
+          blocks: Json
+          created_at: string
+          from_email: string
+          from_name: string
+          id: string
+          last_error: string | null
+          list_id: string | null
+          name: string
+          postal_address: string
+          preheader: string
+          reply_to: string
+          schedule_at: string | null
+          status: string
+          subject: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          blocks?: Json
+          created_at?: string
+          from_email?: string
+          from_name?: string
+          id?: string
+          last_error?: string | null
+          list_id?: string | null
+          name: string
+          postal_address?: string
+          preheader?: string
+          reply_to?: string
+          schedule_at?: string | null
+          status?: string
+          subject?: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          blocks?: Json
+          created_at?: string
+          from_email?: string
+          from_name?: string
+          id?: string
+          last_error?: string | null
+          list_id?: string | null
+          name?: string
+          postal_address?: string
+          preheader?: string
+          reply_to?: string
+          schedule_at?: string | null
+          status?: string
+          subject?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaigns_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaigns_list_id_fkey"
+            columns: ["list_id"]
+            isOneToOne: false
+            referencedRelation: "contact_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_event_receipts: {
+        Row: {
+          created_at: string
+          event_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+        }
+        Relationships: []
+      }
+      email_provider_capacity: {
+        Row: {
+          daily_limit: number
+          day: string
+          id: boolean
+          used: number
+        }
+        Insert: {
+          daily_limit?: number
+          day?: string
+          id?: boolean
+          used?: number
+        }
+        Update: {
+          daily_limit?: number
+          day?: string
+          id?: boolean
+          used?: number
+        }
+        Relationships: []
+      }
+      email_recipients: {
+        Row: {
+          accepted_at: string | null
+          account_id: string
+          campaign_id: string
+          clicked_at: string | null
+          created_at: string
+          delivered_at: string | null
+          email: string
+          first_name: string | null
+          id: string
+          last_error: string | null
+          opened_at: string | null
+          profile_id: string | null
+          provider_id: string | null
+          status: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          account_id: string
+          campaign_id: string
+          clicked_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          email: string
+          first_name?: string | null
+          id?: string
+          last_error?: string | null
+          opened_at?: string | null
+          profile_id?: string | null
+          provider_id?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          account_id?: string
+          campaign_id?: string
+          clicked_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_error?: string | null
+          opened_at?: string | null
+          profile_id?: string | null
+          provider_id?: string | null
+          status?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_recipients_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -3805,6 +4041,27 @@ export type Database = {
           status?: string
           updated_at?: string
           verified_at?: string | null
+        }
+        Relationships: []
+      }
+      email_suppressions: {
+        Row: {
+          account_id: string
+          created_at: string
+          email: string
+          reason: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          email: string
+          reason: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          email?: string
+          reason?: string
         }
         Relationships: []
       }
@@ -8177,7 +8434,51 @@ export type Database = {
           profile_id: string
         }[]
       }
+      email_activate_bundle: {
+        Args: {
+          _account: string
+          _contacts: number
+          _limit: number
+          _plan: string
+          _price: number
+        }
+        Returns: undefined
+      }
+      email_campaign_report: { Args: { _id: string }; Returns: Json }
+      email_claim_batch: {
+        Args: never
+        Returns: {
+          accepted_at: string | null
+          account_id: string
+          campaign_id: string
+          clicked_at: string | null
+          created_at: string
+          delivered_at: string | null
+          email: string
+          first_name: string | null
+          id: string
+          last_error: string | null
+          opened_at: string | null
+          profile_id: string | null
+          provider_id: string | null
+          status: string
+          token: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "email_recipients"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      email_queue_campaign: {
+        Args: { _account: string; _id: string; _schedule?: string }
+        Returns: number
+      }
       email_queue_dispatch: { Args: never; Returns: undefined }
+      email_renew_bundles: { Args: never; Returns: undefined }
+      email_unsubscribe: { Args: { _token: string }; Returns: undefined }
       encrypt_twilio_token: { Args: { _plain: string }; Returns: string }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }

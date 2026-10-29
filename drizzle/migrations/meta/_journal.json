@@ -218,6 +218,13 @@
       "when": 1793291105334,
       "tag": "0030_email_contacts_and_domains",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793291993450,
+      "tag": "0031_email_campaign_queue_bundles",
+      "breakpoints": true
     }
   ]
 }
