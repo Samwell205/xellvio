@@ -777,10 +777,10 @@ function OptInStep({ form, update }: StepProps) {
   return (
     <>
       <StepHeader
-        title="Describe your opt-in type and how recipients provide consent"
-        subtitle="Provide a clear description of how recipients opt-in to receive your messages."
+        title="How people sign up"
+        subtitle="Show the carrier where customers agree to get your texts."
       />
-      <Field label="Opt-in type" required>
+      <Field label="Where do they sign up?" required>
         <Select value={form.optInType} onValueChange={(v) => update("optInType", v)}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -789,7 +789,8 @@ function OptInStep({ form, update }: StepProps) {
         </Select>
       </Field>
 
-      <div className="rounded-lg border bg-muted/40 p-4 space-y-3 text-sm">
+      <details className="rounded-xl border bg-muted/40 p-4 space-y-3 text-sm [&_summary]:cursor-pointer">
+        <summary className="font-medium text-primary">What carriers want to see on a {help.title.toLowerCase()}</summary>
         <div>
           <div className="font-semibold">Example — {help.title}</div>
           <p className="text-muted-foreground mt-1">{help.example}</p>
