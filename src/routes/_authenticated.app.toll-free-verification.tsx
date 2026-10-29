@@ -10,6 +10,7 @@ import {
   payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
 import { getTfnMarketplaceOffer } from "@/lib/tfn-marketplace.functions";
+import { requestDedicatedLine } from "@/lib/twilio-lines.functions";
 import { LocalNumberBuyCard } from "@/components/LocalNumberBuyCard";
 import { initPaystackTfnCheckout, verifyPaystack } from "@/lib/billing-packs.functions";
 import { initNowPaymentsTfnCheckout } from "@/lib/nowpayments.functions";
@@ -187,7 +188,7 @@ function statusBlurb(status: Status | null | undefined) {
 function TollfreeVerificationPage() {
   const qc = useQueryClient();
   const load = useServerFn(getMyTollfreeVerification);
-  const submit = useServerFn(submitTollfreeVerification);
+  const requestLine = useServerFn(requestDedicatedLine);
   const refresh = useServerFn(refreshTollfreeVerification);
   const feeStatusFn = useServerFn(getTollfreeFeeStatus);
 
@@ -250,16 +251,20 @@ function TollfreeVerificationPage() {
   );
 
   const submitMut = useMutation({
-    mutationFn: (input: any) => submit({ data: input }),
-    onSuccess: (res) => {
-      toast.success(
-        res.status === "verified"
-          ? "Approved by the carrier."
-          : res.status === "rejected"
-            ? (res.friendlyRejectionReason ??
-              "Submission failed. You can retry now without buying another number.")
-            : "Submitted. The carrier will review shortly.",
-      );
+    // Registrations go to the business's own dedicated toll-free line (separate sub-account per business).
+    mutationFn: (f: any) => requestLine({ data: {
+      businessName: f.legalEntityName, website: f.websiteUrl,
+      ein: f.businessRegistrationNumber || "",
+      street: [f.addressLine1, f.addressLine2].filter(Boolean).join(", "), city: f.city, state: f.state,
+      postalCode: f.zip, country: f.businessCountry || "US",
+      contactFirstName: f.contactFirstName, contactLastName: f.contactLastName, contactEmail: f.contactEmail,
+      contactPhone: `${f.contactPhoneCountry || "+1"}${String(f.contactPhone).replace(/\D/g, "")}`.replace(/^\+1\+?1?/, "+1"),
+      privacyUrl: f.privacyPolicyUrl, termsUrl: f.termsUrl, optInImageUrl: f.proofOfOptInUrl,
+      useCaseSummary: f.useCaseDescription, sampleMessage: f.sampleMessage,
+      monthlyVolume: f.monthlyVolume,
+    } }),
+    onSuccess: (res: any) => {
+      toast.success(res?.status === "active" ? "Your number is approved and ready." : "Submitted. The carrier usually replies within a few business days.");
       qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
       qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
     },
