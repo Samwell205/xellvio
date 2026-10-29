@@ -68,7 +68,12 @@ export function sanitizeEmailHtml(html: string) {
     .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/\ssrcdoc\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
   out = out.replace(/\s(href|src|action|background)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi, (_m, attr: string, _v, a, b, c) => {
-    const raw = String(a ?? b ?? c ?? "").trim();
+    let raw = String(a ?? b ?? c ?? "").trim();
+    // Imported designs use legacy HTTP pictures; upgrade, never load insecure media.
+    if (["src", "background"].includes(attr.toLowerCase())) {
+      if (/^http:\/\//i.test(raw)) raw = raw.replace(/^http:/i, "https:");
+      else if (/^\/\//.test(raw)) raw = `https:${raw}`;
+    }
     if (UNSUB.test(raw)) { UNSUB.lastIndex = 0; return ` ${attr}="${raw}"`; }
     UNSUB.lastIndex = 0;
     if (/^(#|cid:)/i.test(raw)) return ` ${attr}="${raw}"`;
