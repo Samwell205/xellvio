@@ -277,6 +277,33 @@ function stepValid(f: WizardForm, key: StepKey): string | null {
   }
 }
 
+// ---------- Smart defaults (only fill empty fields, never overwrite) ----------
+
+export function applySmartDefaults(f: WizardForm): WizardForm {
+  const name = (f.businessDba || f.legalEntityName).trim();
+  let origin = "";
+  try { if (isHttp(f.websiteUrl)) origin = new URL(f.websiteUrl.trim()).origin.replace(/^http:/, "https:"); } catch { /* ignore */ }
+  const out = { ...f };
+  const fill = <K extends keyof WizardForm>(k: K, v: WizardForm[K]) => {
+    if (typeof out[k] === "string" && !(out[k] as string).trim() && v) out[k] = v;
+  };
+  fill("notificationEmail", f.contactEmail.trim());
+  fill("optInKeywords", "START, YES, SUBSCRIBE");
+  if (name) {
+    fill("sampleMessage", `${name}: Thanks for joining! Enjoy updates and offers from us. Msg & data rates may apply. Reply HELP for help, STOP to opt out.`);
+    fill("useCaseDescription", `${name} sends marketing offers, updates and account notifications to customers who opted in through our website sign-up form. Messages are sent up to 4 times per month.`);
+    fill("optInConfirmationMessage", `${name}: You're subscribed to text updates. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to cancel.`);
+    fill("helpMessageSample", `${name}: For help, contact ${f.contactEmail.trim() || "us"}. Msg & data rates may apply. Reply STOP to cancel.`);
+  }
+  if (origin) {
+    fill("privacyPolicyUrl", `${origin}/privacy`);
+    fill("termsUrl", `${origin}/terms`);
+  }
+  return out;
+}
+
+const OPT_IN_LABEL: Record<string, string> = Object.fromEntries(OPT_IN_TYPES.map((o) => [o.v, o.l]));
+
 // ---------- Component ----------
 
 export type TollfreeWizardProps = {
