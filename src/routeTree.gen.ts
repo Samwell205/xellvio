@@ -105,6 +105,7 @@ import { Route as AuthenticatedAppBillingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAppCampaignsRouteImport } from './routes/_authenticated.app.campaigns'
 import { Route as AuthenticatedAppCheckoutRouteImport } from './routes/_authenticated.app.checkout'
 import { Route as AuthenticatedAppDeveloperRouteImport } from './routes/_authenticated.app.developer'
+import { Route as AuthenticatedAppEmailDomainsRouteImport } from './routes/_authenticated.app.email-domains'
 import { Route as AuthenticatedAppFlowsRouteImport } from './routes/_authenticated.app.flows'
 import { Route as AuthenticatedAppInboxRouteImport } from './routes/_authenticated.app.inbox'
 import { Route as AuthenticatedAppLandingPagesRouteImport } from './routes/_authenticated.app.landing-pages'
@@ -700,6 +701,12 @@ const AuthenticatedAppDeveloperRoute =
   AuthenticatedAppDeveloperRouteImport.update({
     id: '/developer',
     path: '/developer',
+    getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const AuthenticatedAppEmailDomainsRoute =
+  AuthenticatedAppEmailDomainsRouteImport.update({
+    id: '/email-domains',
+    path: '/email-domains',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
 const AuthenticatedAppFlowsRoute = AuthenticatedAppFlowsRouteImport.update({
@@ -1306,6 +1313,7 @@ export interface FileRoutesByFullPath {
   '/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
   '/app/developer': typeof AuthenticatedAppDeveloperRoute
+  '/app/email-domains': typeof AuthenticatedAppEmailDomainsRoute
   '/app/flows': typeof AuthenticatedAppFlowsRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
   '/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
@@ -1487,6 +1495,7 @@ export interface FileRoutesByTo {
   '/app/billing': typeof AuthenticatedAppBillingRoute
   '/app/checkout': typeof AuthenticatedAppCheckoutRoute
   '/app/developer': typeof AuthenticatedAppDeveloperRoute
+  '/app/email-domains': typeof AuthenticatedAppEmailDomainsRoute
   '/app/flows': typeof AuthenticatedAppFlowsRoute
   '/app/inbox': typeof AuthenticatedAppInboxRoute
   '/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
@@ -1675,6 +1684,7 @@ export interface FileRoutesById {
   '/_authenticated/app/campaigns': typeof AuthenticatedAppCampaignsRouteWithChildren
   '/_authenticated/app/checkout': typeof AuthenticatedAppCheckoutRoute
   '/_authenticated/app/developer': typeof AuthenticatedAppDeveloperRoute
+  '/_authenticated/app/email-domains': typeof AuthenticatedAppEmailDomainsRoute
   '/_authenticated/app/flows': typeof AuthenticatedAppFlowsRoute
   '/_authenticated/app/inbox': typeof AuthenticatedAppInboxRoute
   '/_authenticated/app/landing-pages': typeof AuthenticatedAppLandingPagesRoute
@@ -1863,6 +1873,7 @@ export interface FileRouteTypes {
     | '/app/campaigns'
     | '/app/checkout'
     | '/app/developer'
+    | '/app/email-domains'
     | '/app/flows'
     | '/app/inbox'
     | '/app/landing-pages'
@@ -2044,6 +2055,7 @@ export interface FileRouteTypes {
     | '/app/billing'
     | '/app/checkout'
     | '/app/developer'
+    | '/app/email-domains'
     | '/app/flows'
     | '/app/inbox'
     | '/app/landing-pages'
@@ -2231,6 +2243,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/campaigns'
     | '/_authenticated/app/checkout'
     | '/_authenticated/app/developer'
+    | '/_authenticated/app/email-domains'
     | '/_authenticated/app/flows'
     | '/_authenticated/app/inbox'
     | '/_authenticated/app/landing-pages'
@@ -3098,6 +3111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppDeveloperRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/_authenticated/app/email-domains': {
+      id: '/_authenticated/app/email-domains'
+      path: '/email-domains'
+      fullPath: '/app/email-domains'
+      preLoaderRoute: typeof AuthenticatedAppEmailDomainsRouteImport
+      parentRoute: typeof AuthenticatedAppRoute
+    }
     '/_authenticated/app/flows': {
       id: '/_authenticated/app/flows'
       path: '/flows'
@@ -3895,6 +3915,7 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppCampaignsRoute: typeof AuthenticatedAppCampaignsRouteWithChildren
   AuthenticatedAppCheckoutRoute: typeof AuthenticatedAppCheckoutRoute
   AuthenticatedAppDeveloperRoute: typeof AuthenticatedAppDeveloperRoute
+  AuthenticatedAppEmailDomainsRoute: typeof AuthenticatedAppEmailDomainsRoute
   AuthenticatedAppFlowsRoute: typeof AuthenticatedAppFlowsRoute
   AuthenticatedAppInboxRoute: typeof AuthenticatedAppInboxRoute
   AuthenticatedAppLandingPagesRoute: typeof AuthenticatedAppLandingPagesRoute
@@ -3931,6 +3952,7 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppCampaignsRoute: AuthenticatedAppCampaignsRouteWithChildren,
   AuthenticatedAppCheckoutRoute: AuthenticatedAppCheckoutRoute,
   AuthenticatedAppDeveloperRoute: AuthenticatedAppDeveloperRoute,
+  AuthenticatedAppEmailDomainsRoute: AuthenticatedAppEmailDomainsRoute,
   AuthenticatedAppFlowsRoute: AuthenticatedAppFlowsRoute,
   AuthenticatedAppInboxRoute: AuthenticatedAppInboxRoute,
   AuthenticatedAppLandingPagesRoute: AuthenticatedAppLandingPagesRoute,
