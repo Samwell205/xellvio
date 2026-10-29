@@ -100,8 +100,8 @@ export const sendEmailTest = createServerFn({ method: "POST" }).middleware([requ
   if (!emailSenderDomain(draft.from_email)) throw new Error("Enter a valid sender email.");
   const { error: reserveError } = await db.rpc("email_reserve_test", { _account: accountId });
   if (reserveError) throw new Error(reserveError.message);
-  const { renderEmail } = await import("./email-campaign-rules");
-  const res = await emailProviderRequest("/mail/send", { method: "POST", body: JSON.stringify({ personalizations: [{ to: [{ email: data.email }] }], from: { email: draft.from_email, name: draft.from_name }, subject: `[Test] ${draft.subject}`, content: [{ type: "text/html", value: renderEmail(draft, "https://xellvio.com", "Test") }], tracking_settings: { click_tracking: { enable: false }, open_tracking: { enable: false } } }) });
+  const { renderEmail, renderEmailText } = await import("./email-campaign-rules");
+  const res = await emailProviderRequest("/mail/send", { method: "POST", body: JSON.stringify({ personalizations: [{ to: [{ email: data.email }] }], from: { email: draft.from_email, name: draft.from_name }, subject: `[Test] ${draft.subject}`, content: [{ type: "text/plain", value: renderEmailText(draft, "https://xellvio.com", "Test") }, { type: "text/html", value: renderEmail(draft, "https://xellvio.com", "Test") }], tracking_settings: { click_tracking: { enable: false }, open_tracking: { enable: false } } }) });
   if (res.status !== 202) { console.error("Email test refused", res.status, await res.text()); throw new Error("Email test was refused. Check your sender domain or contact support."); }
   return { accepted: true };
 });
