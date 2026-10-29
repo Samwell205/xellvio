@@ -226,12 +226,29 @@ function CampaignsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this campaign?</AlertDialogTitle>
-            <AlertDialogDescription>"{toDelete?.name}" and all of its message records will be permanently removed. This can't be undone.</AlertDialogDescription>
+            <AlertDialogDescription>"{toDelete?.name}" and all of its records will be permanently removed. This can't be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDelete(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {deleting ? "Deleting…" : "Delete campaign"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmAllDrafts} onOpenChange={(o) => !o && setConfirmAllDrafts(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete all drafts?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {draftRows.length} draft{draftRows.length === 1 ? "" : "s"} and cancelled campaign{draftRows.length === 1 ? "" : "s"} will be permanently removed. Sent and scheduled campaigns are kept. This can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Keep drafts</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); handleDeleteAllDrafts(); }} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? "Deleting…" : `Delete ${draftRows.length} draft${draftRows.length === 1 ? "" : "s"}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
