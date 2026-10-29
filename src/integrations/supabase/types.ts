@@ -3766,6 +3766,48 @@ export type Database = {
         }
         Relationships: []
       }
+      email_sending_domains: {
+        Row: {
+          account_id: string
+          created_at: string
+          dns_records: Json
+          domain: string
+          id: string
+          last_checked_at: string | null
+          last_error: string | null
+          provider_domain_id: number | null
+          status: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          dns_records?: Json
+          domain: string
+          id?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          provider_domain_id?: number | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          dns_records?: Json
+          domain?: string
+          id?: string
+          last_checked_at?: string | null
+          last_error?: string | null
+          provider_domain_id?: number | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       email_unsubscribe_tokens: {
         Row: {
           created_at: string
@@ -5322,12 +5364,13 @@ export type Database = {
           country_code: string | null
           created_at: string
           custom_fields: Json
+          email: string | null
           first_name: string | null
           id: string
           last_name: string | null
           line_type: string | null
           line_type_checked_at: string | null
-          phone_e164: string
+          phone_e164: string | null
           timezone: string | null
           two_way_opt_in: boolean
           updated_at: string
@@ -5337,12 +5380,13 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           custom_fields?: Json
+          email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           line_type?: string | null
           line_type_checked_at?: string | null
-          phone_e164: string
+          phone_e164?: string | null
           timezone?: string | null
           two_way_opt_in?: boolean
           updated_at?: string
@@ -5352,12 +5396,13 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           custom_fields?: Json
+          email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           line_type?: string | null
           line_type_checked_at?: string | null
-          phone_e164?: string
+          phone_e164?: string | null
           timezone?: string | null
           two_way_opt_in?: boolean
           updated_at?: string
