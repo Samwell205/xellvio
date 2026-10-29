@@ -4,7 +4,7 @@ import { queryOptions, useQuery, useSuspenseQuery, useQueryClient } from "@tanst
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, Check, ChevronRight, Mail, Save, Send, Loader2, Pause, Play, CalendarClock, AlertCircle } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Mail, Save, Send, Loader2, Pause, Play, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,7 +30,7 @@ function EmailCampaignPage() {
   const [draft, setDraft] = useState<EmailDraft | null>(null); const [step, setStep] = useState(0); const [busy, setBusy] = useState(false); const [saved, setSaved] = useState(false); const [dirty, setDirty] = useState(false);
   const [testEmail, setTestEmail] = useState(""); const [schedule, setSchedule] = useState(""); const [confirm, setConfirm] = useState(false);
   const creating = useRef(false);
-  const q = useQuery({ queryKey: ["email-campaign", id], queryFn: () => get({ data: { id: id ?? "" } }), enabled: !!id, refetchInterval: draft && qStatus(draft, qCampaignStatusPlaceholder()) ? false : 10000 });
+  const q = useQuery({ queryKey: ["email-campaign", id], queryFn: () => get({ data: { id: id ?? "" } }), enabled: !!id, refetchInterval: (query) => query.state.data?.campaign.status === "draft" ? false : 10000 });
   // Draft content is restored once, never replaced by background refreshes.
   useEffect(() => {
     if (!q.data || draft?.id === q.data.campaign.id) return;
@@ -76,5 +76,3 @@ function EmailCampaignPage() {
   </div>;
 }
 function Field({ label, value, onChange, type = "text" }: { label: string; value: string; onChange: (v: string) => void; type?: string }) { const id = `email-${label.toLowerCase().replaceAll(" ", "-")}`; return <div className="space-y-2"><Label htmlFor={id}>{label}</Label><Input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} /></div>; }
-function qStatus(_draft: EmailDraft, _status: string) { return false; }
-function qCampaignStatusPlaceholder() { return ""; }
