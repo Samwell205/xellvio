@@ -6,6 +6,7 @@
 - [ ] International route: register required country sender IDs (e.g. NG/UAE) before tenants send there; add Infobip inbound (replies/STOP) support for international numbers
 
 ## Email marketing
+- [x] Show ready-made email previews upfront with category selection and direct editing; retain saved/shared template gallery
 - [x] Contacts with phone, email, or both; uploads map an Email column
 - [x] Email sending domain page (add, DNS records, Check) — xellvio.com added, waiting on GoDaddy records
 - [x] Email in campaign builder (subject, sender, reply-to, visual designer, persisted drafts, test send control)

@@ -39,6 +39,26 @@ const TOOLS = [
 const DEFAULT_TEXT: Partial<Record<EmailBlock["type"], string>> = { heading: "Your heading", button: "Learn more", text: "Write your message here.", quote: "A short quote", columns: "Left column\n---\nRight column", social: "Instagram|https://instagram.com\nFacebook|https://facebook.com", logo: "Logo" };
 const FONTS = ["Arial", "Helvetica", "Georgia", "Verdana", "Trebuchet MS"] as const;
 
+export function EmailTemplateChooser({ onPick }: { onPick: (v: Partial<EmailDraft>) => void }) {
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("All");
+  const categories = ["All", ...new Set(EMAIL_TEMPLATES.map((t) => t.category))];
+  return <section aria-label="Ready-made email templates" className="space-y-4">
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div><h2 className="text-xl font-bold">Choose an email template</h2><p className="text-sm text-muted-foreground">Ready-made designs</p></div>
+      <Button variant="outline" onClick={() => setOpen(true)}><LayoutTemplate className="size-4" />All templates & saved designs</Button>
+    </div>
+    <Tabs value={category} onValueChange={setCategory}><TabsList className="h-auto flex-wrap justify-start">{categories.map((c) => <TabsTrigger key={c} value={c}>{c}</TabsTrigger>)}</TabsList></Tabs>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {EMAIL_TEMPLATES.map((t, i) => ({ t, i })).filter(({ t }) => category === "All" || category === t.category).map(({ t, i }) => <article key={t.name} className="overflow-hidden rounded-lg border bg-card transition motion-safe:hover:-translate-y-1 hover:border-brand-green">
+        <div className="pointer-events-none relative h-52 overflow-hidden border-b bg-muted" aria-hidden="true"><iframe title={`${t.name} template preview`} sandbox="" tabIndex={-1} loading="lazy" srcDoc={renderEmail({ preheader: "", from_name: "Your business", postal_address: "Your business address", blocks: templateBlocks(i), theme: t.theme ?? {} }, "#", "Alex")} className="absolute left-1/2 h-[900px] w-[640px] -translate-x-1/2 origin-top scale-[0.45] border-0" /></div>
+        <div className="space-y-3 p-4"><div><h3 className="font-semibold">{t.name}</h3><p className="text-xs text-muted-foreground">{t.category}</p></div><Button variant="outline" className="w-full" onClick={() => onPick({ content_mode: "design", blocks: templateBlocks(i), theme: t.theme ?? {} })}><LayoutTemplate className="size-4" />Use {t.name}</Button></div>
+      </article>)}
+    </div>
+    <TemplateGallery open={open} onOpenChange={setOpen} onPick={(v) => { onPick(v); setOpen(false); }} />
+  </section>;
+}
+
 export function EmailDesigner({ draft, onChange }: { draft: EmailDraft; onChange: (v: Partial<EmailDraft>) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [mobile, setMobile] = useState(false);
@@ -89,7 +109,7 @@ export function EmailDesigner({ draft, onChange }: { draft: EmailDraft; onChange
         </TabsList>
       </Tabs>
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={() => setGallery(true)}><LayoutTemplate className="size-4" />Templates</Button>
+        <Button variant="outline" size="sm" onClick={() => setGallery(true)}><LayoutTemplate className="size-4" />Choose template</Button>
         <Button variant="outline" size="sm" onClick={() => setSaveOpen(true)}><BookmarkPlus className="size-4" />Save as template</Button>
       </div>
     </div>
