@@ -26,7 +26,7 @@ export const getMyDedicatedLine = createServerFn({ method: "GET" })
       await refreshLine(acting.accountId).catch((e) => console.error("[line refresh]", e));
     }
     ({ data } = await db.from("tenant_twilio_lines")
-      .select("phone_number,status,status_detail,monthly_fee_usd,renews_at,billing_status")
+      .select("phone_number,status,status_detail,monthly_fee_usd,renews_at,billing_status,created_at,updated_at")
       .eq("account_id", acting.accountId).maybeSingle());
     const { data: fee } = await db.from("platform_settings").select("value").eq("key", "twilio_line_monthly_usd").maybeSingle();
     const { data: acct } = await db.from("accounts")
