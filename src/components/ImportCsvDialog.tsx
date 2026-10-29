@@ -52,10 +52,11 @@ function CsvDropZone({ fileRef, disabled, onFile }: {
     </div>
   );
 }
-type Mapping = { phone?: string; first?: string; last?: string; country?: string };
+type Mapping = { phone?: string; email?: string; first?: string; last?: string; country?: string };
 type RowError = { row: number; reason: string };
 
 const PHONE_KEYS = ["phone", "phone_number", "phonenumber", "mobile", "mobile_number", "cell", "msisdn", "number", "tel", "telephone", "to"];
+const EMAIL_KEYS = ["email", "e-mail", "email_address", "emailaddress", "mail"];
 const FIRST_KEYS = ["first_name", "firstname", "fname", "given_name", "first"];
 const LAST_KEYS = ["last_name", "lastname", "lname", "surname", "family_name", "last"];
 const COUNTRY_KEYS = ["country", "country_code", "iso", "iso2"];
@@ -160,6 +161,7 @@ export default function ImportCsvDialog({
         setSample(res.data.slice(0, PREVIEW_ROWS));
         setMapping({
           phone: detect(hs, PHONE_KEYS),
+          email: detect(hs, EMAIL_KEYS),
           first: detect(hs, FIRST_KEYS),
           last: detect(hs, LAST_KEYS),
           country: detect(hs, COUNTRY_KEYS),
@@ -173,10 +175,12 @@ export default function ImportCsvDialog({
     });
   }
 
-  const canImport = !!file && !!mapping.phone && !excludedCols.has(mapping.phone ?? "");
+  const phoneUsable = !!mapping.phone && !excludedCols.has(mapping.phone);
+  const emailUsable = !!mapping.email && !excludedCols.has(mapping.email);
+  const canImport = !!file && (phoneUsable || emailUsable);
 
   async function runImport(resumeFrom = 0, jobIdIn?: string) {
-    if (!file || !mapping.phone) return;
+    if (!file || !canImport) return;
     setBusy(true); setResult(null); cancelRef.current = false;
 
     const targetList = listId === "none" ? null : listId;
@@ -204,7 +208,8 @@ export default function ImportCsvDialog({
     let buffer: ImportRow[] = [];
 
     const customEntries = Object.entries(customMap).filter(([h]) => !excludedCols.has(h));
-    const phoneCol = mapping.phone!;
+    const phoneCol = phoneUsable ? mapping.phone! : null;
+    const emailCol = emailUsable ? mapping.email! : null;
     const firstCol = mapping.first && !excludedCols.has(mapping.first) ? mapping.first : null;
     const lastCol = mapping.last && !excludedCols.has(mapping.last) ? mapping.last : null;
     const countryCol = mapping.country && !excludedCols.has(mapping.country) ? mapping.country : null;
@@ -241,25 +246,38 @@ export default function ImportCsvDialog({
               if (idx < resumeFrom) { processed++; continue; }
               processed++;
               if (idx < PREVIEW_ROWS && excludedRows.has(idx)) continue;
-              const rawPhone = (row[phoneCol] ?? "").trim();
-              if (!rawPhone) { invalid++; if (errors.length < 50) errors.push({ row: idx + 2, reason: "Missing phone" }); continue; }
-              const norm = normalizePhone(rawPhone, {
-                rowCountry: countryCol ? (row[countryCol] ?? "").trim() : undefined,
-                defaultCountry,
-              });
-              if ("error" in norm) { invalid++; if (errors.length < 50) errors.push({ row: idx + 2, reason: norm.error }); continue; }
-              if (seen.has(norm.e164)) { dupes++; continue; }
-              seen.add(norm.e164);
+              const rawPhone = phoneCol ? (row[phoneCol] ?? "").trim() : "";
+              const email = emailCol ? normalizeEmail(row[emailCol] ?? "") : null;
+              let e164: string | null = null;
+              let rowCountry: string | null = null;
+              if (rawPhone) {
+                const norm = normalizePhone(rawPhone, {
+                  rowCountry: countryCol ? (row[countryCol] ?? "").trim() : undefined,
+                  defaultCountry,
+                });
+                if ("error" in norm) {
+                  if (!email) { invalid++; if (errors.length < 50) errors.push({ row: idx + 2, reason: norm.error }); continue; }
+                } else { e164 = norm.e164; rowCountry = norm.country || null; }
+              }
+              if (!e164 && !email) {
+                invalid++;
+                if (errors.length < 50) errors.push({ row: idx + 2, reason: "Missing phone and email" });
+                continue;
+              }
+              const key = e164 ?? `email:${email}`;
+              if (seen.has(key)) { dupes++; continue; }
+              seen.add(key);
               const custom: Record<string, string> = {};
               for (const [h, key] of customEntries) {
                 const v = (row[h] ?? "").trim();
                 if (v) custom[key] = v;
               }
               buffer.push({
-                phone_e164: norm.e164,
+                phone_e164: e164,
+                email,
                 first_name: firstCol ? (row[firstCol] ?? "").trim() || null : null,
                 last_name: lastCol ? (row[lastCol] ?? "").trim() || null : null,
-                country_code: norm.country || null,
+                country_code: rowCountry,
                 custom_fields: custom,
               });
               if (buffer.length >= BATCH_ROWS) await flush(false);
@@ -293,7 +311,7 @@ export default function ImportCsvDialog({
     if (processed === 0) {
       toast.error("No rows were read from the file — check the CSV has a header row and data.");
     } else if (inserted === 0) {
-      toast.error(`Nothing saved: ${fmtInt(invalid)} invalid, ${fmtInt(dupes)} duplicate rows. Check the phone column mapping.`);
+      toast.error(`Nothing saved: ${fmtInt(invalid)} invalid, ${fmtInt(dupes)} duplicate rows. Check the phone and email column mapping.`);
     } else {
       toast.success(`Imported ${fmtInt(inserted)} contacts`);
     }
@@ -395,9 +413,10 @@ export default function ImportCsvDialog({
                 <div className="text-xs font-medium">
                   Map columns <span className="text-muted-foreground font-normal">(feeds personalization like {"{first_name}"})</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                   {([
-                    { key: "phone", label: "Phone *", required: true },
+                    { key: "phone", label: "Phone", required: true },
+                    { key: "email", label: "Email", required: true },
                     { key: "first", label: "First name", required: false },
                     { key: "last", label: "Last name", required: false },
                     { key: "country", label: "Country (ISO-2)", required: false },
@@ -406,7 +425,7 @@ export default function ImportCsvDialog({
                       <Label className="text-[11px] text-muted-foreground">{label}</Label>
                       <Select value={mapping[key] ?? "__none"}
                         onValueChange={(v) => setMapping((m) => ({ ...m, [key]: v === "__none" ? undefined : v }))}>
-                        <SelectTrigger className={"h-8 text-xs " + (required && !mapping.phone ? "border-destructive" : "")}>
+                        <SelectTrigger className={"h-8 text-xs " + (required && !canImport && headers.length ? "border-destructive" : "")}>
                           <SelectValue placeholder="— none —" />
                         </SelectTrigger>
                         <SelectContent>
@@ -417,9 +436,9 @@ export default function ImportCsvDialog({
                     </div>
                   ))}
                 </div>
-                {!mapping.phone && (
+                {!phoneUsable && !emailUsable && (
                   <div className="flex items-start gap-1 text-destructive text-xs">
-                    <AlertTriangle className="size-3.5 mt-0.5" />Select a phone column to enable import.
+                    <AlertTriangle className="size-3.5 mt-0.5" />Select a phone or email column. Each contact needs at least one.
                   </div>
                 )}
               </div>
@@ -438,6 +457,7 @@ export default function ImportCsvDialog({
                       {headers.map((h) => {
                         const colExcluded = excludedCols.has(h);
                         const builtin = mapping.phone === h ? "phone"
+                          : mapping.email === h ? "email"
                           : mapping.first === h ? "first_name"
                           : mapping.last === h ? "last_name"
                           : mapping.country === h ? "country" : null;
@@ -446,8 +466,9 @@ export default function ImportCsvDialog({
                         const applyBuiltin = (v: string) => {
                           setMapping((m) => {
                             const next = { ...m };
-                            (["phone", "first", "last", "country"] as const).forEach((k) => { if (next[k] === h) delete next[k]; });
+                            (["phone", "email", "first", "last", "country"] as const).forEach((k) => { if (next[k] === h) delete next[k]; });
                             if (v === "phone") next.phone = h;
+                            else if (v === "email") next.email = h;
                             else if (v === "first_name") next.first = h;
                             else if (v === "last_name") next.last = h;
                             else if (v === "country") next.country = h;
@@ -535,7 +556,7 @@ export default function ImportCsvDialog({
                 <div className="h-full bg-primary transition-all"
                   style={{ width: `${progress && progress.total > 0 ? Math.min(99, (progress.processed / progress.total) * 100) : 2}%` }} />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] text-muted-foreground">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-[11px] text-muted-foreground">
                 <div>Saved: <b className="text-foreground">{fmtInt(progress?.inserted ?? 0)}</b></div>
                 <div>Read: <b className="text-foreground">{fmtInt(progress?.processed ?? 0)}</b></div>
                 <div>Speed: <b className="text-foreground">{fmtInt(Math.round(progress?.rps ?? 0))}/s</b></div>
