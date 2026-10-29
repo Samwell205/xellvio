@@ -13,8 +13,8 @@ describe("isInfobipDestination", () => {
     expect(isInfobipDestination("+14165551234")).toBe(false);
   });
 
-  it("keeps UK on the UK route", () => {
-    expect(isInfobipDestination("+447542683958")).toBe(false);
+  it("routes UK through the international route", () => {
+    expect(isInfobipDestination("+447542683958")).toBe(true);
   });
 
   it("never takes picture messages", () => {
