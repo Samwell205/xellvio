@@ -593,6 +593,16 @@ export async function sendMessage(opts: {
       return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
     }
   }
+  // International (non-US/Canada, non-UK) destinations use the international
+  // route so carriers there accept the tenant's alphanumeric sender ID.
+  {
+    const { isInfobipDestination } = await import("./infobip-routing");
+    const { infobipConfigured, sendViaInfobip } = await import("./infobip.server");
+    if (infobipConfigured() && isInfobipDestination(to, { hasMedia: Boolean(opts.mediaUrls?.length) })) {
+      const r = await sendViaInfobip({ to, text: opts.text, senderId: opts.from, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
+      return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
+    }
+  }
   // Business's own dedicated toll-free line goes first for US/Canada text.
   if (opts.accountId) {
     const { ownLineApplies, fallBackFromOwnLine } = await import("./twilio-lines-rules");
@@ -711,6 +721,15 @@ export async function getMessage(id: string, boundedDispatch=false): Promise<any
       return res.data;
     } catch (error: any) {
       if (error?.telnyxStatus !== 404 || i === profiles.length - 1) throw error;
+    }
+  }
+  // International-route messages are not on either primary connection; the
+  // international route owns their receipts. Lookup only — never a resend.
+  {
+    const { infobipConfigured, getInfobipReceipt } = await import("./infobip.server");
+    if (infobipConfigured()) {
+      const receipt = await getInfobipReceipt(id, boundedDispatch);
+      if (receipt) return receipt;
     }
   }
   throw new Error("Delivery receipt is not available on the configured connections.");
