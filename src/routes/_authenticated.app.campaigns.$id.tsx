@@ -720,7 +720,10 @@ function CampaignReport() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
+      <div className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-8 shadow-sm">
+        <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-primary/15 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-32 left-1/3 size-72 rounded-full bg-brand-green/10 blur-3xl" />
+        <div className="relative">
         <Link
           to="/app/campaigns"
           className="text-xs text-muted-foreground inline-flex items-center gap-1 hover:text-foreground"
@@ -729,12 +732,15 @@ function CampaignReport() {
         </Link>
         <div className="flex flex-wrap items-end justify-between gap-3 mt-1">
           <div>
-            <h1 className="text-2xl font-extrabold">{c.name}</h1>
-            <div className="text-sm text-muted-foreground mt-0.5">
-              Text Message · {new Date(sentAt).toLocaleString()}
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
+              <Send className="size-3" /> Text message campaign
+            </div>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">{c.name}</h1>
+            <div className="text-sm text-muted-foreground mt-1">
+              Sent {new Date(sentAt).toLocaleString()}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={c.status} />
             <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
               <RefreshCw className={`size-3 ${messagesQ.isFetching ? "animate-spin" : ""}`} /> live
@@ -890,6 +896,7 @@ function CampaignReport() {
             {/* Provider portal link removed — tenants shouldn't see upstream provider */}
           </div>
         </div>
+        </div>
       </div>
 
       {carrierNotice && (
@@ -1009,83 +1016,19 @@ function CampaignReport() {
       />
 
       <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="recipients">Recipient activity</TabsTrigger>
-          <TabsTrigger value="links">Link activity</TabsTrigger>
+        <TabsList className="h-11 rounded-full p-1">
+          <TabsTrigger value="overview" className="rounded-full px-4">Overview</TabsTrigger>
+          <TabsTrigger value="recipients" className="rounded-full px-4">Recipient activity</TabsTrigger>
+          <TabsTrigger value="links" className="rounded-full px-4">Link activity</TabsTrigger>
           {canViewCosts && (
-            <TabsTrigger value="cost">Cost & deliverability</TabsTrigger>
+            <TabsTrigger value="cost" className="rounded-full px-4">Cost & deliverability</TabsTrigger>
           )}
         </TabsList>
 
         {/* ───────────── OVERVIEW ───────────── */}
         <TabsContent value="overview" className="mt-5">
-          <div className="grid lg:grid-cols-[minmax(0,320px)_1fr] gap-6">
-            {/* Phone + audience */}
-            <div className="space-y-5">
-              <Card className="p-5">
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide">
-                    Text Message
-                  </div>
-                  <Badge
-                    variant={sentSampleQ.data?.rendered_body ? "secondary" : "outline"}
-                    className="text-[10px]"
-                  >
-                    {sentSampleQ.data?.rendered_body ? "Exactly as sent" : "Draft template"}
-                  </Badge>
-                </div>
-                <PhonePreview
-                  body={sentSampleQ.data?.rendered_body ?? c.message_body}
-                  mediaUrl={c.media_url}
-                />
-                <div className="mt-3 text-[11px] text-muted-foreground">
-                  {sentSampleQ.data?.rendered_body
-                    ? "This is the real message body delivered to a recipient, including any shortened tracking links."
-                    : "No message has been rendered yet — showing the campaign template."}
-                </div>
-              </Card>
-
-              <Card className="p-5 space-y-4">
-                <div>
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
-                    Included lists & segments
-                  </div>
-                  {listsQ.data?.include?.length ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {listsQ.data.include.map((l: any) => (
-                        <Badge key={l.id} variant="secondary">
-                          {l.name} · {stats.attempted}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">No included lists</div>
-                  )}
-                </div>
-                <div>
-                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
-                    Excluded
-                  </div>
-                  {listsQ.data?.exclude?.length ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {listsQ.data.exclude.map((l: any) => (
-                        <Badge key={l.id} variant="outline">
-                          {l.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-muted-foreground">No exclusions</div>
-                  )}
-                </div>
-              </Card>
-            </div>
-
-            {/* Right column */}
-            <div className="space-y-5">
               {/* KPI hero */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
                 <Kpi
                   icon={CheckCircle2}
                   label="Delivery rate"
@@ -1133,8 +1076,72 @@ function CampaignReport() {
                 )}
               </div>
 
+          <div className="grid lg:grid-cols-[minmax(0,320px)_1fr] gap-6">
+            {/* Phone + audience */}
+            <div className="space-y-5">
+              <Card className="p-6 rounded-2xl">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide">
+                    Text Message
+                  </div>
+                  <Badge
+                    variant={sentSampleQ.data?.rendered_body ? "secondary" : "outline"}
+                    className="text-[10px]"
+                  >
+                    {sentSampleQ.data?.rendered_body ? "Exactly as sent" : "Draft template"}
+                  </Badge>
+                </div>
+                <PhonePreview
+                  body={sentSampleQ.data?.rendered_body ?? c.message_body}
+                  mediaUrl={c.media_url}
+                />
+                <div className="mt-3 text-[11px] text-muted-foreground">
+                  {sentSampleQ.data?.rendered_body
+                    ? "This is the real message body delivered to a recipient, including any shortened tracking links."
+                    : "No message has been rendered yet — showing the campaign template."}
+                </div>
+              </Card>
+
+              <Card className="p-6 rounded-2xl space-y-4">
+                <div>
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
+                    Included lists & segments
+                  </div>
+                  {listsQ.data?.include?.length ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {listsQ.data.include.map((l: any) => (
+                        <Badge key={l.id} variant="secondary">
+                          {l.name} · {stats.attempted}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">No included lists</div>
+                  )}
+                </div>
+                <div>
+                  <div className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
+                    Excluded
+                  </div>
+                  {listsQ.data?.exclude?.length ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {listsQ.data.exclude.map((l: any) => (
+                        <Badge key={l.id} variant="outline">
+                          {l.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">No exclusions</div>
+                  )}
+                </div>
+              </Card>
+            </div>
+
+            {/* Right column */}
+            <div className="space-y-5">
               {/* Engagement over time */}
-              <Card className="p-5">
+              <Card className="p-6 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <div className="font-semibold flex items-center gap-2">
@@ -1150,9 +1157,9 @@ function CampaignReport() {
                 ) : (
                   <ChartContainer
                     config={{
-                      sent: { label: "Sent", color: "hsl(217 91% 60%)" },
-                      delivered: { label: "Delivered", color: "hsl(142 71% 45%)" },
-                      clicked: { label: "Clicked", color: "hsl(38 92% 50%)" },
+                      sent: { label: "Sent", color: "var(--chart-2)" },
+                      delivered: { label: "Delivered", color: "var(--primary)" },
+                      clicked: { label: "Clicked", color: "var(--chart-4)" },
                     }}
                     className="h-[260px] w-full"
                   >
@@ -1163,16 +1170,16 @@ function CampaignReport() {
                       >
                         <defs>
                           <linearGradient id="g-sent" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="hsl(217 91% 60%)" stopOpacity={0.35} />
-                            <stop offset="100%" stopColor="hsl(217 91% 60%)" stopOpacity={0} />
+                            <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0} />
                           </linearGradient>
                           <linearGradient id="g-del" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="hsl(142 71% 45%)" stopOpacity={0.35} />
-                            <stop offset="100%" stopColor="hsl(142 71% 45%)" stopOpacity={0} />
+                            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
+                            <stop offset="100%" stopColor="var(--primary)" stopOpacity={0} />
                           </linearGradient>
                           <linearGradient id="g-clk" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="hsl(38 92% 50%)" stopOpacity={0.4} />
-                            <stop offset="100%" stopColor="hsl(38 92% 50%)" stopOpacity={0} />
+                            <stop offset="0%" stopColor="var(--chart-4)" stopOpacity={0.4} />
+                            <stop offset="100%" stopColor="var(--chart-4)" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid
@@ -1198,21 +1205,21 @@ function CampaignReport() {
                         <Area
                           type="monotone"
                           dataKey="sent"
-                          stroke="hsl(217 91% 60%)"
+                          stroke="var(--chart-2)"
                           fill="url(#g-sent)"
                           strokeWidth={2}
                         />
                         <Area
                           type="monotone"
                           dataKey="delivered"
-                          stroke="hsl(142 71% 45%)"
+                          stroke="var(--primary)"
                           fill="url(#g-del)"
                           strokeWidth={2}
                         />
                         <Area
                           type="monotone"
                           dataKey="clicked"
-                          stroke="hsl(38 92% 50%)"
+                          stroke="var(--chart-4)"
                           fill="url(#g-clk)"
                           strokeWidth={2}
                         />
@@ -1223,14 +1230,14 @@ function CampaignReport() {
               </Card>
 
               {/* Funnel */}
-              <Card className="p-5">
+              <Card className="p-6 rounded-2xl">
                 <div className="text-xs uppercase text-muted-foreground tracking-wide mb-4 flex items-center gap-1">
                   <TrendingUp className="size-4" /> Recipient funnel
                 </div>
                 <ol className="relative space-y-5 before:absolute before:left-[15px] before:top-2 before:bottom-2 before:w-px before:bg-border">
-                  <FunnelRow icon={Users} label="attempted" value={stats.attempted} tone="muted" />
+                  <FunnelRow max={stats.attempted} icon={Users} label="attempted" value={stats.attempted} tone="muted" />
                   {stats.pendingPlanning > 0 && (
-                    <FunnelRow
+                    <FunnelRow max={stats.attempted}
                       icon={Clock}
                       label="preparing to send"
                       value={stats.pendingPlanning}
@@ -1242,7 +1249,7 @@ function CampaignReport() {
                       tone="muted"
                     />
                   )}
-                  <FunnelRow
+                  <FunnelRow max={stats.attempted}
                     icon={Send}
                     label="sent to carrier"
                     value={stats.sent}
@@ -1254,7 +1261,7 @@ function CampaignReport() {
                     tone="primary"
                   />
                   {stats.awaitingDelivery > 0 && (
-                    <FunnelRow
+                    <FunnelRow max={stats.attempted}
                       icon={Clock}
                       label="awaiting carrier report"
                       value={stats.awaitingDelivery}
@@ -1266,7 +1273,7 @@ function CampaignReport() {
                       tone="muted"
                     />
                   )}
-                  <FunnelRow
+                  <FunnelRow max={stats.attempted}
                     icon={AlertTriangle}
                     label="failed"
                     value={stats.failed}
@@ -1275,28 +1282,28 @@ function CampaignReport() {
                     }
                     tone="danger"
                   />
-                  <FunnelRow
+                  <FunnelRow max={stats.attempted}
                     icon={CheckCircle2}
                     label="delivered"
                     value={stats.delivered}
                     sub={stats.sent ? `${pct(stats.deliveryRate)} of sent` : undefined}
                     tone="success"
                   />
-                  <FunnelRow
+                  <FunnelRow max={stats.attempted}
                     icon={MousePointerClick}
                     label="clicked"
                     value={stats.uniqueClickers}
                     sub={stats.delivered ? `${pct(stats.clickRate)} of delivered` : undefined}
                     tone="primary"
                   />
-                  <FunnelRow
+                  <FunnelRow max={stats.attempted}
                     icon={ShieldOff}
                     label="opt-outs (since send)"
                     value={optOutsQ.data ?? 0}
                     tone="danger"
                   />
                   {stats.queued > 0 && (
-                    <FunnelRow
+                    <FunnelRow max={stats.attempted}
                       icon={Clock}
                       label="queued (in-flight)"
                       value={stats.queued}
@@ -1343,7 +1350,7 @@ function CampaignReport() {
         {/* ───────────── COST & DELIVERABILITY ───────────── */}
         <TabsContent value="cost" className="mt-5">
           <div className="grid lg:grid-cols-3 gap-5">
-            <Card className="p-5">
+            <Card className="p-6 rounded-2xl">
               <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1">
                 <DollarSign className="size-4" /> Cost summary
               </div>
@@ -1361,7 +1368,7 @@ function CampaignReport() {
               </div>
             </Card>
 
-            <Card className="p-5">
+            <Card className="p-6 rounded-2xl">
               <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1">
                 <Globe className="size-4" /> Performance by country
               </div>
@@ -1403,7 +1410,7 @@ function CampaignReport() {
               )}
             </Card>
 
-            <Card className="p-5">
+            <Card className="p-6 rounded-2xl">
               <div className="text-xs uppercase text-muted-foreground tracking-wide mb-3 flex items-center gap-1">
                 <AlertTriangle className="size-4" /> Failure reasons
               </div>
@@ -1501,7 +1508,7 @@ function RecipientActivity({
   return (
     <div className="space-y-5">
       {/* Summary band */}
-      <Card className="p-5">
+      <Card className="p-6 rounded-2xl">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <SummaryStat label="Total" value={stats.attempted} />
           <SummaryStat
@@ -1782,7 +1789,7 @@ function LinkActivity({
 
   return (
     <div className="space-y-5">
-      <Card className="p-5">
+      <Card className="p-6 rounded-2xl">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <LinkStat
             n={uniqueClickers}
@@ -1924,14 +1931,15 @@ function Kpi({
           ? "bg-primary/10 text-primary"
           : "bg-muted text-muted-foreground";
   return (
-    <Card className="p-4">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className={`size-6 rounded-md grid place-items-center ${ring}`}>
-          <Icon className="size-3.5" />
+    <Card className="group relative overflow-hidden rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:shadow-md">
+      <div className={`pointer-events-none absolute -right-8 -top-8 size-24 rounded-full opacity-60 blur-2xl ${ring}`} />
+      <div className="relative flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <span className={`size-8 rounded-xl grid place-items-center ${ring}`}>
+          <Icon className="size-4" />
         </span>
         {label}
       </div>
-      <div className="text-2xl font-extrabold mt-2 tabular-nums">{value}</div>
+      <div className="relative text-3xl font-extrabold mt-3 tabular-nums tracking-tight">{value}</div>
       {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
     </Card>
   );
@@ -2008,7 +2016,9 @@ function FunnelRow({
   value,
   sub,
   tone,
+  max,
 }: {
+  max?: number;
   icon: any;
   label: string;
   value: number;
@@ -2023,6 +2033,8 @@ function FunnelRow({
         : tone === "primary"
           ? "bg-primary/10 text-primary"
           : "bg-muted text-muted-foreground";
+  const bar =
+    tone === "success" ? "bg-success" : tone === "danger" ? "bg-destructive" : tone === "primary" ? "bg-primary" : "bg-muted-foreground/40";
   return (
     <li className="relative pl-10">
       <span className={`absolute left-0 top-0 size-8 rounded-full grid place-items-center ${ring}`}>
@@ -2032,6 +2044,14 @@ function FunnelRow({
         {value.toLocaleString()} {label}
       </div>
       {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
+      {max ? (
+        <div className="mt-2 h-1.5 w-full max-w-md overflow-hidden rounded-full bg-muted">
+          <div
+            className={`h-full rounded-full transition-[width] duration-700 ${bar}`}
+            style={{ width: `${Math.min(100, (value / max) * 100)}%` }}
+          />
+        </div>
+      ) : null}
     </li>
   );
 }
@@ -2129,11 +2149,11 @@ function ProgressPanel({
         : `~${Math.floor(etaMinutes / 60)}h ${etaMinutes % 60}m remaining`;
 
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-3">
+    <Card className="p-6 rounded-2xl">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="font-semibold flex items-center gap-2">
-            <Activity className="size-4 text-primary" /> Campaign progress
+          <div className="font-semibold text-lg flex items-center gap-2">
+            <span className="size-8 rounded-xl bg-primary/10 text-primary grid place-items-center"><Activity className="size-4" /></span> Campaign progress
           </div>
           <span className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
             <span className="inline-block size-1.5 rounded-full bg-emerald-500 animate-pulse" />{" "}
@@ -2161,9 +2181,12 @@ function ProgressPanel({
         </div>
       </div>
 
+      <div className="grid gap-6 md:grid-cols-[180px_1fr] md:items-center">
+      <ProgressRing delivered={delivered} accepted={sent} failed={failed} total={total} />
+      <div>
       {/* Segmented progress bar */}
-      <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden flex">
-        <Seg pct={(delivered / total) * 100} className="bg-emerald-500" />
+      <div className="h-3 w-full rounded-full bg-muted overflow-hidden flex">
+        <Seg pct={(delivered / total) * 100} className="bg-primary" />
         <Seg pct={(sent / total) * 100} className="bg-sky-500" />
         <Seg pct={(sending / total) * 100} className="bg-amber-500 animate-pulse" />
         <Seg pct={(failed / total) * 100} className="bg-destructive" />
@@ -2174,8 +2197,10 @@ function ProgressPanel({
         <ProgTile label="Queued" value={queued} dotClass="bg-muted-foreground/40" />
         <ProgTile label="Sending" value={sending} dotClass="bg-amber-500" pulse={sending > 0} />
         <ProgTile label="Accepted" value={sent} dotClass="bg-sky-500" />
-        <ProgTile label="Delivered" value={delivered} dotClass="bg-emerald-500" />
+        <ProgTile label="Delivered" value={delivered} dotClass="bg-primary" />
         <ProgTile label="Failed" value={failed} dotClass="bg-destructive" />
+      </div>
+      </div>
       </div>
 
       {failed > 0 && topReasons.length > 0 && (
@@ -2418,14 +2443,15 @@ function ProgTile({
   pulse?: boolean;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-3">
+    <div className="relative overflow-hidden rounded-xl border bg-muted/30 p-3.5 transition-colors hover:bg-muted/60">
+      <span className={`absolute inset-x-0 top-0 h-0.5 ${dotClass}`} />
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <span
           className={`inline-block size-2 rounded-full ${dotClass} ${pulse ? "animate-pulse" : ""}`}
         />
         {label}
       </div>
-      <div className="text-xl font-bold mt-1 tabular-nums">{value.toLocaleString()}</div>
+      <div className="text-2xl font-extrabold mt-1 tabular-nums">{value.toLocaleString()}</div>
     </div>
   );
 }
@@ -2436,4 +2462,30 @@ function tenantSafeReason(reason: string): string {
     return "Sending is temporarily unavailable. Please contact support.";
   }
   return reason.replace(/telnyx/gi, "carrier");
+}
+
+function ProgressRing({ delivered, accepted, failed, total }: { delivered: number; accepted: number; failed: number; total: number }) {
+  const r = 70;
+  const C = 2 * Math.PI * r;
+  const seg = (n: number) => (total > 0 ? (n / total) * C : 0);
+  const d = seg(delivered);
+  const a = seg(accepted);
+  const f = seg(failed);
+  const rate = total > 0 ? Math.round((delivered / total) * 100) : 0;
+  return (
+    <div className="relative mx-auto size-[180px]">
+      <svg viewBox="0 0 180 180" className="size-full -rotate-90">
+        <circle cx="90" cy="90" r={r} fill="none" strokeWidth="14" className="stroke-muted" />
+        <circle cx="90" cy="90" r={r} fill="none" strokeWidth="14" className="stroke-primary transition-all duration-700" strokeDasharray={`${d} ${C}`} />
+        <circle cx="90" cy="90" r={r} fill="none" strokeWidth="14" className="stroke-sky-500 transition-all duration-700" strokeDasharray={`${a} ${C}`} strokeDashoffset={-d} />
+        <circle cx="90" cy="90" r={r} fill="none" strokeWidth="14" className="stroke-destructive transition-all duration-700" strokeDasharray={`${f} ${C}`} strokeDashoffset={-(d + a)} />
+      </svg>
+      <div className="absolute inset-0 grid place-items-center text-center">
+        <div>
+          <div className="text-4xl font-extrabold tabular-nums">{rate}%</div>
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">delivered</div>
+        </div>
+      </div>
+    </div>
+  );
 }
