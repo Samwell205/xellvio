@@ -337,8 +337,10 @@ export function TollfreeWizard({
   function goNext() {
     const err = stepValid(form, step.key);
     if (err) { toast.error(err); return; }
+    if (step.key === "general") setForm((f) => applySmartDefaults(f));
     setCompleted((c) => new Set(c).add(step.key));
     if (stepIdx < STEPS.length - 1) setStepIdx(stepIdx + 1);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function goBack() {
@@ -358,8 +360,15 @@ export function TollfreeWizard({
     await onSubmit({ ...form, agreeToTos: true });
   }
 
+  const STEP_HINTS: Record<StepKey, string> = {
+    general: "Who's sending",
+    numbers: "Your number",
+    "use-case-details": "What you'll text",
+  };
+  const progress = ((stepIdx + 1) / STEPS.length) * 100;
+
   return (
-    <div className="rounded-lg border bg-card overflow-hidden">
+    <div className="overflow-hidden rounded-3xl border bg-card shadow-sm">
       {onClose && (
         <div className="border-b px-6 py-3">
           <Button type="button" variant="ghost" size="sm" onClick={onClose} className="h-auto px-0 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground">
@@ -367,67 +376,101 @@ export function TollfreeWizard({
           </Button>
         </div>
       )}
-      <nav className="flex overflow-x-auto border-b px-4 sm:px-6" aria-label="Registration steps">
-        {STEPS.map((item, index) => {
-          const isCurrent = index === stepIdx;
-          const isDone = completed.has(item.key);
-          return (
-            <Button
-              key={item.key}
-              type="button"
-              variant="ghost"
-              onClick={() => setStepIdx(index)}
-              className={`h-12 shrink-0 rounded-none border-b-2 px-3 text-sm hover:bg-transparent ${isCurrent ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}
-              aria-current={isCurrent ? "step" : undefined}
-            >
-              {isDone && !isCurrent && <CheckIcon className="mr-1.5 size-3.5 text-success" />}
-              {item.label}
-            </Button>
-          );
-        })}
-      </nav>
-      <div className="space-y-6 p-5 sm:p-6 lg:p-8">
+      <div className="border-b bg-muted/30 px-4 pt-5 sm:px-8">
+        <ol className="grid grid-cols-3 gap-2" aria-label="Registration steps">
+          {STEPS.map((item, index) => {
+            const isCurrent = index === stepIdx;
+            const isDone = completed.has(item.key) && !isCurrent;
+            return (
+              <li key={item.key}>
+                <button
+                  type="button"
+                  onClick={() => setStepIdx(index)}
+                  aria-current={isCurrent ? "step" : undefined}
+                  className="group flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition-colors hover:bg-background/60"
+                >
+                  <span
+                    className={`grid size-9 shrink-0 place-items-center rounded-full border text-sm font-semibold transition-all duration-300 ${
+                      isCurrent
+                        ? "scale-105 border-primary bg-primary text-primary-foreground shadow-md"
+                        : isDone
+                          ? "border-primary/40 bg-primary/10 text-primary"
+                          : "bg-background text-muted-foreground"
+                    }`}
+                  >
+                    {isDone ? <CheckIcon className="size-4" /> : index + 1}
+                  </span>
+                  <span className="hidden min-w-0 sm:block">
+                    <span className={`block truncate text-sm font-medium ${isCurrent ? "text-foreground" : "text-muted-foreground"}`}>{item.label}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{STEP_HINTS[item.key]}</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+        <div className="mt-4 h-1 w-full overflow-hidden rounded-full bg-border">
+          <div className="h-full rounded-full bg-primary transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
+      <div className="space-y-6 p-5 sm:p-8">
         {helperBanner}
         <fieldset disabled={disabled} className={disabled ? "pointer-events-none opacity-70" : ""}>
-          <div className="space-y-8">
+          <div key={step.key} className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500 motion-reduce:animate-none">
             {step.key === "general" && (
               <>
-                <BusinessInfoStep form={form} update={update} />
-                <div className="border-t pt-8"><AuthorizedRepStep form={form} update={update} /></div>
-                <div className="border-t pt-8"><BusinessAddressStep form={form} update={update} /></div>
+                <SectionCard n={1}><BusinessInfoStep form={form} update={update} /></SectionCard>
+                <SectionCard n={2}><AuthorizedRepStep form={form} update={update} /></SectionCard>
+                <SectionCard n={3}><BusinessAddressStep form={form} update={update} /></SectionCard>
               </>
             )}
             {step.key === "numbers" && (
-              <AssignNumbersStep
-                reservedNumber={reservedNumber}
-                verificationStatus={verificationStatus}
-                feeAmount={feeAmount}
-                creditBalance={creditBalance}
-                feePaid={feePaid}
-              />
+              <SectionCard>
+                <AssignNumbersStep
+                  reservedNumber={reservedNumber}
+                  verificationStatus={verificationStatus}
+                  feeAmount={feeAmount}
+                  creditBalance={creditBalance}
+                  feePaid={feePaid}
+                />
+              </SectionCard>
             )}
             {step.key === "use-case-details" && (
               <>
-                <UseCaseStep form={form} update={update} />
-                <div className="border-t pt-8"><OptInStep form={form} update={update} /></div>
-                <div className="border-t pt-8"><AdditionalStep form={form} update={update} /></div>
-                <div className="border-t pt-8"><ReviewStep form={form} update={update} /></div>
+                <div className="flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm">
+                  <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <p>We pre-filled compliant wording from your business details. Read it over, adjust anything that isn't accurate, and add your sign-up form proof.</p>
+                </div>
+                <SectionCard n={1}><UseCaseStep form={form} update={update} /></SectionCard>
+                <SectionCard n={2}><OptInStep form={form} update={update} /></SectionCard>
+                <details className="group rounded-2xl border bg-background">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 sm:p-6">
+                    <span>
+                      <span className="block font-semibold">Extra carrier details</span>
+                      <span className="block text-sm text-muted-foreground">Already filled in for you — open only if you want to change them.</span>
+                    </span>
+                    <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform duration-300 group-open:rotate-90" />
+                  </summary>
+                  <div className="space-y-5 border-t p-5 sm:p-6"><AdditionalStep form={form} update={update} /></div>
+                </details>
+                <SectionCard n={3}><ReviewStep form={form} update={update} onEdit={(i) => setStepIdx(i)} /></SectionCard>
               </>
             )}
           </div>
         </fieldset>
 
         {!disabled && (
-          <div className="flex items-center justify-between gap-2 border-t pt-5">
-            <Button type="button" variant="outline" onClick={goBack} disabled={stepIdx === 0}>
+          <div className="sticky bottom-0 -mx-5 flex items-center justify-between gap-2 border-t bg-card/95 px-5 py-4 backdrop-blur sm:-mx-8 sm:px-8">
+            <Button type="button" variant="outline" className="rounded-full" onClick={goBack} disabled={stepIdx === 0}>
               <ChevronLeft className="mr-1 size-4" /> Back
             </Button>
+            <span className="hidden text-xs text-muted-foreground sm:block">Step {stepIdx + 1} of {STEPS.length}</span>
             {stepIdx < STEPS.length - 1 ? (
-              <Button type="button" onClick={goNext}>
-                Next <ChevronRight className="ml-1 size-4" />
+              <Button type="button" className="rounded-full px-6" onClick={goNext}>
+                Continue <ChevronRight className="ml-1 size-4" />
               </Button>
             ) : (
-              <Button type="button" onClick={handleSubmit} disabled={submitting} size="lg">
+              <Button type="button" className="rounded-full px-6" onClick={handleSubmit} disabled={submitting} size="lg">
                 {submitting && <Loader2 className="mr-2 size-4 animate-spin" />}
                 {submitLabel}
               </Button>
@@ -441,6 +484,16 @@ export function TollfreeWizard({
 
 // ---------- Field helpers ----------
 
+function SectionCard({ n, children }: { n?: number; children: React.ReactNode }) {
+  return (
+    <section className="relative space-y-5 rounded-2xl border bg-background p-5 transition-shadow hover:shadow-md sm:p-6">
+      {n != null && (
+        <span className="absolute -left-3 -top-3 grid size-7 place-items-center rounded-full border bg-card text-xs font-semibold text-muted-foreground shadow-sm">{n}</span>
+      )}
+      {children}
+    </section>
+  );
+}
 function Two({ children }: { children: React.ReactNode }) {
   return <div className="grid md:grid-cols-2 gap-4">{children}</div>;
 }
@@ -452,9 +505,9 @@ function Field({
 }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="flex items-center justify-between gap-3 text-sm">
+      <Label className="flex items-center gap-1 text-sm font-medium">
         <span>{label}</span>
-        {required && <span className="text-xs italic text-muted-foreground">Required</span>}
+        {required && <span className="text-destructive" aria-label="required">*</span>}
       </Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -464,7 +517,7 @@ function Field({
 function StepHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div>
-      <h2 className="text-xl font-semibold">{title}</h2>
+      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
       {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
     </div>
   );
