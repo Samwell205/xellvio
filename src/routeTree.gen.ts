@@ -177,6 +177,8 @@ import { Route as VerifierVerifyDashboardSettingsRouteImport } from './routes/_v
 import { Route as VerifierVerifyDashboardWithdrawalsRouteImport } from './routes/_verifier.verify.dashboard.withdrawals'
 import { Route as ApiPublicCampaignMediaSplatRouteImport } from './routes/api.public.campaign-media.$'
 import { Route as ApiPublicCardWebhookRouteImport } from './routes/api/public/card/webhook'
+import { Route as ApiPublicEmailDispatchRouteImport } from './routes/api.public.email.dispatch'
+import { Route as ApiPublicEmailEventsRouteImport } from './routes/api.public.email.events'
 import { Route as ApiPublicInfobipWebhookRouteImport } from './routes/api/public/infobip/webhook'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media.$'
 import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
@@ -195,6 +197,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 import { Route as AuthenticatedAppUseTemplateCategorySlugRouteImport } from './routes/_authenticated.app.use-template.$category.$slug'
+import { Route as ApiPublicEmailUnsubscribeTokenRouteImport } from './routes/api.public.email.unsubscribe.$token'
 import { Route as ApiPublicOauthCalendarReturnRouteImport } from './routes/api/public/oauth/calendar/return'
 import { Route as ApiPublicVoiceToolsCallIdActionRouteImport } from './routes/api/public/voice/tools/$callId/$action'
 
@@ -1117,6 +1120,16 @@ const ApiPublicCardWebhookRoute = ApiPublicCardWebhookRouteImport.update({
   path: '/api/public/card/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicEmailDispatchRoute = ApiPublicEmailDispatchRouteImport.update({
+  id: '/api/public/email/dispatch',
+  path: '/api/public/email/dispatch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicEmailEventsRoute = ApiPublicEmailEventsRouteImport.update({
+  id: '/api/public/email/events',
+  path: '/api/public/email/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicInfobipWebhookRoute = ApiPublicInfobipWebhookRouteImport.update({
   id: '/api/public/infobip/webhook',
   path: '/api/public/infobip/webhook',
@@ -1213,6 +1226,12 @@ const AuthenticatedAppUseTemplateCategorySlugRoute =
     id: '/use-template/$category/$slug',
     path: '/use-template/$category/$slug',
     getParentRoute: () => AuthenticatedAppRoute,
+  } as any)
+const ApiPublicEmailUnsubscribeTokenRoute =
+  ApiPublicEmailUnsubscribeTokenRouteImport.update({
+    id: '/api/public/email/unsubscribe/$token',
+    path: '/api/public/email/unsubscribe/$token',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicOauthCalendarReturnRoute =
   ApiPublicOauthCalendarReturnRouteImport.update({
@@ -1382,6 +1401,8 @@ export interface FileRoutesByFullPath {
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
   '/api/public/campaign-media/$': typeof ApiPublicCampaignMediaSplatRoute
   '/api/public/card/webhook': typeof ApiPublicCardWebhookRoute
+  '/api/public/email/dispatch': typeof ApiPublicEmailDispatchRoute
+  '/api/public/email/events': typeof ApiPublicEmailEventsRoute
   '/api/public/infobip/webhook': typeof ApiPublicInfobipWebhookRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
@@ -1412,6 +1433,7 @@ export interface FileRoutesByFullPath {
   '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
+  '/api/public/email/unsubscribe/$token': typeof ApiPublicEmailUnsubscribeTokenRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
   '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
 }
@@ -1564,6 +1586,8 @@ export interface FileRoutesByTo {
   '/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
   '/api/public/campaign-media/$': typeof ApiPublicCampaignMediaSplatRoute
   '/api/public/card/webhook': typeof ApiPublicCardWebhookRoute
+  '/api/public/email/dispatch': typeof ApiPublicEmailDispatchRoute
+  '/api/public/email/events': typeof ApiPublicEmailEventsRoute
   '/api/public/infobip/webhook': typeof ApiPublicInfobipWebhookRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
@@ -1594,6 +1618,7 @@ export interface FileRoutesByTo {
   '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
+  '/api/public/email/unsubscribe/$token': typeof ApiPublicEmailUnsubscribeTokenRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
   '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
 }
@@ -1755,6 +1780,8 @@ export interface FileRoutesById {
   '/_verifier/verify/dashboard/withdrawals': typeof VerifierVerifyDashboardWithdrawalsRoute
   '/api/public/campaign-media/$': typeof ApiPublicCampaignMediaSplatRoute
   '/api/public/card/webhook': typeof ApiPublicCardWebhookRoute
+  '/api/public/email/dispatch': typeof ApiPublicEmailDispatchRoute
+  '/api/public/email/events': typeof ApiPublicEmailEventsRoute
   '/api/public/infobip/webhook': typeof ApiPublicInfobipWebhookRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
@@ -1785,6 +1812,7 @@ export interface FileRoutesById {
   '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
   '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/_authenticated/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
+  '/api/public/email/unsubscribe/$token': typeof ApiPublicEmailUnsubscribeTokenRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
   '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
 }
@@ -1945,6 +1973,8 @@ export interface FileRouteTypes {
     | '/verify/dashboard/withdrawals'
     | '/api/public/campaign-media/$'
     | '/api/public/card/webhook'
+    | '/api/public/email/dispatch'
+    | '/api/public/email/events'
     | '/api/public/infobip/webhook'
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
@@ -1975,6 +2005,7 @@ export interface FileRouteTypes {
     | '/verify/dashboard/'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
+    | '/api/public/email/unsubscribe/$token'
     | '/api/public/oauth/calendar/return'
     | '/api/public/voice/tools/$callId/$action'
   fileRoutesByTo: FileRoutesByTo
@@ -2127,6 +2158,8 @@ export interface FileRouteTypes {
     | '/verify/dashboard/withdrawals'
     | '/api/public/campaign-media/$'
     | '/api/public/card/webhook'
+    | '/api/public/email/dispatch'
+    | '/api/public/email/events'
     | '/api/public/infobip/webhook'
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
@@ -2157,6 +2190,7 @@ export interface FileRouteTypes {
     | '/verify/dashboard'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
+    | '/api/public/email/unsubscribe/$token'
     | '/api/public/oauth/calendar/return'
     | '/api/public/voice/tools/$callId/$action'
   id:
@@ -2317,6 +2351,8 @@ export interface FileRouteTypes {
     | '/_verifier/verify/dashboard/withdrawals'
     | '/api/public/campaign-media/$'
     | '/api/public/card/webhook'
+    | '/api/public/email/dispatch'
+    | '/api/public/email/events'
     | '/api/public/infobip/webhook'
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
@@ -2347,6 +2383,7 @@ export interface FileRouteTypes {
     | '/_verifier/verify/dashboard/'
     | '/_authenticated/app/campaigns/$id/report'
     | '/_authenticated/app/use-template/$category/$slug'
+    | '/api/public/email/unsubscribe/$token'
     | '/api/public/oauth/calendar/return'
     | '/api/public/voice/tools/$callId/$action'
   fileRoutesById: FileRoutesById
@@ -2430,6 +2467,8 @@ export interface RootRouteChildren {
   TemplatesCategoryIndexRoute: typeof TemplatesCategoryIndexRoute
   ApiPublicCampaignMediaSplatRoute: typeof ApiPublicCampaignMediaSplatRoute
   ApiPublicCardWebhookRoute: typeof ApiPublicCardWebhookRoute
+  ApiPublicEmailDispatchRoute: typeof ApiPublicEmailDispatchRoute
+  ApiPublicEmailEventsRoute: typeof ApiPublicEmailEventsRoute
   ApiPublicInfobipWebhookRoute: typeof ApiPublicInfobipWebhookRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
@@ -2446,6 +2485,7 @@ export interface RootRouteChildren {
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
   LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
+  ApiPublicEmailUnsubscribeTokenRoute: typeof ApiPublicEmailUnsubscribeTokenRoute
   ApiPublicOauthCalendarReturnRoute: typeof ApiPublicOauthCalendarReturnRoute
   ApiPublicVoiceToolsCallIdActionRoute: typeof ApiPublicVoiceToolsCallIdActionRoute
 }
@@ -3628,6 +3668,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCardWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/email/dispatch': {
+      id: '/api/public/email/dispatch'
+      path: '/api/public/email/dispatch'
+      fullPath: '/api/public/email/dispatch'
+      preLoaderRoute: typeof ApiPublicEmailDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/email/events': {
+      id: '/api/public/email/events'
+      path: '/api/public/email/events'
+      fullPath: '/api/public/email/events'
+      preLoaderRoute: typeof ApiPublicEmailEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/infobip/webhook': {
       id: '/api/public/infobip/webhook'
       path: '/api/public/infobip/webhook'
@@ -3753,6 +3807,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/app/use-template/$category/$slug'
       preLoaderRoute: typeof AuthenticatedAppUseTemplateCategorySlugRouteImport
       parentRoute: typeof AuthenticatedAppRoute
+    }
+    '/api/public/email/unsubscribe/$token': {
+      id: '/api/public/email/unsubscribe/$token'
+      path: '/api/public/email/unsubscribe/$token'
+      fullPath: '/api/public/email/unsubscribe/$token'
+      preLoaderRoute: typeof ApiPublicEmailUnsubscribeTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/oauth/calendar/return': {
       id: '/api/public/oauth/calendar/return'
@@ -4167,6 +4228,8 @@ const rootRouteChildren: RootRouteChildren = {
   TemplatesCategoryIndexRoute: TemplatesCategoryIndexRoute,
   ApiPublicCampaignMediaSplatRoute: ApiPublicCampaignMediaSplatRoute,
   ApiPublicCardWebhookRoute: ApiPublicCardWebhookRoute,
+  ApiPublicEmailDispatchRoute: ApiPublicEmailDispatchRoute,
+  ApiPublicEmailEventsRoute: ApiPublicEmailEventsRoute,
   ApiPublicInfobipWebhookRoute: ApiPublicInfobipWebhookRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
@@ -4183,6 +4246,7 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
   LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
+  ApiPublicEmailUnsubscribeTokenRoute: ApiPublicEmailUnsubscribeTokenRoute,
   ApiPublicOauthCalendarReturnRoute: ApiPublicOauthCalendarReturnRoute,
   ApiPublicVoiceToolsCallIdActionRoute: ApiPublicVoiceToolsCallIdActionRoute,
 }
