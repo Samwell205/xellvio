@@ -71,15 +71,51 @@ function CampaignsPage() {
     { label: "Email campaigns", value: rows.filter((r) => r.channel === "email").length, icon: Mail },
   ];
 
+  const draftRows = rows.filter((r) => r.status === "draft" || r.status === "cancelled");
+
   async function handleDelete() {
     if (!toDelete) return;
     setDeleting(true);
-    const { error } = await supabase.from("campaigns").delete().eq("id", toDelete.id);
+    if (toDelete.channel === "email") {
+      try {
+        await deleteEmails({ data: { ids: [toDelete.id] } });
+      } catch (e) {
+        setDeleting(false);
+        toast.error(e instanceof Error ? e.message : "Failed to delete campaign");
+        return;
+      }
+    } else {
+      const { error } = await supabase.from("campaigns").delete().eq("id", toDelete.id).in("status", ["draft", "cancelled"]);
+      if (error) { setDeleting(false); toast.error(error.message ?? "Failed to delete campaign"); return; }
+    }
     setDeleting(false);
-    if (error) { toast.error(error.message ?? "Failed to delete campaign"); return; }
     toast.success(`Deleted "${toDelete.name}"`);
     setToDelete(null);
     qc.invalidateQueries({ queryKey: ["campaigns"] });
+    qc.invalidateQueries({ queryKey: ["email-campaigns"] });
+  }
+
+  async function handleDeleteAllDrafts() {
+    if (draftRows.length === 0) return;
+    setDeleting(true);
+    const emailIds = draftRows.filter((r) => r.channel === "email").map((r) => r.id);
+    const smsIds = draftRows.filter((r) => r.channel === "sms").map((r) => r.id);
+    try {
+      if (emailIds.length) await deleteEmails({ data: { ids: emailIds } });
+      if (smsIds.length) {
+        const { error } = await supabase.from("campaigns").delete().in("id", smsIds).in("status", ["draft", "cancelled"]);
+        if (error) throw error;
+      }
+    } catch (e) {
+      setDeleting(false);
+      toast.error(e instanceof Error ? e.message : "Failed to delete drafts");
+      return;
+    }
+    setDeleting(false);
+    toast.success(`Deleted ${draftRows.length} draft${draftRows.length === 1 ? "" : "s"}`);
+    setConfirmAllDrafts(false);
+    qc.invalidateQueries({ queryKey: ["campaigns"] });
+    qc.invalidateQueries({ queryKey: ["email-campaigns"] });
   }
 
   return (
