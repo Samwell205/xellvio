@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { COUNTRIES, isoFromDial } from "@/lib/countries";
+import { AddressAutocomplete } from "./AddressAutocomplete";
 import { uploadOptInProof } from "@/lib/opt-in-proof.functions";
 import { TOLLFREE_USE_CASES, TOLLFREE_VOLUMES, normalizeUseCase } from "@/lib/tollfree-use-cases";
 import { toast } from "sonner";
@@ -606,7 +607,20 @@ function BusinessAddressStep({ form, update }: StepProps) {
       </Field>
       <Two>
         <Field label="Address line 1" required>
-          <Input value={form.addressLine1} onChange={(e) => update("addressLine1", e.target.value)} placeholder="123 Main St" />
+          <AddressAutocomplete
+            value={form.addressLine1}
+            onChange={(v) => update("addressLine1", v)}
+            onPick={(a) => {
+              update("businessCountry", a.country);
+              update("addressLine1", a.line1);
+              if (a.city) update("city", a.city);
+              const list = a.country === "CA" ? CA_PROVINCES : a.country === "US" ? US_STATES : null;
+              const n = a.state.trim().toLowerCase();
+              const region = list ? list.find((s) => s.v.toLowerCase() === n || s.l.toLowerCase() === n)?.v ?? "" : a.state;
+              if (region) update("state", region);
+              if (a.zip) update("zip", a.zip);
+            }}
+          />
         </Field>
         <Field label="Address line 2 (optional)">
           <Input value={form.addressLine2} onChange={(e) => update("addressLine2", e.target.value)} placeholder="Apt / Suite / Unit" />
