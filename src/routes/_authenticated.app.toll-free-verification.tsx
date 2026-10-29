@@ -11,6 +11,7 @@ import {
 } from "@/lib/tollfree-verification.functions";
 import { getTfnMarketplaceOffer } from "@/lib/tfn-marketplace.functions";
 import { requestDedicatedLine, getMyDedicatedLine } from "@/lib/twilio-lines.functions";
+import { LineStatusPanel } from "@/components/tollfree-wizard/LineStatusPanel";
 import { LocalNumberBuyCard } from "@/components/LocalNumberBuyCard";
 import { initPaystackTfnCheckout, verifyPaystack } from "@/lib/billing-packs.functions";
 import { initNowPaymentsTfnCheckout } from "@/lib/nowpayments.functions";
