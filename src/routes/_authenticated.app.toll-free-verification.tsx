@@ -258,7 +258,7 @@ function TollfreeVerificationPage() {
       street: [f.addressLine1, f.addressLine2].filter(Boolean).join(", "), city: f.city, state: f.state,
       postalCode: f.zip, country: f.businessCountry || "US",
       contactFirstName: f.contactFirstName, contactLastName: f.contactLastName, contactEmail: f.contactEmail,
-      contactPhone: `${f.contactPhoneCountry || "+1"}${String(f.contactPhone).replace(/\D/g, "")}`.replace(/^\+1\+?1?/, "+1"),
+      contactPhone: String(f.contactPhone).trim().startsWith("+") ? "+" + String(f.contactPhone).replace(/\D/g, "") : (f.contactPhoneCountry || "+1") + String(f.contactPhone).replace(/\D/g, ""),
       privacyUrl: f.privacyPolicyUrl, termsUrl: f.termsUrl, optInImageUrl: f.proofOfOptInUrl,
       useCaseSummary: f.useCaseDescription, sampleMessage: f.sampleMessage,
       monthlyVolume: f.monthlyVolume,
