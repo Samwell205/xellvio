@@ -10,7 +10,7 @@ import {
   payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
 import { getTfnMarketplaceOffer } from "@/lib/tfn-marketplace.functions";
-import { requestDedicatedLine } from "@/lib/twilio-lines.functions";
+import { requestDedicatedLine, getMyDedicatedLine } from "@/lib/twilio-lines.functions";
 import { LocalNumberBuyCard } from "@/components/LocalNumberBuyCard";
 import { initPaystackTfnCheckout, verifyPaystack } from "@/lib/billing-packs.functions";
 import { initNowPaymentsTfnCheckout } from "@/lib/nowpayments.functions";
@@ -192,6 +192,10 @@ function TollfreeVerificationPage() {
   const refresh = useServerFn(refreshTollfreeVerification);
   const feeStatusFn = useServerFn(getTollfreeFeeStatus);
 
+  const lineFn = useServerFn(getMyDedicatedLine);
+  const lineQuery = useQuery({ queryKey: ["dedicated-line"], queryFn: () => lineFn(), refetchInterval: 60_000 });
+  const line = lineQuery.data?.line as any;
+  const lineSubmitted = !!line && ["verification_pending", "active"].includes(line.status);
   const feeQuery = useQuery({ queryKey: ["tollfree-fee-status"], queryFn: () => feeStatusFn() });
 
   const { data, isLoading } = useQuery({
@@ -267,6 +271,7 @@ function TollfreeVerificationPage() {
       toast.success(res?.status === "active" ? "Your number is approved and ready." : "Submitted. The carrier usually replies within a few business days.");
       qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
       qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
+      qc.invalidateQueries({ queryKey: ["dedicated-line"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to submit"),
   });
@@ -413,7 +418,27 @@ function TollfreeVerificationPage() {
         </div>
       )}
 
-      {isVerified ? (
+      {lineSubmitted ? (
+        <Card className="border-primary/40">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BadgeCheck className="size-5 text-primary" />
+              {line.status === "active" ? "Your toll-free number is approved" : "Registration submitted — in carrier review"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <p>Number: <span className="font-mono text-foreground">{line.phone_number}</span></p>
+            <p>
+              {line.status === "active"
+                ? "You can now send to US and Canada from your own number."
+                : "No further action is needed. The carrier usually replies in 3–5 business days and this page updates automatically."}
+            </p>
+            {line.status === "active" && (
+              <Button asChild size="sm"><Link to="/app/campaigns/new">Start a campaign</Link></Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : isVerified ? (
         <Card className="border-emerald-500/40 bg-emerald-500/5">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -477,7 +502,7 @@ function TollfreeVerificationPage() {
         />
       )}
 
-      {!isVerified && (
+      {!isVerified && !lineSubmitted && (
         <>
           <Card>
             <CardHeader>
