@@ -334,11 +334,11 @@ function EditorialActivity() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div
           {...fade}
-          className="relative overflow-hidden rounded-3xl p-10 md:p-14 min-h-[420px] flex items-center justify-center ring-1 ring-brand-green/30"
+          className="relative overflow-hidden rounded-3xl p-10 md:p-14 min-h-[480px] flex items-end justify-end ring-1 ring-brand-green/30"
         >
           <img src={shopImg} alt="" loading="lazy" width={1200} height={1008} className="absolute inset-0 size-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-tr from-brand-green/40 via-background/10 to-transparent" />
-          <div className="relative w-full flex justify-center">
+          <div className="relative w-full flex justify-end translate-y-6 sm:translate-x-4 scale-90 origin-bottom-right">
           <div className="bg-card rounded-xl border shadow-sm w-full max-w-sm p-5">
             <div className="font-bold text-foreground mb-4">Activity log</div>
             <div className="space-y-3">
@@ -420,11 +420,11 @@ function EditorialReach() {
         </motion.div>
         <motion.div
           {...fade}
-          className="relative overflow-hidden rounded-3xl p-10 md:p-14 min-h-[420px] flex items-center justify-center ring-1 ring-brand-green/30"
+          className="relative overflow-hidden rounded-3xl p-10 md:p-14 min-h-[480px] flex items-end justify-end ring-1 ring-brand-green/30"
         >
           <img src={globalImg} alt="" loading="lazy" width={1200} height={1008} className="absolute inset-0 size-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-tr from-brand-green/40 via-background/10 to-transparent" />
-          <div className="relative w-full flex justify-center">
+          <div className="relative w-full flex justify-end translate-y-6 sm:translate-x-4 scale-90 origin-bottom-right">
           <div className="space-y-3 w-full max-w-sm">
             <div className="bg-card rounded-xl border shadow-sm bg-primary/10 text-primary px-4 py-3 text-sm font-semibold">
               FLOW TRIGGER
@@ -458,11 +458,11 @@ function EditorialAttribution() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div
           {...fade}
-          className="relative overflow-hidden rounded-3xl p-10 md:p-14 min-h-[420px] flex items-center justify-center ring-1 ring-brand-green/30"
+          className="relative overflow-hidden rounded-3xl p-10 md:p-14 min-h-[480px] flex items-end justify-end ring-1 ring-brand-green/30"
         >
           <img src={insightsImg} alt="" loading="lazy" width={1200} height={1008} className="absolute inset-0 size-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-tr from-brand-green/40 via-background/10 to-transparent" />
-          <div className="relative w-full flex justify-center">
+          <div className="relative w-full flex justify-end translate-y-6 sm:translate-x-4 scale-90 origin-bottom-right">
           <div className="bg-card rounded-xl border shadow-sm w-full max-w-sm p-5">
             <div className="font-bold text-foreground mb-4">Attribution windows</div>
             <div className="space-y-3">
