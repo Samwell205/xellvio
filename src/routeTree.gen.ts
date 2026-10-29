@@ -160,6 +160,7 @@ import { Route as AuthenticatedAppAutomationsIndexRouteImport } from './routes/_
 import { Route as AuthenticatedAppAutomationsIdRouteImport } from './routes/_authenticated.app.automations.$id'
 import { Route as AuthenticatedAppCampaignsIndexRouteImport } from './routes/_authenticated.app.campaigns.index'
 import { Route as AuthenticatedAppCampaignsIdRouteImport } from './routes/_authenticated.app.campaigns.$id'
+import { Route as AuthenticatedAppCampaignsEmailRouteImport } from './routes/_authenticated.app.campaigns.email'
 import { Route as AuthenticatedAppCampaignsNewRouteImport } from './routes/_authenticated.app.campaigns.new'
 import { Route as AuthenticatedAppReceptionistIndexRouteImport } from './routes/_authenticated.app.receptionist.index'
 import { Route as AuthenticatedAppReceptionistAppointmentsRouteImport } from './routes/_authenticated.app.receptionist.appointments'
@@ -1015,6 +1016,12 @@ const AuthenticatedAppCampaignsIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedAppCampaignsRoute,
   } as any)
+const AuthenticatedAppCampaignsEmailRoute =
+  AuthenticatedAppCampaignsEmailRouteImport.update({
+    id: '/email',
+    path: '/email',
+    getParentRoute: () => AuthenticatedAppCampaignsRoute,
+  } as any)
 const AuthenticatedAppCampaignsNewRoute =
   AuthenticatedAppCampaignsNewRouteImport.update({
     id: '/new',
@@ -1362,6 +1369,7 @@ export interface FileRoutesByFullPath {
   '/app/assistant/$threadId': typeof AuthenticatedAppAssistantThreadIdRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
+  '/app/campaigns/email': typeof AuthenticatedAppCampaignsEmailRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/receptionist/appointments': typeof AuthenticatedAppReceptionistAppointmentsRoute
   '/app/receptionist/calls': typeof AuthenticatedAppReceptionistCallsRoute
@@ -1543,6 +1551,7 @@ export interface FileRoutesByTo {
   '/app/assistant/$threadId': typeof AuthenticatedAppAssistantThreadIdRoute
   '/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
+  '/app/campaigns/email': typeof AuthenticatedAppCampaignsEmailRoute
   '/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/app/receptionist/appointments': typeof AuthenticatedAppReceptionistAppointmentsRoute
   '/app/receptionist/calls': typeof AuthenticatedAppReceptionistCallsRoute
@@ -1733,6 +1742,7 @@ export interface FileRoutesById {
   '/_authenticated/app/assistant/$threadId': typeof AuthenticatedAppAssistantThreadIdRoute
   '/_authenticated/app/automations/$id': typeof AuthenticatedAppAutomationsIdRoute
   '/_authenticated/app/campaigns/$id': typeof AuthenticatedAppCampaignsIdRouteWithChildren
+  '/_authenticated/app/campaigns/email': typeof AuthenticatedAppCampaignsEmailRoute
   '/_authenticated/app/campaigns/new': typeof AuthenticatedAppCampaignsNewRoute
   '/_authenticated/app/receptionist/appointments': typeof AuthenticatedAppReceptionistAppointmentsRoute
   '/_authenticated/app/receptionist/calls': typeof AuthenticatedAppReceptionistCallsRoute
@@ -1922,6 +1932,7 @@ export interface FileRouteTypes {
     | '/app/assistant/$threadId'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
+    | '/app/campaigns/email'
     | '/app/campaigns/new'
     | '/app/receptionist/appointments'
     | '/app/receptionist/calls'
@@ -2103,6 +2114,7 @@ export interface FileRouteTypes {
     | '/app/assistant/$threadId'
     | '/app/automations/$id'
     | '/app/campaigns/$id'
+    | '/app/campaigns/email'
     | '/app/campaigns/new'
     | '/app/receptionist/appointments'
     | '/app/receptionist/calls'
@@ -2292,6 +2304,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app/assistant/$threadId'
     | '/_authenticated/app/automations/$id'
     | '/_authenticated/app/campaigns/$id'
+    | '/_authenticated/app/campaigns/email'
     | '/_authenticated/app/campaigns/new'
     | '/_authenticated/app/receptionist/appointments'
     | '/_authenticated/app/receptionist/calls'
@@ -3496,6 +3509,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppCampaignsIdRouteImport
       parentRoute: typeof AuthenticatedAppCampaignsRoute
     }
+    '/_authenticated/app/campaigns/email': {
+      id: '/_authenticated/app/campaigns/email'
+      path: '/email'
+      fullPath: '/app/campaigns/email'
+      preLoaderRoute: typeof AuthenticatedAppCampaignsEmailRouteImport
+      parentRoute: typeof AuthenticatedAppCampaignsRoute
+    }
     '/_authenticated/app/campaigns/new': {
       id: '/_authenticated/app/campaigns/new'
       path: '/new'
@@ -3876,6 +3896,7 @@ const AuthenticatedAppCampaignsIdRouteWithChildren =
 
 interface AuthenticatedAppCampaignsRouteChildren {
   AuthenticatedAppCampaignsIdRoute: typeof AuthenticatedAppCampaignsIdRouteWithChildren
+  AuthenticatedAppCampaignsEmailRoute: typeof AuthenticatedAppCampaignsEmailRoute
   AuthenticatedAppCampaignsNewRoute: typeof AuthenticatedAppCampaignsNewRoute
   AuthenticatedAppCampaignsIndexRoute: typeof AuthenticatedAppCampaignsIndexRoute
 }
@@ -3884,6 +3905,7 @@ const AuthenticatedAppCampaignsRouteChildren: AuthenticatedAppCampaignsRouteChil
   {
     AuthenticatedAppCampaignsIdRoute:
       AuthenticatedAppCampaignsIdRouteWithChildren,
+    AuthenticatedAppCampaignsEmailRoute: AuthenticatedAppCampaignsEmailRoute,
     AuthenticatedAppCampaignsNewRoute: AuthenticatedAppCampaignsNewRoute,
     AuthenticatedAppCampaignsIndexRoute: AuthenticatedAppCampaignsIndexRoute,
   }
