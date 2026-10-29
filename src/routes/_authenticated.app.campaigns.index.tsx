@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
-import { listEmailCampaigns } from "@/lib/email-campaigns.functions";
+import { listEmailCampaigns, deleteEmailCampaigns } from "@/lib/email-campaigns.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,12 +32,14 @@ const ACTIVE = ["queued", "sending", "running", "paused", "processing"];
 
 function CampaignsPage() {
   const qc = useQueryClient();
-  const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [toDelete, setToDelete] = useState<{ id: string; name: string; channel: "sms" | "email" } | null>(null);
+  const [confirmAllDrafts, setConfirmAllDrafts] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [channel, setChannel] = useState<"all" | "sms" | "email">("all");
   const [filter, setFilter] = useState<(typeof FILTERS)[number][0]>("all");
   const [search, setSearch] = useState("");
   const listEmails = useServerFn(listEmailCampaigns);
+  const deleteEmails = useServerFn(deleteEmailCampaigns);
   const emails = useQuery({ queryKey: ["email-campaigns"], queryFn: () => listEmails(), refetchInterval: 10000 });
   const q = useQuery({
     queryKey: ["campaigns"],
