@@ -196,6 +196,8 @@ function TollfreeVerificationPage() {
   const lineQuery = useQuery({ queryKey: ["dedicated-line"], queryFn: () => lineFn(), refetchInterval: 60_000 });
   const line = lineQuery.data?.line as any;
   const lineSubmitted = !!line && ["verification_pending", "active"].includes(line.status);
+  const lineRejected = !!line && line.status === "rejected";
+  const hasLine = lineSubmitted || lineRejected;
   const feeQuery = useQuery({ queryKey: ["tollfree-fee-status"], queryFn: () => feeStatusFn() });
 
   const { data, isLoading } = useQuery({
@@ -318,15 +320,27 @@ function TollfreeVerificationPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
           <ShieldCheck className="size-6 text-primary" />
-          {isVerified ? "Toll-Free Verification" : "Toll Free Verification Request"}
+          Toll-Free Verification
         </h1>
         <p className="text-muted-foreground mt-1 max-w-2xl">
-          {isVerified
-            ? "Your toll-free number is verified and cleared to send. No further submission is required."
-            : `Complete the carrier-style request below. We reserve the toll-free number during submission, charge the one-time $${feeQuery.data?.fee ?? 5} setup fee from credits, and send it for review.`}
+          {hasLine
+            ? "Track your carrier review below. The result and any reason from the carrier appear here automatically."
+            : isVerified
+              ? "Your toll-free number is verified and cleared to send. No further submission is required."
+              : `Complete the request below. We reserve your toll-free number, charge the one-time $${feeQuery.data?.fee ?? 5} setup fee from credits, and send it for carrier review.`}
         </p>
       </div>
 
+      {hasLine && (
+        <LineStatusPanel
+          line={line}
+          refreshing={lineQuery.isFetching}
+          onRefresh={() => lineQuery.refetch()}
+          onFix={() => document.getElementById("tollfree-wizard")?.scrollIntoView({ behavior: "smooth" })}
+        />
+      )}
+
+      {!hasLine && (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
@@ -393,12 +407,6 @@ function TollfreeVerificationPage() {
                     : "Carrier is requesting a change"}
                 </div>
                 <div className="mt-1 text-foreground">{carrierFeedback}</div>
-                {status !== "rejected" && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    Update the affected fields below and click <strong>Resubmit</strong>. The
-                    carrier picks up the change automatically.
-                  </div>
-                )}
               </div>
             )}
             {status === "verified" && (
@@ -410,35 +418,15 @@ function TollfreeVerificationPage() {
           </CardContent>
         )}
       </Card>
+      )}
 
-      {isLocked && !isVerified && (
+      {!hasLine && isLocked && !isVerified && (
         <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
-          Your submission is locked while the carrier reviews it. Only the carrier can approve or
-          reject this — we cannot approve it manually. This page updates automatically.
+          Your submission is locked while the carrier reviews it. This page updates automatically.
         </div>
       )}
 
-      {lineSubmitted ? (
-        <Card className="border-primary/40">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <BadgeCheck className="size-5 text-primary" />
-              {line.status === "active" ? "Your toll-free number is approved" : "Registration submitted — in carrier review"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <p>Number: <span className="font-mono text-foreground">{line.phone_number}</span></p>
-            <p>
-              {line.status === "active"
-                ? "You can now send to US and Canada from your own number."
-                : "No further action is needed. The carrier usually replies in 3–5 business days and this page updates automatically."}
-            </p>
-            {line.status === "active" && (
-              <Button asChild size="sm"><Link to="/app/campaigns/new">Start a campaign</Link></Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : isVerified ? (
+      {lineSubmitted ? null : isVerified && !lineRejected ? (
         <Card className="border-emerald-500/40 bg-emerald-500/5">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
