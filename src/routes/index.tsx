@@ -29,6 +29,9 @@ import { StatsMarquee, reveal } from "@/components/marketing/ProductKit";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { faqSchema, pageHead, softwareApplicationSchema, websiteSchema } from "@/lib/seo";
+import shopImg from "@/assets/landing-shop-owner.jpg";
+import globalImg from "@/assets/landing-global.jpg";
+import insightsImg from "@/assets/landing-insights.jpg";
 import heroLoopAsset from "@/assets/xellvio-hero-loop.mp4.asset.json";
 import heroLoopWebmAsset from "@/assets/xellvio-hero-loop.webm.asset.json";
 
@@ -314,7 +317,7 @@ function FeatureGrid() {
               {...fade}
               transition={{ ...fade.transition, delay: i * 0.05 }}
             >
-              <f.icon className="size-7 text-primary" strokeWidth={1.6} />
+              <f.icon className="size-7 text-brand-green" strokeWidth={1.6} />
               <h3 className="mt-5 font-bold text-foreground text-lg leading-snug">{f.title}</h3>
               <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{f.text}</p>
             </motion.div>
@@ -331,8 +334,11 @@ function EditorialActivity() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div
           {...fade}
-          className="bg-muted rounded-3xl p-10 md:p-14 min-h-[420px] flex items-center justify-center"
+          className="relative overflow-hidden rounded-3xl p-10 md:p-14 min-h-[480px] flex items-end justify-end ring-1 ring-brand-green/30"
         >
+          <img src={shopImg} alt="" loading="lazy" width={1200} height={1008} className="absolute inset-0 size-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-brand-green/40 via-background/10 to-transparent" />
+          <div className="relative w-full flex justify-end translate-y-6 sm:translate-x-4 scale-90 origin-bottom-right">
           <div className="bg-card rounded-xl border shadow-sm w-full max-w-sm p-5">
             <div className="font-bold text-foreground mb-4">Activity log</div>
             <div className="space-y-3">
@@ -355,6 +361,7 @@ function EditorialActivity() {
               ))}
             </div>
           </div>
+        </div>
         </motion.div>
         <motion.div {...fade}>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
@@ -366,15 +373,15 @@ function EditorialActivity() {
           </p>
           <ul className="mt-6 space-y-4 text-muted-foreground">
             <li className="flex gap-3">
-              <span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Quickly
+              <span className="size-1.5 rounded-full bg-brand-green ring-4 ring-brand-green/20 mt-2  shrink-0" /> Quickly
               segment, personalize, and act on insights with our unified data platform.
             </li>
             <li className="flex gap-3">
-              <span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Automated
+              <span className="size-1.5 rounded-full bg-brand-green ring-4 ring-brand-green/20 mt-2  shrink-0" /> Automated
               SMS conversations to address FAQs and tailor experiences.
             </li>
             <li className="flex gap-3">
-              <span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Collect
+              <span className="size-1.5 rounded-full bg-brand-green ring-4 ring-brand-green/20 mt-2  shrink-0" /> Collect
               transactional consent separately from marketing for full subscriber control.
             </li>
           </ul>
@@ -398,23 +405,26 @@ function EditorialReach() {
           </p>
           <ul className="mt-6 space-y-4 text-muted-foreground">
             <li className="flex gap-3">
-              <span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Meet
+              <span className="size-1.5 rounded-full bg-brand-green ring-4 ring-brand-green/20 mt-2  shrink-0" /> Meet
               customers anywhere with multi-channel flows.
             </li>
             <li className="flex gap-3">
-              <span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Engage
+              <span className="size-1.5 rounded-full bg-brand-green ring-4 ring-brand-green/20 mt-2  shrink-0" /> Engage
               globally — SMS available in 190+ countries.
             </li>
             <li className="flex gap-3">
-              <span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Send
+              <span className="size-1.5 rounded-full bg-brand-green ring-4 ring-brand-green/20 mt-2  shrink-0" /> Send
               confidently with built-in compliance and trust.
             </li>
           </ul>
         </motion.div>
         <motion.div
           {...fade}
-          className="bg-muted rounded-3xl p-10 md:p-14 min-h-[420px] flex items-center justify-center"
+          className="relative overflow-hidden rounded-3xl p-10 md:p-14 min-h-[480px] flex items-end justify-end ring-1 ring-brand-green/30"
         >
+          <img src={globalImg} alt="" loading="lazy" width={1200} height={1008} className="absolute inset-0 size-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-brand-green/40 via-background/10 to-transparent" />
+          <div className="relative w-full flex justify-end translate-y-6 sm:translate-x-4 scale-90 origin-bottom-right">
           <div className="space-y-3 w-full max-w-sm">
             <div className="bg-card rounded-xl border shadow-sm bg-primary/10 text-primary px-4 py-3 text-sm font-semibold">
               FLOW TRIGGER
@@ -435,6 +445,7 @@ function EditorialReach() {
               View discounted item
             </div>
           </div>
+        </div>
         </motion.div>
       </div>
     </section>
@@ -447,8 +458,11 @@ function EditorialAttribution() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 grid lg:grid-cols-2 gap-12 items-center">
         <motion.div
           {...fade}
-          className="bg-muted rounded-3xl p-10 md:p-14 min-h-[420px] flex items-center justify-center"
+          className="relative overflow-hidden rounded-3xl p-10 md:p-14 min-h-[480px] flex items-end justify-end ring-1 ring-brand-green/30"
         >
+          <img src={insightsImg} alt="" loading="lazy" width={1200} height={1008} className="absolute inset-0 size-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-brand-green/40 via-background/10 to-transparent" />
+          <div className="relative w-full flex justify-end translate-y-6 sm:translate-x-4 scale-90 origin-bottom-right">
           <div className="bg-card rounded-xl border shadow-sm w-full max-w-sm p-5">
             <div className="font-bold text-foreground mb-4">Attribution windows</div>
             <div className="space-y-3">
@@ -473,6 +487,7 @@ function EditorialAttribution() {
               ))}
             </div>
           </div>
+        </div>
         </motion.div>
         <motion.div {...fade}>
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
@@ -483,15 +498,15 @@ function EditorialAttribution() {
           </p>
           <ul className="mt-6 space-y-4 text-muted-foreground">
             <li className="flex gap-3">
-              <span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Accurately
+              <span className="size-1.5 rounded-full bg-brand-green ring-4 ring-brand-green/20 mt-2  shrink-0" /> Accurately
               attribute sales with last-touch multi-channel attribution.
             </li>
             <li className="flex gap-3">
-              <span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Manage
+              <span className="size-1.5 rounded-full bg-brand-green ring-4 ring-brand-green/20 mt-2  shrink-0" /> Manage
               budgets with usage reporting across every channel.
             </li>
             <li className="flex gap-3">
-              <span className="size-1.5 rounded-full bg-neutral-900 mt-2.5 shrink-0" /> Analyze
+              <span className="size-1.5 rounded-full bg-brand-green ring-4 ring-brand-green/20 mt-2  shrink-0" /> Analyze
               subscriber growth and engagement trends over time.
             </li>
           </ul>
