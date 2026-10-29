@@ -3760,57 +3760,69 @@ export type Database = {
         Row: {
           account_id: string
           blocks: Json
+          content_mode: string
           created_at: string
           from_email: string
           from_name: string
+          html_body: string
           id: string
           last_error: string | null
           list_id: string | null
           name: string
+          plain_body: string
           postal_address: string
           preheader: string
           reply_to: string
           schedule_at: string | null
           status: string
           subject: string
+          theme: Json
           total: number
           updated_at: string
         }
         Insert: {
           account_id: string
           blocks?: Json
+          content_mode?: string
           created_at?: string
           from_email?: string
           from_name?: string
+          html_body?: string
           id?: string
           last_error?: string | null
           list_id?: string | null
           name: string
+          plain_body?: string
           postal_address?: string
           preheader?: string
           reply_to?: string
           schedule_at?: string | null
           status?: string
           subject?: string
+          theme?: Json
           total?: number
           updated_at?: string
         }
         Update: {
           account_id?: string
           blocks?: Json
+          content_mode?: string
           created_at?: string
           from_email?: string
           from_name?: string
+          html_body?: string
           id?: string
           last_error?: string | null
           list_id?: string | null
           name?: string
+          plain_body?: string
           postal_address?: string
           preheader?: string
           reply_to?: string
           schedule_at?: string | null
           status?: string
           subject?: string
+          theme?: Json
           total?: number
           updated_at?: string
         }
@@ -4064,6 +4076,65 @@ export type Database = {
           reason?: string
         }
         Relationships: []
+      }
+      email_templates: {
+        Row: {
+          account_id: string | null
+          blocks: Json
+          category: string
+          content_mode: string
+          created_at: string
+          created_by: string | null
+          html_body: string
+          id: string
+          name: string
+          plain_body: string
+          provider_template_id: string | null
+          subject: string
+          theme: Json
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          blocks?: Json
+          category?: string
+          content_mode?: string
+          created_at?: string
+          created_by?: string | null
+          html_body?: string
+          id?: string
+          name: string
+          plain_body?: string
+          provider_template_id?: string | null
+          subject?: string
+          theme?: Json
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          blocks?: Json
+          category?: string
+          content_mode?: string
+          created_at?: string
+          created_by?: string | null
+          html_body?: string
+          id?: string
+          name?: string
+          plain_body?: string
+          provider_template_id?: string | null
+          subject?: string
+          theme?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_unsubscribe_tokens: {
         Row: {
