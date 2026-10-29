@@ -6,7 +6,7 @@
 - [ ] International route: register required country sender IDs (e.g. NG/UAE) before tenants send there; add Infobip inbound (replies/STOP) support for international numbers
 
 ## Email marketing
-- [ ] Fix imported template image loading and cramped preview/card arrangement; verify images and layouts
+- [x] Fix imported template images (HTTP upgraded to HTTPS), fitted previews, concise buttons and full-size preview; signed-in library images, pagination, selection/editing and mobile overflow checked; 14 tests passed
 - [x] Separate email details, template selection, editing and review into focused steps; paginate genuine imported designs and separate saved/basic tabs
 - [x] Import all 60 genuine provider prebuilt designs; authenticated shared-library readback confirmed
 - [ ] Verify genuine-template selection/edit/reload in tenant campaign page — authorized owner test session is admin-only and cannot enter tenant routes
