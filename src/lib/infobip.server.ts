@@ -32,7 +32,10 @@ export function infobipNotifyUrl(): string {
  */
 async function apiBase(): Promise<string> {
   if (cachedBase) return cachedBase;
-  const raw = String(process.env.INFOBIP_BASE_URL ?? "").replace(/\/$/, "");
+  let raw = String(process.env.INFOBIP_BASE_URL ?? "").trim().replace(/\/+$/, "");
+  // Accept a bare host (e.g. "xxxx.api.infobip.com") as saved in the dashboard.
+  if (raw && !/^https?:\/\//i.test(raw)) raw = `https://${raw}`;
+  raw = raw.replace(/^http:\/\//i, "https://");
   if (!/^https:\/\/[a-z0-9.-]+/i.test(raw)) throw new Error("International sending route is not configured.");
   cachedBase = raw;
   try {
