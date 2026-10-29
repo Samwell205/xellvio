@@ -606,7 +606,7 @@ function BusinessAddressStep({ form, update }: StepProps) {
       </Field>
       <Two>
         <Field label="Address line 1" required>
-          <Input value={form.addressLine1} onChange={(e) => update("addressLine1", e.target.value)} placeholder="123 Main St" />
+          <AddressAutocomplete form={form} update={update} />
         </Field>
         <Field label="Address line 2 (optional)">
           <Input value={form.addressLine2} onChange={(e) => update("addressLine2", e.target.value)} placeholder="Apt / Suite / Unit" />
