@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 - International cards use flw.server.ts and /api/public/card/webhook (icp_); hide provider names in UI.
-- Toll-free registration uses one shared three-step wizard for tenant and verifier accounts so both submission experiences stay aligned with the carrier flow.
+- Toll-free registration shares a three-step wizard and tollfree-registration.ts client/server rules, including saved-volume normalization, to prevent submission mismatches.
 - Dashboard lifecycle card visibility is centralized in src/lib/lifecycle/visibility.ts so prior dismissal state cannot hide required workspace guidance.
 - Tenant SMS API routes reuse the campaign queue and workspace API-key authentication; never add a direct carrier-send bypass because it would skip charging, compliance, and opt-out controls.
 - "maintenance" announcements are operational: they bypass comm preferences and dismissal (getAnnouncements, AnnouncementBanner) and keep an un-dismissible alert.

@@ -1,17 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { z } from "zod";
-
-const str = (max: number) => z.string().trim().min(1).max(max);
-const Biz = z.object({
-  businessName: str(120), website: z.string().url().max(300), ein: z.string().trim().regex(/^(\d{2}-?\d{7})?$/, "Enter a 9-digit EIN or leave it empty").optional().default(""),
-  street: str(200), city: str(100), state: str(60), postalCode: str(20), country: z.string().length(2),
-  contactFirstName: str(60), contactLastName: str(60), contactEmail: z.string().email().max(200),
-  contactPhone: z.string().regex(/^\+\d{8,15}$/, "Use international format, e.g. +15551234567"),
-  privacyUrl: z.string().url().max(300), termsUrl: z.string().url().max(300), optInImageUrl: z.string().url().max(500),
-  useCaseSummary: z.string().trim().min(40).max(1000), sampleMessage: z.string().trim().min(20).max(320).refine((s) => /stop/i.test(s), "Sample must include STOP opt-out"),
-  monthlyVolume: z.enum(["1,000", "10,000", "100,000", "250,000", "500,000"]),
-});
+import { parseDedicatedLineRegistration } from "./tollfree-registration";
 
 export const getMyDedicatedLine = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -37,7 +26,7 @@ export const getMyDedicatedLine = createServerFn({ method: "GET" })
 
 export const requestDedicatedLine = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => Biz.parse(input))
+  .inputValidator(parseDedicatedLineRegistration)
   .handler(async ({ data, context }) => {
     const { resolveBillingAccount } = await import("./billing-account.server");
     const acting = await resolveBillingAccount(context.userId);
