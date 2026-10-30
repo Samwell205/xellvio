@@ -18,6 +18,7 @@ import { AddressAutocomplete } from "./AddressAutocomplete";
 import { uploadOptInProof } from "@/lib/opt-in-proof.functions";
 import { TOLLFREE_USE_CASES, TOLLFREE_VOLUMES, normalizeUseCase } from "@/lib/tollfree-use-cases";
 import { toast } from "sonner";
+import { normalizeTollfreeVolume, registrationPhone, tollfreePhoneSchema, tollfreeSampleSchema, tollfreeVolumeSchema } from "@/lib/tollfree-registration";
 
 // ---------- Constants (mirrors Twilio's own wizard) ----------
 
@@ -248,7 +249,7 @@ function stepValid(f: WizardForm, key: StepKey): string | null {
       if (!f.contactLastName.trim()) return "Enter last name.";
       if (!isEmail(f.contactEmail)) return "Enter a valid email.";
       if (!/^\+\d{1,4}$/.test(f.contactPhoneCountry)) return "Select a phone country code.";
-      if (f.contactPhone.replace(/\D/g, "").length < 5) return "Enter a valid phone number.";
+      if (!tollfreePhoneSchema.safeParse(registrationPhone(f.contactPhoneCountry, f.contactPhone)).success) return "Enter a phone number with country code and 8–15 digits.";
       if (!/^[A-Z]{2}$/.test(f.businessCountry)) return "Select a country.";
       if (!f.addressLine1.trim()) return "Enter address line 1.";
       if (!f.city.trim()) return "Enter city.";
@@ -258,12 +259,12 @@ function stepValid(f: WizardForm, key: StepKey): string | null {
     case "numbers":
       return null;
     case "use-case-details":
-      if (!f.monthlyVolume) return "Select a monthly SMS volume.";
+      if (!tollfreeVolumeSchema.safeParse(f.monthlyVolume).success) return "Select a monthly SMS volume.";
       if (f.useCaseCategories.length === 0) return "Select at least one use case category.";
       if (f.useCaseDescription.trim().length < 40) return "Describe your use case in at least 40 characters.";
       if (f.useCaseDescription.trim().length > 500) return "Use-case summary must be 500 characters or fewer.";
-      if (f.sampleMessage.trim().length < 20) return "Enter a sample message (min 20 characters).";
-      if (f.sampleMessage.trim().length > 1000) return "Sample message must be 1,000 characters or fewer.";
+      const sample = tollfreeSampleSchema.safeParse(f.sampleMessage);
+      if (!sample.success) return sample.error.issues[0]?.message ?? "Check your sample message.";
       if (!f.optInType) return "Select an opt-in type.";
       if (!isHttps(f.proofOfOptInUrl)) return "Add a public https:// URL (or upload a screenshot) as opt-in policy proof.";
       if (!isHttps(f.privacyPolicyUrl)) return "Enter a public https:// Privacy Policy URL.";
@@ -327,7 +328,10 @@ export function TollfreeWizard({
   helperBanner, onSubmit, submitting, onClose, reservedNumber,
   verificationStatus, feeAmount = 5, creditBalance = 0, feePaid = false,
 }: TollfreeWizardProps) {
-  const [form, setForm] = useState<WizardForm>(() => ({ ...defaultWizardForm(), ...(initial ?? {}) }));
+  const [form, setForm] = useState<WizardForm>(() => {
+    const defaults = { ...defaultWizardForm(), ...(initial ?? {}) };
+    return { ...defaults, monthlyVolume: normalizeTollfreeVolume(defaults.monthlyVolume) };
+  });
   const [stepIdx, setStepIdx] = useState(0);
   const [completed, setCompleted] = useState<Set<StepKey>>(new Set());
   const step = STEPS[stepIdx];
@@ -779,7 +783,7 @@ function UseCaseStep({ form, update }: StepProps) {
       <Field label="Summarize use-case" required hint="Explain who you're texting, what they'll receive, and how they signed up.">
         <Textarea rows={4} value={form.useCaseDescription} onChange={(e) => update("useCaseDescription", e.target.value)} placeholder="Use case details" />
       </Field>
-      <Field label="Message content" required hint="A representative sample message. Must include STOP / HELP language and your business name.">
+      <Field label="Message content" required hint="20–320 characters. Include STOP opt-out instructions, HELP language and your business name.">
         <Textarea rows={4} value={form.sampleMessage} onChange={(e) => update("sampleMessage", e.target.value)} placeholder="Hi {first_name}, this is Acme with your appointment reminder. Msg & data rates may apply. Reply STOP to opt out, HELP for help." />
       </Field>
     </>

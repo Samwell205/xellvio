@@ -33,8 +33,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { TollfreeWizard, type WizardForm } from "@/components/tollfree-wizard/TollfreeWizard";
+import { normalizeTollfreeVolume, parseDedicatedLineRegistration, registrationPhone } from "@/lib/tollfree-registration";
 
 export const Route = createFileRoute("/_authenticated/app/toll-free-verification")({
+  head: () => ({ meta: [
+    { title: "Toll-Free Registration | Xellvio" },
+    { name: "description", content: "Register your business toll-free number and track its verification status on Xellvio." },
+    { property: "og:title", content: "Toll-Free Registration | Xellvio" },
+    { property: "og:description", content: "Register your business toll-free number and track its verification status on Xellvio." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: TollfreeVerificationPage,
 });
 
@@ -116,7 +125,7 @@ function accountAutofillToForm(a: any | null | undefined): Partial<WizardForm> {
     sampleMessage: a.sample_message ?? "",
     privacyPolicyUrl: a.privacy_policy_url ?? "",
     termsUrl: a.terms_url ?? "",
-    monthlyVolume: a.monthly_volume_estimate ? String(a.monthly_volume_estimate) : "10,000",
+    monthlyVolume: a.monthly_volume_estimate ? normalizeTollfreeVolume(a.monthly_volume_estimate) : "10,000",
     notificationEmail: a.contact_email ?? "",
   };
 }
@@ -259,17 +268,17 @@ function TollfreeVerificationPage() {
 
   const submitMut = useMutation({
     // Registrations go to the business's own dedicated toll-free line (separate sub-account per business).
-    mutationFn: (f: any) => requestLine({ data: {
+    mutationFn: (f: WizardForm) => requestLine({ data: parseDedicatedLineRegistration({
       businessName: f.legalEntityName, website: f.websiteUrl,
       ein: f.businessRegistrationNumber || "",
       street: [f.addressLine1, f.addressLine2].filter(Boolean).join(", "), city: f.city, state: f.state,
       postalCode: f.zip, country: f.businessCountry || "US",
       contactFirstName: f.contactFirstName, contactLastName: f.contactLastName, contactEmail: f.contactEmail,
-      contactPhone: String(f.contactPhone).trim().startsWith("+") ? "+" + String(f.contactPhone).replace(/\D/g, "") : (f.contactPhoneCountry || "+1") + String(f.contactPhone).replace(/\D/g, ""),
+      contactPhone: registrationPhone(f.contactPhoneCountry || "+1", f.contactPhone),
       privacyUrl: f.privacyPolicyUrl, termsUrl: f.termsUrl, optInImageUrl: f.proofOfOptInUrl,
       useCaseSummary: f.useCaseDescription, sampleMessage: f.sampleMessage,
       monthlyVolume: f.monthlyVolume,
-    } }),
+    }) }),
     onSuccess: (res: any) => {
       toast.success(res?.status === "active" ? "Your number is approved and ready." : "Submitted. The carrier usually replies within a few business days.");
       qc.invalidateQueries({ queryKey: ["tollfree-verification"] });
