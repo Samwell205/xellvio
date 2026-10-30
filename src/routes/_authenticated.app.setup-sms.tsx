@@ -138,7 +138,7 @@ function SetupSmsPage() {
               <MessageSquareText className="size-8 text-primary" /> Set up SMS
             </h1>
             <p className="text-muted-foreground">
-              Choose how your business appears on customers' phones. UK Sender IDs go live instantly;
+              Choose how your business appears on customers' phones. Sender IDs outside the US & Canada go live instantly;
               some countries need a one-time registration that we file for you.
             </p>
           </div>
@@ -336,7 +336,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
           </p>
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 text-success px-3 py-1 text-xs font-semibold">
-          <CheckCircle2 className="size-3.5" /> United Kingdom: live instantly
+          <CheckCircle2 className="size-3.5" /> All countries except US & Canada: live instantly
         </span>
       </div>
       <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -493,8 +493,9 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
               </span>{" "}
               (Kuwait, UAE, Saudi Arabia, Nigeria, India, etc.) need a one-time carrier
               registration. Save your Sender ID above, then pick the country here — we file the
-              registration for you. Approval typically takes 3–10 business days. The United
-              Kingdom needs no registration: add it and save, and your name is used straight away.
+              registration for you. Approval typically takes 3–10 business days. Every other
+              country (outside the US & Canada) needs no registration: add it and save, and your
+              name is used straight away.
             </p>
             {countries.length > 0 && (
               <div className="flex flex-wrap gap-2">
