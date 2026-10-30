@@ -106,7 +106,7 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
           status = "verified";
         } else {
           const alpha = await createAlphanumericSenderId({
-            messagingProfileId,
+            messagingProfileId: await getMessagingProfileId(),
             senderId: data.senderId,
             isoCountryCode: cc,
           });
