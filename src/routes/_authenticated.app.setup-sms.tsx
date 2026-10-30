@@ -138,7 +138,7 @@ function SetupSmsPage() {
               <MessageSquareText className="size-8 text-primary" /> Set up SMS
             </h1>
             <p className="text-muted-foreground">
-              Choose how your business appears on customers' phones. UK Sender IDs go live instantly;
+              Choose how your business appears on customers' phones. Sender IDs outside the US & Canada go live instantly;
               some countries need a one-time registration that we file for you.
             </p>
           </div>
