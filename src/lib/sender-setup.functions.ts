@@ -62,6 +62,7 @@ export const refreshMyVerificationStatus = createServerFn({ method: "POST" })
   });
 
 const UK_ROUTE_COUNTRIES = new Set(["GB", "GG", "JE", "IM"]);
+const US_CA_COUNTRIES = new Set(["US", "CA"]);
 
 const CustomSenderInput = z.object({
   countries: z.array(z.string().length(2)).min(1),
@@ -82,6 +83,7 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     const { ensureMessagingProfileForAccount, createAlphanumericSenderId } = await import("./telnyx.server");
     const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } = await import("./countries");
     const { sinchConfigured } = await import("./sinch.server");
+    const { infobipConfigured } = await import("./infobip.server");
     // UK-route countries send via Sinch and never touch Telnyx; only resolve a
     // Telnyx messaging profile lazily when a country actually needs it, so a
     // blocked Telnyx account can't break UK sender ID setup.
@@ -101,9 +103,13 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
       let alphaSenderId: string | null = null;
       let telnyxError: string | null = null;
       try {
-        if (UK_ROUTE_COUNTRIES.has(cc) && sinchConfigured()) {
-          // UK route shows the Sender ID directly; no carrier pre-registration.
-          status = "verified";
+        if (
+          (UK_ROUTE_COUNTRIES.has(cc) && sinchConfigured()) ||
+          (!US_CA_COUNTRIES.has(cc) && !UK_ROUTE_COUNTRIES.has(cc) && infobipConfigured())
+        ) {
+          // Non-US/CA routes (Sinch for UK, Infobip elsewhere) never touch Telnyx.
+          // Open countries go live instantly; registration countries stay submitted.
+          status = needsReg ? "submitted" : "verified";
         } else {
           const alpha = await createAlphanumericSenderId({
             messagingProfileId: await getMessagingProfileId(),
