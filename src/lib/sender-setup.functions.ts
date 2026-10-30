@@ -86,7 +86,7 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     // Telnyx messaging profile lazily when a country actually needs it, so a
     // blocked Telnyx account can't break UK sender ID setup.
     let messagingProfileId: string | null = null;
-    const getMessagingProfileId = async () => {
+    const getMessagingProfileId = async (): Promise<string> => {
       if (!messagingProfileId) messagingProfileId = await ensureMessagingProfileForAccount(accountId);
       return messagingProfileId;
     };
