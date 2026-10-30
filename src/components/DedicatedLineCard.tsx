@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { getMyDedicatedLine, requestDedicatedLine } from "@/lib/twilio-lines.functions";
+import { parseDedicatedLineRegistration } from "@/lib/tollfree-registration";
 
 const VOLUMES = ["1,000", "10,000", "100,000", "250,000", "500,000"] as const;
 
@@ -27,7 +28,7 @@ export function DedicatedLineCard() {
   const submit = useMutation({
     mutationFn: () => {
       const [first = "", ...rest] = String(p?.full_name ?? "").split(" ");
-      return reqFn({ data: {
+      return reqFn({ data: parseDedicatedLineRegistration({
         businessName: v("businessName", p?.legal_business_name ?? ""), website: v("website", p?.website_url ?? ""),
         ein: v("ein", p?.business_reg_number ?? ""), street: v("street"), city: v("city"), state: v("state"),
         postalCode: v("postalCode"), country: v("country", "US"),
@@ -36,8 +37,8 @@ export function DedicatedLineCard() {
         privacyUrl: v("privacyUrl", p?.privacy_policy_url ?? ""), termsUrl: v("termsUrl", p?.terms_url ?? ""),
         optInImageUrl: v("optInImageUrl", p?.opt_in_screenshot_url ?? ""),
         useCaseSummary: v("useCaseSummary", p?.use_case_description ?? ""), sampleMessage: v("sampleMessage", p?.sample_message ?? ""),
-        monthlyVolume: v("monthlyVolume", "10,000") as any,
-      } });
+        monthlyVolume: v("monthlyVolume", "10,000"),
+      }) });
     },
     onSuccess: () => { toast.success("Request submitted. Carrier review usually takes a few days."); setOpen(false); qc.invalidateQueries({ queryKey: ["dedicated-line"] }); },
     onError: (e: any) => {
