@@ -82,7 +82,14 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     const { ensureMessagingProfileForAccount, createAlphanumericSenderId } = await import("./telnyx.server");
     const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } = await import("./countries");
     const { sinchConfigured } = await import("./sinch.server");
-    const messagingProfileId = await ensureMessagingProfileForAccount(accountId);
+    // UK-route countries send via Sinch and never touch Telnyx; only resolve a
+    // Telnyx messaging profile lazily when a country actually needs it, so a
+    // blocked Telnyx account can't break UK sender ID setup.
+    let messagingProfileId: string | null = null;
+    const getMessagingProfileId = async (): Promise<string> => {
+      if (!messagingProfileId) messagingProfileId = await ensureMessagingProfileForAccount(accountId);
+      return messagingProfileId;
+    };
     const results: Array<{ cc: string; status: string }> = [];
     for (const raw of data.countries) {
       const cc = raw.toUpperCase();
@@ -99,7 +106,7 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
           status = "verified";
         } else {
           const alpha = await createAlphanumericSenderId({
-            messagingProfileId,
+            messagingProfileId: await getMessagingProfileId(),
             senderId: data.senderId,
             isoCountryCode: cc,
           });
