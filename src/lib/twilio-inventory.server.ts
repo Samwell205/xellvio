@@ -54,7 +54,7 @@ export async function syncTwilioInventory() {
       const verification = matches.find(v => isApprovedVerification(v.status)) ?? matches[0];
       const line = (lines ?? []).find((l: any) => l.phone_sid === number.sid && l.subaccount_sid === scope.sid && l.status !== 'released');
       const { data: prior } = await database.from('twilio_verified_inventory').select('phone_sid').eq('phone_sid', number.sid).maybeSingle();
-      const row = { phone_sid: number.sid, phone_number: number.phone_number, owner_account_sid: scope.sid, verification_sid: verification?.sid ?? null, verification_status: isApprovedVerification(verification?.status) ? 'verified' : 'pending', synced_at: new Date().toISOString(), ...(line ? { assigned_account_id: line.account_id, assignment_state: 'assigned' } : {}) };
+      const row = { phone_sid: number.sid, phone_number: number.phone_number, owner_account_sid: scope.sid, verification_sid: verification?.sid ?? null, verification_status: isApprovedVerification(verification?.status) ? 'verified' : 'pending', synced_at: new Date().toISOString(), ...(scope.sid === parent.sid ? { available: false } : {}), ...(line ? { assigned_account_id: line.account_id, assignment_state: 'assigned' } : {}) };
       const { error } = prior ? await database.from('twilio_verified_inventory').update(row).eq('phone_sid', number.sid) : await database.from('twilio_verified_inventory').insert(row);
       if (error) throw new Error(error.message);
       synced++;
@@ -68,7 +68,8 @@ export async function listTwilioInventory() {
   if (error) throw new Error(error.message);
   const ids = [...new Set((data ?? []).map((n: any) => n.assigned_account_id).filter(Boolean))];
   const { data: accounts } = ids.length ? await database.from('accounts').select('id,email,legal_business_name').in('id', ids) : { data: [] };
-  return (data ?? []).map((n: any) => ({ ...n, assigned_to: accounts?.find((a: any) => a.id === n.assigned_account_id) ?? null }));
+  const parent = credentials();
+  return (data ?? []).map((n: any) => ({ ...n, platform_reserved: n.owner_account_sid === parent.sid, available: n.available && n.owner_account_sid !== parent.sid, assigned_to: accounts?.find((a: any) => a.id === n.assigned_account_id) ?? null }));
 }
 export async function assignTwilioInventory(accountId: string, phone?: string, price = 0) {
   const database = await db();
@@ -76,7 +77,15 @@ export async function assignTwilioInventory(accountId: string, phone?: string, p
   const { data: business, error: businessError } = await database.from('accounts').select('id,onboarding_status,sending_suspended_at').eq('id', accountId).single();
   if (businessError || !business) throw new Error('Business not found.');
   if (business.onboarding_status === 'suspended' || business.sending_suspended_at) throw new Error('Sending is on hold for this business.');
-  const { data: reserved, error } = await database.rpc('reserve_twilio_inventory', { _account_id: accountId, _phone_number: phone ?? null, _price: price });
+  // Check before reservation, which may debit a purchase. Never reserve a parent-account number.
+  let candidateQuery = database.from('twilio_verified_inventory').select('phone_number,owner_account_sid');
+  if (phone) candidateQuery = candidateQuery.eq('phone_number', phone);
+  else candidateQuery = candidateQuery.neq('owner_account_sid', parent.sid).eq('available', true).eq('verification_status', 'verified').or(`assigned_account_id.is.null,assigned_account_id.eq.${accountId}`).order('created_at').limit(1);
+  const { data: candidate, error: candidateError } = await candidateQuery.maybeSingle();
+  if (candidateError) throw new Error(candidateError.message);
+  if (!candidate) throw new Error('No unassigned verified number is available.');
+  if (!candidate.owner_account_sid || candidate.owner_account_sid === parent.sid) throw new Error('This number is reserved for the platform and cannot be assigned to a business.');
+  const { data: reserved, error } = await database.rpc('reserve_twilio_inventory', { _account_id: accountId, _phone_number: candidate.phone_number, _price: price });
   if (error) throw new Error(error.message);
   const row = Array.isArray(reserved) ? reserved[0] : reserved;
   if (!row) throw new Error('Number reservation failed.');

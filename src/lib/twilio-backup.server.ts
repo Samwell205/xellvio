@@ -17,7 +17,8 @@ export async function twilioBackupState(): Promise<{ enabled: boolean; from: str
     .in("key", ["twilio_backup_enabled", "twilio_backup_from"]);
   const m = new Map((data ?? []).map((r: any) => [r.key, String(r.value ?? "").replace(/"/g, "")]));
   const from = m.get("twilio_backup_from") || null;
-  cache = { at: Date.now(), enabled: twilioConfigured() && m.get("twilio_backup_enabled") === "true" && Boolean(from), from };
+  // Main-account numbers are platform-only; tenants must use their own approved subaccount line.
+  cache = { at: Date.now(), enabled: false, from };
   return cache;
 }
 
@@ -26,7 +27,8 @@ export function twilioStatusUrl(): string {
 }
 
 export async function sendViaTwilio(opts: { to: string; text: string; from: string; timeoutMs?: number }): Promise<{ id: string; parts: number }> {
-  const sid = process.env.TWILIO_ACCOUNT_SID!;
+  throw new Error('Platform-reserved numbers cannot send business messages. Use an assigned approved number.');
+  const sid = process.env.TWILIO_ACCOUNT_SID;
   const basic = Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64");
   const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
     method: "POST",
