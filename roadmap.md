@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Main-account number protection
-- [ ] Audit whether any tenant is assigned a main-account number; replace only affected assignments
-- [ ] Exclude main-account numbers from tenant assignment, purchase and sending; test safeguards
+- [x] Carrier lookup confirms main account holds only +18664725941; no tenant line or sender uses it, so no replacement needed
+- [x] Main-account inventory unavailable; assignment/purchase precheck and sending guards passed 18 tests. Admin visual check blocked by persistent Loading analytics
 
 ## Current tenant assignment conflict
 - [x] Repair approved number ownership constraints without moving numbers; 13 ownership/assignment tests passed
