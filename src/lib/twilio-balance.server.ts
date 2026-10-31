@@ -1,4 +1,4 @@
-// Server-only Telnyx balance check + persistence + email alerts.
+// Server-only funded Twilio account balance + persistence + email alerts.
 
 import { ADMIN_NOTIFY_EMAIL } from "./admin-notify.server";
 
@@ -28,25 +28,25 @@ export async function checkTwilioBalanceAndAlert(): Promise<CheckResult> {
     .in("key", [
       "twilio_low_balance_threshold_usd",
       "twilio_critical_balance_threshold_usd",
-      "telnyx_alert_email",
-      "telnyx_alerts_enabled",
+      "twilio_alert_email",
+      "twilio_alerts_enabled",
     ]);
 
   const thresholdLow = Number(readSetting(settingsRows, "twilio_low_balance_threshold_usd", 20));
   const thresholdCritical = Number(readSetting(settingsRows, "twilio_critical_balance_threshold_usd", 5));
-  const alertEmail = String(readSetting(settingsRows, "telnyx_alert_email", ADMIN_NOTIFY_EMAIL));
-  const alertsEnabled = Boolean(readSetting(settingsRows, "telnyx_alerts_enabled", true));
+  const alertEmail = String(readSetting(settingsRows, "twilio_alert_email", ADMIN_NOTIFY_EMAIL)) || ADMIN_NOTIFY_EMAIL;
+  const alertsEnabled = Boolean(readSetting(settingsRows, "twilio_alerts_enabled", true));
 
   const checkedAt = new Date().toISOString();
-  const { getBalance } = await import("./telnyx.server");
-  const bal = await getBalance();
+  const { fetchTwilioAccountBalance } = await import("./twilio-account-balance.server");
+  const bal = await fetchTwilioAccountBalance();
 
   if (!bal.ok) {
     const snap = {
       balance: 0,
       currency: "USD",
       status: "error" as const,
-      error_message: bal.error ?? "Telnyx balance fetch failed",
+      error_message: bal.error ?? "Twilio balance fetch failed",
       alerted: false,
       checked_at: checkedAt,
     };
@@ -78,7 +78,7 @@ export async function checkTwilioBalanceAndAlert(): Promise<CheckResult> {
       });
       alerted = true;
     } catch (e) {
-      console.error("[telnyx-balance] failed to enqueue alert email", e);
+      console.error("[twilio-balance] failed to enqueue alert email", e);
     }
   }
 
@@ -96,23 +96,23 @@ async function enqueueLowBalanceEmail(args: {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: args.currency });
   const subject = args.status === "critical"
-    ? `URGENT: Telnyx balance critical — ${fmt(args.balance)}`
-    : `Telnyx balance low — ${fmt(args.balance)}`;
+    ? `URGENT: Twilio balance critical — ${fmt(args.balance)}`
+    : `Twilio balance low — ${fmt(args.balance)}`;
   const html = `
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111;">
       <h1 style="font-size:20px;margin:0 0 12px;">${subject}</h1>
-      <p>Your Telnyx account balance has dropped below your <strong>${args.status}</strong> threshold.</p>
+      <p>Your Twilio account balance has dropped below your <strong>${args.status}</strong> threshold.</p>
       <p>Current balance: <strong>${fmt(args.balance)}</strong> · Low: ${fmt(args.thresholdLow)} · Critical: ${fmt(args.thresholdCritical)}</p>
-      <p><a href="https://portal.telnyx.com/#/app/billing/payments" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600;">Top up Telnyx</a></p>
+      <p><a href="https://console.twilio.com/" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600;">Top up Twilio</a></p>
     </div>`;
-  const text = `${subject}\n\nCurrent: ${fmt(args.balance)}\nLow: ${fmt(args.thresholdLow)}\nCritical: ${fmt(args.thresholdCritical)}\n\nTop up: https://portal.telnyx.com/#/app/billing/payments`;
+  const text = `${subject}\n\nCurrent: ${fmt(args.balance)}\nLow: ${fmt(args.thresholdLow)}\nCritical: ${fmt(args.thresholdCritical)}\n\nTop up: https://console.twilio.com/`;
   const { enqueueRawBrandedEmail } = await import("@/lib/email/send-internal.server");
   await enqueueRawBrandedEmail({
     to: args.to,
     subject,
     html,
     text,
-    label: "telnyx_low_balance_alert",
-    idempotencyKey: `telnyx-balance-${args.status}-${new Date().toISOString().slice(0, 13)}`,
+    label: "twilio_low_balance_alert",
+    idempotencyKey: `twilio-balance-${args.status}-${new Date().toISOString().slice(0, 13)}`,
   });
 }

@@ -45,7 +45,14 @@ import { simulateNowPaymentsIpn } from "@/lib/nowpayments-admin.functions";
 import { BalanceCard } from "@/components/BalanceCard";
 
 export const Route = createFileRoute("/_authenticated/admin/billing")({
-  head: () => ({ meta: [{ title: "Admin · Billing — Xellvio" }] }),
+  head: () => ({ meta: [
+    { title: "Admin · Billing — Xellvio" },
+    { name: "description", content: "Manage Xellvio billing, Twilio account balance, credit packs and payment reviews." },
+    { property: "og:title", content: "Admin · Billing — Xellvio" },
+    { property: "og:description", content: "Manage Xellvio billing, Twilio account balance, credit packs and payment reviews." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: AdminBillingPage,
 });
 

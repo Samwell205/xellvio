@@ -29,14 +29,14 @@ export function BalanceCard() {
 
   const q = useQuery({
     queryKey: ["twilio-balance"],
-    queryFn: () => getFn(),
+    queryFn: async () => { await refreshFn(); return getFn(); },
     refetchInterval: 60_000,
   });
 
   const refresh = useMutation({
     mutationFn: () => refreshFn(),
     onSuccess: () => {
-      toast.success("SMS balance refreshed");
+      toast.success("Twilio balance refreshed");
       qc.invalidateQueries({ queryKey: ["twilio-balance"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -118,7 +118,7 @@ export function BalanceCard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Phone className="size-5" />
-          <h3 className="font-semibold">SMS account balance</h3>
+          <h3 className="font-semibold">Twilio account balance</h3>
         </div>
         <Button
           size="sm"
@@ -135,7 +135,7 @@ export function BalanceCard() {
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">Current balance</div>
           <div className="text-3xl font-extrabold tabular-nums">
-            {latest ? formatMoney(balance, currency) : "—"}
+            {latest && status !== "error" ? formatMoney(balance, currency) : "—"}
           </div>
         </div>
         <StatusBadge status={status} />
@@ -152,7 +152,7 @@ export function BalanceCard() {
       </div>
 
       <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-        <strong>Tip:</strong> Enable Auto-Recharge with your SMS provider so your account is topped up automatically when your balance drops below your chosen threshold. This card is your safety net in case Auto-Recharge fails or is off.
+        <strong>Tip:</strong> Enable Auto-Recharge in Twilio to keep the account funded. This balance covers its number sub-accounts.
       </div>
 
       {pausedCount > 0 && (
