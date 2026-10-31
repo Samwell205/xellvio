@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/select";
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 import { sendTestSms } from "@/lib/sms.functions";
+import { getMyDedicatedLine } from "@/lib/twilio-lines.functions";
 import {
   submitNumberRequest,
   listMyNumberRequests,
@@ -96,6 +97,8 @@ function SetupSmsPage() {
     queryFn: () => assetsFn(),
     refetchInterval: 30_000,
   });
+  const lineFn = useServerFn(getMyDedicatedLine);
+  const lineQ = useQuery({ queryKey: ["dedicated-line"], queryFn: () => lineFn(), refetchInterval: 60_000 });
 
   const refreshMut = useMutation({
     mutationFn: () => refresh(),
@@ -110,7 +113,9 @@ function SetupSmsPage() {
     );
   const a = account.data;
   const list = (assets.data ?? []) as any[];
-  const tfReady = list.some((x) => x.sender_kind === "toll_free" && x.verification_status === "verified");
+  const tfReady =
+    list.some((x) => x.sender_kind === "toll_free" && x.verification_status === "verified") ||
+    (lineQ.data as any)?.line?.status === "active";
   const senderIdAsset = list.find((x) => x.sender_kind === "sender_id");
   const readyCountries = list.filter((x) => x.verification_status === "verified").map((x) => x.country_code);
   const pending = list.filter((x) => ["submitted", "in_review", "requires_registration"].includes(x.verification_status));
@@ -1734,13 +1739,18 @@ function TollfreeSetupStep({
   const tf = useQuery({ queryKey: ["tollfree-verification"], queryFn: () => loadTf() });
   const asset = (tf.data as any)?.asset ?? null;
   const altSender = (tf.data as any)?.altVerifiedSender ?? null;
+  const lineFn = useServerFn(getMyDedicatedLine);
+  const lineQ = useQuery({ queryKey: ["dedicated-line"], queryFn: () => lineFn(), refetchInterval: 60_000 });
+  const lineStatus: string | null = (lineQ.data as any)?.line?.status ?? null;
   // An admin-assigned verified number has no carrier verification ID of its own,
   // but it is still fully approved — trust "verified" on its own. A verified
   // US/CA local (10DLC) number assigned by an admin also clears US/CA sending.
   const status: string | null =
-    asset?.verification_status === "verified" || altSender
+    asset?.verification_status === "verified" || altSender || lineStatus === "active"
       ? "verified"
-      : asset?.telnyx_verification_id
+      : lineStatus === "verification_pending"
+        ? "in_review"
+        : asset?.telnyx_verification_id
         ? (asset?.verification_status ?? null)
         : null;
 
