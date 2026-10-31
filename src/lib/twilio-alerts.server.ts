@@ -4,8 +4,8 @@
 // so we keep a working implementation that sends via Telnyx.
 
 export async function getMasterTwilioBalance(): Promise<{ balance: number; currency: string; ok: boolean; error?: string }> {
-  const { getBalance } = await import("./telnyx.server");
-  return getBalance();
+  const { fetchTwilioAccountBalance } = await import("./twilio-account-balance.server");
+  return fetchTwilioAccountBalance();
 }
 
 export async function getBalanceBuffer(): Promise<number> {

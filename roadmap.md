@@ -1,5 +1,9 @@
 # Roadmap
 
+## Active carrier balance
+- [ ] Replace the obsolete balance lookup with the funded Twilio account and align saved alert settings
+- [ ] Verify the admin balance refresh and run account-balance regressions without sending SMS or charging
+
 ## Toll-free purchase safeguards
 - [x] Use eligible inventory for offers and both paid checkouts; reject duplicate purchases
 - [x] Record assignment failures for manual payment review and alert admins across card/crypto paths
