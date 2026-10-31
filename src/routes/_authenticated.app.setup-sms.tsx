@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   CheckCircle2,
@@ -215,7 +215,7 @@ function SetupSmsPage() {
             </div>
           </Card>
           <Card className="p-5 space-y-3 text-sm">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Countries ready</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your Sender IDs</div>
             {senderRows.length === 0 ? (
               <p className="text-muted-foreground">No Sender IDs set up yet.</p>
             ) : (
