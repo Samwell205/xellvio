@@ -118,6 +118,7 @@ function SetupSmsPage() {
     (lineQ.data as any)?.line?.status === "active";
   const senderIdAsset = list.find((x) => x.sender_kind === "sender_id");
   const readyCountries = list.filter((x) => x.verification_status === "verified").map((x) => x.country_code);
+  const senderRows = list.filter((x) => x.sender_kind === "sender_id");
   const pending = list.filter((x) => ["submitted", "in_review", "requires_registration"].includes(x.verification_status));
   const steps = [
     { label: "US & Canada number", done: tfReady, hint: tfReady ? "Approved" : "Toll-free verification" },
@@ -215,21 +216,32 @@ function SetupSmsPage() {
           </Card>
           <Card className="p-5 space-y-3 text-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Countries ready</div>
-            {readyCountries.length === 0 ? (
-              <p className="text-muted-foreground">No countries live yet.</p>
+            {senderRows.length === 0 ? (
+              <p className="text-muted-foreground">No Sender IDs set up yet.</p>
             ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {[...new Set(readyCountries)].map((cc) => (
-                  <Badge key={cc} variant="secondary" className="gap-1">
-                    <CheckCircle2 className="size-3 text-success" /> {COUNTRIES.find((c) => c.code === cc)?.name ?? cc}
-                  </Badge>
-                ))}
-              </div>
-            )}
-            {pending.length > 0 && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Clock className="size-3.5" /> {pending.length} in review
-              </p>
+              <ul className="divide-y divide-border">
+                {senderRows.map((r) => {
+                  const live = r.verification_status === "verified";
+                  const label = live ? "Live" : r.verification_status === "requires_registration" ? "Needs registration" : "In review";
+                  return (
+                    <li key={r.country_code} className="flex items-center gap-2 py-2">
+                      {live ? <CheckCircle2 className="size-4 shrink-0 text-success" /> : <Clock className="size-4 shrink-0 text-muted-foreground" />}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">{COUNTRIES.find((c) => c.code === r.country_code)?.name ?? r.country_code}</div>
+                        <div className="truncate text-xs text-muted-foreground">{r.phone_number || "—"} · {label}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => window.dispatchEvent(new CustomEvent("xv:edit-sender", { detail: { cc: r.country_code, senderId: r.phone_number } }))}
+                      >
+                        Change
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </Card>
           <Card className="p-5 space-y-2 text-sm">
@@ -297,6 +309,30 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
     existingCountries.length ? existingCountries : ["NG"],
   );
   const [busy, setBusy] = useState(false);
+  const senderInputRef = useRef<HTMLInputElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const syncedRef = useRef(false);
+  // Assets load after mount: show the saved Sender ID and its countries once they arrive.
+  useEffect(() => {
+    if (syncedRef.current || existingCountries.length === 0) return;
+    syncedRef.current = true;
+    setSenderId(existingSender);
+    setCountries(existingCountries);
+  }, [existingSender, existingCountries.join(",")]);
+  // "Change" from the country list: edit just that country's Sender ID.
+  useEffect(() => {
+    const onEdit = (e: Event) => {
+      const { cc, senderId: current } = (e as CustomEvent).detail ?? {};
+      if (!cc) return;
+      syncedRef.current = true;
+      setSenderId(current ?? "");
+      setCountries([cc]);
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setTimeout(() => senderInputRef.current?.focus(), 400);
+    };
+    window.addEventListener("xv:edit-sender", onEdit);
+    return () => window.removeEventListener("xv:edit-sender", onEdit);
+  }, []);
   const [infoCountry, setInfoCountry] = useState<string | null>(null);
   const [regCountry, setRegCountry] = useState<string | null>(null);
 
