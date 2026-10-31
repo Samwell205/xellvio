@@ -45,9 +45,18 @@ export async function lineTokenFor(accountSid: string): Promise<string | null> {
   if (accountSid === process.env.TWILIO_ACCOUNT_SID) return process.env.TWILIO_AUTH_TOKEN ?? null;
   const db = await admin();
   const { data } = await db.from("tenant_twilio_lines").select("auth_token_enc").eq("subaccount_sid", accountSid).maybeSingle();
-  if (!data?.auth_token_enc) return null;
-  const { data: tok } = await db.rpc("decrypt_twilio_token", { _cipher: data.auth_token_enc });
-  return tok ?? null;
+  if (data?.auth_token_enc) {
+    const { data: tok } = await db.rpc("decrypt_twilio_token", { _cipher: data.auth_token_enc });
+    if (tok) return tok;
+  }
+  // Stored token unreadable: the parent account can always read its subaccount's token.
+  try {
+    const a = await tw(`${API}/Accounts/${accountSid}.json`, parentAuth());
+    return a?.auth_token ?? null;
+  } catch (e) {
+    console.error("[twilio-lines] subaccount token lookup failed", e);
+    return null;
+  }
 }
 
 export function lineWebhookBase(): string {
