@@ -95,16 +95,16 @@ export async function assignTwilioInventory(accountId: string, phone?: string, p
     const account = await request(`${API}/Accounts/${sid}.json`, auth(parent.sid, parent.token));
     const token: string = account.auth_token;
     if (!token) throw new Error('The number account could not be authenticated.');
-    const { data: encrypted, error: encError } = await database.rpc('encrypt_twilio_token', { _plain: token });
-    if (encError) throw new Error(encError.message);
-    const { error: subError } = await database.from('tenant_twilio_lines').update({ subaccount_sid: sid, auth_token_enc: encrypted }).eq('account_id', accountId);
+    // Use lineTokenFor's existing parent-authenticated lookup for this sub-account.
+    // Do not require optional database encryption or persist a plaintext token.
+    const { error: subError } = await database.from('tenant_twilio_lines').update({ subaccount_sid: sid, auth_token_enc: null }).eq('account_id', accountId);
     if (subError) throw new Error(subError.message);
     await request(`${API}/Accounts/${sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token), { SmsUrl: 'https://xellvio.com/api/public/twilio/inbound', SmsMethod: 'POST' });
     const verifications = await pages(`${TFV}?PageSize=50`, auth(sid, token), 'verifications');
     const verified = verifications.find(v => v.tollfree_phone_number_sid === row.phone_sid && isApprovedVerification(v.status));
     const status = verified ? 'active' : 'verification_pending';
     const now = new Date(); const renews = new Date(now); renews.setMonth(renews.getMonth() + 1);
-    const { error: saveError } = await database.from('tenant_twilio_lines').update({ phone_number: row.phone_number, phone_sid: row.phone_sid, verification_sid: verified?.sid ?? null, status, status_detail: verified ? null : 'Number moved to your account; approval must be confirmed there before sending.', billing_status: 'current', renews_at: line.renews_at ?? renews.toISOString(), updated_at: now.toISOString() }).eq('account_id', accountId);
+    const { error: saveError } = await database.from('tenant_twilio_lines').update({ phone_number: row.phone_number, phone_sid: row.phone_sid, verification_sid: verified?.sid ?? null, status, status_detail: verified ? null : 'Number approval could not be confirmed yet. Sending remains unavailable until approval is confirmed.', billing_status: 'current', renews_at: line.renews_at ?? renews.toISOString(), updated_at: now.toISOString() }).eq('account_id', accountId);
     if (saveError) throw new Error(saveError.message);
     for (const country of ['US', 'CA', 'PR']) {
       const { error: assetError } = await database.from('sender_assets').upsert({ account_id: accountId, country_code: country, sender_kind: 'toll_free', phone_number: row.phone_number, is_shared: false, verification_status: verified ? 'verified' : 'pending', verified_at: verified ? now.toISOString() : null, last_synced_at: now.toISOString(), telnyx_phone_number_id: null, telnyx_messaging_profile_id: null }, { onConflict: 'account_id,country_code,sender_kind' });

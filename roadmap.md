@@ -1,5 +1,10 @@
 # Roadmap
 
+## Assignment repair
+- [ ] Repair the interrupted assignment without moving the approved number or charging again
+- [ ] Add searchable tenant email selection and verify it in admin
+- [ ] Resume the owner's selected assignment and check saved approval/ownership
+
 ## Toll-free assignment isolation
 - [x] Explain the rejected saved connection and verify which connection the existing number setup uses
 - [x] Audit verified inventory, existing assigned numbers and business sub-accounts: seven approved Twilio numbers across four sub-accounts, one linked business
