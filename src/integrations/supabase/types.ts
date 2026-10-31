@@ -7371,6 +7371,7 @@ export type Database = {
           created_at: string
           last_renewal_error: string | null
           monthly_fee_usd: number
+          notified_status: string | null
           phone_number: string | null
           phone_sid: string | null
           renews_at: string | null
@@ -7388,6 +7389,7 @@ export type Database = {
           created_at?: string
           last_renewal_error?: string | null
           monthly_fee_usd?: number
+          notified_status?: string | null
           phone_number?: string | null
           phone_sid?: string | null
           renews_at?: string | null
@@ -7405,6 +7407,7 @@ export type Database = {
           created_at?: string
           last_renewal_error?: string | null
           monthly_fee_usd?: number
+          notified_status?: string | null
           phone_number?: string | null
           phone_sid?: string | null
           renews_at?: string | null
