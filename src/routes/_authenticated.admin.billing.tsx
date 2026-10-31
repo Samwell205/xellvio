@@ -126,7 +126,7 @@ function TenantsBilling() {
           className="max-w-sm"
         />
         <span className="text-xs text-muted-foreground">
-          {rows.length} tenant{rows.length === 1 ? "" : "s"}
+          {rows.length} tenant{rows.length === 1 ? "" : "s"} · Live balances / saved ledger totals
         </span>
       </div>
       {list.isLoading ? (

@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -157,13 +156,13 @@ export function BalanceCard() {
       </div>
 
       {pausedCount > 0 && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-3 flex items-center gap-3">
-          <PauseCircle className="size-5 text-amber-600 shrink-0" />
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-3 flex items-center gap-3">
+          <PauseCircle className="size-5 text-warning shrink-0" />
           <div className="flex-1 text-sm">
-            <div className="font-semibold text-amber-900 dark:text-amber-200">
+            <div className="font-semibold text-foreground">
               {pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused — waiting for funds
             </div>
-            <div className="text-xs text-amber-800/80 dark:text-amber-200/80">
+            <div className="text-xs text-muted-foreground">
               They'll auto-resume on the next balance check. Click below to resume immediately once funded.
             </div>
           </div>
@@ -228,9 +227,9 @@ export function BalanceCard() {
 
 function StatusBadge({ status }: { status: "healthy" | "low" | "critical" | "error" }) {
   if (status === "healthy")
-    return <Badge className="gap-1 bg-emerald-600 hover:bg-emerald-600"><CheckCircle2 className="size-3" />Healthy</Badge>;
+    return <Badge className="gap-1 bg-success text-success-foreground hover:bg-success"><CheckCircle2 className="size-3" />Healthy</Badge>;
   if (status === "low")
-    return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500"><AlertTriangle className="size-3" />Low</Badge>;
+    return <Badge className="gap-1 bg-warning text-warning-foreground hover:bg-warning"><AlertTriangle className="size-3" />Low</Badge>;
   if (status === "critical")
     return <Badge variant="destructive" className="gap-1"><AlertTriangle className="size-3" />Critical</Badge>;
   return <Badge variant="outline" className="gap-1"><XCircle className="size-3" />Error</Badge>;
@@ -260,7 +259,7 @@ export function LowBalanceBanner() {
           ? "border-destructive/40 bg-destructive/10 text-destructive"
           : status === "error"
           ? "border-muted-foreground/30 bg-muted/40 text-muted-foreground"
-          : "border-amber-500/40 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+          : "border-warning/40 bg-warning/10 text-foreground"
       }`}
     >
       <AlertTriangle className="size-4 shrink-0" />

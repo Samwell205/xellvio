@@ -386,7 +386,7 @@ function FinancePage() {
                       <td className="py-2 pr-3 text-right">{num(t.messages)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.carrier_cost)}</td>
                       <td
-                        className={`py-2 pr-3 text-right ${Number(t.profit) >= 0 ? "text-emerald-500" : "text-destructive"}`}
+                        className={`py-2 pr-3 text-right ${Number(t.profit) >= 0 ? "text-success" : "text-destructive"}`}
                       >
                         {usd(t.profit)}
                       </td>
@@ -703,7 +703,7 @@ function FinancePage() {
                       <td className="text-right tabular-nums">{usd(m.true_cost)}</td>
                       <td
                         className={`text-right tabular-nums font-semibold ${
-                          Number(m.margin) < 0 ? "text-destructive" : "text-emerald-500"
+                          Number(m.margin) < 0 ? "text-destructive" : "text-success"
                         }`}
                       >
                         {usd(m.margin)}
@@ -766,7 +766,7 @@ function FinancePage() {
                       </td>
                       <td
                         className={`text-right tabular-nums ${
-                          r.below_cost ? "text-destructive font-semibold" : "text-emerald-500"
+                          r.below_cost ? "text-destructive font-semibold" : "text-success"
                         }`}
                       >
                         ${Number(r.current_margin).toFixed(5)}

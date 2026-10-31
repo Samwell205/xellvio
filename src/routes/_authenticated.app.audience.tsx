@@ -358,7 +358,7 @@ function AudiencePage() {
             Check phone types
             {(lineTypesQ.data?.unchecked ?? 0) > 0 ? ` (${lineTypesQ.data?.unchecked})` : ""}
           </Button>
-          <ManageListsDialog lists={listsQ.data ?? []} onDone={invalidateAll} />
+          <ManageListsDialog lists={listsQ.data ?? []} loading={listsQ.isLoading} failed={!!listsQ.error} onDone={invalidateAll} />
           <Button variant="outline" onClick={downloadTemplate}>
             <Download className="size-4 mr-1.5" />
             CSV template
@@ -642,7 +642,7 @@ function ConsentBadge({ status }: { status: ProfileRow["consent_status"] }) {
 
 /* ============================ Lists management ============================ */
 
-function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: () => void }) {
+function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactList[]; loading: boolean; failed: boolean; onDone: () => void }) {
   const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -853,7 +853,9 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
               )}
             </div>
             <div className="max-h-[45dvh] overflow-y-auto divide-y border-y">
-              {lists.length === 0 && <p className="text-sm text-muted-foreground">No lists yet.</p>}
+              {loading && <div className="space-y-3 py-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>}
+              {failed && <p role="alert" className="py-6 text-sm text-destructive">Lists could not be loaded. Close and try again.</p>}
+              {!loading && !failed && lists.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No lists yet.</p>}
               {lists.length > 0 && visibleLists.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No matching lists.</p>}
               {visibleLists.map((l) => (
                 <div
