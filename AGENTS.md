@@ -21,8 +21,7 @@
 - All-time finance reads use admin_report_cache.server.ts TTL + explicit recalculation, never full-history scans on page views.
 
 - Support tickets (support-tickets.server.ts) are the only support channel: forms, in-app and email replies create/append tickets; closed tickets never accept replies (a reply opens a linked ticket).
-- Screening/carrier-refusal pause rules live in src/lib/AGENTS.md; subdirectories may have their own AGENTS.md to read before changing files there.
-- Receipt recovery is lookup-only, bounded to six workers with stable ID cursors; accept exact matching final receipts, try the other server-owned connection only on 404, and keep unconfirmed distinct from failure. Never resend or change balances during recovery.
+- Screening/carrier-refusal and receipt-recovery rules live in src/lib/AGENTS.md; read subdirectory AGENTS.md before edits.
 - Voice rollout uses voice-rollout.server.ts verified identity gates for UI/RPC, relay and call tools; no admin bypass. Calendar is owner-only; paid activation still needs pricing, line approval and a pilot.
 - Assistant actions require server-generated call-scoped tokens and active-call, ownership and pricing checks; event signatures alone do not authenticate tool requests.
 - Voice uses shared pricing and allow-listed overrides. Owner-authorized transactional edits/deletion keep assistants separate; selected edits/switches require ended calls and reset pilot approval.
