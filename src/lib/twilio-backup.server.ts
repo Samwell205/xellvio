@@ -28,20 +28,6 @@ export function twilioStatusUrl(): string {
 
 export async function sendViaTwilio(opts: { to: string; text: string; from: string; timeoutMs?: number }): Promise<{ id: string; parts: number }> {
   throw new Error('Platform-reserved numbers cannot send business messages. Use an assigned approved number.');
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const basic = Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString("base64");
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-    method: "POST",
-    headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ To: opts.to, From: opts.from, Body: opts.text, StatusCallback: twilioStatusUrl() }),
-    signal: AbortSignal.timeout(opts.timeoutMs ?? 10000),
-  });
-  const j: any = await res.json().catch(() => ({}));
-  if (!res.ok || !j?.sid) {
-    console.error(`Backup route refused [${res.status}]: ${JSON.stringify(j).slice(0, 300)}`);
-    throw new Error("Sending is temporarily unavailable. Please contact support.");
-  }
-  return { id: j.sid, parts: Number(j.num_segments) || 1 };
 }
 
 /** Validates X-Twilio-Signature: base64(HMAC-SHA1(url + sorted key+value pairs)). */
