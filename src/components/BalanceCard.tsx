@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Phone, AlertTriangle, CheckCircle2, XCircle, PlayCircle, PauseCircle } from "lucide-react";
+import { RefreshCw, Phone, AlertTriangle, CheckCircle2, XCircle, PlayCircle, PauseCircle, Settings2, ChevronDown } from "lucide-react";
 import { getTwilioBalance, refreshTwilioBalance, updateTwilioBalanceSettings, resumePausedCampaignsNow, sendTestCapacityAlert } from "@/lib/twilio-balance.functions";
 
 function formatMoney(n: number, currency: string) {
@@ -26,6 +26,7 @@ export function BalanceCard() {
   const resumeFn = useServerFn(resumePausedCampaignsNow);
   const testFn = useServerFn(sendTestCapacityAlert);
   const qc = useQueryClient();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const q = useQuery({
     queryKey: ["twilio-balance"],
@@ -114,7 +115,7 @@ export function BalanceCard() {
   const pausedCount = q.data?.pausedCampaignCount ?? 0;
 
   return (
-    <Card className="p-5 space-y-5">
+    <section className="border-y bg-card px-5 py-6 space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Phone className="size-5" />
@@ -134,7 +135,7 @@ export function BalanceCard() {
       <div className="flex items-end gap-4">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">Current balance</div>
-          <div className="text-3xl font-extrabold tabular-nums">
+          <div className="text-4xl font-semibold tabular-nums">
             {latest && status !== "error" ? formatMoney(balance, currency) : "—"}
           </div>
         </div>
@@ -174,7 +175,8 @@ export function BalanceCard() {
       )}
 
       <div className="border-t pt-4 space-y-3">
-        <h4 className="font-medium text-sm">Alert settings</h4>
+        <Button variant="ghost" className="w-full justify-between" onClick={() => setSettingsOpen(!settingsOpen)} aria-expanded={settingsOpen}><span className="flex items-center gap-2"><Settings2 className="size-4" />Balance alerts & settings</span><ChevronDown className={`size-4 ${settingsOpen ? "rotate-180" : ""}`} /></Button>
+        {settingsOpen && <>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
             <Label htmlFor="lowT">Low threshold (USD)</Label>
@@ -218,8 +220,9 @@ export function BalanceCard() {
             {save.isPending ? "Saving..." : "Save settings"}
           </Button>
         </div>
+        </>}
       </div>
-    </Card>
+    </section>
   );
 }
 

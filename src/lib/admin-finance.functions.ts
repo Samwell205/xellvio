@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { withTimeoutOr } from "./server-timeout";
 
 type RefreshInput = { refresh?: boolean } | undefined;
 const refreshValidator = (d: RefreshInput) => ({ refresh: !!d?.refresh });
@@ -31,7 +30,7 @@ export const adminFinanceOverview = createServerFn({ method: "GET" })
           attempts: attemptsRes.data ?? {},
         };
       },
-      { refresh: input.refresh },
+      { refresh: input.refresh, allowStale: true },
     );
 
     const fundingPromise = admin
@@ -40,29 +39,15 @@ export const adminFinanceOverview = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(100);
 
-    // Live carrier balance must never hold the page hostage.
-    const balancePromise = withTimeoutOr(
-      (async () => {
-        const { getBalance } = await import("./telnyx.server");
-        const b = await getBalance();
-        return { ok: !!b.ok, balance: Number(b.balance ?? 0), currency: b.currency || "USD", error: (b as any).error as string | undefined };
-      })(),
-      { ok: false, balance: 0, currency: "USD", error: "balance unavailable right now" },
-      6_000,
-      "carrier balance",
-    );
-
-    const [heavy, fundingRes, providerBalance] = await Promise.all([heavyPromise, fundingPromise, balancePromise]);
+    // Use the scheduled balance snapshot: a live carrier call must not delay reports.
+    const snapshotPromise = admin.from("twilio_balance_snapshots")
+      .select("balance,currency,status,checked_at").order("checked_at", { ascending: false }).limit(1).maybeSingle();
+    const [heavy, fundingRes, snapshotRes] = await Promise.all([heavyPromise, fundingPromise, snapshotPromise]);
+    const lastSnapshot = snapshotRes.data;
+    const providerBalance = { ok: !!lastSnapshot && lastSnapshot.status !== "error", balance: Number(lastSnapshot?.balance ?? 0), currency: lastSnapshot?.currency ?? "USD", error: "Balance unavailable. Refresh it in Billing." };
     const summaryRes = { data: heavy.value.summary };
     const dailyRes = { data: heavy.value.daily };
     const attemptsRes = { data: heavy.value.attempts };
-
-    const { data: lastSnapshot } = await admin
-      .from("twilio_balance_snapshots")
-      .select("balance,currency,status,checked_at")
-      .order("checked_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
 
     // label map for funding list
     const ids = Array.from(new Set((fundingRes.data ?? []).map((p: any) => p.account_id)));
@@ -112,7 +97,7 @@ export const adminFinanceTenants = createServerFn({ method: "GET" })
         if (error) throw new Error(error.message);
         return (data ?? []) as any[];
       },
-      { refresh: input.refresh },
+      { refresh: input.refresh, allowStale: true },
     );
     return r.value;
   });
@@ -137,7 +122,7 @@ export const adminMarginAudit = createServerFn({ method: "GET" })
         if (error) throw new Error(error.message);
         return (data ?? []) as any[];
       },
-      { refresh: input.refresh },
+      { refresh: input.refresh, allowStale: true },
     );
     return r.value as Array<{
       account_id: string;

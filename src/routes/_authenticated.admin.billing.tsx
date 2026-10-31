@@ -58,24 +58,25 @@ export const Route = createFileRoute("/_authenticated/admin/billing")({
 
 function AdminBillingPage() {
   return (
-    <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2">
-          <Wallet className="size-6" /> Billing administration
+    <div className="space-y-7 max-w-6xl motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300">
+      <div className="border-b pb-5">
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-primary">Financial operations</p>
+        <h1 className="text-3xl font-semibold flex items-center gap-2">
+          <Wallet className="size-6" /> Billing & payments
         </h1>
         <p className="text-sm text-muted-foreground">
-          Manage credit packs, Payoneer instructions, and pending payments.
+          Tenant balances, payments and credit packs.
         </p>
       </div>
       <BalanceCard />
       <Tabs defaultValue="tenants">
-        <TabsList>
+        <div className="overflow-x-auto border-b pb-2"><TabsList className="w-max justify-start">
           <TabsTrigger value="tenants">Tenants</TabsTrigger>
           <TabsTrigger value="payments">Pending payments</TabsTrigger>
           <TabsTrigger value="packs">Credit packs</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
-        </TabsList>
+        </TabsList></div>
         <TabsContent value="tenants" className="mt-4">
           <TenantsBilling />
         </TabsContent>
@@ -116,7 +117,7 @@ function TenantsBilling() {
   });
 
   return (
-    <Card className="p-4 space-y-4">
+    <Card className="p-4 space-y-4 border-0 shadow-none rounded-none">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <Input
           placeholder="Search tenant by name or email…"
