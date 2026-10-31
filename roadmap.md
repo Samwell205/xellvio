@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Assignment repair
-- [ ] Repair the interrupted assignment without moving the approved number or charging again
-- [ ] Add searchable tenant email selection and verify it in admin
-- [ ] Resume the owner's selected assignment and check saved approval/ownership
+- [x] Repair the interrupted assignment without moving the approved number or charging again
+- [x] Add searchable tenant email selection and verify it in admin
+- [x] Resume the owner's selected assignment and check saved approval/ownership; +18553820888 active/verified for the selected tenant after reload
 
 ## Toll-free assignment isolation
 - [x] Explain the rejected saved connection and verify which connection the existing number setup uses
