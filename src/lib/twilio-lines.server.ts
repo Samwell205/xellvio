@@ -122,24 +122,29 @@ export async function provisionLine(accountId: string, biz: LineBusiness): Promi
 export async function refreshLine(accountId: string): Promise<void> {
   const db = await admin();
   const { data: row } = await db.from("tenant_twilio_lines").select("subaccount_sid,verification_sid,status").eq("account_id", accountId).maybeSingle();
-  if (!row?.verification_sid || !row.subaccount_sid) return;
+  if (!row?.subaccount_sid) return;
   const token = await lineTokenFor(row.subaccount_sid);
   if (!token) return;
-  const v = await tw(`https://messaging.twilio.com/v1/Tollfree/Verifications/${row.verification_sid}`, subAuth(row.subaccount_sid, token));
+  let v;
+  if (row.verification_sid) {
+    v = await tw(`https://messaging.twilio.com/v1/Tollfree/Verifications/${row.verification_sid}`, subAuth(row.subaccount_sid, token));
+  } else {
+    const { data: line } = await db.from('tenant_twilio_lines').select('phone_sid').eq('account_id', accountId).maybeSingle();
+    const result = await tw(`https://messaging.twilio.com/v1/Tollfree/Verifications?TollfreePhoneNumberSid=${line?.phone_sid ?? ''}&PageSize=50`, subAuth(row.subaccount_sid, token));
+    v = result.verifications?.find((item: any) => item.tollfree_phone_number_sid === line?.phone_sid);
+    if (!v) return;
+  }
   const { mapVerification } = await import("./twilio-lines-rules");
   const next = mapVerification(v.status);
   await db.from("tenant_twilio_lines").update({
+    verification_sid: v.sid,
     status: next, status_detail: next === "rejected" ? String(v.rejection_reason ?? "Carrier review rejected the request.").slice(0, 300) : null,
     updated_at: new Date().toISOString(),
   }).eq("account_id", accountId);
 }
 
-const lineCache = new Map<string, { at: number; v: { sid: string; token: string; from: string } | null }>();
-
 /** Active, paid-up dedicated line for this business, or null. */
 export async function activeLineFor(accountId: string): Promise<{ sid: string; token: string; from: string } | null> {
-  const hit = lineCache.get(accountId);
-  if (hit && Date.now() - hit.at < 60_000) return hit.v;
   const db = await admin();
   const { data } = await db.from("tenant_twilio_lines").select("subaccount_sid,phone_number,status,billing_status").eq("account_id", accountId).maybeSingle();
   let v: { sid: string; token: string; from: string } | null = null;
@@ -147,7 +152,6 @@ export async function activeLineFor(accountId: string): Promise<{ sid: string; t
     const token = await lineTokenFor(data.subaccount_sid);
     if (token) v = { sid: data.subaccount_sid, token, from: data.phone_number };
   }
-  lineCache.set(accountId, { at: Date.now(), v });
   return v;
 }
 

@@ -37,8 +37,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { IdentityReviewTab } from "@/components/verifier/IdentityReviewTab";
+import { TwilioInventoryPanel } from '@/components/TwilioInventoryPanel';
 
 export const Route = createFileRoute("/_authenticated/admin/verifiers")({
+  head: () => ({ meta: [
+    { title: 'Verified Number Marketplace | Xellvio Admin' },
+    { name: 'description', content: 'Review verifier inventory and assign verified business numbers.' },
+    { property: 'og:title', content: 'Verified Number Marketplace | Xellvio Admin' },
+    { property: 'og:description', content: 'Review verifier inventory and assign verified business numbers.' },
+    { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' },
+  ] }),
   component: AdminVerifiersPage,
 });
 
@@ -389,6 +397,10 @@ function SoldTab() {
 }
 
 function CarrierApprovedTab() {
+  return <TwilioInventoryPanel />;
+}
+
+function LegacyCarrierApprovedTab() {
   const listFn = useServerFn(adminListCarrierApprovedTfns);
   const assignFn = useServerFn(adminAssignCarrierNumberToAccount);
   const unassignFn = useServerFn(adminUnassignSenderAsset);

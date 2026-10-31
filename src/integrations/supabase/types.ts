@@ -7555,6 +7555,59 @@ export type Database = {
         }
         Relationships: []
       }
+      twilio_verified_inventory: {
+        Row: {
+          assigned_account_id: string | null
+          assignment_state: string
+          available: boolean
+          created_at: string
+          last_error: string | null
+          lease_until: string | null
+          owner_account_sid: string
+          phone_number: string
+          phone_sid: string
+          synced_at: string
+          verification_sid: string | null
+          verification_status: string
+        }
+        Insert: {
+          assigned_account_id?: string | null
+          assignment_state?: string
+          available?: boolean
+          created_at?: string
+          last_error?: string | null
+          lease_until?: string | null
+          owner_account_sid: string
+          phone_number: string
+          phone_sid: string
+          synced_at?: string
+          verification_sid?: string | null
+          verification_status?: string
+        }
+        Update: {
+          assigned_account_id?: string | null
+          assignment_state?: string
+          available?: boolean
+          created_at?: string
+          last_error?: string | null
+          lease_until?: string | null
+          owner_account_sid?: string
+          phone_number?: string
+          phone_sid?: string
+          synced_at?: string
+          verification_sid?: string | null
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twilio_verified_inventory_assigned_account_id_fkey"
+            columns: ["assigned_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       twilio_webhook_events: {
         Row: {
           body_hash: string
@@ -8591,6 +8644,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_service: { Args: never; Returns: boolean }
+      lease_twilio_inventory: {
+        Args: { _account_id: string; _phone_sid: string }
+        Returns: boolean
+      }
       link_domain_filter_stats: {
         Args: { _domains: string[] }
         Returns: {
@@ -8669,6 +8726,29 @@ export type Database = {
       release_dispatch_lock:
         | { Args: never; Returns: undefined }
         | { Args: { _name: string }; Returns: undefined }
+      reserve_twilio_inventory: {
+        Args: { _account_id: string; _phone_number?: string; _price?: number }
+        Returns: {
+          assigned_account_id: string | null
+          assignment_state: string
+          available: boolean
+          created_at: string
+          last_error: string | null
+          lease_until: string | null
+          owner_account_sid: string
+          phone_number: string
+          phone_sid: string
+          synced_at: string
+          verification_sid: string | null
+          verification_status: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "twilio_verified_inventory"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       select_receptionist_assistant: {
         Args: { _account_id: string; _assistant_id: string }
         Returns: undefined

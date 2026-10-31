@@ -109,6 +109,10 @@ export const adminAssignTfnToAccount = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Read settings for pricing (USD buyer price + NGN conversion for verifier payout)
+    const { data: candidate } = await supabaseAdmin.from('verifier_tfns').select('phone_number').eq('id', data.tfn_id).maybeSingle();
+    if (!candidate) throw new Error('Number not found');
+    const { data: owned } = await (supabaseAdmin as any).from('twilio_verified_inventory').select('phone_sid').eq('phone_number', candidate.phone_number).eq('verification_status', 'verified').maybeSingle();
+    if (!owned) throw new Error('This legacy number is not verified in the current number account. It cannot be assigned as an isolated number.');
     const { data: settingsRows } = await supabaseAdmin
       .from("platform_settings").select("key,value")
       .in("key", ["tfn_buyer_price_usd", "tfn_commission_pct", "tfn_ngn_per_usd"]);
@@ -368,43 +372,8 @@ export const adminListCarrierApprovedTfns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context.supabase);
-    const key = process.env.TELNYX_API_KEY;
-    if (!key) throw new Error("TELNYX_API_KEY is not configured");
-    const rows: Array<{ sid: string; phone_number: string | null; telnyx_number_id: string | null; status: string; business_name: string | null; date_created: string | null }> = [];
-    // Paginate through Telnyx phone_numbers filtered to toll-free.
-    let page = 1;
-    let safety = 20;
-    while (safety-- > 0) {
-      const res = await fetch(`https://api.telnyx.com/v2/phone_numbers?filter[phone_number_type]=toll-free&page[number]=${page}&page[size]=100`, {
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      if (!res.ok) throw new Error(`Telnyx ${res.status}`);
-      const j: any = await res.json();
-      for (const n of j.data ?? []) {
-        rows.push({
-          sid: n.id,
-          phone_number: n.phone_number ?? null,
-          telnyx_number_id: n.id,
-          status: n.status ?? "active",
-          business_name: n.tags?.[0] ?? null,
-          date_created: n.created_at ?? null,
-        });
-      }
-      if ((j.data ?? []).length < 100) break;
-      page += 1;
-    }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const numbers = rows.map((r) => r.phone_number).filter(Boolean) as string[];
-    const { data: assets } = await supabaseAdmin
-      .from("sender_assets")
-      .select("phone_number,account_id,accounts:account_id(email,full_name)")
-      .in("phone_number", numbers.length ? numbers : ["__none__"]);
-    const aMap = Object.fromEntries((assets ?? []).map((a: any) => [a.phone_number, a]));
-    return rows.map((r) => ({
-      ...r,
-      assigned_to: r.phone_number ? aMap[r.phone_number]?.accounts ?? null : null,
-      assigned_account_id: r.phone_number ? aMap[r.phone_number]?.account_id ?? null : null,
-    }));
+    const inventory = await (await import('./twilio-inventory.server')).listTwilioInventory();
+    return inventory.map((n: any) => ({ ...n, sid: n.phone_sid, status: n.verification_status, business_name: n.assigned_to?.legal_business_name ?? null, date_created: n.created_at, telnyx_number_id: null }));
   });
 
 export const adminAssignCarrierNumberToAccount = createServerFn({ method: "POST" })
@@ -418,17 +387,7 @@ export const adminAssignCarrierNumberToAccount = createServerFn({ method: "POST"
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // Check if already assigned
-    const { data: existing } = await supabaseAdmin
-      .from("sender_assets")
-      .select("id,account_id")
-      .eq("phone_number", data.phone_number)
-      .maybeSingle();
-    if (existing) {
-      if (existing.account_id === data.account_id) return { ok: true, already: true };
-      throw new Error("This number is already assigned to another tenant");
-    }
+    // Every retry must also verify the actual sub-account, not just a saved sender row.
     const { wireAssignedTollfreeForTenant } = await import("./assign-tfn-to-tenant.server");
     await wireAssignedTollfreeForTenant({
       accountId: data.account_id,

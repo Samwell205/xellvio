@@ -43,8 +43,17 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { TwilioInventoryPanel } from '@/components/TwilioInventoryPanel';
 
 export const Route = createFileRoute("/_authenticated/admin/senders")({
+  head: () => ({ meta: [
+    { title: 'Sender and Toll-free Inventory | Xellvio Admin' },
+    { name: 'description', content: 'Manage business senders and verified toll-free number assignments.' },
+    { property: 'og:title', content: 'Sender and Toll-free Inventory | Xellvio Admin' },
+    { property: 'og:description', content: 'Manage business senders and verified toll-free number assignments.' },
+    { property: 'og:type', content: 'website' },
+    { name: 'twitter:card', content: 'summary' },
+  ] }),
   component: AdminSendersPage,
 });
 
@@ -191,7 +200,7 @@ function AdminSendersPage() {
         </div>
       </div>
 
-      <SharedTollfreePoolPanel />
+      <TwilioInventoryPanel />
 
       <LocalTenDlcPanel />
 

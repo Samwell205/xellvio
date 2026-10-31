@@ -101,6 +101,11 @@ export const adminGrantVerifiedTollfree = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const country = data.country.toUpperCase();
     let phoneNumber = data.phone_number?.trim() || "";
+    if (['US', 'CA', 'PR'].includes(country)) {
+      const { assignTwilioInventory } = await import('./twilio-inventory.server');
+      const assigned = await assignTwilioInventory(data.account_id, phoneNumber || undefined);
+      return { ok: true, ...assigned };
+    }
 
     if (phoneNumber) {
       const { data: existing } = await supabaseAdmin
@@ -372,55 +377,8 @@ export const adminAttachSharedTollfree = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: pool } = await supabaseAdmin
-      .from("shared_tollfree_pool")
-      .select("phone_number,country_code,telnyx_phone_number_id,telnyx_messaging_profile_id")
-      .eq("phone_number", data.phone_number).maybeSingle();
-    if (!pool) throw new Error("That number is not in the shared pool. Register it first.");
-
-    const nowIso = new Date().toISOString();
-    const countries = fanoutCountries(pool.country_code);
-    for (const cc of countries) {
-      const { data: existing } = await supabaseAdmin
-        .from("sender_assets")
-        .select("id,phone_number,account_id")
-        .eq("account_id", data.account_id)
-        .eq("country_code", cc)
-        .eq("sender_kind", "toll_free")
-        .maybeSingle();
-      if (existing && existing.phone_number && existing.phone_number !== pool.phone_number) {
-        throw new Error(`Tenant already has a different toll-free number (${existing.phone_number}) for ${cc}. Detach it first.`);
-      }
-      const row = {
-        account_id: data.account_id,
-        country_code: cc,
-        sender_kind: "toll_free" as const,
-        phone_number: pool.phone_number,
-        telnyx_phone_number_id: pool.telnyx_phone_number_id,
-        telnyx_messaging_profile_id: pool.telnyx_messaging_profile_id,
-        verification_status: "verified" as const,
-        verified_at: nowIso,
-        rejected_at: null,
-        rejection_reason: null,
-        friendly_rejection_reason: null,
-        last_synced_at: nowIso,
-        is_shared: true,
-      };
-      const { error } = await supabaseAdmin
-        .from("sender_assets")
-        .upsert(row, { onConflict: "account_id,country_code,sender_kind" });
-      if (error) throw new Error(error.message);
-    }
-
-    // Clear tollfree setup fee so tenant isn't billed for a shared number.
-    await supabaseAdmin.from("accounts").update({
-      tollfree_setup_fee_due_cents: 0,
-      tollfree_setup_fee_paid_at: nowIso,
-      onboarding_status: "active",
-    }).eq("id", data.account_id);
-
-    return { ok: true };
+    const { assignTwilioInventory } = await import('./twilio-inventory.server');
+    return { ok: true, ...await assignTwilioInventory(data.account_id, data.phone_number) };
   });
 
 export const adminDetachSharedTollfree = createServerFn({ method: "POST" })
