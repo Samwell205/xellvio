@@ -1,4 +1,4 @@
-import { isApprovedVerification, isIsolatedNumber } from './twilio-inventory-rules';
+import { isApprovedVerification } from './twilio-inventory-rules';
 
 const API = 'https://api.twilio.com/2010-04-01';
 const TFV = 'https://messaging.twilio.com/v1/Tollfree/Verifications';
