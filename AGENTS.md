@@ -59,3 +59,5 @@
 - Email campaigns separate Details, Content (choose template / drag-and-drop from scratch / plain / HTML), Edit and Review; templates open straight into editing (HTML templates in the click-to-edit EmailVisualEditor, which loads sanitized HTML without scripts and is re-sanitized at render), so method tabs never appear inside the editor. Admin refresh reads /designs/pre-builts in batches of ten; applying any template only edits a draft, never launches it.
 - Email template thumbnails fit their container with ResizeObserver; legacy HTTP media URLs upgrade to HTTPS in the shared sanitizer so existing imported drafts keep pictures without allowing insecure media.
 - Original studio email designs and inferred catalog categories live in email-template-catalog.ts; original images use hosted asset pointers so saved email HTML works outside the app. Original designs stay distinct from imported templates.
+
+- Toll-free offers and paid checkouts use eligible sub-account inventory through tfn-purchase.server.ts; paid fulfilment claims pending payments before assignment and records failures in the existing manual-review status with admin alerts, never automatic refunds.

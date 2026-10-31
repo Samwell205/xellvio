@@ -571,7 +571,7 @@ function MarketplaceBuyCard() {
           qc.invalidateQueries({ queryKey: ["tollfree-fee-status"] });
         } else if (r?.refund_pending) {
           toast.error(
-            "Payment received but no number was available. Our team will refund you shortly.",
+            "Payment received, but number assignment needs review. Our team will check it; please do not pay again.",
           );
         }
       } catch (e: any) {
