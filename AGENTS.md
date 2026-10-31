@@ -21,8 +21,7 @@
 - All-time finance reads use admin_report_cache.server.ts TTL + explicit recalculation, never full-history scans on page views.
 
 - Support tickets (support-tickets.server.ts) are the only support channel: forms, in-app and email replies create/append tickets; closed tickets never accept replies (a reply opens a linked ticket).
-- Screening/carrier-refusal pause rules live in src/lib/AGENTS.md; subdirectories may have their own AGENTS.md to read before changing files there.
-- Receipt recovery is lookup-only, bounded to six workers with stable ID cursors; accept exact matching final receipts, try the other server-owned connection only on 404, and keep unconfirmed distinct from failure. Never resend or change balances during recovery.
+- Screening/carrier-refusal and receipt-recovery rules live in src/lib/AGENTS.md; read subdirectory AGENTS.md before edits.
 - Voice rollout uses voice-rollout.server.ts verified identity gates for UI/RPC, relay and call tools; no admin bypass. Calendar is owner-only; paid activation still needs pricing, line approval and a pilot.
 - Assistant actions require server-generated call-scoped tokens and active-call, ownership and pricing checks; event signatures alone do not authenticate tool requests.
 - Voice uses shared pricing and allow-listed overrides. Owner-authorized transactional edits/deletion keep assistants separate; selected edits/switches require ended calls and reset pilot approval.
@@ -59,3 +58,5 @@
 - Email campaigns separate Details, Content (choose template / drag-and-drop from scratch / plain / HTML), Edit and Review; templates open straight into editing (HTML templates in the click-to-edit EmailVisualEditor, which loads sanitized HTML without scripts and is re-sanitized at render), so method tabs never appear inside the editor. Admin refresh reads /designs/pre-builts in batches of ten; applying any template only edits a draft, never launches it.
 - Email template thumbnails fit their container with ResizeObserver; legacy HTTP media URLs upgrade to HTTPS in the shared sanitizer so existing imported drafts keep pictures without allowing insecure media.
 - Original studio email designs and inferred catalog categories live in email-template-catalog.ts; original images use hosted asset pointers so saved email HTML works outside the app. Original designs stay distinct from imported templates.
+
+- Toll-free offers and paid checkouts use eligible sub-account inventory through tfn-purchase.server.ts; paid fulfilment claims pending payments before assignment and records failures in the existing manual-review status with admin alerts, never automatic refunds.

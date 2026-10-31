@@ -232,14 +232,8 @@ export const initPaystackTfnCheckout = createServerFn({ method: "POST" })
     const priceUsd = Number((setting as any)?.value ?? 50) || 50;
 
     // Refuse if no numbers are currently available.
-    const [{ count: verifierCount }, { count: poolCount }] = await Promise.all([
-      supabaseAdmin.from("verifier_tfns").select("id", { count: "exact", head: true })
-        .eq("status", "verified").is("sold_to_account_id", null),
-      supabaseAdmin.from("shared_tollfree_pool").select("phone_number", { count: "exact", head: true }),
-    ]);
-    if ((verifierCount ?? 0) + (poolCount ?? 0) <= 0) {
-      throw new Error("No verified toll-free numbers are available right now");
-    }
+    const { assertTfnCheckoutAvailable } = await import('./tfn-purchase.server');
+    await assertTfnCheckoutAvailable(supabaseAdmin, acting.accountId);
 
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
@@ -392,46 +386,10 @@ export async function creditFromPayment(supabaseAdmin: any, reference: string) {
   const purpose = (payment.metadata as any)?.purpose;
 
   if (purpose === "tfn_purchase") {
-    const { assignTfnAfterPayment } = await import("./tfn-marketplace.functions");
-    const assigned = await assignTfnAfterPayment(payment.account_id);
-    if (!assigned) {
-      await supabaseAdmin
-        .from("payments")
-        .update({
-          status: "refund_pending",
-          paid_at: new Date().toISOString(),
-          admin_note: "Paid but no toll-free number available — refund required",
-        })
-        .eq("id", payment.id);
-      try {
-        const [{ sendAdminSms }, { sendAdminPush }] = await Promise.all([
-          import("./admin-notify.server"),
-          import("./admin-push.server"),
-        ]);
-        const line = `Xellvio: TFN payment ${reference} received but no number available — issue refund.`;
-        await Promise.all([
-          sendAdminSms(line),
-          sendAdminPush({
-            title: "TFN payment needs refund",
-            body: `Reference ${reference} — no number in pool`,
-            url: "/admin/billing",
-            tag: `tfn-refund-${reference}`,
-          }),
-        ]);
-      } catch (e) {
-        console.error("[tfn-refund] admin notify failed", e);
-      }
-      return { ok: false, reason: "no_number_available", refund_pending: true };
-    }
-    await supabaseAdmin
-      .from("payments")
-      .update({
-        status: "paid",
-        paid_at: new Date().toISOString(),
-        admin_note: `TFN assigned: ${assigned.phone_number}`,
-      })
-      .eq("id", payment.id);
-    return { ok: true, tfn_assigned: assigned };
+    const { settleTfnPurchase } = await import('./tfn-purchase.server');
+    const result = await settleTfnPurchase(supabaseAdmin, payment);
+    if (result.reviewRequired) return { ok: false, reason: "assignment_needs_review", refund_pending: true };
+    return { ok: true, already: result.alreadyPaid, tfn_assigned: result.assigned };
   }
 
   const { error: creditError } = await supabaseAdmin.rpc("topup_account", {

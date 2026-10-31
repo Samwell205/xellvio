@@ -192,14 +192,8 @@ export const initNowPaymentsTfnCheckout = createServerFn({ method: "POST" })
       .maybeSingle();
     const priceUsd = Number((setting as any)?.value ?? 50) || 50;
 
-    const [{ count: verifierCount }, { count: poolCount }] = await Promise.all([
-      supabaseAdmin.from("verifier_tfns").select("id", { count: "exact", head: true })
-        .eq("status", "verified").is("sold_to_account_id", null),
-      supabaseAdmin.from("shared_tollfree_pool").select("phone_number", { count: "exact", head: true }),
-    ]);
-    if ((verifierCount ?? 0) + (poolCount ?? 0) <= 0) {
-      throw new Error("No verified toll-free numbers are available right now");
-    }
+    const { assertTfnCheckoutAvailable } = await import('./tfn-purchase.server');
+    await assertTfnCheckoutAvailable(supabaseAdmin, acting.accountId);
 
     const { data: payment, error: payErr } = await supabaseAdmin
       .from("payments")
@@ -275,6 +269,7 @@ export async function reconcileOneNowPayment(payment: {
 }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   if (payment.status === "paid") return { status: "already_paid" as const };
+  if (payment.status === "refund_pending") return { status: "refund_pending" as const };
 
   const invoiceId = (payment.metadata as any)?.np_invoice_id;
   const apiKey = process.env.NOWPAYMENTS_API_KEY;
@@ -337,46 +332,11 @@ export async function reconcileOneNowPayment(payment: {
     const purpose = (payment.metadata as any)?.purpose;
 
     if (purpose === "tfn_purchase") {
-      const { assignTfnAfterPayment } = await import("./tfn-marketplace.functions");
-      const assigned = await assignTfnAfterPayment(payment.account_id);
-      if (!assigned) {
-        await supabaseAdmin
-          .from("payments")
-          .update({
-            status: "refund_pending",
-            paid_at: new Date().toISOString(),
-            admin_note: "Paid but no toll-free number available — refund required",
-            metadata: meta,
-          })
-          .eq("id", payment.id);
-        try {
-          const { sendAdminSms } = await import("./admin-notify.server");
-          const { sendAdminPush } = await import("./admin-push.server");
-          await Promise.all([
-            sendAdminSms(`Xellvio: crypto TFN payment ${payment.id} received but no number available — refund.`),
-            sendAdminPush({
-              title: "TFN payment needs refund",
-              body: `Payment ${payment.id} — no number in pool`,
-              url: "/admin/billing",
-              tag: `tfn-refund-${payment.id}`,
-            }),
-          ]);
-        } catch (e) { console.error("[tfn-refund] notify failed", e); }
-        return { status: "refund_pending" as const };
-      }
-      const { data: claimed } = await supabaseAdmin
-        .from("payments")
-        .update({
-          status: "paid",
-          paid_at: new Date().toISOString(),
-          admin_note: `TFN assigned: ${assigned.phone_number}`,
-          metadata: meta,
-        })
-        .eq("id", payment.id)
-        .eq("status", "pending")
-        .select("id");
-      if (!claimed?.length) return { status: "already_paid" as const };
-      return { status: "credited" as const, amount: 0, tfn_assigned: assigned };
+      const { settleTfnPurchase } = await import('./tfn-purchase.server');
+      const result = await settleTfnPurchase(supabaseAdmin, payment, meta);
+      if (result.reviewRequired) return { status: "refund_pending" as const };
+      if (result.alreadyPaid) return { status: "already_paid" as const };
+      return { status: "credited" as const, amount: 0, tfn_assigned: result.assigned };
     }
 
     // Atomic claim: only credit if still pending

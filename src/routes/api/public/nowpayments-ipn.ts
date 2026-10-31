@@ -79,29 +79,8 @@ export const Route = createFileRoute("/api/public/nowpayments-ipn")({
           if (payment.status !== "paid") {
             const purpose = (payment.metadata as any)?.purpose;
             if (purpose === "tfn_purchase") {
-              const { assignTfnAfterPayment } = await import("@/lib/tfn-marketplace.functions");
-              const assigned = await assignTfnAfterPayment(payment.account_id);
-              if (!assigned) {
-                await supabaseAdmin
-                  .from("payments")
-                  .update({
-                    status: "refund_pending",
-                    paid_at: new Date().toISOString(),
-                    admin_note: "Paid but no toll-free number available — refund required",
-                    metadata: meta,
-                  })
-                  .eq("id", payment.id);
-              } else {
-                await supabaseAdmin
-                  .from("payments")
-                  .update({
-                    status: "paid",
-                    paid_at: new Date().toISOString(),
-                    admin_note: `TFN assigned: ${assigned.phone_number}`,
-                    metadata: meta,
-                  })
-                  .eq("id", payment.id);
-              }
+              const { settleTfnPurchase } = await import("@/lib/tfn-purchase.server");
+              await settleTfnPurchase(supabaseAdmin, payment, meta);
             } else {
               await supabaseAdmin.rpc("topup_account", {
                 _account_id: payment.account_id,

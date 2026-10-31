@@ -23,28 +23,17 @@ async function readSettings() {
 }
 
 
-async function listAvailablePoolNumbers(): Promise<
-  Array<{ phone_number: string; country_code: string; telnyx_phone_number_id: string | null; telnyx_messaging_profile_id: string }>
-> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  // Only approved, exclusively unassigned numbers can be purchased.
-  const { data: pool, error } = await (supabaseAdmin as any)
-    .from('twilio_verified_inventory')
-    .select('phone_number')
-    .eq('verification_status', 'verified').eq('available', true).is('assigned_account_id', null);
-  if (error) throw new Error(error.message);
-  return (pool ?? []).map((n: any) => ({ ...n, country_code: 'US', telnyx_phone_number_id: null, telnyx_messaging_profile_id: '' }));
-}
-
 async function countAvailable() {
-  return (await listAvailablePoolNumbers()).length;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { countPurchasableTfns } = await import('./tfn-purchase.server');
+  return countPurchasableTfns(supabaseAdmin);
 }
 
 export const getTfnMarketplaceStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
     const [actual, settings] = await Promise.all([countAvailable(), readSettings()]);
-    const available = settings.advertisedAvailable != null ? settings.advertisedAvailable : actual;
+    const available = actual;
     return { available, priceUsd: settings.buyerPriceUsd };
   });
 
@@ -52,7 +41,7 @@ export const getTfnMarketplaceOffer = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
     const [actual, settings] = await Promise.all([countAvailable(), readSettings()]);
-    const available_count = settings.advertisedAvailable != null ? settings.advertisedAvailable : actual;
+    const available_count = actual;
     return { available_count, price_usd: settings.buyerPriceUsd };
   });
 
