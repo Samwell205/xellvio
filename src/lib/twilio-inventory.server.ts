@@ -23,6 +23,7 @@ async function pages(url: string, authorization: string, key: string) {
   const items: any[] = [];
   for (let count = 0; url && count < 30; count++) {
     const result = await request(url, authorization);
+    if (key === 'tollfree_verifications') console.info('[inventory verification shape]', Object.keys(result), Object.values(result).filter(Array.isArray).map((items: any) => items.map((v: any) => ({ sid: v.sid, status: v.status, phone_sid: v.tollfree_phone_number_sid }))));
     items.push(...(result[key] ?? []));
     const next = result.next_page_uri ?? result.meta?.next_page_url;
     if (!next) return items;
