@@ -27,10 +27,7 @@ async function listAvailablePoolNumbers(): Promise<
   Array<{ phone_number: string; country_code: string; telnyx_phone_number_id: string | null; telnyx_messaging_profile_id: string }>
 > {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  // The shared pool is the source of truth for marketplace availability.
-  // Numbers are removed from the pool atomically on claim, so stale
-  // sender_assets rows (from prior syncs / the platform owner's tenant)
-  // must not hide otherwise available numbers.
+  // Only approved, exclusively unassigned numbers can be purchased.
   const { data: pool, error } = await (supabaseAdmin as any)
     .from('twilio_verified_inventory')
     .select('phone_number')
@@ -40,7 +37,6 @@ async function listAvailablePoolNumbers(): Promise<
 }
 
 async function countAvailable() {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return (await listAvailablePoolNumbers()).length;
 }
 
@@ -60,12 +56,6 @@ export const getTfnMarketplaceOffer = createServerFn({ method: "GET" })
     return { available_count, price_usd: settings.buyerPriceUsd };
   });
 
-function pickLeastUsed<T extends { phone_number: string }>(items: T[], counts: Map<string, number>): T {
-  const min = Math.min(...items.map((n) => counts.get(n.phone_number) ?? 0));
-  const tied = items.filter((n) => (counts.get(n.phone_number) ?? 0) === min);
-  return tied[Math.floor(Math.random() * tied.length)];
-}
-
 async function claimFromPool(
   userId: string,
   priceUsd: number,
@@ -73,99 +63,6 @@ async function claimFromPool(
 ) {
   const { assignTwilioInventory } = await import('./twilio-inventory.server');
   return assignTwilioInventory(userId, undefined, opts.skipDebit ? 0 : priceUsd);
-  /* Retired shared-number assignment. Kept temporarily for historical reference.
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const available = await listAvailablePoolNumbers();
-  if (available.length === 0) return null;
-  // Spread tenants across verified numbers: pick randomly among the
-  // least-used numbers instead of always handing out the first one.
-  const { data: att } = await supabaseAdmin
-    .from("sender_assets").select("phone_number").eq("sender_kind", "toll_free")
-    .in("phone_number", available.map((n) => n.phone_number));
-  const counts = new Map<string, number>();
-  for (const a of att ?? []) counts.set(a.phone_number as string, (counts.get(a.phone_number as string) ?? 0) + 1);
-  const pick = pickLeastUsed(available, counts);
-
-  // Shared pool: the same verified TFN can be assigned to multiple tenants.
-  // Do NOT delete the pool row and do NOT delete other tenants' sender_assets
-  // rows for this phone. Just attach this tenant to the number.
-  const nowIso = new Date().toISOString();
-
-  // If this tenant already owns this exact number, treat as idempotent success.
-  const { data: existing } = await supabaseAdmin
-    .from("sender_assets")
-    .select("id")
-    .eq("account_id", userId)
-    .eq("phone_number", pick.phone_number)
-    .maybeSingle();
-
-  if (!existing) {
-    const { error: insErr } = await supabaseAdmin.from("sender_assets").upsert(
-      {
-        account_id: userId,
-        country_code: (pick.country_code || "US").toUpperCase(),
-        sender_kind: "toll_free" as const,
-        phone_number: pick.phone_number,
-        telnyx_phone_number_id: pick.telnyx_phone_number_id,
-        telnyx_messaging_profile_id: pick.telnyx_messaging_profile_id,
-        verification_status: "verified" as const,
-        verified_at: nowIso,
-        rejected_at: null,
-        rejection_reason: null,
-        friendly_rejection_reason: null,
-        last_synced_at: nowIso,
-        is_shared: true,
-      },
-      { onConflict: "account_id,country_code,sender_kind" },
-    );
-    if (insErr) throw new Error(insErr.message);
-  }
-
-
-  // Only debit credit balance when the caller is settling via credits.
-  // When the tenant paid a straight fee via Paystack/NOWPayments, skipDebit
-  // is set — the fee never enters the credit ledger.
-  if (!opts.skipDebit) {
-    await supabaseAdmin.rpc("debit_account", {
-      _account_id: userId,
-      _amount: priceUsd,
-      _campaign_id: null as any,
-      _description: `Purchased verified toll-free number ${pick.phone_number}`,
-    });
-  }
-
-  // Clear tollfree setup fee since they got a pre-verified number
-  await supabaseAdmin.from("accounts").update({
-    tollfree_setup_fee_due_cents: 0,
-    tollfree_setup_fee_paid_at: nowIso,
-    onboarding_status: "active",
-  }).eq("id", userId);
-
-  // Notify admins about the auto-assignment.
-  try {
-    const { data: acct } = await supabaseAdmin
-      .from("accounts").select("email,legal_business_name").eq("id", userId).maybeSingle();
-    const who = acct?.legal_business_name || acct?.email || userId;
-    const [{ sendAdminSms }, { sendAdminPush }] = await Promise.all([
-      import("./admin-notify.server"),
-      import("./admin-push.server"),
-    ]);
-    const paidVia = opts.skipDebit ? "direct fee" : "credit balance";
-    const msg = `Xellvio: ${pick.phone_number} auto-assigned to ${who} for $${priceUsd.toFixed(2)} (${paidVia}).`;
-    await Promise.all([
-      sendAdminSms(msg),
-      sendAdminPush({
-        title: "Toll-free number assigned",
-        body: `${pick.phone_number} → ${who}`,
-        url: "/admin/senders",
-        tag: `tfn-assigned-${pick.phone_number}`,
-      }),
-    ]);
-  } catch (e) {
-    console.error("[tfn-marketplace] admin notify failed", e);
-  }
-
-  return { phone_number: pick.phone_number, country: (pick.country_code || "US").toUpperCase() }; */
 }
 
 /**
@@ -184,48 +81,6 @@ async function buyImpl(userId: string) {
   const { buyerPriceUsd: purchasePrice } = await readSettings();
   const { assignTwilioInventory } = await import('./twilio-inventory.server');
   return { ok: true, ...await assignTwilioInventory(userId, undefined, purchasePrice) };
-  /* Retired legacy verifier sale; it cannot promise isolated carrier ownership.
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { buyerPriceUsd, commissionPct, ngnPerUsd } = await readSettings();
-
-  const { data: acct } = await supabaseAdmin
-    .from("accounts").select("credit_balance").eq("id", userId).maybeSingle();
-  if (!acct || Number(acct.credit_balance) < buyerPriceUsd) {
-    throw new Error(`Insufficient balance. This number costs $${buyerPriceUsd.toFixed(2)}`);
-  }
-
-  // Prefer platform-owned verified pool numbers (auto-synced from Telnyx)
-  const pool = await claimFromPool(userId, buyerPriceUsd);
-  if (pool) return { ok: true, ...pool };
-
-  // Fall back to verifier marketplace numbers
-  const priceNgn = buyerPriceUsd * ngnPerUsd;
-  const { data: sold, error: rpcErr } = await supabaseAdmin.rpc("claim_and_sell_verified_tfn", {
-    _account_id: userId,
-    _price_ngn: priceNgn,
-    _commission_pct: commissionPct,
-  });
-  if (rpcErr) throw new Error(rpcErr.message);
-  const row = Array.isArray(sold) ? sold[0] : sold;
-  if (!row) throw new Error("No verified numbers available right now");
-
-  await supabaseAdmin.rpc("debit_account", {
-    _account_id: userId,
-    _amount: buyerPriceUsd,
-    _campaign_id: undefined as any,
-    _description: `Purchased verified TFN ${row.phone_number}`,
-  });
-
-  await supabaseAdmin.from("sender_assets").insert({
-    account_id: userId,
-    country_code: row.country,
-    sender_kind: "toll_free",
-    phone_number: row.phone_number,
-    verification_status: "verified",
-    last_synced_at: new Date().toISOString(),
-  });
-
-  return { ok: true, phone_number: row.phone_number, country: row.country }; */
 }
 
 export const purchaseTfnFromMarketplace = createServerFn({ method: "POST" })

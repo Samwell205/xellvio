@@ -40,7 +40,7 @@ export async function syncTwilioInventory() {
   // Uses the app's existing parent credentials, not the separate chat connector key.
   const accounts = await pages(`${API}/Accounts.json?PageSize=50&Status=active`, authorization, 'accounts');
   const scopes = [{ sid: parent.sid, token: parent.token }, ...accounts.filter(a => a.sid !== parent.sid && a.owner_account_sid === parent.sid).map(a => ({ sid: a.sid, token: a.auth_token }))];
-  const { data: lines, error: lineError } = await database.from('tenant_twilio_lines').select('account_id,subaccount_sid,phone_sid');
+  const { data: lines, error: lineError } = await database.from('tenant_twilio_lines').select('account_id,subaccount_sid,phone_sid,status');
   if (lineError) throw new Error(lineError.message);
   let synced = 0;
   for (const scope of scopes) {

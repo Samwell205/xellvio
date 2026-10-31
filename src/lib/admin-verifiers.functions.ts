@@ -374,44 +374,6 @@ export const adminListCarrierApprovedTfns = createServerFn({ method: "GET" })
     await assertAdmin(context.supabase);
     const inventory = await (await import('./twilio-inventory.server')).listTwilioInventory();
     return inventory.map((n: any) => ({ ...n, sid: n.phone_sid, status: n.verification_status, business_name: n.assigned_to?.legal_business_name ?? null, date_created: n.created_at, telnyx_number_id: null }));
-    /* Retired legacy carrier inventory lookup.
-    const key = process.env.TELNYX_API_KEY;
-    if (!key) throw new Error("TELNYX_API_KEY is not configured");
-    const rows: Array<{ sid: string; phone_number: string | null; telnyx_number_id: string | null; status: string; business_name: string | null; date_created: string | null }> = [];
-    // Paginate through Telnyx phone_numbers filtered to toll-free.
-    let page = 1;
-    let safety = 20;
-    while (safety-- > 0) {
-      const res = await fetch(`https://api.telnyx.com/v2/phone_numbers?filter[phone_number_type]=toll-free&page[number]=${page}&page[size]=100`, {
-        headers: { Authorization: `Bearer ${key}` },
-      });
-      if (!res.ok) throw new Error(`Telnyx ${res.status}`);
-      const j: any = await res.json();
-      for (const n of j.data ?? []) {
-        rows.push({
-          sid: n.id,
-          phone_number: n.phone_number ?? null,
-          telnyx_number_id: n.id,
-          status: n.status ?? "active",
-          business_name: n.tags?.[0] ?? null,
-          date_created: n.created_at ?? null,
-        });
-      }
-      if ((j.data ?? []).length < 100) break;
-      page += 1;
-    }
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const numbers = rows.map((r) => r.phone_number).filter(Boolean) as string[];
-    const { data: assets } = await supabaseAdmin
-      .from("sender_assets")
-      .select("phone_number,account_id,accounts:account_id(email,full_name)")
-      .in("phone_number", numbers.length ? numbers : ["__none__"]);
-    const aMap = Object.fromEntries((assets ?? []).map((a: any) => [a.phone_number, a]));
-    return rows.map((r) => ({
-      ...r,
-      assigned_to: r.phone_number ? aMap[r.phone_number]?.accounts ?? null : null,
-      assigned_account_id: r.phone_number ? aMap[r.phone_number]?.account_id ?? null : null,
-    })); */
   });
 
 export const adminAssignCarrierNumberToAccount = createServerFn({ method: "POST" })
