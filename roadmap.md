@@ -1,5 +1,9 @@
 # Roadmap
 
+## Current tenant assignment conflict
+- [x] Repair approved number ownership constraints without moving numbers; 13 ownership/assignment tests passed
+- [x] Resume +18553820888 for the owner's selected business; active/verified after reload without charging or sending
+
 ## Assignment repair
 - [x] Repair the interrupted assignment without moving the approved number or charging again
 - [x] Add searchable tenant email selection and verify it in admin
