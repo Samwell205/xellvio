@@ -576,6 +576,9 @@ If you're unsure whether your campaign is allowed, contact [SUPPORT EMAIL] befor
 - Cryptocurrency promotions, giveaways, airdrops, presales, OTP-relay services
 - "Get rich quick", guaranteed-income offers, MLM, pyramid schemes
 - Unsolicited real estate or investment outreach
+- High-risk or speculative investments, stock alerts, "double your money" offers
+- Third-party lending (mortgage, student loan, auto loan) and third-party lead generation
+- Work-from-home schemes, secret/mystery shopper offers, deceptive job alerts
 
 ## Fraud & deception
 
@@ -583,6 +586,41 @@ If you're unsure whether your campaign is allowed, contact [SUPPORT EMAIL] befor
 - Fake prize, package delivery, IRS/SSA, or refund notices
 - Impersonation of banks, carriers, government agencies, or brands
 - Misleading sender identities or spoofed links
+- Simulated phishing or security-testing messages
+- Fake discounts, false claims, or deceptive promotions
+
+## Other restricted content
+
+- Profanity, vulgar, or offensive content that violates carrier standards
+- Fireworks sales or promotions
+
+## Sending practices that are not allowed
+
+Even a legitimate product can be blocked because of *how* it is sent. You may not:
+
+- Send without the recipient's permission, or send unsolicited bulk messages
+- Use purchased, rented, or shared contact lists — consent cannot be bought or transferred between companies
+- Keep messaging anyone who replied STOP or otherwise opted out
+- Send without clearly identifying your business (except follow-ups in an ongoing conversation)
+- Pretend to be another company or make deceptive claims
+- Spread similar messages across multiple numbers to avoid filtering ("snowshoeing")
+- Misspell words or alter messages to get past spam filters
+- Add promotions to messages the recipient only agreed to receive as transactional updates (for example, order confirmations)
+
+## Examples of messages that will be rejected
+
+| Message | Why |
+|---|---|
+| "Earn $5,000 every week without working!" | Get-rich-quick claim |
+| "Join our investment program and double your money." | High-risk, misleading financial claim |
+| "Apply for a payday loan and get cash instantly." | Payday lending |
+| "We can erase all your debts immediately." | Debt relief, deceptive claim |
+| "Buy our premium THC products today." | Cannabis |
+| "Join our network and earn money recruiting others." | Multi-level marketing |
+| "Congratulations! You've won $10,000. Click here to claim." | Fake prize / fraud |
+| "Your bank account is blocked. Enter your password here." | Phishing |
+| "Guaranteed credit score increase in 24 hours." | Credit repair |
+| "Get paid $500 daily as a secret shopper." | Secret shopper scheme |
 
 ## Legal catch-all
 

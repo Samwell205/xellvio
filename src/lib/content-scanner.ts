@@ -127,6 +127,7 @@ const KEYWORD_PATTERNS: Array<{
     patterns: [
       /\b(debt collector|collection agency|collection notice|outstanding debt|past due balance|unpaid balance)\b/gi,
       /\b(debt relief|debt consolidation|settle your debt|reduce your debt|wipe out debt|tax debt relief)\b/gi,
+      /\b(erase (all )?(of )?your debts?|credit repair|fix your credit|repair your credit|guaranteed credit score|boost your credit score fast)\b/gi,
       /\b(garnish(ment)?|lawsuit (will be|may be) filed)\b/gi,
     ],
   },
@@ -147,6 +148,9 @@ const KEYWORD_PATTERNS: Array<{
       /\b(work from home (and )?(earn|make) \$?\d{3,})\b/gi,
       /\b(passive income system|secret system|financial freedom blueprint|millionaire mindset method)\b/gi,
       /\b(no experience needed.*earn|guaranteed income|risk[-\s]?free profits?)\b/gi,
+      /\b(earn \$?[\d,]{3,} (every|a|per) (day|week|month) without working|earn money recruiting|join our (network|downline)|build your downline|mlm opportunity|network marketing opportunity)\b/gi,
+      /\b(secret shopper|mystery shopper)\b/gi,
+      /\b(double your money|investment program.*(double|guaranteed)|guaranteed returns?|hot stock (alert|tip)|penny stock alert)\b/gi,
     ],
   },
   {
