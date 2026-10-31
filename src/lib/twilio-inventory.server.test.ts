@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const state = vi.hoisted(() => ({ updates: [] as { table: string; value: Record<string, unknown> }[], rpc: vi.fn() }));
+const state = vi.hoisted(() => ({ ownerSid: 'ACoriginal', updates: [] as { table: string; value: Record<string, unknown> }[], rpc: vi.fn() }));
 vi.mock('@/integrations/supabase/client.server', () => ({ supabaseAdmin: {
   rpc: state.rpc,
   from: (table: string) => {
@@ -8,6 +8,7 @@ vi.mock('@/integrations/supabase/client.server', () => ({ supabaseAdmin: {
       select: () => query, eq: () => query,
       update: (value: Record<string, unknown>) => { state.updates.push({ table, value }); return query; },
       upsert: () => query,
+      maybeSingle: async () => ({ data: { owner_account_sid: state.ownerSid, phone_number: '+18553820888' }, error: null }),
       single: async () => ({ data: table === 'accounts' ? { id: 'tenant', onboarding_status: 'active', sending_suspended_at: null } : { renews_at: '2026-12-01T00:00:00Z' }, error: null }),
       then: (resolve: (value: unknown) => void) => resolve({ error: null }),
     };
@@ -16,8 +17,16 @@ vi.mock('@/integrations/supabase/client.server', () => ({ supabaseAdmin: {
 } }));
 import { assignTwilioInventory } from './twilio-inventory.server';
 
-afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); state.updates.length = 0; });
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); state.updates.length = 0; state.ownerSid = 'ACoriginal'; });
 describe('approved inventory assignment recovery', () => {
+  it('rejects main-account numbers before reserving or charging', async () => {
+    vi.stubEnv('TWILIO_ACCOUNT_SID', 'ACparent');
+    vi.stubEnv('TWILIO_AUTH_TOKEN', 'test-token');
+    state.ownerSid = 'ACparent';
+    await expect(assignTwilioInventory('tenant', '+18553820888', 100)).rejects.toThrow('reserved for the platform');
+    expect(state.rpc).not.toHaveBeenCalled();
+    expect(state.updates).toHaveLength(0);
+  });
   it('resumes without token encryption, moving the number or resetting renewal', async () => {
     vi.stubEnv('TWILIO_ACCOUNT_SID', 'ACparent');
     vi.stubEnv('TWILIO_AUTH_TOKEN', 'test-token');

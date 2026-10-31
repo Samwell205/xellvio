@@ -39,7 +39,7 @@ export function TwilioInventoryPanel() {
           <td className="py-3 pr-4"><Badge variant={n.verification_status === 'verified' ? 'secondary' : 'outline'}>{n.verification_status === 'verified' ? 'Verified' : 'Approval unconfirmed'}</Badge>{n.last_error && <p className="text-xs text-destructive mt-2 max-w-64 break-words">{n.last_error}</p>}</td>
           <td className="py-3 pr-4"><div>{n.assigned_to?.legal_business_name || n.assigned_to?.email || 'Unassigned'}</div><div className="font-mono text-xs text-muted-foreground break-all">{n.owner_account_sid}</div></td>
           <td className="py-3"><div className="flex flex-wrap gap-2">
-            {n.assigned_account_id ? <>
+            {n.platform_reserved ? <Badge variant="outline">Platform reserved</Badge> : n.assigned_account_id ? <>
               {n.assignment_state === 'setup_paused' && <Button size="sm" variant="outline" disabled={assignMut.isPending} onClick={() => assignMut.mutate({ account_id: n.assigned_account_id, phone_number: n.phone_number })}>Resume setup</Button>}
               <Button aria-label={`Remove assignment for ${n.phone_number}`} title="Remove assignment" size="icon" variant="ghost" disabled={unassignMut.isPending} onClick={() => { if (confirm(`Remove ${n.phone_number} from this business and stop its sending and renewals?`)) unassignMut.mutate(n.phone_number); }}><Unlink className="size-4" /></Button>
             </> : <>

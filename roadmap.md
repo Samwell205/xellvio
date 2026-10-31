@@ -1,5 +1,9 @@
 # Roadmap
 
+## Main-account number protection
+- [x] Carrier lookup confirms main account holds only +18664725941; no tenant line or sender uses it, so no replacement needed
+- [x] Main-account inventory unavailable; assignment/purchase precheck and sending guards passed 18 tests. Admin visual check blocked by persistent Loading analytics
+
 ## Current tenant assignment conflict
 - [x] Repair approved number ownership constraints without moving numbers; 13 ownership/assignment tests passed
 - [x] Resume +18553820888 for the owner's selected business; active/verified after reload without charging or sending

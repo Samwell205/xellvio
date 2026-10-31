@@ -150,7 +150,7 @@ export async function activeLineFor(accountId: string): Promise<{ sid: string; t
   const db = await admin();
   const { data } = await db.from("tenant_twilio_lines").select("subaccount_sid,phone_number,status,billing_status").eq("account_id", accountId).maybeSingle();
   let v: { sid: string; token: string; from: string } | null = null;
-  if (data?.status === "active" && data.billing_status === "current" && data.subaccount_sid && data.phone_number) {
+  if (data?.status === "active" && data.billing_status === "current" && data.subaccount_sid && data.subaccount_sid !== process.env.TWILIO_ACCOUNT_SID && data.phone_number) {
     const token = await lineTokenFor(data.subaccount_sid);
     if (token) v = { sid: data.subaccount_sid, token, from: data.phone_number };
   }
@@ -158,6 +158,7 @@ export async function activeLineFor(accountId: string): Promise<{ sid: string; t
 }
 
 export async function sendViaLine(line: { sid: string; token: string; from: string }, opts: { to: string; text: string; timeoutMs?: number }): Promise<{ id: string; parts: number }> {
+  if (!line.sid || line.sid === process.env.TWILIO_ACCOUNT_SID) throw new Error('This number is reserved for the platform and cannot send business messages.');
   const res = await fetch(`${API}/Accounts/${line.sid}/Messages.json`, {
     method: "POST",
     headers: { Authorization: subAuth(line.sid, line.token), "Content-Type": "application/x-www-form-urlencoded" },
