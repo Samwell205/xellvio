@@ -85,31 +85,20 @@ export async function assignTwilioInventory(accountId: string, phone?: string, p
   try {
     const { data: line, error: readError } = await database.from('tenant_twilio_lines').select('*').eq('account_id', accountId).single();
     if (readError) throw new Error(readError.message);
-    let sid = line.subaccount_sid;
-    let token = sid ? await (await import('./twilio-lines.server')).lineTokenFor(sid) : null;
-    if (!sid) {
-      // Discover an account from an earlier interrupted request before creating another.
-      const existing = await pages(`${API}/Accounts.json?FriendlyName=${encodeURIComponent(`xellvio-${accountId}`)}&Status=active`, auth(parent.sid, parent.token), 'accounts');
-      const created = existing.find(a => a.owner_account_sid === parent.sid) ?? await request(`${API}/Accounts.json`, auth(parent.sid, parent.token), { FriendlyName: `xellvio-${accountId}` });
-      sid = created.sid; token = created.auth_token;
-      const { data: encrypted, error: encError } = await database.rpc('encrypt_twilio_token', { _plain: token });
-      if (encError) throw new Error(encError.message);
-      const { error: saveError } = await database.from('tenant_twilio_lines').update({ subaccount_sid: sid, auth_token_enc: encrypted, status: 'account_created' }).eq('account_id', accountId);
-      if (saveError) throw new Error(saveError.message);
-    }
-    if (!sid || !token || sid === parent.sid) throw new Error('The receiving business needs its own valid sub-account.');
-    let owned;
-    try { owned = await request(`${API}/Accounts/${sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token)); }
-    catch (e) {
-      if (!(e instanceof Error) || !e.message.includes('(404)')) throw e;
-      // Unknown failures do not authorize a transfer; verify current ownership first.
-      const source = await request(`${API}/Accounts/${row.owner_account_sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token));
-      if (source.account_sid !== row.owner_account_sid) throw e;
-      owned = await request(`${API}/Accounts/${row.owner_account_sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token), { AccountSid: sid });
-    }
-    if (!isIsolatedNumber(owned.account_sid, sid, parent.sid)) throw new Error('Number ownership could not be confirmed in the receiving sub-account.');
-    const { error: ownershipError } = await database.from('twilio_verified_inventory').update({ owner_account_sid: sid }).eq('phone_sid', row.phone_sid);
-    if (ownershipError) throw new Error(ownershipError.message);
+    if (!line) throw new Error('Assignment record not found.');
+    // Owner decision: never move an approved number to another sub-account, because a move
+    // forces the carrier verification to be resubmitted. The number stays where it is approved.
+    const sid: string = row.owner_account_sid;
+    if (!sid || sid === parent.sid) throw new Error('This number is not in a sub-account and cannot be assigned.');
+    const owned = await request(`${API}/Accounts/${sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token));
+    if (owned.account_sid !== sid) throw new Error('Number ownership could not be confirmed. Refresh the list and try again.');
+    const account = await request(`${API}/Accounts/${sid}.json`, auth(parent.sid, parent.token));
+    const token: string = account.auth_token;
+    if (!token) throw new Error('The number account could not be authenticated.');
+    const { data: encrypted, error: encError } = await database.rpc('encrypt_twilio_token', { _plain: token });
+    if (encError) throw new Error(encError.message);
+    const { error: subError } = await database.from('tenant_twilio_lines').update({ subaccount_sid: sid, auth_token_enc: encrypted }).eq('account_id', accountId);
+    if (subError) throw new Error(subError.message);
     await request(`${API}/Accounts/${sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token), { SmsUrl: 'https://xellvio.com/api/public/twilio/inbound', SmsMethod: 'POST' });
     const verifications = await pages(`${TFV}?PageSize=50`, auth(sid, token), 'verifications');
     const verified = verifications.find(v => v.tollfree_phone_number_sid === row.phone_sid && isApprovedVerification(v.status));
