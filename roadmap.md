@@ -5,6 +5,7 @@
 - [x] Audit verified inventory, existing assigned numbers and business sub-accounts: seven approved Twilio numbers across four sub-accounts, one linked business
 - [x] Make verified-number assignment and purchase use the receiving business sub-account; show inventory in both admin number pages
 - [x] Test isolation rules and verify inventory/assigned ownership without sending messages
+- [x] Owner decided (2026-10-31): leave the seven approved numbers in their current sub-accounts; moving would require re-verification
 - [ ] Verify a live transfer and tenant purchase — needs the owner's chosen receiving business; no arbitrary assignment or charge
 
 - [x] Register toll-free numbers for CorellCorp (3, own sub-account) and SAMWELL LLC (2 new + existing +1 866-472-5941)
