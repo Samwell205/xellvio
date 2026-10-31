@@ -1,5 +1,10 @@
 # Roadmap
 
+## Toll-free purchase safeguards
+- [ ] Use eligible inventory for offers and both paid checkouts; reject duplicate purchases
+- [ ] Record assignment failures for manual payment review and alert admins across card/crypto paths
+- [ ] Run purchase regressions without charging, assigning or refunding real accounts
+
 ## Main-account number protection
 - [x] Carrier lookup confirms main account holds only +18664725941; no tenant line or sender uses it, so no replacement needed
 - [x] Main-account inventory unavailable; assignment/purchase precheck and sending guards passed 18 tests. Admin visual check blocked by persistent Loading analytics
