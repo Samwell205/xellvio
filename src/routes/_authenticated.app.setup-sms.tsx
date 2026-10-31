@@ -368,7 +368,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
   }
 
   return (
-    <Card className="p-6 space-y-5 rounded-3xl border-primary/30 bg-primary/5" style={{ animation: "bento-rise .5s .15s cubic-bezier(.2,.8,.2,1) both" }}>
+    <Card ref={cardRef} className="p-6 space-y-5 rounded-3xl border-primary/30 bg-primary/5" style={{ animation: "bento-rise .5s .15s cubic-bezier(.2,.8,.2,1) both" }}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-lg font-semibold">Use your own Sender ID</div>
@@ -383,7 +383,7 @@ function CustomSenderIdCard({ assets, onSaved }: { assets: any[]; onSaved: () =>
       <div className="grid gap-3 md:grid-cols-[1fr_auto]">
         <div className="space-y-1.5">
           <Label>Sender ID</Label>
-          <Input
+          <Input ref={senderInputRef}
             value={senderId}
             onChange={(e) =>
               setSenderId(
