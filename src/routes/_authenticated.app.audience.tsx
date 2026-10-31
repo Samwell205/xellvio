@@ -47,6 +47,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   Users,
@@ -66,10 +68,18 @@ import {
   PhoneOff,
   Smartphone,
   Loader2,
+  MoreHorizontal,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/audience")({
-  head: () => ({ meta: [{ title: "Audience — Xellvio" }] }),
+  head: () => ({ meta: [
+    { title: "Audience — Xellvio" },
+    { name: "description", content: "Manage your Xellvio contacts, contact lists, subscriptions and audience." },
+    { property: "og:title", content: "Audience — Xellvio" },
+    { property: "og:description", content: "Manage your Xellvio contacts, contact lists, subscriptions and audience." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: AudiencePage,
 });
 
@@ -348,7 +358,7 @@ function AudiencePage() {
             Check phone types
             {(lineTypesQ.data?.unchecked ?? 0) > 0 ? ` (${lineTypesQ.data?.unchecked})` : ""}
           </Button>
-          <ManageListsDialog lists={listsQ.data ?? []} onDone={invalidateAll} />
+          <ManageListsDialog lists={listsQ.data ?? []} loading={listsQ.isLoading} failed={!!listsQ.error} onDone={invalidateAll} />
           <Button variant="outline" onClick={downloadTemplate}>
             <Download className="size-4 mr-1.5" />
             CSV template
@@ -632,7 +642,7 @@ function ConsentBadge({ status }: { status: ProfileRow["consent_status"] }) {
 
 /* ============================ Lists management ============================ */
 
-function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: () => void }) {
+function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactList[]; loading: boolean; failed: boolean; onDone: () => void }) {
   const acctId = useAccountId();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -640,6 +650,8 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
   const [editingId, setEditingId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [listSearch, setListSearch] = useState("");
+  const visibleLists = lists.filter(l => `${l.name} ${l.description ?? ""}`.toLowerCase().includes(listSearch.toLowerCase()));
   const deleteListFn = useServerFn(deleteContactList);
   const deleteListsFn = useServerFn(deleteContactLists);
 
@@ -762,16 +774,14 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
           Manage lists
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="sm:max-w-3xl max-h-[90dvh] overflow-y-auto gap-0 p-0">
+        <DialogHeader className="border-b p-6">
           <DialogTitle>Contact lists</DialogTitle>
-          <DialogDescription>
-            Group contacts into named lists you can target with segments and campaigns.
-          </DialogDescription>
+          <DialogDescription>{lists.length} lists in your audience</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="grid gap-2">
-            <Label>{editingId ? "Edit list" : "Create new list"}</Label>
+        <div className="grid min-h-96 md:grid-cols-[240px_minmax(0,1fr)]">
+          <div className="flex flex-col gap-3 border-b bg-muted/30 p-5 md:border-b-0 md:border-r">
+            <Label className="font-semibold">{editingId ? "Edit list" : "New list"}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -802,17 +812,18 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
               </Button>
             </div>
           </div>
-          <div className="border-t pt-3">
-            <div className="flex items-center justify-between mb-2">
+          <div className="min-w-0 p-5">
+            <div className="relative mb-4"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" aria-label="Search contact lists" placeholder="Search lists" value={listSearch} onChange={e => setListSearch(e.target.value)} /></div>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
               <label className="flex items-center gap-2 text-xs uppercase text-muted-foreground tracking-wide">
                 <Checkbox
-                  checked={lists.length > 0 && selected.size === lists.length}
+                  checked={visibleLists.length > 0 && visibleLists.every(l => selected.has(l.id))}
                   onCheckedChange={(checked) =>
-                    setSelected(checked ? new Set(lists.map((l) => l.id)) : new Set())
+                    setSelected(prev => { const next = new Set(prev); visibleLists.forEach(l => checked ? next.add(l.id) : next.delete(l.id)); return next; })
                   }
                   aria-label="Select all lists"
                 />
-                Existing lists ({lists.length})
+                {selected.size > 0 ? `${selected.size} selected` : `${visibleLists.length} lists`}
               </label>
               {selected.size > 0 && (
                 <div className="flex items-center gap-1">
@@ -836,17 +847,20 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
                     onClick={() => removeSelected(true)}
                   >
                     <Trash2 className="size-3.5 mr-1" />
-                    + contacts
+                    Delete with contacts
                   </Button>
                 </div>
               )}
             </div>
-            <div className="space-y-1 max-h-60 overflow-y-auto">
-              {lists.length === 0 && <p className="text-sm text-muted-foreground">No lists yet.</p>}
-              {lists.map((l) => (
+            <div className="max-h-[45dvh] overflow-y-auto divide-y border-y">
+              {loading && <div className="space-y-3 py-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>}
+              {failed && <p role="alert" className="py-6 text-sm text-destructive">Lists could not be loaded. Close and try again.</p>}
+              {!loading && !failed && lists.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No lists yet.</p>}
+              {lists.length > 0 && visibleLists.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No matching lists.</p>}
+              {visibleLists.map((l) => (
                 <div
                   key={l.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                  className={`flex items-center justify-between gap-3 px-2 py-4 text-sm ${selected.has(l.id) ? "bg-accent/40" : ""}`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <Checkbox
@@ -857,49 +871,17 @@ function ManageListsDialog({ lists, onDone }: { lists: ContactList[]; onDone: ()
                     <div className="min-w-0">
                       <div className="font-medium truncate">{l.name}</div>
                       {l.description && (
-                        <div className="text-xs text-muted-foreground">{l.description}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-2">{l.description}</div>
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setEditingId(l.id);
-                        setName(l.name);
-                        setDesc(l.description ?? "");
-                      }}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      title="Delete list only (keep contacts)"
-                      onClick={() => remove(l.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      title="Delete list AND all contacts in it"
-                      disabled={busy}
-                      onClick={() => removeWithContacts(l.id, l.name)}
-                    >
-                      <Trash2 className="size-4" />
-                      <span className="ml-1 text-[10px] font-semibold">+ contacts</span>
-                    </Button>
-                  </div>
+                  <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" disabled={busy} aria-label={`Actions for ${l.name}`} title={`Actions for ${l.name}`}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onSelect={() => { setEditingId(l.id); setName(l.name); setDesc(l.description ?? ""); }}><Pencil className="size-4" />Edit list</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem className="text-destructive" onSelect={() => remove(l.id)}><Trash2 className="size-4" />Delete list · keep contacts</DropdownMenuItem><DropdownMenuItem className="text-destructive" onSelect={() => removeWithContacts(l.id, l.name)}><Trash2 className="size-4" />Delete list and contacts</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
                 </div>
               ))}
             </div>
           </div>
         </div>
-        <DialogFooter>
+        <DialogFooter className="border-t px-6 py-4">
           <Button variant="outline" onClick={() => setOpen(false)}>
             Done
           </Button>

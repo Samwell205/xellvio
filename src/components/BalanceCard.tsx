@@ -2,13 +2,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Phone, AlertTriangle, CheckCircle2, XCircle, PlayCircle, PauseCircle } from "lucide-react";
+import { RefreshCw, Phone, AlertTriangle, CheckCircle2, XCircle, PlayCircle, PauseCircle, Settings2, ChevronDown } from "lucide-react";
 import { getTwilioBalance, refreshTwilioBalance, updateTwilioBalanceSettings, resumePausedCampaignsNow, sendTestCapacityAlert } from "@/lib/twilio-balance.functions";
 
 function formatMoney(n: number, currency: string) {
@@ -26,10 +25,11 @@ export function BalanceCard() {
   const resumeFn = useServerFn(resumePausedCampaignsNow);
   const testFn = useServerFn(sendTestCapacityAlert);
   const qc = useQueryClient();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const q = useQuery({
     queryKey: ["twilio-balance"],
-    queryFn: async () => { await refreshFn(); return getFn(); },
+    queryFn: () => getFn(),
     refetchInterval: 60_000,
   });
 
@@ -41,6 +41,19 @@ export function BalanceCard() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  useEffect(() => {
+    let active = true;
+    const update = async () => {
+      try {
+        await refreshFn();
+        if (active) await qc.invalidateQueries({ queryKey: ["twilio-balance"] });
+      } catch { /* Keep the last saved balance visible; manual refresh reports errors. */ }
+    };
+    void update();
+    const timer = setInterval(update, 60_000);
+    return () => { active = false; clearInterval(timer); };
+  }, [refreshFn, qc]);
 
   const [lowT, setLowT] = useState<number>(20);
   const [critT, setCritT] = useState<number>(5);
@@ -114,7 +127,7 @@ export function BalanceCard() {
   const pausedCount = q.data?.pausedCampaignCount ?? 0;
 
   return (
-    <Card className="p-5 space-y-5">
+    <section className="border-y bg-card px-5 py-6 space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Phone className="size-5" />
@@ -134,7 +147,7 @@ export function BalanceCard() {
       <div className="flex items-end gap-4">
         <div>
           <div className="text-xs uppercase tracking-wide text-muted-foreground">Current balance</div>
-          <div className="text-3xl font-extrabold tabular-nums">
+          <div className="text-4xl font-semibold tabular-nums">
             {latest && status !== "error" ? formatMoney(balance, currency) : "—"}
           </div>
         </div>
@@ -156,13 +169,13 @@ export function BalanceCard() {
       </div>
 
       {pausedCount > 0 && (
-        <div className="rounded-md border border-amber-500/40 bg-amber-50 dark:bg-amber-950/30 p-3 flex items-center gap-3">
-          <PauseCircle className="size-5 text-amber-600 shrink-0" />
+        <div className="rounded-md border border-warning/40 bg-warning/10 p-3 flex items-center gap-3">
+          <PauseCircle className="size-5 text-warning shrink-0" />
           <div className="flex-1 text-sm">
-            <div className="font-semibold text-amber-900 dark:text-amber-200">
+            <div className="font-semibold text-foreground">
               {pausedCount} campaign{pausedCount === 1 ? "" : "s"} paused — waiting for funds
             </div>
-            <div className="text-xs text-amber-800/80 dark:text-amber-200/80">
+            <div className="text-xs text-muted-foreground">
               They'll auto-resume on the next balance check. Click below to resume immediately once funded.
             </div>
           </div>
@@ -174,7 +187,8 @@ export function BalanceCard() {
       )}
 
       <div className="border-t pt-4 space-y-3">
-        <h4 className="font-medium text-sm">Alert settings</h4>
+        <Button variant="ghost" className="w-full justify-between" onClick={() => setSettingsOpen(!settingsOpen)} aria-expanded={settingsOpen}><span className="flex items-center gap-2"><Settings2 className="size-4" />Balance alerts & settings</span><ChevronDown className={`size-4 ${settingsOpen ? "rotate-180" : ""}`} /></Button>
+        {settingsOpen && <>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
             <Label htmlFor="lowT">Low threshold (USD)</Label>
@@ -218,16 +232,17 @@ export function BalanceCard() {
             {save.isPending ? "Saving..." : "Save settings"}
           </Button>
         </div>
+        </>}
       </div>
-    </Card>
+    </section>
   );
 }
 
 function StatusBadge({ status }: { status: "healthy" | "low" | "critical" | "error" }) {
   if (status === "healthy")
-    return <Badge className="gap-1 bg-emerald-600 hover:bg-emerald-600"><CheckCircle2 className="size-3" />Healthy</Badge>;
+    return <Badge className="gap-1 bg-success text-success-foreground hover:bg-success"><CheckCircle2 className="size-3" />Healthy</Badge>;
   if (status === "low")
-    return <Badge className="gap-1 bg-amber-500 hover:bg-amber-500"><AlertTriangle className="size-3" />Low</Badge>;
+    return <Badge className="gap-1 bg-warning text-warning-foreground hover:bg-warning"><AlertTriangle className="size-3" />Low</Badge>;
   if (status === "critical")
     return <Badge variant="destructive" className="gap-1"><AlertTriangle className="size-3" />Critical</Badge>;
   return <Badge variant="outline" className="gap-1"><XCircle className="size-3" />Error</Badge>;
@@ -257,7 +272,7 @@ export function LowBalanceBanner() {
           ? "border-destructive/40 bg-destructive/10 text-destructive"
           : status === "error"
           ? "border-muted-foreground/30 bg-muted/40 text-muted-foreground"
-          : "border-amber-500/40 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+          : "border-warning/40 bg-warning/10 text-foreground"
       }`}
     >
       <AlertTriangle className="size-4 shrink-0" />

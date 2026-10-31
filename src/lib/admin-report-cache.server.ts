@@ -9,7 +9,7 @@ export const ADMIN_REPORT_TTL_MS = 10 * 60_000;
 export async function cachedReport<T>(
   key: string,
   compute: () => Promise<T>,
-  opts: { refresh?: boolean; ttlMs?: number } = {},
+  opts: { refresh?: boolean; ttlMs?: number; allowStale?: boolean } = {},
 ): Promise<{ value: T; computedAt: string; cached: boolean }> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const sb = supabaseAdmin as any;
@@ -21,7 +21,7 @@ export async function cachedReport<T>(
       .select("payload,computed_at")
       .eq("key", key)
       .maybeSingle();
-    if (data && Date.now() - new Date(data.computed_at).getTime() < ttl) {
+    if (data && (opts.allowStale || Date.now() - new Date(data.computed_at).getTime() < ttl)) {
       return { value: data.payload as T, computedAt: data.computed_at, cached: true };
     }
   }

@@ -1,5 +1,12 @@
 # Roadmap
 
+## Finance, billing and contact lists
+- [x] Remove automatic expired-report recalculation and carrier waits from Finance; Billing reuses saved aggregates instead of downloading ledger history
+- [x] Redesign Finance and Billing with focused navigation, independent optional reports and compact settings
+- [x] Redesign Contact lists with search, readable rows and separate confirmed delete actions
+- [x] Verify signed-in Finance/Billing, search/settings, desktop/mobile overflow and 14 regressions; build OK. Cold Finance observed 4.4–4.7s; repeat Billing navigation 1.5s. No charges or sends.
+- [ ] Verify Contact lists in a tenant session — current owner session redirects tenant pages to admin; not bypassed
+
 ## Active carrier balance
 - [x] Replace the obsolete balance lookup with the funded Twilio account and align saved alert settings
 - [x] Signed-in billing page and Refresh now show Twilio $29.99 / Healthy; 8 account-balance regressions passed, build OK. No SMS sent or charges made.

@@ -19,6 +19,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { BarChart3, RefreshCw, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/admin/finance")({
   component: FinancePage,
@@ -61,24 +64,26 @@ function Stat({
   tone?: "good" | "bad";
 }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
+    <div className="border-t-2 border-primary/30 bg-card px-4 py-5 min-h-36">
+      <div>
         <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
         <div
           className={`text-2xl font-semibold mt-1 ${
-            tone === "good" ? "text-emerald-500" : tone === "bad" ? "text-destructive" : ""
+            tone === "good" ? "text-success" : tone === "bad" ? "text-destructive" : ""
           }`}
         >
           {value}
         </div>
         {hint && <div className="text-xs text-muted-foreground mt-1 leading-snug">{hint}</div>}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 function FinancePage() {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("tenants");
+  const [tenantSearch, setTenantSearch] = useState("");
   const overviewFn = useServerFn(adminFinanceOverview);
   const tenantsFn = useServerFn(adminFinanceTenants);
 
@@ -100,11 +105,13 @@ function FinancePage() {
     queryKey: ["admin-margin-audit"],
     queryFn: () => marginFn({ data: {} }),
     staleTime: FIVE_MIN,
+    enabled: activeTab === "margin",
   });
   const { data: pricing } = useQuery({
     queryKey: ["admin-pricing-preview"],
     queryFn: () => pricingFn({ data: { markupPercent: 100 } }),
     staleTime: FIVE_MIN,
+    enabled: activeTab === "pricing",
   });
 
   const [refreshing, setRefreshing] = useState(false);
@@ -133,6 +140,7 @@ function FinancePage() {
   const { data: recoveries } = useQuery({
     queryKey: ["admin-recovery-cases"],
     queryFn: () => recoveryFn({}),
+    enabled: activeTab === "recovery",
   });
   const updateRecovery = useMutation({
     mutationFn: (input: { id: string; status: string }) => updateRecoveryFn({ data: input }),
@@ -153,8 +161,7 @@ function FinancePage() {
     URL.revokeObjectURL(url);
   };
 
-  if (isLoading) return <div className="p-6 text-muted-foreground">Loading finance analysis…</div>;
-  if (error) return <div className="p-6 text-destructive">{(error as Error).message}</div>;
+  if (isLoading || error) return <div className="space-y-6"><div className="border-b pb-5"><h1 className="text-3xl font-semibold">Finance analysis</h1><p className="mt-2 text-sm text-muted-foreground">Payments, balances and sending performance</p></div>{error ? <div role="alert" className="space-y-3"><p className="text-destructive">Finance totals could not be loaded.</p><Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ["admin-finance"] })}>Try again</Button></div> : <><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[0,1,2,3].map(i => <Skeleton key={i} className="h-36 rounded-md" />)}</div><Skeleton className="h-80 w-full rounded-md" /></>}</div>;
 
   const s: any = data?.summary ?? {};
   const mi = s.money_in ?? {};
@@ -216,16 +223,17 @@ function FinancePage() {
   );
 
   return (
-    <div className="p-6 space-y-6 max-w-[1400px]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-7 max-w-[1400px] motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-5">
         <div>
-          <h1 className="text-2xl font-semibold">Finance analysis</h1>
+          <div className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-primary"><BarChart3 className="size-4" /> Financial overview</div>
+          <h1 className="text-3xl font-semibold">Finance analysis</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Calculated from payments, tenant wallets and the messages actually sent. Amounts are in
-            USD. Totals last updated {date((data as any)?.computedAt)}.
+            USD · Saved totals from {date((data as any)?.computedAt)}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={refreshAll} disabled={refreshing}>
+          <RefreshCw className={`mr-2 size-4 ${refreshing ? "motion-safe:animate-spin" : ""}`} />
           {refreshing ? "Recalculating…" : "Recalculate now"}
         </Button>
       </div>
@@ -233,15 +241,15 @@ function FinancePage() {
       {/* 1. Where the money is */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          1 · Where your money is
+          Account position
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat
-            label="Carrier account balance"
+            label="Twilio account balance"
             value={data?.providerBalance?.ok ? usd(data.providerBalance.balance) : "Unavailable"}
             hint={
               data?.providerBalance?.ok
-                ? `Live now · last recorded ${date(data?.lastSnapshot?.checked_at)}`
+                ? `Last checked ${date(data?.lastSnapshot?.checked_at)}`
                 : (data?.providerBalance?.error ?? "Could not reach the carrier API")
             }
           />
@@ -268,7 +276,7 @@ function FinancePage() {
       {/* 2. How the money was used */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          2 · How the money was used
+          Sending performance
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat
@@ -311,8 +319,8 @@ function FinancePage() {
         </p>
       </section>
 
-      <Tabs defaultValue="tenants">
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="overflow-x-auto border-b pb-2"><TabsList className="w-max justify-start">
           <TabsTrigger value="tenants">Per tenant</TabsTrigger>
           <TabsTrigger value="funding">Funding history</TabsTrigger>
           <TabsTrigger value="daily">Daily timeline</TabsTrigger>
@@ -321,7 +329,7 @@ function FinancePage() {
           <TabsTrigger value="pricing">Pricing check</TabsTrigger>
           <TabsTrigger value="attempts">Send attempts</TabsTrigger>
           <TabsTrigger value="recovery">Recovery & disputes</TabsTrigger>
-        </TabsList>
+        </TabsList></div>
 
         <TabsContent value="tenants">
           <Card>
@@ -334,6 +342,7 @@ function FinancePage() {
                 changed without a matching transaction row. The Totals row is the live aggregate
                 behind the cards at the top.
               </p>
+              <div className="relative mt-3 max-w-sm"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9" aria-label="Search finance tenants" placeholder="Search name or email" value={tenantSearch} onChange={e => setTenantSearch(e.target.value)} /></div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -353,7 +362,7 @@ function FinancePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(tenants ?? []).map((t: any) => (
+                  {(tenants ?? []).filter((t: any) => `${t.label} ${t.email}`.toLowerCase().includes(tenantSearch.toLowerCase())).map((t: any) => (
                     <tr key={t.account_id} className="border-t border-border">
                       <td className="py-2 pr-3">
                         <div className="font-medium">{t.label}</div>
@@ -377,7 +386,7 @@ function FinancePage() {
                       <td className="py-2 pr-3 text-right">{num(t.messages)}</td>
                       <td className="py-2 pr-3 text-right">{usd(t.carrier_cost)}</td>
                       <td
-                        className={`py-2 pr-3 text-right ${Number(t.profit) >= 0 ? "text-emerald-500" : "text-destructive"}`}
+                        className={`py-2 pr-3 text-right ${Number(t.profit) >= 0 ? "text-success" : "text-destructive"}`}
                       >
                         {usd(t.profit)}
                       </td>
@@ -694,7 +703,7 @@ function FinancePage() {
                       <td className="text-right tabular-nums">{usd(m.true_cost)}</td>
                       <td
                         className={`text-right tabular-nums font-semibold ${
-                          Number(m.margin) < 0 ? "text-destructive" : "text-emerald-500"
+                          Number(m.margin) < 0 ? "text-destructive" : "text-success"
                         }`}
                       >
                         {usd(m.margin)}
@@ -757,7 +766,7 @@ function FinancePage() {
                       </td>
                       <td
                         className={`text-right tabular-nums ${
-                          r.below_cost ? "text-destructive font-semibold" : "text-emerald-500"
+                          r.below_cost ? "text-destructive font-semibold" : "text-success"
                         }`}
                       >
                         ${Number(r.current_margin).toFixed(5)}
