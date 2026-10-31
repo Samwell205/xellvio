@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/select";
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 import { sendTestSms } from "@/lib/sms.functions";
+import { getMyDedicatedLine } from "@/lib/twilio-lines.functions";
 import {
   submitNumberRequest,
   listMyNumberRequests,
@@ -96,6 +97,8 @@ function SetupSmsPage() {
     queryFn: () => assetsFn(),
     refetchInterval: 30_000,
   });
+  const lineFn = useServerFn(getMyDedicatedLine);
+  const lineQ = useQuery({ queryKey: ["dedicated-line"], queryFn: () => lineFn(), refetchInterval: 60_000 });
 
   const refreshMut = useMutation({
     mutationFn: () => refresh(),
@@ -110,7 +113,9 @@ function SetupSmsPage() {
     );
   const a = account.data;
   const list = (assets.data ?? []) as any[];
-  const tfReady = list.some((x) => x.sender_kind === "toll_free" && x.verification_status === "verified");
+  const tfReady =
+    list.some((x) => x.sender_kind === "toll_free" && x.verification_status === "verified") ||
+    (lineQ.data as any)?.line?.status === "active";
   const senderIdAsset = list.find((x) => x.sender_kind === "sender_id");
   const readyCountries = list.filter((x) => x.verification_status === "verified").map((x) => x.country_code);
   const pending = list.filter((x) => ["submitted", "in_review", "requires_registration"].includes(x.verification_status));
