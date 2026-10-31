@@ -1,5 +1,11 @@
 # Roadmap
 
+## Finance, billing and contact lists
+- [ ] Diagnose and reduce slow Finance loading without changing financial calculations
+- [ ] Redesign Finance and Billing with focused navigation and compact settings
+- [ ] Redesign Contact lists with search, readable rows and safe existing actions
+- [ ] Verify signed-in pages, loading behavior and narrow regressions
+
 ## Active carrier balance
 - [x] Replace the obsolete balance lookup with the funded Twilio account and align saved alert settings
 - [x] Signed-in billing page and Refresh now show Twilio $29.99 / Healthy; 8 account-balance regressions passed, build OK. No SMS sent or charges made.
