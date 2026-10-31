@@ -1,5 +1,9 @@
 # Roadmap
 
+## Main-account number protection
+- [ ] Audit whether any tenant is assigned a main-account number; replace only affected assignments
+- [ ] Exclude main-account numbers from tenant assignment, purchase and sending; test safeguards
+
 ## Current tenant assignment conflict
 - [x] Repair approved number ownership constraints without moving numbers; 13 ownership/assignment tests passed
 - [x] Resume +18553820888 for the owner's selected business; active/verified after reload without charging or sending
