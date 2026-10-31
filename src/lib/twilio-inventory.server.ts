@@ -23,7 +23,6 @@ async function pages(url: string, authorization: string, key: string) {
   const items: any[] = [];
   for (let count = 0; url && count < 30; count++) {
     const result = await request(url, authorization);
-    if (key === 'tollfree_verifications') console.info('[inventory verification shape]', Object.keys(result), Object.values(result).filter(Array.isArray).map((items: any) => items.map((v: any) => ({ sid: v.sid, status: v.status, phone_sid: v.tollfree_phone_number_sid }))));
     items.push(...(result[key] ?? []));
     const next = result.next_page_uri ?? result.meta?.next_page_url;
     if (!next) return items;
@@ -49,11 +48,11 @@ export async function syncTwilioInventory() {
     const numbers = await pages(`${API}/Accounts/${scope.sid}/IncomingPhoneNumbers.json?PageSize=50`, authorization, 'incoming_phone_numbers');
     const tollfree = numbers.filter(n => /^\+1(?:800|833|844|855|866|877|888)\d{7}$/.test(n.phone_number));
     if (!tollfree.length) continue;
-    const verifications = await pages(`${TFV}?PageSize=50`, auth(scope.sid, scope.token), 'tollfree_verifications');
+    const verifications = await pages(`${TFV}?PageSize=50`, auth(scope.sid, scope.token), 'verifications');
     for (const number of tollfree) {
       const matches = verifications.filter(v => v.tollfree_phone_number_sid === number.sid);
       const verification = matches.find(v => isApprovedVerification(v.status)) ?? matches[0];
-      const line = (lines ?? []).find((l: any) => l.phone_sid === number.sid && l.subaccount_sid === scope.sid);
+      const line = (lines ?? []).find((l: any) => l.phone_sid === number.sid && l.subaccount_sid === scope.sid && l.status !== 'released');
       const { data: prior } = await database.from('twilio_verified_inventory').select('phone_sid').eq('phone_sid', number.sid).maybeSingle();
       const row = { phone_sid: number.sid, phone_number: number.phone_number, owner_account_sid: scope.sid, verification_sid: verification?.sid ?? null, verification_status: isApprovedVerification(verification?.status) ? 'verified' : 'pending', synced_at: new Date().toISOString(), ...(line ? { assigned_account_id: line.account_id, assignment_state: 'assigned' } : {}) };
       const { error } = prior ? await database.from('twilio_verified_inventory').update(row).eq('phone_sid', number.sid) : await database.from('twilio_verified_inventory').insert(row);
@@ -106,7 +105,7 @@ export async function assignTwilioInventory(accountId: string, phone?: string, p
     }
     if (!isIsolatedNumber(owned.account_sid, sid, parent.sid)) throw new Error('Number ownership could not be confirmed in the receiving sub-account.');
     await request(`${API}/Accounts/${sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token), { SmsUrl: 'https://xellvio.com/api/public/twilio/inbound', SmsMethod: 'POST' });
-    const verifications = await pages(`${TFV}?PageSize=50`, auth(sid, token), 'tollfree_verifications');
+    const verifications = await pages(`${TFV}?PageSize=50`, auth(sid, token), 'verifications');
     const verified = verifications.find(v => v.tollfree_phone_number_sid === row.phone_sid && isApprovedVerification(v.status));
     const status = verified ? 'active' : 'verification_pending';
     const now = new Date(); const renews = new Date(now); renews.setMonth(renews.getMonth() + 1);
@@ -118,6 +117,8 @@ export async function assignTwilioInventory(accountId: string, phone?: string, p
     }
     const { error: inventoryError } = await database.from('twilio_verified_inventory').update({ owner_account_sid: sid, verification_sid: verified?.sid ?? null, verification_status: verified ? 'verified' : 'pending', assignment_state: 'assigned', last_error: null }).eq('phone_sid', row.phone_sid);
     if (inventoryError) throw new Error(inventoryError.message);
+    const { error: accountError } = await database.from('accounts').update({ tollfree_setup_fee_due_cents: 0, tollfree_setup_fee_paid_at: now.toISOString() }).eq('id', accountId);
+    if (accountError) throw new Error(accountError.message);
     return { phone_number: row.phone_number, country: 'US', status };
   } catch (e) {
     await database.from('twilio_verified_inventory').update({ assignment_state: 'setup_paused', last_error: String(e instanceof Error ? e.message : e).slice(0, 500) }).eq('phone_sid', row.phone_sid);

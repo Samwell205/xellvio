@@ -122,13 +122,22 @@ export async function provisionLine(accountId: string, biz: LineBusiness): Promi
 export async function refreshLine(accountId: string): Promise<void> {
   const db = await admin();
   const { data: row } = await db.from("tenant_twilio_lines").select("subaccount_sid,verification_sid,status").eq("account_id", accountId).maybeSingle();
-  if (!row?.verification_sid || !row.subaccount_sid) return;
+  if (!row?.subaccount_sid) return;
   const token = await lineTokenFor(row.subaccount_sid);
   if (!token) return;
-  const v = await tw(`https://messaging.twilio.com/v1/Tollfree/Verifications/${row.verification_sid}`, subAuth(row.subaccount_sid, token));
+  let v;
+  if (row.verification_sid) {
+    v = await tw(`https://messaging.twilio.com/v1/Tollfree/Verifications/${row.verification_sid}`, subAuth(row.subaccount_sid, token));
+  } else {
+    const { data: line } = await db.from('tenant_twilio_lines').select('phone_sid').eq('account_id', accountId).maybeSingle();
+    const result = await tw(`https://messaging.twilio.com/v1/Tollfree/Verifications?TollfreePhoneNumberSid=${line?.phone_sid ?? ''}&PageSize=50`, subAuth(row.subaccount_sid, token));
+    v = result.verifications?.find((item: any) => item.tollfree_phone_number_sid === line?.phone_sid);
+    if (!v) return;
+  }
   const { mapVerification } = await import("./twilio-lines-rules");
   const next = mapVerification(v.status);
   await db.from("tenant_twilio_lines").update({
+    verification_sid: v.sid,
     status: next, status_detail: next === "rejected" ? String(v.rejection_reason ?? "Carrier review rejected the request.").slice(0, 300) : null,
     updated_at: new Date().toISOString(),
   }).eq("account_id", accountId);

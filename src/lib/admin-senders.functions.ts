@@ -101,6 +101,11 @@ export const adminGrantVerifiedTollfree = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const country = data.country.toUpperCase();
     let phoneNumber = data.phone_number?.trim() || "";
+    if (['US', 'CA', 'PR'].includes(country)) {
+      const { assignTwilioInventory } = await import('./twilio-inventory.server');
+      const assigned = await assignTwilioInventory(data.account_id, phoneNumber || undefined);
+      return { ok: true, ...assigned };
+    }
 
     if (phoneNumber) {
       const { data: existing } = await supabaseAdmin
@@ -372,6 +377,9 @@ export const adminAttachSharedTollfree = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
+    const { assignTwilioInventory } = await import('./twilio-inventory.server');
+    return { ok: true, ...await assignTwilioInventory(data.account_id, data.phone_number) };
+    /* Retired legacy attachment path.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: pool } = await supabaseAdmin
       .from("shared_tollfree_pool")
@@ -420,7 +428,7 @@ export const adminAttachSharedTollfree = createServerFn({ method: "POST" })
       onboarding_status: "active",
     }).eq("id", data.account_id);
 
-    return { ok: true };
+    return { ok: true }; */
   });
 
 export const adminDetachSharedTollfree = createServerFn({ method: "POST" })
