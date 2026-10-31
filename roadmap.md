@@ -1,10 +1,11 @@
 # Roadmap
 
 ## Toll-free assignment isolation
-- [ ] Explain the rejected saved connection and verify which connection the existing number setup uses
-- [ ] Audit verified inventory, existing assigned numbers and business sub-accounts
-- [ ] Make verified-number assignment and purchase use the receiving business sub-account; show inventory in admin
-- [ ] Test isolation rules and verify assigned-number ownership without sending messages
+- [x] Explain the rejected saved connection and verify which connection the existing number setup uses
+- [x] Audit verified inventory, existing assigned numbers and business sub-accounts: seven approved Twilio numbers across four sub-accounts, one linked business
+- [x] Make verified-number assignment and purchase use the receiving business sub-account; show inventory in both admin number pages
+- [x] Test isolation rules and verify inventory/assigned ownership without sending messages
+- [ ] Verify a live transfer and tenant purchase — needs the owner's chosen receiving business; no arbitrary assignment or charge
 
 - [x] Register toll-free numbers for CorellCorp (3, own sub-account) and SAMWELL LLC (2 new + existing +1 866-472-5941)
 - [ ] Ready-made number store: tenants buy an approved number, it moves to their sub-account, $5/month to keep (upfront price not set by owner)

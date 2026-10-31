@@ -143,12 +143,8 @@ export async function refreshLine(accountId: string): Promise<void> {
   }).eq("account_id", accountId);
 }
 
-const lineCache = new Map<string, { at: number; v: { sid: string; token: string; from: string } | null }>();
-
 /** Active, paid-up dedicated line for this business, or null. */
 export async function activeLineFor(accountId: string): Promise<{ sid: string; token: string; from: string } | null> {
-  const hit = lineCache.get(accountId);
-  if (hit && Date.now() - hit.at < 60_000) return hit.v;
   const db = await admin();
   const { data } = await db.from("tenant_twilio_lines").select("subaccount_sid,phone_number,status,billing_status").eq("account_id", accountId).maybeSingle();
   let v: { sid: string; token: string; from: string } | null = null;
@@ -156,7 +152,6 @@ export async function activeLineFor(accountId: string): Promise<{ sid: string; t
     const token = await lineTokenFor(data.subaccount_sid);
     if (token) v = { sid: data.subaccount_sid, token, from: data.phone_number };
   }
-  lineCache.set(accountId, { at: Date.now(), v });
   return v;
 }
 

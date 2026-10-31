@@ -68,8 +68,7 @@ async function claimFromPool(
 /**
  * Assign a pre-verified toll-free number to a user after they've paid a
  * straight fee (Paystack card / NOWPayments crypto). Does NOT touch the
- * credit balance. Returns null when no number is available so the caller
- * can flag the payment for refund.
+ * credit balance. Failed setup stays reserved for a safe retry; never auto-refund.
  */
 export async function assignTfnAfterPayment(userId: string): Promise<{ phone_number: string; country: string } | null> {
   const { buyerPriceUsd } = await readSettings();

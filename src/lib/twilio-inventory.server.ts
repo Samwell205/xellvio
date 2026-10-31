@@ -73,6 +73,9 @@ export async function listTwilioInventory() {
 export async function assignTwilioInventory(accountId: string, phone?: string, price = 0) {
   const database = await db();
   const parent = credentials();
+  const { data: business, error: businessError } = await database.from('accounts').select('id,onboarding_status,sending_suspended_at').eq('id', accountId).single();
+  if (businessError || !business) throw new Error('Business not found.');
+  if (business.onboarding_status === 'suspended' || business.sending_suspended_at) throw new Error('Sending is on hold for this business.');
   const { data: reserved, error } = await database.rpc('reserve_twilio_inventory', { _account_id: accountId, _phone_number: phone ?? null, _price: price });
   if (error) throw new Error(error.message);
   const row = Array.isArray(reserved) ? reserved[0] : reserved;
@@ -98,12 +101,15 @@ export async function assignTwilioInventory(accountId: string, phone?: string, p
     let owned;
     try { owned = await request(`${API}/Accounts/${sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token)); }
     catch (e) {
+      if (!(e instanceof Error) || !e.message.includes('(404)')) throw e;
       // Unknown failures do not authorize a transfer; verify current ownership first.
       const source = await request(`${API}/Accounts/${row.owner_account_sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token));
       if (source.account_sid !== row.owner_account_sid) throw e;
       owned = await request(`${API}/Accounts/${row.owner_account_sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token), { AccountSid: sid });
     }
     if (!isIsolatedNumber(owned.account_sid, sid, parent.sid)) throw new Error('Number ownership could not be confirmed in the receiving sub-account.');
+    const { error: ownershipError } = await database.from('twilio_verified_inventory').update({ owner_account_sid: sid }).eq('phone_sid', row.phone_sid);
+    if (ownershipError) throw new Error(ownershipError.message);
     await request(`${API}/Accounts/${sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token), { SmsUrl: 'https://xellvio.com/api/public/twilio/inbound', SmsMethod: 'POST' });
     const verifications = await pages(`${TFV}?PageSize=50`, auth(sid, token), 'verifications');
     const verified = verifications.find(v => v.tollfree_phone_number_sid === row.phone_sid && isApprovedVerification(v.status));
