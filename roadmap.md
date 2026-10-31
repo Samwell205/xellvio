@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Toll-free assignment isolation
+- [ ] Explain the rejected saved connection and verify which connection the existing number setup uses
 - [ ] Audit verified inventory, existing assigned numbers and business sub-accounts
 - [ ] Make verified-number assignment and purchase use the receiving business sub-account; show inventory in admin
 - [ ] Test isolation rules and verify assigned-number ownership without sending messages
