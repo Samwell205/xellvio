@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Active carrier balance
-- [ ] Replace the obsolete balance lookup with the funded Twilio account and align saved alert settings
-- [ ] Verify the admin balance refresh and run account-balance regressions without sending SMS or charging
+- [x] Replace the obsolete balance lookup with the funded Twilio account and align saved alert settings
+- [x] Signed-in billing page and Refresh now show Twilio $29.99 / Healthy; 8 account-balance regressions passed, build OK. No SMS sent or charges made.
 
 ## Toll-free purchase safeguards
 - [x] Use eligible inventory for offers and both paid checkouts; reject duplicate purchases
