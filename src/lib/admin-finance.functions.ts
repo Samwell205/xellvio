@@ -88,17 +88,8 @@ export const adminFinanceTenants = createServerFn({ method: "GET" })
   .handler(async ({ context, data: input }) => {
     const { data: ok } = await context.supabase.rpc("has_role", { _role: "admin" });
     if (!ok) throw new Error("Forbidden");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { cachedReport } = await import("./admin-report-cache.server");
-    const r = await cachedReport(
-      "finance_tenants",
-      async () => {
-        const { data, error } = await (supabaseAdmin as any).rpc("admin_finance_tenants");
-        if (error) throw new Error(error.message);
-        return (data ?? []) as any[];
-      },
-      { refresh: input.refresh, allowStale: true },
-    );
+    const { financeTenantReport } = await import("./admin-finance-reports.server");
+    const r = await financeTenantReport(input.refresh);
     return r.value;
   });
 
