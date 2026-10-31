@@ -10,6 +10,11 @@ export async function wireAssignedTollfreeForTenant(opts: {
   markVerified?: boolean;
 }): Promise<{ telnyx_phone_number_id: string | null; telnyx_messaging_profile_id: string | null }> {
   const country = (opts.countryCode ?? "US").toUpperCase();
+  if (['US', 'CA', 'PR'].includes(country)) {
+    const { assignTwilioInventory } = await import('./twilio-inventory.server');
+    await assignTwilioInventory(opts.accountId, opts.phoneNumber);
+    return { telnyx_phone_number_id: null, telnyx_messaging_profile_id: null };
+  }
   const markVerified = opts.markVerified === true;
   if (!process.env.TELNYX_API_KEY) throw new Error("TELNYX_API_KEY is not configured");
 
@@ -91,10 +96,15 @@ export async function wireAssignedTollfreeForTenant(opts: {
 
 export async function unwireAssignedTollfreeForTenant(opts: { phoneNumber: string }) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: inventory } = await (supabaseAdmin as any).from('twilio_verified_inventory').select('phone_sid').eq('phone_number', opts.phoneNumber).maybeSingle();
+  if (inventory) {
+    await (await import('./twilio-inventory.server')).unassignTwilioInventory(opts.phoneNumber);
+    return;
+  }
   const { data: asset } = await supabaseAdmin
-    .from("sender_assets").select("id,account_id").eq("phone_number", opts.phoneNumber).maybeSingle();
+    .from("sender_assets").select("id,account_id").eq("phone_number", opts.phoneNumber).limit(1).maybeSingle();
   if (!asset) return;
-  await supabaseAdmin.from("sender_assets").delete().eq("id", asset.id);
+  await supabaseAdmin.from("sender_assets").delete().eq('account_id', asset.account_id).eq('phone_number', opts.phoneNumber);
   await supabaseAdmin.from("numbers").delete().eq("phone_number", opts.phoneNumber);
   await supabaseAdmin.from("accounts").update({
     telnyx_phone_number: null,

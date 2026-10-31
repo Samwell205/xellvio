@@ -31,23 +31,17 @@ async function listAvailablePoolNumbers(): Promise<
   // Numbers are removed from the pool atomically on claim, so stale
   // sender_assets rows (from prior syncs / the platform owner's tenant)
   // must not hide otherwise available numbers.
-  const { data: pool } = await supabaseAdmin
-    .from("shared_tollfree_pool")
-    .select("phone_number,country_code,telnyx_phone_number_id,telnyx_messaging_profile_id");
-  return (pool ?? []) as any;
+  const { data: pool, error } = await (supabaseAdmin as any)
+    .from('twilio_verified_inventory')
+    .select('phone_number')
+    .eq('verification_status', 'verified').eq('available', true).is('assigned_account_id', null);
+  if (error) throw new Error(error.message);
+  return (pool ?? []).map((n: any) => ({ ...n, country_code: 'US', telnyx_phone_number_id: null, telnyx_messaging_profile_id: '' }));
 }
 
 async function countAvailable() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const [{ count: verifierCount }, poolAvailable] = await Promise.all([
-    supabaseAdmin
-      .from("verifier_tfns")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "verified")
-      .is("sold_to_account_id", null),
-    listAvailablePoolNumbers(),
-  ]);
-  return (verifierCount ?? 0) + poolAvailable.length;
+  return (await listAvailablePoolNumbers()).length;
 }
 
 export const getTfnMarketplaceStatus = createServerFn({ method: "GET" })
@@ -77,6 +71,9 @@ async function claimFromPool(
   priceUsd: number,
   opts: { skipDebit?: boolean } = {},
 ) {
+  const { assignTwilioInventory } = await import('./twilio-inventory.server');
+  return assignTwilioInventory(userId, undefined, opts.skipDebit ? 0 : priceUsd);
+  /* Retired shared-number assignment. Kept temporarily for historical reference.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const available = await listAvailablePoolNumbers();
   if (available.length === 0) return null;
@@ -168,7 +165,7 @@ async function claimFromPool(
     console.error("[tfn-marketplace] admin notify failed", e);
   }
 
-  return { phone_number: pick.phone_number, country: (pick.country_code || "US").toUpperCase() };
+  return { phone_number: pick.phone_number, country: (pick.country_code || "US").toUpperCase() }; */
 }
 
 /**
@@ -184,6 +181,10 @@ export async function assignTfnAfterPayment(userId: string): Promise<{ phone_num
 
 
 async function buyImpl(userId: string) {
+  const { buyerPriceUsd: purchasePrice } = await readSettings();
+  const { assignTwilioInventory } = await import('./twilio-inventory.server');
+  return { ok: true, ...await assignTwilioInventory(userId, undefined, purchasePrice) };
+  /* Retired legacy verifier sale; it cannot promise isolated carrier ownership.
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { buyerPriceUsd, commissionPct, ngnPerUsd } = await readSettings();
 
@@ -224,13 +225,19 @@ async function buyImpl(userId: string) {
     last_synced_at: new Date().toISOString(),
   });
 
-  return { ok: true, phone_number: row.phone_number, country: row.country };
+  return { ok: true, phone_number: row.phone_number, country: row.country }; */
 }
 
 export const purchaseTfnFromMarketplace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }: any) => buyImpl(context.userId));
+  .handler(async ({ context }) => {
+    const { resolveBillingAccount } = await import('./billing-account.server');
+    return buyImpl((await resolveBillingAccount(context.userId)).accountId);
+  });
 
 export const buyVerifiedTfn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => buyImpl(context.userId));
+  .handler(async ({ context }) => {
+    const { resolveBillingAccount } = await import('./billing-account.server');
+    return buyImpl((await resolveBillingAccount(context.userId)).accountId);
+  });
