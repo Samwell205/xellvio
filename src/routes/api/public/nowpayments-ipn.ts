@@ -82,17 +82,6 @@ export const Route = createFileRoute("/api/public/nowpayments-ipn")({
               const { settleTfnPurchase } = await import("@/lib/tfn-purchase.server");
               await settleTfnPurchase(supabaseAdmin, payment, meta);
             } else {
-                await supabaseAdmin
-                  .from("payments")
-                  .update({
-                    status: "paid",
-                    paid_at: new Date().toISOString(),
-                    admin_note: `TFN assigned: ${assigned.phone_number}`,
-                    metadata: meta,
-                  })
-                  .eq("id", payment.id);
-              }
-            } else {
               await supabaseAdmin.rpc("topup_account", {
                 _account_id: payment.account_id,
                 _amount: payment.credits,
