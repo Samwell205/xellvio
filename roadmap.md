@@ -1,10 +1,11 @@
 # Roadmap
 
 ## Finance, billing and contact lists
-- [ ] Diagnose and reduce slow Finance loading without changing financial calculations
-- [ ] Redesign Finance and Billing with focused navigation and compact settings
-- [ ] Redesign Contact lists with search, readable rows and safe existing actions
-- [ ] Verify signed-in pages, loading behavior and narrow regressions
+- [x] Remove automatic expired-report recalculation and carrier waits from Finance; Billing reuses saved aggregates instead of downloading ledger history
+- [x] Redesign Finance and Billing with focused navigation, independent optional reports and compact settings
+- [x] Redesign Contact lists with search, readable rows and separate confirmed delete actions
+- [x] Verify signed-in Finance/Billing, search/settings, desktop/mobile overflow and 14 regressions; build OK. Cold Finance observed 4.4–4.7s; repeat Billing navigation 1.5s. No charges or sends.
+- [ ] Verify Contact lists in a tenant session — current owner session redirects tenant pages to admin; not bypassed
 
 ## Active carrier balance
 - [x] Replace the obsolete balance lookup with the funded Twilio account and align saved alert settings
