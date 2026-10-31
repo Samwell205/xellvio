@@ -15,7 +15,9 @@ export const Route = createFileRoute("/api/public/lifecycle-tick")({
         }
         const { runLifecycleChecks } = await import("@/lib/lifecycle/scheduler.server");
         const result = await runLifecycleChecks(200);
-        return Response.json(result);
+        const { refreshPendingLines } = await import("@/lib/twilio-line-notify.server");
+        const tollfree = await refreshPendingLines().catch((e) => ({ error: String(e) }));
+        return Response.json({ ...result, tollfree });
       },
     },
   },

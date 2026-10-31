@@ -44,7 +44,7 @@ async function admin() {
 export async function lineTokenFor(accountSid: string): Promise<string | null> {
   if (accountSid === process.env.TWILIO_ACCOUNT_SID) return process.env.TWILIO_AUTH_TOKEN ?? null;
   const db = await admin();
-  const { data } = await db.from("tenant_twilio_lines").select("auth_token_enc").eq("subaccount_sid", accountSid).maybeSingle();
+  const { data } = await db.from("tenant_twilio_lines").select("auth_token_enc").eq("subaccount_sid", accountSid).not("auth_token_enc","is",null).limit(1).maybeSingle();
   if (data?.auth_token_enc) {
     const { data: tok } = await db.rpc("decrypt_twilio_token", { _cipher: data.auth_token_enc });
     if (tok) return tok;
@@ -115,6 +115,7 @@ export async function provisionLine(accountId: string, biz: LineBusiness): Promi
     : "https://messaging.twilio.com/v1/Tollfree/Verifications";
   const v = await tw(url, auth, fields);
   await db.from("tenant_twilio_lines").update({ verification_sid: v.sid, status: "verification_pending", status_detail: null, updated_at: new Date().toISOString() }).eq("account_id", accountId);
+  await (await import("./twilio-line-notify.server")).notifyLineStatus(accountId).catch((e) => console.error("[toll-free email]", e));
   return { status: "verification_pending", phone };
 }
 
@@ -141,6 +142,7 @@ export async function refreshLine(accountId: string): Promise<void> {
     status: next, status_detail: next === "rejected" ? String(v.rejection_reason ?? "Carrier review rejected the request.").slice(0, 300) : null,
     updated_at: new Date().toISOString(),
   }).eq("account_id", accountId);
+  await (await import("./twilio-line-notify.server")).notifyLineStatus(accountId).catch((e) => console.error("[toll-free email]", e));
 }
 
 /** Active, paid-up dedicated line for this business, or null. */

@@ -1,0 +1,2 @@
+ALTER TABLE public.tenant_twilio_lines ADD COLUMN IF NOT EXISTS notified_status text;
+UPDATE public.tenant_twilio_lines SET notified_status = status WHERE status IN ('active','rejected','verification_pending');
