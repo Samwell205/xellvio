@@ -5,7 +5,7 @@ import { RefreshCw, Unlink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TenantAssignmentPicker } from '@/components/TenantAssignmentPicker';
 import { adminListAccountsLite } from '@/lib/admin-verifiers.functions';
 import { adminTwilioInventory, adminSyncTwilioInventory, adminAssignTwilioInventory, adminUnassignTwilioInventory } from '@/lib/twilio-inventory.functions';
 
@@ -21,11 +21,11 @@ export function TwilioInventoryPanel() {
   const { data: accounts = [] } = useQuery({ queryKey: ['admin-accounts-lite'], queryFn: () => accountsFn() });
   const invalidate = () => { qc.invalidateQueries({ queryKey: ['admin-twilio-inventory'] }); qc.invalidateQueries({ queryKey: ['admin-senders'] }); };
   const syncMut = useMutation({ mutationFn: () => sync(), onSuccess: r => { toast.success(`${r.synced} toll-free numbers checked`); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
-  const assignMut = useMutation({ mutationFn: (data: { account_id: string; phone_number: string }) => assign({ data }), onSuccess: r => { toast.success(r.status === 'active' ? 'Assigned and verified in the business sub-account' : 'Assigned; waiting for approval confirmation in the business sub-account'); invalidate(); }, onError: (e: Error) => { toast.error(e.message); invalidate(); } });
+  const assignMut = useMutation({ mutationFn: (data: { account_id: string; phone_number: string }) => assign({ data }), onSuccess: r => { toast.success(r.status === 'active' ? 'Number assigned; verified status retained' : 'Number assigned; approval confirmation pending'); invalidate(); }, onError: (e: Error) => { toast.error(e.message); invalidate(); } });
   const unassignMut = useMutation({ mutationFn: (phone_number: string) => unassign({ data: { phone_number } }), onSuccess: () => { toast.success('Assignment removed; sending and renewals stopped'); invalidate(); }, onError: (e: Error) => toast.error(e.message) });
   return <section className="space-y-4 border-y py-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="font-semibold">Verified toll-free inventory</h2><p className="text-sm text-muted-foreground">{numbers.length} numbers · Business-owned sub-accounts</p></div>
+      <div><h2 className="font-semibold">Verified toll-free inventory</h2><p className="text-sm text-muted-foreground">{numbers.length} numbers</p></div>
       <Button variant="outline" size="sm" onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
         {syncMut.isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <RefreshCw className="size-4 mr-2" />} Check numbers
       </Button>
@@ -43,8 +43,8 @@ export function TwilioInventoryPanel() {
               {n.assignment_state === 'setup_paused' && <Button size="sm" variant="outline" disabled={assignMut.isPending} onClick={() => assignMut.mutate({ account_id: n.assigned_account_id, phone_number: n.phone_number })}>Resume setup</Button>}
               <Button aria-label={`Remove assignment for ${n.phone_number}`} title="Remove assignment" size="icon" variant="ghost" disabled={unassignMut.isPending} onClick={() => { if (confirm(`Remove ${n.phone_number} from this business and stop its sending and renewals?`)) unassignMut.mutate(n.phone_number); }}><Unlink className="size-4" /></Button>
             </> : <>
-              <Select value={selected[n.phone_sid] ?? ''} onValueChange={value => setSelected(current => ({ ...current, [n.phone_sid]: value }))}><SelectTrigger className="w-52"><SelectValue placeholder="Choose business…" /></SelectTrigger><SelectContent>{accounts.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.email || a.full_name || a.id}</SelectItem>)}</SelectContent></Select>
-              <Button size="sm" disabled={!n.available || n.verification_status !== 'verified' || !selected[n.phone_sid] || assignMut.isPending} onClick={() => { if (confirm(`Assign ${n.phone_number} to the selected business? It will use its own sub-account and the existing monthly number fee.`)) assignMut.mutate({ account_id: selected[n.phone_sid], phone_number: n.phone_number }); }}>Assign</Button>
+              <TenantAssignmentPicker accounts={accounts} value={selected[n.phone_sid] ?? ''} onChange={value => setSelected(current => ({ ...current, [n.phone_sid]: value }))} number={n.phone_number} />
+              <Button size="sm" disabled={!n.available || n.verification_status !== 'verified' || !selected[n.phone_sid] || assignMut.isPending} onClick={() => { const business = accounts.find(a => a.id === selected[n.phone_sid]); if (confirm(`Assign ${n.phone_number} to ${business?.email || business?.full_name || 'the selected business'}? The number stays in its current account; the existing monthly number fee applies.`)) assignMut.mutate({ account_id: selected[n.phone_sid], phone_number: n.phone_number }); }}>Assign</Button>
             </>}
           </div></td>
         </tr>)}</tbody>
