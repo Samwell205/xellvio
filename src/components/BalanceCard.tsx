@@ -29,7 +29,7 @@ export function BalanceCard() {
 
   const q = useQuery({
     queryKey: ["twilio-balance"],
-    queryFn: async () => { await refreshFn(); return getFn(); },
+    queryFn: () => getFn(),
     refetchInterval: 60_000,
   });
 
@@ -41,6 +41,19 @@ export function BalanceCard() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  useEffect(() => {
+    let active = true;
+    const update = async () => {
+      try {
+        await refreshFn();
+        if (active) await qc.invalidateQueries({ queryKey: ["twilio-balance"] });
+      } catch { /* Keep the last saved balance visible; manual refresh reports errors. */ }
+    };
+    void update();
+    const timer = setInterval(update, 60_000);
+    return () => { active = false; clearInterval(timer); };
+  }, [refreshFn, qc]);
 
   const [lowT, setLowT] = useState<number>(20);
   const [critT, setCritT] = useState<number>(5);
