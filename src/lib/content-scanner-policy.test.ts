@@ -16,3 +16,18 @@ describe("carrier policy examples", () => {
   for (const m of blocked) it(`blocks: ${m}`, () => expect(keywordScan(m).allowed).toBe(false));
   it("allows a normal promo", () => expect(keywordScan("Hi from Bella Salon: 20% off haircuts this week. Reply STOP to opt out.").allowed).toBe(true));
 });
+
+import { keywordScan as scanExtra } from "./content-scanner";
+describe("Twilio policy extra automatic checks", () => {
+  it.each([
+    ["What the fuck, 50% off today", "profanity"],
+    ["Big fireworks sale this weekend!", "fireworks"],
+    ["We bought your number from a partner. Deals inside", "sending_practices"],
+    ["Don't reply STOP, this offer is for you", "sending_practices"],
+  ])("blocks %s", (text, cat) => {
+    expect(scanExtra(text)).toMatchObject({ allowed: false, category: cat });
+  });
+  it("allows a normal promotion", () => {
+    expect(scanExtra("Hi Ana, 20% off haircuts this week. Reply STOP to opt out").allowed).toBe(true);
+  });
+});

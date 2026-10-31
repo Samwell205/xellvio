@@ -16,6 +16,9 @@ export const PROHIBITED_CATEGORIES = [
   "fraud_deceptive",
   "brand_impersonation",
   "phishing",
+  "profanity",
+  "fireworks",
+  "sending_practices",
 ] as const;
 
 export type ProhibitedCategory = (typeof PROHIBITED_CATEGORIES)[number];
@@ -217,6 +220,30 @@ const KEYWORD_PATTERNS: Array<{
       // Linked company-information demands must not depend on a fresh AI
       // opinion or a tracking code. Hold them consistently for safety review;
       // this is a flag, not evidence for an immediate hard-category suspension.
+      /\b(?:business|company|account)\s+(?:information|info|details)\s+(?:needed|required|missing)\b/gi,
+      /\b(?:complete|update|confirm|review)\s+your\s+(?:company|business)\s+(?:details|information|info|profile)\b/gi,
+    ],
+  },
+  {
+    category: "profanity",
+    severity: "block",
+    patterns: [
+      /\b(f+u+c+k+\w*|f\*+k|sh[i1]t+\w*|b[i1]tch\w*|asshole\w*|motherf\w*|c+u+n+t+s?|d[i1]ckhead|bastards?|wh[o0]res?|sl[u]ts?|pussy|wank\w*|bollocks)\b/gi,
+    ],
+  },
+  {
+    category: "fireworks",
+    severity: "block",
+    patterns: [/\b(fireworks?|firecrackers?|bottle rockets?|roman candles?|sparklers? sale|m-?80s?|cherry bombs?|pyrotechnics?)\b/gi],
+  },
+  {
+    // Twilio disallowed sending practices that show up in the message text.
+    category: "sending_practices",
+    severity: "block",
+    patterns: [
+      /\b(we (bought|purchased|acquired) your (number|contact|info|details)|got your number from (a|our) (list|partner|third party)|purchased (contact |phone )?list)\b/gi,
+      /\b(do not|don'?t|can'?t|cannot) (reply|text) stop\b|\bstop (will not|won'?t|does not|doesn'?t) work\b|\b(no|without) (way to )?opt[- ]?out\b/gi,
+      /\b(shared|rotating|rotate) (sender|numbers?) to avoid (filters?|blocking|spam)\b|\bavoid (carrier )?(filters?|filtering|spam detection)\b/gi,
     ],
   },
 ];
