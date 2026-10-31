@@ -38,17 +38,17 @@ export async function syncTwilioInventory() {
   const parent = credentials();
   const authorization = auth(parent.sid, parent.token);
   // Uses the app's existing parent credentials, not the separate chat connector key.
-  const accounts = await pages(`${API}/Accounts.json?PageSize=1000&Status=active`, authorization, 'accounts');
+  const accounts = await pages(`${API}/Accounts.json?PageSize=50&Status=active`, authorization, 'accounts');
   const scopes = [{ sid: parent.sid, token: parent.token }, ...accounts.filter(a => a.sid !== parent.sid && a.owner_account_sid === parent.sid).map(a => ({ sid: a.sid, token: a.auth_token }))];
   const { data: lines, error: lineError } = await database.from('tenant_twilio_lines').select('account_id,subaccount_sid,phone_sid');
   if (lineError) throw new Error(lineError.message);
   let synced = 0;
   for (const scope of scopes) {
     if (!scope.token) throw new Error('A number sub-account could not be authenticated.');
-    const numbers = await pages(`${API}/Accounts/${scope.sid}/IncomingPhoneNumbers.json?PageSize=1000`, authorization, 'incoming_phone_numbers');
+    const numbers = await pages(`${API}/Accounts/${scope.sid}/IncomingPhoneNumbers.json?PageSize=50`, authorization, 'incoming_phone_numbers');
     const tollfree = numbers.filter(n => /^\+1(?:800|833|844|855|866|877|888)\d{7}$/.test(n.phone_number));
     if (!tollfree.length) continue;
-    const verifications = await pages(`${TFV}?PageSize=100`, auth(scope.sid, scope.token), 'tollfree_verifications');
+    const verifications = await pages(`${TFV}?PageSize=50`, auth(scope.sid, scope.token), 'tollfree_verifications');
     for (const number of tollfree) {
       const matches = verifications.filter(v => v.tollfree_phone_number_sid === number.sid);
       const verification = matches.find(v => isApprovedVerification(v.status)) ?? matches[0];
@@ -105,7 +105,7 @@ export async function assignTwilioInventory(accountId: string, phone?: string, p
     }
     if (!isIsolatedNumber(owned.account_sid, sid, parent.sid)) throw new Error('Number ownership could not be confirmed in the receiving sub-account.');
     await request(`${API}/Accounts/${sid}/IncomingPhoneNumbers/${row.phone_sid}.json`, auth(parent.sid, parent.token), { SmsUrl: 'https://xellvio.com/api/public/twilio/inbound', SmsMethod: 'POST' });
-    const verifications = await pages(`${TFV}?PageSize=100`, auth(sid, token), 'tollfree_verifications');
+    const verifications = await pages(`${TFV}?PageSize=50`, auth(sid, token), 'tollfree_verifications');
     const verified = verifications.find(v => v.tollfree_phone_number_sid === row.phone_sid && isApprovedVerification(v.status));
     const status = verified ? 'active' : 'verification_pending';
     const now = new Date(); const renews = new Date(now); renews.setMonth(renews.getMonth() + 1);
