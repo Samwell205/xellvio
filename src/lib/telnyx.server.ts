@@ -891,7 +891,7 @@ export async function ensureMessagingProfileForAccount(accountId: string): Promi
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: acct, error } = await supabaseAdmin
     .from("accounts")
-    .select("id, legal_business_name, email, telnyx_messaging_profile_id")
+    .select("id, legal_business_name, email, telnyx_messaging_profile_id, onboarding_status")
     .eq("id", accountId)
     .maybeSingle();
   if (error || !acct) throw new Error("Account not found");
@@ -913,7 +913,12 @@ export async function ensureMessagingProfileForAccount(accountId: string): Promi
     .update({
       telnyx_messaging_profile_id: profile.id,
       telnyx_messaging_profile_created_at: new Date().toISOString(),
-      onboarding_status: "sender_pending",
+      // Only a fresh signup drops to sender_pending. An established tenant
+      // whose stored profile belonged to a previous sending account must
+      // never be downgraded just because a new profile is provisioned here.
+      ...(acct.onboarding_status && acct.onboarding_status !== "signup"
+        ? {}
+        : { onboarding_status: "sender_pending" }),
     })
     .eq("id", accountId);
   return profile.id;

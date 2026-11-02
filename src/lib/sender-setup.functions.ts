@@ -61,8 +61,6 @@ export const refreshMyVerificationStatus = createServerFn({ method: "POST" })
     return { checked: (data ?? []).length, updated: 0 };
   });
 
-const UK_ROUTE_COUNTRIES = new Set(["GB", "GG", "JE", "IM"]);
-const US_CA_COUNTRIES = new Set(["US", "CA"]);
 
 const CustomSenderInput = z.object({
   countries: z.array(z.string().length(2)).min(1),
@@ -80,18 +78,14 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     assertPermission(acting, "setup_sms");
     const accountId = acting.accountId;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { ensureMessagingProfileForAccount, createAlphanumericSenderId } = await import("./telnyx.server");
+    const { createAlphanumericSenderId } = await import("./telnyx.server");
     const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } = await import("./countries");
-    const { sinchConfigured } = await import("./sinch.server");
-    const { infobipConfigured } = await import("./infobip.server");
-    // UK-route countries send via Sinch and never touch Telnyx; only resolve a
-    // Telnyx messaging profile lazily when a country actually needs it, so a
-    // blocked Telnyx account can't break UK sender ID setup.
-    let messagingProfileId: string | null = null;
-    const getMessagingProfileId = async (): Promise<string> => {
-      if (!messagingProfileId) messagingProfileId = await ensureMessagingProfileForAccount(accountId);
-      return messagingProfileId;
-    };
+    const { INTERNATIONAL_PROFILE_ID } = await import("./telnyx-connection");
+    // Every non-US/CA destination sends on the dedicated international
+    // connection (owner decision 2026-11-02), so Sender IDs register on its
+    // shared messaging profile. Open countries go live instantly;
+    // registration countries stay submitted until approved.
+    const messagingProfileId = INTERNATIONAL_PROFILE_ID;
     const results: Array<{ cc: string; status: string }> = [];
     for (const raw of data.countries) {
       const cc = raw.toUpperCase();
@@ -103,21 +97,12 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
       let alphaSenderId: string | null = null;
       let telnyxError: string | null = null;
       try {
-        if (
-          (UK_ROUTE_COUNTRIES.has(cc) && sinchConfigured()) ||
-          (!US_CA_COUNTRIES.has(cc) && !UK_ROUTE_COUNTRIES.has(cc) && infobipConfigured())
-        ) {
-          // Non-US/CA routes (Sinch for UK, Infobip elsewhere) never touch Telnyx.
-          // Open countries go live instantly; registration countries stay submitted.
-          status = needsReg ? "submitted" : "verified";
-        } else {
-          const alpha = await createAlphanumericSenderId({
-            messagingProfileId: await getMessagingProfileId(),
-            senderId: data.senderId,
-            isoCountryCode: cc,
-          });
-          alphaSenderId = alpha.id ?? null;
-        }
+        const alpha = await createAlphanumericSenderId({
+          messagingProfileId,
+          senderId: data.senderId,
+          isoCountryCode: cc,
+        });
+        alphaSenderId = alpha.id ?? null;
       } catch (e: any) {
         telnyxError = String(e?.message ?? e);
         const telnyxErrorText = telnyxError.toLowerCase();
