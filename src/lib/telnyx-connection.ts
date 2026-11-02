@@ -32,6 +32,10 @@ export function usesSecondaryConnection(profileId: string | null | undefined): b
   return profileId === SECONDARY_PROFILE_ID;
 }
 
+export function usesInternationalConnection(profileId: string | null | undefined): boolean {
+  return profileId === INTERNATIONAL_PROFILE_ID;
+}
+
 /** Original sending account, used for any sender still pointing at the temporary one. */
 export const ORIGINAL_PROFILE_ID = "40019f2a-14c7-4447-8b7b-d4cb04511b5a";
 

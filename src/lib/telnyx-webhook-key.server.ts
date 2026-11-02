@@ -1,13 +1,31 @@
-import { usesSecondaryConnection } from "./telnyx-connection";
+import { usesSecondaryConnection, usesInternationalConnection, INTERNATIONAL_PROFILE_ID } from "./telnyx-connection";
 
-// An untrusted profile only selects the key; signature verification is still mandatory.
-export function webhookPublicKey(raw: string): string | undefined {
+// An untrusted profile only selects the candidate order; signature verification
+// is still mandatory and every candidate is a trusted sending account's key.
+export function webhookPublicKeys(raw: string): string[] {
+  const candidates: string[] = [];
+  const push = (key?: string) => {
+    if (key && !candidates.includes(key)) candidates.push(key);
+  };
   try {
     const profileId = JSON.parse(raw)?.data?.payload?.messaging_profile_id;
-    return usesSecondaryConnection(profileId)
-      ? process.env.TELNYX_SECONDARY_PUBLIC_KEY
-      : process.env.TELNYX_PUBLIC_KEY;
+    if (profileId === INTERNATIONAL_PROFILE_ID) {
+      push(process.env.TELNYX_INTERNATIONAL_PUBLIC_KEY);
+    } else if (usesSecondaryConnection(profileId)) {
+      push(process.env.TELNYX_SECONDARY_PUBLIC_KEY);
+    } else {
+      push(process.env.TELNYX_PRIMARY_PUBLIC_KEY);
+    }
   } catch {
-    return undefined;
+    // Unparseable body still gets all candidates; verification decides.
   }
+  push(process.env.TELNYX_PUBLIC_KEY);
+  push(process.env.TELNYX_PRIMARY_PUBLIC_KEY);
+  push(process.env.TELNYX_INTERNATIONAL_PUBLIC_KEY);
+  push(process.env.TELNYX_SECONDARY_PUBLIC_KEY);
+  return candidates;
+}
+
+export function webhookPublicKey(raw: string): string | undefined {
+  return webhookPublicKeys(raw)[0];
 }

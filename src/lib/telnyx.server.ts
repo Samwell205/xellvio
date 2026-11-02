@@ -6,9 +6,18 @@ const TELNYX_API = "https://api.telnyx.com/v2";
 import { usesSecondaryConnection, SECONDARY_PROFILE_ID, sentDuringFailover, routeOutbound } from "./telnyx-connection";
 
 function apiKey(profileId?: string): string {
-  const key = usesSecondaryConnection(profileId)
-    ? process.env.TELNYX_SECONDARY_INACTIVE_API_KEY
-    : process.env.TELNYX_API_KEY;
+  if (usesSecondaryConnection(profileId)) {
+    const secondary = process.env.TELNYX_SECONDARY_INACTIVE_API_KEY;
+    if (secondary) return secondary;
+  }
+  if (profileId === INTERNATIONAL_PROFILE_ID) {
+    const international = process.env.TELNYX_API_KEY;
+    if (international) return international;
+  }
+  // Primary sending account: every US/Canada number and per-account profile
+  // lives here, so provisioning, toll-free and +1 sends must authenticate
+  // against it even while international sends use the separate connection.
+  const key = process.env.TELNYX_PRIMARY_API_KEY ?? process.env.TELNYX_API_KEY;
   if (!key) throw new Error("Sending connection is not configured");
   return key;
 }
