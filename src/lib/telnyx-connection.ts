@@ -46,7 +46,7 @@ export const ORIGINAL_PROFILE_ID = "40019f2a-14c7-4447-8b7b-d4cb04511b5a";
  * provider accounts no longer exist on it, so a stored profile never picks
  * the actual international connection.
  */
-export const INTERNATIONAL_PROFILE_ID = "4001a148-a725-474c-83df-c09f2914ff91";
+export const INTERNATIONAL_PROFILE_ID = "4001a19c-30e6-4736-98d9-153dc96474fb";
 
 /**
  * Original routing restored: each message uses the tenant's own sender and profile.
