@@ -175,9 +175,12 @@ export const submitSenderIdRegistration = createServerFn({ method: "POST" })
     assertPermission(acting, "setup_sms");
     const accountId = acting.accountId;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { ensureMessagingProfileForAccount, createAlphanumericSenderId } = await import("./telnyx.server");
+    const { createAlphanumericSenderId } = await import("./telnyx.server");
+    const { INTERNATIONAL_PROFILE_ID } = await import("./telnyx-connection");
     const cc = data.country.toUpperCase();
-    const messagingProfileId = await ensureMessagingProfileForAccount(accountId);
+    // Registration submissions go to the dedicated international connection,
+    // the same one every non-US/CA send uses.
+    const messagingProfileId = INTERNATIONAL_PROFILE_ID;
 
     const accountPatch: {
       legal_business_name?: string;

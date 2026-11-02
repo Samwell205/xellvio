@@ -26,6 +26,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { ensureMessagingProfileForAccount, searchAvailableNumbers, orderNumber, safeTelnyxCall, createAlphanumericSenderId } =
     await import("./telnyx.server");
+  const { INTERNATIONAL_PROFILE_ID } = await import("./telnyx-connection");
 
   let { data: acct, error } = await supabaseAdmin
     .from("accounts")
