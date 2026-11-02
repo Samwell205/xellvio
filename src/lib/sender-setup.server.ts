@@ -26,6 +26,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { ensureMessagingProfileForAccount, searchAvailableNumbers, orderNumber, safeTelnyxCall, createAlphanumericSenderId } =
     await import("./telnyx.server");
+  const { INTERNATIONAL_PROFILE_ID } = await import("./telnyx-connection");
 
   let { data: acct, error } = await supabaseAdmin
     .from("accounts")
@@ -126,13 +127,16 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         const sid = senderIdFromName(acct.legal_business_name || "Sender", data.customSenderId);
         const { ALPHA_SENDER_REQUIRES_REGISTRATION } = await import("./telnyx.server");
         const needsReg = ALPHA_SENDER_REQUIRES_REGISTRATION.has(cc);
+        // Sender-ID countries send on the dedicated international connection,
+        // so the Sender ID registers on its shared messaging profile.
+        const internationalProfileId = INTERNATIONAL_PROFILE_ID;
         let status: "verified" | "submitted" | "requires_registration" = needsReg ? "submitted" : "verified";
         let alphaSenderId: string | null = null;
         let telnyxError: string | null = null;
         try {
           const alpha = await safeTelnyxCall(
-            "create_alpha_sender", { userId, messagingProfileId },
-            () => createAlphanumericSenderId({ messagingProfileId, senderId: sid, isoCountryCode: cc }),
+            "create_alpha_sender", { userId, messagingProfileId: internationalProfileId },
+            () => createAlphanumericSenderId({ messagingProfileId: internationalProfileId, senderId: sid, isoCountryCode: cc }),
           );
           alphaSenderId = alpha.id ?? null;
         } catch (e: any) {
@@ -147,7 +151,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
           sender_kind: "sender_id",
           phone_number: sid,
           telnyx_phone_number_id: null,
-          telnyx_messaging_profile_id: messagingProfileId,
+          telnyx_messaging_profile_id: internationalProfileId,
           telnyx_verification_id: alphaSenderId,
           verification_status: status,
           rejection_reason: telnyxError,
@@ -156,7 +160,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         if (status === "verified") {
           await setPrimarySender({
             telnyx_phone_number: sid,
-            telnyx_messaging_profile_id: messagingProfileId,
+            telnyx_messaging_profile_id: internationalProfileId,
             onboarding_status: "active",
           });
         }

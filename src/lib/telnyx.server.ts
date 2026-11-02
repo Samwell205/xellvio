@@ -3,12 +3,21 @@
 // goes through this module. No Twilio anywhere.
 
 const TELNYX_API = "https://api.telnyx.com/v2";
-import { usesSecondaryConnection, SECONDARY_PROFILE_ID, sentDuringFailover, routeOutbound } from "./telnyx-connection";
+import { usesSecondaryConnection, SECONDARY_PROFILE_ID, sentDuringFailover, routeOutbound, INTERNATIONAL_PROFILE_ID } from "./telnyx-connection";
 
 function apiKey(profileId?: string): string {
-  const key = usesSecondaryConnection(profileId)
-    ? process.env.TELNYX_SECONDARY_INACTIVE_API_KEY
-    : process.env.TELNYX_API_KEY;
+  if (usesSecondaryConnection(profileId)) {
+    const secondary = process.env.TELNYX_SECONDARY_INACTIVE_API_KEY;
+    if (secondary) return secondary;
+  }
+  if (profileId === INTERNATIONAL_PROFILE_ID) {
+    const international = process.env.TELNYX_API_KEY;
+    if (international) return international;
+  }
+  // Primary sending account: every US/Canada number and per-account profile
+  // lives here, so provisioning, toll-free and +1 sends must authenticate
+  // against it even while international sends use the separate connection.
+  const key = process.env.TELNYX_PRIMARY_API_KEY ?? process.env.TELNYX_API_KEY;
   if (!key) throw new Error("Sending connection is not configured");
   return key;
 }
@@ -260,7 +269,9 @@ export const DEFAULT_WHITELISTED_DESTINATIONS = [
 // country in the whitelist so registered senders / long codes work later, but
 // we won't mark an auto-created alpha SID as `verified` for these.
 export const ALPHA_SENDER_REQUIRES_REGISTRATION = new Set([
-  "US","CA","NG","IN","CN","SA","AE","QA","KW","BH","OM","EG","TR",
+  // AU and FR need sender-ID pre-registration on Telnyx (Telnyx country
+  // guidance); everything else here is per local-operator rules.
+  "AU","FR","US","CA","NG","IN","CN","SA","AE","QA","KW","BH","OM","EG","TR",
   "PH","VN","TH","ID","MY","BD","PK","LK","MA","DZ","TN",
   "JO","LB","IL","ZA","KE","GH",
 ]);
@@ -585,26 +596,12 @@ export async function sendMessage(opts: {
   if (!/^\+[1-9]\d{7,14}$/.test(to)) {
     throw new Error(`Invalid destination number: "${opts.to}" is not a valid international (E.164) number`);
   }
-  // UK destinations use the UK route so the tenant's alphanumeric sender ID
-  // is shown and delivery keeps working while international-route UK access
-  // is pending; its webhook already feeds receipts. Other non-US/CA
-  // destinations use the international route.
-  {
-    const { isSinchDestination } = await import("./sinch-routing");
-    const { sinchConfigured, sendViaSinch } = await import("./sinch.server");
-    if (sinchConfigured() && isSinchDestination(to, { hasMedia: Boolean(opts.mediaUrls?.length) })) {
-      const r = await sendViaSinch({ to, text: opts.text, senderId: opts.from, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
-      return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
-    }
-  }
-  {
-    const { isInfobipDestination } = await import("./infobip-routing");
-    const { infobipConfigured, sendViaInfobip } = await import("./infobip.server");
-    if (infobipConfigured() && isInfobipDestination(to, { hasMedia: Boolean(opts.mediaUrls?.length) })) {
-      const r = await sendViaInfobip({ to, text: opts.text, senderId: opts.from, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
-      return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
-    }
-  }
+  // UK and every other non-US/CA destination sends on the dedicated
+  // international connection (owner decision 2026-11-02, replacing the
+  // former UK-only and international routes); routeOutbound above already
+  // selects its messaging profile, and receipts arrive on the
+  // telnyx-status webhook. Historical Sinch/Infobip message IDs are still
+  // recognised by getMessage for delivery lookups of old sends.
   // Business's own dedicated toll-free line goes first for US/Canada text.
   if (opts.accountId) {
     const { ownLineApplies, fallBackFromOwnLine } = await import("./twilio-lines-rules");
@@ -903,7 +900,7 @@ export async function ensureMessagingProfileForAccount(accountId: string): Promi
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: acct, error } = await supabaseAdmin
     .from("accounts")
-    .select("id, legal_business_name, email, telnyx_messaging_profile_id")
+    .select("id, legal_business_name, email, telnyx_messaging_profile_id, onboarding_status")
     .eq("id", accountId)
     .maybeSingle();
   if (error || !acct) throw new Error("Account not found");
@@ -925,7 +922,12 @@ export async function ensureMessagingProfileForAccount(accountId: string): Promi
     .update({
       telnyx_messaging_profile_id: profile.id,
       telnyx_messaging_profile_created_at: new Date().toISOString(),
-      onboarding_status: "sender_pending",
+      // Only a fresh signup drops to sender_pending. An established tenant
+      // whose stored profile belonged to a previous sending account must
+      // never be downgraded just because a new profile is provisioned here.
+      ...(acct.onboarding_status && acct.onboarding_status !== "signup"
+        ? {}
+        : { onboarding_status: "sender_pending" }),
     })
     .eq("id", accountId);
   return profile.id;

@@ -32,17 +32,32 @@ export function usesSecondaryConnection(profileId: string | null | undefined): b
   return profileId === SECONDARY_PROFILE_ID;
 }
 
+export function usesInternationalConnection(profileId: string | null | undefined): boolean {
+  return profileId === INTERNATIONAL_PROFILE_ID;
+}
+
 /** Original sending account, used for any sender still pointing at the temporary one. */
 export const ORIGINAL_PROFILE_ID = "40019f2a-14c7-4447-8b7b-d4cb04511b5a";
 
 /**
+ * Dedicated international connection (owner decision 2026-11-02): every
+ * non-US/Canada destination — UK included — sends through this messaging
+ * profile on the current sending account. Profile IDs saved from previous
+ * provider accounts no longer exist on it, so a stored profile never picks
+ * the actual international connection.
+ */
+export const INTERNATIONAL_PROFILE_ID = "4001a148-a725-474c-83df-c09f2914ff91";
+
+/**
  * Original routing restored: each message uses the tenant's own sender and profile.
  * The temporary connection must never send again (owner decision 2026-10-22), so a
- * sender still pointing at it is sent on the original account instead.
+ * sender still pointing at it is sent on the original account instead. Non-US/CA
+ * destinations always use the dedicated international profile.
  */
 export function routeOutbound(opts: { to: string; from?: string; messagingProfileId?: string }):
   | { ok: true; from?: string; messagingProfileId?: string }
   | { ok: false; error: string } {
-  const profile = usesSecondaryConnection(opts.messagingProfileId) ? ORIGINAL_PROFILE_ID : opts.messagingProfileId;
+  let profile = usesSecondaryConnection(opts.messagingProfileId) ? ORIGINAL_PROFILE_ID : opts.messagingProfileId;
+  if (!isNanpNumber(opts.to)) profile = INTERNATIONAL_PROFILE_ID;
   return { ok: true, from: opts.from, messagingProfileId: profile };
 }
