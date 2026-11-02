@@ -157,6 +157,10 @@ export async function syncLineSenderAssets(accountId: string): Promise<void> {
     const { error } = await db.from("sender_assets").upsert({ account_id: accountId, country_code: country, sender_kind: "toll_free", phone_number: line.phone_number, is_shared: false, verification_status: verified ? "verified" : line.status === "rejected" ? "rejected" : "pending", verified_at: verified ? now : null, last_synced_at: now, telnyx_phone_number_id: null, telnyx_messaging_profile_id: null } as any, { onConflict: "account_id,country_code,sender_kind" });
     if (error) throw new Error(error.message);
   }
+  // Approved dedicated line => business can send (never revives suspended accounts).
+  if (verified) {
+    await db.from("accounts").update({ onboarding_status: "active" }).eq("id", accountId).in("onboarding_status", ["signup", "profile_complete", "sender_pending"]);
+  }
 }
 
 /** Active, paid-up dedicated line for this business, or null. */
