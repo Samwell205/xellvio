@@ -49,4 +49,17 @@ describe("actual message connection selection", () => {
     const options = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
     expect(JSON.parse(String(options?.body))).toMatchObject({ messaging_profile_id: "40019f2a-14c7-4447-8b7b-d4cb04511b5a" });
   });
+
+  it("authenticates +1 sends with the primary account key and international sends with the international key", async () => {
+    vi.stubEnv("TELNYX_PRIMARY_API_KEY", "primary-account-key");
+    vi.stubEnv("TELNYX_API_KEY", "international-account-key");
+    const fetchMock = mockSend();
+    await sendMessage({ accountId: "other", messagingProfileId: ORIGINAL_PROFILE_ID, from: "+18333580241", to: "+14155550123", text: "Test" });
+    let options = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    expect((options?.headers as Record<string, string>).Authorization).toBe("Bearer primary-account-key");
+    await sendMessage({ accountId: "other", messagingProfileId: ORIGINAL_PROFILE_ID, from: "XELLVIO", to: "+447700900123", text: "Test" });
+    options = fetchMock.mock.calls[1]?.[1] as RequestInit | undefined;
+    expect((options?.headers as Record<string, string>).Authorization).toBe("Bearer international-account-key");
+    expect(JSON.parse(String(options?.body))).toMatchObject({ messaging_profile_id: INTERNATIONAL_PROFILE_ID });
+  });
 });
