@@ -123,6 +123,11 @@ export async function assignTwilioInventory(accountId: string, phone?: string, p
     if (inventoryError) throw new Error(inventoryError.message);
     const { error: accountError } = await database.from('accounts').update({ tollfree_setup_fee_due_cents: 0, tollfree_setup_fee_paid_at: now.toISOString() }).eq('id', accountId);
     if (accountError) throw new Error(accountError.message);
+    // An approved line makes the business sendable; the dispatcher silently skips non-active accounts.
+    if (verified) {
+      const { error: activateError } = await database.from('accounts').update({ onboarding_status: 'active' }).eq('id', accountId).in('onboarding_status', ['signup', 'profile_complete', 'sender_pending']);
+      if (activateError) throw new Error(activateError.message);
+    }
     return { phone_number: row.phone_number, country: 'US', status };
   } catch (e) {
     await database.from('twilio_verified_inventory').update({ assignment_state: 'setup_paused', last_error: String(e instanceof Error ? e.message : e).slice(0, 500) }).eq('phone_sid', row.phone_sid);
