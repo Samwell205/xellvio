@@ -142,7 +142,21 @@ export async function refreshLine(accountId: string): Promise<void> {
     status: next, status_detail: next === "rejected" ? String(v.rejection_reason ?? "Carrier review rejected the request.").slice(0, 300) : null,
     updated_at: new Date().toISOString(),
   }).eq("account_id", accountId);
+  await syncLineSenderAssets(accountId).catch((e) => console.error("[toll-free sender sync]", e));
   await (await import("./twilio-line-notify.server")).notifyLineStatus(accountId).catch((e) => console.error("[toll-free email]", e));
+}
+
+/** Mirrors a dedicated line's approval into the US/CA/PR senders used by campaigns. */
+export async function syncLineSenderAssets(accountId: string): Promise<void> {
+  const db = await admin();
+  const { data: line } = await db.from("tenant_twilio_lines").select("phone_number,status").eq("account_id", accountId).maybeSingle();
+  if (!line?.phone_number) return;
+  const verified = line.status === "active";
+  const now = new Date().toISOString();
+  for (const country of ["US", "CA", "PR"]) {
+    const { error } = await db.from("sender_assets").upsert({ account_id: accountId, country_code: country, sender_kind: "toll_free", phone_number: line.phone_number, is_shared: false, verification_status: verified ? "verified" : line.status === "rejected" ? "rejected" : "pending", verified_at: verified ? now : null, last_synced_at: now, telnyx_phone_number_id: null, telnyx_messaging_profile_id: null } as any, { onConflict: "account_id,country_code,sender_kind" });
+    if (error) throw new Error(error.message);
+  }
 }
 
 /** Active, paid-up dedicated line for this business, or null. */
