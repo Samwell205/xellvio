@@ -64,7 +64,7 @@ function CheckoutPage() {
   const credits = pack ? Number(pack.credits) : Number(amountParam ?? 0);
   const orderLabel = pack ? pack.name : isCustom ? `Custom — ${formatUSD(amount)} in credits` : "—";
 
-  const [method, setMethod] = useState<Method>(methodParam ?? "card");
+  const [method, setMethod] = useState<Method>(methodParam && methodParam !== "card" ? methodParam : "paystack");
   const [coin, setCoin] = useState<string>(DEFAULT_CRYPTO_COIN);
 
   const initPaystack = useServerFn(initPaystackCheckout);
@@ -145,20 +145,6 @@ function CheckoutPage() {
           onValueChange={(v) => setMethod(v as Method)}
           className="grid sm:grid-cols-2 gap-3"
         >
-          <label
-            className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "card" ? "border-primary bg-primary/5" : ""}`}
-          >
-            <RadioGroupItem value="card" id="m-card" className="mt-1" />
-            <div className="flex-1">
-              <div className="font-medium flex items-center gap-2">
-                <Globe className="size-4" /> International card
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Visa, Mastercard and Amex — billed in USD.
-              </p>
-            </div>
-          </label>
-
           <label
             className={`rounded-xl border p-4 cursor-pointer flex items-start gap-3 ${method === "paystack" ? "border-primary bg-primary/5" : ""}`}
           >
