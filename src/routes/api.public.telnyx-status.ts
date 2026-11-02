@@ -10,7 +10,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { verify as verifyEd25519 } from "crypto";
-import { webhookPublicKey } from "@/lib/telnyx-webhook-key.server";
+import { webhookPublicKeys } from "@/lib/telnyx-webhook-key.server";
 import { usesSecondaryConnection } from "@/lib/telnyx-connection";
 
 const STOP_WORDS = ["STOP", "UNSUBSCRIBE", "CANCEL", "END", "QUIT", "STOPALL"];
@@ -210,14 +210,14 @@ export const Route = createFileRoute("/api/public/telnyx-status")({
         const raw = await request.text();
         const sig = request.headers.get("telnyx-signature-ed25519");
         const ts = request.headers.get("telnyx-timestamp");
-        const pub = webhookPublicKey(raw);
+        const pubs = webhookPublicKeys(raw);
 
-        // Fail closed: without the signing key every request is unauthenticated.
-        if (!pub) {
-          console.error("[telnyx-webhook] TELNYX_PUBLIC_KEY not set — rejecting webhook");
+        // Fail closed: without any trusted signing key every request is unauthenticated.
+        if (!pubs.length) {
+          console.error("[telnyx-webhook] no Telnyx public key configured — rejecting webhook");
           return new Response("Webhook verification unavailable", { status: 401 });
         }
-        if (!verifyTelnyxSignature(raw, sig, ts, pub)) {
+        if (!pubs.some((pub) => verifyTelnyxSignature(raw, sig, ts, pub))) {
           return new Response("Invalid signature", { status: 401 });
         }
 

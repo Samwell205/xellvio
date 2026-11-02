@@ -3,7 +3,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { verify as verifyEd25519 } from "crypto";
-import { webhookPublicKey } from "@/lib/telnyx-webhook-key.server";
+import { webhookPublicKeys } from "@/lib/telnyx-webhook-key.server";
 
 function verifyTelnyxSignature(rawBody: string, signature: string | null, timestamp: string | null, publicKeyBase64: string): boolean {
   if (!signature || !timestamp) return false;
@@ -26,15 +26,15 @@ export const Route = createFileRoute("/api/public/telnyx-inbound")({
         const raw = await request.text();
         const sig = request.headers.get("telnyx-signature-ed25519");
         const ts = request.headers.get("telnyx-timestamp");
-        const pub = webhookPublicKey(raw);
+        const pubs = webhookPublicKeys(raw);
 
-        // Fail closed: without the signing key we cannot tell a real carrier
-        // webhook from a forged one, so nothing is processed.
-        if (!pub) {
-          console.error("[telnyx-inbound] TELNYX_PUBLIC_KEY not set — rejecting webhook");
+        // Fail closed: without any trusted signing key we cannot tell a real
+        // carrier webhook from a forged one, so nothing is processed.
+        if (!pubs.length) {
+          console.error("[telnyx-inbound] no Telnyx public key configured — rejecting webhook");
           return new Response("Webhook verification unavailable", { status: 401 });
         }
-        if (!verifyTelnyxSignature(raw, sig, ts, pub)) {
+        if (!pubs.some((pub) => verifyTelnyxSignature(raw, sig, ts, pub))) {
           return new Response("Invalid signature", { status: 401 });
         }
 
