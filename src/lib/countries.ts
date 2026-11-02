@@ -11,6 +11,9 @@ export interface Country {
 // error, so we surface them as "Requires registration" in the UI and skip them
 // at send time. US / CA have their own toll-free flow and are handled separately.
 export const ALPHA_SENDER_REQUIRES_REGISTRATION: readonly string[] = [
+  // AU and FR additionally require sender-ID pre-registration on the
+  // international route (Telnyx country guidance, 2026-11).
+  "AU", "FR",
   "NG", "IN", "CN", "SA", "AE", "QA", "KW", "BH", "OM", "EG", "TR",
   "PH", "VN", "TH", "ID", "MY", "BD", "PK", "LK", "MA", "DZ", "TN",
   "JO", "LB", "IL", "ZA", "KE", "GH",
