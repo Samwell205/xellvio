@@ -174,6 +174,24 @@ function CheckoutPage() {
           </label>
         </RadioGroup>
 
+        {method === "paystack" && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+            <strong>Card declined?</strong> Try a <strong>USD (dollar) virtual card</strong>. Virtual
+            dollar cards work reliably with this payment option.
+          </div>
+        )}
+
+        {method === "crypto" && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
+            <strong>Need help paying with crypto?</strong> Just send us a message on{" "}
+            <Link to="/app/support" className="font-medium underline">
+              Support
+            </Link>{" "}
+            and we'll help you complete the payment step by step. Send the exact amount before the
+            invoice expires (about 20 minutes).
+          </div>
+        )}
+
         {method === "crypto" && (
           <div>
             <Label>Coin</Label>
