@@ -9,7 +9,7 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- International cards use flw.server.ts and /api/public/card/webhook (icp_); hide provider names in UI.
+- Hide payment provider names in UI; historical card records remain readable.
 - Toll-free registration shares a three-step wizard and tollfree-registration.ts client/server rules, including saved-volume normalization, to prevent submission mismatches.
 - Dashboard lifecycle card visibility is centralized in src/lib/lifecycle/visibility.ts so prior dismissal state cannot hide required workspace guidance.
 - Tenant SMS API routes reuse the campaign queue and workspace API-key authentication; never add a direct carrier-send bypass because it would skip charging, compliance, and opt-out controls.
@@ -50,7 +50,7 @@
 - Non-US/CA SMS sends on the owner's new Telnyx account via INTERNATIONAL_PROFILE_ID (routeOutbound); +1 sends and provisioning authenticate with TELNYX_PRIMARY_API_KEY (original account), falling back to TELNYX_API_KEY when unset (owner decision 2026-11-02). Webhook signatures try every saved public key.
 - Legacy main-account SMS backup is disabled at state and send boundaries: platform-only numbers cannot send tenant messages. Dedicated sub-account sending preserves screening, charging and opt-outs.
 - Toll-free ownership is unique per unreleased phone/SID, not sub-account; released history cannot block reassignment. Keep approved sub-accounts and parent-authenticated tokens; moves need re-verification. Main-account inventory is unavailable on sync and blocked before reservation and sending. Emails send once per status. Prefer paid-up active lines; fallback only on explicit refusal, never timeout/STOP. SQL owns renewals; unassignment stops sending/renewals without refunds.
-- Sinch and Infobip no longer send; their server modules remain for historical receipt lookup only (old message IDs resolve through getMessage/message-logs, never a resend). INFOBIP_BASE_URL may redirect; apiBase() resolves once unauthenticated.
+- Sinch/Infobip are receipt-only, never resend; apiBase resolves redirects once unauthenticated.
 - Contacts need phone, email or both; SMS requires an 'sms' consent and email a separate 'email' consent, so email-only contacts never enter SMS dispatch.
 - Email domains are provider-validated and exclusive to a business; sending cannot impersonate another business.
 - Email campaigns use durable recipients, atomic consent/quotas, signed events and no ambiguous resends; SMS stays separate. Confirmed bundles debit the acting business; SQL owns renewals.
@@ -60,3 +60,4 @@
 - Original studio email designs and inferred catalog categories live in email-template-catalog.ts; original images use hosted asset pointers so saved email HTML works outside the app. Original designs stay distinct from imported templates.
 
 - Toll-free offers and paid checkouts use eligible sub-account inventory through tfn-purchase.server.ts; paid fulfilment claims pending payments before assignment and records failures in the existing manual-review status with admin alerts, never automatic refunds.
+- SMS Smart Sending uses business/phone history under the existing SQL claim account lock, independent of quiet hours; invalid destinations are separate from STOP so START cannot clear them. Carrier boundaries recheck both.

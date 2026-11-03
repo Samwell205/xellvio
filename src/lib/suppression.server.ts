@@ -56,4 +56,9 @@ export const OPT_OUT_BLOCK_MESSAGE =
 /** Throws a user-facing error when the recipient opted out. */
 export async function assertNotSuppressed(accountId: string, phone: string): Promise<void> {
   if (await isSuppressed(accountId, phone)) throw new Error(OPT_OUT_BLOCK_MESSAGE);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin.from("sms_invalid_destinations")
+    .select("reason").eq("account_id", accountId).eq("phone_e164", phone).maybeSingle();
+  if (error) throw error;
+  if (data) throw new Error("This number is invalid or cannot receive SMS. It has been skipped to protect your sending reputation.");
 }

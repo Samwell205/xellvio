@@ -244,6 +244,7 @@ function CampaignReport() {
       sent: Number(s.sent ?? 0),
       delivered: Number(s.delivered ?? 0),
       deliveryUnconfirmed: Number(s.delivery_unconfirmed ?? 0),
+      skipped: Number(s.skipped ?? 0),
       failed:
         Number(s.failed ?? 0) +
         Number(s.sent_with_error ?? 0),
@@ -608,7 +609,7 @@ function CampaignReport() {
     // have not been skipped. Calling this gap "skipped" made an active large
     // campaign look like most of its audience had been discarded.
     const pendingPlanning = Math.max(0, attempted - (progress?.total ?? 0));
-    const skipped = 0;
+    const skipped = progress?.skipped ?? 0;
     const linkStats = clicksQ.data ?? { links: 0, totalClicks: 0, clickedLinks: 0 };
     const clicked = linkStats.totalClicks || events.filter((e: any) => e.type === "clicked").length;
     // Only count "clicked links" as people when the campaign made roughly one
@@ -698,6 +699,8 @@ function CampaignReport() {
       deliveryUnconfirmed,
       failed,
       skipped,
+      skippedRecent: Number(s?.skipped_recently_messaged ?? 0),
+      skippedInvalid: Number(s?.skipped_invalid_number ?? 0),
       pendingPlanning,
       clicked,
       uniqueClickers,
@@ -1496,8 +1499,8 @@ function RecipientActivity({
     { key: "delivered", label: "Delivered", count: stats.delivered },
     { key: "failed", label: "Failed", count: stats.failed },
     { key: "unconfirmed", label: "Unconfirmed", count: stats.deliveryUnconfirmed },
-    ...(stats.pendingPlanning > 0
-      ? [{ key: "skipped", label: "Preparing", count: stats.pendingPlanning }]
+    ...(stats.skipped > 0
+      ? [{ key: "skipped", label: "Skipped", count: stats.skipped }]
       : []),
     { key: "queued", label: "Queued", count: stats.queued },
   ];
@@ -1507,6 +1510,7 @@ function RecipientActivity({
 
   return (
     <div className="space-y-5">
+      {stats.skipped > 0 && <div className="flex flex-wrap gap-4 border-b pb-3 text-sm text-muted-foreground"><span>Skipped — recently messaged: {stats.skippedRecent.toLocaleString()}</span><span>Skipped — invalid number: {stats.skippedInvalid.toLocaleString()}</span></div>}
       {/* Summary band */}
       <Card className="p-6 rounded-2xl">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">

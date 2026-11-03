@@ -593,6 +593,10 @@ export async function sendMessage(opts: {
   // path — campaigns, inbox replies, flows — flags the bad contact instead
   // of burning a carrier call that can never succeed.
   const to = String(opts.to ?? "").trim();
+  if (opts.accountId) {
+    const { assertNotSuppressed } = await import("./suppression.server");
+    await assertNotSuppressed(opts.accountId, to);
+  }
   if (!/^\+[1-9]\d{7,14}$/.test(to)) {
     throw new Error(`Invalid destination number: "${opts.to}" is not a valid international (E.164) number`);
   }
