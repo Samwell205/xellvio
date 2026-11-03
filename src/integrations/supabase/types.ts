@@ -323,6 +323,7 @@ export type Database = {
           auto_recharge_amount: number
           auto_recharge_enabled: boolean
           auto_recharge_threshold: number
+          auto_screen_uploads: boolean
           avatar_url: string | null
           business_address: string | null
           business_reg_number: string | null
@@ -392,6 +393,7 @@ export type Database = {
           auto_recharge_amount?: number
           auto_recharge_enabled?: boolean
           auto_recharge_threshold?: number
+          auto_screen_uploads?: boolean
           avatar_url?: string | null
           business_address?: string | null
           business_reg_number?: string | null
@@ -461,6 +463,7 @@ export type Database = {
           auto_recharge_amount?: number
           auto_recharge_enabled?: boolean
           auto_recharge_threshold?: number
+          auto_screen_uploads?: boolean
           avatar_url?: string | null
           business_address?: string | null
           business_reg_number?: string | null
