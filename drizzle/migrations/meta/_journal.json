@@ -288,6 +288,13 @@
       "when": 1793691038394,
       "tag": "0040_auto_screen_uploads_toggle",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793742026966,
+      "tag": "0041_allow_skipped_message_status",
+      "breakpoints": true
     }
   ]
 }
