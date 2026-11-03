@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 import { TenantApiPanel } from "@/components/settings/TenantApiPanel";
+import { SmartSendingSettings } from "@/components/settings/SmartSendingControls";
 
 export const Route = createFileRoute("/_authenticated/app/settings")({
   head: () => ({
@@ -389,6 +390,7 @@ function SettingsPage() {
 
       {tab === "messaging" && (
         <div className="space-y-6">
+          <SmartSendingSettings />
           <TollfreeStatusCard />
           <Card className="space-y-3 p-6">
             <h3 className="font-semibold">SMS sending</h3>

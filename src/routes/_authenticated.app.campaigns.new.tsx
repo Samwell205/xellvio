@@ -61,6 +61,10 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 import { trackProduct } from "@/lib/growth/track";
+import { SmartSendingWindow } from "@/components/settings/SmartSendingControls";
+import { getSmartSendingSettings } from "@/lib/smart-sending.functions";
+import { resolveSmartSending, SmartSendingSettingsSchema } from "@/lib/smart-sending";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // A tracked short link may live on the shared platform domain or on a
 // tenant's branded click domain, so match any host with a /r/<code> path.
@@ -87,6 +91,8 @@ type State = {
   sendMode: "now" | "scheduled" | "smart";
   scheduleAt: string;
   smartSkipHours: number;
+  smartSendingMode: "inherit" | "on" | "off";
+  smartSendingHours: number;
   testTo: string;
   testSent: boolean;
   excludedCountries: string[];
@@ -156,6 +162,8 @@ function NewCampaignPage() {
     sendMode: "now",
     scheduleAt: "",
     smartSkipHours: 8,
+    smartSendingMode: "inherit",
+    smartSendingHours: 24,
     testTo: "",
     testSent: false,
     // Link shortening is opt-in: nobody's URLs get rewritten unless the tenant
@@ -164,6 +172,9 @@ function NewCampaignPage() {
     trackLinks: false,
   });
 
+  const loadSmartSettings = useServerFn(getSmartSendingSettings);
+  const smartSettings = useQuery({ queryKey: ["smart-sending-settings"], queryFn: () => loadSmartSettings() });
+  const effectiveSmartSending = resolveSmartSending(smartSettings.data ?? { enabled: true, hours: 24 }, s.smartSendingMode, s.smartSendingHours);
   // True once a draft has been applied to the form. When autosave creates the
   // draft it also writes ?id= into the URL; the resulting refetch must not
   // clobber newer in-progress typing or reset the step.
@@ -204,6 +215,8 @@ function NewCampaignPage() {
           sendMode: (data.send_mode as any) ?? "now",
           scheduleAt: data.schedule_at ? new Date(data.schedule_at).toISOString().slice(0, 16) : "",
           smartSkipHours: data.smart_skip_hours ?? 8,
+          smartSendingMode: data.smart_sending_mode as State["smartSendingMode"] ?? "inherit",
+          smartSendingHours: data.smart_sending_hours ?? 24,
           excludedCountries: Array.isArray(aud.excluded_countries) ? aud.excluded_countries : [],
           trackLinks: (data as any).track_links === true,
         }));
@@ -616,7 +629,7 @@ function NewCampaignPage() {
   const canNext = (() => {
     if (step === 0) return s.name.trim().length > 0 && hasAudience;
     if (step === 1) return s.body.trim().length > 0 && balanceReady && !insufficient;
-    if (step === 2) return s.sendMode !== "scheduled" || !!s.scheduleAt;
+    if (step === 2) return (s.sendMode !== "scheduled" || !!s.scheduleAt) && SmartSendingSettingsSchema.safeParse(effectiveSmartSending).success;
     if (step === 3) return s.testSent || testLimitReached;
     return true;
   })();
@@ -644,6 +657,8 @@ function NewCampaignPage() {
       schedule_at:
         s.sendMode === "scheduled" && s.scheduleAt ? new Date(s.scheduleAt).toISOString() : null,
       smart_skip_hours: s.smartSkipHours,
+      smart_sending_mode: s.smartSendingMode,
+      smart_sending_hours: s.smartSendingHours,
       track_links: s.trackLinks,
 
       sender_map: breakdown.reduce(
@@ -1145,6 +1160,13 @@ function NewCampaignPage() {
 
       {step === 2 && (
         <Card className="p-5 space-y-4">
+          <Label>Smart Sending</Label>
+          <Select value={s.smartSendingMode} onValueChange={value => setS({ ...s, smartSendingMode: value as State["smartSendingMode"] })}>
+            <SelectTrigger aria-label="Campaign Smart Sending"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="inherit">Use business setting</SelectItem><SelectItem value="on">On for this campaign</SelectItem><SelectItem value="off">Off for this campaign</SelectItem></SelectContent>
+          </Select>
+          {s.smartSendingMode === "on" && <SmartSendingWindow hours={s.smartSendingHours} onChange={hours => setS({ ...s, smartSendingHours: hours })} />}
+          <div className="text-sm text-muted-foreground">{effectiveSmartSending.enabled ? `Skip recently messaged numbers: ${effectiveSmartSending.hours} hours` : "Repeat-send skipping off"}</div>
           <Label>When to send</Label>
           <RadioGroup
             value={s.sendMode}
