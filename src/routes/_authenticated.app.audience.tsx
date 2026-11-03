@@ -153,8 +153,7 @@ function AudiencePage() {
       } else {
         toast.success(
           `Checked ${res.checked} contacts — ${res.mobile + res.voip} can receive texts, ${res.landline + res.toll_free} cannot (landline or toll-free).` +
-            (res.remaining ? ` ${res.remaining} still to check — run it again.` : "") +
-            (res.charged ? ` Cost $${Number(res.charged).toFixed(2)}.` : ""),
+            (res.remaining ? ` ${res.remaining} still to check — run it again.` : ""),
         );
       }
       qc.invalidateQueries({ queryKey: ["audience-line-types"] });

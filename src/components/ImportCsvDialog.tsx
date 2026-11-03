@@ -630,9 +630,8 @@ export default function ImportCsvDialog({
               <div>↩️ Duplicates in file: <b>{fmtInt(result.duplicates)}</b></div>
               {result.screened && (
                 <div className="border-t pt-2 text-xs text-muted-foreground">
-                  ☎️ Carrier check: <b className="text-foreground">{fmtInt(result.screened.checked)}</b> numbers checked
+                  ☎️ Phone type check: <b className="text-foreground">{fmtInt(result.screened.checked)}</b> numbers checked
                   {result.screened.blocked > 0 ? <> — <b className="text-foreground">{fmtInt(result.screened.blocked)}</b> blocked (can't receive texts)</> : null}
-                  {result.screened.charged > 0 ? <> · cost <b className="text-foreground">${result.screened.charged.toFixed(2)}</b></> : null}
                 </div>
               )}
               {result.errors.length > 0 && (
