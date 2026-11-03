@@ -432,28 +432,24 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
     // 2) Buy a fresh toll-free from Telnyx into the verifier owner's account
     //    (the platform's messaging profile — verifier does not have a tenant
     //    account, so we use the current user's own account id).
-    const { autoPurchaseNumber } = await import("./auto-provision-number.server");
-    let purchased: { id: string; phone_number: string; messaging_profile_id: string };
+    // Each claimed number gets its own new carrier subaccount — never shared.
+    const { provisionVerifierNumber } = await import("./verifier-twilio.server");
+    let purchased: { phoneSid: string; phoneNumber: string; subaccountSid: string };
     try {
-      purchased = await autoPurchaseNumber({
-        country: "US",
-        number_type: "toll_free",
-        accountId: context.userId,
-        friendlyName: `Verifier ${verifier.id.slice(0, 8)}`,
-      });
+      purchased = await provisionVerifierNumber(supabaseAdmin, verifier.id);
     } catch (e: any) {
-      throw new Error(e?.message ?? "Could not purchase a number from Telnyx");
+      throw new Error(e?.message ?? "Could not get a number right now");
     }
 
     const { data: row, error } = await supabaseAdmin
       .from("verifier_tfns")
       .insert({
         verifier_id: verifier.id,
-        phone_number: purchased.phone_number,
+        phone_number: purchased.phoneNumber,
         country: "US",
         status: "assigned",
-        telnyx_number_id: purchased.id,
-        notes: "Auto-provisioned from Telnyx pool",
+        telnyx_number_id: purchased.phoneSid,
+        notes: null,
       })
       .select("id,phone_number")
       .single();
@@ -500,17 +496,23 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     let carrierStatus: "submitted" | "in_review" | "verified" | "rejected" = "submitted";
     let rejectionReason: string | null = null;
 
-    if (payload && row.telnyx_number_id) {
+    if (payload) {
       const base = process.env.PUBLIC_BASE_URL ?? "https://www.xellvio.com";
-      const { submitTwilioTollfreeVerification } = await import("./tollfree-submit.server");
+      const v = await import("./verifier-twilio.server");
       try {
-        const result = await submitTwilioTollfreeVerification({
-          phoneSid: row.telnyx_number_id,
-          phoneNumberE164: row.phone_number,
-          accountSid: "",
-          authToken: "",
+        let phoneSid: string | null = row.telnyx_number_id;
+        let subSid = await v.subaccountForPhone(supabaseAdmin, phoneSid);
+        if (!subSid) {
+          // Legacy number from the old carrier: replace it with a fresh number
+          // in its own dedicated subaccount before submitting.
+          const fresh = await v.provisionVerifierNumber(supabaseAdmin, verifier.id);
+          phoneSid = fresh.phoneSid; subSid = fresh.subaccountSid; twilioVerificationSid = null;
+          await supabaseAdmin.from("verifier_tfns").update({ phone_number: fresh.phoneNumber, telnyx_number_id: fresh.phoneSid, telnyx_verification_id: null } as any).eq("id", data.id);
+        }
+        const result = await v.submitVerifierVerification({
+          subaccountSid: subSid, phoneSid: phoneSid!,
           existingVerificationSid: twilioVerificationSid,
-          statusCallbackUrl: `${base}/api/public/telnyx-status`,
+          statusCallbackUrl: `${base}/api/public/twilio/status`,
           payload: payload as any,
         });
         twilioVerificationSid = result.verificationSid;
@@ -575,12 +577,10 @@ export const refreshMyTfn = createServerFn({ method: "POST" })
       .eq("verifier_id", verifier.id)
       .maybeSingle();
     if (!row?.telnyx_verification_id) return { ok: false, reason: "not_submitted" };
-    const { fetchTwilioTollfreeVerification } = await import("./tollfree-submit.server");
-    const result = await fetchTwilioTollfreeVerification({
-      verificationSid: row.telnyx_verification_id,
-      accountSid: "",
-      authToken: "",
-    });
+    const { fetchVerifierVerification, subaccountForPhone } = await import("./verifier-twilio.server");
+    const subSid = await subaccountForPhone(supabaseAdmin, (row as any).telnyx_number_id);
+    if (!subSid || !row.telnyx_verification_id.startsWith("HH")) return { ok: false, reason: "legacy_number" };
+    const result = await fetchVerifierVerification(supabaseAdmin, subSid, row.telnyx_verification_id);
     const dbStatus =
       result.status === "verified" ? "verified" :
       result.status === "rejected" ? "rejected" : "pending_verification";
