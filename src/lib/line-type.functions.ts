@@ -23,3 +23,29 @@ export const getPhoneLineTypeStats = createServerFn({ method: "GET" })
     const { getLineTypeStatsForUser } = await import("./line-type.server");
     return getLineTypeStatsForUser(context.userId);
   });
+
+/** Screen explicit phone numbers, e.g. straight from a CSV upload. */
+export const screenImportedPhones = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ phones: z.array(z.string()).min(1).max(2000) }).parse(input ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { screenExplicitPhonesForUser } = await import("./line-type.server");
+    return screenExplicitPhonesForUser(context.userId, data.phones);
+  });
+
+export const getUploadScreeningSetting = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { getUploadScreeningSettingForUser } = await import("./line-type.server");
+    return getUploadScreeningSettingForUser(context.userId);
+  });
+
+export const saveUploadScreeningSetting = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ enabled: z.boolean() }).parse(input ?? {}))
+  .handler(async ({ data, context }) => {
+    const { saveUploadScreeningSettingForUser } = await import("./line-type.server");
+    return saveUploadScreeningSettingForUser(context.userId, data.enabled);
+  });

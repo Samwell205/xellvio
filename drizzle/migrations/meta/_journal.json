@@ -281,6 +281,13 @@
       "when": 1793690265412,
       "tag": "0039_sms_smart_sending_protections",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793691038394,
+      "tag": "0040_auto_screen_uploads_toggle",
+      "breakpoints": true
     }
   ]
 }

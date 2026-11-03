@@ -153,7 +153,8 @@ function AudiencePage() {
       } else {
         toast.success(
           `Checked ${res.checked} contacts — ${res.mobile + res.voip} can receive texts, ${res.landline + res.toll_free} cannot (landline or toll-free).` +
-            (res.remaining ? ` ${res.remaining} still to check — run it again.` : ""),
+            (res.remaining ? ` ${res.remaining} still to check — run it again.` : "") +
+            (res.charged ? ` Cost $${Number(res.charged).toFixed(2)}.` : ""),
         );
       }
       qc.invalidateQueries({ queryKey: ["audience-line-types"] });
@@ -348,7 +349,7 @@ function AudiencePage() {
             variant="outline"
             onClick={() => screenLineTypes.mutate()}
             disabled={screenLineTypes.isPending}
-            title="Ask the carrier which of your contacts are mobile phones. Landlines and toll-free lines cannot receive texts and are skipped in future campaigns."
+            title="Ask the carrier which of your contacts are mobile phones. Landlines and toll-free lines cannot receive texts and are skipped in future campaigns. $0.01 per number not checked before."
           >
             {screenLineTypes.isPending ? (
               <Loader2 className="size-4 mr-1.5 animate-spin" />

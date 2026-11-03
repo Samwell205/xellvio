@@ -1,0 +1,2 @@
+ALTER TABLE public.accounts ADD COLUMN auto_screen_uploads boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.accounts.auto_screen_uploads IS 'When true, phone numbers from CSV uploads are checked with the carrier after import; the account is debited per new number checked.';

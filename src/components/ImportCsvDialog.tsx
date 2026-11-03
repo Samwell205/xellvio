@@ -22,6 +22,8 @@ import {
   startImportJob, importProfilesBatch, finishImportJob, getActiveImportJob,
   type ImportJob, type ImportRow,
 } from "@/lib/audience-import.functions";
+import { getUploadScreeningSetting, saveUploadScreeningSetting, screenImportedPhones } from "@/lib/line-type.functions";
+import { LOOKUP_PRICE_PER_NUMBER } from "@/lib/line-type.shared";
 
 type ContactList = { id: string; name: string; description: string | null };
 
@@ -91,6 +93,9 @@ export default function ImportCsvDialog({
   const importBatch = useServerFn(importProfilesBatch);
   const finishJob = useServerFn(finishImportJob);
   const activeJobFn = useServerFn(getActiveImportJob);
+  const screenPhonesFn = useServerFn(screenImportedPhones);
+  const loadScreeningSetting = useServerFn(getUploadScreeningSetting);
+  const saveScreeningSetting = useServerFn(saveUploadScreeningSetting);
 
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -109,22 +114,47 @@ export default function ImportCsvDialog({
   const [estimatedRows, setEstimatedRows] = useState(0);
   const [busy, setBusy] = useState(false);
   const [resumeJob, setResumeJob] = useState<ImportJob | null>(null);
+  const [autoCheck, setAutoCheck] = useState(false);
+  const [screening, setScreening] = useState<{ done: number; total: number; blocked: number; charged: number } | null>(null);
   const [progress, setProgress] = useState<{ processed: number; total: number; inserted: number; invalid: number; dupes: number; rps: number; eta: number } | null>(null);
-  const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number; errors: RowError[] } | null>(null);
+  const [result, setResult] = useState<{ inserted: number; invalid: number; duplicates: number; errors: RowError[]; screened?: { checked: number; blocked: number; charged: number } } | null>(null);
   const cancelRef = useRef(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
     activeJobFn().then((j) => setResumeJob(j)).catch(() => {});
+    loadScreeningSetting().then((s) => setAutoCheck(s.enabled)).catch(() => {});
   }, [open]);
 
   function reset(keepResume = false) {
     setFile(null); setHeaders([]); setSample([]); setMapping({}); setCustomMap({});
     setExcludedCols(new Set()); setExcludedRows(new Set()); setEstimatedRows(0);
-    setProgress(null); setResult(null); setBusy(false); cancelRef.current = false;
+    setProgress(null); setResult(null); setBusy(false); setScreening(null); cancelRef.current = false;
     if (!keepResume) setResumeJob(null);
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  /** Carrier-check uploaded numbers in chunks so each call stays well inside limits. */
+  async function runScreening(phones: string[]) {
+    setScreening({ done: 0, total: phones.length, blocked: 0, charged: 0 });
+    let done = 0, blocked = 0, charged = 0;
+    const queue = [...phones];
+    while (queue.length) {
+      if (cancelRef.current) break;
+      const chunk = queue.splice(0, 400);
+      try {
+        const r = await screenPhonesFn({ data: { phones: chunk } });
+        done += r.checked;
+        blocked += r.blocked;
+        charged += r.charged ?? 0;
+        setScreening({ done, total: phones.length, blocked, charged });
+      } catch (e: any) {
+        toast.error(e?.message ?? "Phone type check failed");
+        break;
+      }
+    }
+    return { checked: done, blocked, charged };
   }
 
   async function createList() {
@@ -206,6 +236,7 @@ export default function ImportCsvDialog({
     let inserted = 0, invalid = 0, dupes = 0;
     const errors: RowError[] = [];
     const seen = new Set<string>();
+    const screened: { value?: { checked: number; blocked: number; charged: number } } = {};
     let buffer: ImportRow[] = [];
 
     const customEntries = Object.entries(customMap).filter(([h]) => !excludedCols.has(h));
@@ -298,6 +329,10 @@ export default function ImportCsvDialog({
     }).then(async () => {
       await flush(true);
       await finishJob({ data: { jobId: job.id, status: cancelRef.current ? "cancelled" : "completed" } });
+      if (!cancelRef.current && autoCheck) {
+        const uploadPhones = Array.from(seen).filter((k) => k.startsWith("+"));
+        if (uploadPhones.length) screened.value = await runScreening(uploadPhones);
+      }
     }).catch(async (e: any) => {
       toast.error(e?.message ?? "Import failed");
       await finishJob({ data: { jobId: job.id, status: "failed" } }).catch(() => {});
@@ -305,7 +340,7 @@ export default function ImportCsvDialog({
 
     setBusy(false);
     setResumeJob(null);
-    setResult({ inserted, invalid, duplicates: dupes, errors });
+    setResult({ inserted, invalid, duplicates: dupes, errors, screened: screened.value });
     qc.invalidateQueries({ queryKey: ["audience-profiles"] });
     onDone();
     if (cancelRef.current) return;
@@ -314,7 +349,7 @@ export default function ImportCsvDialog({
     } else if (inserted === 0) {
       toast.error(`Nothing saved: ${fmtInt(invalid)} invalid, ${fmtInt(dupes)} duplicate rows. Check the phone and email column mapping.`);
     } else {
-      toast.success(`Imported ${fmtInt(inserted)} contacts`);
+      toast.success(`Imported ${fmtInt(inserted)} contacts` + (screened.value && screened.value.blocked > 0 ? ` — ${fmtInt(screened.value.blocked)} numbers can't receive texts` : ""));
     }
   }
 
@@ -374,6 +409,15 @@ export default function ImportCsvDialog({
               <Label className="text-xs">Default country</Label>
               <Input className="w-24" maxLength={2} value={defaultCountry} disabled={busy}
                 onChange={(e) => setDefaultCountry(e.target.value.toUpperCase())} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">After import</Label>
+              <label className="flex items-center gap-2 text-xs font-medium">
+                <Checkbox checked={autoCheck} disabled={busy}
+                  onCheckedChange={(v) => { setAutoCheck(!!v); saveScreeningSetting({ data: { enabled: !!v } }).catch(() => {}); }} />
+                Check phone types
+              </label>
+              <p className="text-[11px] text-muted-foreground">${LOOKUP_PRICE_PER_NUMBER.toFixed(2)} per new number</p>
             </div>
             <Button variant="ghost" size="sm" onClick={onDownloadTemplate}>
               <Download className="size-4 mr-1.5" />Template
@@ -549,7 +593,7 @@ export default function ImportCsvDialog({
           {busy && (
             <Card className="p-3 space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Importing contacts…</span>
+                <span className="font-medium">{screening ? "Checking phone types…" : "Importing contacts…"}</span>
                 <span className="text-xs text-muted-foreground tabular-nums">
                   {progress && progress.total > 0 ? Math.min(99, Math.round((progress.processed / progress.total) * 100)) : 0}%
                 </span>
@@ -564,6 +608,13 @@ export default function ImportCsvDialog({
                 <div>Speed: <b className="text-foreground">{fmtInt(Math.round(progress?.rps ?? 0))}/s</b></div>
                 <div>Time left: <b className="text-foreground">{fmtEta(progress?.eta ?? 0)}</b></div>
               </div>
+              {screening && (
+                <div className="text-[11px] text-muted-foreground">
+                  Checked <b className="text-foreground">{fmtInt(screening.done)}</b> of {fmtInt(screening.total)} numbers
+                  {screening.blocked > 0 ? <> — <b className="text-foreground">{fmtInt(screening.blocked)}</b> can't receive texts</> : null}
+                  {" · $"}{screening.charged.toFixed(2)} so far
+                </div>
+              )}
               <div className="text-[11px] text-muted-foreground">
                 Safe to leave this open. If the page reloads, reopen this dialog and resume from where it stopped.
               </div>
@@ -578,6 +629,13 @@ export default function ImportCsvDialog({
               <div>✅ Saved contacts: <b>{fmtInt(result.inserted)}</b></div>
               <div>⚠️ Invalid rows skipped: <b>{fmtInt(result.invalid)}</b></div>
               <div>↩️ Duplicates in file: <b>{fmtInt(result.duplicates)}</b></div>
+              {result.screened && (
+                <div className="border-t pt-2 text-xs text-muted-foreground">
+                  ☎️ Carrier check: <b className="text-foreground">{fmtInt(result.screened.checked)}</b> numbers checked
+                  {result.screened.blocked > 0 ? <> — <b className="text-foreground">{fmtInt(result.screened.blocked)}</b> blocked (can't receive texts)</> : null}
+                  {result.screened.charged > 0 ? <> · cost <b className="text-foreground">${result.screened.charged.toFixed(2)}</b></> : null}
+                </div>
+              )}
               {result.errors.length > 0 && (
                 <div className="border-t pt-2">
                   <div className="font-medium text-xs uppercase text-muted-foreground mb-1">Row errors (first 20)</div>
