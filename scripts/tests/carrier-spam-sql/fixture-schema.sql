@@ -162,7 +162,9 @@ CREATE TABLE public.messages (
   profile_id uuid,
   phone_e164 text NOT NULL,
   rendered_body text NOT NULL,
-  status text DEFAULT 'pending'::text NOT NULL,
+  -- Mirrors the live messages_status_check so claim functions that write an
+  -- unsupported status fail here instead of stalling production dispatch.
+  status text DEFAULT 'pending'::text NOT NULL CONSTRAINT messages_status_check CHECK (status = ANY (ARRAY['pending','queued','sending','sent','delivered','delivery_unconfirmed','failed','undelivered','skipped']::text[])),
   provider_message_id text,
   error_code text,
   segments_count int4,
