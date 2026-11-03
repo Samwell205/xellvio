@@ -274,6 +274,13 @@
       "when": 1793470162139,
       "tag": "0038_preserve_approved_number_assignment_ownership",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793690265412,
+      "tag": "0039_sms_smart_sending_protections",
+      "breakpoints": true
     }
   ]
 }

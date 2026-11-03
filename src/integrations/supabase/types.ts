@@ -368,6 +368,8 @@ export type Database = {
           signup_region: string | null
           signup_session_id: string | null
           signup_source: string | null
+          smart_sending_enabled: boolean
+          smart_sending_hours: number
           sms_consent_disclosures_confirmed_at: string | null
           sms_consent_disclosures_version: string | null
           sms_target_countries: string[] | null
@@ -435,6 +437,8 @@ export type Database = {
           signup_region?: string | null
           signup_session_id?: string | null
           signup_source?: string | null
+          smart_sending_enabled?: boolean
+          smart_sending_hours?: number
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
@@ -502,6 +506,8 @@ export type Database = {
           signup_region?: string | null
           signup_session_id?: string | null
           signup_source?: string | null
+          smart_sending_enabled?: boolean
+          smart_sending_hours?: number
           sms_consent_disclosures_confirmed_at?: string | null
           sms_consent_disclosures_version?: string | null
           sms_target_countries?: string[] | null
@@ -2773,6 +2779,8 @@ export type Database = {
           schedule_at: string | null
           send_mode: string
           sender_map: Json
+          smart_sending_hours: number
+          smart_sending_mode: string
           smart_skip_hours: number
           status: string
           track_links: boolean
@@ -2791,6 +2799,8 @@ export type Database = {
           schedule_at?: string | null
           send_mode?: string
           sender_map?: Json
+          smart_sending_hours?: number
+          smart_sending_mode?: string
           smart_skip_hours?: number
           status?: string
           track_links?: boolean
@@ -2809,6 +2819,8 @@ export type Database = {
           schedule_at?: string | null
           send_mode?: string
           sender_map?: Json
+          smart_sending_hours?: number
+          smart_sending_mode?: string
           smart_skip_hours?: number
           status?: string
           track_links?: boolean
@@ -6711,6 +6723,67 @@ export type Database = {
           },
         ]
       }
+      sms_invalid_destinations: {
+        Row: {
+          account_id: string
+          created_at: string
+          phone_e164: string
+          reason: string
+          source_message_id: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          phone_e164: string
+          reason: string
+          source_message_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          phone_e164?: string
+          reason?: string
+          source_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_invalid_destinations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_phone_history: {
+        Row: {
+          account_id: string
+          last_message_id: string
+          last_sent_at: string
+          phone_e164: string
+        }
+        Insert: {
+          account_id: string
+          last_message_id: string
+          last_sent_at: string
+          phone_e164: string
+        }
+        Update: {
+          account_id?: string
+          last_message_id?: string
+          last_sent_at?: string
+          phone_e164?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_phone_history_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_thread_messages: {
         Row: {
           account_id: string
@@ -8752,9 +8825,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      save_smart_sending_settings: {
+        Args: { _account: string; _enabled: boolean; _hours: number }
+        Returns: undefined
+      }
       select_receptionist_assistant: {
         Args: { _account_id: string; _assistant_id: string }
         Returns: undefined
+      }
+      sms_send_protection_verdict: {
+        Args: { _campaign: string; _message: string; _phone: string }
+        Returns: string
       }
       spam_gate_can_send: { Args: { _campaign_id: string }; Returns: boolean }
       spam_gate_claim: {
