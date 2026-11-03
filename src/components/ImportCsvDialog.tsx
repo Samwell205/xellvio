@@ -236,7 +236,7 @@ export default function ImportCsvDialog({
     let inserted = 0, invalid = 0, dupes = 0;
     const errors: RowError[] = [];
     const seen = new Set<string>();
-    let screenedInfo: { checked: number; blocked: number; charged: number } | null = null;
+    const screened: { value?: { checked: number; blocked: number; charged: number } } = {};
     let buffer: ImportRow[] = [];
 
     const customEntries = Object.entries(customMap).filter(([h]) => !excludedCols.has(h));
@@ -331,7 +331,7 @@ export default function ImportCsvDialog({
       await finishJob({ data: { jobId: job.id, status: cancelRef.current ? "cancelled" : "completed" } });
       if (!cancelRef.current && autoCheck) {
         const uploadPhones = Array.from(seen).filter((k) => k.startsWith("+"));
-        if (uploadPhones.length) screenedInfo = await runScreening(uploadPhones);
+        if (uploadPhones.length) screened.value = await runScreening(uploadPhones);
       }
     }).catch(async (e: any) => {
       toast.error(e?.message ?? "Import failed");
@@ -340,7 +340,7 @@ export default function ImportCsvDialog({
 
     setBusy(false);
     setResumeJob(null);
-    setResult({ inserted, invalid, duplicates: dupes, errors, screened: screenedInfo ?? undefined });
+    setResult({ inserted, invalid, duplicates: dupes, errors, screened: screened.value });
     qc.invalidateQueries({ queryKey: ["audience-profiles"] });
     onDone();
     if (cancelRef.current) return;
@@ -349,7 +349,7 @@ export default function ImportCsvDialog({
     } else if (inserted === 0) {
       toast.error(`Nothing saved: ${fmtInt(invalid)} invalid, ${fmtInt(dupes)} duplicate rows. Check the phone and email column mapping.`);
     } else {
-      toast.success(`Imported ${fmtInt(inserted)} contacts` + (screenedInfo && screenedInfo.blocked > 0 ? ` — ${fmtInt(screenedInfo.blocked)} numbers can't receive texts` : ""));
+      toast.success(`Imported ${fmtInt(inserted)} contacts` + (screened.value && screened.value.blocked > 0 ? ` — ${fmtInt(screened.value.blocked)} numbers can't receive texts` : ""));
     }
   }
 

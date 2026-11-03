@@ -267,22 +267,20 @@ export async function screenLineTypesForUser(
   const { data: candidates, error } = await query;
   if (error) throw error;
   const rows: Array<{ id: string; phone_e164: string }> = (candidates ?? []).slice(0, limit);
-  const remaining = (candidates ?? []).length > limit ? 1 : 0;
+  const overLimit = (candidates ?? []).length > limit;
 
   const result = await screenPhoneSet(accountId, Array.from(new Set(rows.map((r) => r.phone_e164))));
 
-  if (remaining) {
+  if (overLimit) {
     const { count } = await admin
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .eq("account_id", accountId)
       .is("line_type", null);
-    result.remaining = count ?? 0;
-  } else {
-    result.remaining = 0;
+    return { ...result, remaining: count ?? 0 };
   }
 
-  return result;
+  return { ...result, remaining: 0 };
 }
 
 /** Screen explicit phone numbers (e.g. straight from a CSV upload), charging for new lookups. */
