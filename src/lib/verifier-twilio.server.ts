@@ -120,7 +120,7 @@ export async function submitVerifierVerification(opts: {
     ["MessageVolume", p.monthlyVolume], ["AdditionalInformation", p.additionalInformation],
     ["PrivacyPolicyUrl", p.privacyPolicyUrl], ["TermsAndConditionsUrl", p.termsUrl],
     ["OptInKeywords", p.optInKeywords], ["AgeGatedContent", String(!!p.containsAgeGatedContent)],
-    ["ExternalReferenceId", opts.phoneSid], ["StatusCallback", opts.statusCallbackUrl],
+    ["ExternalReferenceId", opts.phoneSid],
     ...(p.optInConfirmationMessage ? ([["OptInConfirmationMessage", p.optInConfirmationMessage]] as Array<[string, string]>) : []),
     ...(p.helpMessageSample ? ([["HelpMessageSample", p.helpMessageSample]] as Array<[string, string]>) : []),
   ];
