@@ -57,7 +57,7 @@ export function UploadScreeningSettings() {
   if (query.isError) return <div role="alert" className="text-destructive">{query.error.message}</div>;
   return <section className="space-y-3 border-b pb-6">
     <div className="flex items-center justify-between gap-4"><h3 className="flex items-center gap-2 font-semibold"><Smartphone className="size-4" />Check phone types on import</h3><Switch aria-label="Check phone types on import" checked={enabled} onCheckedChange={setEnabled} disabled={!query.data?.canEdit} /></div>
-    <p className="text-sm text-muted-foreground">When on, every CSV upload is checked with the carrier: landlines and toll-free numbers are blocked before they can cost a send. ${'{'}LOOKUP_PRICE_PER_NUMBER.toFixed(2){'}'} per number not checked before; already-checked numbers are free.</p>
+    <p className="text-sm text-muted-foreground">When on, every CSV upload is checked with the carrier: landlines and toll-free numbers are blocked before they can cost a send. ${LOOKUP_PRICE_PER_NUMBER.toFixed(2)} per number not checked before; already-checked numbers are free.</p>
     <Button onClick={() => mutation.mutate()} disabled={!query.data?.canEdit || mutation.isPending}>{mutation.isPending ? "Saving…" : "Save phone checking"}</Button>
   </section>;
 }
