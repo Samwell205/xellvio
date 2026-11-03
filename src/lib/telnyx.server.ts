@@ -617,7 +617,18 @@ export async function sendMessage(opts: {
           const r = await sendViaLine(line, { to, text: opts.text, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
           return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
         } catch (e: any) {
-          if (!fallBackFromOwnLine(e)) throw e;
+          // Line busy / rate limited: requeue (dispatcher treats "429" as transient).
+          if (Number(e?.lineStatus) === 429 || Number(e?.lineCode) === 20429) {
+            const busy: any = new Error(`429 rate limit: ${e?.message ?? "dedicated number busy"}`);
+            busy.telnyxCode = "10011";
+            throw busy;
+          }
+          // The shared route cannot send from the business's own number, so
+          // falling back with that sender only produces "Invalid source number".
+          if (!fallBackFromOwnLine(e) || (opts.from && opts.from === line.from)) {
+            if (e?.lineCode) e.telnyxCode = `TW${e.lineCode}`;
+            throw e;
+          }
           console.error("[send] own line refused, using shared route", e?.lineStatus, e?.lineCode);
         }
       }
