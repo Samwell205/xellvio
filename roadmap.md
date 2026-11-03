@@ -4,6 +4,7 @@
 - [x] Add business default and campaign override with adjustable repeat-send window
 - [x] Enforce atomic business/phone skipping before charging; suppress confirmed invalid/landline destinations, not temporary failures
 - [x] Show distinct skip reasons; isolated SQL scenarios and 38 regressions passed; build OK
+- [x] Automatic carrier line-type check after CSV uploads, behind a per-business toggle ($0.01 per number not checked before; manual "Check phone types" bills the same); lookups routed +1 → primary account, other countries → international account; insufficient balance refuses before spending; 4 tests passed
 - [ ] Verify tenant settings save/reload and campaign override in tenant UI — requesting owner's authorized session redirects to admin; no arbitrary tenant impersonation
 
 ## Finance, billing and contact lists
