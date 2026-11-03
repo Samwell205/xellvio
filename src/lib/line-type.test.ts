@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { isTextable, keyForPhone, LOOKUP_PRICE_PER_NUMBER } from "./line-type.server";
-import { lookupCostCents } from "./line-type.shared";
+import { isTextable, keyForPhone } from "./line-type.server";
+import { LOOKUP_PRICE_PER_NUMBER, lookupCostCents } from "./line-type.shared";
 
 const ENV_SNAPSHOT = { ...process.env };
 afterAll(() => {
