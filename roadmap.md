@@ -1,9 +1,10 @@
 # Roadmap
 
 ## SMS Smart Sending and number protection
-- [ ] Add business default and campaign override with adjustable repeat-send window
-- [ ] Enforce atomic business/phone skipping before charging; suppress confirmed invalid/landline destinations, not temporary failures
-- [ ] Show distinct skip reasons and verify rules and saved controls
+- [x] Add business default and campaign override with adjustable repeat-send window
+- [x] Enforce atomic business/phone skipping before charging; suppress confirmed invalid/landline destinations, not temporary failures
+- [x] Show distinct skip reasons; isolated SQL scenarios and 38 regressions passed; build OK
+- [ ] Verify tenant settings save/reload and campaign override in tenant UI — requesting owner's authorized session redirects to admin; no arbitrary tenant impersonation
 
 ## Finance, billing and contact lists
 - [x] Remove automatic expired-report recalculation and carrier waits from Finance; Billing reuses saved aggregates instead of downloading ledger history

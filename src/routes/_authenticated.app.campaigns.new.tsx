@@ -1307,6 +1307,7 @@ function NewCampaignPage() {
               }
             />
             <ReviewItem label="Send mode" value={s.sendMode} />
+            <ReviewItem label="Smart Sending" value={effectiveSmartSending.enabled ? `On · ${effectiveSmartSending.hours} hours` : "Off"} />
             <ReviewItem
               label="Schedule"
               value={s.sendMode === "scheduled" ? new Date(s.scheduleAt).toLocaleString() : "—"}
