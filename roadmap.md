@@ -1,5 +1,10 @@
 # Roadmap
 
+## SMS Smart Sending and number protection
+- [ ] Add business default and campaign override with adjustable repeat-send window
+- [ ] Enforce atomic business/phone skipping before charging; suppress confirmed invalid/landline destinations, not temporary failures
+- [ ] Show distinct skip reasons and verify rules and saved controls
+
 ## Finance, billing and contact lists
 - [x] Remove automatic expired-report recalculation and carrier waits from Finance; Billing reuses saved aggregates instead of downloading ledger history
 - [x] Redesign Finance and Billing with focused navigation, independent optional reports and compact settings
