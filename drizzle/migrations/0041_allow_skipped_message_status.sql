@@ -1,0 +1,2 @@
+ALTER TABLE public.messages DROP CONSTRAINT IF EXISTS messages_status_check;
+ALTER TABLE public.messages ADD CONSTRAINT messages_status_check CHECK (status = ANY (ARRAY['pending','queued','sending','sent','delivered','delivery_unconfirmed','failed','undelivered','skipped']::text[]));
