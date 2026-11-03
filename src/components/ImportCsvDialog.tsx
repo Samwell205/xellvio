@@ -410,6 +410,15 @@ export default function ImportCsvDialog({
               <Input className="w-24" maxLength={2} value={defaultCountry} disabled={busy}
                 onChange={(e) => setDefaultCountry(e.target.value.toUpperCase())} />
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">After import</Label>
+              <label className="flex items-center gap-2 text-xs font-medium">
+                <Checkbox checked={autoCheck} disabled={busy}
+                  onCheckedChange={(v) => { setAutoCheck(!!v); saveScreeningSetting({ data: { enabled: !!v } }).catch(() => {}); }} />
+                Check phone types
+              </label>
+              <p className="text-[11px] text-muted-foreground">${LOOKUP_PRICE_PER_NUMBER.toFixed(2)} per new number</p>
+            </div>
             <Button variant="ghost" size="sm" onClick={onDownloadTemplate}>
               <Download className="size-4 mr-1.5" />Template
             </Button>
@@ -584,7 +593,7 @@ export default function ImportCsvDialog({
           {busy && (
             <Card className="p-3 space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="font-medium">Importing contacts…</span>
+                <span className="font-medium">{screening ? "Checking phone types…" : "Importing contacts…"}</span>
                 <span className="text-xs text-muted-foreground tabular-nums">
                   {progress && progress.total > 0 ? Math.min(99, Math.round((progress.processed / progress.total) * 100)) : 0}%
                 </span>
@@ -599,6 +608,13 @@ export default function ImportCsvDialog({
                 <div>Speed: <b className="text-foreground">{fmtInt(Math.round(progress?.rps ?? 0))}/s</b></div>
                 <div>Time left: <b className="text-foreground">{fmtEta(progress?.eta ?? 0)}</b></div>
               </div>
+              {screening && (
+                <div className="text-[11px] text-muted-foreground">
+                  Checked <b className="text-foreground">{fmtInt(screening.done)}</b> of {fmtInt(screening.total)} numbers
+                  {screening.blocked > 0 ? <> — <b className="text-foreground">{fmtInt(screening.blocked)}</b> can't receive texts</> : null}
+                  {" · $"}{screening.charged.toFixed(2)} so far
+                </div>
+              )}
               <div className="text-[11px] text-muted-foreground">
                 Safe to leave this open. If the page reloads, reopen this dialog and resume from where it stopped.
               </div>
@@ -613,6 +629,13 @@ export default function ImportCsvDialog({
               <div>✅ Saved contacts: <b>{fmtInt(result.inserted)}</b></div>
               <div>⚠️ Invalid rows skipped: <b>{fmtInt(result.invalid)}</b></div>
               <div>↩️ Duplicates in file: <b>{fmtInt(result.duplicates)}</b></div>
+              {result.screened && (
+                <div className="border-t pt-2 text-xs text-muted-foreground">
+                  ☎️ Carrier check: <b className="text-foreground">{fmtInt(result.screened.checked)}</b> numbers checked
+                  {result.screened.blocked > 0 ? <> — <b className="text-foreground">{fmtInt(result.screened.blocked)}</b> blocked (can't receive texts)</> : null}
+                  {result.screened.charged > 0 ? <> · cost <b className="text-foreground">${result.screened.charged.toFixed(2)}</b></> : null}
+                </div>
+              )}
               {result.errors.length > 0 && (
                 <div className="border-t pt-2">
                   <div className="font-medium text-xs uppercase text-muted-foreground mb-1">Row errors (first 20)</div>

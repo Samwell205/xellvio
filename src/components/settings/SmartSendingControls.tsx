@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Clock, ShieldCheck } from "lucide-react";
+import { Clock, ShieldCheck, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SMART_SENDING_WINDOWS, SmartSendingSettingsSchema } from "@/lib/smart-sending";
 import { getSmartSendingSettings, saveSmartSendingSettings } from "@/lib/smart-sending.functions";
+import { getUploadScreeningSetting, saveUploadScreeningSetting } from "@/lib/line-type.functions";
+import { LOOKUP_PRICE_PER_NUMBER } from "@/lib/line-type.shared";
 
 export function SmartSendingWindow({ hours, onChange, disabled }: { hours: number; onChange: (hours: number) => void; disabled?: boolean }) {
   const [custom, setCustom] = useState(!SMART_SENDING_WINDOWS.some(w => w.hours === hours));
@@ -40,5 +42,22 @@ export function SmartSendingSettings() {
     <SmartSendingWindow hours={hours} onChange={setHours} disabled={!enabled || !query.data?.canEdit} />
     <div className="flex items-center gap-2 text-sm text-muted-foreground"><ShieldCheck className="size-4 shrink-0" />Invalid-number and opt-out protection always active</div>
     <Button onClick={() => mutation.mutate()} disabled={!query.data?.canEdit || mutation.isPending || !SmartSendingSettingsSchema.safeParse({ enabled, hours }).success}>{mutation.isPending ? "Saving…" : "Save sending settings"}</Button>
+  </section>;
+}
+
+export function UploadScreeningSettings() {
+  const load = useServerFn(getUploadScreeningSetting);
+  const save = useServerFn(saveUploadScreeningSetting);
+  const qc = useQueryClient();
+  const query = useQuery({ queryKey: ["upload-screening"], queryFn: () => load() });
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => { if (query.data) setEnabled(query.data.enabled); }, [query.data]);
+  const mutation = useMutation({ mutationFn: () => save({ data: { enabled } }), onSuccess: () => { qc.invalidateQueries({ queryKey: ["upload-screening"] }); toast.success("Phone checking settings saved"); }, onError: (error: Error) => toast.error(error.message) });
+  if (query.isPending) return <div role="status">Loading phone checking settings…</div>;
+  if (query.isError) return <div role="alert" className="text-destructive">{query.error.message}</div>;
+  return <section className="space-y-3 border-b pb-6">
+    <div className="flex items-center justify-between gap-4"><h3 className="flex items-center gap-2 font-semibold"><Smartphone className="size-4" />Check phone types on import</h3><Switch aria-label="Check phone types on import" checked={enabled} onCheckedChange={setEnabled} disabled={!query.data?.canEdit} /></div>
+    <p className="text-sm text-muted-foreground">When on, every CSV upload is checked with the carrier: landlines and toll-free numbers are blocked before they can cost a send. ${'{'}LOOKUP_PRICE_PER_NUMBER.toFixed(2){'}'} per number not checked before; already-checked numbers are free.</p>
+    <Button onClick={() => mutation.mutate()} disabled={!query.data?.canEdit || mutation.isPending}>{mutation.isPending ? "Saving…" : "Save phone checking"}</Button>
   </section>;
 }
