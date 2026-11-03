@@ -273,18 +273,20 @@ export async function syncToollfreeVerifications(_opts: { onlyAccountId?: string
 
   const { data: verifierRows, error: verifierError } = await supabaseAdmin
     .from("verifier_tfns")
-    .select("id, telnyx_verification_id, status")
+    .select("id, telnyx_number_id, telnyx_verification_id, status")
     .not("telnyx_verification_id", "is", null)
     .eq("status", "pending_verification");
 
   if (verifierError) errors.push({ id: "verifier_tfns", reason: verifierError.message });
 
+  const vt = await import("./verifier-twilio.server");
   for (const row of verifierRows ?? []) {
     if (!row.telnyx_verification_id) continue;
     try {
-      const res = await fetchTwilioTollfreeVerification({
-        verificationSid: row.telnyx_verification_id, accountSid: "", authToken: "",
-      });
+      // Verifier numbers live in their own carrier subaccount; legacy rows are skipped.
+      const subSid = await vt.subaccountForPhone(supabaseAdmin, (row as any).telnyx_number_id);
+      if (!subSid || !row.telnyx_verification_id.startsWith("HH")) continue;
+      const res = await vt.fetchVerifierVerification(supabaseAdmin, subSid, row.telnyx_verification_id);
       const dbStatus =
         res.status === "verified" ? "verified" :
         res.status === "rejected" ? "rejected" : "pending_verification";
