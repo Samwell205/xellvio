@@ -349,7 +349,7 @@ function AudiencePage() {
             variant="outline"
             onClick={() => screenLineTypes.mutate()}
             disabled={screenLineTypes.isPending}
-            title="Ask the carrier which of your contacts are mobile phones. Landlines and toll-free lines cannot receive texts and are skipped in future campaigns. $0.01 per number not checked before."
+            title="Free check of which contacts are landlines or toll-free lines. Those cannot receive texts and are skipped in future campaigns."
           >
             {screenLineTypes.isPending ? (
               <Loader2 className="size-4 mr-1.5 animate-spin" />

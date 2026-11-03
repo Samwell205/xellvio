@@ -23,7 +23,6 @@ import {
   type ImportJob, type ImportRow,
 } from "@/lib/audience-import.functions";
 import { getUploadScreeningSetting, saveUploadScreeningSetting, screenImportedPhones } from "@/lib/line-type.functions";
-import { LOOKUP_PRICE_PER_NUMBER } from "@/lib/line-type.shared";
 
 type ContactList = { id: string; name: string; description: string | null };
 
@@ -417,7 +416,7 @@ export default function ImportCsvDialog({
                   onCheckedChange={(v) => { setAutoCheck(!!v); saveScreeningSetting({ data: { enabled: !!v } }).catch(() => {}); }} />
                 Check phone types
               </label>
-              <p className="text-[11px] text-muted-foreground">${LOOKUP_PRICE_PER_NUMBER.toFixed(2)} per new number</p>
+              <p className="text-[11px] text-muted-foreground">Free</p>
             </div>
             <Button variant="ghost" size="sm" onClick={onDownloadTemplate}>
               <Download className="size-4 mr-1.5" />Template
@@ -612,7 +611,7 @@ export default function ImportCsvDialog({
                 <div className="text-[11px] text-muted-foreground">
                   Checked <b className="text-foreground">{fmtInt(screening.done)}</b> of {fmtInt(screening.total)} numbers
                   {screening.blocked > 0 ? <> — <b className="text-foreground">{fmtInt(screening.blocked)}</b> can't receive texts</> : null}
-                  {" · $"}{screening.charged.toFixed(2)} so far
+                  
                 </div>
               )}
               <div className="text-[11px] text-muted-foreground">
