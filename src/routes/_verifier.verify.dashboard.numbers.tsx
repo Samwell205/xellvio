@@ -59,7 +59,7 @@ function NumbersPage() {
     };
   }, [qc]);
 
-  // Poll Telnyx directly for any pending rows so status reflects carrier state.
+  // Poll the carrier for any pending rows so status reflects carrier state.
   useEffect(() => {
     const pendingIds = (rows ?? [])
       .filter((r: any) => r.status === "pending_verification")
