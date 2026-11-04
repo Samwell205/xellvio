@@ -68,6 +68,7 @@ export function parseVerifierRegistration(input: unknown) {
     throw new Error(`Registration (${String(issue?.path[0] ?? "details")}): ${issue?.message ?? "Complete the registration details."}`);
   }
   verifierUseCaseCategories(result.data.useCaseCategories);
+  if (result.data.monthlyVolume === "5,000,000+") throw new Error("Select 5,000,000 or 10,000,000+ for monthly volume.");
   return result.data;
 }
 

@@ -3,6 +3,7 @@
 // twilio_verified_inventory (owner_account_sid) keyed by the phone SID that
 // verifier_tfns.telnyx_number_id stores (legacy column name).
 import type { TollfreeSubmitPayload, TollfreeSubmitResult } from "./tollfree-submit.server";
+import { parseVerifierRegistration, verifierUseCaseCategories } from "./verifier-registration";
 
 const API = "https://api.twilio.com/2010-04-01";
 const TFV = "https://messaging.twilio.com/v1/Tollfree/Verifications";
@@ -100,14 +101,19 @@ function phoneE164(country: string, phone: string) {
 
 export async function submitVerifierVerification(opts: {
   subaccountSid: string; phoneSid: string; existingVerificationSid: string | null;
-  payload: TollfreeSubmitPayload; statusCallbackUrl: string;
+  payload: TollfreeSubmitPayload & { proofShowsRequiredConsent: boolean; agreeToTos: boolean };
 }): Promise<TollfreeSubmitResult> {
-  const p = opts.payload;
-  if (!p.proofOfOptInUrl) throw new Error("Proof of opt-in is required. Upload a screenshot of your sign-up form in the Opt-in step.");
+  const p = parseVerifierRegistration(opts.payload);
   const auth = await subAuthFor(opts.subaccountSid);
+  const phone = await tw(`${API}/Accounts/${opts.subaccountSid}/IncomingPhoneNumbers/${opts.phoneSid}.json`, auth);
+  if (phone.account_sid !== opts.subaccountSid || phone.sid !== opts.phoneSid) throw new Error("Number ownership could not be confirmed.");
+  const owned = await tw(`${API}/Accounts/${opts.subaccountSid}/IncomingPhoneNumbers.json?PageSize=2`, auth);
+  if (owned.incoming_phone_numbers?.length !== 1 || owned.incoming_phone_numbers[0]?.sid !== opts.phoneSid || owned.next_page_uri)
+    throw new Error("Verification requires a separate account containing only this number.");
   const reg = (p.businessRegistrationNumber ?? "").trim();
   const fields: Array<[string, string]> = [
     ["TollfreePhoneNumberSid", opts.phoneSid], ["BusinessName", p.legalEntityName], ["BusinessWebsite", p.websiteUrl],
+    ...(p.businessDba ? ([["DoingBusinessAs", p.businessDba]] as Array<[string, string]>) : []),
     ["BusinessType", businessType(p.businessType)],
     ...(reg ? ([["BusinessRegistrationNumber", reg], ["BusinessRegistrationAuthority", (p.businessRegistrationIdentifier || "EIN").toUpperCase()], ["BusinessRegistrationCountry", (p.businessRegistrationCountry || "US").toUpperCase()]] as Array<[string, string]>) : []),
     ["BusinessStreetAddress", p.addressLine1], ...(p.addressLine2 ? ([["BusinessStreetAddress2", p.addressLine2]] as Array<[string, string]>) : []),
@@ -119,22 +125,26 @@ export async function submitVerifierVerification(opts: {
     ["OptInImageUrls", p.proofOfOptInUrl], ["OptInType", (p.optInType || "WEB_FORM").toUpperCase().replace(/[\s-]+/g, "_")],
     ["MessageVolume", p.monthlyVolume], ["AdditionalInformation", p.additionalInformation],
     ["PrivacyPolicyUrl", p.privacyPolicyUrl], ["TermsAndConditionsUrl", p.termsUrl],
-    ["OptInKeywords", p.optInKeywords], ["AgeGatedContent", String(!!p.containsAgeGatedContent)],
+    ["AgeGatedContent", String(!!p.containsAgeGatedContent)],
     ["ExternalReferenceId", opts.phoneSid],
     ...(p.optInConfirmationMessage ? ([["OptInConfirmationMessage", p.optInConfirmationMessage]] as Array<[string, string]>) : []),
     ...(p.helpMessageSample ? ([["HelpMessageSample", p.helpMessageSample]] as Array<[string, string]>) : []),
   ];
-  for (const c of p.useCaseCategories?.length ? p.useCaseCategories : ["MARKETING"]) {
-    fields.push(["UseCaseCategories", c.toUpperCase().replace(/[\s-]+/g, "_")]);
-  }
+  for (const keyword of p.optInKeywords.split(/[,\s]+/).filter(Boolean)) fields.push(["OptInKeywords", keyword]);
+  for (const category of verifierUseCaseCategories(p.useCaseCategories)) fields.push(["UseCaseCategories", category]);
   const url = opts.existingVerificationSid?.startsWith("HH") ? `${TFV}/${opts.existingVerificationSid}` : TFV;
   const v = await tw(url, auth, fields);
+  if (typeof v.sid !== "string" || !v.sid.startsWith("HH")) throw new Error("Verification submission was not confirmed. Please refresh before trying again.");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { error } = await supabaseAdmin.from("twilio_verified_inventory").update({ verification_sid: v.sid, verification_status: mapTwilioStatus(v.status) === "verified" ? "verified" : "pending" }).eq("phone_sid", opts.phoneSid).eq("owner_account_sid", opts.subaccountSid);
+  if (error) console.error("[verifier-twilio] verification inventory save failed", error.message);
   return { verificationSid: v.sid, status: mapTwilioStatus(v.status), rejectionReason: v.rejection_reason ?? null, raw: v };
 }
 
 export async function fetchVerifierVerification(db: any, subaccountSid: string, verificationSid: string): Promise<TollfreeSubmitResult> {
   const v = await tw(`${TFV}/${verificationSid}`, await subAuthFor(subaccountSid));
   const status = mapTwilioStatus(v.status);
-  await db.from("twilio_verified_inventory").update({ verification_sid: v.sid, verification_status: status === "verified" ? "verified" : "pending" }).eq("owner_account_sid", subaccountSid);
+  const { error } = await db.from("twilio_verified_inventory").update({ verification_sid: v.sid, verification_status: status === "verified" ? "verified" : "pending" }).eq("owner_account_sid", subaccountSid).eq("verification_sid", verificationSid);
+  if (error) throw new Error("Could not save the verification update.");
   return { verificationSid: v.sid, status, rejectionReason: v.rejection_reason ?? null, raw: v };
 }

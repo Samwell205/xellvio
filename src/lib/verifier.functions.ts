@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { readVerifierRegistration } from "./verifier-registration";
 
 const PAYSTACK_API = "https://api.paystack.co";
 const SIGNUP_CODE_TTL_MINUTES = 15;
@@ -392,7 +393,7 @@ export const submitTfn = createServerFn({ method: "POST" })
         phone_number: data.phone_number,
         country: data.country,
         notes: data.notes ?? null,
-        status: "pending_verification",
+        status: "assigned",
       });
     if (error) throw new Error(error.message.includes("duplicate") ? "This number was already submitted" : error.message);
     return { ok: true };
@@ -429,9 +430,7 @@ export const claimTfnFromPool = createServerFn({ method: "POST" })
     //    as claimable). Since verifier_id is NOT NULL we simply skip this
     //    step here and always purchase fresh; future pool logic can plug in.
 
-    // 2) Buy a fresh toll-free from Telnyx into the verifier owner's account
-    //    (the platform's messaging profile — verifier does not have a tenant
-    //    account, so we use the current user's own account id).
+    // 2) Buy a fresh toll-free in a new dedicated subaccount.
     // Each claimed number gets its own new carrier subaccount — never shared.
     const { provisionVerifierNumber } = await import("./verifier-twilio.server");
     let purchased: { phoneSid: string; phoneNumber: string; subaccountSid: string };
@@ -465,7 +464,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     z.object({
       id: z.string().uuid(),
       notes: z.string().max(10000).optional(),
-      payload: z.any().optional(),
+      payload: z.unknown().optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -486,18 +485,15 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
       throw new Error("This number is no longer awaiting submission");
     }
 
-    // Parse structured payload out of notes JSON when caller didn't pass one.
-    let payload: any = data.payload ?? null;
-    if (!payload && data.notes) {
-      try { payload = JSON.parse(data.notes); } catch { payload = null; }
-    }
+    // Validate before any carrier request or replacement purchase.
+    const payload = readVerifierRegistration(data.payload, data.notes);
+    const savedNotes = JSON.stringify(payload);
 
     let twilioVerificationSid: string | null = row.telnyx_verification_id ?? null;
     let carrierStatus: "submitted" | "in_review" | "verified" | "rejected" = "submitted";
     let rejectionReason: string | null = null;
 
     if (payload) {
-      const base = process.env.PUBLIC_BASE_URL ?? "https://www.xellvio.com";
       const v = await import("./verifier-twilio.server");
       try {
         let phoneSid: string | null = row.telnyx_number_id;
@@ -507,13 +503,14 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
           // in its own dedicated subaccount before submitting.
           const fresh = await v.provisionVerifierNumber(supabaseAdmin, verifier.id);
           phoneSid = fresh.phoneSid; subSid = fresh.subaccountSid; twilioVerificationSid = null;
-          await supabaseAdmin.from("verifier_tfns").update({ phone_number: fresh.phoneNumber, telnyx_number_id: fresh.phoneSid, telnyx_verification_id: null } as any).eq("id", data.id);
+          const { error: replacementError } = await supabaseAdmin.from("verifier_tfns").update({ phone_number: fresh.phoneNumber, telnyx_number_id: fresh.phoneSid, telnyx_verification_id: null } as any).eq("id", data.id).eq("verifier_id", verifier.id);
+          if (replacementError) throw new Error("Could not save the replacement number. Contact support before trying again.");
         }
+        if (!phoneSid) throw new Error("Number ownership could not be confirmed.");
         const result = await v.submitVerifierVerification({
-          subaccountSid: subSid, phoneSid: phoneSid!,
+          subaccountSid: subSid, phoneSid,
           existingVerificationSid: twilioVerificationSid,
-          statusCallbackUrl: `${base}/api/public/twilio/status`,
-          payload: payload as any,
+          payload,
         });
         twilioVerificationSid = result.verificationSid;
         carrierStatus = result.status;
@@ -525,7 +522,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
         // updates and the wizard reopens pre-filled instead of losing everything.
         await supabaseAdmin
           .from("verifier_tfns")
-          .update({ notes: data.notes ?? null, rejection_reason: `Submission failed: ${msg}` } as any)
+          .update({ notes: savedNotes, rejection_reason: `Submission failed: ${msg}` } as any)
           .eq("id", data.id)
           .eq("verifier_id", verifier.id);
         throw new Error(msg);
@@ -539,7 +536,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
     const nowIso = new Date().toISOString();
     const patch = {
       status: dbStatus,
-      notes: data.notes ?? null,
+      notes: savedNotes,
       telnyx_verification_id: twilioVerificationSid,
       rejection_reason: rejectionReason,
       submitted_at: nowIso,
@@ -572,13 +569,13 @@ export const refreshMyTfn = createServerFn({ method: "POST" })
     if (!verifier.is_active) throw new Error("Your verifier account is suspended. Contact support.");
     const { data: row } = await supabaseAdmin
       .from("verifier_tfns")
-      .select("id,telnyx_verification_id,status")
+      .select("id,telnyx_number_id,telnyx_verification_id,status")
       .eq("id", data.id)
       .eq("verifier_id", verifier.id)
       .maybeSingle();
     if (!row?.telnyx_verification_id) return { ok: false, reason: "not_submitted" };
     const { fetchVerifierVerification, subaccountForPhone } = await import("./verifier-twilio.server");
-    const subSid = await subaccountForPhone(supabaseAdmin, (row as any).telnyx_number_id);
+    const subSid = await subaccountForPhone(supabaseAdmin, row.telnyx_number_id);
     if (!subSid || !row.telnyx_verification_id.startsWith("HH")) return { ok: false, reason: "legacy_number" };
     const result = await fetchVerifierVerification(supabaseAdmin, subSid, row.telnyx_verification_id);
     const dbStatus =
@@ -589,7 +586,8 @@ export const refreshMyTfn = createServerFn({ method: "POST" })
     if (result.status === "in_review") patch.in_review_at = nowIso;
     if (dbStatus === "verified") patch.verified_at = nowIso;
     if (dbStatus === "rejected") patch.rejected_at = nowIso;
-    await supabaseAdmin.from("verifier_tfns").update(patch).eq("id", data.id);
+    const { error: saveError } = await supabaseAdmin.from("verifier_tfns").update(patch).eq("id", data.id).eq("verifier_id", verifier.id);
+    if (saveError) throw new Error("Could not save the verification update.");
 
     return { ok: true, status: dbStatus };
   });

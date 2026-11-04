@@ -22,6 +22,13 @@ import { toast } from "sonner";
 import { Sparkles, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_verifier/verify/dashboard/numbers")({
+  head: () => ({ meta: [
+    { title: "Verifier Numbers | Xellvio" },
+    { name: "description", content: "Register and track your Xellvio toll-free verification submissions." },
+    { property: "og:title", content: "Verifier Numbers | Xellvio" },
+    { property: "og:description", content: "Register and track your Xellvio toll-free verification submissions." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: NumbersPage,
 });
 
@@ -83,7 +90,7 @@ function NumbersPage() {
   const submitMut = useMutation({
     mutationFn: () => submit({ data: { phone_number: phone, country: "US", notes } }),
     onSuccess: () => {
-      toast.success("Number submitted for verification");
+      toast.success("Number saved — complete its registration form to submit for verification.");
       setPhone("");
       setNotes("");
       qc.invalidateQueries({ queryKey: ["verifier", "tfns"] });
@@ -294,6 +301,10 @@ function NumbersPage() {
           {wizardTfnId && (
             <TollfreeWizard
               initial={parseWizardInitial(wizardRow?.notes)}
+              reservedNumber={wizardRow?.phone_number ?? null}
+              verificationStatus={wizardRow?.status ?? null}
+              feeAmount={0}
+              feePaid
               submitting={submitAssignedMut.isPending}
               onClose={() => setWizardTfnId(null)}
               submitLabel={
