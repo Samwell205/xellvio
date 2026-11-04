@@ -53,6 +53,16 @@ describe("verifier child-account verification", () => {
     requestMock([child, phone, owned, { status: "IN_REVIEW" }]);
     await expect(submitVerifierVerification(options())).rejects.toThrow("not confirmed");
   });
+  it("checks existing verification ownership before updating a submission", async () => {
+    const request = requestMock([child, phone, owned, { tollfree_phone_number_sid: "PNother" }]);
+    await expect(submitVerifierVerification({ ...options(), existingVerificationSid: "HHexisting" })).rejects.toThrow("does not belong");
+    expect(request).toHaveBeenCalledTimes(4);
+  });
+  it("updates the same owned verification rather than submitting a second request", async () => {
+    const request = requestMock([child, phone, owned, { tollfree_phone_number_sid: "PNone" }, { sid: "HHexisting", status: "IN_REVIEW" }]);
+    await expect(submitVerifierVerification({ ...options(), existingVerificationSid: "HHexisting" })).resolves.toMatchObject({ verificationSid: "HHexisting" });
+    expect(request.mock.calls[4]?.[0]).toBe("https://messaging.twilio.com/v1/Tollfree/Verifications/HHexisting");
+  });
   it("refreshes approved verification in its owning account and targets only that verification", async () => {
     const db = dbMock(); const request = requestMock([child, { sid: "HHverify", status: "TWILIO_APPROVED" }]);
     expect(await fetchVerifierVerification(db, "ACchild", "HHverify")).toMatchObject({ status: "verified" });
