@@ -51,6 +51,7 @@ import {
   ChevronsUpDown,
   ListFilter,
 } from "lucide-react";
+import { ShieldCheck as SmartShieldIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
@@ -1160,13 +1161,44 @@ function NewCampaignPage() {
 
       {step === 2 && (
         <Card className="p-5 space-y-4">
-          <Label>Smart Sending</Label>
-          <Select value={s.smartSendingMode} onValueChange={value => setS({ ...s, smartSendingMode: value as State["smartSendingMode"] })}>
-            <SelectTrigger aria-label="Campaign Smart Sending"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="inherit">Use business setting</SelectItem><SelectItem value="on">On for this campaign</SelectItem><SelectItem value="off">Off for this campaign</SelectItem></SelectContent>
-          </Select>
-          {s.smartSendingMode === "on" && <SmartSendingWindow hours={s.smartSendingHours} onChange={hours => setS({ ...s, smartSendingHours: hours })} />}
-          <div className="text-sm text-muted-foreground">{effectiveSmartSending.enabled ? `Skip recently messaged numbers: ${effectiveSmartSending.hours} hours` : "Repeat-send skipping off"}</div>
+          <div className={`rounded-xl border p-4 transition-colors ${effectiveSmartSending.enabled ? "border-primary/40 bg-primary/5" : "bg-muted/30"}`}>
+            <div className="flex items-start gap-3">
+              <div className={`grid size-10 shrink-0 place-items-center rounded-lg transition-colors ${effectiveSmartSending.enabled ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                <SmartShieldIcon className="size-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="campaign-smart-sending" className="text-base font-semibold cursor-pointer">Smart Sending</Label>
+                  <Switch
+                    id="campaign-smart-sending"
+                    aria-label="Campaign Smart Sending"
+                    checked={effectiveSmartSending.enabled}
+                    onCheckedChange={(on) => setS({ ...s, smartSendingMode: on ? "on" : "off", smartSendingHours: on ? effectiveSmartSending.hours : s.smartSendingHours })}
+                  />
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {effectiveSmartSending.enabled
+                    ? `Skips anyone who got a text from you in the last ${effectiveSmartSending.hours} hours.`
+                    : "Everyone on the list gets this text, even if they were messaged recently."}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-full border px-2 py-0.5 text-muted-foreground">
+                    {s.smartSendingMode === "inherit" ? "Using your business setting" : "Custom for this campaign"}
+                  </span>
+                  {s.smartSendingMode !== "inherit" && (
+                    <button type="button" className="text-primary underline-offset-2 hover:underline" onClick={() => setS({ ...s, smartSendingMode: "inherit" })}>
+                      Reset to business setting
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            {s.smartSendingMode === "on" && (
+              <div className="mt-4 border-t pt-4">
+                <SmartSendingWindow hours={s.smartSendingHours} onChange={hours => setS({ ...s, smartSendingHours: hours })} />
+              </div>
+            )}
+          </div>
           <Label>When to send</Label>
           <RadioGroup
             value={s.sendMode}
