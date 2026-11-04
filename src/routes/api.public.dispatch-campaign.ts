@@ -1409,8 +1409,14 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             maxPerRun: 3_000,
             concurrency: DISPATCH_CONNECTIONS,
             minAgeMs: 90_000,
-            budgetMs: Math.max(1000,RUN_BUDGET_MS-(Date.now()-startedAt)),
+            budgetMs: Math.max(1000,RUN_BUDGET_MS-(Date.now()-startedAt)-9_000),
           });
+          // Record Twilio's actual price on finalized messages (lookup-only, small slice).
+          let prices: any = null;
+          try {
+            const { syncTwilioPrices } = await import("@/lib/twilio-price-sync.server");
+            prices = await syncTwilioPrices(supabaseAdmin, { limit: 200, budgetMs: 8_000 });
+          } catch (e) { prices = { error: String((e as Error)?.message ?? e) }; }
           await finishWebhooks();
           return Response.json({ mode: "reconcile", ...result });
         }
