@@ -138,7 +138,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       return out;
     };
     const [rows, attemptRows] = await Promise.all([
-      fetchRows("messages", "id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id,is_mms"),
+      fetchRows("messages", "id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id,is_mms,carrier_price,carrier_price_checked_at"),
       fetchRows("message_send_attempts", "attempt_number,authorization_source,tenant_charge,estimated_carrier_cost,provider_status,reserved_at,sent_at,finalized_at,created_at"),
     ]);
 
@@ -161,6 +161,9 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       carrier_cost: 0,
       segments: 0,
       delivery_rate: 0,
+      actual_carrier_cost: 0,
+      priced_count: 0,
+      price_pending_count: 0,
     };
     const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; segments: number; cost: number; reserved_cost: number; carrier_cost: number; mms_count: number }>();
     // A recipient row only costs the tenant money once it has actually been handed
@@ -203,6 +206,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       if (billed) totals.cost += Number(r.cost ?? 0);
       if (pending) totals.reserved_cost += Number(r.cost ?? 0);
       if (billed) totals.carrier_cost += carrier;
+      if (r.carrier_price !== null && r.carrier_price !== undefined) { totals.actual_carrier_cost += Number(r.carrier_price); totals.priced_count += 1; }
+      else if (String(r.provider_message_id ?? "").startsWith("SM") && !r.carrier_price_checked_at) totals.price_pending_count += 1;
       totals.segments += seg;
       if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
       if (r.status === "sent") totals.awaiting_delivery += 1;
@@ -237,6 +242,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     totals.cost = +totals.cost.toFixed(4);
     totals.reserved_cost = +totals.reserved_cost.toFixed(4);
     totals.carrier_cost = +totals.carrier_cost.toFixed(4);
+    totals.actual_carrier_cost = +totals.actual_carrier_cost.toFixed(4);
     totals.delivery_rate = totals.sent > 0 ? +((totals.delivered / totals.sent) * 100).toFixed(1) : 0;
 
     const acct: any = account;
@@ -306,6 +312,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         mms_count: mmsCount,
         is_mms: mmsCount > 0,
         margin: +(totals.cost - totals.carrier_cost).toFixed(4),
+        actual_margin: +(totals.cost - totals.actual_carrier_cost).toFixed(4),
       },
       byCountry: Array.from(byCC.entries())
         .map(([country_code, v]) => ({
