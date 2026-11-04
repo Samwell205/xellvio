@@ -11,7 +11,7 @@ function dbMock() {
 }
 function requestMock(bodies: unknown[]) {
   vi.stubEnv("TWILIO_ACCOUNT_SID", "ACparent"); vi.stubEnv("TWILIO_AUTH_TOKEN", "fake-parent-token");
-  const request = vi.fn(async () => new Response(JSON.stringify(bodies.shift()), { status: 200 }));
+  const request = vi.fn(async (_url: string, _init?: RequestInit) => new Response(JSON.stringify(bodies.shift()), { status: 200 }));
   vi.stubGlobal("fetch", request); return request;
 }
 const child = { owner_account_sid: "ACparent", auth_token: "fake-child-token" };
