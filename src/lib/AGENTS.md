@@ -8,3 +8,4 @@
 - Dedicated-line (SM…) receipt recovery lives in twilio-receipt-recovery.server.ts: lookup-only via the owning subaccount, replayed through handleStatus; an hourly sweep-receipts cron backstops missed callbacks. Never resends or charges.
 
 - Dispatch holds all sending (recipients stay queued, never failed) when the funded carrier balance is at/below the buffer or a recent send hit 30002/20003, via carrier-funds-guard.ts; protects carrier health score.
+- Actual Twilio price per message comes from twilio-price-sync.server.ts (lookup-only, run inside the reconcile cron slice); report it beside the country_rates estimate, never replace tenant charges with it.

@@ -5286,6 +5286,8 @@ export type Database = {
         Row: {
           attempt_number: number
           campaign_id: string
+          carrier_price: number | null
+          carrier_price_checked_at: string | null
           charged_amount: number | null
           charged_at: string | null
           cost: number | null
@@ -5316,6 +5318,8 @@ export type Database = {
         Insert: {
           attempt_number?: number
           campaign_id: string
+          carrier_price?: number | null
+          carrier_price_checked_at?: string | null
           charged_amount?: number | null
           charged_at?: string | null
           cost?: number | null
@@ -5346,6 +5350,8 @@ export type Database = {
         Update: {
           attempt_number?: number
           campaign_id?: string
+          carrier_price?: number | null
+          carrier_price_checked_at?: string | null
           charged_amount?: number | null
           charged_at?: string | null
           cost?: number | null

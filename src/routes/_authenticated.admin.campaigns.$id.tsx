@@ -374,7 +374,7 @@ function AdminCampaignReportPage() {
         <Stat label="Awaiting" value={(t.awaiting_delivery + t.queued).toLocaleString()} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Stat
           label="Delivery rate"
           value={`${t.delivery_rate}%`}
@@ -389,8 +389,19 @@ function AdminCampaignReportPage() {
               : undefined
           }
         />
-        <Stat label="Carrier cost" value={formatUSD(t.carrier_cost)} />
-        <Stat label="Margin" value={formatUSD(t.margin)} tone={t.margin >= 0 ? "ok" : "bad"} />
+        <Stat label="Estimated carrier cost" value={formatUSD(t.carrier_cost)} hint="From your price list" />
+        <Stat label="Estimated margin" value={formatUSD(t.margin)} tone={t.margin >= 0 ? "ok" : "bad"} />
+        <Stat
+          label="Actual Twilio price"
+          value={formatUSD(Number((t as any).actual_carrier_cost ?? 0))}
+          hint={`${Number((t as any).priced_count ?? 0).toLocaleString()} texts priced · excludes US carrier fees${Number((t as any).price_pending_count ?? 0) > 0 ? ` · ${Number((t as any).price_pending_count).toLocaleString()} pending` : ""}`}
+        />
+        <Stat
+          label="Actual margin"
+          value={formatUSD(Number((t as any).actual_margin ?? 0))}
+          tone={Number((t as any).actual_margin ?? 0) >= 0 ? "ok" : "bad"}
+          hint={Number((t as any).price_pending_count ?? 0) > 0 ? "Still filling in" : undefined}
+        />
       </div>
 
       {(r as any).clicks?.links > 0 && (

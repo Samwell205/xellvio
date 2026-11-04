@@ -1,0 +1,3 @@
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS carrier_price numeric(12,5), ADD COLUMN IF NOT EXISTS carrier_price_checked_at timestamptz;
+CREATE INDEX IF NOT EXISTS messages_carrier_price_pending_idx ON public.messages (id) WHERE carrier_price_checked_at IS NULL AND provider_message_id LIKE 'SM%';
+UPDATE public.country_rates SET cost_price=0.0083, passthrough_fee=0.003 WHERE country_code='US';
