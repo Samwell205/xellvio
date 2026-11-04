@@ -374,7 +374,7 @@ function AdminCampaignReportPage() {
         <Stat label="Awaiting" value={(t.awaiting_delivery + t.queued).toLocaleString()} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Stat
           label="Delivery rate"
           value={`${t.delivery_rate}%`}
