@@ -392,9 +392,9 @@ function AdminCampaignReportPage() {
         <Stat label="Estimated carrier cost" value={formatUSD(t.carrier_cost)} hint="From your price list" />
         <Stat label="Estimated margin" value={formatUSD(t.margin)} tone={t.margin >= 0 ? "ok" : "bad"} />
         <Stat
-          label="Actual Twilio cost"
+          label="Actual Twilio price"
           value={formatUSD(Number((t as any).actual_carrier_cost ?? 0))}
-          hint={`${Number((t as any).priced_count ?? 0).toLocaleString()} texts priced${Number((t as any).price_pending_count ?? 0) > 0 ? ` · ${Number((t as any).price_pending_count).toLocaleString()} pending` : ""}`}
+          hint={`${Number((t as any).priced_count ?? 0).toLocaleString()} texts priced · excludes US carrier fees${Number((t as any).price_pending_count ?? 0) > 0 ? ` · ${Number((t as any).price_pending_count).toLocaleString()} pending` : ""}`}
         />
         <Stat
           label="Actual margin"
