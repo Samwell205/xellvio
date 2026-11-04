@@ -13,8 +13,7 @@ export const reconcileCampaignMessages = createServerFn({ method: "POST" })
     if (cErr || !campaign) throw new Error("Campaign not found");
     if (campaign.account_id !== userId) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { recoverReceiptPage } = await import("./receipt-recovery.server");
-    return recoverReceiptPage(supabaseAdmin, data.campaignId, data.after);
+    return recoverBoth(supabaseAdmin, data.campaignId, data.after);
   });
 
 export const adminRecoverCampaignReceipts = createServerFn({ method: "POST" })
@@ -26,6 +25,14 @@ export const adminRecoverCampaignReceipts = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: campaign, error: campaignError } = await supabaseAdmin.from("campaigns").select("id").eq("id", data.campaignId).maybeSingle();
     if (campaignError || !campaign) throw new Error("Campaign not found");
-    const { recoverReceiptPage } = await import("./receipt-recovery.server");
-    return recoverReceiptPage(supabaseAdmin, data.campaignId, data.after);
+    return recoverBoth(supabaseAdmin, data.campaignId, data.after);
   });
+
+async function recoverBoth(admin: any, campaignId: string, after?: string) {
+  const { recoverReceiptPage } = await import("./receipt-recovery.server");
+  const { recoverTwilioReceipts } = await import("./twilio-receipt-recovery.server");
+  const line = after ? null : await recoverTwilioReceipts(admin, { campaignId, limit: 60, budgetMs: 10_000 });
+  const page = await recoverReceiptPage(admin, campaignId, after);
+  if (!line) return page;
+  return { ...page, checked: page.checked + line.checked, updated: page.updated + line.updated, errors: page.errors + line.errors, stillAwaiting: page.stillAwaiting + line.stillAwaiting };
+}
