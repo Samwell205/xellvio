@@ -16,8 +16,12 @@ export function mapVerification(status: string | undefined): LineStatus {
  * already have been accepted and the recipient would get it twice.
  * Twilio 21610 (recipient replied STOP) must never be retried elsewhere.
  */
-export function ownLineApplies(to: string, hasMedia: boolean): boolean {
-  return !hasMedia && /^\+1\d{10}$/.test(String(to ?? "").trim());
+export function ownLineApplies(to: string, _hasMedia: boolean): boolean {
+  // Dedicated lines are US/Canada toll-free numbers, which carry both text
+  // and picture messages — media must ride the business's own line too,
+  // because the shared route cannot send from that number ("Invalid source
+  // number").
+  return /^\+1\d{10}$/.test(String(to ?? "").trim());
 }
 
 export function fallBackFromOwnLine(err: { lineStatus?: number | null; lineCode?: number | null }): boolean {

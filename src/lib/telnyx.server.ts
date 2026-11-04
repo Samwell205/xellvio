@@ -614,7 +614,7 @@ export async function sendMessage(opts: {
       const line = await activeLineFor(opts.accountId).catch(() => null);
       if (line) {
         try {
-          const r = await sendViaLine(line, { to, text: opts.text, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
+          const r = await sendViaLine(line, { to, text: opts.text, mediaUrls: opts.mediaUrls, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
           return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
         } catch (e: any) {
           // Line busy / rate limited: requeue (dispatcher treats "429" as transient).

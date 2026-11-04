@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { fallBackFromOwnLine, mapVerification, ownLineApplies } from "./twilio-lines-rules";
 describe("dedicated line routing", () => {
-  it("own line only for US/Canada text", () => {
+  it("own line for US/Canada text and picture messages", () => {
     expect(ownLineApplies("+17049286912", false)).toBe(true);
     expect(ownLineApplies("+447542683958", false)).toBe(false);
-    expect(ownLineApplies("+17049286912", true)).toBe(false);
+    // Media must ride the business's own line too: the shared route cannot
+    // send from that number and rejects it as an invalid source.
+    expect(ownLineApplies("+17049286912", true)).toBe(true);
+    expect(ownLineApplies("+447542683958", true)).toBe(false);
   });
   it("falls back only on explicit refusal, never timeout or STOP", () => {
     expect(fallBackFromOwnLine({ lineStatus: 400, lineCode: 30007 })).toBe(true);
