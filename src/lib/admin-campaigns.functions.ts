@@ -144,6 +144,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
 
     // True carrier cost per segment = base rate + per-message carrier passthrough fee.
     const costByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.cost_price ?? 0) + Number(r.passthrough_fee ?? 0)]));
+    const feeByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.passthrough_fee ?? 0)]));
     const mmsMultByCc = new Map<string, number>((rates ?? []).map((r: any) => [r.country_code, Number(r.mms_cost_multiplier ?? r.mms_multiplier ?? 3)]));
 
     const totals = {
@@ -164,6 +165,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       actual_carrier_cost: 0,
       priced_count: 0,
       price_pending_count: 0,
+      carrier_fees: 0,
+      twilio_total: 0,
     };
     const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; segments: number; cost: number; reserved_cost: number; carrier_cost: number; mms_count: number }>();
     // A recipient row only costs the tenant money once it has actually been handed
@@ -206,7 +209,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       if (billed) totals.cost += Number(r.cost ?? 0);
       if (pending) totals.reserved_cost += Number(r.cost ?? 0);
       if (billed) totals.carrier_cost += carrier;
-      if (r.carrier_price !== null && r.carrier_price !== undefined) { totals.actual_carrier_cost += Number(r.carrier_price); totals.priced_count += 1; }
+      if (r.carrier_price !== null && r.carrier_price !== undefined) { totals.actual_carrier_cost += Number(r.carrier_price); totals.priced_count += 1; totals.carrier_fees += (feeByCc.get(cc) ?? 0) * seg; }
       else if (String(r.provider_message_id ?? "").startsWith("SM") && !r.carrier_price_checked_at) totals.price_pending_count += 1;
       totals.segments += seg;
       if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
@@ -243,6 +246,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     totals.reserved_cost = +totals.reserved_cost.toFixed(4);
     totals.carrier_cost = +totals.carrier_cost.toFixed(4);
     totals.actual_carrier_cost = +totals.actual_carrier_cost.toFixed(4);
+    totals.carrier_fees = +totals.carrier_fees.toFixed(4);
+    totals.twilio_total = +(totals.actual_carrier_cost + totals.carrier_fees).toFixed(4);
     totals.delivery_rate = totals.sent > 0 ? +((totals.delivered / totals.sent) * 100).toFixed(1) : 0;
 
     const acct: any = account;
@@ -312,7 +317,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         mms_count: mmsCount,
         is_mms: mmsCount > 0,
         margin: +(totals.cost - totals.carrier_cost).toFixed(4),
-        actual_margin: +(totals.cost - totals.actual_carrier_cost).toFixed(4),
+        actual_margin: +(totals.cost - totals.actual_carrier_cost - totals.carrier_fees).toFixed(4),
       },
       byCountry: Array.from(byCC.entries())
         .map(([country_code, v]) => ({
