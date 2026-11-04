@@ -175,12 +175,14 @@ export async function activeLineFor(accountId: string): Promise<{ sid: string; t
   return v;
 }
 
-export async function sendViaLine(line: { sid: string; token: string; from: string }, opts: { to: string; text: string; timeoutMs?: number }): Promise<{ id: string; parts: number }> {
+export async function sendViaLine(line: { sid: string; token: string; from: string }, opts: { to: string; text: string; mediaUrls?: string[]; timeoutMs?: number }): Promise<{ id: string; parts: number }> {
   if (!line.sid || line.sid === process.env.TWILIO_ACCOUNT_SID) throw new Error('This number is reserved for the platform and cannot send business messages.');
+  const form = new URLSearchParams({ To: opts.to, From: line.from, Body: opts.text, StatusCallback: `${lineWebhookBase()}/status` });
+  for (const url of opts.mediaUrls ?? []) form.append("MediaUrl", url);
   const res = await fetch(`${API}/Accounts/${line.sid}/Messages.json`, {
     method: "POST",
     headers: { Authorization: subAuth(line.sid, line.token), "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ To: opts.to, From: line.from, Body: opts.text, StatusCallback: `${lineWebhookBase()}/status` }),
+    body: form,
     signal: AbortSignal.timeout(opts.timeoutMs ?? 10000),
   });
   const j: any = await res.json().catch(() => ({}));
