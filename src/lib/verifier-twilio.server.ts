@@ -111,6 +111,10 @@ export async function submitVerifierVerification(opts: {
   const owned = await tw(`${API}/Accounts/${opts.subaccountSid}/IncomingPhoneNumbers.json?PageSize=2`, auth);
   if (owned.incoming_phone_numbers?.length !== 1 || owned.incoming_phone_numbers[0]?.sid !== opts.phoneSid || owned.next_page_uri)
     throw new Error("Verification requires a separate account containing only this number.");
+  if (opts.existingVerificationSid?.startsWith("HH")) {
+    const existing = await tw(`${TFV}/${opts.existingVerificationSid}`, auth);
+    if (existing.tollfree_phone_number_sid !== opts.phoneSid) throw new Error("Verification does not belong to this number.");
+  }
   const reg = (p.businessRegistrationNumber ?? "").trim();
   const fields: Array<[string, string]> = [
     ["TollfreePhoneNumberSid", opts.phoneSid], ["BusinessName", p.legalEntityName], ["BusinessWebsite", p.websiteUrl],

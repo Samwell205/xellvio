@@ -135,9 +135,7 @@ function NumbersPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-slate-400">
-            One click assigns you a toll-free number to verify. We first check the platform pool for
-            an unclaimed number, and if none is available we provision a fresh toll-free number and
-            assign it to you automatically.
+            Claim a new toll-free number, then complete its business and opt-in details for verification.
           </p>
           <p className="text-xs text-slate-400">
             Marketplace slots used:{" "}

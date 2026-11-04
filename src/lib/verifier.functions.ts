@@ -386,16 +386,13 @@ export const submitTfn = createServerFn({ method: "POST" })
       throw new Error("You can have at most 3 numbers in the marketplace at a time. Sell one before submitting a new number.");
     }
 
-    const { error } = await supabaseAdmin
-      .from("verifier_tfns")
-      .insert({
-        verifier_id: verifier.id,
-        phone_number: data.phone_number,
-        country: data.country,
-        notes: data.notes ?? null,
-        status: "assigned",
-      });
-    if (error) throw new Error(error.message.includes("duplicate") ? "This number was already submitted" : error.message);
+    // Manual entry cannot register a number whose carrier ownership we cannot prove.
+    const { data: owned } = await supabaseAdmin.from("verifier_tfns")
+      .select("id,telnyx_number_id,status").eq("verifier_id", verifier.id).eq("phone_number", data.phone_number).maybeSingle();
+    const { subaccountForPhone } = await import("./verifier-twilio.server");
+    if (!owned || !await subaccountForPhone(supabaseAdmin, owned.telnyx_number_id))
+      throw new Error("Use Claim a number to get a number registered to your verifier account. Existing external numbers require support review.");
+    if (owned.status !== "assigned" && owned.status !== "rejected") throw new Error("This number has already been submitted.");
     return { ok: true };
   });
 
