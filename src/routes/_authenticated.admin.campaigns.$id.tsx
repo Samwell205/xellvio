@@ -374,7 +374,7 @@ function AdminCampaignReportPage() {
         <Stat label="Awaiting" value={(t.awaiting_delivery + t.queued).toLocaleString()} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat
           label="Delivery rate"
           value={`${t.delivery_rate}%`}
@@ -389,18 +389,16 @@ function AdminCampaignReportPage() {
               : undefined
           }
         />
-        <Stat label="Estimated carrier cost" value={formatUSD(t.carrier_cost)} hint="From your price list" />
-        <Stat label="Estimated margin" value={formatUSD(t.margin)} tone={t.margin >= 0 ? "ok" : "bad"} />
         <Stat
-          label="Actual Twilio price"
-          value={formatUSD(Number((t as any).actual_carrier_cost ?? 0))}
-          hint={`${Number((t as any).priced_count ?? 0).toLocaleString()} texts priced · excludes US carrier fees${Number((t as any).price_pending_count ?? 0) > 0 ? ` · ${Number((t as any).price_pending_count).toLocaleString()} pending` : ""}`}
+          label="Total Twilio charged"
+          value={formatUSD(Number((t as any).twilio_total ?? 0))}
+          hint={`${formatUSD(Number((t as any).actual_carrier_cost ?? 0))} Twilio price + ${formatUSD(Number((t as any).carrier_fees ?? 0))} carrier fees${Number((t as any).price_pending_count ?? 0) > 0 ? ` · ${Number((t as any).price_pending_count).toLocaleString()} texts still pricing` : ""}`}
         />
         <Stat
-          label="Actual margin"
+          label="Your profit"
           value={formatUSD(Number((t as any).actual_margin ?? 0))}
           tone={Number((t as any).actual_margin ?? 0) >= 0 ? "ok" : "bad"}
-          hint={Number((t as any).price_pending_count ?? 0) > 0 ? "Still filling in" : undefined}
+          hint="Tenant charge minus total Twilio charge"
         />
       </div>
 
