@@ -625,7 +625,22 @@ async function sendOneMessage(
     const rateLimited =
       code === "10011" ||
       /429|rate limit|maximum number of allowed requests|Cannot perform I\/O on behalf of a different request/i.test(String(reason));
-    if (rateLimited) {
+    // Carrier account suspended / unfunded (30002, 20003): never burn the
+    // recipient as failed. Requeue it and hold all sending so we stop firing
+    // rejected requests that lower the carrier health score.
+    const { isCarrierFundsError } = await import("@/lib/carrier-funds-guard");
+    const fundsError = isCarrierFundsError(code);
+    if (fundsError) {
+      try {
+        await supabaseAdmin.from("platform_settings").upsert(
+          { key: "carrier_funds_hold_at", value: new Date().toISOString() as any },
+          { onConflict: "key" },
+        );
+      } catch (holdErr) {
+        console.error("[dispatch] failed to arm carrier funds hold", holdErr);
+      }
+    }
+    if (rateLimited || fundsError) {
       try {
         await recordStatus(supabaseAdmin, sink, m.id, {
           status: "queued",
@@ -1429,6 +1444,33 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
           }
         }
 
+        // Carrier funds guard: check the funded account balance once per tick
+        // and hold sending (campaigns stay queued) when it is at/below the
+        // buffer or a recent send hit an account-suspended rejection.
+        let carrierFundsHold = false;
+        try {
+          const { carrierFundsHeld } = await import("@/lib/carrier-funds-guard");
+          const { getMasterTwilioBalance, getBalanceBuffer, fireCapacityAlert } = await import("@/lib/twilio-alerts.server");
+          const [{ data: fh }, bal, buffer] = await Promise.all([
+            supabaseAdmin.from("platform_settings").select("value").eq("key", "carrier_funds_hold_at").maybeSingle(),
+            getMasterTwilioBalance().catch(() => ({ ok: false, balance: 0, currency: "USD" })),
+            getBalanceBuffer(),
+          ]);
+          const heldAtMs = fh?.value ? Date.parse(String(fh.value)) : null;
+          carrierFundsHold = carrierFundsHeld({ balanceOk: bal.ok, balance: bal.balance, buffer, heldAtMs, nowMs: Date.now() });
+          if (carrierFundsHold && bal.ok) {
+            await fireCapacityAlert({
+              kind: "mid_campaign_exhausted",
+              twilioBalance: bal.balance,
+              currency: bal.currency ?? "USD",
+              campaignCost: 0,
+              shortfall: Math.max(0, buffer - bal.balance),
+            }).catch(() => {});
+          }
+        } catch (e) {
+          console.error("[dispatch] carrier funds check failed", e);
+        }
+
         const { data: ratesRows } = await supabaseAdmin
           .from("country_rates")
           .select("country_code,dial_prefix,sell_price,mms_multiplier,active")
@@ -1670,6 +1712,7 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
             gorgiasEnabled: acct?.gorgias_enabled === true,
             assets: (senderAssets ?? []).filter((s: any) => s.verification_status === "verified"),
           };
+          if (carrierFundsHold) return { skipped: "carrier_funds_hold" };
           const throttle = throttleForSender(sender, !!c.media_url);
           // The tenant allowance is a per-invocation total; each lease slot gets
           // a share of it so parallel slots add throughput without exceeding the
