@@ -695,14 +695,14 @@ function AssignNumbersStep({
           </table>
         </div>
       </div>
-      <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+      {feeAmount > 0 && <div className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
         Submit this wizard to reserve a number and start verification. The one-time ${feeAmount} setup fee is charged from credits at submit time.
         {willDeferFee && (
           <span className="block pt-1">
             Your balance is ${creditBalance.toFixed(2)}. We'll still submit your request now and collect the ${feeAmount} fee automatically from your next top-up.
           </span>
         )}
-      </div>
+      </div>}
     </>
   );
 }

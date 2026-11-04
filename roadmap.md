@@ -1,5 +1,11 @@
 # Roadmap
 
+## Verifier registration alignment
+- [x] Audit shared form, submission validation, category mapping and separate number accounts
+- [x] Require complete validated registration, correct category mapping, phone ownership and approval refresh
+- [x] Registration and carrier safeguards passed; authorized My numbers page opens without runtime errors
+- [ ] Verify real registration/readback — authorized verifier has no numbers; creating one incurs a real purchase, not performed
+
 ## SMS Smart Sending and number protection
 - [x] Add business default and campaign override with adjustable repeat-send window
 - [x] Enforce atomic business/phone skipping before charging; suppress confirmed invalid/landline destinations, not temporary failures

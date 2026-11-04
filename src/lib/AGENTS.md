@@ -1,4 +1,5 @@
 # src/lib rules
+- Verifier registration validates through verifier-registration.ts before provisioning/submission and checks single-number child-account ownership; only carrier-confirmed identifiers can mark submitted.
 - Finance page views reuse timestamped saved reports until explicit recalculation; Billing shares financeTenantReport but reads current wallets separately. Optional margin/pricing/recovery views load only when opened, and carrier reads never delay Finance.
 - Admin SMS balance uses twilio-account-balance.server.ts with the funded parent credentials and saved twilio alert settings; failed reads are not confirmed zero balances. Number sub-account sending remains separate and guarded.
 - Receipt recovery is lookup-only, bounded to six workers with stable ID cursors; accept exact matching final receipts, try the other server-owned connection only on 404, and keep unconfirmed distinct from failure. Never resend or change balances during recovery.
