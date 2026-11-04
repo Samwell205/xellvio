@@ -508,6 +508,7 @@ export const submitAssignedTfn = createServerFn({ method: "POST" })
         }
         if (!phoneSid) throw new Error("Number ownership could not be confirmed.");
         const result = await v.submitVerifierVerification({
+          db: supabaseAdmin,
           subaccountSid: subSid, phoneSid,
           existingVerificationSid: twilioVerificationSid,
           payload,

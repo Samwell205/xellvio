@@ -100,6 +100,7 @@ function phoneE164(country: string, phone: string) {
 }
 
 export async function submitVerifierVerification(opts: {
+  db: any;
   subaccountSid: string; phoneSid: string; existingVerificationSid: string | null;
   payload: TollfreeSubmitPayload & { proofShowsRequiredConsent: boolean; agreeToTos: boolean };
 }): Promise<TollfreeSubmitResult> {
@@ -135,8 +136,7 @@ export async function submitVerifierVerification(opts: {
   const url = opts.existingVerificationSid?.startsWith("HH") ? `${TFV}/${opts.existingVerificationSid}` : TFV;
   const v = await tw(url, auth, fields);
   if (typeof v.sid !== "string" || !v.sid.startsWith("HH")) throw new Error("Verification submission was not confirmed. Please refresh before trying again.");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { error } = await supabaseAdmin.from("twilio_verified_inventory").update({ verification_sid: v.sid, verification_status: mapTwilioStatus(v.status) === "verified" ? "verified" : "pending" }).eq("phone_sid", opts.phoneSid).eq("owner_account_sid", opts.subaccountSid);
+  const { error } = await opts.db.from("twilio_verified_inventory").update({ verification_sid: v.sid, verification_status: mapTwilioStatus(v.status) === "verified" ? "verified" : "pending" }).eq("phone_sid", opts.phoneSid).eq("owner_account_sid", opts.subaccountSid);
   if (error) console.error("[verifier-twilio] verification inventory save failed", error.message);
   return { verificationSid: v.sid, status: mapTwilioStatus(v.status), rejectionReason: v.rejection_reason ?? null, raw: v };
 }
