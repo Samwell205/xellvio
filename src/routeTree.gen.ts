@@ -132,6 +132,7 @@ import { Route as ApiPublicPollCarrierBalanceRouteImport } from './routes/api.pu
 import { Route as ApiPublicPollVerificationsRouteImport } from './routes/api.public.poll-verifications'
 import { Route as ApiPublicRunFlowsRouteImport } from './routes/api.public.run-flows'
 import { Route as ApiPublicSnapshotFinanceRouteImport } from './routes/api.public.snapshot-finance'
+import { Route as ApiPublicSweepReceiptsRouteImport } from './routes/api.public.sweep-receipts'
 import { Route as ApiPublicTelnyxInboundRouteImport } from './routes/api.public.telnyx-inbound'
 import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.telnyx-status'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
@@ -860,6 +861,11 @@ const ApiPublicSnapshotFinanceRoute =
     path: '/api/public/snapshot-finance',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicSweepReceiptsRoute = ApiPublicSweepReceiptsRouteImport.update({
+  id: '/api/public/sweep-receipts',
+  path: '/api/public/sweep-receipts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTelnyxInboundRoute = ApiPublicTelnyxInboundRouteImport.update({
   id: '/api/public/telnyx-inbound',
   path: '/api/public/telnyx-inbound',
@@ -1366,6 +1372,7 @@ export interface FileRoutesByFullPath {
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/run-flows': typeof ApiPublicRunFlowsRoute
   '/api/public/snapshot-finance': typeof ApiPublicSnapshotFinanceRoute
+  '/api/public/sweep-receipts': typeof ApiPublicSweepReceiptsRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -1551,6 +1558,7 @@ export interface FileRoutesByTo {
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/run-flows': typeof ApiPublicRunFlowsRoute
   '/api/public/snapshot-finance': typeof ApiPublicSnapshotFinanceRoute
+  '/api/public/sweep-receipts': typeof ApiPublicSweepReceiptsRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -1745,6 +1753,7 @@ export interface FileRoutesById {
   '/api/public/poll-verifications': typeof ApiPublicPollVerificationsRoute
   '/api/public/run-flows': typeof ApiPublicRunFlowsRoute
   '/api/public/snapshot-finance': typeof ApiPublicSnapshotFinanceRoute
+  '/api/public/sweep-receipts': typeof ApiPublicSweepReceiptsRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -1938,6 +1947,7 @@ export interface FileRouteTypes {
     | '/api/public/poll-verifications'
     | '/api/public/run-flows'
     | '/api/public/snapshot-finance'
+    | '/api/public/sweep-receipts'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
@@ -2123,6 +2133,7 @@ export interface FileRouteTypes {
     | '/api/public/poll-verifications'
     | '/api/public/run-flows'
     | '/api/public/snapshot-finance'
+    | '/api/public/sweep-receipts'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
@@ -2316,6 +2327,7 @@ export interface FileRouteTypes {
     | '/api/public/poll-verifications'
     | '/api/public/run-flows'
     | '/api/public/snapshot-finance'
+    | '/api/public/sweep-receipts'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
     | '/lovable/email/suppression'
@@ -2457,6 +2469,7 @@ export interface RootRouteChildren {
   ApiPublicPollVerificationsRoute: typeof ApiPublicPollVerificationsRoute
   ApiPublicRunFlowsRoute: typeof ApiPublicRunFlowsRoute
   ApiPublicSnapshotFinanceRoute: typeof ApiPublicSnapshotFinanceRoute
+  ApiPublicSweepReceiptsRoute: typeof ApiPublicSweepReceiptsRoute
   ApiPublicTelnyxInboundRoute: typeof ApiPublicTelnyxInboundRoute
   ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
@@ -3353,6 +3366,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicSnapshotFinanceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/sweep-receipts': {
+      id: '/api/public/sweep-receipts'
+      path: '/api/public/sweep-receipts'
+      fullPath: '/api/public/sweep-receipts'
+      preLoaderRoute: typeof ApiPublicSweepReceiptsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/telnyx-inbound': {
       id: '/api/public/telnyx-inbound'
       path: '/api/public/telnyx-inbound'
@@ -4218,6 +4238,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicPollVerificationsRoute: ApiPublicPollVerificationsRoute,
   ApiPublicRunFlowsRoute: ApiPublicRunFlowsRoute,
   ApiPublicSnapshotFinanceRoute: ApiPublicSnapshotFinanceRoute,
+  ApiPublicSweepReceiptsRoute: ApiPublicSweepReceiptsRoute,
   ApiPublicTelnyxInboundRoute: ApiPublicTelnyxInboundRoute,
   ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
