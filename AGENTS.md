@@ -61,4 +61,3 @@
 
 - Toll-free offers and paid checkouts use eligible sub-account inventory through tfn-purchase.server.ts; paid fulfilment claims pending payments before assignment and records failures in the existing manual-review status with admin alerts, never automatic refunds.
 - SMS Smart Sending uses business/phone history under the existing SQL claim account lock, independent of quiet hours; invalid destinations are separate from STOP so START cannot clear them. Carrier boundaries recheck both.
-- Auth emails (purpose 'auth') always send via the built-in Lovable sender, never Resend, so the provider's daily quota can't block signups.
