@@ -1,5 +1,10 @@
 # Roadmap
 
+## Owner-supplied email designs
+- [ ] Install supplied designs with hosted logos and safe personalized rendering
+- [ ] Apply designs to existing auth, support, lifecycle, verification, billing and campaign-alert email flows without changing sending rules
+- [ ] Verify previews, personalization and existing recipient-rule regressions; publish when checks pass
+
 ## Tenant notice targeting and support consolidation
 - [x] Catalog tenant emails, exact lifecycle/status/support/security copy, timing, audience and variables for owner redesign in Files; unimplemented monthly/permanent/renewal notices clearly marked
 - [x] Reproduce and correct first-campaign email/dashboard targeting; immutable launch history and queued-send eligibility prevent historic replay
