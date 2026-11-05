@@ -22,6 +22,7 @@ import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant
 import { getProvisioningStatus, saveBusinessProfile } from "@/lib/account.functions";
 import { getGrowthGoal, saveGrowthGoal } from "@/lib/growth-tenant.functions";
 import { ONBOARDING_GOALS, type OnboardingGoalKey } from "@/lib/growth/taxonomy";
+import { isProfileComplete } from "@/lib/profile-requirements";
 import { firstTouch, sessionId, track } from "@/lib/growth/track";
 
 export const Route = createFileRoute("/_authenticated/app/onboarding")({
