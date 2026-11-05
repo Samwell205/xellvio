@@ -23,7 +23,10 @@ import {
   adminListEmailRecipients,
   adminSendTenantNotice,
   adminRecentNotices,
+  adminPricingNoticePreview,
+  adminSendPricingNoticeBatch,
 } from "@/lib/admin-email.functions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export const Route = createFileRoute("/_authenticated/admin/email")({
   head: () => ({
@@ -51,6 +54,33 @@ function AdminEmailPage() {
   const listFn = useServerFn(adminListEmailRecipients);
   const sendFn = useServerFn(adminSendTenantNotice);
   const logFn = useServerFn(adminRecentNotices);
+  const pricingPreviewFn = useServerFn(adminPricingNoticePreview);
+  const pricingSendFn = useServerFn(adminSendPricingNoticeBatch);
+  const [pricingPreview, setPricingPreview] = useState<Awaited<ReturnType<typeof adminPricingNoticePreview>> | null>(null);
+  const [pricingBusy, setPricingBusy] = useState(false);
+  const [pricingProgress, setPricingProgress] = useState('');
+
+  async function openPricingNotice() {
+    try { setPricingPreview(await pricingPreviewFn()); }
+    catch (e) { toast.error(e instanceof Error ? e.message : 'Could not preview notice'); }
+  }
+  async function sendPricingNotice() {
+    if (!pricingPreview || pricingBusy) return;
+    setPricingBusy(true);
+    let completed = 0;
+    try {
+      for (let i = 0; i < pricingPreview.accountIds.length; i += 40) {
+        const result = await pricingSendFn({ data: { accountIds: pricingPreview.accountIds.slice(i, i + 40) } });
+        completed += result.sent + result.alreadySent;
+        setPricingProgress(`${completed} of ${pricingPreview.accountIds.length} accepted by email service`);
+      }
+      toast.success(`Pricing notice accepted for ${completed} tenants`);
+      qc.invalidateQueries({ queryKey: ['admin-email-log'] });
+    } catch (e) {
+      setPricingProgress(`${completed} confirmed. Sending stopped; check recent email activity before continuing.`);
+      toast.error(e instanceof Error ? e.message : 'Notice sending stopped');
+    } finally { setPricingBusy(false); }
+  }
 
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -123,7 +153,17 @@ function AdminEmailPage() {
         <Mail className="size-5 text-primary" />
         <h1 className="text-xl font-semibold tracking-tight">Tenant notices</h1>
         <Badge variant="outline">Service email</Badge>
+        <Button variant="outline" className="ml-auto" onClick={openPricingNotice}><Mail className="size-4 mr-2" />SMS pricing notice</Button>
       </div>
+      <Dialog open={!!pricingPreview} onOpenChange={(open) => { if (!open && !pricingBusy) setPricingPreview(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>SMS pricing update</DialogTitle></DialogHeader>
+          <iframe title="Pricing email preview" srcDoc={pricingPreview?.html} sandbox="" className="w-full h-[60vh] border border-border rounded" />
+          <p className="text-sm text-muted-foreground">{pricingPreview?.accountIds.length} tenant recipients · {pricingPreview?.excluded} unsubscribed or duplicate addresses excluded</p>
+          {pricingProgress && <p role="status" className="text-sm">{pricingProgress}</p>}
+          <Button disabled={pricingBusy || pricingProgress.includes('accepted by email service')} onClick={sendPricingNotice}><Send className="size-4 mr-2" />{pricingBusy ? 'Sending pricing notice…' : 'Send pricing notice to all tenants'}</Button>
+        </DialogContent>
+      </Dialog>
       <p className="text-sm text-muted-foreground max-w-2xl">
         Send an operational notice to one tenant or every tenant — maintenance windows, pricing or
         policy changes, account actions. Each tenant gets their own email. Use{" "}
