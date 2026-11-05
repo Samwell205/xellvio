@@ -413,6 +413,21 @@ async function recordStatus(
   await writeWithRetry(supabaseAdmin, "messages", patch, { id });
 }
 
+// Destination-permission blocks (see carrier-geo-guard), cached briefly per worker.
+let geoBlocksCache: { at: number; blocks: Record<string, string> } | null = null;
+async function loadGeoBlocks(supabaseAdmin: any): Promise<Record<string, string>> {
+  if (geoBlocksCache && Date.now() - geoBlocksCache.at < 60_000) return geoBlocksCache.blocks;
+  try {
+    const { data } = await supabaseAdmin.from("platform_settings").select("value").eq("key", "carrier_geo_blocks").maybeSingle();
+    const v = data?.value;
+    const blocks = v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, string>) : {};
+    geoBlocksCache = { at: Date.now(), blocks };
+    return blocks;
+  } catch {
+    return geoBlocksCache?.blocks ?? {};
+  }
+}
+
 async function sendOneMessage(
   supabaseAdmin: any,
   campaign: any,
@@ -492,6 +507,20 @@ async function sendOneMessage(
         failure_reason: "Skipped: this contact's saved details contain restricted wording. Edit the contact and retry.",
       });
       return { ok: false, shaft: false, debited: 0 };
+    }
+
+    // Texting to this destination was just refused by the carrier (21408).
+    // Don't send more doomed requests that lower the carrier health score.
+    {
+      const { isGeoBlocked } = await import("@/lib/carrier-geo-guard");
+      if (isGeoBlocked(await loadGeoBlocks(supabaseAdmin), m.phone_e164, Date.now())) {
+        await recordStatus(supabaseAdmin, sink, m.id, {
+          status: "failed",
+          error_code: "destination_not_enabled",
+          failure_reason: "Texting to this destination is not enabled yet. Retry once it is enabled.",
+        });
+        return { ok: false, shaft: false, debited: 0 };
+      }
     }
 
     const result = await safeTelnyxCall(
@@ -638,6 +667,22 @@ async function sendOneMessage(
         );
       } catch (holdErr) {
         console.error("[dispatch] failed to arm carrier funds hold", holdErr);
+      }
+    }
+    {
+      const { isGeoPermissionError, withGeoBlock } = await import("@/lib/carrier-geo-guard");
+      if (isGeoPermissionError(code)) {
+        try {
+          const current = await loadGeoBlocks(supabaseAdmin);
+          const next = withGeoBlock(current, m.phone_e164, Date.now());
+          geoBlocksCache = { at: Date.now(), blocks: next };
+          await supabaseAdmin.from("platform_settings").upsert(
+            { key: "carrier_geo_blocks", value: next as any },
+            { onConflict: "key" },
+          );
+        } catch (geoErr) {
+          console.error("[dispatch] failed to record destination block", geoErr);
+        }
       }
     }
     if (rateLimited || fundsError) {
