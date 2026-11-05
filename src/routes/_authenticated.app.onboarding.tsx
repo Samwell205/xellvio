@@ -187,7 +187,7 @@ function OnboardingPage() {
                     required
                     v={form.legal_business_name}
                     on={(v) => setForm({ ...form, legal_business_name: v })}
-                    placeholder="e.g. House of Ignis"
+                    placeholder="Your registered business name"
                   />
                   <div className="grid gap-5 sm:grid-cols-2">
                     <PickField label="Industry" v={form.industry} on={(v) => setForm({ ...form, industry: v })}
@@ -207,7 +207,7 @@ function OnboardingPage() {
                       placeholder="Start typing, e.g. 221 Baker Street"
                     />
                   </div>
-                  <Field label="Apartment, suite, unit" v={addr.line2} on={setPart("line2")} placeholder="Optional" />
+                  <Field label="Apartment, suite, unit" v={addr.line2} on={setPart("line2")} placeholder="e.g. Suite 4B" />
                   <div className="grid gap-5 sm:grid-cols-2">
                     <Field label="City" required v={addr.city} on={setPart("city")} />
                     <Field label="State / county / region" v={addr.state} on={setPart("state")} />
