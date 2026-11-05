@@ -129,91 +129,117 @@ function OnboardingPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold">Tell us about your business</h1>
-        <p className="text-sm text-muted-foreground">
-          A few details before you get started. Carriers need them for texting and calling, and
-          we use your business name across your account.
-        </p>
+    <div className="mx-auto w-full max-w-6xl px-1 pb-16">
+      <div className="grid gap-10 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-14">
+        <aside className="lg:sticky lg:top-8 lg:self-start">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            Account setup
+          </p>
+          <h1 className="mt-3 text-3xl font-bold leading-[1.1] tracking-tight">
+            {step === 1 ? "Your business, on record." : "Get ready to send."}
+          </h1>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            {step === 1
+              ? "Phone networks check these details before your texts go out. It takes about two minutes."
+              : "Your profile is saved. Set up the number your customers will see your messages come from."}
+          </p>
+
+          <ol className="mt-8 space-y-0">
+            <StepBadge n={1} active={step === 1} done={profileDone} label="Business profile" hint="Who you are and how to reach you" />
+            <StepBadge n={2} active={step === 2} done={status === "active"} label="Sending number" hint="The number your texts come from" last />
+          </ol>
+
+          <div className="mt-8 hidden border-t border-border pt-6 lg:block">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Your details stay private. We only share what phone networks need to approve your messages.
+            </p>
+          </div>
+        </aside>
+
+        <main className="min-w-0 space-y-8">
+          {step === 1 && (
+            <section className="rounded-2xl border border-border bg-card">
+              <header className="border-b border-border px-6 py-5 sm:px-8">
+                <h2 className="text-lg font-semibold">Business details</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Use the details customers and phone networks will recognise.</p>
+              </header>
+
+              <div className="divide-y divide-border">
+                <FormGroup title="Identity" text="The name shown on your account.">
+                  <Field
+                    label="Business name"
+                    required
+                    v={form.legal_business_name}
+                    on={(v) => setForm({ ...form, legal_business_name: v })}
+                    placeholder="e.g. House of Ignis"
+                  />
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <PickField label="Industry" v={form.industry} on={(v) => setForm({ ...form, industry: v })}
+                      options={["Home services / trades","Retail & ecommerce","Restaurants & hospitality","Health & beauty","Professional services","Real estate","Fitness","Education","Agency / reseller","Other"]} />
+                    <PickField label="Team size" required={false} v={form.team_size} on={(v) => setForm({ ...form, team_size: v })}
+                      options={["Just me","2–10","11–50","51–200","200+"]} />
+                  </div>
+                </FormGroup>
+
+                <FormGroup title="Location" text="Start typing and pick your address from the list.">
+                  <div className="space-y-2">
+                    <FieldLabel label="Business address" required />
+                    <AddressAutocomplete
+                      value={form.business_address}
+                      onChange={(v) => setForm((f) => ({ ...f, business_address: v }))}
+                    />
+                  </div>
+                </FormGroup>
+
+                <FormGroup title="Contact" text="Where customers and our team can reach you.">
+                  <Field
+                    label="Website"
+                    required
+                    v={form.website_url}
+                    on={(v) => setForm({ ...form, website_url: v })}
+                    placeholder="https://"
+                  />
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field
+                      label="Contact email"
+                      required
+                      v={form.contact_email}
+                      on={(v) => setForm({ ...form, contact_email: v })}
+                      type="email"
+                    />
+                    <Field
+                      label="Business phone"
+                      required
+                      v={form.phone}
+                      on={(v) => setForm({ ...form, phone: v })}
+                      placeholder="+447700900123"
+                    />
+                  </div>
+                </FormGroup>
+              </div>
+
+              <footer className="flex flex-col-reverse gap-3 border-t border-border bg-muted/40 px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 rounded-b-2xl">
+                <p className="text-xs text-muted-foreground">Fields marked <span className="text-primary">*</span> are needed to continue.</p>
+                <Button size="lg" onClick={() => save.mutate()} disabled={save.isPending}>
+                  {save.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+                  Save and continue
+                </Button>
+              </footer>
+            </section>
+          )}
+
+          {step === 2 && (
+            <>
+              <SenderStep provisioning={provisioning.data} />
+              <div className="flex justify-end">
+                <Button size="lg" onClick={() => navigate({ to: "/app" })}>Go to my dashboard</Button>
+              </div>
+            </>
+          )}
+
+          <GoalPicker />
+        </main>
       </div>
-
-      <div className="flex items-center gap-3 text-sm">
-        <StepBadge n={1} active={step === 1} done={profileDone} label="Business profile" />
-        <div className="h-px flex-1 bg-border" />
-        <StepBadge
-          n={2}
-          active={step === 2}
-          done={status === "active"}
-          label="Sender provisioning"
-        />
-      </div>
-
-      <GoalPicker />
-
-      {step === 1 && (
-        <Card className="p-6 space-y-4">
-          <h3 className="font-semibold">Business details</h3>
-          <Field
-            label="Business name"
-            required
-            v={form.legal_business_name}
-            on={(v) => setForm({ ...form, legal_business_name: v })}
-          />
-          <div className="space-y-1.5">
-            <Label className="flex items-center justify-between gap-3">
-              <span>Business address</span>
-              <span className="text-xs italic text-muted-foreground">Required</span>
-            </Label>
-            <AddressAutocomplete
-              value={form.business_address}
-              onChange={(v) => setForm((f) => ({ ...f, business_address: v }))}
-            />
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field
-              label="Website URL"
-              required
-              v={form.website_url}
-              on={(v) => setForm({ ...form, website_url: v })}
-              placeholder="https://"
-            />
-            <Field
-              label="Contact email"
-              required
-              v={form.contact_email}
-              on={(v) => setForm({ ...form, contact_email: v })}
-              type="email"
-            />
-            <Field
-              label="Business phone"
-              required
-              v={form.phone}
-              on={(v) => setForm({ ...form, phone: v })}
-              placeholder="+447700900123"
-            />
-            <PickField label="Industry" v={form.industry} on={(v) => setForm({ ...form, industry: v })}
-              options={["Home services / trades","Retail & ecommerce","Restaurants & hospitality","Health & beauty","Professional services","Real estate","Fitness","Education","Agency / reseller","Other"]} />
-            <PickField label="Team size" required={false} v={form.team_size} on={(v) => setForm({ ...form, team_size: v })}
-              options={["Just me","2–10","11–50","51–200","200+"]} />
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>
-              {save.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-              Save and continue
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {step === 2 && (
-        <>
-          <SenderStep provisioning={provisioning.data} />
-          <div className="flex justify-end">
-            <Button onClick={() => navigate({ to: "/app" })}>Go to my dashboard</Button>
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -266,102 +292,99 @@ function SenderStep({
   const hasNumber = !!provisioning?.hasNumber;
 
   return (
-    <div className="space-y-4">
-      <Card className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
-            <ShieldCheck className="size-4" /> SMS subaccount
-          </h3>
-          {hasSub && <Badge variant="default">Provisioned</Badge>}
-        </div>
-        {hasSub ? (
-          <p className="text-sm text-muted-foreground">
-            Your dedicated SMS subaccount is active. Credentials are encrypted at rest and only
-            available to server functions.
-          </p>
-        ) : (
-          <>
-            <p className="text-sm text-muted-foreground">
-              We'll create a dedicated SMS subaccount under your business. Your subaccount auth
-              token is encrypted at rest and never exposed to the browser.
-            </p>
-            <Button onClick={() => provisionMut.mutate()} disabled={provisionMut.isPending}>
-              {provisionMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-              Create subaccount
-            </Button>
-          </>
-        )}
-      </Card>
+    <section className="rounded-2xl border border-border bg-card">
+      <header className="border-b border-border px-6 py-5 sm:px-8">
+        <h2 className="text-lg font-semibold">Sending setup</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Two quick steps and you can start texting.</p>
+      </header>
 
-      <Card className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Phone className="size-4" /> Sender phone number
-          </h3>
-          {hasNumber && <Badge variant="default">Active</Badge>}
-        </div>
-        {hasNumber ? (
-          <p className="text-sm">
-            Your sender: <span className="font-mono">{provisioning?.phoneNumber}</span>
-          </p>
-        ) : !hasSub ? (
-          <p className="text-sm text-muted-foreground">Provision your subaccount first.</p>
-        ) : (
-          <>
-            <div className="flex gap-2 items-end">
-              <div className="space-y-1.5">
-                <Label>Country</Label>
-                <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["US", "CA", "GB", "AU", "DE", "FR", "ES", "IT", "NL", "SE"].map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => searchMut.mutate()}
-                disabled={searchMut.isPending}
-              >
-                {searchMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-                Search available numbers
-              </Button>
+      <div className="divide-y divide-border">
+        <div className="flex flex-col gap-4 px-6 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-8">
+          <div className="flex gap-4">
+            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+              <ShieldCheck className="size-4" />
+            </span>
+            <div>
+              <h3 className="font-medium">Messaging account</h3>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                {hasSub
+                  ? "Your private messaging account is ready."
+                  : "We'll open a private messaging account for your business, kept separate from everyone else."}
+              </p>
             </div>
-            {numbers.length > 0 && (
-              <div className="border rounded-md divide-y">
-                {numbers.map((n) => (
-                  <div
-                    key={n.phone_number}
-                    className="p-3 flex items-center justify-between text-sm"
-                  >
-                    <div>
-                      <div className="font-mono">{n.phone_number}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {[n.locality, n.region].filter(Boolean).join(", ")}
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => buyMut.mutate(n.phone_number)}
-                      disabled={buyMut.isPending}
-                    >
-                      {buyMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-                      Purchase
-                    </Button>
-                  </div>
-                ))}
+          </div>
+          {hasSub ? (
+            <Badge className="self-start">Ready</Badge>
+          ) : (
+            <Button className="self-start" onClick={() => provisionMut.mutate()} disabled={provisionMut.isPending}>
+              {provisionMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+              Set it up
+            </Button>
+          )}
+        </div>
+
+        <div className={`px-6 py-6 sm:px-8 ${!hasSub ? "opacity-60" : ""}`}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex gap-4">
+              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+                <Phone className="size-4" />
+              </span>
+              <div>
+                <h3 className="font-medium">Sending number</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {hasNumber ? (
+                    <>Your texts come from <span className="font-mono text-foreground">{provisioning?.phoneNumber}</span></>
+                  ) : !hasSub ? (
+                    "Available once your messaging account is ready."
+                  ) : (
+                    "Choose a country and pick a number."
+                  )}
+                </p>
               </div>
-            )}
-          </>
-        )}
-      </Card>
-    </div>
+            </div>
+            {hasNumber && <Badge className="self-start">Active</Badge>}
+          </div>
+
+          {hasSub && !hasNumber && (
+            <div className="mt-5 sm:pl-[52px]">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Country</Label>
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["US", "CA", "GB", "AU", "DE", "FR", "ES", "IT", "NL", "SE"].map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button variant="outline" onClick={() => searchMut.mutate()} disabled={searchMut.isPending}>
+                  {searchMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+                  Find numbers
+                </Button>
+              </div>
+              {numbers.length > 0 && (
+                <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border">
+                  {numbers.map((n) => (
+                    <li key={n.phone_number} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                      <div>
+                        <div className="font-mono">{n.phone_number}</div>
+                        <div className="text-xs text-muted-foreground">{[n.locality, n.region].filter(Boolean).join(", ")}</div>
+                      </div>
+                      <Button size="sm" onClick={() => buyMut.mutate(n.phone_number)} disabled={buyMut.isPending}>
+                        {buyMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
+                        Choose
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -370,23 +393,50 @@ function StepBadge({
   active,
   done,
   label,
+  hint,
+  last,
 }: {
   n: number;
   active: boolean;
   done: boolean;
   label: string;
+  hint: string;
+  last?: boolean;
 }) {
   return (
-    <div
-      className={`flex items-center gap-2 ${active ? "text-foreground" : "text-muted-foreground"}`}
-    >
-      <div
-        className={`size-7 rounded-full flex items-center justify-center text-xs font-semibold border ${done ? "bg-success text-success-foreground border-success" : active ? "border-primary text-primary" : "border-border"}`}
+    <li className="relative flex gap-4 pb-6">
+      {!last && <span className="absolute left-[13px] top-8 bottom-1 w-px bg-border" aria-hidden />}
+      <span
+        className={`relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${done ? "bg-primary text-primary-foreground" : active ? "bg-foreground text-background" : "border border-border bg-background text-muted-foreground"}`}
       >
         {done ? <CheckCircle2 className="size-4" /> : n}
+      </span>
+      <div className={active || done ? "" : "opacity-60"}>
+        <div className="text-sm font-medium">{label}</div>
+        <div className="text-xs text-muted-foreground">{hint}</div>
       </div>
-      <span className="text-sm font-medium">{label}</span>
+    </li>
+  );
+}
+
+function FormGroup({ title, text, children }: { title: string; text: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-5 px-6 py-7 sm:px-8 md:grid-cols-[180px_minmax(0,1fr)] md:gap-8">
+      <div>
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
+      </div>
+      <div className="space-y-5">{children}</div>
     </div>
+  );
+}
+
+function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+  return (
+    <Label className="text-sm font-medium">
+      {label}
+      {required ? <span className="ml-0.5 text-primary">*</span> : <span className="ml-2 text-xs font-normal text-muted-foreground">Optional</span>}
+    </Label>
   );
 }
 
@@ -406,12 +456,9 @@ function Field({
   type?: string;
 }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="flex items-center justify-between gap-3">
-        <span>{label}</span>
-        {required && <span className="text-xs italic text-muted-foreground">Required</span>}
-      </Label>
-      <Input value={v} onChange={(e) => on(e.target.value)} placeholder={placeholder} type={type} />
+    <div className="space-y-2">
+      <FieldLabel label={label} required={required} />
+      <Input className="h-11" value={v} onChange={(e) => on(e.target.value)} placeholder={placeholder} type={type} />
     </div>
   );
 }
@@ -453,56 +500,47 @@ function GoalPicker() {
   const match = ONBOARDING_GOALS.find((g) => g.key === selected) ?? null;
 
   return (
-    <Card className="p-6 space-y-3">
-      <div>
-        <h3 className="font-semibold">What would you like to do first?</h3>
-        <p className="text-sm text-muted-foreground">
-          We'll point you at the quickest way to get there. You can change this any time.
-        </p>
+    <section className="rounded-2xl border border-dashed border-border px-6 py-6 sm:px-8">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+        <h3 className="text-sm font-semibold">What would you like to do first?</h3>
+        <span className="text-xs text-muted-foreground">Optional · change it any time</span>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         {ONBOARDING_GOALS.map((g) => (
-          <Button
+          <button
             key={g.key}
-            size="sm"
-            variant={selected === g.key ? "default" : "outline"}
+            type="button"
             disabled={pick.isPending}
             onClick={() => pick.mutate(g.key as OnboardingGoalKey)}
+            className={`rounded-full border px-4 py-2 text-sm transition-colors disabled:opacity-60 ${selected === g.key ? "border-foreground bg-foreground text-background" : "border-border hover:border-foreground/40 hover:bg-muted"}`}
           >
             {g.label}
-          </Button>
+          </button>
         ))}
       </div>
       {match && (
-        <div className="rounded-lg border border-border p-3 text-sm">
-          <div className="font-medium mb-1">Recommended for you</div>
-          <ul className="list-disc pl-4 text-xs text-muted-foreground space-y-1">
-            {match.recommend.map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
+        <div className="mt-5 flex flex-col gap-3 rounded-xl bg-muted/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm">
+            <span className="font-medium">Suggested next: </span>
+            <span className="text-muted-foreground">{match.recommend.join(" · ")}</span>
+          </div>
           {match.href && (
-            <Button asChild size="sm" variant="secondary" className="mt-2">
-              <a href={match.href} onClick={() => track({ event: "onboarding_recommendation_clicked" })}>
-                Start here
-              </a>
+            <Button asChild size="sm" variant="outline">
+              <a href={match.href} onClick={() => track({ event: "onboarding_recommendation_clicked" })}>Start here</a>
             </Button>
           )}
         </div>
       )}
-    </Card>
+    </section>
   );
 }
 
 function PickField({ label, v, on, options, required = true }: { label: string; v: string; on: (v: string) => void; options: string[]; required?: boolean }) {
   return (
-    <div className="space-y-1.5">
-      <Label className="flex items-center justify-between gap-3">
-        <span>{label}</span>
-        {required && <span className="text-xs italic text-muted-foreground">Required</span>}
-      </Label>
+    <div className="space-y-2">
+      <FieldLabel label={label} required={required} />
       <Select value={v} onValueChange={on}>
-        <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
+        <SelectTrigger className="h-11"><SelectValue placeholder="Choose…" /></SelectTrigger>
         <SelectContent>{options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
       </Select>
     </div>
