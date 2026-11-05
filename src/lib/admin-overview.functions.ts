@@ -14,8 +14,6 @@ export const adminGetOverview = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await ensureAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: previous, error: previousError } = await supabaseAdmin.from('accounts').select('suspended_at,onboarding_status').eq('id', data.accountId).single();
-    if (previousError) throw previousError;
     const since24h = new Date(Date.now() - 86400000).toISOString();
     const since7d = new Date(Date.now() - 7 * 86400000).toISOString();
     const signal = AbortSignal.timeout(12000);
@@ -131,6 +129,8 @@ export const adminReinstateAccount = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await ensureAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: previous, error: previousError } = await supabaseAdmin.from('accounts').select('suspended_at,onboarding_status').eq('id', data.accountId).single();
+    if (previousError) throw previousError;
     const { error } = await supabaseAdmin
       .from("accounts")
       .update({ suspended_at: null, onboarding_status: "active" })
