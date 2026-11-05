@@ -16,6 +16,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
 const policy = await import('../../src/lib/campaign-incident-email.server.ts');
 const { processSpamGateEmailOutbox } = await import('../../src/lib/carrier-spam-guard.server.ts');
 const { buildSpamIncidentEmail } = await import('../../src/lib/carrier-spam-guard.ts');
+const { queuedLifecycleEmailRelevant } = await import('../../src/lib/lifecycle/queued-message.server.ts');
 
 function fixture(options = {}) {
   const payload = { label: policy.INCIDENT_EMAIL_LABEL, incident_outbox_id: 'o1', to: 'owner@example.com',
@@ -179,10 +180,11 @@ function queueHandler(db, sendMail) {
   source=source.replace(/^import .*$/gm,'').replace('export const Route','const Route').replaceAll('import.meta.env','__env');
   source=stripTypeScriptTypes(source);
   const build=new Function('sendMail','mailerProvider','createClient','createFileRoute','isIncidentEmail',
-    'prepareIncidentEmailSend','recordIncidentEmailOutcome','deferIncidentEmail','__env','process',
+    'prepareIncidentEmailSend','recordIncidentEmailOutcome','deferIncidentEmail','queuedLifecycleEmailRelevant','__env','process',
     source+'; return Route.server.handlers.POST;');
   return build(sendMail,()=> 'resend',()=>db,()=>config=>config,
     policy.isIncidentEmail,policy.prepareIncidentEmailSend,policy.recordIncidentEmailOutcome,policy.deferIncidentEmail,
+    queuedLifecycleEmailRelevant,
     {VITE_SUPABASE_URL:'https://local.invalid'},{env:{SUPABASE_SERVICE_ROLE_KEY:'local-test-key'}});
 }
 async function runQueue(db,{failSend=false}={}) {
