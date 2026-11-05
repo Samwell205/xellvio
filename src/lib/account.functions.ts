@@ -113,10 +113,8 @@ export const saveBusinessProfile = createServerFn({ method: "POST" })
   }) => data)
   .handler(async ({ data, context }) => {
     const { userId } = context;
-    const required = ["legal_business_name", "business_address", "website_url", "contact_email", "phone", "industry", "team_size"] as const;
-    for (const k of required) {
-      if (!data[k] || !String(data[k]).trim()) throw new Error(`${k.replace(/_/g, " ")} is required`);
-    }
+    const missing = missingProfileField(data);
+    if (missing) throw new Error(requiredFieldMessage(missing));
     if (!/^https?:\/\//.test(data.website_url.trim())) throw new Error("website url must include http:// or https://");
     if (data.privacy_policy_url && !/^https:\/\//.test(String(data.privacy_policy_url).trim())) throw new Error("privacy policy url must start with https://");
     if (data.terms_url && !/^https:\/\//.test(String(data.terms_url).trim())) throw new Error("terms url must start with https://");

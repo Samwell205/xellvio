@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { resolveActingAccount } from "@/lib/acting-account.server";
+import { isProfileComplete } from "@/lib/profile-requirements";
 import type { Permissions } from "@/lib/team-permissions";
 
 export type SessionInfo = {
@@ -26,7 +27,7 @@ export const getMySession = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: acct } = await supabaseAdmin.from("accounts").select("legal_business_name,company,website_url,business_address,phone,industry,team_size,onboarding_status").eq("id", acting.accountId).maybeSingle();
     const businessName = acct?.legal_business_name || acct?.company || null;
-    const profileComplete = Boolean(acct && acct.legal_business_name && acct.website_url && acct.business_address && acct.phone && acct.industry && acct.team_size) || acct?.onboarding_status === "active";
+    const profileComplete = isProfileComplete(acct);
     return {
       businessName,
       profileComplete,
