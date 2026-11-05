@@ -129,6 +129,8 @@ export const adminReinstateAccount = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await ensureAdmin(context.supabase);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: previous, error: previousError } = await supabaseAdmin.from('accounts').select('suspended_at,onboarding_status').eq('id', data.accountId).single();
+    if (previousError) throw previousError;
     const { error } = await supabaseAdmin
       .from("accounts")
       .update({ suspended_at: null, onboarding_status: "active" })
@@ -139,6 +141,10 @@ export const adminReinstateAccount = createServerFn({ method: "POST" })
       account_id: data.accountId,
       payload: { by: context.userId },
     });
+    if (previous.suspended_at || previous.onboarding_status === 'suspended') {
+      const { notifyAccountStatus } = await import('./account-status-notice.server');
+      await notifyAccountStatus(data.accountId, 'account_restored', previous.suspended_at || new Date().toISOString());
+    }
     return { ok: true };
   });
 

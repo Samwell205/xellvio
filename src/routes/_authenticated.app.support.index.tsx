@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/support/TicketThread";
 import { createMyTicket, listMyTickets } from "@/lib/support-tickets.functions";
 
 export const Route = createFileRoute("/_authenticated/app/support/")({
-  head: () => ({ meta: [{ title: "Support tickets — Xellvio" }, { name: "description", content: "Open and track your Xellvio support tickets." }] }),
+  head: () => ({ meta: [{ title: "Support tickets — Xellvio" }, { name: "description", content: "Open and track your Xellvio support tickets." }, { property: 'og:title', content: 'Support tickets — Xellvio' }, { property: 'og:description', content: 'Follow your support conversation with the Xellvio team.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: SupportList,
 });
 
@@ -25,6 +25,7 @@ function SupportList() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const active = (q.data ?? []).find((t: { status: string }) => ['open', 'waiting'].includes(t.status));
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -32,7 +33,7 @@ function SupportList() {
           <h1 className="flex items-center gap-2 text-2xl font-bold"><LifeBuoy className="size-6" /> Support</h1>
           <p className="text-sm text-muted-foreground">Open a ticket and our team will reply here and by email.</p>
         </div>
-        <Button onClick={() => setOpen((v) => !v)}><Plus className="size-4" /> New ticket</Button>
+        <Button onClick={() => setOpen((v) => !v)}><Plus className="size-4" /> {active ? 'Add to active ticket' : 'New ticket'}</Button>
       </div>
       {open && (
         <Card className="space-y-3 p-5">
@@ -41,7 +42,7 @@ function SupportList() {
           <div className="flex justify-end">
             <Button disabled={busy || subject.trim().length < 3 || !body.trim()} onClick={async () => {
               setBusy(true);
-              try { const r = await createFn({ data: { subject, body } }); toast.success("Ticket opened"); nav({ to: "/app/support/$id", params: { id: r.id } }); }
+              try { const r = await createFn({ data: { subject, body } }); toast.success(active ? 'Request added to your active ticket' : 'Request saved'); nav({ to: "/app/support/$id", params: { id: r.id } }); }
               catch (e: any) { toast.error(e?.message ?? "Could not open ticket"); } finally { setBusy(false); }
             }}>{busy && <Loader2 className="size-4 animate-spin" />} Open ticket</Button>
           </div>

@@ -83,7 +83,7 @@ export function LifecyclePanel() {
               <p className="text-sm text-muted-foreground leading-relaxed mt-2 max-w-md">
                 {done
                   ? "You're all set up. Time to grow."
-                  : `${remaining} step${remaining === 1 ? "" : "s"} until your first SMS campaign is live. We'll keep track as you go.`}
+                  : s.show_welcome ? `${remaining} step${remaining === 1 ? "" : "s"} until your first SMS campaign is live. We'll keep track as you go.` : `${remaining} setup item${remaining === 1 ? '' : 's'} to review for your business.`}
               </p>
               <div className="mt-6 h-2 w-full rounded-full bg-arctic-bg overflow-hidden">
                 <div

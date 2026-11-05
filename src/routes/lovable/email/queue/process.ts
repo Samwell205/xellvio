@@ -2,6 +2,7 @@ import { isIncidentEmail, prepareIncidentEmailSend, recordIncidentEmailOutcome, 
 import { sendMail, mailerProvider } from '@/lib/email/mailer.server'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createFileRoute } from '@tanstack/react-router'
+import { queuedLifecycleEmailRelevant } from '@/lib/lifecycle/queued-message.server'
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -241,6 +242,12 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
 
             let providerSendAttempted = false
             try {
+              if (!(await queuedLifecycleEmailRelevant(supabase, payload, mailer === 'resend'))) {
+                await supabase.from('email_send_log').insert({ message_id: payload.message_id, template_name: payload.label || queue, recipient_email: payload.to, status: 'suppressed', error_message: 'Lifecycle notice is no longer relevant to this business' })
+                const { error: skipError } = await supabase.rpc('delete_email', { queue_name: queue, message_id: msg.msg_id })
+                if (skipError) throw new Error('Could not remove stale lifecycle email')
+                continue
+              }
               if (isIncidentEmail(payload)) {
                 const check = await prepareIncidentEmailSend(supabase, payload)
                 if (!check.send) {

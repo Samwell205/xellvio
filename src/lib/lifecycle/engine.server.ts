@@ -17,6 +17,7 @@ import {
   type MessageCategory,
   type TenantEvent,
 } from "./taxonomy";
+import { lifecycleMessageRelevant } from './visibility';
 
 type Db = any;
 
@@ -25,9 +26,9 @@ async function admin(): Promise<Db> {
   return supabaseAdmin as unknown as Db;
 }
 
-const SENT_STATUSES = ["sending", "sent", "paused"];
-
 export type LifecycleRow = {
+  created_at: string | null;
+  launched_campaign_count: number;
   account_id: string;
   stage: LifecycleStage;
   onboarding_state: string;
@@ -82,19 +83,21 @@ async function firstAt(
     .order("created_at", { ascending: true })
     .limit(1);
   if (extra) q = extra(q);
-  const { data } = await q.maybeSingle();
+  const { data, error } = await q.maybeSingle();
+  if (error) throw new Error('Could not verify business milestone history');
   return data?.created_at ?? null;
 }
 
 /** Reads the workspace's real milestones. */
 async function readMilestones(db: Db, accountId: string) {
-  const { data: account } = await db
+  const { data: account, error: accountError } = await db
     .from("accounts")
     .select(
       "created_at,legal_business_name,business_address,contact_email,website_url,use_case_description,last_seen_at,credit_balance,onboarding_status,telnyx_phone_number",
     )
     .eq("id", accountId)
     .maybeSingle();
+  if (accountError || !account) throw new Error('Could not verify the business');
 
   // A workspace counts as complete either when the business profile is filled
   // in, or when sender provisioning already finished — in that case there is
@@ -113,15 +116,16 @@ async function readMilestones(db: Db, accountId: string) {
     firstAt(db, "profiles", accountId),
     firstAt(db, "campaigns", accountId),
     (async () => {
-      const { data } = await db
+      const { data, error } = await db
         .from("campaigns")
-        .select("updated_at")
+        .select("first_launched_at")
         .eq("account_id", accountId)
-        .in("status", SENT_STATUSES)
-        .order("updated_at", { ascending: true })
+        .not("first_launched_at", "is", null)
+        .order("first_launched_at", { ascending: true })
         .limit(1)
         .maybeSingle();
-      return data?.updated_at ?? null;
+      if (error) throw new Error('Could not verify campaign launch history');
+      return data?.first_launched_at ?? null;
     })(),
     firstAt(db, "automations", accountId),
     firstAt(db, "landing_pages", accountId),
@@ -183,11 +187,12 @@ export async function refreshLifecycle(
     .maybeSingle();
 
   const m = await readMilestones(db, accountId);
-  const { count: sentCampaigns } = await db
+  const { count: sentCampaigns, error: campaignCountError } = await db
     .from("campaigns")
     .select("id", { count: "exact", head: true })
     .eq("account_id", accountId)
-    .in("status", SENT_STATUSES);
+    .not("first_launched_at", "is", null);
+  if (campaignCountError) throw new Error('Could not verify campaign history');
 
   const completedSteps = CHECKLIST_STEPS.filter((s) => Boolean((m as any)[s.field])).length;
   const progress = progressFrom(completedSteps);
@@ -225,7 +230,7 @@ export async function refreshLifecycle(
     .select("*")
     .maybeSingle();
 
-  const row = (saved ?? { ...existing, ...patch }) as LifecycleRow;
+  const row = { ...(saved ?? { ...existing, ...patch }), launched_campaign_count: sentCampaigns ?? 0 } as LifecycleRow;
 
   // Timeline entries for newly reached milestones.
   if (!existing) {
@@ -238,7 +243,7 @@ export async function refreshLifecycle(
     // Welcome the workspace the first time it signs in (deduped inside
     // deliverMessage). Never sent when we're only backfilling profiles.
     try {
-      if (!opts.login) throw new Error("skip");
+      if (!opts.login || (sentCampaigns ?? 0) > 0) throw new Error("skip");
       await deliverMessage({ accountId, templateKey: "welcome" });
     } catch {
       /* onboarding must never block a page load */
@@ -323,6 +328,15 @@ export async function deliverMessage(input: {
     .maybeSingle();
   if (!template || !template.enabled) return { sent: false, reason: "template_off" };
 
+  // Recheck real eligibility at delivery, not only at scheduling or profile discovery.
+  const [milestones, history, lifecycle] = await Promise.all([
+    readMilestones(db, input.accountId),
+    db.from('campaigns').select('id', { count: 'exact', head: true }).eq('account_id', input.accountId).not('first_launched_at', 'is', null),
+    db.from('tenant_lifecycle').select('created_at,last_activity_at').eq('account_id', input.accountId).maybeSingle(),
+  ]);
+  if (history.error || lifecycle.error) return { sent: false, reason: 'eligibility_unavailable' };
+  if (!lifecycleMessageRelevant(input.templateKey, { ...milestones, created_at: lifecycle.data?.created_at ?? null, launched_campaign_count: history.count ?? 0, last_activity_at: lifecycle.data?.last_activity_at ?? null })) return { sent: false, reason: 'not_relevant' };
+
   const category = template.category as MessageCategory;
   const prefKey = CATEGORY_PREFERENCE[category];
   if (prefKey) {
@@ -366,7 +380,13 @@ export async function deliverMessage(input: {
   const title = fill(template.title, vars);
   const body = fill(template.body, vars);
   const ctaPath = input.ctaPath ?? template.cta_path ?? null;
-  const channels: string[] = input.channels ?? template.channels ?? ["in_app"];
+  let channels: string[] = input.channels ?? template.channels ?? ["in_app"];
+  const optionalEmail = category !== 'transactional' && category !== 'milestone' && input.templateKey !== 'welcome';
+  // Educational nudges / re-engagement / promotions never enter built-in app email.
+  if (optionalEmail && channels.includes('email')) {
+    const { mailerProvider } = await import('@/lib/email/mailer.server');
+    if (mailerProvider() !== 'resend') channels = channels.filter((c) => c !== 'email');
+  }
 
   // In-app is the default surface for every lifecycle message.
   await db.from("lifecycle_messages").insert({
@@ -390,6 +410,7 @@ export async function deliverMessage(input: {
           templateName: "generic",
           recipientEmail: to,
           idempotencyKey: `lifecycle-${input.templateKey}-${input.accountId}`,
+          sendImmediately: optionalEmail,
           templateData: {
             subject: cleanSubject(fill(template.subject ?? title, vars)),
             heading: title,

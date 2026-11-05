@@ -12,6 +12,7 @@
  * one-send-per-message and the quiet period between optional messages.
  */
 import { deliverMessage, refreshLifecycle, nextStep, type LifecycleRow } from "./engine.server";
+import { lifecycleMessageRelevant } from './visibility';
 
 type Db = any;
 
@@ -89,7 +90,7 @@ export async function runLifecycleChecks(limit = 200): Promise<LifecycleTickResu
     const balance = Number(account?.credit_balance ?? 0);
 
     // 1. Celebrate the first real send.
-    if (row.first_campaign_sent_at) {
+    if (lifecycleMessageRelevant('first_success', row)) {
       const r = await deliverMessage({ accountId, templateKey: "first_success" });
       if (r.sent) result.celebrations += 1;
     }

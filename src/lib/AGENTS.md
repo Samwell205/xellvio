@@ -1,4 +1,7 @@
 # src/lib rules
+- Lifecycle first-send targeting uses immutable campaign first_launched_at, count, tracking start and a short relevance window for both email and dashboard; historical discovery never congratulates longstanding businesses.
+- Support creation serializes per business and appends to the unresolved conversation; explicit merges retain audit histories and notify the requester, with service-only SQL validation.
+- Optional lifecycle promotional/re-engagement emails require the existing external sender and never enter built-in app-email queues; template replacement remains owner-controlled.
 - Verifier registration validates through verifier-registration.ts before provisioning/submission and checks single-number child-account ownership; only carrier-confirmed identifiers can mark submitted.
 - Finance page views reuse timestamped saved reports until explicit recalculation; Billing shares financeTenantReport but reads current wallets separately. Optional margin/pricing/recovery views load only when opened, and carrier reads never delay Finance.
 - Admin SMS balance uses twilio-account-balance.server.ts with the funded parent credentials and saved twilio alert settings; failed reads are not confirmed zero balances. Number sub-account sending remains separate and guarded.

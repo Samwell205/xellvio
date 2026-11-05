@@ -158,13 +158,21 @@ export const adminSetSuspension = createServerFn({ method: "POST" })
     if (roleErr) throw roleErr;
     if (!isAdmin) throw new Error("Forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: previous, error: previousError } = await supabaseAdmin.from('accounts').select('suspended_at,onboarding_status').eq('id', data.accountId).single();
+    if (previousError) throw previousError;
+    const wasSuspended = Boolean(previous.suspended_at) || previous.onboarding_status === 'suspended';
+    const changedAt = new Date().toISOString();
     const { error } = await supabaseAdmin
       .from("accounts")
       .update({
         onboarding_status: data.suspend ? "suspended" : "active",
-        suspended_at: data.suspend ? new Date().toISOString() : null,
+        suspended_at: data.suspend ? changedAt : null,
       })
       .eq("id", data.accountId);
     if (error) throw error;
+    if (wasSuspended !== data.suspend) {
+      const { notifyAccountStatus } = await import('./account-status-notice.server');
+      await notifyAccountStatus(data.accountId, data.suspend ? 'account_suspended' : 'account_restored', previous.suspended_at || changedAt);
+    }
     return { ok: true };
   });

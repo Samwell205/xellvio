@@ -91,13 +91,20 @@ export async function createTicket(input: {
   const sb = await db();
   const now = new Date().toISOString();
   const accountId = input.accountId ?? (await matchAccount(input.email));
-  const { data: t, error } = await sb.from("support_tickets").insert({
-    requester_email: input.email.trim().toLowerCase(), requester_name: input.name ?? null,
-    subject: input.subject.slice(0, 200), topic: input.topic ?? null, source: input.source,
-    account_id: accountId, previous_ticket_id: input.previousTicketId ?? null, last_customer_reply_at: now,
-  }).select("*").single();
+  const { data: outcome, error } = await sb.rpc('create_or_append_support_ticket', {
+    _account_id: accountId, _email: input.email, _name: input.name ?? null,
+    _subject: input.subject, _topic: input.topic ?? null, _message: input.message,
+    _source: input.source, _previous: input.previousTicketId ?? null,
+  });
   if (error) throw new Error(error.message);
-  await sb.from("support_ticket_messages").insert({ ticket_id: t.id, author: "customer", body: input.message, via: input.source === "email" ? "email" : "web" });
+  const t = outcome?.ticket as TicketRow | undefined;
+  if (!t) throw new Error('Could not save the support request');
+  if (outcome.appended) {
+    await email(t, `consolidated-${now}`, t.subject, `Your request was added to ticket #${t.number}`,
+      `You already have an active support ticket. We have added your new request to ticket #${t.number} so all your messages stay together. Please continue replying in that conversation. You can open another ticket after this one is resolved or closed.\n\nNew request: ${input.subject}\n${input.message}`);
+    await notifyAdmin(t, `Additional request added to existing ticket: ${input.message}`);
+    return t;
+  }
   const prev = input.previousTicketId ? "\n\nYour earlier ticket was closed, so we've opened this new one." : "";
   await email(t, "opened", t.subject,
     `Ticket #${t.number} has been received`,
@@ -111,7 +118,8 @@ export async function notifyTicketOpened(ticketId: string) {
   const sb = await db();
   const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
   if (!t) return;
-  await email(t, "opened", t.subject, `Ticket #${t.number} is open`,
+  const { data: request } = await sb.from('assisted_number_requests').select('id').eq('ticket_id', ticketId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  await email(t, `assisted-${request?.id ?? ticketId}`, t.subject, `Your request is in ticket #${t.number}`,
     "Your $100 assisted number-verification request has been received. Our support handling target is 24 hours. Carrier approval and number availability remain subject to checks; we will request any required documents through this ticket.");
   await notifyAdmin(t, "Paid assisted number-verification request awaiting review.");
 }
@@ -132,6 +140,7 @@ export async function adminReply(ticketId: string, body: string, userId: string,
   const sb = await db();
   const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
   if (!t) throw new Error("Ticket not found");
+  if (t.status === 'closed' && !opts.internal) throw new Error('This ticket is closed. Continue in an active ticket instead.');
   const now = new Date().toISOString();
   const { data: msg } = await sb.from("support_ticket_messages")
     .insert({ ticket_id: t.id, author: "admin", author_user_id: userId, body, internal: !!opts.internal }).select("id").single();
@@ -195,6 +204,10 @@ export async function customerReopenResolved(ticketId: string) {
 
 export async function setTicketStatus(ticketId: string, status: "open" | "closed") {
   const sb = await db();
+  if (status === 'open') {
+    const { data: current } = await sb.from('support_tickets').select('merged_into_ticket_id').eq('id', ticketId).maybeSingle();
+    if (current?.merged_into_ticket_id) throw new Error('This ticket was combined. Continue in the surviving ticket.');
+  }
   const now = new Date().toISOString();
   const { data: t } = await sb.from("support_tickets")
     .update({ status, closed_at: status === "closed" ? now : null, reminder_sent_at: null, updated_at: now })
@@ -273,6 +286,7 @@ export async function handleInboundEmail(msg: { from: string; to: string[]; subj
     const r = (await sb.from("support_tickets").select("*").eq("number", Number(num)).maybeSingle()).data;
     if (r && r.requester_email === fromEmail) t = r;
   }
+  if (t && t.requester_email.toLowerCase() !== fromEmail) t = null;
   if (t && t.status !== "closed") {
     await customerReply(t.id, body, "email");
     return { ok: true, ticket: t.number };
@@ -282,6 +296,18 @@ export async function handleInboundEmail(msg: { from: string; to: string[]; subj
     message: body, source: "email", previousTicketId: t?.id ?? null,
   });
   return { ok: true, ticket: created.number, created: true };
+}
+
+/** Preserve both audit histories, copy all messages to the surviving ticket and notify the requester. */
+export async function mergeTickets(sourceId: string, targetId: string) {
+  const sb = await db();
+  const { data, error } = await sb.rpc('merge_support_ticket', { _source: sourceId, _target: targetId });
+  if (error) throw new Error(error.message);
+  if (!data?.target || !data?.source) throw new Error('Could not consolidate tickets');
+  if (!data.already_merged) {
+    await email(data.target, `merged-${sourceId}`, data.target.subject, `Your requests are together in ticket #${data.target.number}`, data.explanation);
+  }
+  return { id: data.target.id, number: data.target.number };
 }
 
 // ---------- Attachments (private bucket, service-role only) ----------
