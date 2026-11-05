@@ -40,9 +40,7 @@ export async function updateRecoveryCase(
   return data;
 }
 
-function csvCell(value: unknown) {
-  return `"${String(value ?? "").replaceAll('"', '""')}"`;
-}
+import { csvCell } from "./csv-safe";
 
 export async function recoveryCaseCsv(admin: any, id: string) {
   const { data: recovery, error } = await admin

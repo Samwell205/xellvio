@@ -92,8 +92,8 @@ export const submitMyIdentity = createServerFn({ method: "POST" })
     z.object({
       nin: z.string().regex(/^\d{11}$/, "NIN must be 11 digits"),
       selfie: z.string().min(50),
-      device_id: z.string().max(100).optional(),
-      fingerprint: z.string().max(100).optional(),
+      device_id: z.string().max(100).regex(/^[A-Za-z0-9_-]+$/).optional(),
+      fingerprint: z.string().max(100).regex(/^[A-Za-z0-9_-]+$/).optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -121,12 +121,11 @@ export const submitMyIdentity = createServerFn({ method: "POST" })
     const keys = [data.device_id, data.fingerprint].filter(Boolean) as string[];
     let sharedDevice = false;
     if (keys.length) {
-      const orParts = [
-        data.device_id ? `device_id.eq.${data.device_id}` : "",
-        data.fingerprint ? `fingerprint.eq.${data.fingerprint}` : "",
-      ].filter(Boolean).join(",");
-      const { data: hits } = await supabaseAdmin
-        .from("verifier_device_signals").select("verifier_id").or(orParts).neq("verifier_id", verifier.id).limit(1);
+      // Exact-match lookups (no filter-string interpolation).
+      const checks = [];
+      if (data.device_id) checks.push(supabaseAdmin.from("verifier_device_signals").select("verifier_id").eq("device_id", data.device_id).neq("verifier_id", verifier.id).limit(1));
+      if (data.fingerprint) checks.push(supabaseAdmin.from("verifier_device_signals").select("verifier_id").eq("fingerprint", data.fingerprint).neq("verifier_id", verifier.id).limit(1));
+      const hits = (await Promise.all(checks)).flatMap((r: any) => r.data ?? []);
       sharedDevice = (hits ?? []).length > 0;
     }
 
