@@ -1498,7 +1498,7 @@ function RecipientActivity({
     { key: "sent", label: "Accepted", count: stats.awaitingDelivery },
     { key: "delivered", label: "Delivered", count: stats.delivered },
     { key: "failed", label: "Failed", count: stats.failed },
-    { key: "unconfirmed", label: "Unconfirmed", count: stats.deliveryUnconfirmed },
+    { key: "unconfirmed", label: "No network report", count: stats.deliveryUnconfirmed },
     ...(stats.skipped > 0
       ? [{ key: "skipped", label: "Skipped", count: stats.skipped }]
       : []),

@@ -30,8 +30,21 @@ async function authForSender(db: any, sender: string, cache: Map<string, string 
 }
 
 /** Recovers up to `limit` open dedicated-line messages; optional campaign scope and id cursor. */
-export async function recoverTwilioReceipts(db: any, opts: { campaignId?: string; after?: string; olderThanMin?: number; maxAgeHours?: number; limit?: number; budgetMs?: number }) {
-  let q = db.from("messages").select("id,provider_message_id,sender_used")
+/**
+ * True when the carrier still reports a plain "sent" (handed to the recipient's
+ * network) long after sending. Some networks (notably Puerto Rico) never return
+ * a delivery report, so these would otherwise show "awaiting" forever.
+ */
+export function isStaleNoReport(carrierStatus: string | null | undefined, sentAt: string | null | undefined, nowMs: number, afterHours: number): boolean {
+  if (String(carrierStatus ?? "").toLowerCase() !== "sent") return false;
+  const at = Date.parse(String(sentAt ?? ""));
+  return Number.isFinite(at) && nowMs - at >= afterHours * 3_600_000;
+}
+
+export const NO_REPORT_REASON = "The recipient's network accepted this text but never sent back a delivery report.";
+
+export async function recoverTwilioReceipts(db: any, opts: { campaignId?: string; after?: string; olderThanMin?: number; maxAgeHours?: number; limit?: number; budgetMs?: number; noReportAfterHours?: number }) {
+  let q = db.from("messages").select("id,provider_message_id,sender_used,sent_at,status")
     .in("status", OPEN).ilike("provider_message_id", "SM%").not("sender_used", "is", null)
     .order("id", { ascending: true }).limit(opts.limit ?? 120);
   if (opts.campaignId) q = q.eq("campaign_id", opts.campaignId);
@@ -44,7 +57,7 @@ export async function recoverTwilioReceipts(db: any, opts: { campaignId?: string
   const { handleStatus } = await import("@/routes/api.public.telnyx-status");
   const cache = new Map<string, string | null>();
   const deadline = Date.now() + (opts.budgetMs ?? 20_000);
-  let checked = 0, updated = 0, errors = 0, stillAwaiting = 0, nextCursor = opts.after ?? null;
+  let checked = 0, updated = 0, errors = 0, stillAwaiting = 0, noReport = 0, nextCursor = opts.after ?? null;
   for (let i = 0; i < rows.length && Date.now() < deadline; i += 6) {
     const chunk = rows.slice(i, i + 6);
     await Promise.all(chunk.map(async (row: any) => {
@@ -55,13 +68,23 @@ export async function recoverTwilioReceipts(db: any, opts: { campaignId?: string
         const [sid, header] = auth.split("|");
         const res = await fetch(`${API}/Accounts/${sid}/Messages/${row.provider_message_id}.json`, { headers: { Authorization: header }, signal: AbortSignal.timeout(8000) });
         if (!res.ok) { errors++; return; }
-        const payload = twilioReceiptPayload(await res.json());
-        if (!payload) { stillAwaiting++; return; }
+        const msg = await res.json();
+        const payload = twilioReceiptPayload(msg);
+        if (!payload) {
+          // Lookup-only relabel: never resends, never changes charges.
+          if (opts.noReportAfterHours && row.status === "sent" && isStaleNoReport(msg?.status, row.sent_at, Date.now(), opts.noReportAfterHours)) {
+            const { data: changed } = await db.from("messages")
+              .update({ status: "delivery_unconfirmed", failure_reason: NO_REPORT_REASON })
+              .eq("id", row.id).eq("status", "sent").select("id");
+            if (changed?.length) { noReport++; return; }
+          }
+          stillAwaiting++; return;
+        }
         await handleStatus(payload);
         updated++;
       } catch { errors++; }
     }));
     nextCursor = chunk[chunk.length - 1]?.id ?? nextCursor;
   }
-  return { checked, updated, errors, stillAwaiting, nextCursor, done: checked === rows.length && rows.length < (opts.limit ?? 120) };
+  return { checked, updated, errors, stillAwaiting, noReport, nextCursor, done: checked === rows.length && rows.length < (opts.limit ?? 120) };
 }
