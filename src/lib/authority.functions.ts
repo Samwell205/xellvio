@@ -58,12 +58,23 @@ const saveSchema = z.object({
 });
 
 /** System-managed columns the editor may never set directly. */
-const PROTECTED_KEYS = new Set(["id", "created_at", "updated_at", "created_by", "account_id", "user_id"]);
-const KEY_RE = /^[a-z][a-z0-9_]{0,62}$/;
-function editableValues(input: Record<string, unknown>) {
+/** Exact fields the editor may set per table; anything else is dropped. */
+const EDITABLE: Record<string, readonly string[]> = {
+  authority_assets: ["name","asset_type","target_audience","problem_solved","topic","related_product","page_path","distribution_plan","potential_audience","outreach_angle","status","is_research","data_source","methodology","sample_size","date_range","limitations","notes"],
+  authority_brand_profile: ["brand_name","tagline","short_description","medium_description","long_description","website_url","logo_url","screenshots","primary_categories","key_features","company_info","social_profiles"],
+  authority_directories: ["platform","platform_url","listing_url","category","status","account_owner","description_used","logo_uploaded","screenshots_uploaded","quality","notes","last_updated_at"],
+  authority_distribution: ["asset_id","content_piece","channel","post_format","adapted_copy","status","scheduled_for","performance_notes"],
+  authority_mentions: ["source_name","source_url","term","link_state","sentiment","verified","relevant","suggested_target_page","review_status","opportunity_id","notes","found_at"],
+  authority_opportunities: ["website_name","website_url","website_type","topic","domain_relevance","opportunity_type","contact_person","contact_method","quality","quality_notes","priority_score","stage","target_page","proposed_value","pitch_draft","notes","last_contact_at","quality_answers"],
+  authority_outreach_log: ["opportunity_id","direction","channel","summary","occurred_at"],
+  authority_partners: ["name","slug","short_description","description","relationship","integration_summary","integration_app_slug","use_cases","benefits","related_links","website_url","logo_url","verified","published"],
+  authority_referrals: ["source_name","source_type","source_url","opportunity_id","landing_page","period_start","period_end","visitors","engaged_visitors","product_views","signups","notes"],
+};
+function editableValues(table: string, input: Record<string, unknown>) {
+  const allowed = new Set(EDITABLE[table] ?? []);
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(input)) {
-    if (!KEY_RE.test(k) || PROTECTED_KEYS.has(k)) continue;
+    if (!allowed.has(k)) continue;
     out[k] = v === "" ? null : v;
   }
   return out;
@@ -76,7 +87,7 @@ export const authoritySave = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase);
     const client = await db();
-    const values = editableValues(data.values);
+    const values = editableValues(data.table, data.values);
     if (data.table === "authority_opportunities" && !data.id) {
       values.created_by = context.userId;
     }
@@ -139,7 +150,7 @@ export const authoritySaveBrandProfile = createServerFn({ method: "POST" })
     const client = await db();
     const { data: row, error } = await client
       .from("authority_brand_profile")
-      .update(editableValues(data.values))
+      .update(editableValues("authority_brand_profile", data.values))
       .eq("id", data.id)
       .select("*")
       .maybeSingle();
