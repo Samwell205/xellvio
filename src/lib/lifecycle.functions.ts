@@ -11,6 +11,7 @@ import {
   dashboardLifecycleVisibility,
   isLowBalanceMessage,
   LOW_BALANCE_THRESHOLD,
+  lifecycleMessageRelevant,
 } from "@/lib/lifecycle/visibility";
 
 /**
@@ -26,6 +27,7 @@ async function acct(userId: string) {
 
 export type ChecklistItem = { key: string; label: string; href: string; done: boolean };
 export type LifecycleMessage = {
+  template_key: string;
   id: string;
   title: string | null;
   body: string | null;
@@ -68,10 +70,11 @@ export const getLifecycle = createServerFn({ method: "GET" })
       refreshLifecycle(accountId, { login: true, userId: context.userId }),
       db
         .from("lifecycle_messages")
-        .select("id,title,body,cta_label,cta_path,sent_at,seen_at")
+        .select("id,template_key,title,body,cta_label,cta_path,sent_at,seen_at")
         .eq("account_id", accountId)
         .order("sent_at", { ascending: false })
-        .limit(5),
+        .is('dismissed_at', null)
+        .limit(30),
       db.from("accounts").select("credit_balance").eq("id", accountId).maybeSingle(),
     ]);
 
@@ -88,8 +91,8 @@ export const getLifecycle = createServerFn({ method: "GET" })
     const balance = Number(accRes?.data?.credit_balance ?? 0);
     const messages = ((msgRes?.data ?? []) as LifecycleMessage[]).filter(
       (m) =>
-        !isLowBalanceMessage(m) || balance < LOW_BALANCE_THRESHOLD,
-    );
+        lifecycleMessageRelevant(m.template_key, row) && (!isLowBalanceMessage(m) || balance < LOW_BALANCE_THRESHOLD),
+    ).slice(0, 5);
 
     // Recommendations: only ever about something the workspace has not done yet,
     // and only when an earlier step makes the suggestion sensible.
@@ -135,6 +138,8 @@ export const getLifecycle = createServerFn({ method: "GET" })
       completed,
       total: checklist.length,
       firstCampaignSentAt: row.first_campaign_sent_at,
+      launchedCampaignCount: row.launched_campaign_count,
+      trackingStartedAt: row.created_at,
     });
 
     return {
