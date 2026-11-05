@@ -22,6 +22,7 @@ import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant
 import { getProvisioningStatus, saveBusinessProfile } from "@/lib/account.functions";
 import { getGrowthGoal, saveGrowthGoal } from "@/lib/growth-tenant.functions";
 import { ONBOARDING_GOALS, type OnboardingGoalKey } from "@/lib/growth/taxonomy";
+import { isProfileComplete } from "@/lib/profile-requirements";
 import { firstTouch, sessionId, track } from "@/lib/growth/track";
 
 export const Route = createFileRoute("/_authenticated/app/onboarding")({
@@ -101,7 +102,7 @@ function OnboardingPage() {
   const status = account.data?.onboarding_status ?? "signup";
   const a = account.data as any;
   // Same rule as the dashboard gate: show the form until every required detail is saved.
-  const profileDone = status === "active" || Boolean(a && a.legal_business_name && a.website_url && a.business_address && a.phone && a.industry && a.team_size);
+  const profileDone = isProfileComplete(a);
   const step: 1 | 2 = useMemo(() => (profileDone ? 2 : 1), [profileDone]);
 
   const save = useMutation({
@@ -210,7 +211,7 @@ function OnboardingPage() {
             />
             <PickField label="Industry" v={form.industry} on={(v) => setForm({ ...form, industry: v })}
               options={["Home services / trades","Retail & ecommerce","Restaurants & hospitality","Health & beauty","Professional services","Real estate","Fitness","Education","Agency / reseller","Other"]} />
-            <PickField label="Team size" v={form.team_size} on={(v) => setForm({ ...form, team_size: v })}
+            <PickField label="Team size" required={false} v={form.team_size} on={(v) => setForm({ ...form, team_size: v })}
               options={["Just me","2–10","11–50","51–200","200+"]} />
           </div>
           <div className="flex justify-end gap-3 pt-2">
@@ -510,12 +511,12 @@ function GoalPicker() {
   );
 }
 
-function PickField({ label, v, on, options }: { label: string; v: string; on: (v: string) => void; options: string[] }) {
+function PickField({ label, v, on, options, required = true }: { label: string; v: string; on: (v: string) => void; options: string[]; required?: boolean }) {
   return (
     <div className="space-y-1.5">
       <Label className="flex items-center justify-between gap-3">
         <span>{label}</span>
-        <span className="text-xs italic text-muted-foreground">Required</span>
+        {required && <span className="text-xs italic text-muted-foreground">Required</span>}
       </Label>
       <Select value={v} onValueChange={on}>
         <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
