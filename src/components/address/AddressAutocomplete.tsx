@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { MapPin } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
-import { suggestAddresses, getAddressDetails } from "@/lib/address-autocomplete.functions";
+import { suggestAddresses, getAddressDetails, type AddressParts } from "@/lib/address-autocomplete.functions";
+import { Input } from "@/components/ui/input";
 
 type Suggestion = { placeId: string; text: string };
 
-export function AddressAutocomplete({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function AddressAutocomplete({ value, onChange, onPick, placeholder }: { value: string; onChange: (v: string) => void; onPick?: (p: AddressParts) => void; placeholder?: string }) {
   const suggest = useServerFn(suggestAddresses);
   const details = useServerFn(getAddressDetails);
   const [items, setItems] = useState<Suggestion[]>([]);
@@ -38,18 +38,19 @@ export function AddressAutocomplete({ value, onChange }: { value: string; onChan
     onChange(s.text);
     try {
       const r = await details({ data: { placeId: s.placeId, sessionToken: token.current } });
-      if (r.address) onChange(r.address);
+      if (onPick && r.parts) onPick(r.parts);
+      else if (r.address) onChange(r.address);
     } catch { /* suggestion text is already filled */ }
     token.current = "";
   }
 
   return (
     <div className="relative">
-      <Textarea
+      <Input
+        className="h-11"
         value={value}
-        rows={3}
         autoComplete="off"
-        placeholder="Start typing your address…"
+        placeholder={placeholder ?? "Start typing your address…"}
         onChange={(e) => { typed.current = true; onChange(e.target.value); }}
         onFocus={() => items.length && setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}

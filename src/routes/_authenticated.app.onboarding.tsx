@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AddressAutocomplete } from "@/components/address/AddressAutocomplete";
+import type { AddressParts } from "@/lib/address-autocomplete.functions";
+
+const EMPTY_ADDR: AddressParts = { line1: "", line2: "", city: "", state: "", postcode: "", country: "" };
+function composeAddress(a: AddressParts) {
+  return [a.line1, a.line2, a.city, [a.state, a.postcode].filter((x) => x.trim()).join(" "), a.country]
+    .map((x) => x.trim()).filter(Boolean).join(", ");
+}
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -100,6 +107,13 @@ function OnboardingPage() {
     });
   }, [account.data]);
 
+  const [addr, setAddr] = useState<AddressParts>(EMPTY_ADDR);
+  useEffect(() => {
+    const saved = account.data?.business_address;
+    if (saved) setAddr((a) => (a.line1 || a.city ? a : { ...EMPTY_ADDR, line1: saved }));
+  }, [account.data?.business_address]);
+  const setPart = (k: keyof AddressParts) => (v: string) => setAddr((a) => ({ ...a, [k]: v }));
+
   const status = account.data?.onboarding_status ?? "signup";
   const a = account.data as any;
   // Same rule as the dashboard gate: show the form until every required detail is saved.
@@ -108,7 +122,9 @@ function OnboardingPage() {
 
   const save = useMutation({
     mutationFn: async () => {
-      await saveProfileFn({ data: form });
+      const missing = [["street address", addr.line1], ["city", addr.city], ["country", addr.country]].find(([, v]) => !v.trim());
+      if (missing) throw new Error(`Please enter your ${missing[0]}`);
+      await saveProfileFn({ data: { ...form, business_address: composeAddress(addr) } });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["account"] });
@@ -183,11 +199,22 @@ function OnboardingPage() {
 
                 <FormGroup title="Location" text="Start typing and pick your address from the list.">
                   <div className="space-y-2">
-                    <FieldLabel label="Business address" required />
+                    <FieldLabel label="Street address" required />
                     <AddressAutocomplete
-                      value={form.business_address}
-                      onChange={(v) => setForm((f) => ({ ...f, business_address: v }))}
+                      value={addr.line1}
+                      onChange={setPart("line1")}
+                      onPick={(p) => setAddr(p)}
+                      placeholder="Start typing, e.g. 221 Baker Street"
                     />
+                  </div>
+                  <Field label="Apartment, suite, unit" v={addr.line2} on={setPart("line2")} placeholder="Optional" />
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field label="City" required v={addr.city} on={setPart("city")} />
+                    <Field label="State / county / region" v={addr.state} on={setPart("state")} />
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <Field label="Postcode / ZIP" v={addr.postcode} on={setPart("postcode")} />
+                    <Field label="Country" required v={addr.country} on={setPart("country")} />
                   </div>
                 </FormGroup>
 
