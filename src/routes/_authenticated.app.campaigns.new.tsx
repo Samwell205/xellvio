@@ -303,6 +303,7 @@ function NewCampaignPage() {
     if (nanpNumber) {
       if (!m["US"]) m["US"] = nanpNumber;
       if (!m["CA"]) m["CA"] = nanpNumber;
+      if (!m["PR"]) m["PR"] = nanpNumber;
     }
     return m;
   }, [senderList]);
@@ -489,7 +490,7 @@ function NewCampaignPage() {
     // MMS (US/CA) = one billable message with an attachment, priced at
     // rate x MMS multiplier — never multiplied by SMS segments. Elsewhere the
     // image falls back to a link, so it is billed as normal SMS segments.
-    const mmsCountry = (cc: string) => cc === "US" || cc === "CA";
+    const mmsCountry = (cc: string) => cc === "US" || cc === "CA" || cc === "PR";
     return Object.entries(counts)
       .map(([cc, n]) => {
         const r = rates.find((x) => x.country_code === cc);

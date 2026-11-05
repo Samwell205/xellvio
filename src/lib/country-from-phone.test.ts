@@ -58,3 +58,15 @@ describe("countryFromPhone", () => {
     expect(countryFromPhone("+15551234567", rates)).toBe("US");
   });
 });
+
+import { resolveRecipientCountry } from "./country-from-phone";
+describe("Puerto Rico pricing", () => {
+  const R = [{ country_code: "US", dial_prefix: "+1" }, { country_code: "PR", dial_prefix: "+1787" }];
+  it("787 and 939 numbers are Puerto Rico even when saved as US", () => {
+    expect(resolveRecipientCountry("US", "+17875551234", R)).toBe("PR");
+    expect(resolveRecipientCountry(null, "+19395551234", R)).toBe("PR");
+  });
+  it("mainland numbers stay US", () => {
+    expect(resolveRecipientCountry("US", "+12125551234", R)).toBe("US");
+  });
+});

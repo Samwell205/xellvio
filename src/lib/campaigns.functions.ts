@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { countryFromPhone } from "./country-from-phone";
+import { resolveRecipientCountry } from "./country-from-phone";
 
 const AudienceSchema = z.object({
   include: z.array(z.string().uuid()).default([]),
@@ -65,7 +65,7 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
 
     const counts: Record<string, number> = {};
     for (const p of recipients) {
-      const cc = p.country_code || countryFromPhone(p.phone_e164, dial) || "??";
+      const cc = resolveRecipientCountry(p.country_code, p.phone_e164, dial) || "??";
       counts[cc] = (counts[cc] ?? 0) + 1;
     }
 
@@ -87,6 +87,7 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
     if (nanpNumber) {
       if (!sendersByCountry.US) sendersByCountry.US = nanpNumber;
       if (!sendersByCountry.CA) sendersByCountry.CA = nanpNumber;
+      if (!sendersByCountry.PR) sendersByCountry.PR = nanpNumber;
     }
 
     const rows: SenderPreviewRow[] = Object.entries(counts)
