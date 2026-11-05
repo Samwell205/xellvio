@@ -52,12 +52,30 @@ export const getAddressDetails = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const qs = data.sessionToken ? `?sessionToken=${encodeURIComponent(data.sessionToken)}` : "";
     const res = await fetch(`${GATEWAY_URL}/places/v1/places/${data.placeId}${qs}`, {
-      headers: { ...creds(), "X-Goog-FieldMask": "formattedAddress" },
+      headers: { ...creds(), "X-Goog-FieldMask": "formattedAddress,addressComponents" },
     });
     if (!res.ok) {
       console.error(`Address details failed [${res.status}]: ${await res.text()}`);
-      return { address: null as string | null };
+      return { address: null as string | null, parts: null as AddressParts | null };
     }
-    const json = (await res.json()) as { formattedAddress?: string };
-    return { address: json.formattedAddress ?? null };
+    const json = (await res.json()) as {
+      formattedAddress?: string;
+      addressComponents?: { longText?: string; shortText?: string; types?: string[] }[];
+    };
+    const c = json.addressComponents ?? [];
+    const get = (t: string, short = false) => {
+      const x = c.find((a) => a.types?.includes(t));
+      return (short ? x?.shortText : x?.longText) ?? "";
+    };
+    const parts: AddressParts = {
+      line1: [get("street_number"), get("route")].filter(Boolean).join(" ") || get("premise"),
+      line2: get("subpremise"),
+      city: get("locality") || get("postal_town") || get("administrative_area_level_2"),
+      state: get("administrative_area_level_1"),
+      postcode: get("postal_code"),
+      country: get("country"),
+    };
+    return { address: json.formattedAddress ?? null, parts };
   });
+
+export type AddressParts = { line1: string; line2: string; city: string; state: string; postcode: string; country: string };
