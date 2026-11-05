@@ -4,6 +4,7 @@ import {
   XellvioLayout, Eyebrow, CTA, StatusBox, h1, p, muted, link, divider, BRAND, FONT,
 } from "./_xellvio-layout";
 import { LIFECYCLE, LifecycleKey, absolute } from "./lifecycle-copy";
+import OwnerEmailDesign, { resolveGenericDesign } from './owner-designs';
 
 export type GenericProps = {
   eyebrow?: string;
@@ -67,7 +68,9 @@ export const previewData: GenericProps = genericPropsFor("welcome", { first_name
 /** Registry adapter — tolerates the loose templateData callers already send. */
 function GenericCompat(d: Record<string, any>) {
   return (
-    <Generic
+    <OwnerEmailDesign
+      generic
+      designKey={resolveGenericDesign(d)}
       eyebrow={d.eyebrow}
       heading={d.heading ?? d.subject ?? "Xellvio notification"}
       body={String(d.body ?? "")}

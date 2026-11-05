@@ -10,6 +10,7 @@ import { MagicLinkEmail } from '@/lib/email-templates/magic-link'
 import { RecoveryEmail } from '@/lib/email-templates/recovery'
 import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
+import { ownerComponent } from '@/lib/email-templates/owner-designs'
 
 const EMAIL_SUBJECTS: Record<string, string> = {
   signup: 'Your Xellvio verification code',
@@ -22,12 +23,12 @@ const EMAIL_SUBJECTS: Record<string, string> = {
 
 // Template mapping
 const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
-  signup: SignupEmail,
-  invite: InviteEmail,
-  magiclink: MagicLinkEmail,
-  recovery: RecoveryEmail,
-  email_change: EmailChangeEmail,
-  reauthentication: ReauthenticationEmail,
+  signup: ownerComponent('signup'),
+  invite: ownerComponent('invite'),
+  magiclink: ownerComponent('magiclink'),
+  recovery: ownerComponent('recovery'),
+  email_change: ownerComponent('email_change'),
+  reauthentication: ownerComponent('reauthentication'),
 }
 
 // Configuration
