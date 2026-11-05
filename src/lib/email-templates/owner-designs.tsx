@@ -47,6 +47,10 @@ function renderNode(node: Node, data: Record<string, unknown>, key = 'root'): Re
   }
   if (node.tag === 'body') attrs.style = { ...(attrs.style as object), backgroundColor: '#ffffff' };
   const children = node.children.map((child, i) => renderNode(child, data, `${key}-${i}`));
+  if (node.tag === 'body' && typeof data.unsubscribeUrl === 'string' && safeUrl(data.unsubscribeUrl)) {
+    children.push(React.createElement('p', { key: 'preferences', style: { textAlign: 'center', fontFamily: 'Arial, sans-serif', fontSize: '12px' } },
+      React.createElement('a', { href: data.unsubscribeUrl }, 'Unsubscribe from app emails')));
+  }
   const voidTag = ['img', 'meta', 'br', 'hr', 'link', 'input'].includes(node.tag);
   return React.createElement(node.tag, attrs, ...(voidTag ? [] : children));
 }
@@ -68,7 +72,8 @@ export default function OwnerEmailDesign({ designKey, generic = false, ...data }
 
 export function ownerComponent(designKey: string) {
   return function OwnerComponent(data: Record<string, any>) {
-    return <OwnerEmailDesign {...data} designKey={designKey} />;
+    const selected = designKey === 'verifier-signup-code' && !data.phone ? 'signup-code' : designKey;
+    return <OwnerEmailDesign {...data} designKey={selected} />;
   };
 }
 
