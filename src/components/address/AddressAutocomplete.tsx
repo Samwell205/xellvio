@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { MapPin } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
 import { suggestAddresses, getAddressDetails, type AddressParts } from "@/lib/address-autocomplete.functions";
 import { Input } from "@/components/ui/input";
 
