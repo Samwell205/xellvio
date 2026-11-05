@@ -83,19 +83,21 @@ async function firstAt(
     .order("created_at", { ascending: true })
     .limit(1);
   if (extra) q = extra(q);
-  const { data } = await q.maybeSingle();
+  const { data, error } = await q.maybeSingle();
+  if (error) throw new Error('Could not verify business milestone history');
   return data?.created_at ?? null;
 }
 
 /** Reads the workspace's real milestones. */
 async function readMilestones(db: Db, accountId: string) {
-  const { data: account } = await db
+  const { data: account, error: accountError } = await db
     .from("accounts")
     .select(
       "created_at,legal_business_name,business_address,contact_email,website_url,use_case_description,last_seen_at,credit_balance,onboarding_status,telnyx_phone_number",
     )
     .eq("id", accountId)
     .maybeSingle();
+  if (accountError || !account) throw new Error('Could not verify the business');
 
   // A workspace counts as complete either when the business profile is filled
   // in, or when sender provisioning already finished — in that case there is
@@ -114,7 +116,7 @@ async function readMilestones(db: Db, accountId: string) {
     firstAt(db, "profiles", accountId),
     firstAt(db, "campaigns", accountId),
     (async () => {
-      const { data } = await db
+      const { data, error } = await db
         .from("campaigns")
         .select("first_launched_at")
         .eq("account_id", accountId)
@@ -122,6 +124,7 @@ async function readMilestones(db: Db, accountId: string) {
         .order("first_launched_at", { ascending: true })
         .limit(1)
         .maybeSingle();
+      if (error) throw new Error('Could not verify campaign launch history');
       return data?.first_launched_at ?? null;
     })(),
     firstAt(db, "automations", accountId),
@@ -184,11 +187,12 @@ export async function refreshLifecycle(
     .maybeSingle();
 
   const m = await readMilestones(db, accountId);
-  const { count: sentCampaigns } = await db
+  const { count: sentCampaigns, error: campaignCountError } = await db
     .from("campaigns")
     .select("id", { count: "exact", head: true })
     .eq("account_id", accountId)
     .not("first_launched_at", "is", null);
+  if (campaignCountError) throw new Error('Could not verify campaign history');
 
   const completedSteps = CHECKLIST_STEPS.filter((s) => Boolean((m as any)[s.field])).length;
   const progress = progressFrom(completedSteps);
