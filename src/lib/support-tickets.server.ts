@@ -118,7 +118,8 @@ export async function notifyTicketOpened(ticketId: string) {
   const sb = await db();
   const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
   if (!t) return;
-  await email(t, "opened", t.subject, `Ticket #${t.number} is open`,
+  const { data: request } = await sb.from('assisted_number_requests').select('id').eq('ticket_id', ticketId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  await email(t, `assisted-${request?.id ?? ticketId}`, t.subject, `Your request is in ticket #${t.number}`,
     "Your $100 assisted number-verification request has been received. Our support handling target is 24 hours. Carrier approval and number availability remain subject to checks; we will request any required documents through this ticket.");
   await notifyAdmin(t, "Paid assisted number-verification request awaiting review.");
 }
@@ -139,6 +140,7 @@ export async function adminReply(ticketId: string, body: string, userId: string,
   const sb = await db();
   const { data: t } = await sb.from("support_tickets").select("*").eq("id", ticketId).maybeSingle();
   if (!t) throw new Error("Ticket not found");
+  if (t.status === 'closed' && !opts.internal) throw new Error('This ticket is closed. Continue in an active ticket instead.');
   const now = new Date().toISOString();
   const { data: msg } = await sb.from("support_ticket_messages")
     .insert({ ticket_id: t.id, author: "admin", author_user_id: userId, body, internal: !!opts.internal }).select("id").single();
@@ -202,6 +204,10 @@ export async function customerReopenResolved(ticketId: string) {
 
 export async function setTicketStatus(ticketId: string, status: "open" | "closed") {
   const sb = await db();
+  if (status === 'open') {
+    const { data: current } = await sb.from('support_tickets').select('merged_into_ticket_id').eq('id', ticketId).maybeSingle();
+    if (current?.merged_into_ticket_id) throw new Error('This ticket was combined. Continue in the surviving ticket.');
+  }
   const now = new Date().toISOString();
   const { data: t } = await sb.from("support_tickets")
     .update({ status, closed_at: status === "closed" ? now : null, reminder_sent_at: null, updated_at: now })

@@ -1,11 +1,13 @@
 # Roadmap
 
 ## Tenant notice targeting and support consolidation
-- [ ] Catalog every tenant email with exact copy, timing, audience, placeholders and links for owner redesign
-- [ ] Reproduce and correct first-campaign email/dashboard targeting; prevent historic milestone replay
-- [ ] Consolidate duplicate unresolved support requests atomically with tenant-visible explanation; preserve all messages
-- [ ] Check relevant event notices and announcement audiences; keep promotional emails out of built-in app emails
-- [ ] Run eligibility/support tests and verify available signed-in admin views
+- [x] Catalog tenant emails, exact lifecycle/status/support/security copy, timing, audience and variables for owner redesign in Files; unimplemented monthly/permanent/renewal notices clearly marked
+- [x] Reproduce and correct first-campaign email/dashboard targeting; immutable launch history and queued-send eligibility prevent historic replay
+- [x] Consolidate new duplicate unresolved requests atomically, including paid requests; add confirmed admin merge preserving private messages/attachments; no current duplicate open businesses found
+- [x] Add affected-business sending/account suspension/restoration notices and announcement audience selector; optional lifecycle email never falls back to built-in app emails
+- [x] 40 message tests and isolated support/launch SQL tests passed; signed-in admin support and audience selector checked, no page errors
+- [ ] Full tenant-session live milestone/merge/email delivery check — owner session is admin-only; no real tenant campaign, support merge or suspension was invented for testing
+- [ ] Distinct permanent suspension, verifier-specific full status emails, information-request mapping and monthly number past-due email rollout — no corresponding confirmed state/trigger in this audit; templates/status rules require a separate rollout
 
 ## Current SMS pricing update
 - [x] Set US tenant pricing to $16.50 per 1,000 segments; preserve Puerto Rico at $48
