@@ -1,12 +1,6 @@
 import * as React from 'react'
 import { render } from 'react-email'
 import { createFileRoute } from '@tanstack/react-router'
-import { SignupEmail } from '@/lib/email-templates/signup'
-import { InviteEmail } from '@/lib/email-templates/invite'
-import { MagicLinkEmail } from '@/lib/email-templates/magic-link'
-import { RecoveryEmail } from '@/lib/email-templates/recovery'
-import { EmailChangeEmail } from '@/lib/email-templates/email-change'
-import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 import { ownerComponent } from '@/lib/email-templates/owner-designs'
 
 const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
