@@ -1,5 +1,10 @@
 # Roadmap
 
+## Current SMS pricing update
+- [ ] Set US tenant pricing to $16.50 per 1,000 segments; preserve Puerto Rico at $48
+- [ ] Verify shared public/admin/tenant rates and pricing tests
+- [ ] Design and send a branded pricing notice to all tenants through an eligible email service
+
 ## Website video blending
 - [x] Blend the existing homepage and login videos into light and dark page backgrounds
 - [x] Verify both themes on desktop and mobile without changing sign-in behavior; videos play, no horizontal overflow or page errors
