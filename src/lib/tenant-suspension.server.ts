@@ -37,7 +37,7 @@ export async function suspendTenantSending(opts: {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: acct } = await supabaseAdmin
     .from("accounts")
-    .select("id, telnyx_messaging_profile_id")
+    .select("id, telnyx_messaging_profile_id,sending_suspended_at")
     .eq("id", opts.tenantAccountId)
     .maybeSingle();
   if (!acct) throw new Error("Account not found");
@@ -91,7 +91,12 @@ export async function suspendTenantSending(opts: {
     .eq("account_id", opts.tenantAccountId)
     .in("status", ["queued", "sending", "scheduled"]);
 
-  return { ok: true, telnyxOk, telnyxError, suspensionId: log!.id };
+  if (!log?.id) throw new Error('Could not record the sending hold');
+  if (!acct.sending_suspended_at) {
+    const { notifyAccountStatus } = await import('./account-status-notice.server');
+    await notifyAccountStatus(opts.tenantAccountId, 'sending_suspended', log.id);
+  }
+  return { ok: true, telnyxOk, telnyxError, suspensionId: log.id };
 }
 
 export async function resumeTenantSending(opts: {
@@ -101,7 +106,7 @@ export async function resumeTenantSending(opts: {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: acct } = await supabaseAdmin
     .from("accounts")
-    .select("id, telnyx_messaging_profile_id")
+    .select("id, telnyx_messaging_profile_id,sending_suspended_at")
     .eq("id", opts.tenantAccountId)
     .maybeSingle();
   if (!acct) throw new Error("Account not found");
@@ -143,6 +148,11 @@ export async function resumeTenantSending(opts: {
     .select("id", { count: "exact", head: true })
     .eq("account_id", opts.tenantAccountId)
     .eq("status", "paused");
+
+  if (acct.sending_suspended_at) {
+    const { notifyAccountStatus } = await import('./account-status-notice.server');
+    await notifyAccountStatus(opts.tenantAccountId, 'sending_restored', acct.sending_suspended_at);
+  }
 
   return {
     ok: true, telnyxOk, telnyxError,

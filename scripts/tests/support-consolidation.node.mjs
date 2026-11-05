@@ -39,6 +39,6 @@ await db.query("update campaigns set status='sending' where id=$1",[campaign]);
 const launch=(await db.query('select first_launched_at from campaigns where id=$1',[campaign])).rows[0].first_launched_at;
 assert.ok(launch);
 await db.query("update campaigns set status='sent',first_launched_at=now()+interval '1 day' where id=$1",[campaign]);
-assert.equal((await db.query('select first_launched_at from campaigns where id=$1',[campaign])).rows[0].first_launched_at,launch);
+assert.equal(new Date((await db.query('select first_launched_at from campaigns where id=$1',[campaign])).rows[0].first_launched_at).getTime(),new Date(launch).getTime());
 console.log('Passed: one unresolved ticket, content preservation, account isolation, new after resolved/closed, merge with private attachments, idempotency, cross-business rejection, immutable real launch.');
 await db.close();
