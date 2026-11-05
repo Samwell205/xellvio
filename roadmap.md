@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Website video blending
-- [ ] Blend the existing homepage and login videos into light and dark page backgrounds
-- [ ] Verify both themes on desktop and mobile without changing sign-in behavior
+- [x] Blend the existing homepage and login videos into light and dark page backgrounds
+- [x] Verify both themes on desktop and mobile without changing sign-in behavior; videos play, no horizontal overflow or page errors
 
 ## Verifier registration alignment
 - [x] Audit shared form, submission validation, category mapping and separate number accounts
