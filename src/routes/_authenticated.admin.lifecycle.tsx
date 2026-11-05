@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from "sonner";
 import { RefreshCw, Users, Rocket, Megaphone, Gauge } from "lucide-react";
 import { STAGE_LABELS, EVENT_LABELS, type LifecycleStage } from "@/lib/lifecycle/taxonomy";
@@ -24,7 +25,7 @@ import {
 } from "@/lib/admin-lifecycle.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/lifecycle")({
-  head: () => ({ meta: [{ title: "Customer success — Xellvio admin" }] }),
+  head: () => ({ meta: [{ title: "Customer success — Xellvio admin" }, { name: 'description', content: 'Manage relevant tenant messages, onboarding and targeted announcements.' }, { property: 'og:title', content: 'Customer success — Xellvio admin' }, { property: 'og:description', content: 'Manage relevant tenant messages, onboarding and targeted announcements.' }, { property: 'og:type', content: 'website' }, { name: 'twitter:card', content: 'summary' }] }),
   component: LifecyclePage,
 });
 
@@ -331,6 +332,7 @@ function Announcements() {
   const qc = useQueryClient();
   const list = useQuery({ queryKey: ["admin-announcements"], queryFn: () => load() });
   const [form, setForm] = useState({ title: "", body: "", cta_label: "", cta_path: "" });
+  const [audience, setAudience] = useState('all');
 
   const add = useMutation({
     mutationFn: (publish: boolean) =>
@@ -341,6 +343,7 @@ function Announcements() {
           kind: "feature" as const,
           cta_label: form.cta_label || null,
           cta_path: form.cta_path || null,
+          target_stages: audience === 'all' ? [] : audience === 'new' ? ['new','onboarding','activating'] : ['active','power_user','at_risk','inactive','churned'],
           publish,
         },
       }),
@@ -362,6 +365,7 @@ function Announcements() {
         <div className="font-semibold flex items-center gap-2">
           <Megaphone className="size-4" /> New announcement
         </div>
+        <div className="space-y-1.5"><Label>Audience</Label><Select value={audience} onValueChange={setAudience}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All businesses</SelectItem><SelectItem value="new">New businesses completing setup</SelectItem><SelectItem value="established">Established businesses</SelectItem></SelectContent></Select></div>
         <div>
           <Label className="text-xs">Title</Label>
           <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
