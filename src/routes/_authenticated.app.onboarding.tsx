@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AddressAutocomplete } from "@/components/address/AddressAutocomplete";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -164,10 +165,9 @@ function OnboardingPage() {
               <span>Business address</span>
               <span className="text-xs italic text-muted-foreground">Required</span>
             </Label>
-            <Textarea
+            <AddressAutocomplete
               value={form.business_address}
-              onChange={(e) => setForm({ ...form, business_address: e.target.value })}
-              rows={3}
+              onChange={(v) => setForm((f) => ({ ...f, business_address: v }))}
             />
           </div>
           <div className="grid md:grid-cols-2 gap-4">
