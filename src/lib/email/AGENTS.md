@@ -1,0 +1,1 @@
+- Auth emails (purpose 'auth') always use the built-in Lovable sender, never Resend, so provider quotas can't block signups.
