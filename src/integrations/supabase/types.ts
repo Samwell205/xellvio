@@ -2773,6 +2773,7 @@ export type Database = {
           account_id: string
           audience: Json
           created_at: string
+          first_launched_at: string | null
           id: string
           media_url: string | null
           message_body: string
@@ -2793,6 +2794,7 @@ export type Database = {
           account_id: string
           audience?: Json
           created_at?: string
+          first_launched_at?: string | null
           id?: string
           media_url?: string | null
           message_body?: string
@@ -2813,6 +2815,7 @@ export type Database = {
           account_id?: string
           audience?: Json
           created_at?: string
+          first_launched_at?: string | null
           id?: string
           media_url?: string | null
           message_body?: string
@@ -6955,6 +6958,7 @@ export type Database = {
           last_admin_reply_at: string | null
           last_customer_reply_at: string | null
           legacy_contact_id: string | null
+          merged_into_ticket_id: string | null
           number: number
           previous_ticket_id: string | null
           reminder_sent_at: string | null
@@ -6979,6 +6983,7 @@ export type Database = {
           last_admin_reply_at?: string | null
           last_customer_reply_at?: string | null
           legacy_contact_id?: string | null
+          merged_into_ticket_id?: string | null
           number?: number
           previous_ticket_id?: string | null
           reminder_sent_at?: string | null
@@ -7003,6 +7008,7 @@ export type Database = {
           last_admin_reply_at?: string | null
           last_customer_reply_at?: string | null
           legacy_contact_id?: string | null
+          merged_into_ticket_id?: string | null
           number?: number
           previous_ticket_id?: string | null
           reminder_sent_at?: string | null
@@ -7016,6 +7022,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "support_tickets_merged_into_ticket_id_fkey"
+            columns: ["merged_into_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "support_tickets_previous_ticket_id_fkey"
             columns: ["previous_ticket_id"]
@@ -8548,6 +8561,19 @@ export type Database = {
           campaign_id: string
         }[]
       }
+      create_or_append_support_ticket: {
+        Args: {
+          _account_id: string
+          _email: string
+          _message: string
+          _name: string
+          _previous?: string
+          _source: string
+          _subject: string
+          _topic: string
+        }
+        Returns: Json
+      }
       credit_seller: {
         Args: {
           _account_id: string
@@ -8744,6 +8770,10 @@ export type Database = {
       mark_verifier_withdrawal_paid: {
         Args: { _admin_note?: string; _withdrawal_id: string }
         Returns: number
+      }
+      merge_support_ticket: {
+        Args: { _source: string; _target: string }
+        Returns: Json
       }
       move_to_dlq: {
         Args: {
