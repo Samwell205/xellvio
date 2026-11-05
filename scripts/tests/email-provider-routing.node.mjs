@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { registerHooks, stripTypeScriptTypes } from 'node:module';
+import { registerHooks } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 
@@ -15,25 +15,7 @@ registerHooks({
     }
     return nextResolve(specifier, context);
   },
-  load(url, context, nextLoad) {
-    if (url.endsWith('.ts')) {
-      return { format: 'module', source: stripTypeScriptTypes(readSource(url)), shortCircuit: true };
-    }
-    return nextLoad(url, context);
-  },
 });
-
-function readSource(url) {
-  const { readFileSync } = require_node_fs();
-  return readFileSync(new URL(url), 'utf8');
-}
-function require_node_fs() {
-  return globalThis.__fs ??= null;
-}
-
-// Simpler: read via dynamic import of node:fs
-const { readFileSync } = await import('node:fs');
-globalThis.__fs = { readFileSync };
 
 process.env.RESEND_API_KEY = 're_test_key';
 process.env.LOVABLE_API_KEY = 'lvv_test_key';
