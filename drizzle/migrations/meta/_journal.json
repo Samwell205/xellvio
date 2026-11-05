@@ -302,6 +302,13 @@
       "when": 1793817026720,
       "tag": "0042_twilio_actual_message_price",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793856923573,
+      "tag": "0043_puerto_rico_sms_rate",
+      "breakpoints": true
     }
   ]
 }
