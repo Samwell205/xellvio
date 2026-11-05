@@ -255,6 +255,33 @@ export const adminSetTicketStatus = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminMergeDuplicateTickets = createServerFn({ method: 'POST' })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ sourceId: z.string().uuid(), targetId: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }) => {
+    await ensureAdmin(context.supabase);
+    const { mergeTickets } = await import('./support-tickets.server');
+    return mergeTickets(data.sourceId, data.targetId);
+  });
+
+export const adminDuplicateTickets = createServerFn({ method: 'GET' })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.supabase);
+    const sb = await db();
+    const { data, error } = await sb.from('support_tickets').select('id,number,account_id,requester_email,created_at').in('status', ['open','waiting']).is('merged_into_ticket_id', null).order('created_at').limit(1000);
+    if (error) throw new Error(error.message);
+    const first = new Map<string, { id: string; number: number }>();
+    const duplicates: { sourceId: string; sourceNumber: number; targetId: string; targetNumber: number }[] = [];
+    for (const ticket of data ?? []) {
+      const key = `${ticket.account_id ?? 'public'}:${ticket.requester_email.toLowerCase()}`;
+      const existing = first.get(key);
+      if (existing) duplicates.push({ sourceId: ticket.id, sourceNumber: ticket.number, targetId: existing.id, targetNumber: existing.number });
+      else first.set(key, ticket);
+    }
+    return duplicates;
+  });
+
 /** Copilot draft only — never sends. */
 export const adminDraftTicketReply = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
