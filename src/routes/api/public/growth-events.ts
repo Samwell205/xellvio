@@ -84,7 +84,9 @@ export const Route = createFileRoute("/api/public/growth-events")({
           // Roll the visit summary forward so funnel maths stays cheap.
           const bySession = new Map<string, typeof rows>();
           for (const r of rows) {
-            if (!r.session_id) continue;
+            // Only unguessable browser-generated ids roll up, so callers can't
+            // target someone else's visit summary by guessing its id.
+            if (!r.session_id || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(r.session_id)) continue;
             const list = bySession.get(r.session_id) ?? [];
             list.push(r);
             bySession.set(r.session_id, list);
