@@ -1,5 +1,12 @@
 # Roadmap
 
+## Tenant notice targeting and support consolidation
+- [ ] Catalog every tenant email with exact copy, timing, audience, placeholders and links for owner redesign
+- [ ] Reproduce and correct first-campaign email/dashboard targeting; prevent historic milestone replay
+- [ ] Consolidate duplicate unresolved support requests atomically with tenant-visible explanation; preserve all messages
+- [ ] Check relevant event notices and announcement audiences; keep promotional emails out of built-in app emails
+- [ ] Run eligibility/support tests and verify available signed-in admin views
+
 ## Current SMS pricing update
 - [x] Set US tenant pricing to $16.50 per 1,000 segments; preserve Puerto Rico at $48
 - [x] Verify shared public rates and pricing tests (30 tests passed)
