@@ -172,27 +172,10 @@ function OnboardingPage() {
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             <Field
-              label="Business registration # (EIN / company number)"
-              v={form.business_reg_number}
-              on={(v) => setForm({ ...form, business_reg_number: v })}
-            />
-            <Field
               label="Website URL"
               required
               v={form.website_url}
               on={(v) => setForm({ ...form, website_url: v })}
-              placeholder="https://"
-            />
-            <Field
-              label="Privacy policy URL"
-              v={form.privacy_policy_url}
-              on={(v) => setForm({ ...form, privacy_policy_url: v })}
-              placeholder="https://"
-            />
-            <Field
-              label="Terms of service URL"
-              v={form.terms_url}
-              on={(v) => setForm({ ...form, terms_url: v })}
               placeholder="https://"
             />
             <Field
