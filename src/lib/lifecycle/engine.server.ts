@@ -412,6 +412,7 @@ export async function deliverMessage(input: {
           idempotencyKey: `lifecycle-${input.templateKey}-${input.accountId}`,
           sendImmediately: optionalEmail,
           templateData: {
+            designKey: input.templateKey,
             subject: cleanSubject(fill(template.subject ?? title, vars)),
             heading: title,
             body,

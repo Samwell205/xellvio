@@ -1,4 +1,5 @@
 # src/lib rules
+- Owner email designs are static React trees with hosted artwork; recipient values are escaped and links scheme-checked, generic notices retain event-owned text, and previews share send rendering without changing triggers/providers.
 - Lifecycle first-send targeting uses immutable campaign first_launched_at, count, tracking start and a short relevance window for both email and dashboard; historical discovery never congratulates longstanding businesses.
 - Support creation serializes per business and appends to the unresolved conversation; explicit merges retain audit histories and notify the requester, with service-only SQL validation.
 - Optional lifecycle promotional/re-engagement emails require the existing external sender and never enter built-in app-email queues; template replacement remains owner-controlled.

@@ -52,6 +52,18 @@ function withUnsubscribeFooter(html: string, url: string): string {
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
 
 export async function sendMail(payload: MailPayload): Promise<void> {
+  if (payload.label === 'campaign-spam-incident') {
+    const [{ default: OwnerEmailDesign }, { createElement }, { render }] = await Promise.all([
+      import('../email-templates/owner-designs'), import('react'), import('@react-email/components'),
+    ]);
+    const element = createElement(OwnerEmailDesign, {
+      designKey: /paused/i.test(payload.subject) ? 'campaign-paused-spam' : 'campaign-spam-all-sent',
+      generic: true, eyebrow: 'Campaign alert', heading: payload.subject,
+      body: payload.text || payload.subject, preview: payload.subject,
+      ctaText: 'View campaigns', ctaUrl: 'https://xellvio.com/app/campaigns',
+    });
+    payload = { ...payload, html: await render(element), text: await render(element, { plainText: true }) };
+  }
   const resendKey = process.env.RESEND_API_KEY;
   const lovableKey = process.env.LOVABLE_API_KEY;
 
