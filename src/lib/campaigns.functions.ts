@@ -87,6 +87,7 @@ export const previewCampaignSenders = createServerFn({ method: "POST" })
     if (nanpNumber) {
       if (!sendersByCountry.US) sendersByCountry.US = nanpNumber;
       if (!sendersByCountry.CA) sendersByCountry.CA = nanpNumber;
+      if (!sendersByCountry.PR) sendersByCountry.PR = nanpNumber;
     }
 
     const rows: SenderPreviewRow[] = Object.entries(counts)
