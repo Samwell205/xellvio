@@ -76,9 +76,10 @@ export const saveFlow = createServerFn({ method: "POST" })
     };
     let flowId = data.id ?? null;
     if (flowId) {
-      const { error } = await supabaseAdmin.from("sms_flows").update(payload).eq("id", flowId).eq("account_id", accountId);
+      const { data: owned, error } = await supabaseAdmin.from("sms_flows").update(payload).eq("id", flowId).eq("account_id", accountId).select("id");
       if (error) throw new Error(error.message);
-      await supabaseAdmin.from("sms_flow_steps").delete().eq("flow_id", flowId);
+      if (!owned?.length) throw new Error("Flow not found.");
+      await supabaseAdmin.from("sms_flow_steps").delete().eq("flow_id", flowId).eq("account_id", accountId);
     } else {
       const { data: created, error } = await supabaseAdmin.from("sms_flows").insert(payload).select("id").single();
       if (error) throw new Error(error.message);

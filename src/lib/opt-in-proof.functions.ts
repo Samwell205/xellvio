@@ -48,7 +48,7 @@ export const uploadOptInProof = createServerFn({ method: "POST" })
     if (bytes.byteLength > 5 * 1024 * 1024) {
       throw new Error("File too large. Max 5MB.");
     }
-    const key = `${context.userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const key = `${context.userId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.storage

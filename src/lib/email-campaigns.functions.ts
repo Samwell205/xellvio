@@ -107,6 +107,19 @@ export const cancelEmailBundleRenewal = createServerFn({ method: "POST" }).middl
 });
 export const sendEmailTest = createServerFn({ method: "POST" }).middleware([requireSupabaseAuth]).inputValidator((d: unknown) => z.object({ id: z.string().uuid(), email: z.string().email(), confirmed: z.literal(true) }).parse(d)).handler(async ({ data, context }) => {
   const { accountId, db } = await access(context.userId);
+  // Test emails may only go to the signed-in user or a teammate on this business.
+  const target = data.email.trim().toLowerCase();
+  const ownEmail = String((context as any).claims?.email ?? "").toLowerCase();
+  if (target !== ownEmail) {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: owner } = await supabaseAdmin.auth.admin.getUserById(accountId);
+    let allowed = String(owner?.user?.email ?? "").toLowerCase() === target;
+    if (!allowed) {
+      const { data: members } = await supabaseAdmin.from("account_members").select("invited_email").eq("account_id", accountId).eq("status", "active");
+      allowed = (members ?? []).some((m: any) => String(m.invited_email ?? "").toLowerCase() === target);
+    }
+    if (!allowed) throw new Error("Test emails can only be sent to your own email or a teammate's email.");
+  }
   const { data: c, error } = await db.from("email_campaigns").select("*").eq("id", data.id).eq("account_id", accountId).single();
   if (error) throw error;
   const { verifyCampaignSender, emailProviderRequest } = await import("./email-campaigns.server");

@@ -115,6 +115,15 @@ export const Route = createFileRoute("/lovable/email/transactional/send")({
           )
         }
 
+        // Callers may only email their own address unless they are an admin;
+        // this route must never become an open relay for arbitrary recipients.
+        if (!template.to && effectiveRecipient.toLowerCase() !== String(user.email ?? '').toLowerCase()) {
+          const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' })
+          if (isAdmin !== true) {
+            return Response.json({ error: 'Forbidden' }, { status: 403 })
+          }
+        }
+
         // 2. Check suppression list (fail-closed: if we can't verify, don't send)
         const { data: suppressed, error: suppressionError } = await supabase
           .from('suppressed_emails')
