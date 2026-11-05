@@ -259,14 +259,14 @@ function Hero() {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="relative"
         >
-          <div className="bg-muted rounded-3xl relative overflow-hidden">
+          <div className="brand-video-surface relative overflow-hidden">
             <video
               autoPlay
               loop
               muted
               playsInline
               preload="metadata"
-              className="block w-full h-full object-cover"
+              className="brand-video block w-full h-full object-cover"
               aria-label="Xellvio automation preview"
             >
               <source src={heroLoopAsset.url} type="video/mp4" />

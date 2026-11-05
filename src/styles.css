@@ -76,6 +76,9 @@
 
 :root {
   --radius: 0.75rem;
+  --video-blend-mode: multiply;
+  --video-theme-filter: none;
+  --video-mask-solid: oklch(0 0 0);
   --background: oklch(1 0 0);
   --foreground: oklch(0.18 0.02 256);
   --card: oklch(1 0 0);
@@ -126,6 +129,8 @@
 
 .dark {
   /* Reference-matched dark scheme: near-black surfaces, graphite lines, blue accent only. */
+  --video-blend-mode: screen;
+  --video-theme-filter: invert(1) hue-rotate(180deg);
   --background: oklch(0.11 0.012 175);
   --brand-green: oklch(0.74 0.17 155);
   --brand-green-soft: oklch(0.26 0.06 155);
@@ -174,6 +179,27 @@
     radial-gradient(ellipse 60% 50% at 80% 30%, oklch(0.75 0.15 165 / 0.12), transparent 70%),
     var(--color-background);
 }
+
+/* Light-backed brand films become part of the page instead of framed tiles.
+   In dark appearance, invert luminance while retaining the original hues. */
+.brand-video-surface {
+  isolation: isolate;
+  background: var(--background);
+}
+
+.brand-video {
+  mix-blend-mode: var(--video-blend-mode);
+  filter: var(--video-theme-filter);
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, var(--video-mask-solid) 5%, var(--video-mask-solid) 95%, transparent),
+    linear-gradient(to bottom, transparent, var(--video-mask-solid) 5%, var(--video-mask-solid) 95%, transparent);
+  mask-image:
+    linear-gradient(to right, transparent, var(--video-mask-solid) 5%, var(--video-mask-solid) 95%, transparent),
+    linear-gradient(to bottom, transparent, var(--video-mask-solid) 5%, var(--video-mask-solid) 95%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
 @utility text-gradient {
   background: linear-gradient(135deg, oklch(0.6 0.16 155), oklch(0.55 0.22 270));
   -webkit-background-clip: text;
