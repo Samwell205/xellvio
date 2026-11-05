@@ -67,9 +67,9 @@ export async function sendMail(payload: MailPayload): Promise<void> {
   const resendKey = process.env.RESEND_API_KEY;
   const lovableKey = process.env.LOVABLE_API_KEY;
 
-  // Account security emails (sign-up codes, password resets) always use the
-  // built-in sender so the outside provider's daily quota can never block signups.
-  if (resendKey && lovableKey && payload.purpose !== 'auth') {
+  // Every email, including sign-up codes and password resets, goes through
+  // Resend (owner decision 2026-11-05: Resend plan is being upgraded).
+  if (resendKey && lovableKey) {
     const token = payload.unsubscribe_token || undefined;
     const url = token ? unsubscribeUrl(token) : undefined;
     const headers: Record<string, string> = {};
