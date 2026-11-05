@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Phone, ShieldCheck } from "lucide-react";
 import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant-twilio.functions";
@@ -419,7 +419,7 @@ function StepBadge({
   );
 }
 
-function FormGroup({ title, text, children }: { title: string; text: string; children: React.ReactNode }) {
+function FormGroup({ title, text, children }: { title: string; text: string; children: ReactNode }) {
   return (
     <div className="grid gap-5 px-6 py-7 sm:px-8 md:grid-cols-[180px_minmax(0,1fr)] md:gap-8">
       <div>
