@@ -1,1 +1,1 @@
-- Auth emails (purpose 'auth') always use the built-in Lovable sender, never Resend, so provider quotas can't block signups.
+- All emails, including auth (purpose 'auth' sign-up codes and password resets), go through Resend; the owner keeps the Resend plan upgraded so its daily quota does not block signups. Built-in app sender stays the fallback only when Resend credentials are absent.
