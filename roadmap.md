@@ -1,5 +1,11 @@
 # Roadmap
 
+## Owner-supplied email designs
+- [x] Install 52 supplied designs with hosted logos and escaped React personalization
+- [x] Apply designs to existing auth, support, lifecycle, verification, billing and campaign-alert email flows without changing sending rules; generic notices retain complete event-owned copy
+- [x] All eight app and six auth previews render; desktop/phone logo loading and no overflow verified; 53 regression tests pass
+- [ ] Publish checked designs; actual inbox delivery remains untested without triggering a real tenant event
+
 ## Tenant notice targeting and support consolidation
 - [x] Catalog tenant emails, exact lifecycle/status/support/security copy, timing, audience and variables for owner redesign in Files; unimplemented monthly/permanent/renewal notices clearly marked
 - [x] Reproduce and correct first-campaign email/dashboard targeting; immutable launch history and queued-send eligibility prevent historic replay

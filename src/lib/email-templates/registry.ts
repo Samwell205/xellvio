@@ -7,6 +7,7 @@ import { template as teamInvite } from './team-invite'
 import { template as generic } from './generic'
 import { template as verifierSignupCode } from './verifier-signup-code'
 import { template as accountSignupCode } from './account-signup-code'
+import { ownerComponent } from './owner-designs'
 
 
 export interface TemplateEntry {
@@ -30,4 +31,8 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'generic': generic,
   'verifier-signup-code': verifierSignupCode,
   'account-signup-code': accountSignupCode,
+}
+
+for (const name of Object.keys(TEMPLATES)) {
+  if (name !== 'generic') TEMPLATES[name] = { ...TEMPLATES[name], component: ownerComponent(name) }
 }

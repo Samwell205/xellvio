@@ -10,6 +10,7 @@ import * as React from "react";
 import { render } from "@react-email/components";
 import { sendMail, mailerProvider } from "./mailer.server";
 import { TEMPLATES, type TemplateEntry } from "@/lib/email-templates/registry";
+import { resolveGenericDesign } from '@/lib/email-templates/owner-designs';
 
 const SITE_NAME = "xellvio";
 const SENDER_DOMAIN = "notify.xellvio.com";
@@ -119,7 +120,10 @@ export async function sendBrandedEmail(
     }
   }
 
-  const element = React.createElement(template.component, templateData);
+  const renderingData = templateName === 'generic'
+    ? { ...templateData, designKey: resolveGenericDesign(templateData, idempotencyKey) }
+    : templateData;
+  const element = React.createElement(template.component, renderingData);
   const html = await render(element);
   const text = await render(element, { plainText: true });
   const subject =
