@@ -4,7 +4,7 @@ import { isAuthorizedCronRequest } from "@/lib/cron-auth.server";
 
 import { createFileRoute } from "@tanstack/react-router";
 import { calculateSegments } from "@/lib/sms-segments";
-import { countryFromPhone } from "@/lib/country-from-phone";
+import { countryFromPhone, resolveRecipientCountry } from "@/lib/country-from-phone";
 import { keywordScan, isPersonalizationOnlyBlock } from "@/lib/content-scanner";
 import { publicCampaignMediaUrl } from "@/lib/campaign-media";
 import { STOPPED_AS_SENT } from "@/lib/campaign-stop";
@@ -142,7 +142,7 @@ function publicBaseUrl() {
 
 function supportsMms(countryCode?: string | null) {
   const cc = (countryCode ?? "").toUpperCase();
-  return cc === "US" || cc === "CA";
+  return cc === "US" || cc === "CA" || cc === "PR";
 }
 function mediaLinkForMessage(messageId: string) {
   return `${publicBaseUrl()}/m/${messageId}`;
@@ -441,7 +441,7 @@ async function sendOneMessage(
     // Sender fallback rules — pick best available sender for this recipient.
     // Priority: US/CA → toll_free > local > sender_id; other countries → sender_id > local > toll_free.
     const cc = (m.country_code ?? "").toUpperCase();
-    const isNanp = cc === "US" || cc === "CA";
+    const isNanp = cc === "US" || cc === "CA" || cc === "PR";
     const rank = (kind: string | null | undefined) => {
       const k = kind ?? "";
       if (isNanp) return k === "toll_free" ? 0 : k === "local" ? 1 : k === "sender_id" ? 2 : 3;
@@ -817,7 +817,7 @@ async function planCampaign(
   const enriched = recipients.map((p: any) => {
     const body = render(campaign.message_body, p);
     const seg = calculateSegments(body);
-    const cc = p.country_code || countryFromPhone(p.phone_e164, dial);
+    const cc = resolveRecipientCountry(p.country_code, p.phone_e164, dial);
     const rate = cc ? rateByCC[cc] : undefined;
     const priced = priceFor(rate, cc, seg.segments);
     return { ...p, body, segments: seg.segments, country_code: cc, cost: priced.cost };

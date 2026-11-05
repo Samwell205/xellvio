@@ -93,7 +93,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
             a.country_code === countryCode ||
             // Verified North American toll-free and local numbers can route to
             // both US and Canada.
-            ((countryCode === "US" || countryCode === "CA") &&
+            ((countryCode === "US" || countryCode === "CA" || countryCode === "PR") &&
               (a.sender_kind === "toll_free" || a.sender_kind === "local") &&
               (a.country_code === "US" || a.country_code === "CA")),
         )
