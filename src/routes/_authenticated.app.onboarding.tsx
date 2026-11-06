@@ -23,9 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, Phone, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Loader2, Phone } from "lucide-react";
 import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant-twilio.functions";
 import { getProvisioningStatus, saveBusinessProfile } from "@/lib/account.functions";
 import { getGrowthGoal, saveGrowthGoal } from "@/lib/growth-tenant.functions";
@@ -118,7 +118,8 @@ function OnboardingPage() {
   const a = account.data as any;
   // Same rule as the dashboard gate: show the form until every required detail is saved.
   const profileDone = isProfileComplete(a);
-  const step: 1 | 2 = useMemo(() => (profileDone ? 2 : 1), [profileDone]);
+  const [editing, setEditing] = useState(false);
+  const step: 1 | 2 = useMemo(() => (profileDone && !editing ? 2 : 1), [profileDone, editing]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -131,6 +132,7 @@ function OnboardingPage() {
       qc.invalidateQueries({ queryKey: ["provisioning-status"] });
       qc.invalidateQueries({ queryKey: ["my-session"] });
       track({ event: "onboarding_step_completed", props: { step: "business_profile" } });
+      setEditing(false);
       toast.success("Business profile saved");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -246,6 +248,9 @@ function OnboardingPage() {
               </div>
 
               <footer className="flex flex-col-reverse gap-3 border-t border-border bg-muted/40 px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 rounded-b-2xl">
+                {editing && profileDone && (
+                  <Button variant="ghost" onClick={() => setEditing(false)}>Back</Button>
+                )}
                 <p className="text-xs text-muted-foreground">Fields marked <span className="text-primary">*</span> are needed to continue.</p>
                 <Button size="lg" onClick={() => save.mutate()} disabled={save.isPending}>
                   {save.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
@@ -258,7 +263,10 @@ function OnboardingPage() {
           {step === 2 && (
             <>
               <SenderStep provisioning={provisioning.data} />
-              <div className="flex justify-end">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                <Button size="lg" variant="outline" onClick={() => { setEditing(true); window.scrollTo({ top: 0 }); }}>
+                  Back to business details
+                </Button>
                 <Button size="lg" onClick={() => navigate({ to: "/app" })}>Go to my dashboard</Button>
               </div>
             </>
@@ -291,7 +299,7 @@ function SenderStep({
     onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["account"] });
       qc.invalidateQueries({ queryKey: ["provisioning-status"] });
-      toast.success(r.already ? "Subaccount already provisioned" : "SMS subaccount created");
+      void r;
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -317,39 +325,23 @@ function SenderStep({
 
   const hasSub = !!provisioning?.hasSubaccount;
   const hasNumber = !!provisioning?.hasNumber;
+  // Prepare the business's sending setup automatically behind the scenes.
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (provisioning && !hasSub && !startedRef.current) {
+      startedRef.current = true;
+      provisionMut.mutate();
+    }
+  }, [provisioning, hasSub]);
 
   return (
     <section className="rounded-2xl border border-border bg-card">
       <header className="border-b border-border px-6 py-5 sm:px-8">
         <h2 className="text-lg font-semibold">Sending setup</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Two quick steps and you can start texting.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Pick the number your texts will come from.</p>
       </header>
 
       <div className="divide-y divide-border">
-        <div className="flex flex-col gap-4 px-6 py-6 sm:flex-row sm:items-start sm:justify-between sm:px-8">
-          <div className="flex gap-4">
-            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-              <ShieldCheck className="size-4" />
-            </span>
-            <div>
-              <h3 className="font-medium">Messaging account</h3>
-              <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                {hasSub
-                  ? "Your private messaging account is ready."
-                  : "We'll open a private messaging account for your business, kept separate from everyone else."}
-              </p>
-            </div>
-          </div>
-          {hasSub ? (
-            <Badge className="self-start">Ready</Badge>
-          ) : (
-            <Button className="self-start" onClick={() => provisionMut.mutate()} disabled={provisionMut.isPending}>
-              {provisionMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-              Set it up
-            </Button>
-          )}
-        </div>
-
         <div className={`px-6 py-6 sm:px-8 ${!hasSub ? "opacity-60" : ""}`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex gap-4">
@@ -362,7 +354,7 @@ function SenderStep({
                   {hasNumber ? (
                     <>Your texts come from <span className="font-mono text-foreground">{provisioning?.phoneNumber}</span></>
                   ) : !hasSub ? (
-                    "Available once your messaging account is ready."
+                    "Getting things ready…"
                   ) : (
                     "Choose a country and pick a number."
                   )}
