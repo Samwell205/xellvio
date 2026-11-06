@@ -239,7 +239,7 @@ function OnboardingPage() {
                       required
                       v={form.phone}
                       on={(v) => setForm({ ...form, phone: v })}
-                      placeholder="+447700900123"
+                      placeholder="+1 (212) 555-0142"
                     />
                   </div>
                 </FormGroup>
