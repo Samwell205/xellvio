@@ -191,7 +191,7 @@ function OnboardingPage() {
                   />
                   <div className="grid gap-5 sm:grid-cols-2">
                     <PickField label="Industry" v={form.industry} on={(v) => setForm({ ...form, industry: v })}
-                      options={["Home services / trades","Retail & ecommerce","Restaurants & hospitality","Health & beauty","Professional services","Real estate","Fitness","Education","Agency / reseller","Other"]} />
+                      options={["Agency / reseller","Automotive","Beauty, salon & spa","Construction","Education & training","Entertainment & events","Financial services","Fitness & wellness","Healthcare & medical","Home services / trades","Insurance","Legal services","Logistics & transportation","Manufacturing","Marketing & advertising","Media & publishing","Non-profit & charity","Professional services","Real estate","Religious organization","Restaurants & hospitality","Retail & ecommerce","Software & technology","Telecommunications","Travel & tourism","Other"]} />
                     <PickField label="Team size" required={false} v={form.team_size} on={(v) => setForm({ ...form, team_size: v })}
                       options={["Just me","2–10","11–50","51–200","200+"]} />
                   </div>
