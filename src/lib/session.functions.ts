@@ -25,7 +25,7 @@ export const getMySession = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<SessionInfo> => {
     const acting = await resolveActingAccount(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: acct } = await supabaseAdmin.from("accounts").select("legal_business_name,company,website_url,business_address,phone,industry,team_size,onboarding_status").eq("id", acting.accountId).maybeSingle();
+    const { data: acct } = await supabaseAdmin.from("accounts").select("legal_business_name,company,website_url,business_address,contact_email,phone,industry,team_size,onboarding_status").eq("id", acting.accountId).maybeSingle();
     const businessName = acct?.legal_business_name || acct?.company || null;
     const profileComplete = isProfileComplete(acct);
     return {
