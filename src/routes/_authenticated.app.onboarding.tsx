@@ -23,9 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, Phone, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Loader2, Phone } from "lucide-react";
 import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant-twilio.functions";
 import { getProvisioningStatus, saveBusinessProfile } from "@/lib/account.functions";
 import { getGrowthGoal, saveGrowthGoal } from "@/lib/growth-tenant.functions";
