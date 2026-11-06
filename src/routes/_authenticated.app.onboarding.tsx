@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,21 @@ import { AddressAutocomplete } from "@/components/address/AddressAutocomplete";
 import type { AddressParts } from "@/lib/address-autocomplete.functions";
 
 const EMPTY_ADDR: AddressParts = { line1: "", line2: "", city: "", state: "", postcode: "", country: "" };
+function parseAddress(saved: string): AddressParts {
+  const p = saved.split(",").map((x) => x.trim()).filter(Boolean);
+  if (p.length < 3) return { ...EMPTY_ADDR, line1: saved };
+  const country = p.pop()!;
+  let state = "", postcode = "", city = "";
+  if (p.length >= 3) {
+    const sz = p.pop()!.split(/\s+/);
+    const zipIdx = sz.findIndex((t) => /\d/.test(t));
+    if (zipIdx >= 0) { postcode = sz.slice(zipIdx).join(" "); state = sz.slice(0, zipIdx).join(" "); }
+    else state = sz.join(" ");
+  }
+  city = p.pop() ?? "";
+  const line1 = p.shift() ?? "";
+  return { line1, line2: p.join(", "), city, state, postcode, country };
+}
 function composeAddress(a: AddressParts) {
   return [a.line1, a.line2, a.city, [a.state, a.postcode].filter((x) => x.trim()).join(" "), a.country]
     .map((x) => x.trim()).filter(Boolean).join(", ");
@@ -26,7 +41,6 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Phone } from "lucide-react";
-import { provisionSubaccount, searchNumbers, purchaseNumber } from "@/lib/tenant-twilio.functions";
 import { getProvisioningStatus, saveBusinessProfile } from "@/lib/account.functions";
 import { getGrowthGoal, saveGrowthGoal } from "@/lib/growth-tenant.functions";
 import { ONBOARDING_GOALS, type OnboardingGoalKey } from "@/lib/growth/taxonomy";
@@ -110,7 +124,7 @@ function OnboardingPage() {
   const [addr, setAddr] = useState<AddressParts>(EMPTY_ADDR);
   useEffect(() => {
     const saved = account.data?.business_address;
-    if (saved) setAddr((a) => (a.line1 || a.city ? a : { ...EMPTY_ADDR, line1: saved }));
+    if (saved) setAddr((a) => (a.line1 || a.city ? a : parseAddress(saved)));
   }, [account.data?.business_address]);
   const setPart = (k: keyof AddressParts) => (v: string) => setAddr((a) => ({ ...a, [k]: v }));
 
@@ -286,122 +300,36 @@ function SenderStep({
     | { hasSubaccount: boolean; hasNumber: boolean; phoneNumber: string | null }
     | undefined;
 }) {
-  const qc = useQueryClient();
-  const provision = useServerFn(provisionSubaccount);
-  const search = useServerFn(searchNumbers);
-  const purchase = useServerFn(purchaseNumber);
-
-  const [country, setCountry] = useState("US");
-  const [numbers, setNumbers] = useState<any[]>([]);
-
-  const provisionMut = useMutation({
-    mutationFn: () => provision(),
-    onSuccess: (r) => {
-      qc.invalidateQueries({ queryKey: ["account"] });
-      qc.invalidateQueries({ queryKey: ["provisioning-status"] });
-      void r;
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const searchMut = useMutation({
-    mutationFn: () => search({ data: { country } }),
-    onSuccess: (r) => {
-      setNumbers(r);
-      if (r.length === 0) toast.message("No numbers available for that country");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const buyMut = useMutation({
-    mutationFn: (phoneNumber: string) => purchase({ data: { phoneNumber } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["account"] });
-      qc.invalidateQueries({ queryKey: ["provisioning-status"] });
-      toast.success("Number purchased — your account is live!");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const hasSub = !!provisioning?.hasSubaccount;
   const hasNumber = !!provisioning?.hasNumber;
-  // Prepare the business's sending setup automatically behind the scenes.
-  const startedRef = useRef(false);
-  useEffect(() => {
-    if (provisioning && !hasSub && !startedRef.current) {
-      startedRef.current = true;
-      provisionMut.mutate();
-    }
-  }, [provisioning, hasSub]);
-
   return (
     <section className="rounded-2xl border border-border bg-card">
       <header className="border-b border-border px-6 py-5 sm:px-8">
         <h2 className="text-lg font-semibold">Sending setup</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Pick the number your texts will come from.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Get the number your texts will come from.</p>
       </header>
-
-      <div className="divide-y divide-border">
-        <div className={`px-6 py-6 sm:px-8 ${!hasSub ? "opacity-60" : ""}`}>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex gap-4">
-              <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-                <Phone className="size-4" />
-              </span>
-              <div>
-                <h3 className="font-medium">Sending number</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {hasNumber ? (
-                    <>Your texts come from <span className="font-mono text-foreground">{provisioning?.phoneNumber}</span></>
-                  ) : !hasSub ? (
-                    "Getting things ready…"
-                  ) : (
-                    "Choose a country and pick a number."
-                  )}
-                </p>
-              </div>
-            </div>
-            {hasNumber && <Badge className="self-start">Active</Badge>}
-          </div>
-
-          {hasSub && !hasNumber && (
-            <div className="mt-5 sm:pl-[52px]">
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Country</Label>
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {["US", "CA", "GB", "AU", "DE", "FR", "ES", "IT", "NL", "SE"].map((c) => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button variant="outline" onClick={() => searchMut.mutate()} disabled={searchMut.isPending}>
-                  {searchMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-                  Find numbers
-                </Button>
-              </div>
-              {numbers.length > 0 && (
-                <ul className="mt-4 divide-y divide-border overflow-hidden rounded-xl border border-border">
-                  {numbers.map((n) => (
-                    <li key={n.phone_number} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                      <div>
-                        <div className="font-mono">{n.phone_number}</div>
-                        <div className="text-xs text-muted-foreground">{[n.locality, n.region].filter(Boolean).join(", ")}</div>
-                      </div>
-                      <Button size="sm" onClick={() => buyMut.mutate(n.phone_number)} disabled={buyMut.isPending}>
-                        {buyMut.isPending && <Loader2 className="size-4 animate-spin mr-2" />}
-                        Choose
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
+      <div className="flex flex-col gap-4 px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div className="flex gap-4">
+          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+            <Phone className="size-4" />
+          </span>
+          <div>
+            <h3 className="font-medium">Sending number</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {hasNumber ? (
+                <>Your texts come from <span className="font-mono text-foreground">{provisioning?.phoneNumber}</span></>
+              ) : (
+                "Get a verified toll-free number or request one, then send once it's approved."
               )}
-            </div>
-          )}
+            </p>
+          </div>
         </div>
+        {hasNumber ? (
+          <Badge className="self-start">Active</Badge>
+        ) : (
+          <Button asChild className="self-start sm:self-center">
+            <Link to="/app/setup-sms">Get a sending number</Link>
+          </Button>
+        )}
       </div>
     </section>
   );
