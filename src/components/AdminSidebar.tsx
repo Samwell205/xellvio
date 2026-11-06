@@ -41,7 +41,7 @@ const groups: { label: string; items: Item[] }[] = [
   ] },
   { label: "Advanced", items: [
     { title: "Activity log", url: "/admin/activity", icon: Activity },
-    { title: "Carrier activity", url: "/admin/telnyx", icon: Radio },
+    { title: "Carrier activity", url: "/admin/telnyx", icon: Radio, exact: true },
     { title: "Balance-drop audit", url: "/admin/telnyx/audit", icon: Scale },
     { title: "Number activity", url: "/admin/telnyx/tfn", icon: PhoneOutgoing },
     { title: "Toll-free logs", url: "/admin/tollfree-attempts", icon: ClipboardList },
