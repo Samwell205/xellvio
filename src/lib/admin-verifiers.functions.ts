@@ -412,3 +412,45 @@ export const adminUnassignSenderAsset = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+/**
+ * Admin read-only carrier sync: verifier numbers are approved or rejected by
+ * the carrier (Twilio), never by an admin. This pulls the latest carrier
+ * decision for pending submissions and saves it. Bounded to 25 per call.
+ */
+export const adminSyncTfnsFromCarrier = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ tfn_id: z.string().uuid().optional() }).parse(input ?? {}))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let q = supabaseAdmin.from("verifier_tfns")
+      .select("id,telnyx_verification_id,telnyx_number_id,status")
+      .not("telnyx_verification_id", "is", null);
+    q = data.tfn_id ? q.eq("id", data.tfn_id) : q.eq("status", "pending_verification").order("submitted_at", { ascending: true }).limit(25);
+    const { data: rows, error } = await q;
+    if (error) throw new Error("Submissions could not be loaded.");
+    const { fetchVerifierVerification, subaccountForPhone } = await import("./verifier-twilio.server");
+    let updated = 0, failed = 0, skipped = 0;
+    for (const row of rows ?? []) {
+      try {
+        if (!row.telnyx_verification_id?.startsWith("HH")) { skipped++; continue; }
+        const subSid = await subaccountForPhone(supabaseAdmin, row.telnyx_number_id);
+        if (!subSid) { skipped++; continue; }
+        const r = await fetchVerifierVerification(supabaseAdmin, subSid, row.telnyx_verification_id);
+        const dbStatus = r.status === "verified" ? "verified" : r.status === "rejected" ? "rejected" : "pending_verification";
+        const nowIso = new Date().toISOString();
+        const patch: any = { status: dbStatus, rejection_reason: r.rejectionReason, updated_at: nowIso };
+        if (r.status === "in_review") patch.in_review_at = nowIso;
+        if (dbStatus === "verified" && row.status !== "verified") patch.verified_at = nowIso;
+        if (dbStatus === "rejected" && row.status !== "rejected") patch.rejected_at = nowIso;
+        // Never overwrite a sold number's status.
+        const { error: e } = await supabaseAdmin.from("verifier_tfns").update(patch).eq("id", row.id).neq("status", "sold");
+        if (e) failed++; else updated++;
+      } catch (err) {
+        console.error("[admin-verifiers] carrier sync failed", row.id, err);
+        failed++;
+      }
+    }
+    return { checked: rows?.length ?? 0, updated, failed, skipped };
+  });
