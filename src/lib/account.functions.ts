@@ -119,7 +119,14 @@ export const saveBusinessProfile = createServerFn({ method: "POST" })
     if (!/^https?:\/\//.test(data.website_url.trim())) throw new Error("website url must include http:// or https://");
     if (data.privacy_policy_url && !/^https:\/\//.test(String(data.privacy_policy_url).trim())) throw new Error("privacy policy url must start with https://");
     if (data.terms_url && !/^https:\/\//.test(String(data.terms_url).trim())) throw new Error("terms url must start with https://");
-    if (!/^\+[1-9][0-9]{6,14}$/.test(String(data.phone).trim())) throw new Error("business phone must be E.164, e.g. +15551234567");
+    // Accept common formats like "+1 (484) 716-2601" or "+44 7700 900123" and store digits only.
+    const rawPhone = String(data.phone ?? "").trim();
+    let phone = rawPhone.replace(/[\s().\-]/g, "");
+    if (phone.startsWith("00")) phone = "+" + phone.slice(2);
+    if (/^[0-9]{10}$/.test(phone)) phone = "+1" + phone;
+    if (/^1[0-9]{10}$/.test(phone)) phone = "+" + phone;
+    if (!/^\+[1-9][0-9]{6,14}$/.test(phone)) throw new Error("Enter a valid business phone with country code, e.g. +1 (212) 555-0142");
+    data.phone = phone;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("accounts")
