@@ -48,7 +48,14 @@ import { isProfileComplete } from "@/lib/profile-requirements";
 import { firstTouch, sessionId, track } from "@/lib/growth/track";
 
 export const Route = createFileRoute("/_authenticated/app/onboarding")({
-  head: () => ({ meta: [{ title: "Set up your business — Xellvio" }] }),
+  head: () => ({ meta: [
+    { title: "Set up your business — Xellvio" },
+    { name: "description", content: "Complete your Xellvio business details and review your sending setup." },
+    { property: "og:title", content: "Set up your business — Xellvio" },
+    { property: "og:description", content: "Complete your Xellvio business details and review your sending setup." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: OnboardingPage,
 });
 
@@ -323,12 +330,8 @@ function SenderStep({
             </p>
           </div>
         </div>
-        {hasNumber ? (
+        {hasNumber && (
           <Badge className="self-start">Active</Badge>
-        ) : (
-          <Button asChild className="self-start sm:self-center">
-            <Link to="/app/setup-sms">Get a sending number</Link>
-          </Button>
         )}
       </div>
     </section>
