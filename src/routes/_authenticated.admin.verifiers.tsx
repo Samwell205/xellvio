@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   adminListVerifiers,
   adminListTfns,
-  adminUpdateTfnStatus,
   adminAssignTfnToAccount,
   adminListWithdrawals,
   adminMarkWithdrawalPaid,
@@ -36,6 +35,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { SubmissionsReview } from "@/components/verifier/SubmissionsReview";
 import { IdentityReviewTab } from "@/components/verifier/IdentityReviewTab";
 import { TwilioInventoryPanel } from '@/components/TwilioInventoryPanel';
 
@@ -225,124 +225,7 @@ function VerifiersTab() {
 }
 
 function SubmissionsTab() {
-  const listFn = useServerFn(adminListTfns);
-  const updateFn = useServerFn(adminUpdateTfnStatus);
-  const qc = useQueryClient();
-  const [status, setStatusFilter] = useState<"pending_verification" | "rejected" | "all">(
-    "pending_verification",
-  );
-  const { data } = useQuery({
-    queryKey: ["admin", "tfns", status],
-    queryFn: () => listFn({ data: { status } }),
-  });
-  const [reasonMap, setReasonMap] = useState<Record<string, string>>({});
-
-  const setStatus = useMutation({
-    mutationFn: (args: {
-      id: string;
-      status: "verified" | "rejected" | "pending_verification";
-      reason?: string;
-    }) =>
-      updateFn({ data: { tfn_id: args.id, status: args.status, rejection_reason: args.reason } }),
-    onSuccess: () => {
-      toast.success("Updated");
-      qc.invalidateQueries({ queryKey: ["admin", "tfns"] });
-      qc.invalidateQueries({ queryKey: ["admin", "verifiers"] });
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>Submissions</CardTitle>
-        <Select value={status} onValueChange={(v: any) => setStatusFilter(v)}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending_verification">Pending</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="all">All</SelectItem>
-          </SelectContent>
-        </Select>
-      </CardHeader>
-      <CardContent>
-        {(data ?? []).length === 0 ? (
-          <div className="text-sm text-muted-foreground">Nothing here.</div>
-        ) : (
-          <div className="space-y-2">
-            {(data ?? []).map((t: any) => (
-              <div key={t.id} className="border rounded-md p-3 space-y-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-mono">
-                      {t.phone_number}{" "}
-                      <Badge variant="outline" className="ml-2">
-                        {t.status}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {t.verifiers?.full_name} · {t.verifiers?.email}
-                    </div>
-                    {t.notes && <div className="text-xs mt-1">Notes: {t.notes}</div>}
-                    {t.rejection_reason && (
-                      <div className="text-xs text-destructive mt-1">
-                        Rejected: {t.rejection_reason}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    {t.status !== "verified" && (
-                      <Button
-                        size="sm"
-                        onClick={() => setStatus.mutate({ id: t.id, status: "verified" })}
-                      >
-                        Approve
-                      </Button>
-                    )}
-                    {t.status !== "rejected" && (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() =>
-                          setStatus.mutate({
-                            id: t.id,
-                            status: "rejected",
-                            reason: reasonMap[t.id] || "Did not meet requirements",
-                          })
-                        }
-                      >
-                        Reject
-                      </Button>
-                    )}
-                    {t.status === "rejected" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setStatus.mutate({ id: t.id, status: "pending_verification" })
-                        }
-                      >
-                        Reopen
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                {t.status !== "verified" && (
-                  <Input
-                    placeholder="Rejection reason (optional)"
-                    value={reasonMap[t.id] || ""}
-                    onChange={(e) => setReasonMap({ ...reasonMap, [t.id]: e.target.value })}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+  return <SubmissionsReview />;
 }
 
 function SoldTab() {
