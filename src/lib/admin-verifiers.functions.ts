@@ -59,7 +59,7 @@ export const adminListTfns = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let q = supabaseAdmin
       .from("verifier_tfns")
-      .select("id,phone_number,country,status,verifier_id,rejection_reason,sold_to_account_id,sold_at,payout_ngn,commission_ngn,notes,created_at,verifiers(full_name,email)")
+      .select("id,phone_number,country,status,verifier_id,rejection_reason,sold_to_account_id,sold_at,payout_ngn,commission_ngn,notes,created_at,updated_at,submitted_at,in_review_at,verified_at,rejected_at,telnyx_verification_id,verifiers(full_name,email)")
       .order("created_at", { ascending: false });
     if (data.status !== "all") q = q.eq("status", data.status);
     const { data: rows } = await q;
