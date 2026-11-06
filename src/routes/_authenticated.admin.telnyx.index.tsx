@@ -11,6 +11,7 @@ import { Phone, ExternalLink, RefreshCw, TrendingDown, Wallet, AlertTriangle } f
 import {
   getTelnyxSpendOverview,
   getTelnyxLiveBalance,
+  getTwilioLiveBalance,
   getTelnyxTenantSpend,
   sendMmsCorrectionEmail,
   getTelnyxFunding,
@@ -21,8 +22,8 @@ import { toast } from "sonner";
 import { formatUSD } from "@/lib/money";
 import { useEffect, useState } from "react";
 
-export const Route = createFileRoute("/_authenticated/admin/telnyx")({
-  head: () => ({ meta: [{ title: "Admin · Telnyx activity — Xellvio" }] }),
+export const Route = createFileRoute("/_authenticated/admin/telnyx/")({
+  head: () => ({ meta: [{ title: "Carrier activity — Twilio & Telnyx — Xellvio Admin" }, { name: "description", content: "Live Twilio and Telnyx balances and carrier spend." }] }),
   component: AdminTelnyxPage,
 });
 
@@ -42,6 +43,12 @@ function AdminTelnyxPage() {
     queryFn: () => balFn(),
     refetchInterval: 60_000,
   });
+  const twilioFn = useServerFn(getTwilioLiveBalance);
+  const twBal = useQuery({
+    queryKey: ["admin-twilio-live"],
+    queryFn: () => twilioFn(),
+    refetchInterval: 60_000,
+  });
   const accounts = useQuery({ queryKey: ["admin-accounts-lite"], queryFn: () => accountsFn() });
 
   const [tenantId, setTenantId] = useState<string>("");
@@ -55,41 +62,41 @@ function AdminTelnyxPage() {
     <div className="space-y-6 max-w-7xl">
       <div>
         <h1 className="text-2xl font-extrabold flex items-center gap-2">
-          <Phone className="size-6" /> Telnyx activity
+          <Phone className="size-6" /> Carrier activity
         </h1>
         <p className="text-sm text-muted-foreground">
-          Live balance, every dollar spent, and what each campaign cost you at Telnyx.
+          Live balances for both carriers. Twilio sends US &amp; Canada texts; Telnyx sends international texts.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        <Card className="p-5">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">
-            Telnyx balance (live)
-          </div>
-          <div className="text-3xl font-extrabold tabular-nums mt-1">
-            {bal.data?.ok ? formatUSD(Number(bal.data.balance)) : "—"}
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {bal.data?.ok
-              ? `Fetched ${new Date(bal.data.checked_at).toLocaleTimeString()} from Telnyx`
-              : (bal.data?.error ?? "Loading…")}
-          </div>
-          <Button asChild size="sm" variant="outline" className="mt-3">
-            <a
-              href="https://portal.telnyx.com/#/app/billing/transactions"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExternalLink className="size-3.5 mr-1.5" />
-              Open Telnyx billing
-            </a>
-          </Button>
-        </Card>
-        <SpendBox label="Spent last 24h" v={spend.data?.windows.last_24h} />
-        <SpendBox label="Spent last 7 days" v={spend.data?.windows.last_7d} />
+      <div className="grid md:grid-cols-2 gap-4">
+        <BalanceCard
+          name="Twilio"
+          role="US & Canada texts"
+          ok={!!twBal.data?.ok}
+          balance={twBal.data?.ok ? Number(twBal.data.balance) : null}
+          note={twBal.data?.ok ? `Fetched ${new Date(twBal.data.checked_at).toLocaleTimeString()} from Twilio` : (twBal.data?.error ?? "Loading…")}
+          href="https://console.twilio.com/us1/billing/manage-billing/billing-overview"
+        />
+        <BalanceCard
+          name="Telnyx"
+          role="International texts"
+          ok={!!bal.data?.ok}
+          balance={bal.data?.ok ? Number(bal.data.balance) : null}
+          note={bal.data?.ok ? `Fetched ${new Date(bal.data.checked_at).toLocaleTimeString()} from Telnyx` : (bal.data?.error ?? "Loading…")}
+          href="https://portal.telnyx.com/#/app/billing/transactions"
+        />
       </div>
 
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground mb-2">Telnyx spend (international)</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          <SpendBox label="Spent last 24h" v={spend.data?.windows.last_24h} />
+          <SpendBox label="Spent last 7 days" v={spend.data?.windows.last_7d} />
+        </div>
+      </div>
+
+      <h2 className="text-sm font-semibold text-muted-foreground -mb-3">Telnyx funding &amp; usage</h2>
       <FundingPanel />
 
 
@@ -916,6 +923,29 @@ function FundingPanel() {
           </p>
         </div>
       </div>
+    </Card>
+  );
+}
+
+function BalanceCard(props: { name: string; role: string; ok: boolean; balance: number | null; note: string; href: string }) {
+  const low = props.balance !== null && props.balance <= 20;
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">{props.name} balance (live)</div>
+        <Badge variant="outline">{props.role}</Badge>
+      </div>
+      <div className={`text-3xl font-extrabold tabular-nums mt-1 ${low ? "text-destructive" : ""}`}>
+        {props.balance !== null ? formatUSD(props.balance) : "—"}
+      </div>
+      <div className="text-xs text-muted-foreground mt-1">{props.note}</div>
+      {low && <div className="text-xs text-destructive mt-1 flex items-center gap-1"><AlertTriangle className="size-3" /> Low balance — top up to keep sending.</div>}
+      <Button asChild size="sm" variant="outline" className="mt-3">
+        <a href={props.href} target="_blank" rel="noreferrer">
+          <ExternalLink className="size-3.5 mr-1.5" />
+          Open {props.name} billing
+        </a>
+      </Button>
     </Card>
   );
 }

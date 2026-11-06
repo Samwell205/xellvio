@@ -385,6 +385,15 @@ export const getTelnyxLiveBalance = createServerFn({ method: "GET" })
     return { ...bal, checked_at: new Date().toISOString() };
   });
 
+export const getTwilioLiveBalance = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context);
+    const { fetchTwilioAccountBalance } = await import("./twilio-account-balance.server");
+    const bal = await fetchTwilioAccountBalance();
+    return { ...bal, checked_at: new Date().toISOString() };
+  });
+
 /**
  * Admin: everything needed by the "Fund the carrier account" panel — the live
  * balance plus the current automatic top-up preferences. No card details ever
