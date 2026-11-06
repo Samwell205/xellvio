@@ -29,7 +29,6 @@ const groups: { label: string; items: Item[] }[] = [
   ] },
   { label: "Tenants & numbers", items: [
     { title: "User management", url: "/admin/users", icon: UserCog },
-    { title: "Number requests", url: "/admin/number-requests", icon: PhoneCall },
     { title: "Tenant senders", url: "/admin/senders", icon: Radio },
     { title: "API access", url: "/admin/api-access", icon: KeyRound },
     { title: "Receptionist pilot", url: "/admin/receptionist", icon: Bot },
