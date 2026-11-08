@@ -87,6 +87,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useCanViewCosts } from "@/hooks/useCanViewCosts";
 import { formatUSD } from "@/lib/money";
+import { fetchCampaignCharge } from "@/lib/campaign-charges";
 
 const CARRIER_NOTICE_EMAIL_LABELS: Record<string, string> = {
   pending: "waiting to send",
@@ -232,6 +233,12 @@ function CampaignReport() {
       if (error) throw error;
       return data as any;
     },
+  });
+
+  const chargeQ = useQuery({
+    queryKey: ["campaign-charge", id],
+    refetchInterval: poll(20_000),
+    queryFn: () => fetchCampaignCharge(supabase, id),
   });
 
   const progress = useMemo(() => {
@@ -620,7 +627,8 @@ function CampaignReport() {
       ? linkStats.clickedLinks
       : Math.min(clicked, Math.max(delivered, clicked));
 
-    const totalCost = Number(s?.billed_cost ?? 0);
+    // Wallet ledger is authoritative: it matches what left the balance, net of refunds.
+    const totalCost = chargeQ.data?.hasLedger ? chargeQ.data.net : Number(s?.billed_cost ?? 0);
     const reservedCost = Number(s?.reserved_cost ?? 0);
     const totalSegments = Number(s?.segments ?? 0);
     const deliveryRate = sent > 0 ? (delivered / sent) * 100 : 0;
@@ -714,7 +722,7 @@ function CampaignReport() {
       failures: failures?.byReason ?? {},
       series,
     };
-  }, [summaryQ.data, progress, failures, seriesQ.data, eventsQ.data, clicksQ.data, eligibleQ.data]);
+  }, [summaryQ.data, chargeQ.data, progress, failures, seriesQ.data, eventsQ.data, clicksQ.data, eligibleQ.data]);
 
   if (!campaignQ.data) return <div className="text-muted-foreground">Loading campaign…</div>;
   const c = campaignQ.data;
