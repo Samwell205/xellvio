@@ -186,6 +186,11 @@ export const getCampaignReport = createServerFn({ method: "POST" })
     }
 
     totals.cost = +totals.cost.toFixed(4);
+    {
+      const { fetchCampaignCharge } = await import("./campaign-charges");
+      const charge = await fetchCampaignCharge(supabase, data.campaignId);
+      if (charge.hasLedger) totals.cost = charge.net;
+    }
     totals.reserved_cost = +totals.reserved_cost.toFixed(4);
     totals.delivery_rate = totals.sent > 0 ? +((totals.delivered / totals.sent) * 100).toFixed(1) : 0;
     totals.is_mms = totals.mms_count > 0;
