@@ -46,7 +46,7 @@ async function report(messages: Record<string, unknown>[]) {
   })).totals;
 }
 
-const priced = { status: "delivered", country_code: "US", cost: 0.0165, segments_count: 1, provider_message_id: "SMpriced", carrier_price: 0.0083 };
+const priced = { status: "delivered", country_code: "US", cost: 0.0165, charged_amount: 0.0165, charged_at: "2026-11-07T22:00:00Z", segments_count: 1, provider_message_id: "SMpriced", carrier_price: 0.0083 };
 
 describe("campaign report price coverage", () => {
   it("does not claim actual profit when a non-Twilio message has no price", async () => {
@@ -61,10 +61,11 @@ describe("campaign report price coverage", () => {
     expect(totals.actual_margin).toBeNull();
     expect(totals.price_pending_count).toBe(1);
   });
-  it("returns actual margin when every submitted message has a recorded price", async () => {
+  it("keeps margin estimated even with complete prices because fees are estimated", async () => {
     const totals = await report([priced]);
     expect(totals.twilio_total).toBe(0.0103);
-    expect(totals.actual_margin).toBe(0.0062);
+    expect(totals.actual_margin).toBeNull();
+    expect(totals.recorded_price_margin_estimate).toBe(0.0062);
     expect(totals.price_pending_count).toBe(0);
   });
   it("queued recipients are not billed or missing submitted-message prices", async () => {
@@ -72,7 +73,19 @@ describe("campaign report price coverage", () => {
     expect(totals.cost).toBe(0.0165);
     expect(totals.carrier_cost).toBe(0.011);
     expect(totals.reserved_cost).toBe(0.048);
-    expect(totals.actual_margin).toBe(0.0062);
+    expect(totals.recorded_price_margin_estimate).toBe(0.0062);
     expect(totals.price_pending_count).toBe(0);
+  });
+  it("includes the actual $0.7545 debit for 39 no-submission recipients without estimating a carrier charge", async () => {
+    const totals = await report([{ status: "failed", cost: 0.7545, charged_amount: 0.7545, charged_at: "2026-11-07T22:00:00Z", segments_count: 39, country_code: "US" }]);
+    expect(totals.cost).toBe(0.7545);
+    expect(totals.charged_without_submission).toBe(0.7545);
+    expect(totals.carrier_cost).toBe(0);
+    expect(totals.actual_margin).toBeNull();
+  });
+  it("includes carrier-submitted failures in costs rather than assuming failures are free", async () => {
+    const totals = await report([{ ...priced, status: "failed" }]);
+    expect(totals.cost).toBe(0.0165);
+    expect(totals.carrier_cost).toBe(0.011);
   });
 });
