@@ -92,9 +92,14 @@ export async function recoverCampaignPricePage(db: any, campaignId: string, afte
   const ids = messages.map((m: any) => m.sid).filter((v: unknown) => typeof v === "string");
   let priced = 0;
   if (ids.length) {
-    const { data: matches, error: matchError } = await db.from("messages").select("id,provider_message_id")
-      .eq("campaign_id", campaignId).in("provider_message_id", ids).is("carrier_price", null).limit(1000);
-    if (matchError) throw new Error(matchError.message);
+    const matches: any[] = [];
+    // Keep the encoded URL bounded: 1,000 message IDs exceed HTTP URL limits.
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const { data: chunk, error: matchError } = await db.from("messages").select("id,provider_message_id")
+        .eq("campaign_id", campaignId).in("provider_message_id", ids.slice(offset, offset + 100)).is("carrier_price", null).limit(100);
+      if (matchError) throw new Error(matchError.message);
+      matches.push(...(chunk ?? []));
+    }
     const bySid = new Map(messages.map((m: any) => [m.sid, m]));
     const patches = (matches ?? []).map((m: any) => verifiedPricePatch(m, bySid.get(m.provider_message_id) as any)).filter(Boolean);
     if (patches.length) {
