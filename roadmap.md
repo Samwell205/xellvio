@@ -12,6 +12,7 @@
 - [x] Confirmed and removed global region blocking inferred from individual rejections; legacy block settings are no longer read or written
 - [x] Restored all-route estimated cost/margin, separated recorded prices, and made recorded-price margin unavailable when any submitted price is missing; exports are labeled estimates
 - [x] 31 regressions and build passed; populated signed-in campaign report checked on desktop/phone without sending, retrying, or charging; publish required for deployment
+- [x] Flagged contacts now build planning rows through campaign-plan-rows.ts with every queued-row column (is_mms included), so one flagged contact can no longer reject the whole planning batch; 3 new regressions plus 117 sending/screening tests and build passed; publish required
 
 ## Owner-supplied email designs
 - [x] Install 52 supplied designs with hosted logos and escaped React personalization
