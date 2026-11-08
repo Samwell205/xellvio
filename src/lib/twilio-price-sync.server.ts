@@ -69,12 +69,10 @@ export async function syncTwilioPrices(db: any, opts: { limit?: number; budgetMs
 
 /** Campaign-scoped bulk lookup: list pages only, never submits SMS or changes wallets. */
 export async function recoverCampaignPricePage(db: any, campaignId: string, after?: string, pageToken?: string) {
-  const { data: rows, error } = await db.from("messages")
-    .select("id,provider_message_id,sender_used,sent_at")
-    .eq("campaign_id", campaignId).ilike("provider_message_id", "SM%")
-    .order("id", { ascending: true }).limit(1).gt("id", after ?? "00000000-0000-0000-0000-000000000000");
+  const { data: groups, error } = await db.rpc("campaign_carrier_price_groups", { _campaign_id: campaignId });
   if (error) throw new Error(error.message);
-  const row = rows?.[0];
+  const index = Number(after ?? 0);
+  const row = groups?.[index];
   if (!row) return { checked: 0, priced: 0, done: true, after: null, pageToken: null };
   const { data: line } = await db.from("tenant_twilio_lines").select("subaccount_sid").eq("phone_number", row.sender_used).limit(1).maybeSingle();
   const sid = line?.subaccount_sid;
@@ -82,7 +80,7 @@ export async function recoverCampaignPricePage(db: any, campaignId: string, afte
   const { lineTokenFor } = await import("./twilio-lines.server");
   const token = await lineTokenFor(sid);
   if (!token) throw new Error("The sending number's price connection is unavailable.");
-  const day = String(row.sent_at).slice(0, 10);
+  const day = row.sent_day;
   const params = new URLSearchParams({ From: row.sender_used, DateSent: day, PageSize: "1000" });
   if (pageToken) params.set("PageToken", pageToken);
   const res = await fetch(`${API}/Accounts/${sid}/Messages.json?${params}`, {
@@ -107,9 +105,5 @@ export async function recoverCampaignPricePage(db: any, campaignId: string, afte
   }
   const nextToken = result.next_page_uri ? new URL(result.next_page_uri, "https://api.twilio.com").searchParams.get("PageToken") : null;
   if (nextToken) return { checked: messages.length, priced, done: false, after: after ?? null, pageToken: nextToken };
-  // Advance past every campaign row from this sender/day, then process another group.
-  const { data: end } = await db.from("messages").select("id").eq("campaign_id", campaignId)
-    .eq("sender_used", row.sender_used).gte("sent_at", `${day}T00:00:00Z`).lt("sent_at", `${day}T23:59:59.999999Z`)
-    .ilike("provider_message_id", "SM%").order("id", { ascending: false }).limit(1).maybeSingle();
-  return { checked: messages.length, priced, done: false, after: end?.id ?? row.id, pageToken: null };
+  return { checked: messages.length, priced, done: index + 1 >= groups.length, after: String(index + 1), pageToken: null };
 }
