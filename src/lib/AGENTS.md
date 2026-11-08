@@ -16,3 +16,4 @@
 - Individual destination/sender rejections never infer regional blocks: dispatch ignores legacy global geo blocks because one request cannot prove another account's permissions.
 - Campaign accounting uses recorded tenant debits independently of delivery status; carrier recovery is lookup-only, campaign/SID-matched, USD-only and service-scoped. Message prices exclude reconciled surcharges, so confirmed profit stays unavailable.
 - Screen personalized recipients during planning before paid claims; preserve the send-time safety backstop and never automatically refund historical charges.
+- Tenant campaign "Charged/Spend" totals come from campaign-charges.ts (wallet debits minus refunds) so campaign screens always match the balance change.
