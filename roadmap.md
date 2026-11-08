@@ -1,9 +1,9 @@
 # Roadmap
 
 ## Current monitoring corrections
-- [ ] Verify and remove any cross-customer destination blocking inferred from individual rejections
-- [ ] Verify and correct mixed-carrier campaign cost/profit reporting
-- [ ] Run focused regressions and check the signed-in campaign report without sending or charging
+- [x] Confirmed and removed global region blocking inferred from individual rejections; legacy block settings are no longer read or written
+- [x] Restored all-route estimated cost/margin, separated recorded prices, and made recorded-price margin unavailable when any submitted price is missing; exports are labeled estimates
+- [x] 31 regressions and build passed; populated signed-in campaign report checked on desktop/phone without sending, retrying, or charging; publish required for deployment
 
 ## Owner-supplied email designs
 - [x] Install 52 supplied designs with hosted logos and escaped React personalization
