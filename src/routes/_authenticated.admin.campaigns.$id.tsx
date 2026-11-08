@@ -202,8 +202,8 @@ function AdminCampaignReportPage() {
         "delivered",
         "failed",
         "tenant_spend_usd",
-        "telnyx_cost_usd",
-        "margin_usd",
+        "estimated_carrier_cost_usd",
+        "estimated_margin_usd",
       ],
       r.byCountry.map((row) => [
         row.country_code,
@@ -233,8 +233,8 @@ function AdminCampaignReportPage() {
             ["Failed", t.failed.toLocaleString()],
             ["Charged to tenant", formatUSD(t.cost)],
             ["Not yet sent (estimate)", formatUSD(Number(t.reserved_cost ?? 0))],
-            ["Telnyx (MDR) cost", formatUSD(t.carrier_cost)],
-            ["Profit / margin", formatUSD(t.margin)],
+            ["Carrier cost (estimate)", formatUSD(t.carrier_cost)],
+            ["Margin (estimate)", formatUSD(t.margin)],
             ["Recorded send attempts", Number(r.attemptAudit?.total ?? 0).toLocaleString()],
             ["Approved retries", Number(r.attemptAudit?.retries ?? 0).toLocaleString()],
             ["Retry charges", formatUSD(Number(r.attemptAudit?.retry_charged ?? 0))],
@@ -250,8 +250,8 @@ function AdminCampaignReportPage() {
             "Delivered",
             "Failed",
             "Tenant $",
-            "Telnyx $",
-            "Margin",
+            "Est. carrier $",
+            "Est. margin",
           ],
           rows: r.byCountry.map((row) => [
             row.country_code,
@@ -390,15 +390,28 @@ function AdminCampaignReportPage() {
           }
         />
         <Stat
-          label="Total Twilio charged"
-          value={formatUSD(Number((t as any).twilio_total ?? 0))}
-          hint={`${formatUSD(Number((t as any).actual_carrier_cost ?? 0))} Twilio price + ${formatUSD(Number((t as any).carrier_fees ?? 0))} carrier fees${Number((t as any).price_pending_count ?? 0) > 0 ? ` · ${Number((t as any).price_pending_count).toLocaleString()} texts still pricing` : ""}`}
+          label="Carrier cost (estimate)"
+          value={formatUSD(t.carrier_cost)}
+          hint="Rate-based estimate across all sending routes"
         />
         <Stat
-          label="Your profit"
-          value={formatUSD(Number((t as any).actual_margin ?? 0))}
-          tone={Number((t as any).actual_margin ?? 0) >= 0 ? "ok" : "bad"}
-          hint="Tenant charge minus total Twilio charge"
+          label="Margin (estimate)"
+          value={formatUSD(t.margin)}
+          tone={t.margin >= 0 ? "ok" : "bad"}
+          hint="Tenant charge minus estimated carrier cost"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Stat
+          label="Recorded carrier prices + estimated fees"
+          value={formatUSD(t.twilio_total)}
+          hint={`${t.priced_count.toLocaleString()} priced messages · ${t.price_pending_count.toLocaleString()} submitted messages without a price`}
+        />
+        <Stat
+          label="Margin from recorded prices"
+          value={t.actual_margin === null ? "Unavailable" : formatUSD(t.actual_margin)}
+          hint={t.actual_margin === null ? "Incomplete carrier prices; use the estimate above" : "Recorded prices plus estimated carrier fees"}
         />
       </div>
 
@@ -436,7 +449,7 @@ function AdminCampaignReportPage() {
             </div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">Retry margin</div>
+            <div className="text-xs text-muted-foreground">Retry margin (estimate)</div>
             <div className="text-lg font-semibold">
               {formatUSD(
                 Number(r.attemptAudit?.retry_charged ?? 0) -
@@ -459,8 +472,8 @@ function AdminCampaignReportPage() {
                 <th className="p-3 text-right">Delivered</th>
                 <th className="p-3 text-right">Failed</th>
                 <th className="p-3 text-right">Tenant spend</th>
-                <th className="p-3 text-right">Carrier cost</th>
-                <th className="p-3 text-right">Margin</th>
+                <th className="p-3 text-right">Est. carrier cost</th>
+                <th className="p-3 text-right">Est. margin</th>
               </tr>
             </thead>
             <tbody>
