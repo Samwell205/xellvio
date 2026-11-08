@@ -1,5 +1,10 @@
 # Roadmap
 
+## Current monitoring corrections
+- [ ] Verify and remove any cross-customer destination blocking inferred from individual rejections
+- [ ] Verify and correct mixed-carrier campaign cost/profit reporting
+- [ ] Run focused regressions and check the signed-in campaign report without sending or charging
+
 ## Owner-supplied email designs
 - [x] Install 52 supplied designs with hosted logos and escaped React personalization
 - [x] Apply designs to existing auth, support, lifecycle, verification, billing and campaign-alert email flows without changing sending rules; generic notices retain complete event-owned copy
