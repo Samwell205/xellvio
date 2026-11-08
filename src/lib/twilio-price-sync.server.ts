@@ -2,13 +2,19 @@
 // campaign reports show real carrier cost. Read-only lookup: never resends,
 // never changes tenant balances.
 const API = "https://api.twilio.com/2010-04-01";
-const FINAL = ["delivered", "undelivered", "failed", "delivery_unconfirmed"];
+const FINAL = ["sent", "accepted", "delivered", "undelivered", "failed", "delivery_unconfirmed"];
 
 /** Twilio reports price as a negative string (e.g. "-0.00830"); returns the positive cost or null. */
 export function parseTwilioPrice(price: unknown): number | null {
   if (price === null || price === undefined || price === "") return null;
   const n = Number(price);
   return Number.isFinite(n) ? Math.abs(n) : null;
+}
+
+export function verifiedPricePatch(row: { id: string; provider_message_id: string }, message: { sid?: string; price?: unknown; price_unit?: string }) {
+  const price = parseTwilioPrice(message.price);
+  if (message.sid !== row.provider_message_id || message.price_unit?.toUpperCase() !== "USD" || price === null) return null;
+  return { id: row.id, provider_message_id: row.provider_message_id, carrier_price: price };
 }
 
 export async function syncTwilioPrices(db: any, opts: { limit?: number; budgetMs?: number } = {}) {
@@ -19,8 +25,8 @@ export async function syncTwilioPrices(db: any, opts: { limit?: number; budgetMs
 
   const { data, error } = await db.from("messages")
     .select("id,provider_message_id,sender_used,status,sent_at")
-    .is("carrier_price_checked_at", null).ilike("provider_message_id", "SM%")
-    .in("status", FINAL).order("id", { ascending: true }).limit(opts.limit ?? 600);
+    .is("carrier_price", null).ilike("provider_message_id", "SM%")
+    .in("status", FINAL).order("carrier_price_checked_at", { ascending: true, nullsFirst: true }).order("id", { ascending: true }).limit(opts.limit ?? 600);
   if (error) throw new Error(error.message);
   const rows = (data ?? []) as any[];
 
@@ -33,26 +39,76 @@ export async function syncTwilioPrices(db: any, opts: { limit?: number; budgetMs
   }
 
   const deadline = Date.now() + (opts.budgetMs ?? 25_000);
+  const { lineTokenFor } = await import("./twilio-lines.server");
+  const tokens = new Map<string, string>();
+  await Promise.all([...new Set(subBySender.values())].map(async (sid) => {
+    const token = await lineTokenFor(sid);
+    if (token) tokens.set(sid, `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`);
+  }));
   let checked = 0, priced = 0, errors = 0;
-  for (let i = 0; i < rows.length && Date.now() < deadline; i += 10) {
-    await Promise.all(rows.slice(i, i + 10).map(async (row) => {
+  for (let i = 0; i < rows.length && Date.now() < deadline; i += 6) {
+    await Promise.all(rows.slice(i, i + 6).map(async (row) => {
       checked++;
       try {
         const sid = subBySender.get(row.sender_used) ?? parentSid;
-        const res = await fetch(`${API}/Accounts/${sid}/Messages/${row.provider_message_id}.json`, { headers: { Authorization: auth }, signal: AbortSignal.timeout(8000) });
-        const ageH = row.sent_at ? (Date.now() - new Date(row.sent_at).getTime()) / 3_600_000 : 999;
+        const res = await fetch(`${API}/Accounts/${sid}/Messages/${row.provider_message_id}.json`, { headers: { Authorization: tokens.get(sid) ?? auth }, signal: AbortSignal.timeout(8000) });
         if (!res.ok) {
           errors++;
-          // Give up on unreadable messages after 3 days so the queue keeps moving.
-          if (res.status === 404 || ageH > 72) await db.from("messages").update({ carrier_price_checked_at: new Date().toISOString() }).eq("id", row.id);
+          await db.from("messages").update({ carrier_price_checked_at: new Date().toISOString() }).eq("id", row.id);
           return;
         }
-        const price = parseTwilioPrice((await res.json())?.price);
-        if (price === null && ageH < 72) return; // Twilio hasn't priced it yet
-        await db.from("messages").update({ carrier_price: price, carrier_price_checked_at: new Date().toISOString() }).eq("id", row.id);
-        if (price !== null) priced++;
+        const patch = verifiedPricePatch(row, await res.json());
+        const { error: updateError } = await db.from("messages").update({ ...(patch ? { carrier_price: patch.carrier_price } : {}), carrier_price_checked_at: new Date().toISOString() }).eq("id", row.id).eq("provider_message_id", row.provider_message_id);
+        if (updateError) throw new Error(updateError.message);
+        if (patch) priced++;
       } catch { errors++; }
     }));
   }
   return { checked, priced, errors };
+}
+
+/** Campaign-scoped bulk lookup: list pages only, never submits SMS or changes wallets. */
+export async function recoverCampaignPricePage(db: any, campaignId: string, after?: string, pageToken?: string) {
+  const { data: groups, error } = await db.rpc("campaign_carrier_price_groups", { _campaign_id: campaignId });
+  if (error) throw new Error(error.message);
+  const index = Number(after ?? 0);
+  const row = groups?.[index];
+  if (!row) return { checked: 0, priced: 0, done: true, after: null, pageToken: null };
+  const { data: line } = await db.from("tenant_twilio_lines").select("subaccount_sid").eq("phone_number", row.sender_used).limit(1).maybeSingle();
+  const sid = line?.subaccount_sid;
+  if (!sid) throw new Error("The sending number's price connection is unavailable.");
+  const { lineTokenFor } = await import("./twilio-lines.server");
+  const token = await lineTokenFor(sid);
+  if (!token) throw new Error("The sending number's price connection is unavailable.");
+  const day = row.sent_day;
+  const params = new URLSearchParams({ From: row.sender_used, DateSent: day, PageSize: "1000" });
+  if (pageToken) params.set("PageToken", pageToken);
+  const res = await fetch(`${API}/Accounts/${sid}/Messages.json?${params}`, {
+    headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}` }, signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) throw new Error(`Message price lookup unavailable (${res.status}).`);
+  const result = await res.json();
+  const messages = Array.isArray(result.messages) ? result.messages : [];
+  const ids = messages.map((m: any) => m.sid).filter((v: unknown) => typeof v === "string");
+  let priced = 0;
+  if (ids.length) {
+    const matches: any[] = [];
+    // Keep the encoded URL bounded: 1,000 message IDs exceed HTTP URL limits.
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      const { data: chunk, error: matchError } = await db.from("messages").select("id,provider_message_id")
+        .eq("campaign_id", campaignId).in("provider_message_id", ids.slice(offset, offset + 100)).is("carrier_price", null).limit(100);
+      if (matchError) throw new Error(matchError.message);
+      matches.push(...(chunk ?? []));
+    }
+    const bySid = new Map(messages.map((m: any) => [m.sid, m]));
+    const patches = (matches ?? []).map((m: any) => verifiedPricePatch(m, bySid.get(m.provider_message_id) as any)).filter(Boolean);
+    if (patches.length) {
+      const { data: count, error: saveError } = await db.rpc("record_campaign_carrier_prices", { _campaign_id: campaignId, _rows: patches });
+      if (saveError) throw new Error(saveError.message);
+      priced = Number(count ?? 0);
+    }
+  }
+  const nextToken = result.next_page_uri ? new URL(result.next_page_uri, "https://api.twilio.com").searchParams.get("PageToken") : null;
+  if (nextToken) return { checked: messages.length, priced, done: false, after: after ?? null, pageToken: nextToken };
+  return { checked: messages.length, priced, done: index + 1 >= groups.length, after: String(index + 1), pageToken: null };
 }

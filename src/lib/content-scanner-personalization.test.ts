@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { isPersonalizationOnlyBlock } from "./content-scanner";
+import { isPersonalizationOnlyBlock, personalizationPlanningPatch } from "./content-scanner";
 
 describe("personalization-only keyword hits", () => {
+  it("excludes restricted personalisation from paid queued claims", () => {
+    expect(personalizationPlanningPatch("{{first_name}}: Hi STOP", "Concealed Carry Handgun Training: Hi STOP")?.status).toBe("skipped");
+    expect(personalizationPlanningPatch("{{first_name}}: Hi STOP", "Sam: Hi STOP")).toBeNull();
+  });
   it("skips only the recipient whose name contains restricted wording", () => {
     expect(isPersonalizationOnlyBlock(
       "{{first_name}}: Your order update is ready. STOP",

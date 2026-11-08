@@ -14,3 +14,5 @@
 - Dispatch holds all sending (recipients stay queued, never failed) when the funded carrier balance is at/below the buffer or a recent send hit 30002/20003, via carrier-funds-guard.ts; protects carrier health score.
 - Actual Twilio price per message comes from twilio-price-sync.server.ts (lookup-only, run inside the reconcile cron slice); report it beside the country_rates estimate, never replace tenant charges with it.
 - Individual destination/sender rejections never infer regional blocks: dispatch ignores legacy global geo blocks because one request cannot prove another account's permissions.
+- Campaign accounting uses recorded tenant debits independently of delivery status; carrier recovery is lookup-only, campaign/SID-matched, USD-only and service-scoped. Message prices exclude reconciled surcharges, so confirmed profit stays unavailable.
+- Screen personalized recipients during planning before paid claims; preserve the send-time safety backstop and never automatically refund historical charges.

@@ -138,7 +138,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       return out;
     };
     const [rows, attemptRows] = await Promise.all([
-      fetchRows("messages", "id,phone_e164,country_code,status,cost,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id,is_mms,carrier_price,carrier_price_checked_at"),
+      fetchRows("messages", "id,phone_e164,country_code,status,cost,charged_at,charged_amount,segments_count,sender_kind,error_code,failure_reason,sent_at,delivered_at,created_at,provider_message_id,is_mms,carrier_price,carrier_price_checked_at"),
       fetchRows("message_send_attempts", "attempt_number,authorization_source,tenant_charge,estimated_carrier_cost,provider_status,reserved_at,sent_at,finalized_at,created_at"),
     ]);
 
@@ -167,6 +167,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       price_pending_count: 0,
       carrier_fees: 0,
       twilio_total: 0,
+      charged_without_submission: 0,
+      charged_without_submission_count: 0,
     };
     const byCC = new Map<string, { recipients: number; delivered: number; unconfirmed: number; failed: number; segments: number; cost: number; reserved_cost: number; carrier_cost: number; mms_count: number }>();
     // A recipient row only costs the tenant money once it has actually been handed
@@ -184,13 +186,15 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       const mmsMult = r.is_mms ? (mmsMultByCc.get(cc) ?? 3) : 1;
       const carrier = (costByCc.get(cc) ?? 0) * seg * mmsMult;
       const billed = BILLED.has(r.status);
+      const submitted = !!r.provider_message_id || billed;
+      const tenantDebit = r.charged_at ? Number(r.charged_amount ?? r.cost ?? 0) : billed ? Number(r.cost ?? 0) : 0;
       const pending = PENDING.has(r.status);
       const cur = byCC.get(cc) ?? { recipients: 0, delivered: 0, unconfirmed: 0, failed: 0, segments: 0, cost: 0, reserved_cost: 0, carrier_cost: 0, mms_count: 0 };
       cur.recipients += 1;
       cur.segments += seg;
-      if (billed) cur.cost += Number(r.cost ?? 0);
-      if (pending) cur.reserved_cost += Number(r.cost ?? 0);
-      if (billed) cur.carrier_cost += carrier;
+      cur.cost += tenantDebit;
+      if (pending && !r.charged_at) cur.reserved_cost += Number(r.cost ?? 0);
+      if (submitted) cur.carrier_cost += carrier;
       if (r.is_mms) { cur.mms_count += 1; mmsCount += 1; }
       if (r.status === "delivered") cur.delivered += 1;
       if (r.status === "delivery_unconfirmed") cur.unconfirmed += 1;
@@ -206,9 +210,13 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         byKind.set(r.sender_kind, k);
       }
 
-      if (billed) totals.cost += Number(r.cost ?? 0);
-      if (pending) totals.reserved_cost += Number(r.cost ?? 0);
-      if (billed) totals.carrier_cost += carrier;
+      totals.cost += tenantDebit;
+      if (pending && !r.charged_at) totals.reserved_cost += Number(r.cost ?? 0);
+      if (submitted) totals.carrier_cost += carrier;
+      if (tenantDebit > 0 && !submitted) {
+        totals.charged_without_submission += tenantDebit;
+        totals.charged_without_submission_count++;
+      }
       const hasCarrierPrice = r.carrier_price !== null && r.carrier_price !== undefined && Number.isFinite(Number(r.carrier_price));
       if (hasCarrierPrice) {
         totals.actual_carrier_cost += Number(r.carrier_price);
@@ -251,6 +259,7 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
     }
 
     totals.cost = +totals.cost.toFixed(4);
+    totals.charged_without_submission = +totals.charged_without_submission.toFixed(4);
     totals.reserved_cost = +totals.reserved_cost.toFixed(4);
     totals.carrier_cost = +totals.carrier_cost.toFixed(4);
     totals.actual_carrier_cost = +totals.actual_carrier_cost.toFixed(4);
@@ -325,7 +334,8 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         mms_count: mmsCount,
         is_mms: mmsCount > 0,
         margin: +(totals.cost - totals.carrier_cost).toFixed(4),
-        actual_margin: totals.price_pending_count === 0
+        actual_margin: null,
+        recorded_price_margin_estimate: totals.price_pending_count === 0 && totals.charged_without_submission_count === 0
           ? +(totals.cost - totals.actual_carrier_cost - totals.carrier_fees).toFixed(4)
           : null,
       },

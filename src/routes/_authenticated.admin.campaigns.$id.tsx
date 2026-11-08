@@ -94,7 +94,7 @@ function CampaignPauseStatus({ campaign, account, onDone }: {
 }
 import { formatUSD } from "@/lib/money";
 import { downloadCsv, downloadPdf } from "@/lib/report-export";
-import { adminRecoverCampaignReceipts } from "@/lib/reconcile-messages.functions";
+import { adminRecoverCampaignReceipts, adminRecoverCampaignPrices } from "@/lib/reconcile-messages.functions";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -135,6 +135,9 @@ function AdminCampaignReportPage() {
   const { id } = Route.useParams();
   const fn = useServerFn(adminGetCampaignReport);
   const recover = useServerFn(adminRecoverCampaignReceipts);
+  const recoverPrices = useServerFn(adminRecoverCampaignPrices);
+  const [pricing, setPricing] = useState(false);
+  const [pricesRecovered, setPricesRecovered] = useState(0);
   const [recovering, setRecovering] = useState(false);
   const [recoveryProgress, setRecoveryProgress] = useState(0);
   const q = useQuery({
@@ -190,6 +193,25 @@ function AdminCampaignReportPage() {
       if (errors) toast.warning(`${errors.toLocaleString()} lookups remain unavailable. Run recovery again later.`);
     } catch { toast.error('Receipt recovery stopped. Saved results are retained; you can retry.'); }
     finally { setRecovering(false); await q.refetch(); }
+  }
+
+  async function recoverPriceRecords() {
+    setPricing(true);
+    setPricesRecovered(0);
+    let after: string | undefined, pageToken: string | undefined;
+    let priced = 0;
+    try {
+      for (let page = 0; page < 1000; page++) {
+        const result = await recoverPrices({ data: { campaignId: id, after, pageToken } });
+        priced += result.priced;
+        setPricesRecovered(priced);
+        if (result.done) break;
+        after = result.after ?? undefined;
+        pageToken = result.pageToken ?? undefined;
+      }
+      toast.success(`Recovered ${priced.toLocaleString()} message prices. No texts resent or charges changed.`);
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Price recovery stopped; saved prices are retained."); }
+    finally { setPricing(false); await q.refetch(); }
   }
 
   function exportCsv() {
@@ -299,6 +321,10 @@ function AdminCampaignReportPage() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" disabled={pricing} onClick={recoverPriceRecords}>
+            <Loader2 className={`size-4 mr-1 ${pricing ? 'animate-spin' : ''}`} />
+            {pricing ? `Recovered ${pricesRecovered.toLocaleString()}…` : 'Recover prices'}
+          </Button>
           <Button variant="outline" size="sm" disabled={recovering} onClick={recoverReceipts}>
             <Loader2 className={`size-4 mr-1 ${recovering ? 'animate-spin' : ''}`} />
             {recovering ? `Checking ${recoveryProgress.toLocaleString()}…` : 'Recover receipts'}
@@ -404,16 +430,23 @@ function AdminCampaignReportPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <Stat
-          label="Recorded carrier prices + estimated fees"
-          value={formatUSD(t.twilio_total)}
-          hint={`${t.priced_count.toLocaleString()} priced messages · ${t.price_pending_count.toLocaleString()} submitted messages without a price`}
+          label={t.price_pending_count > 0 ? "Partial recorded message prices" : "Recorded message prices"}
+          value={formatUSD(t.actual_carrier_cost)}
+          hint={`${t.priced_count.toLocaleString()} priced · ${t.price_pending_count.toLocaleString()} missing. Carrier surcharges excluded.`}
         />
         <Stat
-          label="Margin from recorded prices"
-          value={t.actual_margin === null ? "Unavailable" : formatUSD(t.actual_margin)}
-          hint={t.actual_margin === null ? "Incomplete carrier prices; use the estimate above" : "Recorded prices plus estimated carrier fees"}
+          label="Confirmed campaign profit"
+          value="Unavailable"
+          hint="Message prices do not include reconciled carrier surcharges. Estimates are not confirmed profit."
         />
       </div>
+
+      {t.charged_without_submission_count > 0 && (
+        <div role="status" className="border-l-4 border-destructive pl-4 py-2 text-sm">
+          <strong>{formatUSD(t.charged_without_submission)} charged across {t.charged_without_submission_count.toLocaleString()} recipients without a recorded submission.</strong>
+          <p className="text-muted-foreground">Included in tenant charges; requires accounting review. No refund or resend has been applied.</p>
+        </div>
+      )}
 
       {(r as any).clicks?.links > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -571,16 +604,7 @@ function AdminCampaignReportPage() {
         </Card>
       )}
 
-      <Card className="p-4 text-xs text-muted-foreground">
-        <div className="font-semibold text-foreground mb-1">Where to see this on Telnyx</div>
-        Log into the Telnyx portal →{" "}
-        <span className="font-medium">Reporting → Messaging Detail Records (MDR)</span>. Filter by
-        date range around{" "}
-        <span className="font-medium">{new Date(c.created_at).toLocaleString()}</span> and by the
-        messaging profile used for this tenant. Telnyx MDRs show carrier price per message;
-        Xellvio&apos;s "Carrier cost" column above is calculated from your configured country rates
-        and matches what Telnyx bills.
-      </Card>
+      <div className="text-xs text-muted-foreground">Account balance changes can also include other campaigns, inbound messages and number fees. They are not this campaign's confirmed cost.</div>
     </div>
   );
 }

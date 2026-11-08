@@ -330,6 +330,13 @@
       "when": 1793905347089,
       "tag": "0046_faster_receipt_sweep",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794118672332,
+      "tag": "0047_campaign_carrier_price_recovery",
+      "breakpoints": true
     }
   ]
 }

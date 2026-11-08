@@ -284,3 +284,10 @@ export function isPersonalizationOnlyBlock(template: string, rendered: string): 
   const r = keywordScan(rendered);
   return r.confidence === "keyword" && !r.allowed;
 }
+
+/** Planning must discard blocked personalization before a paid claim exists. */
+export function personalizationPlanningPatch(template: string, rendered: string) {
+  return isPersonalizationOnlyBlock(template, rendered)
+    ? { status: "skipped", error_code: "personalization_flagged", failure_reason: "Skipped before charging: this contact's saved details contain restricted wording. Edit the contact and retry." }
+    : null;
+}

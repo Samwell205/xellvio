@@ -1,5 +1,13 @@
 # Roadmap
 
+## Campaign accounting reconciliation
+- [x] Campaign report uses actual tenant debits ($324.0495), includes submitted failures, labels estimates and partial prices, and never claims confirmed profit from estimated surcharges
+- [x] Recovered all 19,349 submitted campaign message prices ($162.7552, excluding surcharges); lookup-only recovery available for other campaigns, no resend or wallet changes
+- [x] Identified 31 post-claim personalization blocks ($0.5115) and eight carrier validation refusals ($0.2430); new planning skips restricted personalization before charging
+- [x] Signed-in populated report/recovery checked on desktop/phone; 31 regression tests and build passed
+- [ ] Publish report, price-sync and pre-charge planning corrections — explicit publish authorization required
+- [ ] Resolve historical $0.7545 debit discrepancy — no refunds authorized; campaign-specific surcharge reconciliation remains unavailable from message prices
+
 ## Current monitoring corrections
 - [x] Confirmed and removed global region blocking inferred from individual rejections; legacy block settings are no longer read or written
 - [x] Restored all-route estimated cost/margin, separated recorded prices, and made recorded-price margin unavailable when any submitted price is missing; exports are labeled estimates
