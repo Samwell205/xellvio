@@ -6,6 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone, resolveRecipientCountry } from "@/lib/country-from-phone";
 import { keywordScan, isPersonalizationOnlyBlock, personalizationPlanningPatch } from "@/lib/content-scanner";
+import { buildCampaignPlanRow, buildPersonalizationBlockedRow } from "@/lib/campaign-plan-rows";
 import { publicCampaignMediaUrl } from "@/lib/campaign-media";
 import { STOPPED_AS_SENT } from "@/lib/campaign-stop";
 import {DISPATCH_RUN_MS,DISPATCH_PLAN_ROWS,DISPATCH_CONNECTIONS,DISPATCH_SEND_RESERVE_MS,queuedPersistedIds,canStartDispatchSend} from "@/lib/dispatch-reliability";
@@ -891,8 +892,18 @@ async function planCampaign(
     const messageId = crypto.randomUUID();
     const blocked = personalizationPlanningPatch(campaign.message_body, r.body);
     if (blocked) {
-      failedRows.push({ id: messageId, campaign_id: campaign.id, profile_id: r.profile_id, phone_e164: r.phone_e164,
-        country_code: r.country_code, segments_count: r.segments, rendered_body: r.body, cost: 0, ...blocked });
+      // Built through the shared row builder so a skipped contact carries every
+      // column the queued rows do; a missing column would be written as NULL
+      // and reject the whole planning batch.
+      failedRows.push(buildPersonalizationBlockedRow({
+        messageId,
+        campaignId: campaign.id,
+        profileId: r.profile_id,
+        phoneE164: r.phone_e164,
+        countryCode: r.country_code,
+        segmentsCount: r.segments,
+        renderedBody: r.body,
+      }, blocked));
       continue;
     }
     const rewritten = rewriteBody(r.body, messageId);
@@ -901,18 +912,17 @@ async function planCampaign(
     const rate = rateByCC[r.country_code];
     const priced = priceFor(rate, r.country_code, segs);
     const cost = priced.cost;
-    const rowBase = {
-      id: messageId,
-      campaign_id: campaign.id,
-      profile_id: r.profile_id,
-      phone_e164: r.phone_e164,
-      country_code: r.country_code,
-      // MMS is a single message, not N SMS segments.
-      segments_count: priced.billedSegments,
-      is_mms: priced.isMms,
+    const rowBase = buildCampaignPlanRow({
+      messageId,
+      campaignId: campaign.id,
+      profileId: r.profile_id,
+      phoneE164: r.phone_e164,
+      countryCode: r.country_code,
+      segmentsCount: priced.billedSegments,
+      isMms: priced.isMms,
       cost,
-      rendered_body: rewritten,
-    };
+      renderedBody: rewritten,
+    });
 
     if (cost === 0) queuedRows.push({ ...rowBase, status: "queued" });
     else if (cost <= remaining) { remaining -= cost; queuedRows.push({ ...rowBase, status: "queued" }); }
