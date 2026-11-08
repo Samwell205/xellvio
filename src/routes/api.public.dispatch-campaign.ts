@@ -5,7 +5,7 @@ import { isAuthorizedCronRequest } from "@/lib/cron-auth.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { calculateSegments } from "@/lib/sms-segments";
 import { countryFromPhone, resolveRecipientCountry } from "@/lib/country-from-phone";
-import { keywordScan, isPersonalizationOnlyBlock } from "@/lib/content-scanner";
+import { keywordScan, isPersonalizationOnlyBlock, personalizationPlanningPatch } from "@/lib/content-scanner";
 import { publicCampaignMediaUrl } from "@/lib/campaign-media";
 import { STOPPED_AS_SENT } from "@/lib/campaign-stop";
 import {DISPATCH_RUN_MS,DISPATCH_PLAN_ROWS,DISPATCH_CONNECTIONS,DISPATCH_SEND_RESERVE_MS,queuedPersistedIds,canStartDispatchSend} from "@/lib/dispatch-reliability";
@@ -889,6 +889,12 @@ async function planCampaign(
 
   for (const r of enriched) {
     const messageId = crypto.randomUUID();
+    const blocked = personalizationPlanningPatch(campaign.message_body, r.body);
+    if (blocked) {
+      failedRows.push({ id: messageId, campaign_id: campaign.id, profile_id: r.profile_id, phone_e164: r.phone_e164,
+        country_code: r.country_code, segments_count: r.segments, rendered_body: r.body, cost: 0, ...blocked });
+      continue;
+    }
     const rewritten = rewriteBody(r.body, messageId);
     // Recompute segments after rewrite in case link length changed the count.
     const segs = calculateSegments(rewritten).segments;
@@ -1421,7 +1427,7 @@ export const Route = createFileRoute("/api/public/dispatch-campaign")({
             prices = await syncTwilioPrices(supabaseAdmin, { limit: 200, budgetMs: 8_000 });
           } catch (e) { prices = { error: String((e as Error)?.message ?? e) }; }
           await finishWebhooks();
-          return Response.json({ mode: "reconcile", ...result });
+          return Response.json({ mode: "reconcile", ...result, prices });
         }
 
         // Campaign-level leases (acquired inside runDispatchTick) let several
