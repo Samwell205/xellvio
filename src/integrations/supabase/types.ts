@@ -8488,6 +8488,13 @@ export type Database = {
           upserted: number
         }[]
       }
+      campaign_carrier_price_groups: {
+        Args: { _campaign_id: string }
+        Returns: {
+          sender_used: string
+          sent_day: string
+        }[]
+      }
       campaign_report_summary: { Args: { _campaign_id: string }; Returns: Json }
       can_read_app: { Args: { _app_id: string }; Returns: boolean }
       can_write_app: { Args: { _app_id: string }; Returns: boolean }
@@ -8824,6 +8831,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      record_campaign_carrier_prices: {
+        Args: { _campaign_id: string; _rows: Json }
+        Returns: number
       }
       record_link_click: {
         Args: { _code: string }
