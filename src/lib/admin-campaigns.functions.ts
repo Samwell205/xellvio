@@ -209,8 +209,16 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
       if (billed) totals.cost += Number(r.cost ?? 0);
       if (pending) totals.reserved_cost += Number(r.cost ?? 0);
       if (billed) totals.carrier_cost += carrier;
-      if (r.carrier_price !== null && r.carrier_price !== undefined) { totals.actual_carrier_cost += Number(r.carrier_price); totals.priced_count += 1; totals.carrier_fees += (feeByCc.get(cc) ?? 0) * seg; }
-      else if (String(r.provider_message_id ?? "").startsWith("SM") && !r.carrier_price_checked_at) totals.price_pending_count += 1;
+      const hasCarrierPrice = r.carrier_price !== null && r.carrier_price !== undefined && Number.isFinite(Number(r.carrier_price));
+      if (hasCarrierPrice) {
+        totals.actual_carrier_cost += Number(r.carrier_price);
+        totals.priced_count += 1;
+        totals.carrier_fees += (feeByCc.get(cc) ?? 0) * seg;
+      } else if (billed || r.provider_message_id) {
+        // Every submitted unpriced message is unknown, including other
+        // carriers and lookups exhausted without a price. Never assume $0.
+        totals.price_pending_count += 1;
+      }
       totals.segments += seg;
       if (["sent", "delivered", "delivery_unconfirmed", "failed", "undelivered"].includes(r.status)) totals.sent += 1;
       if (r.status === "sent") totals.awaiting_delivery += 1;
@@ -317,7 +325,9 @@ export const adminGetCampaignReport = createServerFn({ method: "POST" })
         mms_count: mmsCount,
         is_mms: mmsCount > 0,
         margin: +(totals.cost - totals.carrier_cost).toFixed(4),
-        actual_margin: +(totals.cost - totals.actual_carrier_cost - totals.carrier_fees).toFixed(4),
+        actual_margin: totals.price_pending_count === 0
+          ? +(totals.cost - totals.actual_carrier_cost - totals.carrier_fees).toFixed(4)
+          : null,
       },
       byCountry: Array.from(byCC.entries())
         .map(([country_code, v]) => ({

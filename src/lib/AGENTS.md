@@ -13,4 +13,4 @@
 
 - Dispatch holds all sending (recipients stay queued, never failed) when the funded carrier balance is at/below the buffer or a recent send hit 30002/20003, via carrier-funds-guard.ts; protects carrier health score.
 - Actual Twilio price per message comes from twilio-price-sync.server.ts (lookup-only, run inside the reconcile cron slice); report it beside the country_rates estimate, never replace tenant charges with it.
-- After a carrier destination-permission rejection (21408), dispatch fails further sends to that region (NANP area code, else leading digits) locally for 6h via carrier-geo-guard.ts, then probes once; protects carrier health score.
+- Individual destination/sender rejections never infer regional blocks: dispatch ignores legacy global geo blocks because one request cannot prove another account's permissions.
