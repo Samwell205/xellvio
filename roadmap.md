@@ -1,5 +1,11 @@
 # Roadmap
 
+## Campaign accounting reconciliation
+- [ ] Correct incomplete price/profit presentation consistently across campaign reports
+- [ ] Recover missing carrier prices without resending or charging messages
+- [ ] Investigate the 39 charged/no-submission records; prevent confirmed accounting bugs without refunds
+- [ ] Verify report with populated signed-in account and regression tests; deploy corrections if permitted
+
 ## Current monitoring corrections
 - [x] Confirmed and removed global region blocking inferred from individual rejections; legacy block settings are no longer read or written
 - [x] Restored all-route estimated cost/margin, separated recorded prices, and made recorded-price margin unavailable when any submitted price is missing; exports are labeled estimates
