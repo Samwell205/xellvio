@@ -9,6 +9,7 @@ import {
   getTollfreeFeeStatus,
   payTollfreeFee,
 } from "@/lib/tollfree-verification.functions";
+import { BuyReadyNumberCard } from "@/components/BuyReadyNumberCard";
 import { getTfnMarketplaceOffer } from "@/lib/tfn-marketplace.functions";
 import { requestDedicatedLine, getMyDedicatedLine } from "@/lib/twilio-lines.functions";
 import { LineStatusPanel } from "@/components/tollfree-wizard/LineStatusPanel";
@@ -527,7 +528,7 @@ function TollfreeVerificationPage() {
             </CardContent>
           </Card>
 
-          <MarketplaceBuyCard />
+          <BuyReadyNumberCard />
         </>
       )}
 
