@@ -8626,6 +8626,15 @@ export type Database = {
         }
         Returns: number
       }
+      delete_contact_lists_step: {
+        Args: {
+          _account_id: string
+          _batch?: number
+          _list_ids: string[]
+          _with_contacts: boolean
+        }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

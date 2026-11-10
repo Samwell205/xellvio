@@ -9,6 +9,7 @@ import ImportCsvDialog from "@/components/ImportCsvDialog";
 import {
   deleteContactList,
   deleteContactLists,
+  deleteContactListsStep,
   getAudienceListCounts,
   getAudienceStats,
   listAudienceContactLists,
@@ -653,7 +654,19 @@ function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactL
   const [listSearch, setListSearch] = useState("");
   const visibleLists = lists.filter(l => `${l.name} ${l.description ?? ""}`.toLowerCase().includes(listSearch.toLowerCase()));
   const deleteListFn = useServerFn(deleteContactList);
-  const deleteListsFn = useServerFn(deleteContactLists);
+  const deleteStepFn = useServerFn(deleteContactListsStep);
+  const [progress, setProgress] = useState<string | null>(null);
+
+  async function runDelete(listIds: string[], withContacts: boolean) {
+    let total = 0;
+    for (let i = 0; i < 2000; i++) {
+      const res = await deleteStepFn({ data: { listIds, withContacts } });
+      total += res.deleted;
+      if (withContacts) setProgress(`Deleting… ${total.toLocaleString()} contacts removed`);
+      if (res.done) return total;
+    }
+    return total;
+  }
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
@@ -673,8 +686,7 @@ function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactL
     if (!confirm(message)) return;
     setBusy(true);
     try {
-      const res = await deleteListsFn({ data: { listIds: ids, withContacts } });
-      const n = res?.deletedContacts ?? 0;
+      const n = await runDelete(ids, withContacts);
       toast.success(
         withContacts
           ? `${ids.length} list${ids.length === 1 ? "" : "s"} and ${n} contact${n === 1 ? "" : "s"} deleted`
@@ -686,6 +698,7 @@ function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactL
       toast.error(e?.message ?? "Failed to delete lists");
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -723,6 +736,7 @@ function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactL
       toast.error(e.message ?? "Failed");
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -742,6 +756,7 @@ function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactL
       toast.error(e?.message ?? "Failed to delete list");
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -750,8 +765,7 @@ function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactL
       return;
     setBusy(true);
     try {
-      const res = await deleteListFn({ data: { listId: id, withContacts: true } });
-      const n = res?.deletedContacts ?? 0;
+      const n = await runDelete([id], true);
       toast.success(`List and ${n} contact${n === 1 ? "" : "s"} deleted`);
       setSelected((prev) => {
         const next = new Set(prev);
@@ -763,6 +777,7 @@ function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactL
       toast.error(e?.message ?? "Failed to delete list with contacts");
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -852,6 +867,7 @@ function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactL
                 </div>
               )}
             </div>
+            {progress && <p role="status" className="py-2 text-xs text-muted-foreground">{progress}</p>}
             <div className="max-h-[45dvh] overflow-y-auto divide-y border-y">
               {loading && <div className="space-y-3 py-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>}
               {failed && <p role="alert" className="py-6 text-sm text-destructive">Lists could not be loaded. Close and try again.</p>}
