@@ -65,18 +65,21 @@ function PricingCalculatorPage() {
   }, [rates, search]);
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-extrabold flex items-center gap-2">
-          <Calculator className="size-6" /> SMS Pricing
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Estimate cost per country, per message, instantly.
-        </p>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-8">
+      <header className="flex min-w-0 items-center gap-4">
+        <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+          <Calculator className="size-6" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">SMS pricing</h1>
+          <p className="text-sm text-muted-foreground">
+            Type your message, pick a country and see exactly what a send will cost.
+          </p>
+        </div>
+      </header>
 
-      <div className="grid lg:grid-cols-2 gap-5">
-        <Card className="p-5 space-y-4">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <Card className="space-y-5 rounded-3xl p-6">
           <div>
             <Label>Destination country</Label>
             <Select value={country} onValueChange={setCountry}>
@@ -96,10 +99,13 @@ function PricingCalculatorPage() {
           </div>
           <div>
             <Label>Message</Label>
-            <Textarea rows={5} value={body} onChange={(e) => setBody(e.target.value)} />
-            <div className="text-xs text-muted-foreground mt-1">
-              {seg.encoding} · {seg.charCount} chars · {seg.segments} segment
-              {seg.segments !== 1 ? "s" : ""}
+            <Textarea rows={5} value={body} onChange={(e) => setBody(e.target.value)} className="mt-1.5 resize-none" />
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full bg-muted px-2.5 py-1 text-muted-foreground">{seg.encoding}</span>
+              <span className="rounded-full bg-muted px-2.5 py-1 tabular-nums text-muted-foreground">{seg.charCount} characters</span>
+              <span className={`rounded-full px-2.5 py-1 tabular-nums ${seg.segments > 1 ? "bg-warning/15 text-warning" : "bg-primary/10 text-primary"}`}>
+                {seg.segments} segment{seg.segments !== 1 ? "s" : ""}
+              </span>
             </div>
           </div>
           <div>
@@ -113,24 +119,29 @@ function PricingCalculatorPage() {
           </div>
         </Card>
 
-        <Card className="p-5 space-y-3 self-start bg-gradient-to-br from-primary/10 to-transparent">
-          <div className="text-xs uppercase text-muted-foreground tracking-wide">Estimate</div>
+        <Card className="relative space-y-4 self-start overflow-hidden rounded-3xl border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 lg:sticky lg:top-20">
+          <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-primary/20 blur-3xl" />
+          <div className="relative">
+            <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Total for {recipients.toLocaleString()} recipients
+            </div>
+            <div className="mt-2 text-5xl font-bold tracking-tight tabular-nums">{formatUSD(total)}</div>
+          </div>
+          <div className="relative space-y-3 rounded-2xl border bg-background/70 p-4 backdrop-blur">
           <Row
             label={`Rate for ${rate?.country ?? country}`}
             value={`${formatRate(unit)} per segment`}
           />
           <Row label="Segments per message" value={String(seg.segments)} />
           <Row label="Cost per SMS" value={formatUSD(perSms)} />
-          <div className="border-t pt-3">
-            <div className="text-xs text-muted-foreground">
-              Total for {recipients.toLocaleString()} recipients
-            </div>
-            <div className="text-4xl font-extrabold mt-1">{formatUSD(total)}</div>
           </div>
+          <p className="relative text-xs text-muted-foreground">
+            Longer messages, emojis and pictures use more segments and cost more.
+          </p>
         </Card>
       </div>
 
-      <Card className="p-5 space-y-3">
+      <Card className="space-y-4 rounded-3xl p-6">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <h3 className="font-semibold flex items-center gap-2">
             <Globe className="size-4" /> Per-country pricing
@@ -145,9 +156,9 @@ function PricingCalculatorPage() {
             />
           </div>
         </div>
-        <div className="border rounded-md overflow-hidden">
+        <div className="max-h-[560px] overflow-auto rounded-2xl border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-muted-foreground text-xs uppercase tracking-wide">
+            <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur text-muted-foreground text-xs uppercase tracking-wide">
               <tr>
                 <th className="text-left p-3">Country</th>
                 <th className="text-left p-3">Dial</th>
@@ -159,7 +170,7 @@ function PricingCalculatorPage() {
             </thead>
             <tbody>
               {filtered.map((r) => (
-                <tr key={r.code} className="border-t">
+                <tr key={r.code} onClick={() => setCountry(r.code)} className={`cursor-pointer border-t transition-colors hover:bg-muted/40 ${r.code === country ? "bg-primary/5" : ""}`}>
                   <td className="p-3">
                     <div className="font-medium">{r.country}</div>
                     <div className="text-xs text-muted-foreground">{r.code}</div>
@@ -176,7 +187,7 @@ function PricingCalculatorPage() {
                   </td>
                   <td className="p-3">
                     {r.status === "Active" ? (
-                      <Badge variant="secondary">Active</Badge>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-medium text-success"><span className="size-1.5 rounded-full bg-success" />Active</span>
                     ) : (
                       <Badge variant="destructive">Off</Badge>
                     )}
