@@ -337,6 +337,13 @@
       "when": 1794118672332,
       "tag": "0047_campaign_carrier_price_recovery",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794327690499,
+      "tag": "0048_batched_contact_list_delete",
+      "breakpoints": true
     }
   ]
 }
