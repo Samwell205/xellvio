@@ -21,6 +21,10 @@ import {
   KeyRound,
   Mail,
   User,
+  Building2,
+  MessageSquare,
+  Code2,
+  ChevronRight,
 } from "lucide-react";
 import { getMyTollfreeVerification } from "@/lib/tollfree-verification.functions";
 import { TenantApiPanel } from "@/components/settings/TenantApiPanel";
@@ -48,12 +52,12 @@ export const Route = createFileRoute("/_authenticated/app/settings")({
 
 type Tab = "personal" | "account" | "security" | "messaging" | "api";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "personal", label: "Personal" },
-  { id: "account", label: "Account" },
-  { id: "security", label: "Security" },
-  { id: "messaging", label: "Messaging" },
-  { id: "api", label: "API & webhooks" },
+const TABS: { id: Tab; label: string; hint: string; icon: typeof User }[] = [
+  { id: "personal", label: "Personal", hint: "Name, company and phone", icon: User },
+  { id: "account", label: "Business", hint: "Team, billing and access", icon: Building2 },
+  { id: "security", label: "Security", hint: "Login email, password, emails", icon: ShieldCheck },
+  { id: "messaging", label: "Messaging", hint: "Smart Sending and sender", icon: MessageSquare },
+  { id: "api", label: "API & webhooks", hint: "Keys and integrations", icon: Code2 },
 ];
 
 function TollfreeStatusCard() {
@@ -278,30 +282,53 @@ function SettingsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Your profile, sign-in details and sending setup.
-        </p>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-8">
+      <header className="relative overflow-hidden rounded-3xl border bg-card p-6 sm:p-8">
+        <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex min-w-0 items-center gap-4">
+          <div className="grid size-14 shrink-0 place-items-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground">
+            {(account.data?.full_name ?? account.data?.email ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Settings</p>
+            <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+              {account.data?.full_name || "Your account"}
+            </h1>
+            <p className="truncate text-sm text-muted-foreground">{account.data?.email}</p>
+          </div>
+        </div>
+      </header>
 
-      <div className="flex flex-wrap gap-1 border-b">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`-mb-px border-b-2 px-4 py-2.5 text-sm transition-colors ${
-              tab === t.id
-                ? "border-primary font-medium text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <nav aria-label="Settings sections" className="flex gap-2 overflow-x-auto pb-1 lg:sticky lg:top-20 lg:flex-col lg:self-start lg:overflow-visible">
+          {TABS.map((t) => {
+            const Icon = t.icon;
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                aria-current={active ? "page" : undefined}
+                className={`group flex shrink-0 items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all lg:w-full ${
+                  active
+                    ? "border-primary/30 bg-primary/10 text-foreground shadow-sm"
+                    : "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${active ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                  <Icon className="size-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium">{t.label}</span>
+                  <span className="hidden truncate text-xs text-muted-foreground lg:block">{t.hint}</span>
+                </span>
+                <ChevronRight className={`ml-auto hidden size-4 shrink-0 transition-transform lg:block ${active ? "translate-x-0.5 text-primary" : "opacity-0 group-hover:opacity-60"}`} />
+              </button>
+            );
+          })}
+        </nav>
 
+        <div key={tab} className="min-w-0 animate-in fade-in-0 slide-in-from-bottom-1 duration-300">
       {tab === "personal" && (
         <div className="space-y-6">
           <Card className="space-y-4 p-6">
@@ -313,7 +340,7 @@ function SettingsPage() {
                 Used on invoices and in the messages we send you.
               </p>
             </div>
-            <div className="grid max-w-2xl gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Full name</Label>
                 <Input
@@ -420,6 +447,8 @@ function SettingsPage() {
         </div>
       )}
       {tab === "api" && <TenantApiPanel />}
+        </div>
+      </div>
     </div>
   );
 }
