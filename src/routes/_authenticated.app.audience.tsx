@@ -945,7 +945,6 @@ function AssignToListBulk({
       toast.error(e.message ?? "Failed");
     } finally {
       setBusy(false);
-      setProgress(null);
     }
   }
 
