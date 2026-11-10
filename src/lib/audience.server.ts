@@ -195,6 +195,23 @@ export async function deleteContactListForUser(
   return { deletedContacts: Number(data ?? 0) };
 }
 
+export async function deleteContactListsStepForUser(
+  userId: string,
+  listIds: string[],
+  withContacts: boolean,
+): Promise<{ deleted: number; done: boolean }> {
+  const accountId = await getAudienceAccountId(userId);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await (supabaseAdmin.rpc as any)("delete_contact_lists_step", {
+    _account_id: accountId,
+    _list_ids: listIds,
+    _with_contacts: withContacts,
+    _batch: 1500,
+  });
+  if (error) throw error;
+  return { deleted: Number(data?.deleted ?? 0), done: Boolean(data?.done) };
+}
+
 export async function deleteContactListsForUser(
   userId: string,
   listIds: string[],
