@@ -65,6 +65,17 @@ function BillingPage() {
       ).data ?? [],
   });
 
+  const spend = useQuery({
+    queryKey: ["account-spend-30d", accountId],
+    enabled: !!accountId,
+    refetchInterval: 15_000,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)("account_spend_30d", { _account_id: accountId });
+      if (error) throw error;
+      return Number(data ?? 0);
+    },
+  });
+
   const packsFn = useServerFn(listCreditPacks);
   const paymentsFn = useServerFn(listMyPayments);
   const verifyFn = useServerFn(verifyPaystack);
@@ -257,11 +268,7 @@ function BillingPage() {
   // using the admin-configured FX rate, but customers shop in USD.
   const usdPacks = (packs.data ?? []).filter((p) => p.currency === "USD");
 
-  const spend30d = (tx.data ?? [])
-    .filter(
-      (t) => t.type === "debit" && new Date(t.created_at).getTime() > Date.now() - 30 * 86400_000,
-    )
-    .reduce((s, t) => s + Number(t.amount), 0);
+  const spend30d = spend.data ?? 0;
   const lastPaid = (payments.data ?? []).find((p) => p.status === "paid");
 
   const TABS = [
