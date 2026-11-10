@@ -279,24 +279,44 @@ function BillingPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <div className="space-y-1">
-        <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight">
-          <Wallet className="size-6" /> Billing
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Your balance, payments and top-up preferences.
-        </p>
-      </div>
+      <header className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 sm:p-8">
+        <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-primary/20 blur-3xl" />
+        <div className="relative grid gap-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <Wallet className="size-4" /> Available balance
+            </p>
+            <div className="mt-2 text-5xl font-bold tracking-tight tabular-nums sm:text-6xl">{formatUSD(balance)}</div>
+            <p className="mt-2 text-sm text-muted-foreground">Credits are used as your messages go out.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:min-w-[340px]">
+            <div className="rounded-2xl border bg-background/70 p-4 backdrop-blur">
+              <div className="text-xs text-muted-foreground">Spent · last 30 days</div>
+              <div className="mt-1 text-xl font-semibold tabular-nums">{formatUSD(spend30d)}</div>
+            </div>
+            <div className="rounded-2xl border bg-background/70 p-4 backdrop-blur">
+              <div className="text-xs text-muted-foreground">Last payment</div>
+              <div className="mt-1 truncate text-xl font-semibold">
+                {lastPaid ? new Date(lastPaid.created_at).toLocaleDateString() : "—"}
+              </div>
+              <div className="truncate text-xs text-muted-foreground">
+                {lastPaid?.provider === "nowpayments" ? "Crypto" : lastPaid ? "Card / Bank" : "Card or crypto"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
 
-      <div className="flex flex-wrap gap-1 border-b">
+      <div className="inline-flex max-w-full gap-1 overflow-x-auto rounded-2xl border bg-muted/40 p-1">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`-mb-px border-b-2 px-4 py-2.5 text-sm transition-colors ${
+            aria-current={tab === t.id ? "page" : undefined}
+            className={`shrink-0 rounded-xl px-4 py-2 text-sm transition-all ${
               tab === t.id
-                ? "border-primary font-medium text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+                ? "bg-background font-medium text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t.label}
@@ -305,45 +325,11 @@ function BillingPage() {
       </div>
 
       {tab === "overview" && (
-        <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card className="p-6">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Available balance
-              </div>
-              <div className="mt-1 text-3xl font-extrabold tabular-nums">{formatUSD(balance)}</div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Credits are used as your messages go out.
-              </p>
-            </Card>
-            <Card className="p-6">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Spent in the last 30 days
-              </div>
-              <div className="mt-1 text-3xl font-extrabold tabular-nums">{formatUSD(spend30d)}</div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Across all campaigns and replies.
-              </p>
-            </Card>
-            <Card className="p-6">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Payment method
-              </div>
-              <div className="mt-1 text-lg font-semibold capitalize">
-                {lastPaid?.provider === "nowpayments" ? "Crypto" : lastPaid ? "Card / Bank" : "Card or crypto"}
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {lastPaid
-                  ? `Last payment ${new Date(lastPaid.created_at).toLocaleDateString()}`
-                  : "Choose at checkout — nothing is stored here."}
-              </p>
-            </Card>
-          </div>
-
-          <Card className="space-y-4 p-6">
+        <div className="space-y-6 animate-in fade-in-0 duration-300">
+          <Card className="space-y-5 rounded-3xl p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Sparkles className="size-5 text-primary" />
+              <div className="flex items-center gap-3">
+                <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary"><Sparkles className="size-5" /></span>
                 <h3 className="font-semibold">Add credits</h3>
               </div>
               <span className="text-xs text-muted-foreground">
@@ -361,15 +347,15 @@ function BillingPage() {
       )}
 
       {tab === "payments" && (
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h3 className="mb-3 font-semibold">Payment history</h3>
+        <div className="space-y-6 animate-in fade-in-0 duration-300">
+          <Card className="rounded-3xl p-6">
+            <h3 className="mb-4 text-base font-semibold">Payment history</h3>
             {(payments.data?.length ?? 0) === 0 ? (
               <p className="text-sm text-muted-foreground">No payments yet.</p>
             ) : (
-              <div className="overflow-hidden rounded-md border">
+              <div className="max-h-[520px] overflow-auto rounded-2xl border">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                  <thead className="sticky top-0 bg-muted/80 backdrop-blur text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="p-3 text-left">When</th>
                       <th className="p-3 text-left">Method</th>
@@ -381,7 +367,7 @@ function BillingPage() {
                   </thead>
                   <tbody>
                     {(payments.data ?? []).map((p) => (
-                      <tr key={p.id} className="border-t">
+                      <tr key={p.id} className="border-t transition-colors hover:bg-muted/40">
                         <td className="p-3 text-xs text-muted-foreground">
                           {new Date(p.created_at).toLocaleString()}
                         </td>
@@ -404,14 +390,14 @@ function BillingPage() {
             )}
           </Card>
 
-          <Card className="p-6">
-            <h3 className="mb-3 font-semibold">Credit ledger</h3>
+          <Card className="rounded-3xl p-6">
+            <h3 className="mb-4 text-base font-semibold">Credit ledger</h3>
             {(tx.data?.length ?? 0) === 0 ? (
               <p className="text-sm text-muted-foreground">No transactions yet.</p>
             ) : (
-              <div className="overflow-hidden rounded-md border">
+              <div className="max-h-[520px] overflow-auto rounded-2xl border">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                  <thead className="sticky top-0 bg-muted/80 backdrop-blur text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="p-3 text-left">When</th>
                       <th className="p-3 text-left">Type</th>
