@@ -867,6 +867,7 @@ function ManageListsDialog({ lists, loading, failed, onDone }: { lists: ContactL
                 </div>
               )}
             </div>
+            {progress && <p role="status" className="py-2 text-xs text-muted-foreground">{progress}</p>}
             <div className="max-h-[45dvh] overflow-y-auto divide-y border-y">
               {loading && <div className="space-y-3 py-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></div>}
               {failed && <p role="alert" className="py-6 text-sm text-destructive">Lists could not be loaded. Close and try again.</p>}
