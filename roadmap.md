@@ -1,5 +1,11 @@
 # Roadmap
 
+## Integrated blog CMS
+- [ ] Reuse existing content tables; add secure categories, revisions, redirects, publishing schedules, media metadata, settings and consented subscriptions
+- [ ] Build admin overview, posts, rich-text editor, categories/tags, media, calendar, analytics and settings
+- [ ] Build database-backed public blog, article/category/tag pages, Resources integration and SEO/sitemaps
+- [ ] Verify draft/upload/preview/publish/edit/schedule/unpublish and customer access restrictions with tests and browser checks
+
 ## Google Sheets and ticket #1047
 - [ ] Connect per-tenant Google Sheets, map columns and sync consent-confirmed contacts into existing SMS lists — Google connection setup required
 - [x] Diagnose ticket #1047: three cannabis-flagged test attempts on November 11 triggered repeat-abuse suspension; reported cause without lifting it or replying
