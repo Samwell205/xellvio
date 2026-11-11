@@ -48,6 +48,7 @@ export const NAV: NavEntry[] = [
       {
         heading: "Learn",
         items: [
+          { to: "/blog", label: "Blog", blurb: "Marketing insights and customer conversation strategies", icon: BookOpen },
           { to: "/resources", label: "Resource hub", blurb: "Guides, templates and documentation", icon: BookOpen },
           { to: "/templates", label: "Templates", blurb: "Pages, forms and automations ready to use", icon: LayoutTemplate },
           { to: "/docs", label: "Documentation", blurb: "How every part of Xellvio works", icon: BookOpen },

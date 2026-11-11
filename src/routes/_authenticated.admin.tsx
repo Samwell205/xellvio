@@ -6,10 +6,16 @@ import { getCachedIsAdmin } from "@/lib/auth-cache";
 import { RouteFallback } from "@/components/RouteFallback";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
-  beforeLoad: async () => {
-    if (!(await getCachedIsAdmin())) throw redirect({ to: "/app" });
+  beforeLoad: async ({ location }) => {
+    if (await getCachedIsAdmin()) return;
+    if (location.pathname.startsWith("/admin/blog")) {
+      const { data } = await supabase.rpc("blog_role");
+      if (data === "editor" || data === "writer") return;
+    }
+    throw redirect({ to: "/app" });
   },
   pendingComponent: RouteFallback,
   component: AdminShell,

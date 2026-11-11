@@ -2484,6 +2484,196 @@ export type Database = {
         }
         Relationships: []
       }
+      blog_audit: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json
+          id: string
+          post_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          post_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          post_id?: string | null
+        }
+        Relationships: []
+      }
+      blog_categories: {
+        Row: {
+          archived: boolean
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          meta_description: string | null
+          name: string
+          seo_title: string | null
+          slug: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          meta_description?: string | null
+          name: string
+          seo_title?: string | null
+          slug: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          meta_description?: string | null
+          name?: string
+          seo_title?: string | null
+          slug?: string
+        }
+        Relationships: []
+      }
+      blog_redirects: {
+        Row: {
+          created_at: string
+          old_slug: string
+          post_id: string
+        }
+        Insert: {
+          created_at?: string
+          old_slug: string
+          post_id: string
+        }
+        Update: {
+          created_at?: string
+          old_slug?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_redirects_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "content_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_revisions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          post_id: string
+          snapshot: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          post_id: string
+          snapshot: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          post_id?: string
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_revisions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "content_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_settings: {
+        Row: {
+          cta_label: string
+          cta_url: string
+          description: string
+          id: boolean
+          newsletter_enabled: boolean
+          title: string
+        }
+        Insert: {
+          cta_label?: string
+          cta_url?: string
+          description?: string
+          id?: boolean
+          newsletter_enabled?: boolean
+          title?: string
+        }
+        Update: {
+          cta_label?: string
+          cta_url?: string
+          description?: string
+          id?: boolean
+          newsletter_enabled?: boolean
+          title?: string
+        }
+        Relationships: []
+      }
+      blog_staff: {
+        Row: {
+          role: string
+          user_id: string
+        }
+        Insert: {
+          role: string
+          user_id: string
+        }
+        Update: {
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      blog_subscriptions: {
+        Row: {
+          consent_text: string
+          consented_at: string
+          email: string
+          id: string
+          source: string
+          status: string
+        }
+        Insert: {
+          consent_text: string
+          consented_at?: string
+          email: string
+          id?: string
+          source?: string
+          status?: string
+        }
+        Update: {
+          consent_text?: string
+          consented_at?: string
+          email?: string
+          id?: string
+          source?: string
+          status?: string
+        }
+        Relationships: []
+      }
       campaign_spam_email_outbox: {
         Row: {
           account_id: string
@@ -3291,7 +3481,10 @@ export type Database = {
           canonical_url: string | null
           content_type: Database["public"]["Enums"]["content_kind"]
           created_at: string
+          created_by: string | null
           cta_key: string | null
+          cta_label: string | null
+          cta_url: string | null
           excerpt: string
           faqs: Json
           featured: boolean
@@ -3303,7 +3496,9 @@ export type Database = {
           last_reviewed_at: string | null
           meta_description: string | null
           next_review_at: string | null
+          og_description: string | null
           og_image: string | null
+          og_title: string | null
           plan_id: string | null
           primary_keyword: string | null
           published_at: string | null
@@ -3313,6 +3508,7 @@ export type Database = {
           related_templates: string[]
           review_interval_months: number
           review_notes: string | null
+          scheduled_at: string | null
           schema_type: string
           seo_title: string | null
           slug: string
@@ -3321,6 +3517,8 @@ export type Database = {
           title: string
           topic: string
           updated_at: string
+          version: number
+          visibility: string
         }
         Insert: {
           author_id?: string | null
@@ -3328,7 +3526,10 @@ export type Database = {
           canonical_url?: string | null
           content_type?: Database["public"]["Enums"]["content_kind"]
           created_at?: string
+          created_by?: string | null
           cta_key?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
           excerpt?: string
           faqs?: Json
           featured?: boolean
@@ -3340,7 +3541,9 @@ export type Database = {
           last_reviewed_at?: string | null
           meta_description?: string | null
           next_review_at?: string | null
+          og_description?: string | null
           og_image?: string | null
+          og_title?: string | null
           plan_id?: string | null
           primary_keyword?: string | null
           published_at?: string | null
@@ -3350,6 +3553,7 @@ export type Database = {
           related_templates?: string[]
           review_interval_months?: number
           review_notes?: string | null
+          scheduled_at?: string | null
           schema_type?: string
           seo_title?: string | null
           slug: string
@@ -3358,6 +3562,8 @@ export type Database = {
           title: string
           topic?: string
           updated_at?: string
+          version?: number
+          visibility?: string
         }
         Update: {
           author_id?: string | null
@@ -3365,7 +3571,10 @@ export type Database = {
           canonical_url?: string | null
           content_type?: Database["public"]["Enums"]["content_kind"]
           created_at?: string
+          created_by?: string | null
           cta_key?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
           excerpt?: string
           faqs?: Json
           featured?: boolean
@@ -3377,7 +3586,9 @@ export type Database = {
           last_reviewed_at?: string | null
           meta_description?: string | null
           next_review_at?: string | null
+          og_description?: string | null
           og_image?: string | null
+          og_title?: string | null
           plan_id?: string | null
           primary_keyword?: string | null
           published_at?: string | null
@@ -3387,6 +3598,7 @@ export type Database = {
           related_templates?: string[]
           review_interval_months?: number
           review_notes?: string | null
+          scheduled_at?: string | null
           schema_type?: string
           seo_title?: string | null
           slug?: string
@@ -3395,6 +3607,8 @@ export type Database = {
           title?: string
           topic?: string
           updated_at?: string
+          version?: number
+          visibility?: string
         }
         Relationships: [
           {
@@ -5161,6 +5375,8 @@ export type Database = {
       media_assets: {
         Row: {
           account_id: string
+          alt_text: string
+          blog_asset: boolean
           content_type: string
           created_at: string
           created_by: string | null
@@ -5173,6 +5389,8 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          alt_text?: string
+          blog_asset?: boolean
           content_type?: string
           created_at?: string
           created_by?: string | null
@@ -5185,6 +5403,8 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          alt_text?: string
+          blog_asset?: boolean
           content_type?: string
           created_at?: string
           created_by?: string | null
@@ -8513,6 +8733,18 @@ export type Database = {
           scopes: string[]
         }[]
       }
+      blog_metrics: { Args: never; Returns: Json }
+      blog_publish_due: { Args: never; Returns: number }
+      blog_record_event: {
+        Args: {
+          _event: string
+          _session: string
+          _slug: string
+          _source: string
+        }
+        Returns: boolean
+      }
+      blog_role: { Args: never; Returns: string }
       bulk_import_profiles: {
         Args: { _account_id: string; _list_id: string; _rows: Json }
         Returns: {

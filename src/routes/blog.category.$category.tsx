@@ -1,0 +1,7 @@
+import { createFileRoute, notFound } from '@tanstack/react-router';
+import { z } from 'zod';
+import { publicBlog } from '@/lib/blog-public.functions';
+import { BlogListing } from '@/components/blog/BlogPublic';
+import { pageHead } from '@/lib/seo';
+export const Route=createFileRoute('/blog/category/$category')({validateSearch:(input)=>z.object({q:z.string().optional(),page:z.coerce.number().int().min(0).optional()}).parse(input),loaderDeps:({search})=>search,loader:async({params,deps})=>{const data=await publicBlog({data:{category:params.category,search:deps.q||'',page:deps.page||0}});if(!data.categories.some(c=>c.slug===params.category))throw notFound();return data;},head:({loaderData,params})=>{const c=loaderData?.categories.find(c=>c.slug===params.category);return pageHead({title:c?.seo_title||`${c?.name||'Category'} | Xellvio Blog`,description:c?.meta_description||c?.description||'Xellvio marketing articles and guides.',path:`/blog/category/${params.category}`,image:c?.image_url?.startsWith('https://')?c.image_url:null,robots:c?'index':'noindex'});},component:CategoryPage});
+function CategoryPage(){const data=Route.useLoaderData();const params=Route.useParams();const search=Route.useSearch();const navigate=Route.useNavigate();return <BlogListing data={data} category={params.category} page={search.page||0} onSearch={q=>navigate({search:{q,page:0}})} onPage={page=>navigate({search:{...search,page}})}/>;}
