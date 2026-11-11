@@ -21,6 +21,7 @@ import { RouteFallback, skeletonFor } from "@/components/RouteFallback";
 import { AnnouncementBanner } from "@/components/lifecycle/AnnouncementBanner";
 import { ContextualTip } from "@/components/lifecycle/ContextualTip";
 import { CONTEXTUAL_TIPS } from "@/lib/lifecycle/taxonomy";
+import { AccountBlocked } from "@/components/AccountBlocked";
 
 export const Route = createFileRoute("/_authenticated/app")({
   beforeLoad: async () => {
@@ -95,6 +96,12 @@ function AreaTip() {
 }
 
 function AppShell() {
+  const { data: blockSession } = useSession();
+  if (blockSession?.accountBlocked) return <AccountBlocked />;
+  return <AppShellInner />;
+}
+
+function AppShellInner() {
   const onboardingPath = useRouterState({ select: (st) => st.location.pathname }) === "/app/onboarding";
   // Ensure this tenant has a carrier messaging profile provisioned.
   // Idempotent: no-op if already set. Covers new signups AND existing users.

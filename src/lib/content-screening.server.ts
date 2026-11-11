@@ -373,7 +373,9 @@ export async function screenMessageContent(
         }, 3);
         if (recentBlocks >= 3) {
           shouldSuspend = true;
-          suspendReason = `Auto-suspended: ${recentBlocks} blocked messages in 7 days (repeat abuse).`;
+          suspendReason = `Account blocked: ${recentBlocks} prohibited-content warnings in 7 days (repeat abuse).`;
+        } else {
+          blockedReasons.unshift(`Warning ${recentBlocks} of 3: this content is not allowed. After 3 warnings your account will be blocked.`);
         }
       }
 
@@ -391,6 +393,11 @@ export async function screenMessageContent(
             reason: suspendReason,
             suspendedBy: null, // system
           });
+          // Full account block: the tenant can only see the "Account blocked"
+          // screen and contact support until an admin reinstates them.
+          await supabaseAdmin.from("accounts")
+            .update({ suspended_at: new Date().toISOString(), onboarding_status: "suspended" })
+            .eq("id", tenantAccountId);
           await supabaseAdmin.from("events").insert({
             account_id: tenantAccountId,
             type: "tenant_auto_suspended",
