@@ -134,11 +134,8 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         let alphaSenderId: string | null = null;
         let telnyxError: string | null = null;
         try {
-          const alpha = await safeTelnyxCall(
-            "create_alpha_sender", { userId, messagingProfileId: internationalProfileId },
-            () => createAlphanumericSenderId({ messagingProfileId: internationalProfileId, senderId: sid, isoCountryCode: cc }),
-          );
-          alphaSenderId = alpha.id ?? null;
+          const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
+          alphaSenderId = (await ensureIntlSubaccount(acct.id)).sid;
         } catch (e: any) {
           telnyxError = String(e?.message ?? e);
           const telnyxErrorText = telnyxError.toLowerCase();

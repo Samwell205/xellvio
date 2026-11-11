@@ -3,7 +3,7 @@
 // goes through this module. No Twilio anywhere.
 
 const TELNYX_API = "https://api.telnyx.com/v2";
-import { usesSecondaryConnection, SECONDARY_PROFILE_ID, sentDuringFailover, routeOutbound, INTERNATIONAL_PROFILE_ID } from "./telnyx-connection";
+import { usesSecondaryConnection, SECONDARY_PROFILE_ID, sentDuringFailover, routeOutbound, INTERNATIONAL_PROFILE_ID, isNanpNumber } from "./telnyx-connection";
 
 function apiKey(profileId?: string): string {
   if (usesSecondaryConnection(profileId)) {
@@ -633,6 +633,14 @@ export async function sendMessage(opts: {
         }
       }
     }
+  }
+  // Non-US/CA destinations send from the business's own sub-account on the
+  // separate international carrier account (owner decision 2026-11-11).
+  if (opts.accountId && !isNanpNumber(to)) {
+    if (!opts.from) throw new Error("No international sender is set up for this business.");
+    const { sendViaIntl } = await import("./intl-subaccounts.server");
+    const r = await sendViaIntl(opts.accountId, { to, from: opts.from, text: opts.text, mediaUrls: opts.mediaUrls, timeoutMs: opts.boundedDispatch ? 6000 : 10000 });
+    return { id: r.id, parts: r.parts, to: [{ phone_number: to, status: "queued" }] };
   }
   const body: any = {
     to,
