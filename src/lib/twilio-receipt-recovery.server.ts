@@ -55,7 +55,7 @@ export function isStaleNoReport(carrierStatus: string | null | undefined, sentAt
 export const NO_REPORT_REASON = "The recipient's network accepted this text but never sent back a delivery report.";
 
 export async function recoverTwilioReceipts(db: any, opts: { campaignId?: string; after?: string; olderThanMin?: number; maxAgeHours?: number; limit?: number; budgetMs?: number; noReportAfterHours?: number }) {
-  let q = db.from("messages").select("id,account_id,provider_message_id,sender_used,sent_at,status")
+  let q = db.from("messages").select("id,provider_message_id,sender_used,sent_at,status,campaigns(account_id)")
     .in("status", OPEN).ilike("provider_message_id", "SM%").not("sender_used", "is", null)
     .order("id", { ascending: true }).limit(opts.limit ?? 120);
   if (opts.campaignId) q = q.eq("campaign_id", opts.campaignId);
@@ -74,7 +74,7 @@ export async function recoverTwilioReceipts(db: any, opts: { campaignId?: string
     await Promise.all(chunk.map(async (row: any) => {
       checked++;
       try {
-        const auth = await authForSender(db, row.sender_used, row.account_id ?? null, cache);
+        const auth = await authForSender(db, row.sender_used, row.campaigns?.account_id ?? null, cache);
         if (!auth) { stillAwaiting++; return; }
         const [sid, header] = auth.split("|");
         const res = await fetch(`${API}/Accounts/${sid}/Messages/${row.provider_message_id}.json`, { headers: { Authorization: header }, signal: AbortSignal.timeout(8000) });
