@@ -1,10 +1,11 @@
 # Roadmap
 
 ## Integrated blog CMS
-- [ ] Reuse existing content tables; add secure categories, revisions, redirects, publishing schedules, media metadata, settings and consented subscriptions
-- [ ] Build admin overview, posts, rich-text editor, categories/tags, media, calendar, analytics and settings
-- [ ] Build database-backed public blog, article/category/tag pages, Resources integration and SEO/sitemaps
-- [ ] Verify draft/upload/preview/publish/edit/schedule/unpublish and customer access restrictions with tests and browser checks
+- [x] Reuse existing content tables; add secure categories, revisions, redirects, publishing schedules, media metadata, settings and consented subscriptions
+- [x] Add admin overview, posts, rich-text editor, categories/tags, media, calendar, analytics and settings; live admin checks remain blocked below
+- [x] Add database-backed public blog, article/category/tag pages, Resources integration and SEO/sitemaps; public empty blog renders, latest build OK
+- [ ] Verify draft/upload/preview/publish/edit/schedule/unpublish and customer access restrictions end-to-end — signed-in preview remains on existing Loading analytics screen with pending package requests after cache refresh; 10 security/publishing-rule tests pass, no test article created
+- [ ] Complete staff management, registration attribution, public popular-article aggregates and broader analytics — not yet implemented; existing metrics explicitly label registration attribution unavailable
 
 ## Google Sheets and ticket #1047
 - [ ] Connect per-tenant Google Sheets, map columns and sync consent-confirmed contacts into existing SMS lists — Google connection setup required

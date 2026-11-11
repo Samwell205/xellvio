@@ -85,6 +85,7 @@ function ResourcesPage() {
           <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Start here</h2>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <HubCard icon={BookOpen} title="Xellvio Blog" text="Ideas and strategies for better customer conversations." to="/blog" />
+            <HubCard icon={BookOpen} title="Documentation" text="How sending, senders, imports and reporting work." to="/docs" />
             <HubCard icon={LayoutTemplate} title="Templates" text="Pages, forms and automations ready to use." to="/templates" />
             <HubCard icon={Building2} title="Industry solutions" text="How Xellvio is used in your sector." to="/solutions" />
             <HubCard icon={LifeBuoy} title="Contact support" text="Talk to a human about your setup." to="/contact" />
