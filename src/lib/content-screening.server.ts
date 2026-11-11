@@ -346,14 +346,14 @@ export async function screenMessageContent(
         return r.score >= 80;
       });
 
-      let shouldSuspend = hardCategoryHit;
+      // Owner rule (2026-11-11): every prohibited-content block, including hard
+      // categories, is one warning; the 3rd warning within 90 days blocks the account.
+      void hardCategoryHit;
+      let shouldSuspend = false;
       let suspendReason = "";
 
-      if (hardCategoryHit) {
-        const cat = reasons.find((r) => r.code.startsWith("category:"))?.code.replace("category:", "");
-        suspendReason = `Auto-suspended: prohibited content category (${cat ?? "SHAFT/phishing"}).`;
-      } else if (!reasons.some((r) => r.code === "ai_scan_unavailable")) {
-        const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      if (!reasons.some((r) => r.code === "ai_scan_unavailable")) {
+        const sevenDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
         // Every audit row is kept, but duplicate checks of the same campaign
         // submission (overlapping workers / retries) count as ONE violation.
         // Provider-unavailable decisions never reach this branch.
@@ -373,7 +373,7 @@ export async function screenMessageContent(
         }, 3);
         if (recentBlocks >= 3) {
           shouldSuspend = true;
-          suspendReason = `Account blocked: ${recentBlocks} prohibited-content warnings in 7 days (repeat abuse).`;
+          suspendReason = `Account blocked: ${recentBlocks} prohibited-content warnings in 90 days (repeat abuse).`;
         } else {
           blockedReasons.unshift(`Warning ${recentBlocks} of 3: this content is not allowed. After 3 warnings your account will be blocked.`);
         }
