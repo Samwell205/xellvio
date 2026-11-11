@@ -141,6 +141,13 @@ export const adminReinstateAccount = createServerFn({ method: "POST" })
       account_id: data.accountId,
       payload: { by: context.userId },
     });
+    {
+      const { data: acctNow } = await supabaseAdmin.from("accounts").select("sending_suspended_at").eq("id", data.accountId).maybeSingle();
+      if (acctNow?.sending_suspended_at) {
+        const { resumeTenantSending } = await import("./tenant-suspension.server");
+        await resumeTenantSending({ tenantAccountId: data.accountId, liftedBy: context.userId });
+      }
+    }
     if (previous.suspended_at || previous.onboarding_status === 'suspended') {
       const { notifyAccountStatus } = await import('./account-status-notice.server');
       await notifyAccountStatus(data.accountId, 'account_restored', previous.suspended_at || new Date().toISOString());
