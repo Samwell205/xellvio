@@ -1,12 +1,14 @@
 # Roadmap
 
 ## Integrated blog CMS
-- [ ] Complete uploaded continuation brief: verified publishing, staff administration, efficient scheduling, real analytics and desktop/mobile security QA
+- [ ] Complete remaining continuation QA: live editor/writer/customer endpoint tests and timed scheduling/retry execution are not yet verified
 - [x] Reuse existing content tables; add secure categories, revisions, redirects, publishing schedules, media metadata, settings and consented subscriptions
-- [x] Add admin overview, posts, rich-text editor, categories/tags, media, calendar, analytics and settings; live admin checks remain blocked below
+- [x] Admin blog loads; staff access management with confirmation and audited server permissions added; settings and real analytics load without browser errors
 - [x] Add database-backed public blog, article/category/tag pages, Resources integration and SEO/sitemaps; public empty blog renders, latest build OK
-- [ ] Verify draft/upload/preview/publish/edit/schedule/unpublish and customer access restrictions end-to-end — signed-in preview remains on existing Loading analytics screen with pending package requests after cache refresh; 10 security/publishing-rule tests pass, no test article created
-- [ ] Complete staff management, registration attribution, public popular-article aggregates and broader analytics — not yet implemented; existing metrics explicitly label registration attribution unavailable
+- [x] Signed-in draft, actual image upload, preview, publish, listing/search/category, public image/SEO, edit readback, mobile no-overflow, unpublish 404 and sitemap removal verified; 10 publishing/security tests pass
+- [x] Registration attribution uses the existing growth session and real signup-completed events; per-article visitors and CTA clicks available; temporary QA visits are counted as real test traffic
+- [x] Scheduling now arms only the next UTC deadline, with up to one minute delay, bounded batches, locking and five-attempt retry/error records; zero blog jobs when no scheduled articles exist
+- [ ] Public popular-article section, broader integration tests, timed scheduling and permissions across real staff/customer sessions remain incomplete
 
 ## Google Sheets and ticket #1047
 - [ ] Connect per-tenant Google Sheets, map columns and sync consent-confirmed contacts into existing SMS lists — Google connection setup required
