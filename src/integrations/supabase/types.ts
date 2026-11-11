@@ -3501,6 +3501,9 @@ export type Database = {
           og_title: string | null
           plan_id: string | null
           primary_keyword: string | null
+          publish_attempts: number
+          publish_error: string | null
+          publish_retry_at: string | null
           published_at: string | null
           related_posts: string[]
           related_products: string[]
@@ -3546,6 +3549,9 @@ export type Database = {
           og_title?: string | null
           plan_id?: string | null
           primary_keyword?: string | null
+          publish_attempts?: number
+          publish_error?: string | null
+          publish_retry_at?: string | null
           published_at?: string | null
           related_posts?: string[]
           related_products?: string[]
@@ -3591,6 +3597,9 @@ export type Database = {
           og_title?: string | null
           plan_id?: string | null
           primary_keyword?: string | null
+          publish_attempts?: number
+          publish_error?: string | null
+          publish_retry_at?: string | null
           published_at?: string | null
           related_posts?: string[]
           related_products?: string[]
@@ -8745,6 +8754,11 @@ export type Database = {
         Returns: boolean
       }
       blog_role: { Args: never; Returns: string }
+      blog_schedule_next: { Args: never; Returns: undefined }
+      blog_set_staff: {
+        Args: { _role: string; _user: string }
+        Returns: undefined
+      }
       bulk_import_profiles: {
         Args: { _account_id: string; _list_id: string; _rows: Json }
         Returns: {
