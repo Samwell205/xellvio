@@ -8733,7 +8733,17 @@ export type Database = {
           scopes: string[]
         }[]
       }
+      blog_metrics: { Args: never; Returns: Json }
       blog_publish_due: { Args: never; Returns: number }
+      blog_record_event: {
+        Args: {
+          _event: string
+          _session: string
+          _slug: string
+          _source: string
+        }
+        Returns: boolean
+      }
       blog_role: { Args: never; Returns: string }
       bulk_import_profiles: {
         Args: { _account_id: string; _list_id: string; _rows: Json }

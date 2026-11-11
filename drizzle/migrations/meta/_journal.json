@@ -365,6 +365,13 @@
       "when": 1794437414747,
       "tag": "0051_integrated_blog_cms",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1794437518533,
+      "tag": "0052_blog_metrics_and_permissions",
+      "breakpoints": true
     }
   ]
 }
