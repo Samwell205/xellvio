@@ -372,6 +372,20 @@
       "when": 1794437518533,
       "tag": "0052_blog_metrics_and_permissions",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1794438764856,
+      "tag": "0053_complete_blog_permissions_and_deadline_publishing",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1794439269432,
+      "tag": "0054_blog_schedule_retry_validation",
+      "breakpoints": true
     }
   ]
 }

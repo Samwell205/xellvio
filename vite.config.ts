@@ -7,7 +7,6 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 import { liveVoiceDev } from "./live-vite-plugin";
-import path from "node:path";
 import { loadEnv, type ConfigEnv } from "vite";
 
 export default async function config(env: ConfigEnv) {
@@ -51,12 +50,6 @@ export default async function config(env: ConfigEnv) {
         "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(supabaseUrl),
         "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(supabasePublishableKey),
         "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(supabaseProjectId),
-      },
-      resolve: {
-        alias: {
-          "entities/lib/decode.js": path.resolve(__dirname, "node_modules/htmlparser2/node_modules/entities/lib/decode.js"),
-          "entities/lib/encode.js": path.resolve(__dirname, "node_modules/htmlparser2/node_modules/entities/lib/encode.js"),
-        },
       },
     },
 
