@@ -6,8 +6,11 @@ import { ChannelCta } from "@/components/marketing/ProductKit";
 import { INDUSTRIES } from "@/components/marketing/industries";
 import { CATEGORY_META, templatesInCategory, type TemplateCategory } from "@/lib/marketing/template-catalog";
 import { pageHead } from "@/lib/seo";
+import { publicBlog } from "@/lib/blog-public.functions";
+import { BlogCard } from "@/components/blog/BlogPublic";
 
 export const Route = createFileRoute("/resources")({
+  loader: () => publicBlog({ data: { search: "", page: 0 } }),
   head: () =>
     pageHead({
       path: "/resources",
@@ -59,6 +62,7 @@ const GUIDES = [
 ];
 
 function ResourcesPage() {
+  const blog = Route.useLoaderData();
   const categories = Object.keys(CATEGORY_META) as TemplateCategory[];
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -80,12 +84,14 @@ function ResourcesPage() {
         <section className="mx-auto max-w-[1400px] px-5 sm:px-8 py-16">
           <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Start here</h2>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <HubCard icon={BookOpen} title="Documentation" text="How sending, senders, imports and reporting work." to="/docs" />
+            <HubCard icon={BookOpen} title="Xellvio Blog" text="Ideas and strategies for better customer conversations." to="/blog" />
             <HubCard icon={LayoutTemplate} title="Templates" text="Pages, forms and automations ready to use." to="/templates" />
             <HubCard icon={Building2} title="Industry solutions" text="How Xellvio is used in your sector." to="/solutions" />
             <HubCard icon={LifeBuoy} title="Contact support" text="Talk to a human about your setup." to="/contact" />
           </div>
         </section>
+
+        {!!blog.posts.length && <section className="mx-auto max-w-[1400px] px-5 py-12 sm:px-8"><div className="mb-8 flex items-center justify-between"><h2 className="text-2xl font-display">From the Xellvio Blog</h2><Link to="/blog" className="text-sm text-primary">All articles</Link></div><div className="grid gap-8 sm:grid-cols-3">{blog.posts.slice(0,3).map(post => <BlogCard key={post.id} post={post} />)}</div></section>}
 
         <section className="border-y border-border bg-background py-16">
           <div className="mx-auto max-w-[1400px] px-5 sm:px-8">

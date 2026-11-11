@@ -20,6 +20,16 @@ const primary: Item[] = [
   { title: "Tenant accounts", url: "/admin/accounts", icon: Building2 },
 ];
 const groups: { label: string; items: Item[] }[] = [
+  { label: "Content Management", items: [
+    { title: "Blog Overview", url: "/admin/blog", icon: LayoutDashboard, exact: true },
+    { title: "All Blog Posts", url: "/admin/blog/posts", icon: ClipboardList },
+    { title: "Create New Post", url: "/admin/blog/new", icon: MessageSquareText },
+    { title: "Categories & Tags", url: "/admin/blog/categories", icon: Blocks },
+    { title: "Media Library", url: "/admin/blog/media", icon: Radio },
+    { title: "Publishing Calendar", url: "/admin/blog/calendar", icon: Activity },
+    { title: "Blog Analytics", url: "/admin/blog/analytics", icon: LineChart },
+    { title: "Blog Settings", url: "/admin/blog/settings", icon: Settings2 },
+  ] },
   { label: "Messaging", items: [
     { title: "Campaigns", url: "/admin/campaigns", icon: Megaphone },
     { title: "Message monitor", url: "/admin/messaging", icon: MessageSquareText },
