@@ -351,6 +351,13 @@
       "when": 1794328175130,
       "tag": "0049_account_spend_30d",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794414300228,
+      "tag": "0050_tenant_intl_twilio_accounts",
+      "breakpoints": true
     }
   ]
 }

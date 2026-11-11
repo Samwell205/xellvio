@@ -7298,6 +7298,36 @@ export type Database = {
           },
         ]
       }
+      tenant_intl_subaccounts: {
+        Row: {
+          account_id: string
+          auth_token_enc: string | null
+          created_at: string
+          last_error: string | null
+          status: string
+          subaccount_sid: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          auth_token_enc?: string | null
+          created_at?: string
+          last_error?: string | null
+          status?: string
+          subaccount_sid?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          auth_token_enc?: string | null
+          created_at?: string
+          last_error?: string | null
+          status?: string
+          subaccount_sid?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tenant_lifecycle: {
         Row: {
           account_id: string
