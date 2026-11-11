@@ -5,7 +5,7 @@ vi.mock('@/integrations/supabase/client.server', () => ({ supabaseAdmin: {
   rpc: state.rpc,
   from: (table: string) => {
     const query: any = {
-      select: () => query, eq: () => query,
+      select: () => query, eq: () => query, in: () => query,
       update: (value: Record<string, unknown>) => { state.updates.push({ table, value }); return query; },
       upsert: () => query,
       maybeSingle: async () => ({ data: { owner_account_sid: state.ownerSid, phone_number: '+18553820888' }, error: null }),
