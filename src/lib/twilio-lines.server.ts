@@ -49,6 +49,11 @@ export async function lineTokenFor(accountSid: string): Promise<string | null> {
     const { data: tok } = await db.rpc("decrypt_twilio_token", { _cipher: data.auth_token_enc });
     if (tok) return tok;
   }
+  {
+    const { intlTokenFor } = await import("./intl-subaccounts.server");
+    const intl = await intlTokenFor(accountSid).catch(() => null);
+    if (intl) return intl;
+  }
   // Stored token unreadable: the parent account can always read its subaccount's token.
   try {
     const a = await tw(`${API}/Accounts/${accountSid}.json`, parentAuth());
