@@ -78,7 +78,6 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     assertPermission(acting, "setup_sms");
     const accountId = acting.accountId;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { createAlphanumericSenderId } = await import("./telnyx.server");
     const { ALPHA_SENDER_REQUIRES_REGISTRATION_SET, ALPHA_SENDER_UNSUPPORTED_SET } = await import("./countries");
     const { INTERNATIONAL_PROFILE_ID } = await import("./telnyx-connection");
     // Every non-US/CA destination sends on the dedicated international
@@ -90,19 +89,15 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
     for (const raw of data.countries) {
       const cc = raw.toUpperCase();
       if (ALPHA_SENDER_UNSUPPORTED_SET.has(cc)) {
-        throw new Error(`${cc} does not support alphanumeric Sender ID on Telnyx. Use toll-free verification instead.`);
+        throw new Error(`${cc} does not support sender names. Use toll-free verification instead.`);
       }
       const needsReg = ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(cc);
       let status = needsReg ? "submitted" : "verified";
       let alphaSenderId: string | null = null;
       let telnyxError: string | null = null;
       try {
-        const alpha = await createAlphanumericSenderId({
-          messagingProfileId,
-          senderId: data.senderId,
-          isoCountryCode: cc,
-        });
-        alphaSenderId = alpha.id ?? null;
+        const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
+        alphaSenderId = (await ensureIntlSubaccount(accountId)).sid;
       } catch (e: any) {
         telnyxError = String(e?.message ?? e);
         const telnyxErrorText = telnyxError.toLowerCase();
@@ -175,7 +170,6 @@ export const submitSenderIdRegistration = createServerFn({ method: "POST" })
     assertPermission(acting, "setup_sms");
     const accountId = acting.accountId;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { createAlphanumericSenderId } = await import("./telnyx.server");
     const { INTERNATIONAL_PROFILE_ID } = await import("./telnyx-connection");
     const cc = data.country.toUpperCase();
     // Registration submissions go to the dedicated international connection,
@@ -204,12 +198,8 @@ export const submitSenderIdRegistration = createServerFn({ method: "POST" })
     let telnyxError: string | null = null;
     let alphaSenderId: string | null = null;
     try {
-      const alpha = await createAlphanumericSenderId({
-        messagingProfileId,
-        senderId: data.senderId,
-        isoCountryCode: cc,
-      });
-      alphaSenderId = alpha.id ?? null;
+      const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
+      alphaSenderId = (await ensureIntlSubaccount(accountId)).sid;
     } catch (e: any) {
       telnyxError = e?.message ?? String(e);
       submittedStatus = "requires_registration";

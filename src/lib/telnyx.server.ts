@@ -3,7 +3,7 @@
 // goes through this module. No Twilio anywhere.
 
 const TELNYX_API = "https://api.telnyx.com/v2";
-import { usesSecondaryConnection, SECONDARY_PROFILE_ID, sentDuringFailover, routeOutbound, INTERNATIONAL_PROFILE_ID } from "./telnyx-connection";
+import { usesSecondaryConnection, SECONDARY_PROFILE_ID, sentDuringFailover, routeOutbound, INTERNATIONAL_PROFILE_ID, isNanpNumber } from "./telnyx-connection";
 
 function apiKey(profileId?: string): string {
   if (usesSecondaryConnection(profileId)) {
