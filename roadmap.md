@@ -1,5 +1,9 @@
 # Roadmap
 
+## Google Sheets and ticket #1047
+- [ ] Connect per-tenant Google Sheets, map columns and sync consent-confirmed contacts into existing SMS lists — Google connection setup required
+- [x] Diagnose ticket #1047: three cannabis-flagged test attempts on November 11 triggered repeat-abuse suspension; reported cause without lifting it or replying
+
 ## Campaign accounting reconciliation
 - [x] Campaign report uses actual tenant debits ($324.0495), includes submitted failures, labels estimates and partial prices, and never claims confirmed profit from estimated surcharges
 - [x] Recovered all 19,349 submitted campaign message prices ($162.7552, excluding surcharges); lookup-only recovery available for other campaigns, no resend or wallet changes
