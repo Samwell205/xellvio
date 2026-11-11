@@ -26,13 +26,13 @@ export function BlogEditor({id}:{id?:string}){
  const persist=useCallback(async(status?:BlogPostInput['status'],silent=false)=>{
   if(savingRef.current)return;const current=postRef.current;if(!current.title.trim())return;
   savingRef.current=true;setSaving(true);
-  try{const row=await save({data:{...current,status:status ?? current.status}});setPost(blogPostSchema.parse(row));setDirty(false);setSavedAt(new Date().toLocaleTimeString());qc.invalidateQueries({queryKey:['blog-admin']});qc.invalidateQueries({queryKey:['blog-editor',id]});if(!silent)toast.success(status==='published'?'Article published':status==='scheduled'?'Article scheduled':'Article saved');if(!id){await navigate({to:'/admin/blog/posts/$postId',params:{postId:row.id},replace:true});}}
+  try{const row=await save({data:{...current,status:status ?? current.status}});const unchanged=postRef.current===current;setPost(latest=>unchanged?blogPostSchema.parse(row):{...latest,id:row.id,version:row.version,status:row.status as BlogPostInput['status']});setDirty(!unchanged);setSavedAt(new Date().toLocaleTimeString());qc.invalidateQueries({queryKey:['blog-admin']});qc.invalidateQueries({queryKey:['blog-editor',id]});if(!silent)toast.success(status==='published'?'Article published':status==='scheduled'?'Article scheduled':'Article saved');if(!id){await navigate({to:'/admin/blog/posts/$postId',params:{postId:row.id},replace:true});}}
   catch(error){toast.error(error instanceof Error?error.message:'Could not save article');}finally{savingRef.current=false;setSaving(false);}
  },[save,id,navigate,qc]);
  useEffect(()=>{if(!dirty||!loaded||!['draft','in_review'].includes(post.status))return;const timer=setTimeout(()=>{void persist(undefined,true);},2500);return()=>clearTimeout(timer);},[dirty,post,loaded,persist]);
  useEffect(()=>{const warn=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn);},[dirty]);
  const doc=articleDocument(post.body);
- if(q.isPending||!loaded)return <p className="text-muted-foreground">Loading article…</p>;if(q.error)return <p role="alert">{q.error.message}</p>;
+ if(q.error)return <p role="alert">{q.error.message}</p>;if(!q.isPending&&id&&!q.data?.posts.length)return <p role="alert">Article unavailable or you do not have permission to edit it.</p>;if(q.isPending||!loaded)return <p className="text-muted-foreground">Loading article…</p>;
  const role=q.data?.role;const canPublish=role==='admin'||role==='editor';
  const field=(key:keyof BlogPostInput,label:string,placeholder='')=><div key={key} className="space-y-2"><Label htmlFor={`blog-${key}`}>{label}</Label><Input id={`blog-${key}`} value={String(post[key] ?? '')} placeholder={placeholder} onChange={e=>change({[key]:e.target.value || null})}/></div>;
  const chooseImage=(url:string,alt:string)=>{if(library==='featured')change({featured_image:url,image_alt:alt});else change({body:post.body+`<p><img src="${url}" alt="${alt.replace(/["<>]/g,'')}" /></p>`});setLibrary(null);};

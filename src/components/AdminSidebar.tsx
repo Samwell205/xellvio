@@ -64,7 +64,7 @@ const groups: { label: string; items: Item[] }[] = [
   ] },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({contentOnly=false}:{contentOnly?:boolean}) {
   const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed" && !isMobile;
   const pathname = useRouterState({ select: s => s.location.pathname });
@@ -73,7 +73,7 @@ export function AdminSidebar() {
   const isActive = (it: Item) => it.exact ? pathname === it.url || pathname === it.url + "/" : pathname === it.url || pathname.startsWith(it.url + "/");
   const matches = (it: Item) => it.title.toLowerCase().includes(search.toLowerCase());
   const openCountFn = useServerFn(adminOpenTicketCount);
-  const ticketQ = useQuery({ queryKey: ["admin-open-tickets"], queryFn: () => openCountFn(), refetchInterval: 30_000 });
+  const ticketQ = useQuery({ queryKey: ["admin-open-tickets"], queryFn: () => openCountFn(), refetchInterval: 30_000, enabled:!contentOnly });
   const openTickets = pathname.startsWith("/admin/tickets") ? 0 : (ticketQ.data?.count ?? 0);
   useTabBadge(openTickets);
   const lastTicketActivityAt = useRef<string | null>(null);
@@ -118,8 +118,8 @@ export function AdminSidebar() {
     </SidebarHeader>
     <SidebarContent className="gap-1 px-2 py-4">
       {!collapsed && <div className="relative mx-2 mb-4"><Search className="absolute left-3 top-3 size-3.5 text-muted-foreground" /><Input aria-label="Find an admin page" placeholder="Find a page…" className="h-9 pl-9 text-xs bg-background" value={search} onChange={e => setSearch(e.target.value)} /></div>}
-      <SidebarGroup className="pt-0">{menu(primary)}</SidebarGroup>
-      {groups.map(g => {
+      {!contentOnly&&<SidebarGroup className="pt-0">{menu(primary)}</SidebarGroup>}
+      {groups.filter(g=>!contentOnly||g.label==='Content Management').map(g => {
         const active = g.items.some(isActive);
         const open = expanded[g.label] ?? active;
         if (search && !g.items.some(matches)) return null;

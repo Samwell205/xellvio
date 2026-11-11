@@ -20,7 +20,7 @@ export const blogAdminData = createServerFn({method:'GET'}).middleware([requireS
    db.from('media_assets').select('*').eq('blog_asset',true).order('created_at',{ascending:false}).limit(200),
    data.id?db.from('blog_revisions').select('*').eq('post_id',data.id).order('created_at',{ascending:false}).limit(30):Promise.resolve({data:[]}),
   ]);
-  if(posts.error) throw new Error(posts.error.message);
+  for(const result of [posts,categories,authors,settings,media]) if(result.error) throw new Error(result.error.message);
   return {role,posts:posts.data ?? [],count:posts.count ?? 0,categories:categories.data ?? [],authors:authors.data ?? [],settings:settings.data ?? defaultBlogSettings,media:media.data ?? [],revisions:revisions.data ?? []};
  });
 
@@ -36,9 +36,11 @@ export const blogSavePost=createServerFn({method:'POST'}).middleware([requireSup
    if(version!==existing.version) throw new Error('This article changed in another session. Reload before saving.');
   }
   values.body=cleanBlogHtml(values.body); validatePublishing({...data,body:values.body});
+  if(values.topic){const {data:category,error}=await db.from('blog_categories').select('id').eq('slug',values.topic).eq('archived',false).maybeSingle();if(error)throw new Error(error.message);if(!category){if(!['admin','editor'].includes(role))throw new Error('Select an existing category');const {error:createError}=await db.from('blog_categories').insert({slug:values.topic,name:values.topic.split('-').map(s=>s.charAt(0).toUpperCase()+s.slice(1)).join(' ')});if(createError&&createError.code!=='23505')throw new Error(createError.message);}}
   const {data:reserved}=await db.from('blog_redirects').select('post_id').eq('old_slug',values.slug).maybeSingle();
   if(reserved && reserved.post_id!==id) throw new Error('This URL belongs to a previous article');
-  const query=id ? db.from('content_posts').update(values).eq('id',id).eq('version',version ?? 0) : db.from('content_posts').insert({...values,created_by:context.userId});
+  const patch={...values,...(values.status==='scheduled'?{publish_attempts:0,publish_error:null,publish_retry_at:null}:{})};
+  const query=id ? db.from('content_posts').update(patch).eq('id',id).eq('version',version ?? 0) : db.from('content_posts').insert({...patch,created_by:context.userId});
   const {data:row,error}=await query.select('*').single();
   if(error) throw new Error(error.code==='23505'?'That URL slug is already in use':error.message);
   return row;
@@ -87,3 +89,10 @@ export const blogAnalytics=createServerFn({method:'GET'}).middleware([requireSup
  const {data:role}=await context.supabase.rpc('blog_role');if(!['admin','editor'].includes(role ?? ''))throw new Error('Editor access required');
  const {data,error}=await context.supabase.rpc('blog_metrics');if(error)throw new Error(error.message);return data;
 });
+
+export const blogStaffData=createServerFn({method:'GET'}).middleware([requireSupabaseAuth])
+ .inputValidator((input:unknown)=>z.object({search:z.string().max(100).default('')}).parse(input??{}))
+ .handler(async({context,data})=>{const {data:role}=await context.supabase.rpc('blog_role');if(role!=='admin')throw new Error('Administrator access required');const {supabaseAdmin:db}=await import('@/integrations/supabase/client.server');let query=db.from('accounts').select('id,email,full_name').order('email').limit(50);if(data.search)query=query.ilike('email',`%${data.search.replace(/[%_]/g,'')}%`);const [users,staff,admins]=await Promise.all([query,db.from('blog_staff').select('*'),db.from('user_roles').select('user_id').eq('role','admin')]);for(const r of [users,staff,admins])if(r.error)throw new Error(r.error.message);return (users.data??[]).map(u=>({...u,blogRole:admins.data?.some(a=>a.user_id===u.id)?'admin':staff.data?.find(s=>s.user_id===u.id)?.role??null}));});
+export const blogSetStaff=createServerFn({method:'POST'}).middleware([requireSupabaseAuth])
+ .inputValidator((input:unknown)=>z.object({userId:z.string().uuid(),role:z.enum(['editor','writer']).nullable()}).parse(input))
+ .handler(async({context,data})=>{const {error}=await context.supabase.rpc('blog_set_staff',{_user:data.userId,_role:data.role as string});if(error)throw new Error(error.message);return {ok:true};});

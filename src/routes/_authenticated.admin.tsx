@@ -10,10 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async ({ location }) => {
-    if (await getCachedIsAdmin()) return;
-    if (location.pathname.startsWith("/admin/blog")) {
+    if (await getCachedIsAdmin()) return { blogStaffOnly: false };
+    if (location.pathname === "/admin/blog" || location.pathname.startsWith("/admin/blog/")) {
       const { data } = await supabase.rpc("blog_role");
-      if (data === "editor" || data === "writer") return;
+      if (data === "editor" || data === "writer") return { blogStaffOnly: true };
     }
     throw redirect({ to: "/app" });
   },
@@ -22,11 +22,12 @@ export const Route = createFileRoute("/_authenticated/admin")({
 });
 
 function AdminShell() {
+  const { blogStaffOnly } = Route.useRouteContext();
   const pathname = useRouterState({ select: s => s.location.pathname });
   const section = pathname.split("/")[2]?.replaceAll("-", " ") || "overview";
   return <SidebarProvider className="admin-workspace font-dash">
     <div className="flex min-h-screen w-full bg-background text-foreground">
-      <AdminSidebar />
+      <AdminSidebar contentOnly={blogStaffOnly} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 grid h-[72px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur-md md:px-8">
           <div className="flex min-w-0 items-center gap-3"><SidebarTrigger /><div className="min-w-0 text-sm"><span className="hidden text-muted-foreground sm:inline">Business <span className="mx-3 text-border">/</span></span><span className="capitalize truncate">{section}</span></div></div>
