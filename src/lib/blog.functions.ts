@@ -72,9 +72,10 @@ export const blogMediaAction=createServerFn({method:'POST'}).middleware([require
    if(!data.path?.startsWith(`${context.userId}/blog/`))throw new Error('Invalid upload path');
    const {data:file,error:infoError}=await db.storage.from('tenant-media').info(data.path);
    if(infoError||!file)throw new Error('Upload was not completed');
-   const metadata=file.metadata as {size?:number;mimetype?:string};
-   if(!metadata || (metadata.size ?? 0)>10*1024*1024 || !['image/png','image/jpeg','image/webp','image/gif','image/avif'].includes(metadata.mimetype ?? ''))throw new Error('Invalid uploaded image');
-   const {error}=await db.from('media_assets').insert({account_id:context.userId,created_by:context.userId,name:data.name,alt_text:data.alt,kind:'image',content_type:metadata.mimetype ?? data.type,size:metadata.size ?? data.size,storage_path:data.path,url:`/api/public/media/${data.path}`,blog_asset:true});if(error)throw new Error(error.message);return {ok:true};
+   const metadata=file.metadata as {size?:number;mimetype?:string}|undefined;
+   const size=file.size??metadata?.size;const contentType=file.contentType??metadata?.mimetype;
+   if(!size || size>10*1024*1024 || !['image/png','image/jpeg','image/webp','image/gif','image/avif'].includes(contentType ?? ''))throw new Error('Invalid uploaded image');
+   const {error}=await db.from('media_assets').insert({account_id:context.userId,created_by:context.userId,name:data.name,alt_text:data.alt,kind:'image',content_type:contentType,size,storage_path:data.path,url:`/api/public/media/${data.path}`,blog_asset:true});if(error)throw new Error(error.message);return {ok:true};
   }
   if(!data.id)throw new Error('Select an image');
   const {data:asset}=await context.supabase.from('media_assets').select('*').eq('id',data.id).eq('blog_asset',true).single();if(!asset)throw new Error('Image not found');
