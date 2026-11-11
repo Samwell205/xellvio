@@ -14,6 +14,8 @@ import {
   type Industry,
 } from "@/lib/templates/library";
 import { PUBLIC_PAGES, SITE_URL } from "@/lib/seo";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 interface SitemapEntry {
   path: string;
@@ -93,6 +95,20 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        const blogEntries: SitemapEntry[] = [{ path: "/blog", changefreq: "weekly", priority: "0.8" }];
+        const url = process.env["SUPABASE_URL"];
+        const key = process.env["SUPABASE_PUBLISHABLE_KEY"];
+        if (url && key) {
+          const client = createClient<Database>(url, key, { auth: { persistSession: false }, global: { fetch: (input, init) => { const headers = new Headers(init?.headers); if (key.startsWith("sb_") && headers.get("Authorization") === `Bearer ${key}`) headers.delete("Authorization"); headers.set("apikey", key); return fetch(input, { ...init, headers }); } } });
+          for (let offset = 0; ; offset += 1000) {
+            const { data, error } = await client.from("content_posts").select("slug,updated_at,topic,tags").eq("status", "published").eq("visibility", "public").eq("indexable", true).lte("published_at", new Date().toISOString()).order("slug").range(offset, offset + 999);
+            if (error) throw new Error(error.message);
+            for (const p of data ?? []) blogEntries.push({ path: `/blog/${encodeURIComponent(p.slug)}`, lastmod: p.updated_at, changefreq: "weekly", priority: "0.7" });
+            if (!data || data.length < 1000) break;
+          }
+          const { data: categories } = await client.from("blog_categories").select("slug").eq("archived", false);
+          for (const c of categories ?? []) blogEntries.push({ path: `/blog/category/${encodeURIComponent(c.slug)}`, changefreq: "weekly", priority: "0.6" });
+        }
         const categories = Object.keys(CATEGORY_META) as TemplateCategory[];
         const entries: SitemapEntry[] = [
           ...PUBLIC_PAGES.map((p) => ({
@@ -129,6 +145,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           })),
           ...(await partnerPages()),
           ...(await publishedLandingPages()),
+          ...blogEntries,
 
         ];
 
@@ -155,7 +172,7 @@ export const Route = createFileRoute("/sitemap.xml")({
         return new Response(xml, {
           headers: {
             "Content-Type": "application/xml",
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": "no-cache, max-age=0",
           },
         });
       },
