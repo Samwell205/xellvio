@@ -53,6 +53,8 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated.app'
 import { Route as ApiAccountAssistantRouteImport } from './routes/api.account-assistant'
 import { Route as ApiSetupSmsRouteImport } from './routes/api.setup-sms'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as CompareIndexRouteImport } from './routes/compare.index'
 import { Route as CompareSlugRouteImport } from './routes/compare.$slug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
@@ -134,6 +136,8 @@ import { Route as ApiPublicSnapshotFinanceRouteImport } from './routes/api.publi
 import { Route as ApiPublicSweepReceiptsRouteImport } from './routes/api.public.sweep-receipts'
 import { Route as ApiPublicTelnyxInboundRouteImport } from './routes/api.public.telnyx-inbound'
 import { Route as ApiPublicTelnyxStatusRouteImport } from './routes/api.public.telnyx-status'
+import { Route as BlogCategoryCategoryRouteImport } from './routes/blog.category.$category'
+import { Route as BlogTagTagRouteImport } from './routes/blog.tag.$tag'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as MarketplaceAppsIndexRouteImport } from './routes/marketplace.apps.index'
 import { Route as MarketplaceAppsSlugRouteImport } from './routes/marketplace.apps.$slug'
@@ -144,6 +148,13 @@ import { Route as TemplatesIndustryIndustryRouteImport } from './routes/template
 import { Route as TemplatesUseCaseGoalRouteImport } from './routes/templates.use-case.$goal'
 import { Route as AuthenticatedAdminAccountAssistantIndexRouteImport } from './routes/_authenticated.admin.account-assistant.index'
 import { Route as AuthenticatedAdminAccountAssistantThreadIdRouteImport } from './routes/_authenticated.admin.account-assistant.$threadId'
+import { Route as AuthenticatedAdminBlogIndexRouteImport } from './routes/_authenticated.admin.blog.index'
+import { Route as AuthenticatedAdminBlogAnalyticsRouteImport } from './routes/_authenticated.admin.blog.analytics'
+import { Route as AuthenticatedAdminBlogCalendarRouteImport } from './routes/_authenticated.admin.blog.calendar'
+import { Route as AuthenticatedAdminBlogCategoriesRouteImport } from './routes/_authenticated.admin.blog.categories'
+import { Route as AuthenticatedAdminBlogMediaRouteImport } from './routes/_authenticated.admin.blog.media'
+import { Route as AuthenticatedAdminBlogNewRouteImport } from './routes/_authenticated.admin.blog.new'
+import { Route as AuthenticatedAdminBlogSettingsRouteImport } from './routes/_authenticated.admin.blog.settings'
 import { Route as AuthenticatedAdminCampaignsIndexRouteImport } from './routes/_authenticated.admin.campaigns.index'
 import { Route as AuthenticatedAdminCampaignsIdRouteImport } from './routes/_authenticated.admin.campaigns.$id'
 import { Route as AuthenticatedAdminSupportIndexRouteImport } from './routes/_authenticated.admin.support.index'
@@ -196,6 +207,8 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
+import { Route as AuthenticatedAdminBlogPostsIndexRouteImport } from './routes/_authenticated.admin.blog.posts.index'
+import { Route as AuthenticatedAdminBlogPostsPostIdRouteImport } from './routes/_authenticated.admin.blog.posts.$postId'
 import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 import { Route as AuthenticatedAppUseTemplateCategorySlugRouteImport } from './routes/_authenticated.app.use-template.$category.$slug'
 import { Route as ApiPublicEmailUnsubscribeTokenRouteImport } from './routes/api.public.email.unsubscribe.$token'
@@ -420,6 +433,16 @@ const ApiAccountAssistantRoute = ApiAccountAssistantRouteImport.update({
 const ApiSetupSmsRoute = ApiSetupSmsRouteImport.update({
   id: '/api/setup-sms',
   path: '/api/setup-sms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompareIndexRoute = CompareIndexRouteImport.update({
@@ -870,6 +893,16 @@ const ApiPublicTelnyxStatusRoute = ApiPublicTelnyxStatusRouteImport.update({
   path: '/api/public/telnyx-status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogCategoryCategoryRoute = BlogCategoryCategoryRouteImport.update({
+  id: '/blog/category/$category',
+  path: '/blog/category/$category',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogTagTagRoute = BlogTagTagRouteImport.update({
+  id: '/blog/tag/$tag',
+  path: '/blog/tag/$tag',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
   path: '/lovable/email/suppression',
@@ -921,6 +954,48 @@ const AuthenticatedAdminAccountAssistantThreadIdRoute =
   AuthenticatedAdminAccountAssistantThreadIdRouteImport.update({
     id: '/account-assistant/$threadId',
     path: '/account-assistant/$threadId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBlogIndexRoute =
+  AuthenticatedAdminBlogIndexRouteImport.update({
+    id: '/blog/',
+    path: '/blog/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBlogAnalyticsRoute =
+  AuthenticatedAdminBlogAnalyticsRouteImport.update({
+    id: '/blog/analytics',
+    path: '/blog/analytics',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBlogCalendarRoute =
+  AuthenticatedAdminBlogCalendarRouteImport.update({
+    id: '/blog/calendar',
+    path: '/blog/calendar',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBlogCategoriesRoute =
+  AuthenticatedAdminBlogCategoriesRouteImport.update({
+    id: '/blog/categories',
+    path: '/blog/categories',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBlogMediaRoute =
+  AuthenticatedAdminBlogMediaRouteImport.update({
+    id: '/blog/media',
+    path: '/blog/media',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBlogNewRoute =
+  AuthenticatedAdminBlogNewRouteImport.update({
+    id: '/blog/new',
+    path: '/blog/new',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBlogSettingsRoute =
+  AuthenticatedAdminBlogSettingsRouteImport.update({
+    id: '/blog/settings',
+    path: '/blog/settings',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminCampaignsIndexRoute =
@@ -1221,6 +1296,18 @@ const LovableEmailTransactionalSendRoute =
     path: '/lovable/email/transactional/send',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAdminBlogPostsIndexRoute =
+  AuthenticatedAdminBlogPostsIndexRouteImport.update({
+    id: '/blog/posts/',
+    path: '/blog/posts/',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBlogPostsPostIdRoute =
+  AuthenticatedAdminBlogPostsPostIdRouteImport.update({
+    id: '/blog/posts/$postId',
+    path: '/blog/posts/$postId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAppCampaignsIdReportRoute =
   AuthenticatedAppCampaignsIdReportRouteImport.update({
     id: '/report',
@@ -1295,6 +1382,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AuthenticatedAppRouteWithChildren
   '/api/account-assistant': typeof ApiAccountAssistantRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
@@ -1308,6 +1396,7 @@ export interface FileRoutesByFullPath {
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/blog/': typeof BlogIndexRoute
   '/compare/': typeof CompareIndexRoute
   '/marketplace/': typeof MarketplaceIndexRoute
   '/partners/': typeof PartnersIndexRoute
@@ -1374,6 +1463,8 @@ export interface FileRoutesByFullPath {
   '/api/public/sweep-receipts': typeof ApiPublicSweepReceiptsRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
+  '/blog/category/$category': typeof BlogCategoryCategoryRoute
+  '/blog/tag/$tag': typeof BlogTagTagRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/support/t/$token': typeof SupportTTokenRoute
@@ -1385,6 +1476,12 @@ export interface FileRoutesByFullPath {
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/templates/$category/': typeof TemplatesCategoryIndexRoute
   '/admin/account-assistant/$threadId': typeof AuthenticatedAdminAccountAssistantThreadIdRoute
+  '/admin/blog/analytics': typeof AuthenticatedAdminBlogAnalyticsRoute
+  '/admin/blog/calendar': typeof AuthenticatedAdminBlogCalendarRoute
+  '/admin/blog/categories': typeof AuthenticatedAdminBlogCategoriesRoute
+  '/admin/blog/media': typeof AuthenticatedAdminBlogMediaRoute
+  '/admin/blog/new': typeof AuthenticatedAdminBlogNewRoute
+  '/admin/blog/settings': typeof AuthenticatedAdminBlogSettingsRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
@@ -1426,6 +1523,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/account-assistant/': typeof AuthenticatedAdminAccountAssistantIndexRoute
+  '/admin/blog/': typeof AuthenticatedAdminBlogIndexRoute
   '/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
   '/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/admin/telnyx/': typeof AuthenticatedAdminTelnyxIndexRoute
@@ -1438,10 +1536,12 @@ export interface FileRoutesByFullPath {
   '/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/app/support/': typeof AuthenticatedAppSupportIndexRoute
   '/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
+  '/admin/blog/posts/$postId': typeof AuthenticatedAdminBlogPostsPostIdRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
   '/api/public/email/unsubscribe/$token': typeof ApiPublicEmailUnsubscribeTokenRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
+  '/admin/blog/posts/': typeof AuthenticatedAdminBlogPostsIndexRoute
   '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
 }
 export interface FileRoutesByTo {
@@ -1484,6 +1584,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/account-assistant': typeof ApiAccountAssistantRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
@@ -1497,6 +1598,7 @@ export interface FileRoutesByTo {
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/blog': typeof BlogIndexRoute
   '/compare': typeof CompareIndexRoute
   '/marketplace': typeof MarketplaceIndexRoute
   '/partners': typeof PartnersIndexRoute
@@ -1560,6 +1662,8 @@ export interface FileRoutesByTo {
   '/api/public/sweep-receipts': typeof ApiPublicSweepReceiptsRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
+  '/blog/category/$category': typeof BlogCategoryCategoryRoute
+  '/blog/tag/$tag': typeof BlogTagTagRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/support/t/$token': typeof SupportTTokenRoute
@@ -1571,6 +1675,12 @@ export interface FileRoutesByTo {
   '/marketplace/apps': typeof MarketplaceAppsIndexRoute
   '/templates/$category': typeof TemplatesCategoryIndexRoute
   '/admin/account-assistant/$threadId': typeof AuthenticatedAdminAccountAssistantThreadIdRoute
+  '/admin/blog/analytics': typeof AuthenticatedAdminBlogAnalyticsRoute
+  '/admin/blog/calendar': typeof AuthenticatedAdminBlogCalendarRoute
+  '/admin/blog/categories': typeof AuthenticatedAdminBlogCategoriesRoute
+  '/admin/blog/media': typeof AuthenticatedAdminBlogMediaRoute
+  '/admin/blog/new': typeof AuthenticatedAdminBlogNewRoute
+  '/admin/blog/settings': typeof AuthenticatedAdminBlogSettingsRoute
   '/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
@@ -1612,6 +1722,7 @@ export interface FileRoutesByTo {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/admin/account-assistant': typeof AuthenticatedAdminAccountAssistantIndexRoute
+  '/admin/blog': typeof AuthenticatedAdminBlogIndexRoute
   '/admin/campaigns': typeof AuthenticatedAdminCampaignsIndexRoute
   '/admin/support': typeof AuthenticatedAdminSupportIndexRoute
   '/admin/telnyx': typeof AuthenticatedAdminTelnyxIndexRoute
@@ -1624,10 +1735,12 @@ export interface FileRoutesByTo {
   '/app/segments': typeof AuthenticatedAppSegmentsIndexRoute
   '/app/support': typeof AuthenticatedAppSupportIndexRoute
   '/verify/dashboard': typeof VerifierVerifyDashboardIndexRoute
+  '/admin/blog/posts/$postId': typeof AuthenticatedAdminBlogPostsPostIdRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
   '/api/public/email/unsubscribe/$token': typeof ApiPublicEmailUnsubscribeTokenRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
+  '/admin/blog/posts': typeof AuthenticatedAdminBlogPostsIndexRoute
   '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
 }
 export interface FileRoutesById {
@@ -1676,6 +1789,7 @@ export interface FileRoutesById {
   '/_authenticated/app': typeof AuthenticatedAppRouteWithChildren
   '/api/account-assistant': typeof ApiAccountAssistantRoute
   '/api/setup-sms': typeof ApiSetupSmsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/f/$slug': typeof FSlugRoute
@@ -1689,6 +1803,7 @@ export interface FileRoutesById {
   '/solutions/email-to-sms': typeof SolutionsEmailToSmsRoute
   '/verify/auth': typeof VerifyAuthRoute
   '/verify/reset-password': typeof VerifyResetPasswordRoute
+  '/blog/': typeof BlogIndexRoute
   '/compare/': typeof CompareIndexRoute
   '/marketplace/': typeof MarketplaceIndexRoute
   '/partners/': typeof PartnersIndexRoute
@@ -1755,6 +1870,8 @@ export interface FileRoutesById {
   '/api/public/sweep-receipts': typeof ApiPublicSweepReceiptsRoute
   '/api/public/telnyx-inbound': typeof ApiPublicTelnyxInboundRoute
   '/api/public/telnyx-status': typeof ApiPublicTelnyxStatusRoute
+  '/blog/category/$category': typeof BlogCategoryCategoryRoute
+  '/blog/tag/$tag': typeof BlogTagTagRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/marketplace/apps/$slug': typeof MarketplaceAppsSlugRoute
   '/support/t/$token': typeof SupportTTokenRoute
@@ -1766,6 +1883,12 @@ export interface FileRoutesById {
   '/marketplace/apps/': typeof MarketplaceAppsIndexRoute
   '/templates/$category/': typeof TemplatesCategoryIndexRoute
   '/_authenticated/admin/account-assistant/$threadId': typeof AuthenticatedAdminAccountAssistantThreadIdRoute
+  '/_authenticated/admin/blog/analytics': typeof AuthenticatedAdminBlogAnalyticsRoute
+  '/_authenticated/admin/blog/calendar': typeof AuthenticatedAdminBlogCalendarRoute
+  '/_authenticated/admin/blog/categories': typeof AuthenticatedAdminBlogCategoriesRoute
+  '/_authenticated/admin/blog/media': typeof AuthenticatedAdminBlogMediaRoute
+  '/_authenticated/admin/blog/new': typeof AuthenticatedAdminBlogNewRoute
+  '/_authenticated/admin/blog/settings': typeof AuthenticatedAdminBlogSettingsRoute
   '/_authenticated/admin/campaigns/$id': typeof AuthenticatedAdminCampaignsIdRoute
   '/_authenticated/admin/support/$caseId': typeof AuthenticatedAdminSupportCaseIdRoute
   '/_authenticated/admin/telnyx/audit': typeof AuthenticatedAdminTelnyxAuditRoute
@@ -1807,6 +1930,7 @@ export interface FileRoutesById {
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
   '/_authenticated/admin/account-assistant/': typeof AuthenticatedAdminAccountAssistantIndexRoute
+  '/_authenticated/admin/blog/': typeof AuthenticatedAdminBlogIndexRoute
   '/_authenticated/admin/campaigns/': typeof AuthenticatedAdminCampaignsIndexRoute
   '/_authenticated/admin/support/': typeof AuthenticatedAdminSupportIndexRoute
   '/_authenticated/admin/telnyx/': typeof AuthenticatedAdminTelnyxIndexRoute
@@ -1819,10 +1943,12 @@ export interface FileRoutesById {
   '/_authenticated/app/segments/': typeof AuthenticatedAppSegmentsIndexRoute
   '/_authenticated/app/support/': typeof AuthenticatedAppSupportIndexRoute
   '/_verifier/verify/dashboard/': typeof VerifierVerifyDashboardIndexRoute
+  '/_authenticated/admin/blog/posts/$postId': typeof AuthenticatedAdminBlogPostsPostIdRoute
   '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/_authenticated/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
   '/api/public/email/unsubscribe/$token': typeof ApiPublicEmailUnsubscribeTokenRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
+  '/_authenticated/admin/blog/posts/': typeof AuthenticatedAdminBlogPostsIndexRoute
   '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
 }
 export interface FileRouteTypes {
@@ -1870,6 +1996,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/api/account-assistant'
     | '/api/setup-sms'
+    | '/blog/$slug'
     | '/compare/$slug'
     | '/email/unsubscribe'
     | '/f/$slug'
@@ -1883,6 +2010,7 @@ export interface FileRouteTypes {
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/blog/'
     | '/compare/'
     | '/marketplace/'
     | '/partners/'
@@ -1949,6 +2077,8 @@ export interface FileRouteTypes {
     | '/api/public/sweep-receipts'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
+    | '/blog/category/$category'
+    | '/blog/tag/$tag'
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
     | '/support/t/$token'
@@ -1960,6 +2090,12 @@ export interface FileRouteTypes {
     | '/marketplace/apps/'
     | '/templates/$category/'
     | '/admin/account-assistant/$threadId'
+    | '/admin/blog/analytics'
+    | '/admin/blog/calendar'
+    | '/admin/blog/categories'
+    | '/admin/blog/media'
+    | '/admin/blog/new'
+    | '/admin/blog/settings'
     | '/admin/campaigns/$id'
     | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
@@ -2001,6 +2137,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/admin/account-assistant/'
+    | '/admin/blog/'
     | '/admin/campaigns/'
     | '/admin/support/'
     | '/admin/telnyx/'
@@ -2013,10 +2150,12 @@ export interface FileRouteTypes {
     | '/app/segments/'
     | '/app/support/'
     | '/verify/dashboard/'
+    | '/admin/blog/posts/$postId'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
     | '/api/public/email/unsubscribe/$token'
     | '/api/public/oauth/calendar/return'
+    | '/admin/blog/posts/'
     | '/api/public/voice/tools/$callId/$action'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -2059,6 +2198,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/api/account-assistant'
     | '/api/setup-sms'
+    | '/blog/$slug'
     | '/compare/$slug'
     | '/email/unsubscribe'
     | '/f/$slug'
@@ -2072,6 +2212,7 @@ export interface FileRouteTypes {
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/blog'
     | '/compare'
     | '/marketplace'
     | '/partners'
@@ -2135,6 +2276,8 @@ export interface FileRouteTypes {
     | '/api/public/sweep-receipts'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
+    | '/blog/category/$category'
+    | '/blog/tag/$tag'
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
     | '/support/t/$token'
@@ -2146,6 +2289,12 @@ export interface FileRouteTypes {
     | '/marketplace/apps'
     | '/templates/$category'
     | '/admin/account-assistant/$threadId'
+    | '/admin/blog/analytics'
+    | '/admin/blog/calendar'
+    | '/admin/blog/categories'
+    | '/admin/blog/media'
+    | '/admin/blog/new'
+    | '/admin/blog/settings'
     | '/admin/campaigns/$id'
     | '/admin/support/$caseId'
     | '/admin/telnyx/audit'
@@ -2187,6 +2336,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/admin/account-assistant'
+    | '/admin/blog'
     | '/admin/campaigns'
     | '/admin/support'
     | '/admin/telnyx'
@@ -2199,10 +2349,12 @@ export interface FileRouteTypes {
     | '/app/segments'
     | '/app/support'
     | '/verify/dashboard'
+    | '/admin/blog/posts/$postId'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
     | '/api/public/email/unsubscribe/$token'
     | '/api/public/oauth/calendar/return'
+    | '/admin/blog/posts'
     | '/api/public/voice/tools/$callId/$action'
   id:
     | '__root__'
@@ -2250,6 +2402,7 @@ export interface FileRouteTypes {
     | '/_authenticated/app'
     | '/api/account-assistant'
     | '/api/setup-sms'
+    | '/blog/$slug'
     | '/compare/$slug'
     | '/email/unsubscribe'
     | '/f/$slug'
@@ -2263,6 +2416,7 @@ export interface FileRouteTypes {
     | '/solutions/email-to-sms'
     | '/verify/auth'
     | '/verify/reset-password'
+    | '/blog/'
     | '/compare/'
     | '/marketplace/'
     | '/partners/'
@@ -2329,6 +2483,8 @@ export interface FileRouteTypes {
     | '/api/public/sweep-receipts'
     | '/api/public/telnyx-inbound'
     | '/api/public/telnyx-status'
+    | '/blog/category/$category'
+    | '/blog/tag/$tag'
     | '/lovable/email/suppression'
     | '/marketplace/apps/$slug'
     | '/support/t/$token'
@@ -2340,6 +2496,12 @@ export interface FileRouteTypes {
     | '/marketplace/apps/'
     | '/templates/$category/'
     | '/_authenticated/admin/account-assistant/$threadId'
+    | '/_authenticated/admin/blog/analytics'
+    | '/_authenticated/admin/blog/calendar'
+    | '/_authenticated/admin/blog/categories'
+    | '/_authenticated/admin/blog/media'
+    | '/_authenticated/admin/blog/new'
+    | '/_authenticated/admin/blog/settings'
     | '/_authenticated/admin/campaigns/$id'
     | '/_authenticated/admin/support/$caseId'
     | '/_authenticated/admin/telnyx/audit'
@@ -2381,6 +2543,7 @@ export interface FileRouteTypes {
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
     | '/_authenticated/admin/account-assistant/'
+    | '/_authenticated/admin/blog/'
     | '/_authenticated/admin/campaigns/'
     | '/_authenticated/admin/support/'
     | '/_authenticated/admin/telnyx/'
@@ -2393,10 +2556,12 @@ export interface FileRouteTypes {
     | '/_authenticated/app/segments/'
     | '/_authenticated/app/support/'
     | '/_verifier/verify/dashboard/'
+    | '/_authenticated/admin/blog/posts/$postId'
     | '/_authenticated/app/campaigns/$id/report'
     | '/_authenticated/app/use-template/$category/$slug'
     | '/api/public/email/unsubscribe/$token'
     | '/api/public/oauth/calendar/return'
+    | '/_authenticated/admin/blog/posts/'
     | '/api/public/voice/tools/$callId/$action'
   fileRoutesById: FileRoutesById
 }
@@ -2443,6 +2608,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiAccountAssistantRoute: typeof ApiAccountAssistantRoute
   ApiSetupSmsRoute: typeof ApiSetupSmsRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   CompareSlugRoute: typeof CompareSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   FSlugRoute: typeof FSlugRoute
@@ -2452,6 +2618,7 @@ export interface RootRouteChildren {
   RCodeRoute: typeof RCodeRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   CompareIndexRoute: typeof CompareIndexRoute
   PartnersIndexRoute: typeof PartnersIndexRoute
   TemplatesIndexRoute: typeof TemplatesIndexRoute
@@ -2472,6 +2639,8 @@ export interface RootRouteChildren {
   ApiPublicSweepReceiptsRoute: typeof ApiPublicSweepReceiptsRoute
   ApiPublicTelnyxInboundRoute: typeof ApiPublicTelnyxInboundRoute
   ApiPublicTelnyxStatusRoute: typeof ApiPublicTelnyxStatusRoute
+  BlogCategoryCategoryRoute: typeof BlogCategoryCategoryRoute
+  BlogTagTagRoute: typeof BlogTagTagRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   SupportTTokenRoute: typeof SupportTTokenRoute
   TemplatesCategorySlugRoute: typeof TemplatesCategorySlugRoute
@@ -2811,6 +2980,20 @@ declare module '@tanstack/react-router' {
       path: '/api/setup-sms'
       fullPath: '/api/setup-sms'
       preLoaderRoute: typeof ApiSetupSmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compare/': {
@@ -3380,6 +3563,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTelnyxStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/category/$category': {
+      id: '/blog/category/$category'
+      path: '/blog/category/$category'
+      fullPath: '/blog/category/$category'
+      preLoaderRoute: typeof BlogCategoryCategoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/tag/$tag': {
+      id: '/blog/tag/$tag'
+      path: '/blog/tag/$tag'
+      fullPath: '/blog/tag/$tag'
+      preLoaderRoute: typeof BlogTagTagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
       path: '/lovable/email/suppression'
@@ -3448,6 +3645,55 @@ declare module '@tanstack/react-router' {
       path: '/account-assistant/$threadId'
       fullPath: '/admin/account-assistant/$threadId'
       preLoaderRoute: typeof AuthenticatedAdminAccountAssistantThreadIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/blog/': {
+      id: '/_authenticated/admin/blog/'
+      path: '/blog'
+      fullPath: '/admin/blog/'
+      preLoaderRoute: typeof AuthenticatedAdminBlogIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/blog/analytics': {
+      id: '/_authenticated/admin/blog/analytics'
+      path: '/blog/analytics'
+      fullPath: '/admin/blog/analytics'
+      preLoaderRoute: typeof AuthenticatedAdminBlogAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/blog/calendar': {
+      id: '/_authenticated/admin/blog/calendar'
+      path: '/blog/calendar'
+      fullPath: '/admin/blog/calendar'
+      preLoaderRoute: typeof AuthenticatedAdminBlogCalendarRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/blog/categories': {
+      id: '/_authenticated/admin/blog/categories'
+      path: '/blog/categories'
+      fullPath: '/admin/blog/categories'
+      preLoaderRoute: typeof AuthenticatedAdminBlogCategoriesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/blog/media': {
+      id: '/_authenticated/admin/blog/media'
+      path: '/blog/media'
+      fullPath: '/admin/blog/media'
+      preLoaderRoute: typeof AuthenticatedAdminBlogMediaRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/blog/new': {
+      id: '/_authenticated/admin/blog/new'
+      path: '/blog/new'
+      fullPath: '/admin/blog/new'
+      preLoaderRoute: typeof AuthenticatedAdminBlogNewRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/blog/settings': {
+      id: '/_authenticated/admin/blog/settings'
+      path: '/blog/settings'
+      fullPath: '/admin/blog/settings'
+      preLoaderRoute: typeof AuthenticatedAdminBlogSettingsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/campaigns/': {
@@ -3814,6 +4060,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/blog/posts/': {
+      id: '/_authenticated/admin/blog/posts/'
+      path: '/blog/posts'
+      fullPath: '/admin/blog/posts/'
+      preLoaderRoute: typeof AuthenticatedAdminBlogPostsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/blog/posts/$postId': {
+      id: '/_authenticated/admin/blog/posts/$postId'
+      path: '/blog/posts/$postId'
+      fullPath: '/admin/blog/posts/$postId'
+      preLoaderRoute: typeof AuthenticatedAdminBlogPostsPostIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/app/campaigns/$id/report': {
       id: '/_authenticated/app/campaigns/$id/report'
       path: '/report'
@@ -3895,14 +4155,23 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminVerifiersRoute: typeof AuthenticatedAdminVerifiersRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAdminAccountAssistantThreadIdRoute: typeof AuthenticatedAdminAccountAssistantThreadIdRoute
+  AuthenticatedAdminBlogAnalyticsRoute: typeof AuthenticatedAdminBlogAnalyticsRoute
+  AuthenticatedAdminBlogCalendarRoute: typeof AuthenticatedAdminBlogCalendarRoute
+  AuthenticatedAdminBlogCategoriesRoute: typeof AuthenticatedAdminBlogCategoriesRoute
+  AuthenticatedAdminBlogMediaRoute: typeof AuthenticatedAdminBlogMediaRoute
+  AuthenticatedAdminBlogNewRoute: typeof AuthenticatedAdminBlogNewRoute
+  AuthenticatedAdminBlogSettingsRoute: typeof AuthenticatedAdminBlogSettingsRoute
   AuthenticatedAdminCampaignsIdRoute: typeof AuthenticatedAdminCampaignsIdRoute
   AuthenticatedAdminTelnyxAuditRoute: typeof AuthenticatedAdminTelnyxAuditRoute
   AuthenticatedAdminTelnyxTfnRoute: typeof AuthenticatedAdminTelnyxTfnRoute
   AuthenticatedAdminTicketsIdRoute: typeof AuthenticatedAdminTicketsIdRoute
   AuthenticatedAdminAccountAssistantIndexRoute: typeof AuthenticatedAdminAccountAssistantIndexRoute
+  AuthenticatedAdminBlogIndexRoute: typeof AuthenticatedAdminBlogIndexRoute
   AuthenticatedAdminCampaignsIndexRoute: typeof AuthenticatedAdminCampaignsIndexRoute
   AuthenticatedAdminTelnyxIndexRoute: typeof AuthenticatedAdminTelnyxIndexRoute
   AuthenticatedAdminTicketsIndexRoute: typeof AuthenticatedAdminTicketsIndexRoute
+  AuthenticatedAdminBlogPostsPostIdRoute: typeof AuthenticatedAdminBlogPostsPostIdRoute
+  AuthenticatedAdminBlogPostsIndexRoute: typeof AuthenticatedAdminBlogPostsIndexRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -3934,15 +4203,25 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedAdminAccountAssistantThreadIdRoute:
     AuthenticatedAdminAccountAssistantThreadIdRoute,
+  AuthenticatedAdminBlogAnalyticsRoute: AuthenticatedAdminBlogAnalyticsRoute,
+  AuthenticatedAdminBlogCalendarRoute: AuthenticatedAdminBlogCalendarRoute,
+  AuthenticatedAdminBlogCategoriesRoute: AuthenticatedAdminBlogCategoriesRoute,
+  AuthenticatedAdminBlogMediaRoute: AuthenticatedAdminBlogMediaRoute,
+  AuthenticatedAdminBlogNewRoute: AuthenticatedAdminBlogNewRoute,
+  AuthenticatedAdminBlogSettingsRoute: AuthenticatedAdminBlogSettingsRoute,
   AuthenticatedAdminCampaignsIdRoute: AuthenticatedAdminCampaignsIdRoute,
   AuthenticatedAdminTelnyxAuditRoute: AuthenticatedAdminTelnyxAuditRoute,
   AuthenticatedAdminTelnyxTfnRoute: AuthenticatedAdminTelnyxTfnRoute,
   AuthenticatedAdminTicketsIdRoute: AuthenticatedAdminTicketsIdRoute,
   AuthenticatedAdminAccountAssistantIndexRoute:
     AuthenticatedAdminAccountAssistantIndexRoute,
+  AuthenticatedAdminBlogIndexRoute: AuthenticatedAdminBlogIndexRoute,
   AuthenticatedAdminCampaignsIndexRoute: AuthenticatedAdminCampaignsIndexRoute,
   AuthenticatedAdminTelnyxIndexRoute: AuthenticatedAdminTelnyxIndexRoute,
   AuthenticatedAdminTicketsIndexRoute: AuthenticatedAdminTicketsIndexRoute,
+  AuthenticatedAdminBlogPostsPostIdRoute:
+    AuthenticatedAdminBlogPostsPostIdRoute,
+  AuthenticatedAdminBlogPostsIndexRoute: AuthenticatedAdminBlogPostsIndexRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
@@ -4200,6 +4479,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiAccountAssistantRoute: ApiAccountAssistantRoute,
   ApiSetupSmsRoute: ApiSetupSmsRoute,
+  BlogSlugRoute: BlogSlugRoute,
   CompareSlugRoute: CompareSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   FSlugRoute: FSlugRoute,
@@ -4209,6 +4489,7 @@ const rootRouteChildren: RootRouteChildren = {
   RCodeRoute: RCodeRoute,
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
+  BlogIndexRoute: BlogIndexRoute,
   CompareIndexRoute: CompareIndexRoute,
   PartnersIndexRoute: PartnersIndexRoute,
   TemplatesIndexRoute: TemplatesIndexRoute,
@@ -4229,6 +4510,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicSweepReceiptsRoute: ApiPublicSweepReceiptsRoute,
   ApiPublicTelnyxInboundRoute: ApiPublicTelnyxInboundRoute,
   ApiPublicTelnyxStatusRoute: ApiPublicTelnyxStatusRoute,
+  BlogCategoryCategoryRoute: BlogCategoryCategoryRoute,
+  BlogTagTagRoute: BlogTagTagRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   SupportTTokenRoute: SupportTTokenRoute,
   TemplatesCategorySlugRoute: TemplatesCategorySlugRoute,
