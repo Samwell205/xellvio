@@ -16,8 +16,9 @@ export function twilioReceiptPayload(msg: { sid?: string; status?: string; error
   return { data: { event_type: "message.finalized", payload: { id: msg.sid, to: [{ status, errors }] } } };
 }
 
-async function authForSender(db: any, sender: string, cache: Map<string, string | null>) {
-  if (cache.has(sender)) return cache.get(sender)!;
+async function authForSender(db: any, sender: string, accountId: string | null, cache: Map<string, string | null>) {
+  const key = `${sender}|${accountId ?? ""}`;
+  if (cache.has(key)) return cache.get(key)!;
   const { lineTokenFor } = await import("./twilio-lines.server");
   const { data } = await db.from("tenant_twilio_lines").select("subaccount_sid").eq("phone_number", sender).not("subaccount_sid", "is", null).limit(1).maybeSingle();
   let auth: string | null = null;
@@ -25,7 +26,17 @@ async function authForSender(db: any, sender: string, cache: Map<string, string 
     const tok = await lineTokenFor(data.subaccount_sid);
     if (tok) auth = `${data.subaccount_sid}|Basic ${Buffer.from(`${data.subaccount_sid}:${tok}`).toString("base64")}`;
   }
-  cache.set(sender, auth);
+  // Sender names and other non-US/CA sends live in the business's own
+  // international sub-account, looked up by the message's business.
+  if (!auth && accountId) {
+    const { data: intl } = await db.from("tenant_intl_subaccounts").select("subaccount_sid").eq("account_id", accountId).not("subaccount_sid", "is", null).maybeSingle();
+    if (intl?.subaccount_sid) {
+      const { intlTokenFor } = await import("./intl-subaccounts.server");
+      const tok = await intlTokenFor(intl.subaccount_sid);
+      if (tok) auth = `${intl.subaccount_sid}|Basic ${Buffer.from(`${intl.subaccount_sid}:${tok}`).toString("base64")}`;
+    }
+  }
+  cache.set(key, auth);
   return auth;
 }
 
@@ -44,7 +55,7 @@ export function isStaleNoReport(carrierStatus: string | null | undefined, sentAt
 export const NO_REPORT_REASON = "The recipient's network accepted this text but never sent back a delivery report.";
 
 export async function recoverTwilioReceipts(db: any, opts: { campaignId?: string; after?: string; olderThanMin?: number; maxAgeHours?: number; limit?: number; budgetMs?: number; noReportAfterHours?: number }) {
-  let q = db.from("messages").select("id,provider_message_id,sender_used,sent_at,status")
+  let q = db.from("messages").select("id,account_id,provider_message_id,sender_used,sent_at,status")
     .in("status", OPEN).ilike("provider_message_id", "SM%").not("sender_used", "is", null)
     .order("id", { ascending: true }).limit(opts.limit ?? 120);
   if (opts.campaignId) q = q.eq("campaign_id", opts.campaignId);
@@ -63,7 +74,7 @@ export async function recoverTwilioReceipts(db: any, opts: { campaignId?: string
     await Promise.all(chunk.map(async (row: any) => {
       checked++;
       try {
-        const auth = await authForSender(db, row.sender_used, cache);
+        const auth = await authForSender(db, row.sender_used, row.account_id ?? null, cache);
         if (!auth) { stillAwaiting++; return; }
         const [sid, header] = auth.split("|");
         const res = await fetch(`${API}/Accounts/${sid}/Messages/${row.provider_message_id}.json`, { headers: { Authorization: header }, signal: AbortSignal.timeout(8000) });
