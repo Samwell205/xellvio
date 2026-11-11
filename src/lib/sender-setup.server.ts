@@ -135,7 +135,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         let telnyxError: string | null = null;
         try {
           const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
-          alphaSenderId = (await ensureIntlSubaccount(accountId)).sid;
+          alphaSenderId = (await ensureIntlSubaccount(acct.id)).sid;
         } catch (e: any) {
           telnyxError = String(e?.message ?? e);
           const telnyxErrorText = telnyxError.toLowerCase();
