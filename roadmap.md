@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Integrated blog CMS
+- [ ] Complete uploaded continuation brief: verified publishing, staff administration, efficient scheduling, real analytics and desktop/mobile security QA
 - [x] Reuse existing content tables; add secure categories, revisions, redirects, publishing schedules, media metadata, settings and consented subscriptions
 - [x] Add admin overview, posts, rich-text editor, categories/tags, media, calendar, analytics and settings; live admin checks remain blocked below
 - [x] Add database-backed public blog, article/category/tag pages, Resources integration and SEO/sitemaps; public empty blog renders, latest build OK
