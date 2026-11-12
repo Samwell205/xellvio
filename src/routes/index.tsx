@@ -220,7 +220,7 @@ function Hero() {
           <p className="text-xs font-semibold tracking-[0.18em] uppercase text-muted-foreground">
             Xellvio
           </p>
-          <h1 className="mt-4 text-5xl sm:text-6xl md:text-[64px] font-extrabold tracking-tight leading-[1.02] text-foreground">
+          <h1 className="mt-4 text-[44px] sm:text-6xl md:text-[64px] font-extrabold tracking-tight leading-[1.02] text-foreground">
             One platform for
             <br />
             every customer message
