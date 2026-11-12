@@ -210,7 +210,7 @@ function HomePage() {
 
 function Hero() {
   return (
-    <section className="bg-background">
+    <section className="bg-background overflow-x-clip">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-12 pb-24 md:pt-20 md:pb-32 grid lg:grid-cols-[0.9fr_1.1fr] gap-14 lg:gap-12 items-center">
         <motion.div
           initial={{ opacity: 0, y: 24 }}

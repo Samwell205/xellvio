@@ -157,7 +157,7 @@ export function HeroProduct() {
                     <span className="ml-auto tabular-nums">141 chars · 1 segment</span>
                   </div>
                 </div>
-                <div className="divide-y divide-border rounded-xl border border-border px-3">
+                <div className="divide-y divide-border rounded-xl border border-border px-3 sm:mr-28 lg:mr-24">
                   <Row k="Audience" v="VIP customers · 1,248" />
                   <Row k="Sender" v="BRIGHTLEAF" />
                   <Row
