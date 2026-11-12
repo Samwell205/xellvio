@@ -169,7 +169,7 @@ export function AiChatWidget() {
           "fixed bottom-[calc(6rem+var(--cookie-offset,0px))] right-5 z-50 flex w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B0B14]/90 shadow-[0_0_40px_-10px_rgba(124,58,237,0.3)] backdrop-blur-2xl transition-all",
           open ? "xv-panel-open pointer-events-auto opacity-100" : "pointer-events-none translate-y-3 opacity-0",
         )}
-        style={{ height: "min(560px, calc(100vh - 8rem))", fontFamily: "'DM Sans', sans-serif" }}
+        style={{ height: "min(560px, calc(100dvh - 7rem - var(--cookie-offset, 0px)))", fontFamily: "'DM Sans', sans-serif" }}
         role="dialog"
         aria-label="Support chat"
       >
