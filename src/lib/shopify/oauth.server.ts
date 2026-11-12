@@ -11,7 +11,7 @@ function secret() {
 }
 async function hmac(data: string | Uint8Array, key = secret()) {
   const k = await crypto.subtle.importKey("raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  return new Uint8Array(await crypto.subtle.sign("HMAC", k, typeof data === "string" ? enc.encode(data) : data));
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, (typeof data === "string" ? enc.encode(data) : data) as BufferSource));
 }
 const hex = (b: Uint8Array) => [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
 const b64 = (b: Uint8Array) => btoa(String.fromCharCode(...b));
