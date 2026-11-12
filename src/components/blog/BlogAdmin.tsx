@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { Plus, Search, FileText, Eye, CalendarDays, Copy, Archive, Trash2, ImagePlus, ArrowUpRight, Pencil, Save } from 'lucide-react';
+import { markInternalBlogVisitor } from '@/components/blog/BlogPublic';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +21,7 @@ export type BlogAdminView='overview'|'posts'|'categories'|'media'|'calendar'|'an
 const titles:Record<BlogAdminView,string>={overview:'Blog overview',posts:'All blog posts',categories:'Categories & tags',media:'Media library',calendar:'Publishing calendar',analytics:'Blog analytics',settings:'Blog settings'};
 type Metrics={published:number;drafts:number;scheduled:number;views:number;visitors:number;engaged:number;ctaClicks:number;subscriptions:number;registrations:number;top:{id:string;slug:string;title:string;topic:string;views:number;visitors:number;cta_clicks:number}[];trend:{day:string;views:number}[];sources:{source:string;views:number}[]};
 export function BlogAdmin({view}:{view:BlogAdminView}){
+ useEffect(()=>{markInternalBlogVisitor(true);},[]);
  const fetch=useServerFn(blogAdminData);const analytics=useServerFn(blogAnalytics);const savePost=useServerFn(blogSavePost);const deletePost=useServerFn(blogDeletePost);const saveCategory=useServerFn(blogSaveCategory);const saveSettings=useServerFn(blogSaveSettings);const saveAuthor=useServerFn(blogSaveAuthor);const mediaAction=useServerFn(blogMediaAction);const qc=useQueryClient();
  const [page,setPage]=useState(0);const [search,setSearch]=useState('');const [status,setStatus]=useState('');const [topic,setTopic]=useState('');const [author,setAuthor]=useState('');const [sort,setSort]=useState<'updated_at'|'published_at'|'title'>('updated_at');const [confirm,setConfirm]=useState<{kind:'post'|'media';id:string;name:string}|null>(null);const [busy,setBusy]=useState(false);const [category,setCategory]=useState<Partial<BlogCategory>|null>(null);const [settings,setSettings]=useState<BlogSettings|null>(null);const [authorForm,setAuthorForm]=useState({id:undefined as string|undefined,name:'',slug:'',bio:'',title:''});const [editMedia,setEditMedia]=useState<BlogMedia|null>(null);const fileInput=useRef<HTMLInputElement>(null);
  const q=useQuery({queryKey:['blog-admin',view,page,search,status,topic,author,sort],queryFn:()=>fetch({data:{page,search,status,topic,author,sort}})});
