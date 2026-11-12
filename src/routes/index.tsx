@@ -24,7 +24,9 @@ import { useState } from "react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { PlatformShowcase } from "@/components/marketing/PlatformShowcase";
-import { InteractiveShowcase } from "@/components/marketing/InteractiveShowcase";
+import { IntegrationMarquee } from "@/components/marketing/InteractiveShowcase";
+import { HeroProduct } from "@/components/marketing/home/HeroProduct";
+import { ProductSteps } from "@/components/marketing/home/ProductSteps";
 import { StatsMarquee, reveal } from "@/components/marketing/ProductKit";
 import { PhotoGallery } from "@/components/marketing/PhotoGallery";
 import { Button } from "@/components/ui/button";
@@ -33,8 +35,6 @@ import { faqSchema, pageHead, softwareApplicationSchema, websiteSchema } from "@
 import shopImg from "@/assets/landing-shop-owner.jpg";
 import globalImg from "@/assets/landing-global.jpg";
 import insightsImg from "@/assets/landing-insights.jpg";
-import heroLoopAsset from "@/assets/xellvio-hero-loop.mp4.asset.json";
-import heroLoopWebmAsset from "@/assets/xellvio-hero-loop.webm.asset.json";
 
 const CHANNELS = [
   {
@@ -187,7 +187,10 @@ function HomePage() {
             { value: "24/7", label: "delivery monitoring" },
           ]}
         />
-        <InteractiveShowcase />
+        <ProductSteps />
+        <section className="bg-background pb-20">
+          <IntegrationMarquee />
+        </section>
         <Channels />
         <PlatformShowcase />
         <FeatureGrid />
@@ -208,7 +211,7 @@ function HomePage() {
 function Hero() {
   return (
     <section className="bg-background">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28 grid lg:grid-cols-2 gap-12 items-center">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-12 pb-24 md:pt-20 md:pb-32 grid lg:grid-cols-[0.9fr_1.1fr] gap-14 lg:gap-12 items-center">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -259,20 +262,7 @@ function Hero() {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="relative"
         >
-          <div className="brand-video-surface relative overflow-hidden">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              className="brand-video block w-full h-full object-cover"
-              aria-label="Xellvio automation preview"
-            >
-              <source src={heroLoopAsset.url} type="video/mp4" />
-              <source src={heroLoopWebmAsset.url} type="video/webm" />
-            </video>
-          </div>
+          <HeroProduct />
         </motion.div>
       </div>
     </section>

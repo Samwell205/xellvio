@@ -138,7 +138,6 @@ function AutomationVisual() {
           {/* branch */}
           <div className="relative w-full max-w-[520px]">
             <span aria-hidden className="absolute left-1/4 right-1/4 top-0 h-px bg-primary/60" />
-            <span aria-hidden className="absolute left-1/2 top-[-0px] h-0 w-px" />
             <div className="grid grid-cols-2 gap-3 pt-0">
               {[
                 { label: "Yes", node: <Node kind="Exit" icon={CheckCircle2} tone="bg-primary/15 text-primary" title="End flow" desc="Goal reached" /> },
@@ -223,7 +222,7 @@ const STEPS = [
     tab: "Capture a contact",
     title: "A visitor signs up. A contact appears.",
     body: "Publish a Xellvio form on your site or a landing page. Each submission becomes a contact, added to the list you choose, with SMS and email consent recorded separately.",
-    to: "/forms",
+    to: "/signup-forms",
     cta: "See forms",
     Visual: FormVisual,
   },
@@ -307,7 +306,6 @@ export function ProductSteps() {
                 role="tabpanel"
                 id={`step-panel-${s.id}`}
                 aria-labelledby={`step-tab-${s.id}`}
-                hidden={false}
                 aria-hidden={!on}
                 inert={!on ? true : undefined}
                 className={`[grid-area:1/1] grid items-center gap-8 transition-opacity duration-300 motion-reduce:transition-none lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-12 ${
