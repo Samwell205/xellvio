@@ -180,3 +180,8 @@ export function previewFor(category: TemplateCategory, slug: string) {
   if (category === "sign-up-forms") return FORM_BUILDER_TEMPLATES.find((t) => t.id === slug);
   return undefined;
 }
+
+/** Single source for every displayed template total on the public site. */
+export function templateCount(category: TemplateCategory) {
+  return templatesInCategory(category).length;
+}
