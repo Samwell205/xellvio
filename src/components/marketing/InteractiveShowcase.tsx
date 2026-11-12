@@ -792,6 +792,38 @@ const ROW_B = [
   "Webhooks & API",
 ] as const;
 
+const LOGO_DOMAINS: Record<string, string> = {
+  Shopify: "shopify.com", WooCommerce: "woocommerce.com", Stripe: "stripe.com", Paystack: "paystack.com",
+  Flutterwave: "flutterwave.com", HubSpot: "hubspot.com", Salesforce: "salesforce.com", Pipedrive: "pipedrive.com",
+  "Zoho CRM": "zoho.com", Klaviyo: "klaviyo.com", Mailchimp: "mailchimp.com", OpenAI: "openai.com",
+  Claude: "claude.ai", Gemini: "gemini.google.com", Zapier: "zapier.com", Make: "make.com", n8n: "n8n.io",
+  Slack: "slack.com", "Google Sheets": "sheets.google.com", "Google Analytics": "analytics.google.com",
+  "Meta Pixel": "meta.com", Calendly: "calendly.com", Typeform: "typeform.com",
+};
+
+function BrandLogo({ name }: { name: string }) {
+  const [failed, setFailed] = useState(false);
+  const domain = LOGO_DOMAINS[name];
+  if (!domain || failed) {
+    return (
+      <span className="grid size-6 place-items-center rounded-lg bg-muted text-[11px] font-extrabold text-foreground">
+        {name === "Webhooks & API" ? "{ }" : name.charAt(0)}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+      alt={`${name} logo`}
+      width={24}
+      height={24}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="size-6 rounded-md object-contain"
+    />
+  );
+}
+
 function LogoRow({ items, reverse }: { items: readonly string[]; reverse?: boolean }) {
   const row = [...items, ...items];
   return (
@@ -804,9 +836,7 @@ function LogoRow({ items, reverse }: { items: readonly string[]; reverse?: boole
             key={`${name}-${i}`}
             className="mx-2 flex shrink-0 items-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 shadow-sm"
           >
-            <span className="grid size-6 place-items-center rounded-lg bg-muted text-[11px] font-extrabold text-foreground">
-              {name.charAt(0)}
-            </span>
+            <BrandLogo name={name} />
             <span className="whitespace-nowrap text-sm font-bold tracking-tight text-foreground">
               {name}
             </span>
