@@ -8743,6 +8743,18 @@ export type Database = {
         }[]
       }
       blog_metrics: { Args: never; Returns: Json }
+      blog_popular: {
+        Args: { _limit?: number }
+        Returns: {
+          featured_image: string
+          image_alt: string
+          slug: string
+          title: string
+          topic: string
+          visitors: number
+          words: number
+        }[]
+      }
       blog_publish_due: { Args: never; Returns: number }
       blog_record_event: {
         Args: {

@@ -393,6 +393,13 @@
       "when": 1794462962893,
       "tag": "0055_scope_blog_settings_public_read",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1794463214469,
+      "tag": "0056_blog_popular_articles",
+      "breakpoints": true
     }
   ]
 }
