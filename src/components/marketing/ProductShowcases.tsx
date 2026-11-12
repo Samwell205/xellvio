@@ -23,7 +23,7 @@ export function LandingHeroVisual() {
             blocks={LANDING_DEMO.blocks}
             theme={LANDING_DEMO.theme}
             renderWidth={1100}
-            clipHeight={760}
+            clipHeight={650}
             label="Finished landing page for a sample boutique: autumn sale headline, sign-up form for a 15% code and a street-style shopping photo"
           />
         </BrowserFrame>
@@ -54,7 +54,7 @@ export function LandingExperience() {
       <div className="mx-auto grid max-w-[1200px] items-center gap-12 px-5 sm:px-8 md:grid-cols-[minmax(0,320px)_1fr] lg:gap-20">
         <motion.figure {...reveal} className="mx-auto w-full max-w-[300px]">
           <PhoneFrame className="border-ink-foreground/20">
-            <DesignRender blocks={LANDING_DEMO.blocks} theme={LANDING_DEMO.theme} device="mobile" renderWidth={390} clipHeight={1180} label="Mobile design preview of the boutique page: headline, form, photo and delivery benefits" />
+            <DesignRender blocks={LANDING_DEMO.blocks} theme={LANDING_DEMO.theme} device="mobile" renderWidth={390} clipHeight={1040} label="Mobile design preview of the boutique page: headline, form, photo and delivery benefits" />
           </PhoneFrame>
           <figcaption className="mt-3 text-center text-xs text-ink-foreground/70">Design preview at phone width, same example page</figcaption>
         </motion.figure>
@@ -94,7 +94,7 @@ export function FormHeroVisual() {
               theme={FORM_DEMO.theme}
               device="mobile"
               renderWidth={400}
-              clipHeight={560}
+              clipHeight={470}
               label="Café coffee-club sign-up form with first name and mobile number fields, a Join the coffee club button and text-message consent wording"
             />
           </div>
@@ -135,7 +135,7 @@ export function FormExperience() {
           ].map((v) => (
             <motion.figure key={v.name} {...reveal} className="mx-auto w-full max-w-[340px]">
               <PhoneFrame>
-                <DesignRender blocks={FORM_DEMO.blocks} theme={v.theme} device="mobile" renderWidth={390} clipHeight={620} label={`Coffee-club form styled as ${v.name}`} />
+                <DesignRender blocks={FORM_DEMO.blocks} theme={v.theme} device="mobile" renderWidth={390} clipHeight={530} label={`Coffee-club form styled as ${v.name}`} />
               </PhoneFrame>
               <figcaption className="mt-3 text-center text-xs text-muted-foreground">Design preview · {v.name}</figcaption>
             </motion.figure>
