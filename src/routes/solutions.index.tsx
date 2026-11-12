@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { pageHead } from "@/lib/seo";
 
-export const Route = createFileRoute("/solutions")({
+export const Route = createFileRoute("/solutions/")({
   head: () =>
     pageHead({
       path: "/solutions",

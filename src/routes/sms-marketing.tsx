@@ -54,7 +54,7 @@ function SmsMarketingPage() {
           title={<>SMS marketing built for smarter sends</>}
           body="Reach, convert and retain customers with personal, timely conversations — powered by automation and one shared view of every contact."
           primary={{ label: "Sign up", to: "/auth" }}
-          secondary={{ label: "Take a tour", to: "/features" }}
+          secondary={{ label: "See all features", to: "/features" }}
           visual={<PhoneVisual />}
         />
         <StatsMarquee
