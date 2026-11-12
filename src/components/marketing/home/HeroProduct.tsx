@@ -159,7 +159,7 @@ export function HeroProduct() {
                 </div>
                 <div className="divide-y divide-border rounded-xl border border-border px-3 sm:mr-28 lg:mr-24">
                   <Row k="Audience" v={`${DEMO.audience.name} · ${fmtInt(DEMO.audience.size)} · ${DEMO.country}`} />
-                  <Row k="Sender" v={`${DEMO.sender} (example two-way number)`} />
+                  <Row k="Sender" v={DEMO.sender} />
                   <Row
                     k="Send"
                     v={

@@ -7,6 +7,7 @@ export function stepLabel(type: string) {
     "trigger.tag_added": "Trigger: tag added",
     "trigger.date": "Trigger: date reached",
     "trigger.list_join": "Trigger: joined a list",
+    "trigger.form_submitted": "Trigger: form submitted",
     "logic.check_consent": "Check messaging consent",
     "logic.clicked_link": "Condition: clicked a link",
     "logic.exit": "Exit the journey",
