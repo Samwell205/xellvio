@@ -9,7 +9,9 @@ export default defineTool({
   inputSchema: {},
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async (_a, ctx) => {
-    const { db } = await requireBlogAdmin(ctx);
+    const agent = await requireBlogAdmin(ctx);
+    if (typeof agent === "string") return errorResult(agent);
+    const { db } = agent;
     const { data, error } = await db.from("blog_categories").select("slug,name").eq("archived", false).order("name");
     if (error) return errorResult("Could not load categories");
     return jsonResult({ categories: (data ?? []).map((c) => ({ slug: c.slug, name: c.name })) });

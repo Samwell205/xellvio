@@ -13,6 +13,7 @@ export default defineTool({
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   handler: async (args, ctx) => {
     const agent = await requireBlogAdmin(ctx);
+    if (typeof agent === "string") return errorResult(agent);
     try {
       const row = await agentSavePost(agent, agentPostInput.parse(args));
       return jsonResult({ post: { id: row.id, title: row.title, status: row.status, ...postLinks(SITE, row) } });
