@@ -1,3 +1,4 @@
+import { INTEGRATIONS, type BrandEntry } from "@/lib/marketing/brand-logos";
 import { Link } from "@tanstack/react-router";
 import {
   motion,
@@ -761,84 +762,34 @@ function StaticCanvas() {
 
 /* ----------------------------- integration rows --------------------------- */
 
-/** Names of apps that exist in the Xellvio app directory today. */
-const ROW_A = [
-  "Shopify",
-  "WooCommerce",
-  "Stripe",
-  "Paystack",
-  "Flutterwave",
-  "HubSpot",
-  "Salesforce",
-  "Pipedrive",
-  "Zoho CRM",
-  "Klaviyo",
-  "Mailchimp",
-] as const;
-
-const ROW_B = [
-  "OpenAI",
-  "Claude",
-  "Gemini",
-  "Zapier",
-  "Make",
-  "n8n",
-  "Slack",
-  "Google Sheets",
-  "Google Analytics",
-  "Meta Pixel",
-  "Calendly",
-  "Typeform",
-  "Webhooks & API",
-] as const;
-
-const LOGO_DOMAINS: Record<string, string> = {
-  Shopify: "shopify.com", WooCommerce: "woocommerce.com", Stripe: "stripe.com", Paystack: "paystack.com",
-  Flutterwave: "flutterwave.com", HubSpot: "hubspot.com", Salesforce: "salesforce.com", Pipedrive: "pipedrive.com",
-  "Zoho CRM": "zoho.com", Klaviyo: "klaviyo.com", Mailchimp: "mailchimp.com", OpenAI: "openai.com",
-  Claude: "claude.ai", Gemini: "gemini.google.com", Zapier: "zapier.com", Make: "make.com", n8n: "n8n.io",
-  Slack: "slack.com", "Google Sheets": "sheets.google.com", "Google Analytics": "analytics.google.com",
-  "Meta Pixel": "meta.com", Calendly: "calendly.com", Typeform: "typeform.com",
-};
-
-function BrandLogo({ name }: { name: string }) {
-  const [failed, setFailed] = useState(false);
-  const domain = LOGO_DOMAINS[name];
-  if (!domain || failed) {
-    return (
-      <span className="grid size-6 place-items-center rounded-lg bg-muted text-[11px] font-extrabold text-foreground">
-        {name === "Webhooks & API" ? "{ }" : name.charAt(0)}
-      </span>
-    );
-  }
+function BrandMark({ entry }: { entry: BrandEntry }) {
+  if (!entry.path) return null;
   return (
-    <img
-      src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
-      alt={`${name} logo`}
-      width={24}
-      height={24}
-      loading="lazy"
-      onError={() => setFailed(true)}
-      className="size-6 rounded-md object-contain"
-    />
+    <svg
+      role="img"
+      aria-label={`${entry.name} logo`}
+      viewBox="0 0 24 24"
+      className="size-6 shrink-0 text-foreground"
+      style={entry.hex ? { color: entry.hex } : undefined}
+    >
+      <path d={entry.path} fill="currentColor" />
+    </svg>
   );
 }
 
-function LogoRow({ items, reverse }: { items: readonly string[]; reverse?: boolean }) {
+function LogoRow({ items, reverse }: { items: BrandEntry[]; reverse?: boolean }) {
   const row = [...items, ...items];
   return (
     <div className="group relative overflow-hidden py-2">
       <div
         className={`marquee-track ${reverse ? "marquee-track--reverse marquee-track--slow" : ""} group-hover:[animation-play-state:paused]`}
       >
-        {row.map((name, i) => (
-          <div
-            key={`${name}-${i}`}
-            className="mx-2 flex shrink-0 items-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 shadow-sm"
-          >
-            <BrandLogo name={name} />
-            <span className="whitespace-nowrap text-sm font-bold tracking-tight text-foreground">
-              {name}
+        {row.map((entry, i) => (
+          <div key={`${entry.name}-${i}`} aria-hidden={i >= items.length || undefined} className="mx-6 flex shrink-0 items-center gap-2.5 py-2">
+            <BrandMark entry={entry} />
+            <span className="whitespace-nowrap text-base font-bold tracking-tight text-foreground">{entry.name}</span>
+            <span className="whitespace-nowrap rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {entry.kind === "native" ? "Native" : "API / webhook"}
             </span>
           </div>
         ))}
@@ -846,6 +797,10 @@ function LogoRow({ items, reverse }: { items: readonly string[]; reverse?: boole
     </div>
   );
 }
+
+const HALF = Math.ceil(INTEGRATIONS.length / 2);
+const ROW_A = INTEGRATIONS.slice(0, HALF);
+const ROW_B = INTEGRATIONS.slice(HALF);
 
 export function IntegrationMarquee() {
   return (
@@ -855,9 +810,9 @@ export function IntegrationMarquee() {
           Connect your entire growth stack.
         </h2>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Bring your customer data, marketing tools and workflows together with Xellvio. Every name
-          below is available in the Xellvio app directory — some connect directly, others through
-          Zapier, Make, n8n or our webhooks and API.
+          Bring customer data from the tools you already use. Every name below is available in the
+          Xellvio app directory as a native connection; anything else can connect through our
+          webhooks and API. Names and logos belong to their owners and don't imply partnership.
         </p>
       </div>
       <div

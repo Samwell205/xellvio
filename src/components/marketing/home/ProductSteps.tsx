@@ -233,7 +233,7 @@ const STEPS = [
     id: "follow-up",
     tab: "Send the right follow-up",
     title: "The next message sends itself.",
-    body: "Automations start from a trigger, wait, check a condition and send a text or email. Each step on the canvas shows what happens and when.",
+    body: "Automations start from a trigger, wait, check a condition, then send a text or tag the contact. Each step on the canvas shows what happens and when.",
     to: "/automations",
     cta: "See automations",
     Visual: AutomationVisual,
