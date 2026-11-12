@@ -17,7 +17,10 @@ function Caption({ children }: { children: React.ReactNode }) {
 export function LandingHeroVisual() {
   return (
     <figure>
-      <div className="relative">
+      <PhoneFrame className="mx-auto w-full max-w-[290px] sm:hidden">
+        <DesignRender blocks={LANDING_DEMO.blocks} theme={LANDING_DEMO.theme} device="mobile" renderWidth={390} clipHeight={760} label="Finished landing page for a sample boutique on a phone: autumn sale headline and sign-up form for a 15% code" />
+      </PhoneFrame>
+      <div className="relative hidden sm:block">
         <BrowserFrame url="maisonrow.example/autumn-edit">
           <DesignRender
             blocks={LANDING_DEMO.blocks}
@@ -31,7 +34,7 @@ export function LandingHeroVisual() {
           <DesignRender blocks={LANDING_DEMO.blocks} theme={LANDING_DEMO.theme} device="mobile" renderWidth={390} clipHeight={720} label="The same page on a phone" />
         </PhoneFrame>
       </div>
-      <figcaption className="mt-10 text-xs text-muted-foreground">
+      <figcaption className="mt-4 text-xs sm:mt-10 text-muted-foreground">
         Customized example based on the{" "}
         <Link to="/templates/$category/$slug" params={{ category: "landing-pages", slug: LANDING_DEMO.basedOn.slug }} className="font-semibold text-foreground underline">
           {LANDING_DEMO.basedOn.label} template
