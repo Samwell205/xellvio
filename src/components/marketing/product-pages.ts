@@ -247,7 +247,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
     eyebrow: "Xellvio sign-up forms",
     seoTitle: "Online Sign-up Form Builder for SMS & Email Lists",
     seoDescription:
-      "Grow your list with Xellvio sign-up forms: 16 templates, a visual editor, explicit SMS consent capture, duplicate protection, submission analytics and lead export — with contacts landing in your audiences instantly.",
+      "Grow your list with Xellvio sign-up forms: ${templatesInCategory("sign-up-forms").length} templates, a visual editor, explicit SMS consent capture, duplicate protection, submission analytics and lead export — with contacts landing in your audiences instantly.",
     keywords: ["sign up form builder", "sms opt in form", "online form builder", "grow sms list"],
     h1: "Sign-up forms that grow a list you're allowed to text",
     heroBody:
