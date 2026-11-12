@@ -524,6 +524,7 @@ function SenderIdExplainer() {
       region: "United States & Canada",
       req: "Toll-free verification",
       what: "Fill a short business & opt-in form inside your dashboard. We reserve the toll-free number and submit it to the carrier for you. Approval usually takes 1–3 weeks.",
+      fast: "Need to send today? Pick a ready-made toll-free number that's already carrier-verified and start sending right away — no waiting.",
       tone: "amber",
     },
     {
@@ -578,14 +579,23 @@ function SenderIdExplainer() {
                 <h3 className="mt-4 font-bold text-foreground text-lg leading-snug">{r.region}</h3>
                 {r.sub && <p className="mt-1 text-xs text-muted-foreground">{r.sub}</p>}
                 <p className="mt-4 text-sm text-muted-foreground leading-relaxed">{r.what}</p>
+                {"fast" in r && r.fast && (
+                  <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                      Instant option
+                    </p>
+                    <p className="mt-1 text-sm text-foreground leading-relaxed">{r.fast}</p>
+                  </div>
+                )}
               </Card>
             </motion.div>
           ))}
         </div>
         <motion.p {...fade} className="mt-10 text-sm text-muted-foreground max-w-3xl">
           <strong className="text-foreground">Bottom line:</strong> for most of the world, you just
-          pick a Sender ID and send. For the US and Canada, we walk you through the toll-free
-          verification wizard. For countries that need local carrier whitelisting, we file the
+          pick a Sender ID and send. For the US and Canada, either start sending today on a
+          ready-made verified toll-free number, or go through the toll-free verification wizard
+          for your own number. For countries that need local carrier whitelisting, we file the
           request for you — no external portal, no paperwork.
         </motion.p>
       </div>

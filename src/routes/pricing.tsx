@@ -48,6 +48,32 @@ function PricingPage() {
           </div>
         </section>
         <EmailPlans />
+        <section className="mx-auto max-w-5xl px-4 sm:px-6 py-12">
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 md:p-8 grid md:grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                US &amp; Canada sending
+              </p>
+              <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
+                Send today with a ready-made verified number
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Skip the carrier wait. Choose an already-verified toll-free number in your
+                dashboard and launch your first campaign the same day.
+              </p>
+            </div>
+            <div className="text-sm text-muted-foreground space-y-3">
+              <p>
+                <strong className="text-foreground">Instant:</strong> ready-made verified
+                toll-free number, active as soon as you pick it.
+              </p>
+              <p>
+                <strong className="text-foreground">Your own number:</strong> free toll-free
+                verification wizard — carrier approval usually takes 1–3 weeks.
+              </p>
+            </div>
+          </div>
+        </section>
         <CreditPacks />
         <SmsCalculator rates={rates} />
         <PerCountryPricing rates={rates} />
