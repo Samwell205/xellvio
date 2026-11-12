@@ -77,6 +77,7 @@
         "jspdf-autotable": "^5.0.8",
         "libphonenumber-js": "^1.13.6",
         "lucide-react": "^0.575.0",
+        "marked": "15",
         "motion": "^14.4.0",
         "nanoid": "^6.0.2",
         "papaparse": "^5.5.3",

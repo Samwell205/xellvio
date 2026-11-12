@@ -9,6 +9,7 @@
 - [x] Registration attribution uses the existing growth session and real signup-completed events; per-article visitors and CTA clicks available; temporary QA visits are counted as real test traffic
 - [x] Scheduling now arms only the next UTC deadline, with up to one minute delay, bounded batches, locking and five-attempt retry/error records; zero blog jobs when no scheduled articles exist
 - [x] Popular articles section (real 30-day unique visitors) and internal-traffic exclusion; ops/deploy checklist in docs/blog-operations.md
+- [x] ChatGPT publishing: admin keys (hashed, revocable), create/update/publish API with image import, setup link and instructions; verified end-to-end
 - [ ] Live browser checks as real writer/editor/customer accounts, true parallel-worker test, end-to-end upload/sitemap automation
 
 ## Google Sheets and ticket #1047
