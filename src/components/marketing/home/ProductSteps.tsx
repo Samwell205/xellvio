@@ -190,7 +190,7 @@ function ReportVisual() {
             <p className="text-[12px] font-semibold text-foreground">Clicks by hour after send</p>
             <div className="mt-4 flex h-32 items-end gap-2">
               {BARS.map((b, i) => (
-                <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
                   <span className="w-full rounded-t-md bg-primary/80" style={{ height: `${b}%` }} />
                   <span className="text-[9px] tabular-nums text-muted-foreground">{i + 1}h</span>
                 </div>
@@ -308,7 +308,7 @@ export function ProductSteps() {
                 aria-labelledby={`step-tab-${s.id}`}
                 aria-hidden={!on}
                 inert={!on ? true : undefined}
-                className={`[grid-area:1/1] grid items-center gap-8 transition-opacity duration-300 motion-reduce:transition-none lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-12 ${
+                className={`[grid-area:1/1] grid content-start items-start gap-8 lg:content-center lg:items-center transition-opacity duration-300 motion-reduce:transition-none lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-12 ${
                   on ? "opacity-100" : "pointer-events-none invisible opacity-0"
                 }`}
               >
