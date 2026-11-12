@@ -238,7 +238,7 @@ function Hero() {
               to="/contact"
               className="inline-flex items-center gap-1.5 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-full px-5 py-3 font-semibold transition-colors"
             >
-              Take a tour
+              Request a demo
             </Link>
           </div>
           <div className="mt-8 flex items-center gap-6 text-xs text-muted-foreground">
@@ -707,7 +707,7 @@ function CTA() {
                   variant="outline"
                   className="rounded-full bg-transparent border-white/40 text-white hover:bg-card/10 font-semibold px-6"
                 >
-                  <Play className="size-4 mr-1.5" /> Take a tour
+                  <Play className="size-4 mr-1.5" /> Request a demo
                 </Button>
               </Link>
             </div>

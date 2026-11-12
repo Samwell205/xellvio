@@ -43,7 +43,6 @@ import { Route as SignupFormsRouteImport } from './routes/signup-forms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SmsMarketingRouteImport } from './routes/sms-marketing'
 import { Route as SmsTermsRouteImport } from './routes/sms-terms'
-import { Route as SolutionsRouteImport } from './routes/solutions'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
@@ -67,6 +66,7 @@ import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as PartnersIndexRouteImport } from './routes/partners.index'
 import { Route as PartnersSlugRouteImport } from './routes/partners.$slug'
 import { Route as RCodeRouteImport } from './routes/r.$code'
+import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsIndustryRouteImport } from './routes/solutions.$industry'
 import { Route as SolutionsEmailToSmsRouteImport } from './routes/solutions.email-to-sms'
 import { Route as TemplatesIndexRouteImport } from './routes/templates.index'
@@ -389,11 +389,6 @@ const SmsTermsRoute = SmsTermsRouteImport.update({
   path: '/sms-terms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SolutionsRoute = SolutionsRouteImport.update({
-  id: '/solutions',
-  path: '/solutions',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -511,15 +506,20 @@ const RCodeRoute = RCodeRouteImport.update({
   path: '/r/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SolutionsIndexRoute = SolutionsIndexRouteImport.update({
+  id: '/solutions/',
+  path: '/solutions/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SolutionsIndustryRoute = SolutionsIndustryRouteImport.update({
-  id: '/$industry',
-  path: '/$industry',
-  getParentRoute: () => SolutionsRoute,
+  id: '/solutions/$industry',
+  path: '/solutions/$industry',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SolutionsEmailToSmsRoute = SolutionsEmailToSmsRouteImport.update({
-  id: '/email-to-sms',
-  path: '/email-to-sms',
-  getParentRoute: () => SolutionsRoute,
+  id: '/solutions/email-to-sms',
+  path: '/solutions/email-to-sms',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const TemplatesIndexRoute = TemplatesIndexRouteImport.update({
   id: '/templates/',
@@ -1414,7 +1414,6 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
-  '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -1442,6 +1441,7 @@ export interface FileRoutesByFullPath {
   '/compare/': typeof CompareIndexRoute
   '/marketplace/': typeof MarketplaceIndexRoute
   '/partners/': typeof PartnersIndexRoute
+  '/solutions/': typeof SolutionsIndexRoute
   '/templates/': typeof TemplatesIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -1624,7 +1624,6 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
-  '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -1650,6 +1649,7 @@ export interface FileRoutesByTo {
   '/compare': typeof CompareIndexRoute
   '/marketplace': typeof MarketplaceIndexRoute
   '/partners': typeof PartnersIndexRoute
+  '/solutions': typeof SolutionsIndexRoute
   '/templates': typeof TemplatesIndexRoute
   '/verify': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -1833,7 +1833,6 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sms-marketing': typeof SmsMarketingRoute
   '/sms-terms': typeof SmsTermsRoute
-  '/solutions': typeof SolutionsRouteWithChildren
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/verify-email': typeof VerifyEmailRoute
@@ -1861,6 +1860,7 @@ export interface FileRoutesById {
   '/compare/': typeof CompareIndexRoute
   '/marketplace/': typeof MarketplaceIndexRoute
   '/partners/': typeof PartnersIndexRoute
+  '/solutions/': typeof SolutionsIndexRoute
   '/templates/': typeof TemplatesIndexRoute
   '/verify/': typeof VerifyIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
@@ -2046,7 +2046,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sms-marketing'
     | '/sms-terms'
-    | '/solutions'
     | '/terms'
     | '/unsubscribe'
     | '/verify-email'
@@ -2074,6 +2073,7 @@ export interface FileRouteTypes {
     | '/compare/'
     | '/marketplace/'
     | '/partners/'
+    | '/solutions/'
     | '/templates/'
     | '/verify/'
     | '/.lovable/oauth/consent'
@@ -2256,7 +2256,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sms-marketing'
     | '/sms-terms'
-    | '/solutions'
     | '/terms'
     | '/unsubscribe'
     | '/verify-email'
@@ -2282,6 +2281,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/marketplace'
     | '/partners'
+    | '/solutions'
     | '/templates'
     | '/verify'
     | '/.lovable/oauth/consent'
@@ -2464,7 +2464,6 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sms-marketing'
     | '/sms-terms'
-    | '/solutions'
     | '/terms'
     | '/unsubscribe'
     | '/verify-email'
@@ -2492,6 +2491,7 @@ export interface FileRouteTypes {
     | '/compare/'
     | '/marketplace/'
     | '/partners/'
+    | '/solutions/'
     | '/templates/'
     | '/verify/'
     | '/.lovable/oauth/consent'
@@ -2678,7 +2678,6 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SmsMarketingRoute: typeof SmsMarketingRoute
   SmsTermsRoute: typeof SmsTermsRoute
-  SolutionsRoute: typeof SolutionsRouteWithChildren
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
@@ -2694,11 +2693,14 @@ export interface RootRouteChildren {
   PSlugRoute: typeof PSlugRoute
   PartnersSlugRoute: typeof PartnersSlugRoute
   RCodeRoute: typeof RCodeRoute
+  SolutionsIndustryRoute: typeof SolutionsIndustryRoute
+  SolutionsEmailToSmsRoute: typeof SolutionsEmailToSmsRoute
   VerifyAuthRoute: typeof VerifyAuthRoute
   VerifyResetPasswordRoute: typeof VerifyResetPasswordRoute
   BlogIndexRoute: typeof BlogIndexRoute
   CompareIndexRoute: typeof CompareIndexRoute
   PartnersIndexRoute: typeof PartnersIndexRoute
+  SolutionsIndexRoute: typeof SolutionsIndexRoute
   TemplatesIndexRoute: typeof TemplatesIndexRoute
   VerifyIndexRoute: typeof VerifyIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -2996,13 +2998,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SmsTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/solutions': {
-      id: '/solutions'
-      path: '/solutions'
-      fullPath: '/solutions'
-      preLoaderRoute: typeof SolutionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -3164,19 +3159,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/solutions/': {
+      id: '/solutions/'
+      path: '/solutions'
+      fullPath: '/solutions/'
+      preLoaderRoute: typeof SolutionsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/solutions/$industry': {
       id: '/solutions/$industry'
-      path: '/$industry'
+      path: '/solutions/$industry'
       fullPath: '/solutions/$industry'
       preLoaderRoute: typeof SolutionsIndustryRouteImport
-      parentRoute: typeof SolutionsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/solutions/email-to-sms': {
       id: '/solutions/email-to-sms'
-      path: '/email-to-sms'
+      path: '/solutions/email-to-sms'
       fullPath: '/solutions/email-to-sms'
       preLoaderRoute: typeof SolutionsEmailToSmsRouteImport
-      parentRoute: typeof SolutionsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/templates/': {
       id: '/templates/'
@@ -4547,20 +4549,6 @@ const MarketplaceRouteWithChildren = MarketplaceRoute._addFileChildren(
   MarketplaceRouteChildren,
 )
 
-interface SolutionsRouteChildren {
-  SolutionsIndustryRoute: typeof SolutionsIndustryRoute
-  SolutionsEmailToSmsRoute: typeof SolutionsEmailToSmsRoute
-}
-
-const SolutionsRouteChildren: SolutionsRouteChildren = {
-  SolutionsIndustryRoute: SolutionsIndustryRoute,
-  SolutionsEmailToSmsRoute: SolutionsEmailToSmsRoute,
-}
-
-const SolutionsRouteWithChildren = SolutionsRoute._addFileChildren(
-  SolutionsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
@@ -4596,7 +4584,6 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SmsMarketingRoute: SmsMarketingRoute,
   SmsTermsRoute: SmsTermsRoute,
-  SolutionsRoute: SolutionsRouteWithChildren,
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   VerifyEmailRoute: VerifyEmailRoute,
@@ -4613,11 +4600,14 @@ const rootRouteChildren: RootRouteChildren = {
   PSlugRoute: PSlugRoute,
   PartnersSlugRoute: PartnersSlugRoute,
   RCodeRoute: RCodeRoute,
+  SolutionsIndustryRoute: SolutionsIndustryRoute,
+  SolutionsEmailToSmsRoute: SolutionsEmailToSmsRoute,
   VerifyAuthRoute: VerifyAuthRoute,
   VerifyResetPasswordRoute: VerifyResetPasswordRoute,
   BlogIndexRoute: BlogIndexRoute,
   CompareIndexRoute: CompareIndexRoute,
   PartnersIndexRoute: PartnersIndexRoute,
+  SolutionsIndexRoute: SolutionsIndexRoute,
   TemplatesIndexRoute: TemplatesIndexRoute,
   VerifyIndexRoute: VerifyIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
