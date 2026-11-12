@@ -847,7 +847,7 @@ function LogoRow({ items, reverse }: { items: readonly string[]; reverse?: boole
   );
 }
 
-function IntegrationMarquee() {
+export function IntegrationMarquee() {
   return (
     <div className="mt-24 border-t border-border pt-16 lg:mt-32">
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8">
