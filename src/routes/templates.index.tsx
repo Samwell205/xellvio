@@ -4,7 +4,7 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { ChannelCta } from "@/components/marketing/ProductKit";
 import { TemplateGrid } from "@/components/marketing/TemplateLibraryGrid";
-import { CATEGORY_META, templatesInCategory, type TemplateCategory } from "@/lib/marketing/template-catalog";
+import { CATEGORY_META, templatesInCategory, templateCount, type TemplateCategory } from "@/lib/marketing/template-catalog";
 import {
   COMPLEXITY_LABEL,
   GOAL_LABEL,
@@ -221,7 +221,7 @@ function TemplatesHub() {
             {categories.map((c) => {
               const meta = CATEGORY_META[c];
               const Icon = ICONS[c];
-              const count = templatesInCategory(c).length;
+              const count = templateCount(c);
               return (
                 <Link
                   key={c}

@@ -1,4 +1,4 @@
-import { templatesInCategory } from "@/lib/marketing/template-catalog";
+import { templatesInCategory, templateCount } from "@/lib/marketing/template-catalog";
 import {
   BarChart3,
   Bell,
@@ -105,7 +105,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
       { label: "FAQ", hash: "#faq" },
     ],
     stats: [
-      { value: "10", label: "ready-made automation templates" },
+      { value: String(templateCount("automations")), label: "ready-made automation templates" },
       { value: "24/7", label: "runs without you" },
       { value: "1 canvas", label: "triggers, waits, branches" },
       { value: "Consent", label: "checked on every step" },
@@ -184,7 +184,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
       { label: "FAQ", hash: "#faq" },
     ],
     stats: [
-      { value: "16", label: "landing page templates" },
+      { value: String(templateCount("landing-pages")), label: "landing page templates" },
       { value: "AI", label: "builds the first draft" },
       { value: "1 click", label: "publish and update" },
       { value: "Leads", label: "saved, never lost" },
@@ -216,7 +216,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
       "A landing page is where the journey starts: the form on it creates the contact, segments organise them, an automation follows up, and reporting ties the leads back to the campaign that drove them.",
     features: [
       { icon: Sparkles, title: "AI design assistant", text: "Generate a full page from a prompt, then ask for edits in plain words." },
-      { icon: LayoutTemplate, title: "Section templates", text: "16 real multi-section pages for launches, webinars, lead magnets and more." },
+      { icon: LayoutTemplate, title: "Section templates", text: `${templateCount("landing-pages")} real multi-section pages for launches, webinars, lead magnets and more.` },
       { icon: Palette, title: "Brand tokens", text: "Set colour, type and spacing once and reuse them everywhere." },
       { icon: Image, title: "Media library", text: "Upload and reuse your own images, logos and backgrounds." },
       { icon: MousePointerClick, title: "Built-in forms", text: "Capture phone, email and custom fields with explicit SMS consent." },
@@ -248,7 +248,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
     eyebrow: "Xellvio sign-up forms",
     seoTitle: "Online Sign-up Form Builder for SMS & Email Lists",
     seoDescription:
-      `Grow your list with Xellvio sign-up forms: ${templatesInCategory("sign-up-forms").length} templates, a visual editor, explicit SMS consent capture, duplicate protection, submission analytics and lead export — with contacts landing in your audiences instantly.`,
+      `Grow your list with Xellvio sign-up forms: ${templateCount("sign-up-forms")} templates, a visual editor, explicit SMS consent capture, duplicate protection, submission analytics and lead export — with contacts landing in your audiences instantly.`,
     keywords: ["sign up form builder", "sms opt in form", "online form builder", "grow sms list"],
     h1: "Sign-up forms that grow a list you're allowed to text",
     heroBody:
@@ -263,7 +263,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
       { label: "FAQ", hash: "#faq" },
     ],
     stats: [
-      { value: "16", label: "form templates" },
+      { value: String(templateCount("sign-up-forms")), label: "form templates" },
       { value: "Consent", label: "captured and stored" },
       { value: "0", label: "leads lost to duplicates" },
       { value: "CSV", label: "export whenever you want" },

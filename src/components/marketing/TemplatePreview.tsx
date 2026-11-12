@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BlockCanvas } from "@/components/builder/BlockRenderer";
 import { AUTOMATION_TEMPLATES } from "@/lib/automation-templates";
 import { previewFor, type TemplateCategory } from "@/lib/marketing/template-catalog";
-import { stepLabel } from "@/lib/marketing/automation-step-label";
+import { FlowDiagram } from "./FlowDiagram";
 
 /* Card thumbnail rendered from the same template data the detail page's
    "Live preview" uses, so the thumbnail always matches what opens. */
@@ -36,17 +36,9 @@ export function TemplatePreview({ category, slug, label }: { category: TemplateC
         </div>
       )}
       {flow && (
-        <ol aria-hidden className="flex h-full flex-col items-center justify-center gap-1 p-4" style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: "14px 14px" }}>
-          {flow.nodes.slice(0, 5).map((n, i) => (
-            <li key={n.key} className="flex w-full max-w-[220px] flex-col items-center">
-              {i > 0 && <span className="mb-1 block h-2.5 w-px bg-primary/60" />}
-              <span className="w-full truncate rounded-lg border border-border bg-card px-3 py-1.5 text-center text-[11px] font-semibold text-foreground shadow-sm">
-                {stepLabel(n.type)}
-              </span>
-            </li>
-          ))}
-          {flow.nodes.length > 5 && <li className="mt-1 text-[10px] text-muted-foreground">+{flow.nodes.length - 5} more steps</li>}
-        </ol>
+        <div aria-hidden className="absolute inset-0 p-3" style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: "14px 14px" }}>
+          <FlowDiagram flow={flow} className="h-full w-full" />
+        </div>
       )}
     </div>
   );

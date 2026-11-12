@@ -17,6 +17,17 @@ export function stepLabel(type: string) {
     "action.add_to_list": "Add to a list",
     "action.webhook": "Call a webhook",
     "timing.wait": "Wait",
+    "timing.wait_for_reply": "Wait for a reply",
+    "trigger.keyword_received": "Trigger: keyword received",
+    "trigger.link_clicked": "Trigger: link clicked",
+    "trigger.recurring": "Trigger: recurring schedule",
+    "trigger.birthday": "Trigger: birthday",
+    "trigger.opted_out": "Trigger: opted out",
+    "trigger.sms_failed": "Trigger: SMS failed",
+    "logic.ab_split": "A/B split",
+    "logic.replied": "Condition: replied",
+    "action.remove_from_list": "Remove from a list",
+    "action.internal_notification": "Notify your team",
   };
   return map[type] ?? type.replace(/^[a-z]+\./, "").replace(/_/g, " ");
 }

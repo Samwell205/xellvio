@@ -161,7 +161,33 @@ function AutomationVisual() {
 }
 
 /* ---------------- step 3: report ---------------- */
-const BARS = [38, 62, 80, 54, 30, 22, 14, 10];
+/* Mirrors the real report's "Engagement over time" card: sent, delivered and
+   clicked, cumulative by hour (see campaign report page). Shares are of each total. */
+const CUMULATIVE = [0, 0.62, 0.9, 0.97, 0.99, 1, 1, 1];
+const CLICK_CURVE = [0, 0.38, 0.64, 0.79, 0.88, 0.94, 0.98, 1];
+function EngagementChart() {
+  const W = 320, H = 120;
+  const max = STATS.sent;
+  const line = (vals: number[]) => vals.map((v, i) => `${(i / (vals.length - 1)) * W},${H - (v / max) * (H - 8)}`).join(" ");
+  const series = [
+    { k: "Sent", cls: "stroke-muted-foreground", v: CUMULATIVE.map((c) => c * STATS.sent) },
+    { k: "Delivered", cls: "stroke-primary", v: CUMULATIVE.map((c) => c * DEMO.results.delivered) },
+    { k: "Clicked", cls: "stroke-foreground", v: CLICK_CURVE.map((c) => c * DEMO.results.clicks) },
+  ];
+  return (
+    <div className="rounded-xl border border-border p-4">
+      <p className="text-[12px] font-semibold text-foreground">Engagement over time</p>
+      <p className="text-[11px] text-muted-foreground">Sent, delivered and clicked, cumulative by hour</p>
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 h-28 w-full" preserveAspectRatio="none" aria-hidden>
+        {series.map((x) => <polyline key={x.k} points={line(x.v)} fill="none" strokeWidth={2} vectorEffect="non-scaling-stroke" className={x.cls} />)}
+      </svg>
+      <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+        {series.map((x) => <span key={x.k} className="flex items-center gap-1"><svg width="10" height="2" aria-hidden><line x1="0" y1="1" x2="10" y2="1" strokeWidth={2} className={x.cls} /></svg>{x.k}</span>)}
+      </div>
+    </div>
+  );
+}
+
 function ReportVisual() {
   const kpis = [
     { icon: Send, k: "Sent", v: fmtInt(STATS.sent) },
@@ -171,7 +197,7 @@ function ReportVisual() {
     { icon: Wallet, k: "Spend", v: fmtUsd(ESTIMATED_COST), s: "example" },
   ];
   return (
-    <Frame url="xellvio.com/app/campaigns/spring-menu/report" label="Example Xellvio campaign report with sent, delivered, clicks, failed and spend, a clicks-over-time chart and a delivery status breakdown">
+    <Frame url="xellvio.com/app/campaigns/spring-menu/report" label="Example Xellvio campaign report with sent, delivered, clicks, failed and spend, a cumulative engagement-over-time chart and a delivery status breakdown">
       <div className="p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-base font-extrabold tracking-tight text-foreground">Spring menu — VIP early access</p>
@@ -189,17 +215,7 @@ function ReportVisual() {
           ))}
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-[1.4fr_1fr]">
-          <div className="rounded-xl border border-border p-4">
-            <p className="text-[12px] font-semibold text-foreground">Clicks by hour after send</p>
-            <div className="mt-4 flex h-32 items-end gap-2">
-              {BARS.map((b, i) => (
-                <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-                  <span className="w-full rounded-t-md bg-primary/80" style={{ height: `${b}%` }} />
-                  <span className="text-[9px] tabular-nums text-muted-foreground">{i + 1}h</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <EngagementChart />
           <div className="rounded-xl border border-border p-4">
             <p className="text-[12px] font-semibold text-foreground">Delivery status</p>
             <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-muted">
