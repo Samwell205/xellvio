@@ -1,7 +1,7 @@
 # Roadmap
 
 ## Integrated blog CMS
-- [ ] Claude image uploads: accept image bytes or downloadable links, return hosted URLs for covers and inline pictures, verify storage and post readback
+- [x] Claude image uploads: byte/link tool extracted; 16 tests passed; real admin image storage, draft readback and local PNG response verified; test records removed. Actual Claude canvas export/tool call remains dependent on Claude access and republishing.
 - [x] Database tests cover scheduling (deadline, early, time zones, reschedule, cancel, retries, errors, no idle job) and writer/editor/admin/customer permissions
 - [x] Reuse existing content tables; add secure categories, revisions, redirects, publishing schedules, media metadata, settings and consented subscriptions
 - [x] Admin blog loads; staff access management with confirmation and audited server permissions added; settings and real analytics load without browser errors
