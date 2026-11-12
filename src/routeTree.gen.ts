@@ -211,8 +211,12 @@ import { Route as AuthenticatedAdminBlogPostsIndexRouteImport } from './routes/_
 import { Route as AuthenticatedAdminBlogPostsPostIdRouteImport } from './routes/_authenticated.admin.blog.posts.$postId'
 import { Route as AuthenticatedAppCampaignsIdReportRouteImport } from './routes/_authenticated.app.campaigns.$id.report'
 import { Route as AuthenticatedAppUseTemplateCategorySlugRouteImport } from './routes/_authenticated.app.use-template.$category.$slug'
+import { Route as ApiPublicBlogAgentCategoriesRouteImport } from './routes/api/public/blog/agent/categories'
+import { Route as ApiPublicBlogAgentOpenapiDotjsonRouteImport } from './routes/api/public/blog/agent/openapi[.]json'
 import { Route as ApiPublicEmailUnsubscribeTokenRouteImport } from './routes/api.public.email.unsubscribe.$token'
 import { Route as ApiPublicOauthCalendarReturnRouteImport } from './routes/api/public/oauth/calendar/return'
+import { Route as ApiPublicBlogAgentPostsIndexRouteImport } from './routes/api/public/blog/agent/posts/index'
+import { Route as ApiPublicBlogAgentPostsIdRouteImport } from './routes/api/public/blog/agent/posts/$id'
 import { Route as ApiPublicVoiceToolsCallIdActionRouteImport } from './routes/api/public/voice/tools/$callId/$action'
 
 const IndexRoute = IndexRouteImport.update({
@@ -1320,6 +1324,18 @@ const AuthenticatedAppUseTemplateCategorySlugRoute =
     path: '/use-template/$category/$slug',
     getParentRoute: () => AuthenticatedAppRoute,
   } as any)
+const ApiPublicBlogAgentCategoriesRoute =
+  ApiPublicBlogAgentCategoriesRouteImport.update({
+    id: '/api/public/blog/agent/categories',
+    path: '/api/public/blog/agent/categories',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicBlogAgentOpenapiDotjsonRoute =
+  ApiPublicBlogAgentOpenapiDotjsonRouteImport.update({
+    id: '/api/public/blog/agent/openapi.json',
+    path: '/api/public/blog/agent/openapi.json',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicEmailUnsubscribeTokenRoute =
   ApiPublicEmailUnsubscribeTokenRouteImport.update({
     id: '/api/public/email/unsubscribe/$token',
@@ -1330,6 +1346,18 @@ const ApiPublicOauthCalendarReturnRoute =
   ApiPublicOauthCalendarReturnRouteImport.update({
     id: '/api/public/oauth/calendar/return',
     path: '/api/public/oauth/calendar/return',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicBlogAgentPostsIndexRoute =
+  ApiPublicBlogAgentPostsIndexRouteImport.update({
+    id: '/api/public/blog/agent/posts/',
+    path: '/api/public/blog/agent/posts/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicBlogAgentPostsIdRoute =
+  ApiPublicBlogAgentPostsIdRouteImport.update({
+    id: '/api/public/blog/agent/posts/$id',
+    path: '/api/public/blog/agent/posts/$id',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicVoiceToolsCallIdActionRoute =
@@ -1539,10 +1567,14 @@ export interface FileRoutesByFullPath {
   '/admin/blog/posts/$postId': typeof AuthenticatedAdminBlogPostsPostIdRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
+  '/api/public/blog/agent/categories': typeof ApiPublicBlogAgentCategoriesRoute
+  '/api/public/blog/agent/openapi.json': typeof ApiPublicBlogAgentOpenapiDotjsonRoute
   '/api/public/email/unsubscribe/$token': typeof ApiPublicEmailUnsubscribeTokenRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
   '/admin/blog/posts/': typeof AuthenticatedAdminBlogPostsIndexRoute
+  '/api/public/blog/agent/posts/$id': typeof ApiPublicBlogAgentPostsIdRoute
   '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
+  '/api/public/blog/agent/posts/': typeof ApiPublicBlogAgentPostsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1738,10 +1770,14 @@ export interface FileRoutesByTo {
   '/admin/blog/posts/$postId': typeof AuthenticatedAdminBlogPostsPostIdRoute
   '/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
+  '/api/public/blog/agent/categories': typeof ApiPublicBlogAgentCategoriesRoute
+  '/api/public/blog/agent/openapi.json': typeof ApiPublicBlogAgentOpenapiDotjsonRoute
   '/api/public/email/unsubscribe/$token': typeof ApiPublicEmailUnsubscribeTokenRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
   '/admin/blog/posts': typeof AuthenticatedAdminBlogPostsIndexRoute
+  '/api/public/blog/agent/posts/$id': typeof ApiPublicBlogAgentPostsIdRoute
   '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
+  '/api/public/blog/agent/posts': typeof ApiPublicBlogAgentPostsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1946,10 +1982,14 @@ export interface FileRoutesById {
   '/_authenticated/admin/blog/posts/$postId': typeof AuthenticatedAdminBlogPostsPostIdRoute
   '/_authenticated/app/campaigns/$id/report': typeof AuthenticatedAppCampaignsIdReportRoute
   '/_authenticated/app/use-template/$category/$slug': typeof AuthenticatedAppUseTemplateCategorySlugRoute
+  '/api/public/blog/agent/categories': typeof ApiPublicBlogAgentCategoriesRoute
+  '/api/public/blog/agent/openapi.json': typeof ApiPublicBlogAgentOpenapiDotjsonRoute
   '/api/public/email/unsubscribe/$token': typeof ApiPublicEmailUnsubscribeTokenRoute
   '/api/public/oauth/calendar/return': typeof ApiPublicOauthCalendarReturnRoute
   '/_authenticated/admin/blog/posts/': typeof AuthenticatedAdminBlogPostsIndexRoute
+  '/api/public/blog/agent/posts/$id': typeof ApiPublicBlogAgentPostsIdRoute
   '/api/public/voice/tools/$callId/$action': typeof ApiPublicVoiceToolsCallIdActionRoute
+  '/api/public/blog/agent/posts/': typeof ApiPublicBlogAgentPostsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -2153,10 +2193,14 @@ export interface FileRouteTypes {
     | '/admin/blog/posts/$postId'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
+    | '/api/public/blog/agent/categories'
+    | '/api/public/blog/agent/openapi.json'
     | '/api/public/email/unsubscribe/$token'
     | '/api/public/oauth/calendar/return'
     | '/admin/blog/posts/'
+    | '/api/public/blog/agent/posts/$id'
     | '/api/public/voice/tools/$callId/$action'
+    | '/api/public/blog/agent/posts/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -2352,10 +2396,14 @@ export interface FileRouteTypes {
     | '/admin/blog/posts/$postId'
     | '/app/campaigns/$id/report'
     | '/app/use-template/$category/$slug'
+    | '/api/public/blog/agent/categories'
+    | '/api/public/blog/agent/openapi.json'
     | '/api/public/email/unsubscribe/$token'
     | '/api/public/oauth/calendar/return'
     | '/admin/blog/posts'
+    | '/api/public/blog/agent/posts/$id'
     | '/api/public/voice/tools/$callId/$action'
+    | '/api/public/blog/agent/posts'
   id:
     | '__root__'
     | '/'
@@ -2559,10 +2607,14 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/blog/posts/$postId'
     | '/_authenticated/app/campaigns/$id/report'
     | '/_authenticated/app/use-template/$category/$slug'
+    | '/api/public/blog/agent/categories'
+    | '/api/public/blog/agent/openapi.json'
     | '/api/public/email/unsubscribe/$token'
     | '/api/public/oauth/calendar/return'
     | '/_authenticated/admin/blog/posts/'
+    | '/api/public/blog/agent/posts/$id'
     | '/api/public/voice/tools/$callId/$action'
+    | '/api/public/blog/agent/posts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -2667,9 +2719,13 @@ export interface RootRouteChildren {
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
   LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
+  ApiPublicBlogAgentCategoriesRoute: typeof ApiPublicBlogAgentCategoriesRoute
+  ApiPublicBlogAgentOpenapiDotjsonRoute: typeof ApiPublicBlogAgentOpenapiDotjsonRoute
   ApiPublicEmailUnsubscribeTokenRoute: typeof ApiPublicEmailUnsubscribeTokenRoute
   ApiPublicOauthCalendarReturnRoute: typeof ApiPublicOauthCalendarReturnRoute
+  ApiPublicBlogAgentPostsIdRoute: typeof ApiPublicBlogAgentPostsIdRoute
   ApiPublicVoiceToolsCallIdActionRoute: typeof ApiPublicVoiceToolsCallIdActionRoute
+  ApiPublicBlogAgentPostsIndexRoute: typeof ApiPublicBlogAgentPostsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -4088,6 +4144,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppUseTemplateCategorySlugRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
+    '/api/public/blog/agent/categories': {
+      id: '/api/public/blog/agent/categories'
+      path: '/api/public/blog/agent/categories'
+      fullPath: '/api/public/blog/agent/categories'
+      preLoaderRoute: typeof ApiPublicBlogAgentCategoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/blog/agent/openapi.json': {
+      id: '/api/public/blog/agent/openapi.json'
+      path: '/api/public/blog/agent/openapi.json'
+      fullPath: '/api/public/blog/agent/openapi.json'
+      preLoaderRoute: typeof ApiPublicBlogAgentOpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/email/unsubscribe/$token': {
       id: '/api/public/email/unsubscribe/$token'
       path: '/api/public/email/unsubscribe/$token'
@@ -4100,6 +4170,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/oauth/calendar/return'
       fullPath: '/api/public/oauth/calendar/return'
       preLoaderRoute: typeof ApiPublicOauthCalendarReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/blog/agent/posts/': {
+      id: '/api/public/blog/agent/posts/'
+      path: '/api/public/blog/agent/posts'
+      fullPath: '/api/public/blog/agent/posts/'
+      preLoaderRoute: typeof ApiPublicBlogAgentPostsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/blog/agent/posts/$id': {
+      id: '/api/public/blog/agent/posts/$id'
+      path: '/api/public/blog/agent/posts/$id'
+      fullPath: '/api/public/blog/agent/posts/$id'
+      preLoaderRoute: typeof ApiPublicBlogAgentPostsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/voice/tools/$callId/$action': {
@@ -4538,9 +4622,13 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
   LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
+  ApiPublicBlogAgentCategoriesRoute: ApiPublicBlogAgentCategoriesRoute,
+  ApiPublicBlogAgentOpenapiDotjsonRoute: ApiPublicBlogAgentOpenapiDotjsonRoute,
   ApiPublicEmailUnsubscribeTokenRoute: ApiPublicEmailUnsubscribeTokenRoute,
   ApiPublicOauthCalendarReturnRoute: ApiPublicOauthCalendarReturnRoute,
+  ApiPublicBlogAgentPostsIdRoute: ApiPublicBlogAgentPostsIdRoute,
   ApiPublicVoiceToolsCallIdActionRoute: ApiPublicVoiceToolsCallIdActionRoute,
+  ApiPublicBlogAgentPostsIndexRoute: ApiPublicBlogAgentPostsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
