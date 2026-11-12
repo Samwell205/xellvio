@@ -4,7 +4,7 @@ import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { ChannelCta } from "@/components/marketing/ProductKit";
 import { INDUSTRIES } from "@/components/marketing/industries";
-import { CATEGORY_META, templatesInCategory, type TemplateCategory } from "@/lib/marketing/template-catalog";
+import { CATEGORY_META, templatesInCategory, templateCount, type TemplateCategory } from "@/lib/marketing/template-catalog";
 import { pageHead } from "@/lib/seo";
 import { publicBlog } from "@/lib/blog-public.functions";
 import { BlogCard } from "@/components/blog/BlogPublic";
@@ -134,7 +134,7 @@ function ResourcesPage() {
                 <h3 className="text-lg font-bold text-foreground">{CATEGORY_META[c].label}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{CATEGORY_META[c].intro}</p>
                 <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                  {templatesInCategory(c).length} templates{" "}
+                  {templateCount(c)} templates{" "}
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </span>
               </Link>
