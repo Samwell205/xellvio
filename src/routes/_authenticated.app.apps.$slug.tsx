@@ -20,6 +20,7 @@ import {
   updateConnection,
 } from "@/lib/marketplace-apps.functions";
 import { AppLogo } from "@/components/marketplace/AppLogo";
+import { ShopifyOneClick } from "@/components/marketplace/ShopifyOneClick";
 import { ConnectDialog } from "@/components/marketplace/ConnectDialog";
 import { IntegrationTools, WorkspaceKeysCard } from "@/components/marketplace/IntegrationTools";
 import { Badge } from "@/components/ui/badge";
@@ -160,6 +161,7 @@ function WorkspaceAppDetail() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
+          {a.slug === "shopify" && <ShopifyOneClick />}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">About this integration</CardTitle>
