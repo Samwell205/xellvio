@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Integrated blog CMS
+- [ ] Claude image uploads: accept image bytes or downloadable links, return hosted URLs for covers and inline pictures, verify storage and post readback
 - [x] Database tests cover scheduling (deadline, early, time zones, reschedule, cancel, retries, errors, no idle job) and writer/editor/admin/customer permissions
 - [x] Reuse existing content tables; add secure categories, revisions, redirects, publishing schedules, media metadata, settings and consented subscriptions
 - [x] Admin blog loads; staff access management with confirmation and audited server permissions added; settings and real analytics load without browser errors
