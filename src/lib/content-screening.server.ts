@@ -353,7 +353,16 @@ export async function screenMessageContent(
       let suspendReason = "";
 
       if (!reasons.some((r) => r.code === "ai_scan_unavailable")) {
-        const sevenDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+        // Admins can restart the count (accounts.warnings_counted_from) when reopening an account.
+        const { data: warnAcct } = await supabaseAdmin
+          .from("accounts")
+          .select("warnings_counted_from")
+          .eq("id", tenantAccountId)
+          .maybeSingle();
+        const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+        const countedFrom = (warnAcct as any)?.warnings_counted_from
+          ? new Date((warnAcct as any).warnings_counted_from).getTime() : 0;
+        const sevenDaysAgo = new Date(Math.max(ninetyDaysAgo, countedFrom)).toISOString();
         // Every audit row is kept, but duplicate checks of the same campaign
         // submission (overlapping workers / retries) count as ONE violation.
         // Provider-unavailable decisions never reach this branch.
