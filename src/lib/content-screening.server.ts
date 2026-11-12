@@ -384,7 +384,7 @@ export async function screenMessageContent(
           shouldSuspend = true;
           suspendReason = `Account blocked: ${recentBlocks} prohibited-content warnings in 90 days (repeat abuse).`;
         } else {
-          blockedReasons.unshift(`Warning ${recentBlocks} of 3: this content is not allowed. After 3 warnings your account will be blocked.`);
+          blockedReasons.unshift("Warning: this content is not allowed.");
         }
       }
 
