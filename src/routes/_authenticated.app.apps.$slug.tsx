@@ -127,7 +127,8 @@ function WorkspaceAppDetail() {
         <ArrowLeft className="size-4" /> App Marketplace
       </Link>
 
-      <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-5">
+      {a.slug === "shopify" && <ShopifyOneClick connected={!!installed?.connection} logoUrl={a.logo_url} />}
+      {a.slug !== "shopify" && <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-card p-5">
         <AppLogo name={a.name} logoUrl={a.logo_url} accentColor={a.accent_color} size="lg" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -157,12 +158,11 @@ function WorkspaceAppDetail() {
             </Link>
           </Button>
         </div>
-      </div>
+      </div>}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className={a.slug === "shopify" ? "grid gap-6" : "grid gap-6 lg:grid-cols-[1fr_340px]"}>
         <div className="space-y-6">
-          {a.slug === "shopify" && <ShopifyOneClick />}
-          <Card>
+          {a.slug !== "shopify" && <Card>
             <CardHeader>
               <CardTitle className="text-base">About this integration</CardTitle>
             </CardHeader>
@@ -195,7 +195,7 @@ function WorkspaceAppDetail() {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
           {installed?.connection && (
             <IntegrationTools
@@ -250,7 +250,7 @@ function WorkspaceAppDetail() {
           )}
         </div>
 
-        <aside className="space-y-4">
+        {a.slug !== "shopify" && <aside className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Setup guide</CardTitle>
@@ -291,7 +291,7 @@ function WorkspaceAppDetail() {
               is logged under Activity.
             </p>
           </div>
-        </aside>
+        </aside>}
       </div>
 
       <ConnectDialog
