@@ -9,7 +9,7 @@ const CUSTOMER = '00000000-0000-4000-8000-000000000004';
 let db: PGlite;
 const one = async <T = Record<string, unknown>>(sql: string, p: unknown[] = []) => (await db.query<T>(sql, p)).rows[0];
 const jobs = async () => (await db.query<{ schedule: string }>("SELECT schedule FROM cron.job WHERE jobname='blog-publish-due'")).rows;
-const post = (slug: string, extra = '') => db.exec(`INSERT INTO content_posts(slug,title,body,topic${extra ? ',' + extra.split('=')[0] : ''}) VALUES('${slug}','${slug} title','<p>Real body words here</p>','sms-marketing'${extra ? ',' + extra.split('=').slice(1).join('=') : ''})`.replace("' America/Los_Angeles'","' America/Los_Angeles')::timestamptz").replace("((now()","(((now()"));
+const post = (slug: string, extra = '') => db.exec(`INSERT INTO content_posts(slug,title,body,topic${extra ? ',' + extra.split('=')[0] : ''}) VALUES('${slug}','${slug} title','<p>Real body words here</p>','sms-marketing'${extra ? ',' + extra.split('=').slice(1).join('=') : ''})`);
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 beforeAll(async () => {
@@ -35,7 +35,7 @@ describe('scheduled publishing', () => {
   });
 
   it('treats deadlines given in different time zones as the same instant', async () => {
-    await post('tz', "status,scheduled_at='scheduled',((now()+interval '5 hours') AT TIME ZONE 'America/Los_Angeles')::text||' America/Los_Angeles'");
+    await db.exec("INSERT INTO content_posts(slug,title,body,status,scheduled_at) VALUES('tz','tz','<p>x</p>','scheduled',(((now()+interval '5 hours') AT TIME ZONE 'America/Los_Angeles')::text||' America/Los_Angeles')::timestamptz)");
     const r = await one<{ same: boolean }>("SELECT abs(extract(epoch FROM scheduled_at-(now()+interval '5 hours')))<1 AS same FROM content_posts WHERE slug='tz'");
     expect(r.same).toBe(true);
     await db.exec("DELETE FROM content_posts WHERE slug='tz'");
