@@ -195,6 +195,8 @@ import { Route as ApiPublicInfobipWebhookRouteImport } from './routes/api/public
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media.$'
 import { Route as ApiPublicOptInProofSplatRouteImport } from './routes/api.public.opt-in-proof.$'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiPublicShopifyCallbackRouteImport } from './routes/api/public/shopify/callback'
+import { Route as ApiPublicShopifyWebhooksRouteImport } from './routes/api/public/shopify/webhooks'
 import { Route as ApiPublicSinchWebhookRouteImport } from './routes/api/public/sinch/webhook'
 import { Route as ApiPublicSupportInboundRouteImport } from './routes/api.public.support.inbound'
 import { Route as ApiPublicSupportSweepRouteImport } from './routes/api.public.support.sweep'
@@ -1237,6 +1239,18 @@ const ApiPublicPaymentsWebhookRoute =
     path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicShopifyCallbackRoute =
+  ApiPublicShopifyCallbackRouteImport.update({
+    id: '/api/public/shopify/callback',
+    path: '/api/public/shopify/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicShopifyWebhooksRoute =
+  ApiPublicShopifyWebhooksRouteImport.update({
+    id: '/api/public/shopify/webhooks',
+    path: '/api/public/shopify/webhooks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicSinchWebhookRoute = ApiPublicSinchWebhookRouteImport.update({
   id: '/api/public/sinch/webhook',
   path: '/api/public/sinch/webhook',
@@ -1538,6 +1552,8 @@ export interface FileRoutesByFullPath {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/shopify/callback': typeof ApiPublicShopifyCallbackRoute
+  '/api/public/shopify/webhooks': typeof ApiPublicShopifyWebhooksRoute
   '/api/public/sinch/webhook': typeof ApiPublicSinchWebhookRoute
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
@@ -1741,6 +1757,8 @@ export interface FileRoutesByTo {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/shopify/callback': typeof ApiPublicShopifyCallbackRoute
+  '/api/public/shopify/webhooks': typeof ApiPublicShopifyWebhooksRoute
   '/api/public/sinch/webhook': typeof ApiPublicSinchWebhookRoute
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
@@ -1953,6 +1971,8 @@ export interface FileRoutesById {
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/api/public/opt-in-proof/$': typeof ApiPublicOptInProofSplatRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/public/shopify/callback': typeof ApiPublicShopifyCallbackRoute
+  '/api/public/shopify/webhooks': typeof ApiPublicShopifyWebhooksRoute
   '/api/public/sinch/webhook': typeof ApiPublicSinchWebhookRoute
   '/api/public/support/inbound': typeof ApiPublicSupportInboundRoute
   '/api/public/support/sweep': typeof ApiPublicSupportSweepRoute
@@ -2164,6 +2184,8 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/shopify/callback'
+    | '/api/public/shopify/webhooks'
     | '/api/public/sinch/webhook'
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
@@ -2367,6 +2389,8 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/shopify/callback'
+    | '/api/public/shopify/webhooks'
     | '/api/public/sinch/webhook'
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
@@ -2578,6 +2602,8 @@ export interface FileRouteTypes {
     | '/api/public/media/$'
     | '/api/public/opt-in-proof/$'
     | '/api/public/payments/webhook'
+    | '/api/public/shopify/callback'
+    | '/api/public/shopify/webhooks'
     | '/api/public/sinch/webhook'
     | '/api/public/support/inbound'
     | '/api/public/support/sweep'
@@ -2707,6 +2733,8 @@ export interface RootRouteChildren {
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
   ApiPublicOptInProofSplatRoute: typeof ApiPublicOptInProofSplatRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
+  ApiPublicShopifyCallbackRoute: typeof ApiPublicShopifyCallbackRoute
+  ApiPublicShopifyWebhooksRoute: typeof ApiPublicShopifyWebhooksRoute
   ApiPublicSinchWebhookRoute: typeof ApiPublicSinchWebhookRoute
   ApiPublicSupportInboundRoute: typeof ApiPublicSupportInboundRoute
   ApiPublicSupportSweepRoute: typeof ApiPublicSupportSweepRoute
@@ -4032,6 +4060,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/shopify/callback': {
+      id: '/api/public/shopify/callback'
+      path: '/api/public/shopify/callback'
+      fullPath: '/api/public/shopify/callback'
+      preLoaderRoute: typeof ApiPublicShopifyCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/shopify/webhooks': {
+      id: '/api/public/shopify/webhooks'
+      path: '/api/public/shopify/webhooks'
+      fullPath: '/api/public/shopify/webhooks'
+      preLoaderRoute: typeof ApiPublicShopifyWebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/sinch/webhook': {
       id: '/api/public/sinch/webhook'
       path: '/api/public/sinch/webhook'
@@ -4610,6 +4652,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
   ApiPublicOptInProofSplatRoute: ApiPublicOptInProofSplatRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
+  ApiPublicShopifyCallbackRoute: ApiPublicShopifyCallbackRoute,
+  ApiPublicShopifyWebhooksRoute: ApiPublicShopifyWebhooksRoute,
   ApiPublicSinchWebhookRoute: ApiPublicSinchWebhookRoute,
   ApiPublicSupportInboundRoute: ApiPublicSupportInboundRoute,
   ApiPublicSupportSweepRoute: ApiPublicSupportSweepRoute,
