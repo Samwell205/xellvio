@@ -5,7 +5,7 @@ import { stepLabel } from "@/lib/marketing/automation-step-label";
    branches appear side by side (never as a sequence). Pure SVG: no links,
    inputs, editing or requests. Shared by template cards and detail pages. */
 
-const NW = 260, NH = 64, PAD = 40;
+const NW = 290, NH = 64, PAD = 40;
 
 function kind(type: string) {
   if (type.startsWith("trigger.")) return "fill-primary/15 stroke-primary";
@@ -44,7 +44,7 @@ export function FlowDiagram({ flow, className, detail = false }: { flow: Automat
           <g key={n.key}>
             <rect x={n.position.x - NW / 2} y={n.position.y} width={NW} height={NH} rx={14} strokeWidth={2} className={kind(n.type)} />
             <text x={n.position.x} y={n.position.y + NH / 2 + fs / 3} fontSize={fs} textAnchor="middle" className="fill-foreground font-semibold">
-              {label.length > 22 ? label.slice(0, 21) + "…" : label}
+              {label.length > 26 ? label.slice(0, 25) + "…" : label}
             </text>
           </g>
         );
