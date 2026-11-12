@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { marked } from 'marked';
 import { blogPostSchema, cleanBlogHtml, validatePublishing, slugify, safeBlogUrl } from './blog-rules';
+import { validateBlogImage, MAX_BLOG_IMAGE } from './blog-image';
 
 const IMAGE_TYPES = ['image/png','image/jpeg','image/webp','image/gif','image/avif'];
-const MAX_IMAGE = 10 * 1024 * 1024;
+const MAX_IMAGE = MAX_BLOG_IMAGE;
 
 export async function hashAgentKey(raw: string) {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
@@ -54,20 +55,42 @@ export const agentPostInput = z.object({
 });
 export type AgentPostInput = z.infer<typeof agentPostInput>;
 
-async function storeImage(agent: Agent, url: string, alt: string) {
-  if (!/^https:\/\//i.test(url)) throw new Error('Image links must use https');
-  const res = await fetch(url, { redirect: 'follow' });
-  if (!res.ok) throw new Error('Could not download the image');
-  const type = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-  if (!IMAGE_TYPES.includes(type)) throw new Error('The image must be PNG, JPEG, WebP, GIF or AVIF');
-  const bytes = new Uint8Array(await res.arrayBuffer());
-  if (!bytes.length || bytes.length > MAX_IMAGE) throw new Error('The image must be under 10 MB');
+export async function storeBlogImageBytes(agent: Agent, bytes: Uint8Array, type: string, alt: string, name = 'AI image') {
+  validateBlogImage(bytes, type);
   const path = `${agent.userId}/blog/${crypto.randomUUID()}.${type.split('/')[1]}`;
   const { error } = await agent.db.storage.from('tenant-media').upload(path, bytes, { contentType: type });
   if (error) throw new Error('Image upload failed');
   const publicUrl = `/api/public/media/${path}`;
-  await agent.db.from('media_assets').insert({ account_id: agent.userId, created_by: agent.userId, name: alt.slice(0, 200) || 'AI image', alt_text: alt, kind: 'image', content_type: type, size: bytes.length, storage_path: path, url: publicUrl, blog_asset: true });
-  return publicUrl;
+  const { data: asset, error: metadataError } = await agent.db.from('media_assets').insert({ account_id: agent.userId, created_by: agent.userId, name: name.slice(0, 200), alt_text: alt, kind: 'image', content_type: type, size: bytes.length, storage_path: path, url: publicUrl, blog_asset: true }).select('id').single();
+  if (metadataError || !asset) {
+    await agent.db.storage.from('tenant-media').remove([path]);
+    throw new Error('Could not register the image');
+  }
+  return { id: asset.id, url: publicUrl, alt, content_type: type, size: bytes.length };
+}
+
+export async function storeImage(agent: Agent, url: string, alt: string, name = 'AI image') {
+  if (!/^https:\/\//i.test(url)) throw new Error('Image links must use https');
+  const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(20000) });
+  if (!res.ok) throw new Error('Could not download the image');
+  const type = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+  if (!IMAGE_TYPES.includes(type)) throw new Error('The image must be PNG, JPEG, WebP, GIF or AVIF');
+  if (Number(res.headers.get('content-length')) > MAX_IMAGE) throw new Error('The image must be under 10 MB');
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('Could not download the image');
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > MAX_IMAGE) { await reader.cancel(); throw new Error('The image must be under 10 MB'); }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+  return (await storeBlogImageBytes(agent, bytes, type, alt, name)).url;
 }
 
 export async function agentSavePost(agent: Agent, input: AgentPostInput, id?: string) {
@@ -86,7 +109,7 @@ export async function agentSavePost(agent: Agent, input: AgentPostInput, id?: st
   const topic = input.category ? slugify(input.category) : undefined;
   if (topic) {
     const { data: cat } = await db.from('blog_categories').select('id,archived').eq('slug', topic).maybeSingle();
-    if (!cat) await db.from('blog_categories').insert({ slug: topic, name: input.category!.trim() });
+    if (!cat) await db.from('blog_categories').insert({ slug: topic, name: input.category?.trim() ?? topic });
     else if (cat.archived) throw new Error('That category is archived');
   }
   const merged = blogPostSchema.parse({

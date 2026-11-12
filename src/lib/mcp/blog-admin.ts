@@ -9,5 +9,7 @@ export async function requireBlogAdmin(ctx: ToolContext) {
   const { data, error } = await supabaseForUser(ctx).rpc("has_role", { _role: "admin" });
   if (error || data !== true) return "Only Xellvio administrators can manage the blog.";
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return { db: supabaseAdmin, userId: ctx.getUserId()! };
+  const userId = ctx.getUserId();
+  if (!userId) return "Not authenticated";
+  return { db: supabaseAdmin, userId };
 }
