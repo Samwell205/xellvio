@@ -386,6 +386,13 @@
       "when": 1794439269432,
       "tag": "0054_blog_schedule_retry_validation",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1794462962893,
+      "tag": "0055_scope_blog_settings_public_read",
+      "breakpoints": true
     }
   ]
 }
