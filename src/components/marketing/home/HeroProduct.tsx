@@ -29,9 +29,9 @@ const NAV = [
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-2.5 text-[13px]">
-      <span className="text-muted-foreground">{k}</span>
-      <span className="text-right font-semibold text-foreground">{v}</span>
+    <div className="flex items-start gap-4 py-2.5 text-[13px]">
+      <span className="w-28 shrink-0 text-muted-foreground">{k}</span>
+      <span className="font-semibold text-foreground">{v}</span>
     </div>
   );
 }
@@ -39,7 +39,7 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 export function PhonePreview({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`w-[230px] rounded-[2.2rem] border border-border bg-ink p-2 shadow-[0_30px_60px_-30px_color-mix(in_oklab,var(--ink)_70%,transparent)] ${className}`}
+      className={`w-[220px] rounded-[2.2rem] border border-border bg-ink p-2 shadow-[0_30px_60px_-30px_color-mix(in_oklab,var(--ink)_70%,transparent)] ${className}`}
       role="img"
       aria-label="Phone showing the text message the customer receives"
     >
@@ -85,7 +85,7 @@ export function HeroProduct() {
           backgroundSize: "18px 18px",
         }}
       />
-      <div className="relative lg:pr-24">
+      <div className="relative sm:pr-24">
         <div
           className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_40px_80px_-40px_color-mix(in_oklab,var(--ink)_45%,transparent)]"
           role="img"
@@ -142,8 +142,8 @@ export function HeroProduct() {
                   </span>
                 ))}
               </div>
-              <div className="mt-4 grid gap-4 xl:grid-cols-[1.15fr_1fr]">
-                <div className="rounded-xl border border-border p-3">
+              <div className="mt-4 grid gap-3">
+                <div className="rounded-xl border border-border p-3 sm:mr-28 lg:mr-24">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Message
                   </p>
@@ -171,7 +171,7 @@ export function HeroProduct() {
                   <Row k="Estimated cost" v="$20.59" />
                 </div>
               </div>
-              <div className="mt-4 flex justify-end gap-2">
+              <div className="mt-4 flex gap-2">
                 <span className="rounded-full border border-border px-3 py-1.5 text-[12px] font-semibold text-foreground">
                   Send a test
                 </span>
@@ -182,7 +182,7 @@ export function HeroProduct() {
             </div>
           </div>
         </div>
-        <PhonePreview className="relative mx-auto -mt-6 sm:absolute sm:-bottom-10 sm:right-0 sm:mt-0 lg:-right-4" />
+        <PhonePreview className="relative mx-auto -mt-6 sm:absolute sm:-bottom-12 sm:right-0 sm:mt-0" />
       </div>
     </div>
   );
