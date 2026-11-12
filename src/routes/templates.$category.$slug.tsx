@@ -5,6 +5,7 @@ import { ArrowRight, Check } from "lucide-react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { stepLabel } from "@/lib/marketing/automation-step-label";
+import { FlowDiagram } from "@/components/marketing/FlowDiagram";
 import { BlockCanvas } from "@/components/builder/BlockRenderer";
 import { AUTOMATION_TEMPLATES } from "@/lib/automation-templates";
 import { CATEGORY_META, previewFor, isTemplateCategory } from "@/lib/marketing/template-catalog";
@@ -143,16 +144,10 @@ function TemplateDetail() {
                     <BlockCanvas blocks={preview.blocks} theme={preview.theme} />
                   </div>
                 ) : automation ? (
-                  <ol className="divide-y divide-border">
-                    {automation.nodes.map((n, i) => (
-                      <li key={n.key} className="flex items-center gap-3 px-5 py-4 text-sm">
-                        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-muted text-[11px] font-bold text-foreground">
-                          {i + 1}
-                        </span>
-                        <span className="text-foreground">{stepLabel(n.type)}</span>
-                      </li>
-                    ))}
-                  </ol>
+                  <div className="bg-muted/30 p-6" style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: "14px 14px" }}>
+                    <FlowDiagram flow={automation} detail className="mx-auto max-h-[470px] w-full" />
+                    <p className="sr-only">Steps: {automation.nodes.map((n) => stepLabel(n.type)).join(", ")}</p>
+                  </div>
                 ) : null}
               </div>
             </div>
