@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, Check } from "lucide-react";
 import { MarketingNav } from "@/components/MarketingNav";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { stepLabel } from "@/lib/marketing/automation-step-label";
 import { BlockCanvas } from "@/components/builder/BlockRenderer";
 import { AUTOMATION_TEMPLATES } from "@/lib/automation-templates";
 import { CATEGORY_META, previewFor, isTemplateCategory } from "@/lib/marketing/template-catalog";
@@ -290,25 +291,4 @@ function TemplateDetail() {
       <MarketingFooter />
     </div>
   );
-}
-
-function stepLabel(type: string) {
-  const map: Record<string, string> = {
-    "trigger.contact_added": "Trigger: contact added",
-    "trigger.keyword": "Trigger: keyword received",
-    "trigger.link_click": "Trigger: link clicked",
-    "trigger.tag_added": "Trigger: tag added",
-    "trigger.date": "Trigger: date reached",
-    "trigger.list_join": "Trigger: joined a list",
-    "logic.check_consent": "Check messaging consent",
-    "logic.clicked_link": "Condition: clicked a link",
-    "logic.exit": "Exit the journey",
-    "action.send_sms": "Send SMS",
-    "action.add_tag": "Add a tag",
-    "action.remove_tag": "Remove a tag",
-    "action.add_to_list": "Add to a list",
-    "action.webhook": "Call a webhook",
-    "timing.wait": "Wait",
-  };
-  return map[type] ?? type.replace(/^[a-z]+\./, "").replace(/_/g, " ");
 }

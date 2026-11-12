@@ -15,7 +15,9 @@ import {
   Wallet,
   Plus,
   Minus,
+  Tag,
 } from "lucide-react";
+import { DEMO, STATS, ESTIMATED_COST, WELCOME_TEXT, fmtInt, fmtUsd } from "./demo-fixture";
 
 /* Compact three-step homepage showcase. Each visual mirrors a real Xellvio
    screen (form builder output, automation builder, campaign report) using
@@ -61,9 +63,9 @@ function FormVisual() {
           <p className="mt-3 text-2xl font-extrabold leading-tight tracking-tight text-foreground">Get first pick of every new menu.</p>
           <p className="mt-2 text-[13px] text-muted-foreground">Join the VIP list for early access and one text a week, at most.</p>
           <div className="mt-5 space-y-3 rounded-xl border border-border bg-card p-4">
-            <Field label="First name" value="Ada" />
-            <Field label="Mobile number" value="+44 7700 900123" />
-            <Field label="Email" value="ada@example.com" />
+            <Field label="First name" value={DEMO.contact.first} />
+            <Field label="Mobile number" value={DEMO.contact.phone} />
+            <Field label="Email" value={DEMO.contact.email} />
             <div className="flex items-start gap-2 text-[11px] leading-snug text-muted-foreground">
               <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded bg-primary text-primary-foreground">
                 <CheckCircle2 className="size-3" />
@@ -80,12 +82,12 @@ function FormVisual() {
               <span className="grid size-9 place-items-center rounded-full bg-accent text-[12px] font-bold text-accent-foreground">AD</span>
               <div className="min-w-0">
                 <p className="text-sm font-bold text-foreground">Ada</p>
-                <p className="truncate text-[11px] text-muted-foreground">+44 7700 900123 · ada@example.com</p>
+                <p className="truncate text-[11px] text-muted-foreground">{DEMO.contact.phone} · {DEMO.contact.email}</p>
               </div>
             </div>
             <div className="mt-3 space-y-1.5 text-[12px]">
               <p className="flex items-center gap-2 text-foreground"><CheckCircle2 className="size-3.5 text-success" /> SMS consent · form “VIP list”</p>
-              <p className="flex items-center gap-2 text-muted-foreground"><Mail className="size-3.5" /> Email consent not given</p>
+              <p className="flex items-center gap-2 text-muted-foreground"><Mail className="size-3.5" /> No email consent · receives texts only</p>
               <p className="flex items-center gap-2 text-foreground"><UserPlus className="size-3.5 text-primary" /> Added to list “Website sign-ups”</p>
             </div>
           </div>
@@ -115,7 +117,7 @@ const Line = ({ h = "h-6" }: { h?: string }) => <span aria-hidden className={`mx
 
 function AutomationVisual() {
   return (
-    <Frame url="xellvio.com/app/automations/welcome-series" label="Example Xellvio automation: when someone joins a list, wait 5 minutes, send a welcome text, then check whether they clicked and send an email reminder if not">
+    <Frame url="xellvio.com/app/automations/welcome-series" label="Example Xellvio automation: when someone joins a list, wait 5 minutes, send a welcome text, with a tracked link, then check whether they clicked: tag clickers, and end the flow for everyone else">
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <p className="text-sm font-bold text-foreground">Welcome series</p>
         <div className="flex items-center gap-2">
@@ -132,16 +134,16 @@ function AutomationVisual() {
           <Line />
           <Node kind="Wait" icon={Clock} tone="bg-muted text-muted-foreground" title="Wait" desc="5 minutes" />
           <Line />
-          <Node kind="Send SMS" icon={MessageSquare} tone="bg-accent text-accent-foreground" title="Welcome text" desc="Hi {first_name}, welcome to the VIP list! Your first-pick code: VIP15" />
+          <Node kind="Send SMS" icon={MessageSquare} tone="bg-accent text-accent-foreground" title="Welcome text" desc={WELCOME_TEXT} />
           <Line />
-          <Node kind="Condition" icon={Split} tone="bg-muted text-foreground" title="Clicked a link?" desc="Within 2 days" />
+          <Node kind="Condition" icon={Split} tone="bg-muted text-foreground" title="Clicked a link?" desc={`${DEMO.welcomeLink} · within 2 days`} />
           {/* branch */}
           <div className="relative w-full max-w-[520px]">
             <span aria-hidden className="absolute left-1/4 right-1/4 top-0 h-px bg-primary/60" />
             <div className="grid grid-cols-2 gap-3 pt-0">
               {[
-                { label: "Yes", node: <Node kind="Exit" icon={CheckCircle2} tone="bg-primary/15 text-primary" title="End flow" desc="Goal reached" /> },
-                { label: "No", node: <Node kind="Send email" icon={Mail} tone="bg-accent text-accent-foreground" title="Menu reminder" desc="Spring menu email with the same code" /> },
+                { label: "Yes", node: <Node kind="Add tag" icon={Tag} tone="bg-primary/15 text-primary" title="Tag “Engaged”" desc="Use the tag to target later campaigns" /> },
+                { label: "No", node: <Node kind="Exit" icon={CheckCircle2} tone="bg-muted text-muted-foreground" title="End flow" desc="No extra message sent" /> },
               ].map((b) => (
                 <div key={b.label} className="flex flex-col items-center">
                   <Line h="h-4" />
@@ -162,19 +164,20 @@ function AutomationVisual() {
 const BARS = [38, 62, 80, 54, 30, 22, 14, 10];
 function ReportVisual() {
   const kpis = [
-    { icon: Send, k: "Sent", v: "1,248" },
-    { icon: CheckCircle2, k: "Delivered", v: "1,201", s: "96.2%" },
-    { icon: MousePointerClick, k: "Link clicks", v: "214", s: "17.8%" },
-    { icon: XCircle, k: "Failed", v: "19", s: "1.5%" },
-    { icon: Wallet, k: "Spend", v: "$20.59" },
+    { icon: Send, k: "Sent", v: fmtInt(STATS.sent) },
+    { icon: CheckCircle2, k: "Delivered", v: fmtInt(DEMO.results.delivered), s: STATS.deliveredPct },
+    { icon: MousePointerClick, k: "Link clicks", v: fmtInt(DEMO.results.clicks), s: `${STATS.clickPct} of delivered` },
+    { icon: XCircle, k: "Failed", v: fmtInt(DEMO.results.failed), s: STATS.failedPct },
+    { icon: Wallet, k: "Spend", v: fmtUsd(ESTIMATED_COST), s: "example" },
   ];
   return (
     <Frame url="xellvio.com/app/campaigns/spring-menu/report" label="Example Xellvio campaign report with sent, delivered, clicks, failed and spend, a clicks-over-time chart and a delivery status breakdown">
       <div className="p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-base font-extrabold tracking-tight text-foreground">Spring menu — VIP early access</p>
-          <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">Completed</span>
-          <span className="ml-auto text-[11px] text-muted-foreground">Sent Fri 10:00 · BRIGHTLEAF</span>
+          <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground">Sending complete</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{fmtInt(DEMO.results.awaiting)} receipts pending</span>
+          <span className="ml-auto text-[11px] text-muted-foreground">Sent Fri 10:00 · {DEMO.sender} · {DEMO.country}</span>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-5">
           {kpis.map((x) => (
@@ -200,14 +203,14 @@ function ReportVisual() {
           <div className="rounded-xl border border-border p-4">
             <p className="text-[12px] font-semibold text-foreground">Delivery status</p>
             <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-muted">
-              <span className="bg-primary" style={{ width: "96.2%" }} />
-              <span className="bg-muted-foreground/40" style={{ width: "2.3%" }} />
-              <span className="bg-destructive" style={{ width: "1.5%" }} />
+              <span className="bg-primary" style={{ width: STATS.deliveredPct }} />
+              <span className="bg-muted-foreground/40" style={{ width: STATS.awaitingPct }} />
+              <span className="bg-destructive" style={{ width: STATS.failedPct }} />
             </div>
             <ul className="mt-3 space-y-1.5 text-[12px]">
-              <li className="flex justify-between"><span className="text-muted-foreground">Delivered</span><span className="font-semibold tabular-nums text-foreground">1,201</span></li>
-              <li className="flex justify-between"><span className="text-muted-foreground">Awaiting carrier report</span><span className="font-semibold tabular-nums text-foreground">28</span></li>
-              <li className="flex justify-between"><span className="text-muted-foreground">Failed</span><span className="font-semibold tabular-nums text-foreground">19</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Delivered</span><span className="font-semibold tabular-nums text-foreground">{fmtInt(DEMO.results.delivered)}</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Awaiting carrier report</span><span className="font-semibold tabular-nums text-foreground">{fmtInt(DEMO.results.awaiting)}</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Failed</span><span className="font-semibold tabular-nums text-foreground">{fmtInt(DEMO.results.failed)}</span></li>
             </ul>
           </div>
         </div>
@@ -230,7 +233,7 @@ const STEPS = [
     id: "follow-up",
     tab: "Send the right follow-up",
     title: "The next message sends itself.",
-    body: "Automations start from a trigger, wait, check a condition and send a text or email. Each step on the canvas shows what happens and when.",
+    body: "Automations start from a trigger, wait, check a condition, then send a text or tag the contact. Each step on the canvas shows what happens and when.",
     to: "/automations",
     cta: "See automations",
     Visual: AutomationVisual,

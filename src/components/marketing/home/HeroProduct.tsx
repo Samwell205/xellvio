@@ -15,8 +15,7 @@ import {
 /* Homepage hero: the campaign review screen as it appears in the Xellvio app,
    paired with the text the customer receives. All data is fictional. */
 
-const MESSAGE =
-  "Brightleaf Café: Hi Ada, our spring menu lands Friday. VIPs get first pick + 15% off this weekend: xell.vi/spring Reply STOP to opt out";
+import { DEMO, MESSAGE, SEGMENTS, ESTIMATED_COST, fmtInt, fmtUsd } from "./demo-fixture";
 
 const NAV = [
   { icon: Megaphone, label: "Campaigns", on: true },
@@ -53,7 +52,8 @@ export function PhonePreview({ className = "" }: { className?: string }) {
           <span className="grid size-8 place-items-center rounded-full bg-accent text-[11px] font-bold text-accent-foreground">
             BC
           </span>
-          <span className="mt-1 text-[11px] font-semibold text-foreground">BRIGHTLEAF</span>
+          <span className="mt-1 text-[11px] font-semibold text-foreground">{DEMO.sender}</span>
+          <span className="text-[9px] text-muted-foreground">Example number</span>
         </div>
         <div className="space-y-2 px-3 py-4">
           <p className="text-center text-[9px] text-muted-foreground">Text Message · Today 10:00</p>
@@ -61,7 +61,7 @@ export function PhonePreview({ className = "" }: { className?: string }) {
             {MESSAGE}
           </div>
           <div className="ml-auto w-fit rounded-2xl rounded-br-md bg-primary px-3 py-1.5 text-[11.5px] text-primary-foreground">
-            Saving a table for Friday!
+            {DEMO.reply}
           </div>
         </div>
         <div className="mx-3 mb-4 rounded-full border border-border px-3 py-1.5 text-[10px] text-muted-foreground">
@@ -105,7 +105,7 @@ export function HeroProduct() {
           </div>
           <div className="flex">
             <aside className="hidden w-40 shrink-0 border-r border-border p-3 sm:block">
-              <p className="px-2 pb-3 text-[13px] font-extrabold text-foreground">Brightleaf Café</p>
+              <p className="px-2 pb-3 text-[13px] font-extrabold text-foreground">{DEMO.business}</p>
               {NAV.map((n) => (
                 <div
                   key={n.label}
@@ -148,18 +148,18 @@ export function HeroProduct() {
                     Message
                   </p>
                   <p className="mt-2 rounded-lg bg-muted/60 p-3 text-[13px] leading-relaxed text-foreground">
-                    Brightleaf Café: Hi <span className="rounded bg-accent px-1 text-accent-foreground">{"{first_name}"}</span>, our spring menu lands Friday. VIPs get first pick + 15% off this weekend:{" "}
-                    <span className="text-primary underline">xell.vi/spring</span> Reply STOP to opt out
+                    {DEMO.templateLead}<span className="rounded bg-accent px-1 text-accent-foreground">{"{first_name}"}</span>{DEMO.templateTail}
+                    <span className="text-primary underline">{DEMO.link}</span>{DEMO.stop}
                   </p>
                   <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
                     <Smile className="size-3.5" />
                     <Link2 className="size-3.5" /> Tracked link
-                    <span className="ml-auto tabular-nums">141 chars · 1 segment</span>
+                    <span className="ml-auto tabular-nums">{SEGMENTS.charCount} chars · {SEGMENTS.segments} segment{SEGMENTS.segments === 1 ? "" : "s"} · preview for {DEMO.contact.first}</span>
                   </div>
                 </div>
                 <div className="divide-y divide-border rounded-xl border border-border px-3 sm:mr-28 lg:mr-24">
-                  <Row k="Audience" v="VIP customers · 1,248" />
-                  <Row k="Sender" v="BRIGHTLEAF" />
+                  <Row k="Audience" v={`${DEMO.audience.name} · ${fmtInt(DEMO.audience.size)} · ${DEMO.country}`} />
+                  <Row k="Sender" v={DEMO.sender} />
                   <Row
                     k="Send"
                     v={
@@ -168,7 +168,7 @@ export function HeroProduct() {
                       </span>
                     }
                   />
-                  <Row k="Estimated cost" v="$20.59" />
+                  <Row k="Estimated cost" v={`${fmtUsd(ESTIMATED_COST)} example estimate`} />
                 </div>
               </div>
               <div className="mt-4 flex gap-2">
