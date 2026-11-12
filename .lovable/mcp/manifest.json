@@ -134,6 +134,265 @@
           }
         },
         "outputSchema": null
+      },
+      {
+        "name": "list_blog_categories",
+        "title": "List blog categories",
+        "description": "List the blog's active categories (admins only).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_blog_posts",
+        "title": "List recent blog articles",
+        "description": "List the 20 most recently updated blog articles with their status and links (admins only).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_blog_post",
+        "title": "Get a blog article",
+        "description": "Read one blog article (HTML body, status, SEO fields) by its id (admins only).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Article id from list_blog_posts."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_blog_post",
+        "title": "Create a blog article",
+        "description": "Save a new blog article as a draft, publish it live, or schedule it. Only publish or schedule after the user explicitly approves the final draft.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 250
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 500000
+            },
+            "content_format": {
+              "default": "markdown",
+              "type": "string",
+              "enum": [
+                "markdown",
+                "html"
+              ]
+            },
+            "excerpt": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "category": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "tags": {
+              "maxItems": 30,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              }
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "scheduled"
+              ]
+            },
+            "scheduled_at": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            "featured": {
+              "type": "boolean"
+            },
+            "featured_image_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "featured_image_alt": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "seo_title": {
+              "type": "string",
+              "maxLength": 250
+            },
+            "meta_description": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "cta_label": {
+              "type": "string",
+              "maxLength": 150
+            },
+            "cta_url": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_blog_post",
+        "title": "Update a blog article",
+        "description": "Edit an existing article; only the fields given change. Set status to draft to take it off the site. Confirm with the user before publishing or unpublishing.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Article id."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 250
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 500000
+            },
+            "content_format": {
+              "default": "markdown",
+              "type": "string",
+              "enum": [
+                "markdown",
+                "html"
+              ]
+            },
+            "excerpt": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "category": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "tags": {
+              "maxItems": 30,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              }
+            },
+            "slug": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "published",
+                "scheduled"
+              ]
+            },
+            "scheduled_at": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            },
+            "featured": {
+              "type": "boolean"
+            },
+            "featured_image_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "featured_image_alt": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "seo_title": {
+              "type": "string",
+              "maxLength": 250
+            },
+            "meta_description": {
+              "type": "string",
+              "maxLength": 1000
+            },
+            "cta_label": {
+              "type": "string",
+              "maxLength": 150
+            },
+            "cta_url": {
+              "type": "string",
+              "maxLength": 2000
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
       }
     ]
   }
