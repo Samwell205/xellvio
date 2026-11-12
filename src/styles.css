@@ -441,3 +441,14 @@
 .blog-prose iframe { width: 100%; max-width: 100%; aspect-ratio: 16/9; height: auto; }
 .blog-prose hr { border-color: var(--border); margin: 2em 0; }
 .blog-prose .ProseMirror-selectednode { outline: 2px solid var(--primary); }
+/* Blog motion */
+.blog-reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+.blog-reveal.is-in { opacity: 1; transform: none; }
+@keyframes blog-rise { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+@keyframes blog-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes blog-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
+.blog-rise { animation: blog-rise .8s cubic-bezier(.2,.7,.2,1) both; }
+.blog-float { animation: blog-float 6s ease-in-out infinite; }
+.blog-zoom { animation: blog-zoom 1.6s cubic-bezier(.2,.7,.2,1) both; }
+@media (prefers-reduced-motion: reduce) { .blog-reveal { opacity: 1; transform: none; transition: none; } .blog-rise, .blog-float, .blog-zoom { animation: none; } }
+.blog-prose img { display: block; width: 100%; box-shadow: 0 18px 40px -24px color-mix(in oklab, var(--foreground) 45%, transparent); }
