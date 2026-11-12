@@ -786,8 +786,17 @@ function LogoRow({ items, reverse }: { items: BrandEntry[]; reverse?: boolean })
       >
         {row.map((entry, i) => (
           <div key={`${entry.name}-${i}`} aria-hidden={i >= items.length || undefined} className="mx-6 flex shrink-0 items-center gap-2.5 py-2">
-            <BrandMark entry={entry} />
-            <span className="whitespace-nowrap text-base font-bold tracking-tight text-foreground">{entry.name}</span>
+            {entry.wordmark ? (
+              <span className="flex h-6 items-center px-1" style={{ width: `${Math.round(24 * Math.min(entry.wordmark.ratio, 6))}px` }}>
+                <img src={entry.wordmark.onLight} alt={`${entry.name} logo`} loading="lazy" className="h-auto max-h-6 w-full object-contain dark:hidden" />
+                <img src={entry.wordmark.onDark} alt="" aria-hidden className="hidden h-auto max-h-6 w-full object-contain dark:block" />
+              </span>
+            ) : (
+              <>
+                <BrandMark entry={entry} />
+                <span className="whitespace-nowrap text-base font-bold tracking-tight text-foreground">{entry.name}</span>
+              </>
+            )}
             <span className="whitespace-nowrap rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {entry.kind === "native" ? "Native" : "API / webhook"}
             </span>
