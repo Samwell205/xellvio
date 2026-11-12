@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ProductPage } from "@/components/marketing/ProductPage";
 import { PRODUCT_PAGES } from "@/components/marketing/product-pages";
+import { LandingHeroVisual, LandingExperience, TemplateTrio } from "@/components/marketing/ProductShowcases";
 import { pageHead, faqSchema, softwareApplicationSchema } from "@/lib/seo";
 
 export const Route = createFileRoute("/landing-pages")({
@@ -26,5 +27,12 @@ export const Route = createFileRoute("/landing-pages")({
 });
 
 function LandingPagesPage() {
-  return <ProductPage def={PRODUCT_PAGES["landing-pages"]!} />;
+  return (
+    <ProductPage
+      def={PRODUCT_PAGES["landing-pages"]!}
+      heroVisual={<LandingHeroVisual />}
+      experience={<LandingExperience />}
+      afterExperience={<TemplateTrio category="landing-pages" slugs={["product-promo", "consultant", "coaching"]} />}
+    />
+  );
 }

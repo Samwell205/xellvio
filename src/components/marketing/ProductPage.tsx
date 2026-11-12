@@ -20,7 +20,18 @@ import type { ProductPageDef } from "./product-pages";
  * Renders a full Platform page from a single definition, so every product page
  * shares the same premium structure while keeping unique content.
  */
-export function ProductPage({ def }: { def: ProductPageDef }) {
+export function ProductPage({
+  def,
+  heroVisual,
+  experience,
+  afterExperience,
+}: {
+  def: ProductPageDef;
+  /** Optional page-specific visuals; other pages keep the shared fallback. */
+  heroVisual?: React.ReactNode;
+  experience?: React.ReactNode;
+  afterExperience?: React.ReactNode;
+}) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <MarketingNav />
@@ -32,7 +43,7 @@ export function ProductPage({ def }: { def: ProductPageDef }) {
           body={def.heroBody}
           primary={{ label: "Start free", to: "/auth" }}
           secondary={def.secondaryCta ?? { label: "Get a demo", to: "/contact" }}
-          visual={<ScreenVisual lines={def.experience.screen} />}
+          visual={heroVisual ?? <ScreenVisual lines={def.experience.screen} />}
         />
         <StatsMarquee stats={def.stats} tone="lime" />
 
@@ -62,14 +73,15 @@ export function ProductPage({ def }: { def: ProductPageDef }) {
         </section>
 
         {/* Section 3 — product experience */}
-        <SplitFeature
+        {experience ?? <SplitFeature
           id="experience"
           flip
           heading={def.experience.heading}
           body={def.experience.body}
           points={def.experience.points}
           visual={<ScreenVisual lines={def.experience.screen} />}
-        />
+        />}
+        {afterExperience}
 
         {/* Section 4 — how it connects */}
         <EcosystemChain active={def.chainKey} body={def.connects} />

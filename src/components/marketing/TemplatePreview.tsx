@@ -31,7 +31,7 @@ export function TemplatePreview({ category, slug, label }: { category: TemplateC
       className="relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-muted/40"
     >
       {visible && page && (
-        <div aria-hidden className="pointer-events-none absolute left-0 top-0 origin-top-left" style={{ width: `${100 / SCALE}%`, transform: `scale(${SCALE})` }}>
+        <div aria-hidden ref={(n) => n?.setAttribute("inert", "")} className="pointer-events-none absolute left-0 top-0 origin-top-left" style={{ width: `${100 / SCALE}%`, transform: `scale(${SCALE})` }}>
           <BlockCanvas blocks={page.blocks} theme={page.theme} />
         </div>
       )}
