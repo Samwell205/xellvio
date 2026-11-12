@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ProductPage } from "@/components/marketing/ProductPage";
 import { PRODUCT_PAGES } from "@/components/marketing/product-pages";
+import { FormHeroVisual, FormExperience, TemplateTrio } from "@/components/marketing/ProductShowcases";
 import { pageHead, faqSchema, softwareApplicationSchema } from "@/lib/seo";
 
 export const Route = createFileRoute("/signup-forms")({
@@ -26,5 +27,12 @@ export const Route = createFileRoute("/signup-forms")({
 });
 
 function SignupFormsPage() {
-  return <ProductPage def={PRODUCT_PAGES["signup-forms"]!} />;
+  return (
+    <ProductPage
+      def={PRODUCT_PAGES["signup-forms"]!}
+      heroVisual={<FormHeroVisual />}
+      experience={<FormExperience />}
+      afterExperience={<TemplateTrio category="sign-up-forms" slugs={["discount", "consultation", "waitlist"]} />}
+    />
+  );
 }

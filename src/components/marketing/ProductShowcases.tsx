@@ -45,7 +45,7 @@ export function LandingHeroVisual() {
 const LANDING_POINTS = [
   { t: "Sections stack on phones", d: "Columns fold into one readable column automatically." },
   { t: "Your photos, your colours", d: "Image blocks and brand settings restyle the whole page." },
-  { t: "The form is built in", d: "Sign-ups arrive as contacts with their text consent recorded." },
+  { t: "The form is built in", d: "Each sign-up arrives in Xellvio as a contact." },
 ];
 
 export function LandingExperience() {
@@ -61,7 +61,7 @@ export function LandingExperience() {
         <motion.div {...reveal}>
           <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">One design. Every screen.</h2>
           <p className="mt-5 max-w-xl leading-relaxed text-ink-foreground/75">
-            You build the page once in the visual builder. Xellvio publishes it on your own link and reflows it for phones, where most text-message visitors land.
+            You build the page once in the visual builder. Xellvio publishes it on a shareable link and reflows it for phones, where most text-message visitors land.
           </p>
           <dl className="mt-10 space-y-6">
             {LANDING_POINTS.map((x) => (
@@ -114,7 +114,7 @@ export function FormHeroVisual() {
 const FORM_POINTS = [
   { t: "Fields", d: "Name, phone, email, dates, dropdowns, checkboxes and more." },
   { t: "Styling", d: "Fonts, colours, corners and button style follow your brand." },
-  { t: "Consent wording", d: "Edit the text shown under the button; it's saved with every sign-up." },
+  { t: "Consent wording", d: "Edit the wording shown under the button to match your programme." },
   { t: "Mobile", d: "Every form is sized for a phone first." },
 ];
 
