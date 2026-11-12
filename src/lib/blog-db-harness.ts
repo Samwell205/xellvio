@@ -10,6 +10,7 @@ CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql STABLE AS $$ SELECT coales
 CREATE TABLE cron.job(jobid serial PRIMARY KEY, jobname text UNIQUE, schedule text, command text);
 CREATE FUNCTION cron.schedule(n text, s text, c text) RETURNS bigint LANGUAGE sql AS $$ INSERT INTO cron.job(jobname,schedule,command) VALUES(n,s,c) ON CONFLICT(jobname) DO UPDATE SET schedule=excluded.schedule RETURNING jobid::bigint $$;
 CREATE FUNCTION cron.unschedule(n text) RETURNS boolean LANGUAGE sql AS $$ WITH d AS (DELETE FROM cron.job WHERE jobname=n RETURNING 1) SELECT count(*)>0 FROM d $$;
+CREATE FUNCTION cron.unschedule(id bigint) RETURNS boolean LANGUAGE sql AS $$ WITH d AS (DELETE FROM cron.job WHERE jobid=id RETURNING 1) SELECT count(*)>0 FROM d $$;
 GRANT USAGE ON SCHEMA auth, cron TO anon, authenticated, service_role;
 CREATE TYPE public.app_role AS ENUM ('admin','user');
 CREATE TYPE public.content_kind AS ENUM ('article','guide','tutorial','pillar','glossary','case_study');
