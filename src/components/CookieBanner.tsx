@@ -1,9 +1,32 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const KEY = "xellvio-cookie-consent-v1";
 
 export function CookieBanner() {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  /* While the notice is open, reserve its real (responsive) height at the end of
+     the page and lift the chat button above it, so every card and action can be
+     scrolled fully clear without making a choice. Consent behaviour is unchanged. */
+  useEffect(() => {
+    const el = ref.current;
+    const root = document.documentElement;
+    if (!open || !el) return;
+    const apply = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height) + 16;
+      root.style.setProperty("--cookie-offset", `${h}px`);
+      document.body.style.paddingBottom = `${h + 16}px`;
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--cookie-offset");
+      document.body.style.paddingBottom = "";
+    };
+  }, [open]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -28,6 +51,7 @@ export function CookieBanner() {
 
   return (
     <div
+      ref={ref}
       role="dialog"
       aria-live="polite"
       aria-label="Cookie preferences"

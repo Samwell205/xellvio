@@ -15,7 +15,7 @@ const GREETING: Msg = {
     "👋 Hi! I'm the Xellvio assistant. Ask me anything — or paste a message you plan to send, e.g. *Review this: \"your text\"*, and I'll check if it's allowed and suggest fixes.",
 };
 
-const LAUNCHER_CLASS = "chat-launcher group fixed bottom-5 right-5 z-50 grid size-16 shrink-0 place-items-center rounded-full p-0 transition-transform duration-300 motion-safe:hover:scale-110 motion-safe:active:scale-95 [&_svg]:size-7";
+const LAUNCHER_CLASS = "chat-launcher group fixed bottom-[calc(1.25rem+var(--cookie-offset,0px))] right-5 z-50 grid size-16 shrink-0 place-items-center rounded-full p-0 transition-transform duration-300 motion-safe:hover:scale-110 motion-safe:active:scale-95 [&_svg]:size-7";
 
 // Turn bare "/contact"-style paths into clickable links.
 function linkify(text: string) {
@@ -166,7 +166,7 @@ export function AiChatWidget() {
       {/* Panel */}
       <div
         className={cn(
-          "fixed bottom-24 right-5 z-50 flex w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B0B14]/90 shadow-[0_0_40px_-10px_rgba(124,58,237,0.3)] backdrop-blur-2xl transition-all",
+          "fixed bottom-[calc(6rem+var(--cookie-offset,0px))] right-5 z-50 flex w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B0B14]/90 shadow-[0_0_40px_-10px_rgba(124,58,237,0.3)] backdrop-blur-2xl transition-all",
           open ? "xv-panel-open pointer-events-auto opacity-100" : "pointer-events-none translate-y-3 opacity-0",
         )}
         style={{ height: "min(560px, calc(100vh - 8rem))", fontFamily: "'DM Sans', sans-serif" }}
