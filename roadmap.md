@@ -1,14 +1,15 @@
 # Roadmap
 
 ## Integrated blog CMS
-- [ ] Complete remaining continuation QA: live editor/writer/customer endpoint tests and timed scheduling/retry execution are not yet verified
+- [x] Database tests cover scheduling (deadline, early, time zones, reschedule, cancel, retries, errors, no idle job) and writer/editor/admin/customer permissions
 - [x] Reuse existing content tables; add secure categories, revisions, redirects, publishing schedules, media metadata, settings and consented subscriptions
 - [x] Admin blog loads; staff access management with confirmation and audited server permissions added; settings and real analytics load without browser errors
 - [x] Add database-backed public blog, article/category/tag pages, Resources integration and SEO/sitemaps; public empty blog renders, latest build OK
 - [x] Signed-in draft, actual image upload, preview, publish, listing/search/category, public image/SEO, edit readback, mobile no-overflow, unpublish 404 and sitemap removal verified; 10 publishing/security tests pass
 - [x] Registration attribution uses the existing growth session and real signup-completed events; per-article visitors and CTA clicks available; temporary QA visits are counted as real test traffic
 - [x] Scheduling now arms only the next UTC deadline, with up to one minute delay, bounded batches, locking and five-attempt retry/error records; zero blog jobs when no scheduled articles exist
-- [ ] Public popular-article section, broader integration tests, timed scheduling and permissions across real staff/customer sessions remain incomplete
+- [x] Popular articles section (real 30-day unique visitors) and internal-traffic exclusion; ops/deploy checklist in docs/blog-operations.md
+- [ ] Live browser checks as real writer/editor/customer accounts, true parallel-worker test, end-to-end upload/sitemap automation
 
 ## Google Sheets and ticket #1047
 - [ ] Connect per-tenant Google Sheets, map columns and sync consent-confirmed contacts into existing SMS lists — Google connection setup required
