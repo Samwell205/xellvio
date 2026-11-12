@@ -244,7 +244,7 @@ function Hero() {
               Request a demo
             </Link>
           </div>
-          <div className="mt-8 flex items-center gap-6 text-xs text-muted-foreground">
+          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <Check className="size-3.5" /> No credit card
             </span>
