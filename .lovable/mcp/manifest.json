@@ -393,6 +393,58 @@
           ]
         },
         "outputSchema": null
+      },
+      {
+        "name": "upload_blog_image",
+        "title": "Upload a blog image",
+        "description": "Upload an approved PNG, JPEG, WebP, GIF or AVIF image from base64 bytes (including data URLs) or a downloadable HTTPS link, up to 10 MB; returns a permanent URL for featured_image_url or inline Markdown. Private Claude canvas IDs and local file paths are not accessible: export the actual image first. Never invent image bytes.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "alt": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "content_type": {
+              "type": "string",
+              "enum": [
+                "image/png",
+                "image/jpeg",
+                "image/webp",
+                "image/gif",
+                "image/avif"
+              ]
+            },
+            "image_base64": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 13981116
+            },
+            "image_url": {
+              "type": "string",
+              "maxLength": 4000,
+              "format": "uri"
+            }
+          },
+          "required": [
+            "name",
+            "alt"
+          ]
+        },
+        "outputSchema": null
       }
     ]
   }
