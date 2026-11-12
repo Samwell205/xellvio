@@ -24,7 +24,9 @@ export const publicBlog = createServerFn({method:'GET'})
   const authorIds=[...new Set((posts ?? []).map(p=>p.author_id).filter((id):id is string=>!!id))];
   const {data:authors}=authorIds.length?await db.from('content_authors').select('id,name,bio,title,avatar_url').in('id',authorIds):{data:[]};
   const related=data.slug&&posts?.[0]?await db.from('content_posts').select('id,slug,title,excerpt,featured_image,image_alt,topic,published_at').eq('status','published').eq('visibility','public').eq('topic',posts[0].topic).neq('slug',data.slug).order('published_at',{ascending:false}).limit(3):{data:[]};
-  return {posts:(posts ?? []).map(p=>({...p,document:articleDocument(p.body)})),count:count ?? 0,categories:categories.data ?? [],settings:settings.data ?? defaultBlogSettings,authors:authors ?? [],related:related.data ?? [],redirectSlug};
+  const wantPopular=!data.slug&&!data.category&&!data.tag&&!data.search&&!data.page;
+  const popular=wantPopular?(await db.rpc('blog_popular',{_limit:4})).data ?? []:[];
+  return {popular:popular.map(p=>({...p,minutes:Math.max(1,Math.ceil((p.words||0)/200))})),posts:(posts ?? []).map(p=>({...p,document:articleDocument(p.body)})),count:count ?? 0,categories:categories.data ?? [],settings:settings.data ?? defaultBlogSettings,authors:authors ?? [],related:related.data ?? [],redirectSlug};
  });
 
 export const recordBlogEvent=createServerFn({method:'POST'})
