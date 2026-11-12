@@ -387,6 +387,7 @@ export type Database = {
           tos_current_version_accepted: string | null
           updated_at: string
           use_case_description: string | null
+          warnings_counted_from: string | null
           website_url: string | null
         }
         Insert: {
@@ -457,6 +458,7 @@ export type Database = {
           tos_current_version_accepted?: string | null
           updated_at?: string
           use_case_description?: string | null
+          warnings_counted_from?: string | null
           website_url?: string | null
         }
         Update: {
@@ -527,6 +529,7 @@ export type Database = {
           tos_current_version_accepted?: string | null
           updated_at?: string
           use_case_description?: string | null
+          warnings_counted_from?: string | null
           website_url?: string | null
         }
         Relationships: []
