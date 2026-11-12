@@ -8,7 +8,7 @@ export default defineTool({
   name: 'upload_blog_image',
   title: 'Upload a blog image',
   description: 'Upload an approved PNG, JPEG, WebP, GIF or AVIF image from base64 bytes (including data URLs) or a downloadable HTTPS link, up to 10 MB; returns a permanent URL for featured_image_url or inline Markdown. Private Claude canvas IDs and local file paths are not accessible: export the actual image first. Never invent image bytes.',
-  inputSchema: blogImageInput.innerType ? {} : {},
+  inputSchema: blogImageInput.shape,
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   handler: async (args, ctx) => {
     const agent = await requireBlogAdmin(ctx);
