@@ -364,12 +364,15 @@ export const recommendedApps = createServerFn({ method: "GET" })
       );
     }
     if ((forms.count ?? 0) > 0) {
-      wanted.push({ slug: "zapier", reason: "Route form submissions anywhere with no code." });
+      wanted.push({ slug: "brevo", reason: "Bring your form and email subscribers into Xellvio." });
     }
     if ((campaigns.count ?? 0) > 5) {
-      wanted.push({ slug: "slack", reason: "Get campaign results and replies in your team channel." });
+      wanted.push({ slug: "pipedrive", reason: "Text the people already in your sales pipeline." });
     }
-    wanted.push({ slug: "openai", reason: "Draft SMS copy and landing page content faster." });
+    wanted.push({ slug: "shopify", reason: "Import your store customers and text them about orders." });
+    wanted.push({ slug: "hubspot", reason: "Keep your CRM contacts in sync for SMS campaigns." });
+    wanted.push({ slug: "klaviyo", reason: "Bring your Klaviyo profiles into Xellvio." });
+    wanted.push({ slug: "woocommerce", reason: "Import WooCommerce customers in one step." });
 
     const installedIds = new Set((installs.data ?? []).map((r: any) => r.app_id));
     const slugs = [...new Set(wanted.map((w) => w.slug))].slice(0, 8);

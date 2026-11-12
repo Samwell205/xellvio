@@ -66,18 +66,48 @@ function WorkspaceApps() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">App Marketplace</h1>
-          <p className="text-sm text-muted-foreground">
-            Connect the tools your business already runs on — and use them inside campaigns and
-            automations.
-          </p>
+      <section className="relative overflow-hidden rounded-3xl border bg-card p-6 md:p-10">
+        <div className="pointer-events-none absolute -right-24 -top-24 size-72 rounded-full bg-primary/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 size-72 rounded-full bg-accent/40 blur-3xl" />
+        <div className="relative grid gap-8 lg:grid-cols-[1.3fr_1fr] lg:items-center">
+          <div className="blog-rise">
+            <span className="inline-flex items-center gap-1.5 rounded-full border bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <Plug className="size-3.5 text-primary" /> Integrations
+            </span>
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">
+              Bring your customers in from the tools you already use
+            </h1>
+            <p className="mt-3 max-w-xl text-muted-foreground">
+              Connect your store, CRM or payment tool once. Xellvio imports the contacts so you can
+              text them in your campaigns.
+            </p>
+            <div className="mt-5 flex max-w-lg items-center gap-2 rounded-full border bg-background px-4 py-2.5 shadow-sm">
+              <Search className="size-4 text-muted-foreground" />
+              <input
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder="Search Shopify, HubSpot, Stripe…"
+                aria-label="Search apps"
+                className="flex-1 bg-transparent text-sm outline-none"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            {(apps.data ?? []).slice(0, 12).map((a, i) => (
+              <Link
+                key={a.id}
+                to="/app/apps/$slug"
+                params={{ slug: a.slug }}
+                className="blog-rise flex aspect-square items-center justify-center rounded-2xl border bg-background transition-transform hover:-translate-y-1"
+                style={{ animationDelay: `${i * 50}ms` }}
+                title={a.name}
+              >
+                <AppLogo name={a.name} logoUrl={a.logo_url} accentColor={a.accent_color} size="sm" />
+              </Link>
+            ))}
+          </div>
         </div>
-        <Button asChild variant="outline">
-          <Link to="/marketplace">Public marketplace</Link>
-        </Button>
-      </div>
+      </section>
 
       <Tabs defaultValue="discover">
         <TabsList>
@@ -88,13 +118,13 @@ function WorkspaceApps() {
           <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="discover" className="mt-5 space-y-6">
+        <TabsContent value="discover" className="mt-5 space-y-8">
           {!!recs.data?.length && (
             <section>
-              <h2 className="flex items-center gap-2 font-semibold">
+              <h2 className="flex items-center gap-2 text-lg font-semibold">
                 <Sparkles className="size-4 text-primary" /> Recommended for your business
               </h2>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {recs.data.map((r) => (
                   <AppCard
                     key={r.id}
@@ -117,19 +147,6 @@ function WorkspaceApps() {
             </section>
           )}
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <div className="flex h-10 flex-1 items-center gap-2 rounded-lg border bg-background px-3">
-              <Search className="size-4 text-muted-foreground" />
-              <input
-                value={term}
-                onChange={(e) => setTerm(e.target.value)}
-                placeholder="Search apps"
-                aria-label="Search apps"
-                className="h-full flex-1 bg-transparent text-sm outline-none"
-              />
-            </div>
-          </div>
-
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -140,7 +157,7 @@ function WorkspaceApps() {
             >
               All
             </button>
-            {cats.data?.map((c) => (
+            {cats.data?.filter((c) => c.app_count > 0).map((c) => (
               <button
                 key={c.id}
                 type="button"
@@ -156,7 +173,12 @@ function WorkspaceApps() {
             ))}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {apps.data && apps.data.length === 0 && (
+            <p className="rounded-2xl border bg-card p-8 text-center text-sm text-muted-foreground">
+              No apps match your search.
+            </p>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {apps.isLoading &&
               Array.from({ length: 8 }).map((_, i) => (
                 <Skeleton key={i} className="h-44 rounded-2xl" />

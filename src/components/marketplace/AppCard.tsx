@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Download, Star } from "lucide-react";
+import { ArrowRight, BadgeCheck } from "lucide-react";
 import { AppLogo } from "./AppLogo";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,6 @@ export type AppCardApp = {
   developers?: { company_name: string; verification_status?: string } | null;
 };
 
-const compact = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n));
 
 export function AppCard({
   app,
@@ -77,18 +76,9 @@ export function AppCard({
               {app.app_categories.name}
             </Badge>
           )}
-          {typeof app.install_count === "number" && app.install_count > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Download className="size-3" />
-              {compact(app.install_count)}
-            </span>
-          )}
-          {!!app.rating && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Star className="size-3 fill-current" />
-              {app.rating}
-            </span>
-          )}
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <BadgeCheck className="size-3 text-primary" /> Imports contacts
+          </span>
         </div>
         <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-primary opacity-70 transition-all group-hover:gap-2 group-hover:opacity-100">
           Connect <ArrowRight className="size-4" />
