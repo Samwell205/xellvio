@@ -43,8 +43,7 @@ export function DesignRender({
       {scale > 0 && (
         <div
           aria-hidden
-          // @ts-expect-error inert is a valid DOM attribute in React 19
-          inert=""
+          ref={(n) => n?.setAttribute("inert", "")}
           className="pointer-events-none absolute left-0 top-0 origin-top-left select-none"
           style={{ width: renderWidth, transform: `scale(${scale})` }}
         >
