@@ -26,7 +26,6 @@ CREATE TABLE public.media_assets(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), 
 GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role; GRANT SELECT,INSERT,UPDATE,DELETE ON public.content_posts, public.media_assets, public.content_events TO authenticated; GRANT SELECT ON public.content_posts, public.user_roles, public.content_authors TO anon, authenticated;
 ALTER TABLE public.content_posts ENABLE ROW LEVEL SECURITY; ALTER TABLE public.media_assets ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Published content is public" ON public.content_posts FOR SELECT USING (status='published');
-CREATE POLICY "CMS media" ON public.media_assets FOR ALL USING (false);
 CREATE POLICY "Admins manage content" ON public.content_posts FOR ALL TO authenticated USING (public.has_role(auth.uid(),'admin')) WITH CHECK (public.has_role(auth.uid(),'admin'));
 `;
 
