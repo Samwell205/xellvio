@@ -26,6 +26,7 @@
 - [ ] Resolve historical $0.7545 debit discrepancy — no refunds authorized; campaign-specific surcharge reconciliation remains unavailable from message prices
 
 ## Current monitoring corrections
+- [x] Reinstatement saves a new warning cutoff with active status, retaining audit history; first/third warning, 90-day window, failed save and admin-only tests passed. No real tenant reopened or SMS sent; publish required.
 - [x] Confirmed and removed global region blocking inferred from individual rejections; legacy block settings are no longer read or written
 - [x] Restored all-route estimated cost/margin, separated recorded prices, and made recorded-price margin unavailable when any submitted price is missing; exports are labeled estimates
 - [x] 31 regressions and build passed; populated signed-in campaign report checked on desktop/phone without sending, retrying, or charging; publish required for deployment

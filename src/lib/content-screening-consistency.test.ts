@@ -6,6 +6,9 @@ vi.mock("./tenant-suspension.server", () => ({ suspendTenantSending: mocks.suspe
 vi.mock("@/integrations/supabase/client.server", () => {
   const query = {
     select: () => query, eq: () => query, in: () => query, gte: () => query,
+    maybeSingle: async () => ({ data: { warnings_counted_from: null }, error: null }),
+    order: () => query,
+    range: async () => ({ data: [], error: null }),
     insert: (row: unknown) => { mocks.insert(row); return query; },
     then: (resolve: (value: unknown) => unknown) => resolve({ data: [], count: 0, error: null }),
   };

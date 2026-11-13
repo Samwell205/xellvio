@@ -133,7 +133,8 @@ export const adminReinstateAccount = createServerFn({ method: "POST" })
     if (previousError) throw previousError;
     const { error } = await supabaseAdmin
       .from("accounts")
-      .update({ suspended_at: null, onboarding_status: "active" })
+      // Restart warnings in the same write that reopens the account; keep audit history.
+      .update({ suspended_at: null, onboarding_status: "active", warnings_counted_from: new Date().toISOString() })
       .eq("id", data.accountId);
     if (error) throw new Error(error.message);
     await supabaseAdmin.from("events").insert({
