@@ -472,6 +472,8 @@ body:has(.marketing-nav) main section li.text-sm { font-size: var(--website-body
 .marketing-footer :is(h4,ul) { font-size: 1rem; line-height: 1.65; }
 .marketing-footer ul { display: grid; gap: .5rem; }
 .marketing-subnav { scroll-padding-inline: 1.25rem; }
+body:has(.marketing-nav) .legal-prose { font-size: 1.125rem; line-height: 1.8; }
+body:has(.marketing-nav) .legal-prose :is(h1,h2,h3) { letter-spacing: 0; scroll-margin-top: 9rem; }
 .blog-article-layout { display: grid; grid-template-columns: minmax(0,1fr); gap: 2.5rem; }
 .blog-article-title { font-size: 2.5rem; line-height: 1.15; font-weight: 700; }
 .blog-article-toc a { display: block; border-left: 2px solid var(--border); padding: .7rem 1rem; font-size: 1rem; line-height: 1.5; color: var(--muted-foreground); transition: color .15s, background .15s; }
