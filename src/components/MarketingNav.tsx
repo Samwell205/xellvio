@@ -37,20 +37,6 @@ export function MarketingNav() {
         <span>Meet your Xellvio AI Assistant<span className="hidden sm:inline"> — campaigns, forms and replies in one conversation</span>.</span>
         <ArrowRight className="size-4 shrink-0" />
       </Link>
-      {/* Utility bar */}
-      <div className="hidden">
-        <div className="flex items-center gap-8">
-          <Link to="/features" className="hover:text-foreground transition-colors">Features</Link>
-          <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-          <Link to="/docs" className="hover:text-foreground transition-colors">Developer docs</Link>
-          <Link to="/contact" className="hover:text-foreground transition-colors">Support center</Link>
-        </div>
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <Link to="/auth" className="rounded-full bg-background px-3.5 py-1 hover:text-foreground shadow-sm transition-colors">Login</Link>
-        </div>
-      </div>
-
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8">
         <div className="grid h-[72px] grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 lg:flex lg:h-[80px] lg:gap-6">
         <div className="shrink-0" onClick={() => setOpenMenu(null)}>
@@ -115,22 +101,7 @@ export function MarketingNav() {
         </Button>
         </div>
 
-        {/* Announcement pill */}
-        <div className="hidden">
-          <Link
-            to="/features"
-            className="group grid w-full max-w-[1200px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl lg:rounded-3xl bg-foreground px-3 py-2.5 lg:px-5 lg:py-3 text-background shadow-lg"
-          >
-            <span className="flex min-w-0 items-center gap-3 lg:gap-5">
-              <span className="shrink-0 text-base lg:text-3xl font-bold text-primary">AI Assistant</span>
-              <span className="hidden sm:block h-8 w-px shrink-0 bg-background/40" />
-              <span className="truncate text-sm lg:text-2xl font-medium tracking-tight">Run campaigns, forms and replies by just asking</span>
-            </span>
-            <span className="inline-flex shrink-0 items-center gap-2 rounded-xl lg:rounded-2xl bg-primary px-3 py-2 lg:px-7 lg:py-3 text-sm lg:text-lg font-semibold text-primary-foreground transition-all group-hover:gap-3">
-              Explore <ArrowRight className="size-4" />
-            </span>
-          </Link>
-        </div>
+
       </div>
 
       {/* Desktop mega menu */}
