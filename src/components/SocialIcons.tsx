@@ -34,7 +34,7 @@ function Icon({ label, className }: { label: string; className?: string }) {
 
 export function SocialIcons({ className }: { className?: string }) {
   return (
-    <ul className={`flex items-center gap-5 ${className ?? ""}`}>
+    <ul aria-label="Social media" className={`flex flex-row flex-wrap items-center gap-3 ${className ?? ""}`}>
       {SOCIAL_LINKS.map((s) => (
         <li key={s.label}>
           <a
@@ -42,7 +42,8 @@ export function SocialIcons({ className }: { className?: string }) {
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Xellvio on ${s.label}`}
-            className="inline-flex text-secondary-foreground/70 transition-colors hover:text-secondary-foreground"
+            title={`Xellvio on ${s.label}`}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-secondary-foreground/20 text-secondary-foreground/70 transition-colors hover:border-secondary-foreground/50 hover:bg-secondary-foreground/10 hover:text-secondary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-secondary"
           >
             <Icon label={s.label} className="h-5 w-5" />
           </a>

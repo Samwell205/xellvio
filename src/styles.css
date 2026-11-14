@@ -470,7 +470,7 @@ body:has(.marketing-nav) main section li.text-sm { font-size: var(--website-body
 .marketing-nav > div > div > div:first-child a { font-size: 1.5rem; gap: .65rem; }
 .marketing-footer p { font-size: 1.125rem; line-height: 1.7; }
 .marketing-footer :is(h4,ul) { font-size: 1rem; line-height: 1.65; }
-.marketing-footer ul { display: grid; gap: .5rem; }
+.marketing-footer .marketing-footer-links { display: grid; gap: .5rem; }
 .marketing-subnav { scroll-padding-inline: 1.25rem; }
 body:has(.marketing-nav) .legal-prose { font-size: 1.125rem; line-height: 1.8; }
 body:has(.marketing-nav) .legal-prose :is(h1,h2,h3) { letter-spacing: 0; scroll-margin-top: 9rem; }
