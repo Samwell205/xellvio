@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Support maintenance correction and NETIO #1052
-- [ ] Exclude unpublished/expired maintenance notices from support AI context and verify regression tests.
-- [ ] Send NETIO an evidence-based reply through ticket #1052 without claiming sending is fixed.
+- [x] Exclude unpublished/expired maintenance notices from support AI context; 4 regression tests pass, build OK. Publish required for the live AI correction.
+- [x] Send NETIO an evidence-based reply through ticket #1052; admin reply verified in the saved thread. Sending failure remains unconfirmed pending destination/attempt details.
 
 ## Integrated blog CMS
 - [x] Claude image uploads: byte/link tool extracted; 16 tests passed; real admin image storage, draft readback and local PNG response verified; test records removed. Actual Claude canvas export/tool call remains dependent on Claude access and republishing.
