@@ -35,15 +35,27 @@ export const getMySenderAssets = createServerFn({ method: "GET" })
         !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code) &&
         asset.verification_status !== "verified",
     );
-    if (readySenderIds.length > 0) {
+    let setupError: string | null = null;
+    let internationalSid: string | null = null;
+    if (rows.some((asset) => asset.sender_kind === "sender_id")) {
+      try {
+        const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
+        internationalSid = (await ensureIntlSubaccount(accountId)).sid;
+      } catch (error) {
+        setupError = error instanceof Error ? error.message : "International sender setup is unavailable. Please contact support.";
+      }
+    }
+    if (readySenderIds.length > 0 && internationalSid) {
       await supabaseAdmin
         .from("sender_assets")
-        .update({ verification_status: "verified", rejection_reason: null, last_synced_at: new Date().toISOString() })
+        .update({ verification_status: "verified", telnyx_verification_id: internationalSid, rejection_reason: null, last_synced_at: new Date().toISOString() })
         .eq("account_id", accountId)
         .in("id", readySenderIds.map((asset) => asset.id));
     }
     return rows.map((asset) =>
-      asset.sender_kind === "sender_id" &&
+      asset.sender_kind === "sender_id" && setupError
+        ? { ...asset, verification_status: "requires_registration", rejection_reason: setupError }
+        : asset.sender_kind === "sender_id" && internationalSid &&
       !ALPHA_SENDER_UNSUPPORTED_SET.has(asset.country_code) &&
       !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code)
         ? { ...asset, verification_status: "verified", rejection_reason: null }
@@ -99,10 +111,9 @@ export const saveCustomSenderId = createServerFn({ method: "POST" })
         const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
         alphaSenderId = (await ensureIntlSubaccount(accountId)).sid;
       } catch (e: any) {
-        telnyxError = String(e?.message ?? e);
-        const telnyxErrorText = telnyxError.toLowerCase();
-        const alreadyExists = telnyxErrorText.includes("already") || telnyxErrorText.includes("duplicate");
-        status = alreadyExists ? (needsReg ? "submitted" : "verified") : "requires_registration";
+        // An infrastructure failure is not a country-registration requirement.
+        // Preserve existing sender assets and surface the actionable setup error.
+        throw e;
       }
       const { data: existing } = await supabaseAdmin
         .from("sender_assets").select("id").eq("account_id", accountId).eq("country_code", cc).maybeSingle();
@@ -201,8 +212,7 @@ export const submitSenderIdRegistration = createServerFn({ method: "POST" })
       const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
       alphaSenderId = (await ensureIntlSubaccount(accountId)).sid;
     } catch (e: any) {
-      telnyxError = e?.message ?? String(e);
-      submittedStatus = "requires_registration";
+      throw e;
     }
 
     const { data: existing } = await supabaseAdmin
