@@ -39,8 +39,13 @@ export const getMySenderAssets = createServerFn({ method: "GET" })
     let internationalSid: string | null = null;
     if (rows.some((asset) => asset.sender_kind === "sender_id")) {
       try {
-        const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
-        internationalSid = (await ensureIntlSubaccount(accountId)).sid;
+        const { data: sub } = await supabaseAdmin.from("tenant_intl_subaccounts")
+          .select("subaccount_sid").eq("account_id", accountId).maybeSingle();
+        const { intlTokenFor } = await import("./intl-subaccounts.server");
+        if (!sub?.subaccount_sid || !(await intlTokenFor(sub.subaccount_sid))) {
+          throw new Error("International sender setup is unavailable. Please contact support.");
+        }
+        internationalSid = sub.subaccount_sid;
       } catch (error) {
         setupError = error instanceof Error ? error.message : "International sender setup is unavailable. Please contact support.";
       }
@@ -54,7 +59,7 @@ export const getMySenderAssets = createServerFn({ method: "GET" })
     }
     return rows.map((asset) =>
       asset.sender_kind === "sender_id" && setupError
-        ? { ...asset, verification_status: "requires_registration", rejection_reason: setupError }
+        ? { ...asset, verification_status: "pending", rejection_reason: setupError, friendly_rejection_reason: setupError }
         : asset.sender_kind === "sender_id" && internationalSid &&
       !ALPHA_SENDER_UNSUPPORTED_SET.has(asset.country_code) &&
       !ALPHA_SENDER_REQUIRES_REGISTRATION_SET.has(asset.country_code)
