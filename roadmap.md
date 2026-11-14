@@ -26,6 +26,7 @@
 - [ ] Resolve historical $0.7545 debit discrepancy — no refunds authorized; campaign-specific surcharge reconciliation remains unavailable from message prices
 
 ## Current monitoring corrections
+- [ ] International capacity: prevent replacement/duplicate sub-accounts and false sender readiness; verify regressions. Live capacity remains dependent on an international account-limit increase; do not close accounts or bypass business isolation.
 - [x] Reinstatement saves a new warning cutoff with active status, retaining audit history; first/third warning, 90-day window, failed save and admin-only tests passed. No real tenant reopened or SMS sent; publish required.
 - [x] Confirmed and removed global region blocking inferred from individual rejections; legacy block settings are no longer read or written
 - [x] Restored all-route estimated cost/margin, separated recorded prices, and made recorded-price margin unavailable when any submitted price is missing; exports are labeled estimates
