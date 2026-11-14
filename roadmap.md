@@ -1,5 +1,9 @@
 # Roadmap
 
+## Support maintenance correction and NETIO #1052
+- [ ] Exclude unpublished/expired maintenance notices from support AI context and verify regression tests.
+- [ ] Send NETIO an evidence-based reply through ticket #1052 without claiming sending is fixed.
+
 ## Integrated blog CMS
 - [x] Claude image uploads: byte/link tool extracted; 16 tests passed; real admin image storage, draft readback and local PNG response verified; test records removed. Actual Claude canvas export/tool call remains dependent on Claude access and republishing.
 - [x] Database tests cover scheduling (deadline, early, time zones, reschedule, cancel, retries, errors, no idle job) and writer/editor/admin/customer permissions
