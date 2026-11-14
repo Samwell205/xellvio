@@ -27,10 +27,10 @@ const response = (body: any, status = 200) => new Response(JSON.stringify(body),
 describe("international account ownership and capacity", () => {
   it("never creates a replacement when an existing account token cannot be recovered", async () => {
     state.row = { subaccount_sid: "ACowned" };
-    const fetcher = vi.fn(async () => response({}, 401)); vi.stubGlobal("fetch", fetcher);
+    const fetcher = vi.fn(async (_url: string, _init?: RequestInit) => response({}, 401)); vi.stubGlobal("fetch", fetcher);
     await expect(ensureIntlSubaccount("business")).rejects.toThrow();
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(fetcher.mock.calls[0]?.[0]).toBeUndefined(); // replaced below with URL capture
+    expect(fetcher.mock.calls[0]?.[0]).toBe("https://api.twilio.com/2010-04-01/Accounts/ACowned.json");
     expect(state.updates).toHaveLength(0);
   });
   it("reuses the exact active parent-owned account before any create call", async () => {
