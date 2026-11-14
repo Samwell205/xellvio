@@ -30,26 +30,15 @@ export function MarketingNav() {
 
   return (
     <header
-      className="sticky top-0 z-50 w-full bg-muted/70 backdrop-blur-xl pb-3"
+      className="marketing-nav sticky top-0 z-50 w-full border-b border-border bg-background"
       onKeyDown={(e) => { if (e.key === "Escape") setOpenMenu(null); }}
     >
-      <div className="h-1 w-full bg-foreground" />
-      {/* Utility bar */}
-      <div className="hidden lg:flex mx-auto max-w-[1400px] items-center justify-between px-8 pt-2.5 pb-2 text-[12px] font-medium uppercase tracking-[0.08em] text-foreground/75">
-        <div className="flex items-center gap-8">
-          <Link to="/features" className="hover:text-foreground transition-colors">Features</Link>
-          <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
-          <Link to="/docs" className="hover:text-foreground transition-colors">Developer docs</Link>
-          <Link to="/contact" className="hover:text-foreground transition-colors">Support center</Link>
-        </div>
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <Link to="/auth" className="rounded-full bg-background px-3.5 py-1 hover:text-foreground shadow-sm transition-colors">Login</Link>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-[1400px] px-3 sm:px-6 pt-3 lg:pt-0">
-        <div className="flex h-[64px] lg:h-[76px] items-center gap-6 rounded-2xl lg:rounded-3xl border border-border/60 bg-background px-4 lg:px-6 shadow-[0_10px_30px_-18px_color-mix(in_oklab,var(--foreground)_35%,transparent)] animate-in fade-in slide-in-from-top-2 duration-500">
+      <Link to="/features" className="marketing-announcement flex min-h-10 items-center justify-center gap-2 bg-primary-soft px-5 py-2 text-center text-sm font-medium text-foreground">
+        <span>Meet your Xellvio AI Assistant<span className="hidden sm:inline"> — campaigns, forms and replies in one conversation</span>.</span>
+        <ArrowRight className="size-4 shrink-0" />
+      </Link>
+      <div className="mx-auto max-w-[1400px] px-5 sm:px-8">
+        <div className="grid h-[72px] grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 lg:flex lg:h-[80px] lg:gap-6">
         <div className="shrink-0" onClick={() => setOpenMenu(null)}>
           <Logo />
         </div>
@@ -58,7 +47,7 @@ export function MarketingNav() {
           {NAV.map((entry) =>
             hasMenu(entry) ? (
               <div key={entry.label} onMouseEnter={() => open(entry.label)} onMouseLeave={scheduleClose}>
-                <button
+                <Button variant="ghost"
                   type="button"
                   aria-expanded={openMenu === entry.label}
                   onClick={() => setOpenMenu(openMenu === entry.label ? null : entry.label)}
@@ -68,7 +57,7 @@ export function MarketingNav() {
                 >
                   {entry.label}
                   <ChevronDown className={`size-3.5 transition-transform ${openMenu === entry.label ? "rotate-180" : ""}`} />
-                </button>
+                </Button>
               </div>
             ) : (
               <Link
@@ -84,15 +73,17 @@ export function MarketingNav() {
         </nav>
 
         <div className="ml-auto hidden lg:flex items-center gap-3">
-          <button type="button" onClick={() => setSearchOpen(true)} aria-label="Search" className="grid size-10 place-items-center rounded-full text-foreground/80 hover:bg-muted hover:text-foreground transition-colors">
+          <ThemeToggle />
+          <Button variant="ghost" size="icon" type="button" onClick={() => setSearchOpen(true)} aria-label="Search" className="size-10 text-foreground/80">
             <Search className="size-5" />
-          </button>
+          </Button>
           <SiteSearch open={searchOpen} onOpenChange={setSearchOpen} />
+          <Link to="/auth" className="text-base underline underline-offset-4">Log in</Link>
           <Link to="/auth" search={{ mode: "signup" }}>
-            <Button className="h-12 rounded-2xl px-6 text-base shadow-md transition-transform hover:-translate-y-0.5">Try for free</Button>
+            <Button className="h-11 rounded-md px-5 text-base">Try for free</Button>
           </Link>
           <Link to="/contact">
-            <Button variant="outline" className="h-12 rounded-2xl border-2 px-6 text-base">Contact us</Button>
+            <Button variant="outline" className="h-11 rounded-md px-5 text-base">Contact us</Button>
           </Link>
         </div>
 
@@ -100,31 +91,17 @@ export function MarketingNav() {
           <ThemeToggle />
         </div>
 
-        <button
-          className="lg:hidden grid size-10 place-items-center rounded-full hover:bg-muted"
+        <Button variant="ghost" size="icon"
+          className="lg:hidden size-10"
           onClick={() => setMobileOpen((v) => !v)}
           aria-label="Menu"
+          aria-expanded={mobileOpen}
         >
           {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-        </button>
+        </Button>
         </div>
 
-        {/* Announcement pill */}
-        <div className="mt-4 flex justify-center animate-in fade-in slide-in-from-top-3 duration-700">
-          <Link
-            to="/features"
-            className="group grid w-full max-w-[1200px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl lg:rounded-3xl bg-foreground px-3 py-2.5 lg:px-5 lg:py-3 text-background shadow-lg"
-          >
-            <span className="flex min-w-0 items-center gap-3 lg:gap-5">
-              <span className="shrink-0 text-base lg:text-3xl font-bold text-primary">AI Assistant</span>
-              <span className="hidden sm:block h-8 w-px shrink-0 bg-background/40" />
-              <span className="truncate text-sm lg:text-2xl font-medium tracking-tight">Run campaigns, forms and replies by just asking</span>
-            </span>
-            <span className="inline-flex shrink-0 items-center gap-2 rounded-xl lg:rounded-2xl bg-primary px-3 py-2 lg:px-7 lg:py-3 text-sm lg:text-lg font-semibold text-primary-foreground transition-all group-hover:gap-3">
-              Explore <ArrowRight className="size-4" />
-            </span>
-          </Link>
-        </div>
+
       </div>
 
       {/* Desktop mega menu */}
@@ -134,7 +111,7 @@ export function MarketingNav() {
             key={entry.label}
             onMouseEnter={() => open(entry.label)}
             onMouseLeave={scheduleClose}
-            className="hidden lg:block absolute inset-x-0 top-full border-b border-border bg-background shadow-[0_24px_48px_-24px_rgba(0,0,0,0.25)]"
+            className="hidden lg:block absolute inset-x-0 top-full border-b border-border bg-background shadow-lg"
           >
             <div className="mx-auto max-w-[1400px] px-5 sm:px-8 py-9 grid gap-10 md:grid-cols-3">
               {entry.groups.map((g) => (
@@ -150,8 +127,8 @@ export function MarketingNav() {
                         >
                           <it.icon className="mt-0.5 size-5 text-primary shrink-0" strokeWidth={1.7} />
                           <span className="min-w-0">
-                            <span className="block text-sm font-semibold text-foreground">{it.label}</span>
-                            <span className="block text-xs text-muted-foreground leading-relaxed">{it.blurb}</span>
+                            <span className="block text-base font-semibold text-foreground">{it.label}</span>
+                            <span className="block text-sm text-muted-foreground leading-relaxed">{it.blurb}</span>
                           </span>
                         </Link>
                       </li>

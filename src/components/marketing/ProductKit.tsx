@@ -19,7 +19,7 @@ export function ChannelSubNav({
   items: { label: string; hash: string }[];
 }) {
   return (
-    <div className="sticky top-[68px] z-30 border-b border-border bg-background/95 backdrop-blur-xl">
+    <div className="marketing-subnav sticky top-[112px] lg:top-[120px] z-30 border-b border-border bg-background/95 backdrop-blur-xl">
       <div className="mx-auto flex max-w-[1400px] items-center gap-5 overflow-x-auto px-5 sm:px-8 py-3 text-sm">
         <span className="shrink-0 font-semibold text-foreground">{channel}</span>
         <span className="h-4 w-px shrink-0 bg-border" />

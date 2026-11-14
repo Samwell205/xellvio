@@ -6,7 +6,7 @@ import { ABUSE_EMAIL, SUPPORT_EMAIL } from "@/content/legal";
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t bg-secondary text-secondary-foreground">
+    <footer className="marketing-footer border-t bg-secondary text-secondary-foreground">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-14 space-y-12">
         <div className="space-y-4">
           <Logo className="text-secondary-foreground" />
@@ -77,7 +77,7 @@ export function MarketingFooter() {
             { label: "Cookie Policy", to: "/cookies" },
           ]} />
         </div>
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 border-t border-white/10 pt-8 text-sm text-secondary-foreground/70">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 border-t border-secondary-foreground/20 pt-8 text-sm text-secondary-foreground/70">
           <Link to="/contact" className="hover:text-secondary-foreground">Contact form</Link>
           <a href={`mailto:${SUPPORT_EMAIL}`} className="hover:text-secondary-foreground break-all">{SUPPORT_EMAIL}</a>
           <a href={`mailto:${ABUSE_EMAIL}`} className="hover:text-secondary-foreground break-all">
@@ -85,7 +85,7 @@ export function MarketingFooter() {
           </a>
         </div>
       </div>
-      <div className="border-t border-white/10">
+      <div className="border-t border-secondary-foreground/20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-5 text-xs text-secondary-foreground/60 flex flex-wrap justify-between gap-3">
           <span>© {new Date().getFullYear()} Xellvio. All rights reserved.</span>
           <span>Built for global communication.</span>

@@ -198,7 +198,7 @@ function DocsPage() {
                 ))}
               </ul>
             </Card>
-            <Card className="p-6 bg-secondary text-secondary-foreground">
+            <Card className="min-w-0 p-6 bg-secondary text-secondary-foreground">
               <h2 className="text-xl font-semibold">Example request</h2>
               <pre className="mt-4 overflow-x-auto rounded-lg bg-background/10 p-4 text-xs leading-relaxed">
                 <code>{apiExample}</code>
@@ -206,16 +206,16 @@ function DocsPage() {
             </Card>
           </div>
           <div className="mx-auto mt-10 grid max-w-7xl gap-6 px-4 sm:px-6 lg:grid-cols-2">
-            <Card className="p-6">
+            <Card className="min-w-0 p-6">
               <h2 className="text-xl font-semibold">REST API reference</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 break-words text-sm text-muted-foreground">
                 Base URL: <code>https://xellvio.com/api/public/v1</code>. Create business keys under Settings → API &amp; webhooks. Keys are shown once, can be scoped, and can be revoked immediately.
               </p>
               <div className="mt-5 divide-y rounded-md border">
                 {apiEndpoints.map(([method, path, detail]) => (
-                  <div key={path} className="grid grid-cols-[54px_1fr] gap-3 p-3 text-sm">
+                  <div key={path} className="grid grid-cols-[54px_minmax(0,1fr)] gap-3 p-3 text-sm">
                     <Badge variant="outline" className="w-fit">{method}</Badge>
-                    <div><code>{path}</code><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>
+                    <div className="min-w-0 break-words"><code>{path}</code><p className="mt-1 text-xs text-muted-foreground">{detail}</p></div>
                   </div>
                 ))}
               </div>
@@ -226,7 +226,7 @@ function DocsPage() {
                 <p><strong className="text-foreground">Limits:</strong> 120 API requests per minute per key by default; bulk requests accept 1–1,000 recipients. Carrier throughput depends on the verified sender and destination route.</p>
               </div>
             </Card>
-            <Card className="p-6">
+            <Card className="min-w-0 p-6">
               <h2 className="text-xl font-semibold">Signed webhooks</h2>
               <p className="mt-2 text-sm text-muted-foreground">Register a public HTTPS endpoint to receive delivery, failure, reply, STOP, START, and batch events. Failed deliveries retry with exponential backoff for up to eight attempts.</p>
               <pre className="mt-4 overflow-x-auto rounded-lg bg-secondary p-4 text-xs leading-relaxed text-secondary-foreground"><code>{webhookExample}</code></pre>

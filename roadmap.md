@@ -1,5 +1,10 @@
 # Roadmap
 
+## Public website readability redesign
+- [x] Apply a consistent readable type scale and compact navigation across public website pages, preserving existing content and Xellvio branding.
+- [x] Rework article layout with a clear title, readable contents navigation and generously spaced article text (20px desktop / 18px phone).
+- [x] Check six core pages at 375/390/768/1280/1440 widths and 18 additional public pages at phone/desktop widths; article anchors, menus and appearance verified, no runtime errors. Unpublished.
+
 ## Support maintenance correction and NETIO #1052
 - [x] Exclude unpublished/expired maintenance notices from support AI context; 4 regression tests pass, build OK. Publish required for the live AI correction.
 - [x] Send NETIO an evidence-based reply through ticket #1052; admin reply verified in the saved thread. Sending failure remains unconfirmed pending destination/attempt details.
