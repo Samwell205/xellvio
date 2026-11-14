@@ -1,3 +1,5 @@
+import { currentMaintenanceNotices } from "./support-maintenance";
+
 /** Builds a full account snapshot of one tenant for the admin support copilot. Server-only. */
 export async function buildTenantSnapshot(accountId: string): Promise<string> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -91,6 +93,7 @@ API facts: tenants must request API access and be approved by an admin before th
 
 Hard rules:
 - Never invent limits, quotas, queue sizes or numbers that are not in these facts or the data. If unknown, say it will be confirmed.
+- Never diagnose maintenance, an outage or a regional pause from a generic sending error, an old notice, or a previous assistant draft. Only current published notices are operational context; even those do not establish the cause of this tenant's failed attempt without matching evidence. If none are current, do not claim maintenance or promise sending will work after maintenance. An account with no recorded hold is not proof its sends work. If the cause is unknown, acknowledge the reported error and request the destination country and attempt time for investigation; do not claim the problem is fixed.
 - Never promise or suggest refunds; refunds happen only if the owner decides. Never claim something was checked if it's not in the data.
 - Never name internal providers or vendors (e.g. Telnyx, Twilio, Flutterwave, NOWPayments) in the customer reply.
 - Never tell a tenant that their sending number is shared, or that capacity, throughput, reputation or limits are shared with anyone else. Never write "shared", "other tenants", "other businesses", "other customers", "other users" or "other accounts" in the Reply to send, and never say the number is "used by several businesses". If sending speed matters, describe it as a property of the sender type alone (e.g. "verified toll-free numbers send a few messages per second") and give no reason or comparison.
@@ -138,7 +141,10 @@ export async function buildPlatformSnapshot(): Promise<string> {
       sb.from("messages").select("error_code, failure_reason").gte("created_at", h24).in("status", ["failed", "undelivered"]).limit(2000),
       cnt(sb.from("number_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
       cnt(sb.from("accounts").select("id", { count: "exact", head: true }).not("sending_suspended_at", "is", null)),
-      sb.from("lifecycle_announcements").select("title, kind, created_at").eq("kind", "maintenance").order("created_at", { ascending: false }).limit(3),
+      sb.from("lifecycle_announcements").select("title, published_at, expires_at").eq("kind", "maintenance")
+        .not("published_at", "is", null).lte("published_at", new Date(now).toISOString())
+        .or(`expires_at.is.null,expires_at.gt.${new Date(now).toISOString()}`)
+        .order("published_at", { ascending: false }).limit(3),
       sb.from("payments").select("provider, status").gte("created_at", h24).limit(500),
     ]);
   const tally = (rows: any[], key: (r: any) => string) => {
@@ -159,6 +165,8 @@ export async function buildPlatformSnapshot(): Promise<string> {
     `Payments last 24h by status: ${tally(pays.data, (r) => `${r.provider} ${r.status}`)}`,
     `Pending number requests: ${pendingReq}`,
     `Accounts with sending on hold: ${holds}`,
-    `Recent maintenance notices: ${(notices.data ?? []).map((n: any) => `"${n.title}" ${String(n.created_at).slice(0, 10)}`).join("; ") || "none"}`,
+    notices.error
+      ? "Current published maintenance notices: check unavailable; do not infer maintenance."
+      : `Current published maintenance notices (context only, not a diagnosis): ${currentMaintenanceNotices(notices.data ?? [], now).map((n) => `"${n.title}" published ${n.published_at}`).join("; ") || "none; no maintenance is confirmed"}`,
   ].join("\n");
 }
