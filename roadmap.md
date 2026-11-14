@@ -26,6 +26,8 @@
 - [ ] Resolve historical $0.7545 debit discrepancy — no refunds authorized; campaign-specific surcharge reconciliation remains unavailable from message prices
 
 ## Current monitoring corrections
+- [x] International provisioning safeguards: preserve owned accounts on credential failures, claim concurrent retries, recover exact parent-owned accounts before creation, and prevent false sender approval/registration; 15 tests passed, build OK. No accounts closed, messages sent or live sender records changed; unpublished.
+- [ ] Restore live international capacity — eight businesses have no child account because the international parent's account limit is reached; needs an owner-requested limit increase. Monitoring finding remains unresolved until live setup/sending is verified.
 - [x] Reinstatement saves a new warning cutoff with active status, retaining audit history; first/third warning, 90-day window, failed save and admin-only tests passed. No real tenant reopened or SMS sent; publish required.
 - [x] Confirmed and removed global region blocking inferred from individual rejections; legacy block settings are no longer read or written
 - [x] Restored all-route estimated cost/margin, separated recorded prices, and made recorded-price margin unavailable when any submitted price is missing; exports are labeled estimates

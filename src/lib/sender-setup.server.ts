@@ -99,6 +99,10 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
           existing.sender_kind === "sender_id" &&
           !ALPHA_SENDER_UNSUPPORTED_SET.has(cc) &&
           !ALPHA_SENDER_REQUIRES_REGISTRATION.has(cc);
+        if (existing.sender_kind === "sender_id") {
+          const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
+          await ensureIntlSubaccount(acct.id);
+        }
         if (supportedAlphaReady && existing.verification_status !== "verified") {
           await supabaseAdmin.from("sender_assets").update({
             verification_status: "verified",
@@ -130,17 +134,14 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
         // Sender-ID countries send on the dedicated international connection,
         // so the Sender ID registers on its shared messaging profile.
         const internationalProfileId = INTERNATIONAL_PROFILE_ID;
-        let status: "verified" | "submitted" | "requires_registration" = needsReg ? "submitted" : "verified";
+        const status = needsReg ? "submitted" : "verified";
         let alphaSenderId: string | null = null;
         let telnyxError: string | null = null;
         try {
           const { ensureIntlSubaccount } = await import("./intl-subaccounts.server");
           alphaSenderId = (await ensureIntlSubaccount(acct.id)).sid;
         } catch (e: any) {
-          telnyxError = String(e?.message ?? e);
-          const telnyxErrorText = telnyxError.toLowerCase();
-          const alreadyExists = telnyxErrorText.includes("already") || telnyxErrorText.includes("duplicate");
-          status = alreadyExists ? (needsReg ? "submitted" : "verified") : "requires_registration";
+          throw e;
         }
         await supabaseAdmin.from("sender_assets").insert({
           account_id: userId,
@@ -152,7 +153,7 @@ export async function setupSmsForUser(userId: string, data: SetupSmsPayload) {
           telnyx_verification_id: alphaSenderId,
           verification_status: status,
           rejection_reason: telnyxError,
-          submitted_at: status === "submitted" || status === "requires_registration" ? new Date().toISOString() : null,
+          submitted_at: status === "submitted" ? new Date().toISOString() : null,
         });
         if (status === "verified") {
           await setPrimarySender({
