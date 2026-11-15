@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   resolve: vi.fn(), permission: vi.fn(), suppressed: vi.fn(), screen: vi.fn(),
-  send: vi.fn(), provision: vi.fn(), adminFrom: vi.fn(),
+  send: vi.fn(), provision: vi.fn(), adminFrom: vi.fn(), activeLine: vi.fn(),
 }));
 vi.mock("@tanstack/react-start", () => ({
   createServerFn: () => ({ middleware() { return this; }, inputValidator() { return this; }, handler(fn: unknown) { return fn; } }),
@@ -12,6 +12,7 @@ vi.mock("./acting-account.server", () => ({ resolveActingAccount: mocks.resolve,
 vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: { from: mocks.adminFrom } }));
 vi.mock("./suppression.server", () => ({ assertNotSuppressed: mocks.suppressed }));
 vi.mock("./content-screening.server", () => ({ screenMessageContent: mocks.screen }));
+vi.mock("./twilio-lines.server", () => ({ activeLineFor: mocks.activeLine }));
 vi.mock("./telnyx.server", () => ({
   isValidTelnyxUuid: (value: unknown) => value === "business-profile",
   ensureMessagingProfileForAccount: mocks.provision,
@@ -24,7 +25,7 @@ import { TOS_CURRENT_VERSION } from "./tos";
 const handler = sendTestSms as unknown as (args: { data: { to: string; body: string; country: string }; context: { userId: string; supabase: unknown } }) => Promise<unknown>;
 const input = { to: "+14165550123", body: "Your requested update. Reply STOP to opt out.", country: "CA" };
 
-function fixture(status = "verified") {
+function fixture(status = "verified", profile: string | null = "business-profile") {
   const filters: Array<[string, string, unknown]> = [];
   const inserted: unknown[] = [];
   const from = (table: string) => {
@@ -36,7 +37,7 @@ function fixture(status = "verified") {
       insert: async (row: unknown) => { inserted.push(row); return { error: null }; },
       then: (resolve: (result: unknown) => unknown) => resolve(table === "sender_assets"
         ? { data: filters.some(([t, c, v]) => t === table && c === "account_id" && v === "business")
-          ? [{ phone_number: "+15555550100", telnyx_messaging_profile_id: "business-profile", sender_kind: "local", country_code: "US", verification_status: status }]
+          ? [{ phone_number: "+15555550100", telnyx_messaging_profile_id: profile, sender_kind: "local", country_code: "US", verification_status: status }]
           : [], error: null }
         : { count: 0, error: null }),
     };
@@ -48,12 +49,29 @@ function fixture(status = "verified") {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.activeLine.mockResolvedValue(null);
   mocks.resolve.mockResolvedValue({ accountId: "business", userId: "teammate", isOwner: false, role: "admin", permissions: { campaigns: true } });
   mocks.screen.mockResolvedValue({ passed: true });
   mocks.send.mockResolvedValue({ id: "test-receipt", to: [{ status: "queued" }] });
 });
 
 describe("shared-business test SMS", () => {
+  it("sends an approved US dedicated-number test without unrelated profile provisioning", async () => {
+    const f = fixture("verified", null);
+    mocks.activeLine.mockResolvedValue({ sid: "child-account", token: "test-token", from: "+15555550100" });
+    mocks.provision.mockRejectedValue(new Error("Sending is temporarily unavailable. Please contact support."));
+    await expect(handler({ data: { ...input, country: "US", to: "+12025550123" }, context: f.context })).resolves.toMatchObject({ status: "queued" });
+    expect(mocks.provision).not.toHaveBeenCalled();
+    expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({ accountId: "business", from: "+15555550100", messagingProfileId: null }));
+    expect(mocks.screen).toHaveBeenCalled();
+    expect(mocks.suppressed).toHaveBeenCalled();
+  });
+  it("does not skip profile provisioning for a different dedicated sender", async () => {
+    mocks.activeLine.mockResolvedValue({ sid: "child-account", token: "test-token", from: "+15555550199" });
+    mocks.provision.mockRejectedValueOnce(new Error("Profile unavailable"));
+    await expect(handler({ data: input, context: fixture("verified", null).context })).rejects.toThrow("Profile unavailable");
+    expect(mocks.send).not.toHaveBeenCalled();
+  });
   it("uses the business's verified US local number for a Canada test, not the teammate's empty account", async () => {
     const f = fixture();
     await expect(handler({ data: input, context: f.context })).resolves.toMatchObject({ from: "+15555550100", status: "queued" });
