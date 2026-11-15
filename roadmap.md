@@ -1,8 +1,9 @@
 # Roadmap
 
 ## NETIO US test sending and ticket #1053
-- [ ] Remove unrelated profile provisioning from approved dedicated-number US tests and run regressions.
-- [ ] Verify the ticket reply is saved; explain deployment and any remaining live-send limitation accurately.
+- [x] Remove unrelated profile provisioning from approved dedicated-number US tests and campaign preparation; 19 regressions passed, build OK.
+- [x] Send an accurate reply through ticket #1053; persisted reply verified after admin-page reload and database readback, ticket not resolved.
+- [ ] Publish correction and verify NETIO's real test acceptance — awaiting publish authorization and a tenant-authorized destination; no SMS sent or balances changed.
 
 ## Public website readability redesign
 - [x] Apply a consistent readable type scale and compact navigation across public website pages, preserving existing content and Xellvio branding.
