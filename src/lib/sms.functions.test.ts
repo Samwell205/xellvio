@@ -62,7 +62,7 @@ describe("shared-business test SMS", () => {
     mocks.provision.mockRejectedValue(new Error("Sending is temporarily unavailable. Please contact support."));
     await expect(handler({ data: { ...input, country: "US", to: "+12025550123" }, context: f.context })).resolves.toMatchObject({ status: "queued" });
     expect(mocks.provision).not.toHaveBeenCalled();
-    expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({ accountId: "business", from: "+15555550100", messagingProfileId: null }));
+    expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({ accountId: "business", from: "+15555550100", messagingProfileId: undefined }));
     expect(mocks.screen).toHaveBeenCalled();
     expect(mocks.suppressed).toHaveBeenCalled();
   });

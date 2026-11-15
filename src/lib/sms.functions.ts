@@ -187,7 +187,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
           to: data.to,
           text: testText,
           from: asset.phone_number ?? undefined,
-          messagingProfileId,
+          messagingProfileId: messagingProfileId ?? undefined,
           mediaUrls: testMediaUrls,
         }),
       );
