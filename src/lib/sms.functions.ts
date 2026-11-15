@@ -108,13 +108,20 @@ export const sendTestSms = createServerFn({ method: "POST" })
       );
     }
 
-    // Telnyx requires messaging_profile_id for alphanumeric sends, and it
-    // must be a Telnyx UUID — never a Twilio MG/AC SID.
+    // A paid-up dedicated North American line does not use a messaging
+    // profile. Do not provision an unrelated connection before reaching it.
+    const { ownLineApplies } = await import("./twilio-lines-rules");
+    const { activeLineFor } = await import("./twilio-lines.server");
+    const dedicatedLine = ownLineApplies(data.to, Boolean(data.mediaUrl))
+      ? await activeLineFor(accountId)
+      : null;
+    const usesDedicatedLine = dedicatedLine?.from === asset.phone_number;
+    // Profile-based sends require a UUID, never an MG/AC SID.
     const { isValidTelnyxUuid, ensureMessagingProfileForAccount } = await import("./telnyx.server");
     let messagingProfileId: string | null | undefined = isValidTelnyxUuid(asset.telnyx_messaging_profile_id)
       ? asset.telnyx_messaging_profile_id
       : null;
-    if (!messagingProfileId) {
+    if (!usesDedicatedLine && !messagingProfileId) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: acct } = await supabaseAdmin
         .from("accounts")
@@ -125,7 +132,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
         ? acct?.telnyx_messaging_profile_id
         : null;
     }
-    if (!messagingProfileId) {
+    if (!usesDedicatedLine && !messagingProfileId) {
       // Auto-provision a Telnyx Messaging Profile for this account on first use.
       messagingProfileId = await ensureMessagingProfileForAccount(accountId);
     }
@@ -180,7 +187,7 @@ export const sendTestSms = createServerFn({ method: "POST" })
           to: data.to,
           text: testText,
           from: asset.phone_number ?? undefined,
-          messagingProfileId,
+          messagingProfileId: messagingProfileId ?? undefined,
           mediaUrls: testMediaUrls,
         }),
       );
