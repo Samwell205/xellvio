@@ -1713,11 +1713,18 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
             return { skipped: "sender_pending_verification" };
           }
           const { isValidTelnyxUuid, ensureMessagingProfileForAccount } = await import("@/lib/telnyx.server");
-          // Auto-provision the Telnyx Messaging Profile if none valid on this account.
+          // Approved dedicated lines send independently of profile-based
+          // connections, just like test SMS. Never fail their campaigns on
+          // an unrelated profile-creation request.
+          const { activeLineFor } = await import("@/lib/twilio-lines.server");
+          const dedicatedLine = await activeLineFor(c.account_id);
+          const usesDedicatedLine = Boolean(dedicatedLine && (senderAssets ?? []).some(
+            (s: any) => s.verification_status === "verified" && s.phone_number === dedicatedLine.from,
+          ));
           let profileId: string | null = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
-            ? (acct!.telnyx_messaging_profile_id as string)
+            ? (acct?.telnyx_messaging_profile_id as string)
             : null;
-          if (!profileId) {
+          if (!usesDedicatedLine && !profileId) {
             try {
               profileId = await ensureMessagingProfileForAccount(c.account_id);
             } catch (e: any) {
@@ -1729,7 +1736,7 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
             }
           }
           const assetProfileId = isValidTelnyxUuid(verifiedSender?.telnyx_messaging_profile_id)
-            ? (verifiedSender!.telnyx_messaging_profile_id as string)
+            ? (verifiedSender?.telnyx_messaging_profile_id as string)
             : null;
           const sender: Sender = {
             messagingProfileId: assetProfileId ?? profileId,
