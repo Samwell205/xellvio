@@ -147,6 +147,6 @@ export async function unassignTwilioInventory(phone: string) {
   if (lineError) throw new Error(lineError.message);
   const { error: assetError } = await database.from('sender_assets').delete().eq('account_id', row.assigned_account_id).eq('phone_number', phone);
   if (assetError) throw new Error(assetError.message);
-  const { error: saveError } = await database.from('twilio_verified_inventory').update({ assigned_account_id: null, assignment_state: 'available', last_error: null }).eq('phone_sid', row.phone_sid);
+  const { error: saveError } = await database.from('twilio_verified_inventory').update({ assigned_account_id: null, assignment_state: 'available', available: true, lease_until: null, last_error: null }).eq('phone_sid', row.phone_sid);
   if (saveError) throw new Error(saveError.message);
 }
