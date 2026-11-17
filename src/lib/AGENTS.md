@@ -19,5 +19,5 @@
 - Screen personalized recipients during planning before paid claims; preserve the send-time safety backstop and never automatically refund historical charges.
 - Tenant campaign "Charged/Spend" totals come from campaign-charges.ts (wallet debits minus refunds) so campaign screens always match the balance change.
 - Campaign planning rows are built in campaign-plan-rows.ts so queued and skipped recipients expose the same columns; a column missing from one row in a bulk upsert is written as NULL and rejects the whole batch, stopping the campaign.
-- Non-US/CA sends go through intl-subaccounts.server.ts: one sub-account per business on the separate international parent (TWILIO_INTL_*), created on sender-name submission or first international send; receipts reuse the shared status webhook via lineTokenFor.
+- Non-US/CA sends go through intl-subaccounts.server.ts: sent directly from the separate international main account (TWILIO_INTL_*) for every business — no per-business sub-accounts (provider cap); receipts reuse the shared status webhook via lineTokenFor.
 - Approved paid-up dedicated lines bypass unrelated profile provisioning in both test SMS and campaign preparation, because their sending connection does not use those profiles.
