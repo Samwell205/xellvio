@@ -36,6 +36,11 @@ async function authForSender(db: any, sender: string, accountId: string | null, 
       if (tok) auth = `${intl.subaccount_sid}|Basic ${Buffer.from(`${intl.subaccount_sid}:${tok}`).toString("base64")}`;
     }
   }
+  // Since 2026-11-17 international sends use the international main account.
+  if (!auth && accountId && process.env.TWILIO_INTL_ACCOUNT_SID && process.env.TWILIO_INTL_AUTH_TOKEN) {
+    const sid = process.env.TWILIO_INTL_ACCOUNT_SID;
+    auth = `${sid}|Basic ${Buffer.from(`${sid}:${process.env.TWILIO_INTL_AUTH_TOKEN}`).toString("base64")}`;
+  }
   cache.set(key, auth);
   return auth;
 }
