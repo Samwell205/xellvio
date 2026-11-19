@@ -2296,7 +2296,7 @@ const REASON_LABELS: Record<string, string> = {
   "30005": "Unknown destination handset",
   "30006": "Landline or unreachable carrier",
   "30008": "Unknown delivery error",
-  "30034": "Blocked — 10DLC not registered (US)",
+  "30034": "Blocked — US sender registration required",
   "21610": "Recipient replied STOP — number opted out",
   "21614": "Not a valid mobile number",
   "40008":

@@ -467,14 +467,6 @@ export function AccountAssistant({
             )}
           </div>
         )}
-        {op.status === "completed" && Boolean(out?.assistantId) && (
-          <Button variant="outline" asChild>
-            <Link to="/app/receptionist">
-              Open assistant settings
-              <ArrowUpRight />
-            </Link>
-          </Button>
-        )}
       </article>
     );
   };

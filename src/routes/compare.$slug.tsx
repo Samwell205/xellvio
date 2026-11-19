@@ -286,7 +286,7 @@ const STEPS = [
   },
   {
     title: "Get your sender approved",
-    text: "Request a sender ID, toll-free verification or 10DLC registration in-app and track its status.",
+    text: "Request a sender ID or toll-free verification in-app and track its status.",
   },
   {
     title: "Rebuild your best flows",

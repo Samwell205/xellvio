@@ -202,7 +202,6 @@ function AdminSendersPage() {
 
       <TwilioInventoryPanel />
 
-      <LocalTenDlcPanel />
 
       <Card>
         <CardHeader>

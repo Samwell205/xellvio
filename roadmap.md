@@ -1,5 +1,11 @@
 # Roadmap
 
+## November 19 owner actions
+- [x] Reinstate THE CONJURE, reset warnings, unlink the actual assigned +1 833 588 3713 (pool retained), and persist final-warning reply in #1061; balance $16.1406 unchanged. Inbox delivery not independently verified.
+- [x] Hide local registration and receptionist navigation, direct pages and public marketing without changing sending rules; admin redirect and homepage checked. Website changes require publishing.
+- [x] Redesign Email sending domain; 18 regression tests pass. Actual authenticated empty state and populated read-only fixture checked at desktop/390px, copy succeeds and no overflow/errors.
+- [ ] Verify add/check/save through a real tenant session — owner session is admin-only; no tenant impersonation or domain mutation performed.
+
 ## NETIO US test sending and ticket #1053
 - [x] Remove unrelated profile provisioning from approved dedicated-number US tests and campaign preparation; 19 regressions passed, build OK.
 - [x] Send an accurate reply through ticket #1053; persisted reply verified after admin-page reload and database readback, ticket not resolved.

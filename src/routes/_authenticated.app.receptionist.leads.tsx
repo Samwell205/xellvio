@@ -1,6 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ReceptionistWorkspace, receptionistQuery } from "@/components/receptionist/ReceptionistWorkspace";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 export const Route = createFileRoute("/_authenticated/app/receptionist/leads")({
-  head: () => ({ meta: [{ title: "Receptionist leads — Xellvio" }, { name: "description", content: "Manage caller requests, captured contact details and SMS permission." }, { property: "og:title", content: "Receptionist leads — Xellvio" }, { property: "og:description", content: "Manage caller requests, captured contact details and SMS permission." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(receptionistQuery), component: () => <ReceptionistWorkspace view="leads"/>,
+  beforeLoad: () => { throw redirect({ to: "/app", replace: true }); },
+  head: () => ({ meta: [{ title: "Unavailable caller requests — Xellvio" }, { name: "description", content: "This page is not available in Xellvio." }, { property: "og:title", content: "Unavailable caller requests — Xellvio" }, { property: "og:description", content: "This page is not available in Xellvio." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
 });

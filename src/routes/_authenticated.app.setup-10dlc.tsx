@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -28,7 +28,8 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/app/setup-10dlc")({
-  head: () => ({ meta: [{ title: "10DLC Registration — Xellvio" }] }),
+  beforeLoad: () => { throw redirect({ to: "/app/setup-sms", replace: true }); },
+  head: () => ({ meta: [{ title: "Unavailable registration — Xellvio" }, { name: "description", content: "Use Xellvio sender setup to manage approved sending identities." }, { property: "og:title", content: "Unavailable registration — Xellvio" }, { property: "og:description", content: "Use Xellvio sender setup to manage approved sending identities." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] }),
   component: TenDlcPage,
   errorComponent: ({ error }) => <div className="p-8 text-destructive">{(error as Error).message}</div>,
   notFoundComponent: () => <div className="p-8">Not found.</div>,

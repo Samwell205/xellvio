@@ -484,7 +484,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
     eyebrow: "Xellvio global delivery",
     seoTitle: "Global SMS Delivery to 190+ Countries",
     seoDescription:
-      "Send SMS worldwide with Xellvio: tier-1 carrier routes to 190+ countries, sender IDs, toll-free and 10DLC registration handled in-app, throughput of thousands of messages a minute, and per-country pricing shown before you send.",
+      "Send SMS worldwide with Xellvio: tier-1 carrier routes to 190+ countries, sender IDs and toll-free verification handled in-app, throughput of thousands of messages a minute, and per-country pricing shown before you send.",
     keywords: ["international sms", "global sms delivery", "bulk sms 190 countries", "sms sender id"],
     h1: "Global delivery with each country's rules handled",
     heroBody:
@@ -521,7 +521,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
       points: [
         "Open sender-ID markets such as the UK, EU, Australia and Singapore can go live immediately.",
         "US and Canada run through a guided toll-free verification wizard, tracked in-app.",
-        "US local sending requires 10DLC registration; unregistered local sends are blocked rather than filtered.",
+        "US and Canadian messages only use approved senders; unverified sends are blocked.",
         "Registration-required destinations are filed on your behalf and their status shown in the product.",
         "Sharded dispatch sustains thousands of messages a minute on large launches, with live counts.",
       ],
@@ -531,7 +531,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
       "Delivery underpins everything you send: segments decide the destination mix, compliance decides who is eligible, and reporting shows delivery and spend per country.",
     features: [
       { icon: Globe2, title: "190+ countries", text: "Tier-1 routes with per-country rate cards." },
-      { icon: FileCheck2, title: "Sender verification", text: "Toll-free and 10DLC registration handled inside Xellvio." },
+      { icon: FileCheck2, title: "Sender verification", text: "Sender IDs and toll-free verification handled inside Xellvio." },
       { icon: Radio, title: "Two-way numbers", text: "Replies route back to the account that sent the campaign." },
       { icon: Image, title: "MMS support", text: "Send images where the destination supports them, priced accordingly." },
       { icon: Clock, title: "High throughput", text: "Large audiences clear in minutes, not hours." },
@@ -550,7 +550,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
     faq: [
       { q: "Do I need my own phone number or sender ID?", a: "No. Xellvio provisions the sender your destination requires — a sender ID, a verified toll-free number or a registered local number." },
       { q: "How long does US toll-free verification take?", a: "It depends on the carrier review, and Xellvio shows the current status in-app throughout. You can send to other countries while it's in progress." },
-      { q: "Why was my US local send blocked?", a: "US local numbers must be registered under 10DLC. Xellvio blocks unregistered local sends because carriers would filter them, and offers verified toll-free instead." },
+      { q: "Why was my US send blocked?", a: "US messages need an approved sender. Xellvio blocks unverified sends and offers verified toll-free numbers." },
       { q: "How fast can a large campaign go out?", a: "Dispatch is parallelised and sustains thousands of messages a minute; a 20,000-recipient campaign typically clears in minutes." },
       { q: "How do I know the cost per country?", a: "Rates are shown per destination before you send, and actual spend is reported per country afterwards." },
     ],
@@ -601,7 +601,7 @@ export const PRODUCT_PAGES: Record<string, ProductPageDef> = {
         "STOP and local equivalents suppress the contact instantly and permanently, across every campaign and automation.",
         "Opt-in proof is retrievable per contact when you need to answer a complaint.",
         "Content screening flags prohibited categories and high-risk links before a carrier can reject them.",
-        "Sender verification — toll-free and 10DLC — is tracked in-app so you only send from approved identities.",
+        "Sender ID and toll-free verification is tracked in-app so you only send from approved identities.",
       ],
       screen: ["Consent · form, 12 Mar", "STOP → suppressed", "Screening · passed", "Sender · verified", "Audit trail kept"],
     },

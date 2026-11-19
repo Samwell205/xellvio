@@ -43,7 +43,7 @@ const GUIDES = [
   },
   {
     title: "How to send to a new country without getting filtered",
-    text: "Which markets accept sender IDs, when toll-free or 10DLC registration is required, and how Xellvio arranges it.",
+    text: "Which markets accept sender IDs, when toll-free verification is required, and how Xellvio arranges it.",
     steps: [
       { label: "Global delivery", to: "/global-delivery" },
       { label: "Per-country pricing", to: "/pricing" },

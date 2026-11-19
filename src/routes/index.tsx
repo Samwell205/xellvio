@@ -118,7 +118,7 @@ export const HOME_FAQS = [
   },
   {
     q: "Which countries can I send to?",
-    a: "Over 190 countries through tier-1 carriers, with automatic routing, failover and each country's sender rules handled for you — including toll-free, 10DLC and sender ID registration where it's required.",
+    a: "Over 190 countries through tier-1 carriers, with automatic routing, failover and each country's sender rules handled for you — including toll-free verification and sender ID registration where it's required.",
   },
   {
     q: "Does Xellvio handle consent and opt-outs?",

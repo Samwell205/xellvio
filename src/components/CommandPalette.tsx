@@ -31,7 +31,6 @@ const COMMANDS: Cmd[] = [
   { label: "Segments", to: "/app/segments", icon: Filter, group: "Jump to", perm: "segments" },
   { label: "Suppressions", to: "/app/suppressions", icon: ShieldOff, group: "Jump to", perm: "suppressions" },
   { label: "Set up SMS", to: "/app/setup-sms", icon: MessageSquareText, group: "Jump to", perm: "setup_sms" },
-  { label: "10DLC (US local)", to: "/app/setup-10dlc", icon: MessageSquareText, group: "Jump to", perm: "setup_sms" },
   { label: "Toll-free verification", to: "/app/toll-free-verification", icon: ShieldCheck, group: "Jump to", perm: "setup_sms" },
   { label: "Team", to: "/app/team", icon: UserPlus, group: "Jump to", perm: "team" },
   { label: "Account settings", to: "/app/settings", icon: Settings, group: "Settings", perm: "settings" },

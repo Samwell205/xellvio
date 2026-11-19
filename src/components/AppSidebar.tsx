@@ -35,7 +35,6 @@ const items: Entry[] = [
     icon: MessageSquareText,
     children: [
       { title: "Set up SMS", url: "/app/setup-sms", icon: MessageSquareText, perm: "setup_sms" },
-      { title: "10DLC (US local)", url: "/app/setup-10dlc", icon: MessageSquareText, perm: "setup_sms" },
       { title: "Toll-free verification", url: "/app/toll-free-verification", icon: ShieldCheck, perm: "setup_sms" },
       { title: "Email domain", url: "/app/email-domains", icon: Globe, perm: "settings" },
     ],
@@ -71,7 +70,7 @@ const navigationSections = [
   { title: "Overview", entries: items.slice(0, 1) },
   { title: "Messaging", entries: items.slice(1, 4) },
   { title: "Audience", entries: items.slice(4, 5) },
-  { title: "Automation", entries: [...items.slice(5, 7), { title: "AI Receptionist", url: "/app/receptionist", icon: Bot, perm: "settings" as PermissionKey }] },
+  { title: "Automation", entries: items.slice(5, 7) },
   { title: "Website", entries: items.slice(7, 8) },
 ];
 
