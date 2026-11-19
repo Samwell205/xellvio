@@ -428,6 +428,20 @@
       "when": 1795026761870,
       "tag": "0060_suppress_dead_and_landline_numbers",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1795097374308,
+      "tag": "0061_harden_security_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1795097386153,
+      "tag": "0062_fix_apps_trigger_role_check",
+      "breakpoints": true
     }
   ]
 }

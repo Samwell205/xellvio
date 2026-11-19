@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -2433,8 +2434,7 @@ function exportProgressCsv({
 
 function csv(v: string): string {
   if (v == null) return "";
-  const s = String(v);
-  return /[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s;
+  return csvCell(v);
 }
 
 function Seg({ pct, className }: { pct: number; className: string }) {

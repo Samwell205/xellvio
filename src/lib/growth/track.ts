@@ -120,16 +120,23 @@ function flush(useBeacon = false) {
   const body = JSON.stringify({ events: queue.slice(0, 40) });
   queue = [];
   try {
-    if (useBeacon && navigator.sendBeacon) {
+    if (useBeacon && !accountId && navigator.sendBeacon) {
       navigator.sendBeacon(ENDPOINT, new Blob([body], { type: "application/json" }));
       return;
     }
-    void fetch(ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-      keepalive: true,
-    }).catch(() => {});
+    void (async () => {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (accountId) {
+        try {
+          const { supabase } = await import("@/integrations/supabase/client");
+          const { data } = await supabase.auth.getSession();
+          if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+        } catch {
+          /* send anonymously */
+        }
+      }
+      await fetch(ENDPOINT, { method: "POST", headers, body, keepalive: true });
+    })().catch(() => {});
   } catch {
     /* analytics must never break the app */
   }

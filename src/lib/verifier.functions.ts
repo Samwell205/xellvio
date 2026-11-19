@@ -61,15 +61,6 @@ async function paystack<T = any>(path: string): Promise<T> {
 
 // ============ Email pre-check (used before signup) ============
 
-export const checkVerifierEmailAvailable = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({ email: z.string().email() }).parse(input),
-  )
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    return { available: !(await verifierEmailExists(supabaseAdmin, data.email)) };
-  });
-
 export const sendVerifierSignupCode = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({
@@ -81,8 +72,10 @@ export const sendVerifierSignupCode = createServerFn({ method: "POST" })
     const email = normalizeEmail(data.email);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // Same response whether or not the email is registered, so this public
+    // endpoint can't be used to discover who has a verifier account.
     if (await verifierEmailExists(supabaseAdmin, email)) {
-      throw new Error("An account with this email already exists — please sign in instead.");
+      return { ok: true };
     }
 
     const { data: existingCode } = await supabaseAdmin

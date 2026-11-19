@@ -59,10 +59,37 @@ export const Route = createFileRoute("/api/public/growth-events")({
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const db = supabaseAdmin as any;
 
-          const rows = parsed.data.events.map((e) => ({
+          // Workspace attribution and completed signups are trusted only from a
+          // verified signed-in caller who belongs to that workspace.
+          let verifiedAccounts = new Set<string>();
+          const auth = request.headers.get("authorization") ?? "";
+          const token = auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "";
+          if (token) {
+            const { data: u } = await supabaseAdmin.auth.getUser(token);
+            if (u?.user?.id) {
+              const claimed = [...new Set(parsed.data.events.map((e) => e.account_id).filter(Boolean))] as string[];
+              if (claimed.length) {
+                const { data: member } = await db
+                  .from("account_members")
+                  .select("account_id")
+                  .in("account_id", claimed)
+                  .eq("user_id", u.user.id);
+                verifiedAccounts = new Set([
+                  ...(claimed.includes(u.user.id) ? [u.user.id] : []),
+                  ...((member ?? []) as any[]).map((r) => r.account_id),
+                ]);
+              }
+            }
+          }
+          const trusted = (e: { account_id?: string | null }) =>
+            !!e.account_id && verifiedAccounts.has(e.account_id);
+          const events = parsed.data.events.filter((e) => e.event !== "signup_completed" || trusted(e));
+          if (!events.length) return new Response(null, { status: 204 });
+
+          const rows = events.map((e) => ({
             event: e.event,
             session_id: e.session_id ?? null,
-            account_id: e.account_id ?? null,
+            account_id: trusted(e) ? e.account_id! : null,
             path: e.path ?? null,
             page_type: e.page_type ?? null,
             entity_type: e.entity_type ?? null,
