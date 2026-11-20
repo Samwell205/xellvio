@@ -1,0 +1,1 @@
+UPDATE public.accounts SET suspended_at = NULL, onboarding_status = 'active' WHERE id = 'e75b6c61-e68e-41d6-be76-3b72059df58e' AND onboarding_status = 'suspended';

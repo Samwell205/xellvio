@@ -1,0 +1,1 @@
+UPDATE public.support_tickets SET status='waiting', updated_at=now() WHERE id='2b439787-2bb8-4b55-89c2-e4bc482a3850';

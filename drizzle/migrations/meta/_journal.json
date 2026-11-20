@@ -442,6 +442,20 @@
       "when": 1795097386153,
       "tag": "0062_fix_apps_trigger_role_check",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1795179721288,
+      "tag": "0063_reopen_maltida_account",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1795179741091,
+      "tag": "0064_ticket_1064_waiting",
+      "breakpoints": true
     }
   ]
 }
