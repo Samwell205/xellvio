@@ -1,0 +1,1 @@
+DELETE FROM public.sender_assets s USING public.twilio_verified_inventory i WHERE s.phone_number = i.phone_number AND i.assigned_account_id IS NULL AND i.assignment_state = 'available' AND i.available;
