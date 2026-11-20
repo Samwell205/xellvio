@@ -1724,7 +1724,11 @@ async function runDispatchTick(supabaseAdmin: any, startedAt: number): Promise<R
           let profileId: string | null = isValidTelnyxUuid(acct?.telnyx_messaging_profile_id)
             ? (acct?.telnyx_messaging_profile_id as string)
             : null;
-          if (!usesDedicatedLine && !profileId) {
+          // A verified sender that already carries its own profile (e.g. an
+          // international Sender ID) needs no account-level profile; creating
+          // one would fail campaigns on an unrelated setup request.
+          const verifiedAssetHasProfile = isValidTelnyxUuid(verifiedSender?.telnyx_messaging_profile_id);
+          if (!usesDedicatedLine && !profileId && !verifiedAssetHasProfile) {
             try {
               profileId = await ensureMessagingProfileForAccount(c.account_id);
             } catch (e: any) {
