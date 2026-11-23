@@ -1,3 +1,4 @@
+import { priceCustomTopUp } from "@/lib/custom-topup";
 import { resolveBillingAccount } from "./billing-account.server";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -130,14 +131,10 @@ export const initPaystackCheckout = createServerFn({ method: "POST" })
 /** Start a Paystack checkout for an arbitrary USD amount (custom credits). 1:1 USD→credits. */
 export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { amount: number }) => {
-    const a = Number(d?.amount);
-    if (!Number.isFinite(a)) throw new Error("amount required");
-    if (a < 5) throw new Error("Minimum is $5");
-    if (a > 10000) throw new Error("Maximum is $10,000");
-    return { amount: Math.round(a * 100) / 100 };
-  })
+  .inputValidator((d: { amount: number }) => ({ amount: priceCustomTopUp(d?.amount).amountUsd }))
   .handler(async ({ data, context }) => {
+    // Price and credits are always derived on the server (1 credit per USD).
+    const priced = priceCustomTopUp(data.amount);
     const acting = await resolveBillingAccount(context.userId);
     const { data: account } = await context.supabase
       .from("accounts")
@@ -155,10 +152,10 @@ export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
         pack_id: null,
         provider: "paystack",
         currency: "USD",
-        amount: data.amount,
-        credits: data.amount,
+        amount: priced.amountUsd,
+        credits: priced.credits,
         status: "pending",
-        metadata: { payer_user_id: context.userId },
+        metadata: { payer_user_id: context.userId, custom: true },
       })
       .select("id")
       .single();
@@ -169,7 +166,7 @@ export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
       .select("usd_to_ngn_rate")
       .maybeSingle();
     const rate = Number((settings as any)?.usd_to_ngn_rate ?? 1600);
-    const chargeAmount = +(data.amount * rate).toFixed(2);
+    const chargeAmount = +(priced.amountUsd * rate).toFixed(2);
     const amountSubunit = Math.round(chargeAmount * 100);
     const reference = `pmt_${payment.id.replace(/-/g, "")}`;
     const callback_url = `${siteOrigin()}/app/billing?ref=${reference}`;
@@ -191,7 +188,7 @@ export const initPaystackCheckoutCustom = createServerFn({ method: "POST" })
           payment_id: payment.id,
           custom: true,
           original_currency: "USD",
-          original_amount: data.amount,
+          original_amount: priced.amountUsd,
         },
       }),
     });

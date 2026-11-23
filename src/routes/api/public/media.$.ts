@@ -10,15 +10,24 @@ export const Route = createFileRoute("/api/public/media/$")({
     handlers: {
       GET: async ({ params }) => {
         const path = String((params as Record<string, string>)._splat ?? "").replace(/^\/+/, "");
-        if (!path || path.includes("..")) return new Response("Not found", { status: 404 });
+        // Only "<business-id>/<random-id>.<ext>" library paths are servable.
+        const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+        if (!new RegExp(`^${UUID}/(?:blog/)?${UUID}\\.[a-z0-9]{1,6}$`, "i").test(path)) {
+          return new Response("Not found", { status: 404 });
+        }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data: asset } = await supabaseAdmin
           .from("media_assets")
-          .select("content_type")
+          .select("content_type, account_id")
           .eq("storage_path", path)
+          .limit(1)
           .maybeSingle();
-        if (!asset) return new Response("Not found", { status: 404 });
+        // The file must sit in the folder of the business that owns the record,
+        // so a record pointed at another business's file can never serve it.
+        if (!asset || !asset.account_id || !path.startsWith(`${asset.account_id}/`)) {
+          return new Response("Not found", { status: 404 });
+        }
 
         const { data: file, error } = await supabaseAdmin.storage.from("tenant-media").download(path);
         if (error || !file) return new Response("Not found", { status: 404 });
