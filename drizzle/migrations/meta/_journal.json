@@ -498,6 +498,13 @@
       "when": 1795452870440,
       "tag": "0070_lock_admin_finance_tenants",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1795452901398,
+      "tag": "0071_lock_admin_reports",
+      "breakpoints": true
     }
   ]
 }
