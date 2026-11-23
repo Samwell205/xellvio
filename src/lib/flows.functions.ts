@@ -136,6 +136,8 @@ export const sendFlowTest = createServerFn({ method: "POST" })
     const accountId = await acct(context.userId);
     const { sendAutomationSms } = await import("./flows.server");
     const phone = data.phone.startsWith("+") ? data.phone : `+${data.phone.replace(/\D/g, "")}`;
+    const { assertSubscribedSmsContact } = await import("./sms-recipient-guard.server");
+    await assertSubscribedSmsContact(accountId, phone);
     await sendAutomationSms(accountId, phone, data.body);
     return { ok: true };
   });

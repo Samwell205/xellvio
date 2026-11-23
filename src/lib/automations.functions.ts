@@ -3,8 +3,9 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 async function acct(userId: string) {
-  const { resolveActingAccount } = await import("./acting-account.server");
+  const { resolveActingAccount, assertPermission } = await import("./acting-account.server");
   const a = await resolveActingAccount(userId);
+  assertPermission(a, "campaigns");
   return a.accountId;
 }
 

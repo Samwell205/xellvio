@@ -160,7 +160,9 @@ export const deleteMediaAsset = createServerFn({ method: "POST" })
       .eq("account_id", accountId)
       .maybeSingle();
     if (!row) return { ok: true };
-    await supabaseAdmin.storage.from(MEDIA_BUCKET).remove([row.storage_path]);
+    // Only remove files inside this business's own folder; a tampered path is never trusted.
+    const sp = String(row.storage_path ?? "");
+    if (sp.startsWith(`${accountId}/`) && !sp.includes("..")) await supabaseAdmin.storage.from(MEDIA_BUCKET).remove([row.storage_path]);
     await supabaseAdmin.from("media_assets").delete().eq("id", row.id);
     return { ok: true };
   });

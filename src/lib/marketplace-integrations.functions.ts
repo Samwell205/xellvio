@@ -187,6 +187,8 @@ export const sendViaConnection = createServerFn({ method: "POST" })
       const { normalizePhone } = await import("@/lib/phone-normalize");
       const norm = normalizePhone(data.to, { defaultCountry: "US" });
       if ("error" in norm) throw new Error(norm.error);
+      const { assertSubscribedSmsContact } = await import("@/lib/sms-recipient-guard.server");
+      await assertSubscribedSmsContact(c.accountId, norm.e164);
 
       const { data: acct } = await c.db
         .from("accounts")

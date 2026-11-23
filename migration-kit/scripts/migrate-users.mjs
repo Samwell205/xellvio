@@ -53,13 +53,14 @@ const admin = createClient(NEW_URL, NEW_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+const mask = (e) => { const [l, d] = String(e ?? "").split("@"); return d ? `${l.slice(0, 1)}***@${d}` : "***"; };
 const users = loadUsers();
 console.log(`${users.length} users to migrate${DRY_RUN ? " (dry run)" : ""}`);
 
 let created = 0, existing = 0, failed = 0;
 
 for (const u of users) {
-  if (DRY_RUN) { console.log(`  would create ${u.email} (${u.id})`); continue; }
+  if (DRY_RUN) { console.log(`  would create ${mask(u.email)} (${u.id})`); continue; }
 
   const { error } = await admin.auth.admin.createUser({
     id: u.id,
@@ -71,16 +72,16 @@ for (const u of users) {
   if (error) {
     if (/already (been )?registered|duplicate/i.test(error.message)) {
       existing++;
-      console.log(`  = ${u.email} already exists`);
+      console.log(`  = ${mask(u.email)} already exists`);
       continue;
     }
     failed++;
-    console.error(`  ! ${u.email}: ${error.message}`);
+    console.error(`  ! ${mask(u.email)}: ${error.message}`);
     continue;
   }
 
   created++;
-  console.log(`  + ${u.email}`);
+  console.log(`  + ${mask(u.email)}`);
 
   if (SEND_RESET) {
     const { error: mailErr } = await admin.auth.resetPasswordForEmail(u.email);

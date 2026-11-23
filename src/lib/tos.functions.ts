@@ -92,8 +92,9 @@ export const acceptCampaignTos = createServerFn({ method: "POST" })
     const { userId } = context;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     // Only accept terms for a campaign owned by the business the caller is acting for.
-    const { resolveActingAccount } = await import("./acting-account.server");
+    const { resolveActingAccount, assertPermission } = await import("./acting-account.server");
     const acting = await resolveActingAccount(userId);
+    assertPermission(acting, "campaigns");
     const { data: owned, error: ownErr } = await supabaseAdmin
       .from("campaigns")
       .select("id")

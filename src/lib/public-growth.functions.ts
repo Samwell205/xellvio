@@ -112,16 +112,25 @@ export const submitSubscribe = createServerFn({ method: "POST" })
     if (!parsed?.isValid()) throw new Error("Enter a valid phone number including country code.");
     const phone = parsed.number as string;
 
+    // Anonymous visitors must never overwrite an existing contact's details.
+    const { data: existingContact } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("account_id", source.account_id)
+      .eq("phone_e164", phone)
+      .maybeSingle();
+    const isNew = !existingContact;
+
     const { error } = await (supabaseAdmin.rpc as any)("bulk_import_profiles", {
       _account_id: source.account_id,
       _list_id: source.list_id ?? null,
       _rows: [
         {
           phone_e164: phone,
-          first_name: data.firstName ?? null,
-          last_name: data.lastName ?? null,
-          country_code: parsed.country ?? null,
-          custom_fields: { source: data.sourceType, source_slug: data.slug },
+          first_name: isNew ? (data.firstName ?? null) : null,
+          last_name: isNew ? (data.lastName ?? null) : null,
+          country_code: isNew ? (parsed.country ?? null) : null,
+          custom_fields: isNew ? { source: data.sourceType, source_slug: data.slug } : {},
         },
       ],
     });

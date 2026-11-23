@@ -477,6 +477,20 @@
       "when": 1795451334659,
       "tag": "0067_skip_impossible_nanp_in_send_check",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1795452741851,
+      "tag": "0068_harden_finance_apps_developers",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1795452753522,
+      "tag": "0069_developer_default_unverified",
+      "breakpoints": true
     }
   ]
 }
