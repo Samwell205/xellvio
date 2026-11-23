@@ -470,6 +470,13 @@
       "when": 1795451279229,
       "tag": "0066_suppress_prefixed_invalid_destinations",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1795451334659,
+      "tag": "0067_skip_impossible_nanp_in_send_check",
+      "breakpoints": true
     }
   ]
 }
