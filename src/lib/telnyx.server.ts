@@ -600,6 +600,11 @@ export async function sendMessage(opts: {
   if (!/^\+[1-9]\d{7,14}$/.test(to)) {
     throw new Error(`Invalid destination number: "${opts.to}" is not a valid international (E.164) number`);
   }
+  // US/Canada numbers must be +1 NXX NXX XXXX (area code and exchange start 2-9);
+  // anything else is refused by the carrier (21211) and hurts sending health.
+  if (to.startsWith("+1") && !/^\+1[2-9]\d{2}[2-9]\d{6}$/.test(to)) {
+    throw new Error(`Invalid destination number: "${opts.to}" is not a valid US/Canada number`);
+  }
   // UK and every other non-US/CA destination sends on the dedicated
   // international connection (owner decision 2026-11-02, replacing the
   // former UK-only and international routes); routeOutbound above already
