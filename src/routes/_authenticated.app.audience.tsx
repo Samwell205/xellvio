@@ -414,7 +414,10 @@ function AudiencePage() {
             </button>
           );
         })}
-        {(listsQ.data ?? []).length === 0 && (
+        {listsQ.isPending && (
+          <span className="text-xs text-muted-foreground">Loading lists…</span>
+        )}
+        {!listsQ.isPending && (listsQ.data ?? []).length === 0 && (
           <span className="text-xs text-muted-foreground">
             No lists yet — create one to group your contacts.
           </span>
