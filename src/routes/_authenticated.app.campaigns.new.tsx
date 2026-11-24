@@ -909,12 +909,16 @@ function NewCampaignPage() {
 
           <ListPicker
             lists={listsQ.data ?? []}
+            loading={listsQ.isPending}
+            failed={listsQ.isError}
+            onRetry={() => void listsQ.refetch()}
             selected={s.listIds}
             onChange={(ids) => setS((prev) => ({ ...prev, listIds: ids }))}
           />
           <SegmentPicker
             title="Include segments"
             segments={segmentsQ.data ?? []}
+            loading={segmentsQ.isPending}
             selected={s.include}
             onChange={(ids) => setS({ ...s, include: ids })}
           />
@@ -1602,11 +1606,13 @@ function Stepper({ step }: { step: number }) {
 function SegmentPicker({
   title,
   segments,
+  loading = false,
   selected,
   onChange,
 }: {
   title: string;
   segments: { id: string; name: string; query: any }[];
+  loading?: boolean;
   selected: string[];
   onChange: (ids: string[]) => void;
 }) {
@@ -1616,7 +1622,8 @@ function SegmentPicker({
           {title}
         </Label>
       <div className="grid sm:grid-cols-2 gap-2 mt-1">
-        {segments.length === 0 && (
+        {loading && <div className="h-14 animate-pulse rounded-xl bg-muted" aria-label="Loading segments" />}
+        {!loading && segments.length === 0 && (
           <div className="text-xs text-muted-foreground">No segments available.</div>
         )}
         {segments.map((seg) => {
@@ -1754,10 +1761,16 @@ function ContactPicker({
 
 function ListPicker({
   lists,
+  loading = false,
+  failed = false,
+  onRetry,
   selected,
   onChange,
 }: {
   lists: { id: string; name: string }[];
+  loading?: boolean;
+  failed?: boolean;
+  onRetry?: () => void;
   selected: string[];
   onChange: (ids: string[]) => void;
 }) {
@@ -1769,7 +1782,16 @@ function ListPicker({
       <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         Pick contact lists
       </Label>
-      {lists.length === 0 ? (
+      {loading ? (
+        <div className="mt-1 h-11 w-full sm:max-w-md animate-pulse rounded-xl bg-muted" aria-label="Loading lists" />
+      ) : failed ? (
+        <div className="text-xs text-muted-foreground mt-1">
+          Couldn't load your lists.{" "}
+          <button type="button" onClick={onRetry} className="text-primary underline">
+            Try again
+          </button>
+        </div>
+      ) : lists.length === 0 ? (
         <div className="text-xs text-muted-foreground mt-1">
           No lists yet.{" "}
           <Link to="/app/audience" className="text-primary underline">
