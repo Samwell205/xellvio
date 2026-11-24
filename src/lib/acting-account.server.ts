@@ -90,3 +90,12 @@ export function assertOwner(acting: ActingAccount): void {
     throw new Error("Only the business owner can perform this action.");
   }
 }
+
+/** Throw unless the acting user may change data (owner, or an editor/admin member; viewers are read-only). */
+export function assertCanEdit(acting: ActingAccount, key?: PermissionKey): void {
+  if (acting.isOwner) return;
+  if (acting.role === "viewer") {
+    throw new Error("Your role is view-only. Ask the business owner for editor access to make changes.");
+  }
+  if (key) assertPermission(acting, key);
+}

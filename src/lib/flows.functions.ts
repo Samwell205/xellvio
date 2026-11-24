@@ -2,6 +2,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+async function editAcct(userId: string) {
+  const { resolveActingAccount, assertCanEdit } = await import("./acting-account.server");
+  const a = await resolveActingAccount(userId);
+  assertCanEdit(a, "campaigns");
+  return a.accountId;
+}
+
 async function acct(userId: string) {
   const { resolveActingAccount } = await import("./acting-account.server");
   const a = await resolveActingAccount(userId);
@@ -61,7 +68,7 @@ export const saveFlow = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => FlowSchema.parse(input))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const accountId = await acct(context.userId);
+    const accountId = await editAcct(context.userId);
     if (data.trigger_type === "keyword_reply" && !data.trigger_keyword?.trim()) {
       throw new Error("Add the keyword contacts should text in.");
     }
@@ -105,7 +112,7 @@ export const setFlowStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const accountId = await acct(context.userId);
+    const accountId = await editAcct(context.userId);
     const { error } = await supabaseAdmin
       .from("sms_flows")
       .update({ status: data.status, updated_at: new Date().toISOString() })
@@ -120,7 +127,7 @@ export const deleteFlow = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const accountId = await acct(context.userId);
+    const accountId = await editAcct(context.userId);
     const { error } = await supabaseAdmin.from("sms_flows").delete().eq("id", data.id).eq("account_id", accountId);
     if (error) throw new Error(error.message);
     return { ok: true };

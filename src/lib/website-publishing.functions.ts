@@ -50,6 +50,13 @@ export function normalizeSlug(input: string) {
     .slice(0, 60);
 }
 
+async function editAcct(userId: string) {
+  const { resolveActingAccount, assertCanEdit } = await import("./acting-account.server");
+  const a = await resolveActingAccount(userId);
+  assertCanEdit(a);
+  return a.accountId;
+}
+
 async function acct(userId: string) {
   const { resolveActingAccount } = await import("./acting-account.server");
   return (await resolveActingAccount(userId)).accountId;
@@ -67,7 +74,7 @@ export const updateWebsiteSlug = createServerFn({ method: "POST" })
     if (RESERVED_SLUGS.includes(slug)) throw new Error(`"${slug}" is reserved — please pick another address.`);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const accountId = await acct(context.userId);
+    const accountId = await editAcct(context.userId);
     const table = TABLE[data.kind];
 
     const { data: clash } = await supabaseAdmin.from(table).select("id").eq("slug", slug).neq("id", data.id).maybeSingle();

@@ -247,6 +247,14 @@ export const sendViaConnection = createServerFn({ method: "POST" })
         }
       }
     } else {
+      // Phone-number destinations must be a subscribed contact of this business.
+      if (data.to && /^\+?[\d\s().-]{7,}$/.test(data.to)) {
+        const { normalizePhone } = await import("@/lib/phone-normalize");
+        const norm = normalizePhone(data.to, { defaultCountry: "US" });
+        if ("error" in norm) throw new Error(norm.error);
+        const { assertSubscribedSmsContact } = await import("@/lib/sms-recipient-guard.server");
+        await assertSubscribedSmsContact(c.accountId, norm.e164);
+      }
       await runtime.send(c.credentials, { db: c.db, accountId: c.accountId, settings: c.settings }, {
         text: data.text,
         to: data.to,

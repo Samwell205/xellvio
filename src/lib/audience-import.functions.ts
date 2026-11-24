@@ -48,6 +48,13 @@ export const startImportJob = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const admin = supabaseAdmin as any;
 
+    if (data.listId != null) {
+      if (!/^[0-9a-f-]{36}$/i.test(data.listId)) throw new Error("Invalid list.");
+      const { data: list } = await admin
+        .from("contact_lists").select("id").eq("id", data.listId).eq("account_id", accountId).maybeSingle();
+      if (!list) throw new Error("List not found.");
+    }
+
     // Reuse an unfinished job for the same file so a refresh resumes it.
     const { data: existing } = await admin
       .from("contact_import_jobs")

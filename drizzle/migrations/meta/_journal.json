@@ -505,6 +505,13 @@
       "when": 1795452901398,
       "tag": "0071_lock_admin_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1795540372223,
+      "tag": "0072_lock_verifier_status_app_stats_line_members",
+      "breakpoints": true
     }
   ]
 }

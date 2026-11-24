@@ -33,6 +33,13 @@ export function mediaUrlFor(storagePath: string) {
   return `/api/public/media/${storagePath}`;
 }
 
+async function editAcct(userId: string) {
+  const { resolveActingAccount, assertCanEdit } = await import("./acting-account.server");
+  const a = await resolveActingAccount(userId);
+  assertCanEdit(a);
+  return a.accountId;
+}
+
 async function acct(userId: string) {
   const { resolveActingAccount } = await import("./acting-account.server");
   return (await resolveActingAccount(userId)).accountId;
@@ -90,7 +97,7 @@ export const createMediaUpload = createServerFn({ method: "POST" })
       throw new Error("That file type is not supported. Use PNG, JPG, WEBP, GIF, MP4 or WebM.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const accountId = await acct(context.userId);
+    const accountId = await editAcct(context.userId);
     const ext = extensionFor(data.name, data.contentType);
     const path = `${accountId}/${crypto.randomUUID()}.${ext}`;
     const { data: signed, error } = await supabaseAdmin.storage.from(MEDIA_BUCKET).createSignedUploadUrl(path);
@@ -138,7 +145,7 @@ export const renameMediaAsset = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const accountId = await acct(context.userId);
+    const accountId = await editAcct(context.userId);
     await supabaseAdmin
       .from("media_assets")
       .update({ name: safeName(data.name) })
@@ -152,7 +159,7 @@ export const deleteMediaAsset = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const accountId = await acct(context.userId);
+    const accountId = await editAcct(context.userId);
     const { data: row } = await supabaseAdmin
       .from("media_assets")
       .select("id,storage_path")

@@ -130,7 +130,8 @@ export const submitMyIdentity = createServerFn({ method: "POST" })
     }
 
     // 3. Automatic face check
-    let status: "approved" | "rejected" = "approved";
+    // An ID number cannot be proven automatically, so passing checks only queues it for admin review.
+    let status: "pending" | "rejected" = "pending";
     let note: string | null = null;
     if (sharedDevice) {
       status = "rejected";
