@@ -66,7 +66,7 @@ export async function assistantCampaignReview(userId: string, campaignId: string
     const rate = rates.data.find((r) => r.country_code === row.country_code);
     const asset =
       assets.data.find((a) => a.country_code === row.country_code) ??
-      (["US", "CA"].includes(row.country_code)
+      (["US", "CA", "PR"].includes(row.country_code)
         ? assets.data.find(
             (a) =>
               ["US", "CA"].includes(a.country_code) &&
